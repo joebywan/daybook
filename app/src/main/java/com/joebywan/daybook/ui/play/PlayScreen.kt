@@ -212,10 +212,12 @@ private fun PlayBoard(
                     history = emptyList()
                     state = initial
                 }
-                ToolButton(Icons.Default.AutoAwesome, "Hint", Modifier.weight(1f)) {
-                    puzzle.hint(state)?.let {
-                        hints++
-                        push(it)
+                if (puzzle.offersHints) {
+                    ToolButton(Icons.Default.AutoAwesome, "Hint", Modifier.weight(1f)) {
+                        puzzle.hint(state)?.let {
+                            hints++
+                            push(it)
+                        }
                     }
                 }
             }

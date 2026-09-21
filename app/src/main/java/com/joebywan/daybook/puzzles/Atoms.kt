@@ -289,11 +289,6 @@ object Atoms : PuzzleType {
         )
     }
 
-    override fun reveal(state: PuzzleState): PuzzleState {
-        val s = state as AtomsState
-        return s.copy(counts = s.solution)
-    }
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as AtomsState

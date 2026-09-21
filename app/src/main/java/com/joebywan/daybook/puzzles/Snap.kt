@@ -194,7 +194,11 @@ object Snap : PuzzleType {
 
     // ---- play ---------------------------------------------------------------------------------
 
-    override fun hint(state: PuzzleState): PuzzleState? = null
+    /**
+     * The path is a single chain, so any tile a hint filled in would pin down the stretch either
+     * side of it — there is no small enough piece of the answer to give away.
+     */
+    override val offersHints = false
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {

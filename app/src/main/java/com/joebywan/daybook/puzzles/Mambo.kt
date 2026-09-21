@@ -239,11 +239,6 @@ object Mambo : PuzzleType {
         return s.withCell(blank, s.solution[blank])
     }
 
-    override fun reveal(state: PuzzleState): PuzzleState {
-        val s = state as MamboState
-        return s.copy(cells = s.solution)
-    }
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as MamboState

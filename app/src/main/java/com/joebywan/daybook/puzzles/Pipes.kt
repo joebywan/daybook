@@ -181,6 +181,12 @@ object Pipes : PuzzleType {
         return count == s.cells.size
     }
 
+    /**
+     * Every tile starts at a random rotation, so no single one can be settled on its own — the
+     * network only resolves once the board is read as a whole.
+     */
+    override val offersHints = false
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as PipesState

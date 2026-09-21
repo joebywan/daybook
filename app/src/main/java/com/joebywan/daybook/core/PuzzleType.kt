@@ -64,6 +64,6 @@ interface PuzzleType {
      */
     fun hint(state: PuzzleState): PuzzleState? = null
 
-    /** Fill in the full solution, for the "give up" path. Null if unsupported. */
-    fun reveal(state: PuzzleState): PuzzleState? = null
+    /** Whether this puzzle can offer a deducible next step. Drives whether the Hint button appears. */
+    val offersHints: Boolean get() = true
 }

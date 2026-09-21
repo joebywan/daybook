@@ -130,11 +130,6 @@ object Sets : PuzzleType {
         return s.copy(found = s.found + listOf(next), selected = emptyList(), moves = s.moves + 1)
     }
 
-    override fun reveal(state: PuzzleState): PuzzleState {
-        val s = state as SetsState
-        return s.copy(found = allSets(s.cards), selected = emptyList())
-    }
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as SetsState

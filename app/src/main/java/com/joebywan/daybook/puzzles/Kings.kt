@@ -229,13 +229,6 @@ object Kings : PuzzleType {
         )
     }
 
-    override fun reveal(state: PuzzleState): PuzzleState {
-        val s = state as KingsState
-        return s.copy(marks = s.marks.indices.map {
-            if (it in s.solution) Mark.KING else Mark.EMPTY
-        })
-    }
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as KingsState

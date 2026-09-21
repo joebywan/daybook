@@ -20,7 +20,7 @@ class GeneratorTest {
     private val seeds = (0 until 6).map { DailySeed.seedFor(LocalDate.of(2026, 3, 1).plusDays(it.toLong()), "x", Difficulty.STANDARD) }
 
     @Test
-    fun `every puzzle generates, is unsolved, and reveals to a solved board`() {
+    fun `every puzzle generates an unsolved board`() {
         for (puzzle in PuzzleRegistry.all) {
             for (difficulty in Difficulty.entries) {
                 for (seed in seeds) {
@@ -29,13 +29,6 @@ class GeneratorTest {
                         "${puzzle.id}/${difficulty.name}/$seed starts already solved",
                         state.solved,
                     )
-                    val revealed = puzzle.reveal(state)
-                    if (revealed != null) {
-                        assertTrue(
-                            "${puzzle.id}/${difficulty.name}/$seed does not reveal to a solved board",
-                            revealed.solved,
-                        )
-                    }
                 }
             }
         }

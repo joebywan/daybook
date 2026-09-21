@@ -404,11 +404,6 @@ object Lits : PuzzleType {
         return s.toggle(wrong)
     }
 
-    override fun reveal(state: PuzzleState): PuzzleState {
-        val s = state as LitsState
-        return s.copy(shaded = s.solution)
-    }
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as LitsState

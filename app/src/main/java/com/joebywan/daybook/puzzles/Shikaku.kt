@@ -229,11 +229,6 @@ object Shikaku : PuzzleType {
         return s.place(missing)
     }
 
-    override fun reveal(state: PuzzleState): PuzzleState {
-        val s = state as ShikakuState
-        return s.copy(blocks = s.solution)
-    }
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as ShikakuState

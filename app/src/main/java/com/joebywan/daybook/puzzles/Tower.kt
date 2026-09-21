@@ -125,11 +125,6 @@ object Tower : PuzzleType {
         return s.withPeg(slot, s.secret[slot])
     }
 
-    override fun reveal(state: PuzzleState): PuzzleState {
-        val s = state as TowerState
-        return s.copy(guesses = s.guesses + listOf(s.secret), current = List(s.slots) { -1 })
-    }
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as TowerState
