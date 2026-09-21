@@ -323,6 +323,17 @@ object Atoms : PuzzleType {
                 fun centre(atom: Atom) =
                     Offset((atom.col + 0.5f) * stepPx, (atom.row + 0.5f) * stepPx)
 
+                // The lattice the atoms stand on. Bonds run along these very lines, so the grid is
+                // drawn first and kept to a hairline at low alpha: heavy enough to answer "do these
+                // two line up?", far too faint to be mistaken for a bond.
+                val lattice = scheme.outline.copy(alpha = 0.40f)
+                val hair = maxOf(stepPx * 0.010f, 1f)
+                for (i in 0 until s.size) {
+                    val at = (i + 0.5f) * stepPx
+                    drawLine(lattice, Offset(at, 0f), Offset(at, size.height), strokeWidth = hair)
+                    drawLine(lattice, Offset(0f, at), Offset(size.width, at), strokeWidth = hair)
+                }
+
                 s.pairs.forEachIndexed { index, pair ->
                     val count = s.counts[index]
                     if (count == 0) return@forEachIndexed

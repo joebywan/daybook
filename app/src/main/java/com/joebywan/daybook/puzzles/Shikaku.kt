@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -235,6 +236,7 @@ object Shikaku : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as ShikakuState
         val scheme = MaterialTheme.colorScheme
+        val dark = scheme.background.luminance() < 0.5f
         var dragFrom by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
         var dragTo by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
 
@@ -307,14 +309,14 @@ object Shikaku : PuzzleType {
                 for (r in 0 until s.height) {
                     for (c in 0 until s.width) {
                         val i = r * s.width + c
-                        val owned = s.blockAt(r, c) != null
+                        val owner = s.blockAt(r, c)
                         Box(
                             Modifier
                                 .padding(start = cell * c, top = cell * r)
                                 .size(cell)
                                 .padding(0.7.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(if (owned) Color(accent).copy(alpha = 0.20f) else scheme.surfaceVariant),
+                                .background(owner?.fill(dark) ?: scheme.surfaceVariant),
                             contentAlignment = Alignment.Center,
                         ) {
                             s.clues[i]?.let { clue ->
@@ -329,19 +331,60 @@ object Shikaku : PuzzleType {
                     }
                 }
 
-                // Committed rectangles, then the one being dragged.
-                (s.blocks.map { it to Color(accent) } + listOfNotNull(preview?.let { it to scheme.primary }))
-                    .forEach { (block, colour) ->
-                        Box(
-                            Modifier
-                                .padding(start = cell * block.c0, top = cell * block.r0)
-                                .width(cell * (block.c1 - block.c0 + 1))
-                                .height(cell * (block.r1 - block.r0 + 1))
-                                .padding(1.dp)
-                                .border(2.dp, colour, RoundedCornerShape(4.dp))
-                        )
-                    }
+                // Each committed rectangle is outlined in its own hue, matching its fill.
+                s.blocks.forEach { block ->
+                    Box(
+                        Modifier
+                            .padding(start = cell * block.c0, top = cell * block.r0)
+                            .width(cell * (block.c1 - block.c0 + 1))
+                            .height(cell * (block.r1 - block.r0 + 1))
+                            .padding(1.dp)
+                            .border(2.dp, block.edge(dark), RoundedCornerShape(4.dp))
+                    )
+                }
+
+                // The drag is set apart on three counts at once — the theme's own green, a washed
+                // fill and a heavier edge — so a rectangle under the finger can never be read as
+                // one already placed.
+                preview?.let { block ->
+                    Box(
+                        Modifier
+                            .padding(start = cell * block.c0, top = cell * block.r0)
+                            .width(cell * (block.c1 - block.c0 + 1))
+                            .height(cell * (block.r1 - block.r0 + 1))
+                            .padding(1.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(scheme.primary.copy(alpha = 0.22f))
+                            .border(3.dp, scheme.primary, RoundedCornerShape(4.dp))
+                    )
+                }
             }
         }
     }
+
+    // ---- rectangle colours --------------------------------------------------------------------
+
+    /**
+     * Which of [HUES] a rectangle takes, keyed on its top-left corner.
+     *
+     * Keyed on the corner rather than on the rectangle's place in [ShikakuState.blocks], so that a
+     * rectangle holds its colour while its neighbours are drawn and torn up around it. The weights
+     * 1 and 3 over eight slots are chosen so two corners within three cells of one another can
+     * never share a slot, which covers every way two rectangles can meet at the sizes this
+     * generator produces.
+     *
+     * The wheel is rolled off zero so that the slots straddle the theme's green rather than one
+     * landing on it, leaving the drag preview a hue of its own.
+     */
+    private fun Block.hue(): Float = (r0 + c0 * 3).mod(HUES) * (360f / HUES) + 2.5f
+
+    /** Pale enough in either theme that the clue printed on top keeps its contrast. */
+    private fun Block.fill(dark: Boolean): Color =
+        if (dark) Color.hsl(hue(), 0.40f, 0.30f) else Color.hsl(hue(), 0.62f, 0.76f)
+
+    /** The same hue pushed away from the fill, so the seam between two rectangles stays a line. */
+    private fun Block.edge(dark: Boolean): Color =
+        if (dark) Color.hsl(hue(), 0.55f, 0.64f) else Color.hsl(hue(), 0.55f, 0.38f)
+
+    private const val HUES = 8
 }
