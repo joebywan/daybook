@@ -69,7 +69,7 @@ data class SavedGame(
     val seconds: Int = 0,
 ) {
     /**
-     * Keeps only the tail of the undo stack. Every entry is a whole board, so a Mosaic Expert game
+     * Keeps only the tail of the undo stack. Every entry is a whole board, so a Sudoku Expert game
      * a few hundred taps deep would run past half a megabyte — more than Android will carry in a
      * savedInstanceState Bundle, which is a crash rather than a lost undo. The live stack on the
      * play screen stays whole; it is only leaving the screen that costs the oldest steps.

@@ -194,7 +194,7 @@ object Mambo : PuzzleType {
      *
      * Every candidate removal is tested with [solvableByLogic] rather than a solution count: a
      * board can have exactly one answer and still offer no legal next move, which is what forced
-     * the owner to guess. Testing against propagation is the same bar Mosaic holds itself to.
+     * the owner to guess, and testing against propagation is what rules that out.
      *
      * Cell clues are offered for removal before links so the links — the part of the board that
      * makes it a Mambo rather than a plain Takuzu — survive to carry the deduction.

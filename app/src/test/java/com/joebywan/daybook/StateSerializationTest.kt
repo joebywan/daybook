@@ -85,7 +85,7 @@ class StateSerializationTest {
         is KingsState -> state.cycle(0).cycle(1)
         is LitsState -> state.toggle(0)
         is MamboState -> state.withCell(state.cells.indices.first { !state.givens[it] }, Sym.SUN)
-        is MosaicState -> state.cycle(0).cycle(1)
+        is MosaicState -> state.flood(0, (state.cells[0] + 1) % state.colours)
         is PipesState -> state.rotate(0)
         is SetsState -> state.copy(
             found = listOf(Sets.allSets(state.cards).first()),
