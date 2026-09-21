@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,7 @@ data class SetsState(
     val found: List<List<Int>>,
     val selected: List<Int>,
     val lastWrong: Boolean = false,
+    val lastRepeat: Boolean = false,
     override val moves: Int = 0,
 ) : PuzzleState {
     override val solved: Boolean get() = found.size == target
@@ -57,8 +59,14 @@ data class SetsState(
 /**
  * Sets — the card game SET.
  *
+ * The target counts *every* set the board contains, and sets on a board overlap: any two cards
+ * determine their third, so one card routinely sits in several sets at once. Spotting those shared
+ * cards is the puzzle. Cards are therefore never used up — claiming a set marks its cards but
+ * leaves them tappable, because retiring them would cap a player at ⌊cards / 3⌋ claims and put
+ * every richer target permanently out of reach.
+ *
  * Boards are rejection-sampled until they contain exactly the intended number of sets, so the
- * target count shown to the player is always achievable and never an over-count.
+ * target shown is always both complete and reachable.
  */
 object Sets : PuzzleType {
 
@@ -70,31 +78,54 @@ object Sets : PuzzleType {
         "Each card has a count, a shape, a shading and a colour.",
         "Three cards form a set when, for every one of those four traits, they are either all the same or all different.",
         "Tap three cards to claim a set. Find them all to finish.",
+        "Cards are never used up — a tinted card is one you have already used, and it is still in play.",
     )
 
     private val colours = listOf(0xFFD9584C, 0xFF4C86D9, 0xFF54B07A)
 
+    private const val DRAWS = 4000
+
+    /**
+     * Board size and set count, per tier.
+     *
+     * Two axes decide how hard a board plays, and both have to climb or the ladder inverts — which
+     * is how Expert once shipped easier than Standard. The first is how many triples must be
+     * examined before you can be sure nothing is left: C(9,3) = 84, C(12,3) = 220. The second is
+     * how many discoveries the tier asks for. Twelve cards is the ceiling — the board lays out
+     * three to a row in a pane that does not scroll, so a fifth row would be cut off — so Expert
+     * climbs the second axis where Hard has already maxed the first.
+     */
     private fun shape(difficulty: Difficulty) = when (difficulty) {
-        Difficulty.STANDARD -> 9 to 4
-        Difficulty.HARD -> 12 to 5
-        Difficulty.EXPERT -> 12 to 3
+        Difficulty.STANDARD -> 9 to 3   //  84 triples to scan, 3 sets to find
+        Difficulty.HARD -> 12 to 4      // 220 triples to scan, 4 sets to find
+        Difficulty.EXPERT -> 12 to 6    // 220 triples to scan, 6 sets to find
     }
+
+    /**
+     * Two sets can share a card but never a pair, since any two cards fix their third uniquely. So
+     * each set spends three of the board's C(n,2) pairs outright, and this bound is exact at n = 9.
+     * It turns an unsatisfiable target into a failure on the first call rather than 4000 futile
+     * draws followed by a board that quietly disagrees with the number on screen.
+     */
+    fun maxSets(cards: Int) = cards * (cards - 1) / 2 / 3
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (size, wanted) = shape(difficulty)
-        var rng = Rng(seed)
+        require(wanted in 1..maxSets(size)) {
+            "$difficulty wants $wanted sets from $size cards, which hold at most ${maxSets(size)}"
+        }
         val deck = buildList {
             for (a in 0..2) for (b in 0..2) for (c in 0..2) for (d in 0..2) add(Card(a, b, c, d))
         }
 
-        var board = rng.shuffled(deck).take(size)
-        var attempts = 0
-        while (allSets(board).size != wanted && attempts < 4000) {
-            rng = Rng(seed + attempts + 1)
-            board = rng.shuffled(deck).take(size)
-            attempts++
+        for (draw in 0..DRAWS) {
+            val board = Rng(if (draw == 0) seed else seed + draw).shuffled(deck).take(size)
+            val sets = allSets(board)
+            if (sets.size == wanted) return SetsState(board, sets.size, emptyList(), emptyList())
         }
-        return SetsState(board, allSets(board).size, emptyList(), emptyList())
+        // Falling through with whatever was drawn last is what shipped the unwinnable board: the
+        // target silently became "however many this one happens to have" instead of the tier's.
+        error("no $size-card board holds exactly $wanted sets after $DRAWS draws ($difficulty)")
     }
 
     fun isSet(a: Card, b: Card, c: Card): Boolean =
@@ -109,38 +140,61 @@ object Sets : PuzzleType {
         }
     }
 
-    private fun tap(s: SetsState, index: Int): SetsState {
-        if (s.found.any { index in it }) return s
-        if (index in s.selected) {
-            return s.copy(selected = s.selected - index, lastWrong = false, moves = s.moves + 1)
-        }
+    /**
+     * Public so the rules can be played, not just inspected, from a test — the board's target is
+     * only meaningful if tapping actually reaches it.
+     *
+     * A card already used in a found set is deliberately still tappable; only the *trio* is spent.
+     * Re-offering a trio already claimed is a misread rather than a mistake, so it clears the
+     * selection without the wrong-answer flash.
+     */
+    fun tap(s: SetsState, index: Int): SetsState {
+        val stepped = s.copy(lastWrong = false, lastRepeat = false, moves = s.moves + 1)
+        if (index in s.selected) return stepped.copy(selected = s.selected - index)
+
         val picked = s.selected + index
-        if (picked.size < 3) return s.copy(selected = picked, lastWrong = false, moves = s.moves + 1)
+        if (picked.size < 3) return stepped.copy(selected = picked)
 
         val (a, b, c) = picked
         val trio = picked.sorted()
-        return if (isSet(s.cards[a], s.cards[b], s.cards[c]) && trio !in s.found) {
-            s.copy(found = s.found + listOf(trio), selected = emptyList(), lastWrong = false, moves = s.moves + 1)
-        } else {
-            s.copy(selected = emptyList(), lastWrong = true, moves = s.moves + 1)
+        return when {
+            !isSet(s.cards[a], s.cards[b], s.cards[c]) ->
+                stepped.copy(selected = emptyList(), lastWrong = true)
+            trio in s.found ->
+                stepped.copy(selected = emptyList(), lastRepeat = true)
+            else ->
+                stepped.copy(found = s.found + listOf(trio), selected = emptyList())
         }
     }
 
     override fun hint(state: PuzzleState): PuzzleState? {
         val s = state as SetsState
         val next = allSets(s.cards).firstOrNull { it !in s.found } ?: return null
-        return s.copy(found = s.found + listOf(next), selected = emptyList(), moves = s.moves + 1)
+        return s.copy(
+            found = s.found + listOf(next),
+            selected = emptyList(),
+            lastWrong = false,
+            lastRepeat = false,
+            moves = s.moves + 1,
+        )
     }
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as SetsState
         val scheme = MaterialTheme.colorScheme
-        val claimed = s.found.flatten().toSet()
+        val used = s.found.flatten().toSet()
+        // Used cards get a wash and a hairline rather than the grey-out a spent card would earn:
+        // they are still live, and the tint is only there to show where the found sets already run.
+        val usedTint = Color(accent).copy(alpha = 0.14f).compositeOver(scheme.surface)
 
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Text(
-                "${s.found.size} of ${s.target} sets found" + if (s.lastWrong) "   ·   not a set" else "",
+                "${s.found.size} of ${s.target} sets found" + when {
+                    s.lastWrong -> "   ·   not a set"
+                    s.lastRepeat -> "   ·   already found"
+                    else -> ""
+                },
                 style = MaterialTheme.typography.labelLarge,
                 color = if (s.lastWrong) scheme.error else scheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 10.dp),
@@ -153,24 +207,26 @@ object Sets : PuzzleType {
                     row.forEachIndexed { colIndex, card ->
                         val index = rowIndex * 3 + colIndex
                         val isSelected = index in s.selected
-                        val isClaimed = index in claimed
+                        val isUsed = index in used
                         Box(
                             Modifier
                                 .weight(1f)
                                 .aspectRatio(0.78f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isClaimed) scheme.surfaceVariant else scheme.surface)
+                                .background(if (isUsed) usedTint else scheme.surface)
                                 .border(
-                                    if (isSelected) 2.5.dp else 0.dp,
-                                    Color(accent),
+                                    when {
+                                        isSelected -> 2.5.dp
+                                        isUsed -> 1.dp
+                                        else -> 0.dp
+                                    },
+                                    Color(accent).copy(alpha = if (isSelected) 1f else 0.45f),
                                     RoundedCornerShape(12.dp),
                                 )
-                                .clickable(enabled = interactive && !isClaimed) {
-                                    onState(tap(s, index))
-                                },
+                                .clickable(enabled = interactive) { onState(tap(s, index)) },
                             contentAlignment = Alignment.Center,
                         ) {
-                            CardFace(card, dimmed = isClaimed)
+                            CardFace(card)
                         }
                     }
                 }
@@ -179,8 +235,8 @@ object Sets : PuzzleType {
     }
 
     @Composable
-    private fun CardFace(card: Card, dimmed: Boolean) {
-        val colour = Color(colours[card.colour]).copy(alpha = if (dimmed) 0.25f else 1f)
+    private fun CardFace(card: Card) {
+        val colour = Color(colours[card.colour])
         Canvas(Modifier.fillMaxSize().padding(10.dp)) {
             val slots = card.count + 1
             val slotHeight = size.height / 3f
