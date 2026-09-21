@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,9 +60,12 @@ fun HomeScreen(
         .toSet()
 
     LazyColumn(
-        Modifier.fillMaxSize().background(scheme.background),
+        Modifier
+            .fillMaxSize()
+            .background(scheme.background)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            start = 18.dp, end = 18.dp, top = 56.dp, bottom = 32.dp,
+            start = 18.dp, end = 18.dp, top = 16.dp, bottom = 32.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {

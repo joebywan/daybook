@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -42,9 +45,14 @@ fun StatsScreen(
 ) {
     val scheme = MaterialTheme.colorScheme
 
-    Column(Modifier.fillMaxSize().background(scheme.background)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(scheme.background)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+    ) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 8.dp, top = 48.dp, bottom = 8.dp),
+            Modifier.fillMaxWidth().padding(start = 8.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
