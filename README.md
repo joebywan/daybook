@@ -126,6 +126,56 @@ GitHub secrets are write-only. The keystore and its password live outside the re
 `~/Documents/github/Claude/daybook-android-signing/` (0700, files 0600) and that is the only
 readable copy. Losing it means every installed copy must be uninstalled to update.
 
+## Publishing to Google Play
+
+Every release already builds and attaches a signed `.aab` alongside the `.apk`. Once Play is set
+up, `.github/workflows/publish-play.yml` uploads that bundle to the **internal testing** track
+automatically whenever a GitHub Release is published. Until the `PLAY_SERVICE_ACCOUNT_JSON` secret
+exists the workflow logs a notice and does nothing, so it is safe sitting here unconfigured.
+
+### Get the signing decision right first
+
+Play App Signing is mandatory for new apps: Google holds the key that signs what users actually
+download, and you sign uploads with an *upload key*. When you create the app you choose where
+Google's copy comes from, and the choice is effectively permanent:
+
+- **Upload the existing `daybook-release.jks` as the app signing key** (Play Console offers
+  "export and upload a key from a Java keystore", using Google's PEPK tool). Play-delivered builds
+  then carry the same certificate as the sideloaded ones, so a sideloaded install upgrades to a
+  Play install in place. **This is the one to pick** given in-place updates are the whole point of
+  the signing setup here.
+- **Let Google generate a fresh app signing key.** Simpler, but Play builds then have a different
+  certificate from the sideloaded APKs, so any device already carrying a sideloaded Daybook has to
+  uninstall — losing its streaks and statistics — before it can install from Play.
+
+### The steps only a human can do
+
+1. **Play Console → Create app.** Name, default language, "App", free.
+2. **Set up app signing** and upload `~/Documents/github/Claude/daybook-android-signing/daybook-release.jks`
+   as the app signing key, per the choice above. Alias `daybook`; the store and key passwords are
+   the same string, in `keystore-password.txt` (no trailing newline).
+3. **Fill in the declarations:** privacy policy URL, data safety, content rating, target audience,
+   ads (none). [`PRIVACY.md`](PRIVACY.md) is written for this — its rendered GitHub URL works as
+   the policy link, and the data safety answers are all "no data collected", which is true: the app
+   declares no `INTERNET` permission.
+4. **Upload one bundle by hand** to internal testing. Play will not accept API uploads for an app
+   that has never had a release created in the console.
+5. **Make a service account:** Google Cloud Console → IAM → Service Accounts → create → create a
+   JSON key. Then Play Console → Users and permissions → invite that service account's email →
+   grant *View app information* and *Release to testing tracks*.
+6. **Add the JSON** as the `PLAY_SERVICE_ACCOUNT_JSON` repository secret.
+
+From then on it is automatic. `workflow_dispatch` on that workflow also lets you push an existing
+release to `alpha`, `beta` or `production` by hand.
+
+### A note on the bundle check
+
+`tools/verify-aab.sh` fails an unsigned bundle but does **not** pin its fingerprint, unlike the APK
+check. With Play App Signing the bundle carries the upload key, which is allowed to differ from the
+app signing key and may be rotated. Worth knowing: an unsigned bundle is still called
+`app-release.aab`, with no `-unsigned` in the name to give it away, which is why that check looks
+inside for a signature block rather than trusting the filename.
+
 ## Dependency updates
 
 Renovate runs weekly from `.github/workflows/renovate.yml`, self-hosted so it needs no GitHub App
@@ -141,4 +191,4 @@ run on them — at which point automerge can safely be widened to minor updates.
 - Pencil marks / candidate notes in Sudoku
 - Per-puzzle "give up and reveal" is implemented on the type but not wired to a button
 - No app icon beyond a placeholder vector
-- No Play Store listing; releases are sideloaded APKs from the Releases page
+- Play Store listing not yet created — see "Publishing to Google Play" above

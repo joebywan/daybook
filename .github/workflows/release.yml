@@ -67,23 +67,39 @@ jobs:
           DAYBOOK_VERSION_NAME: ${{ steps.version.outputs.name }}
         run: ./gradlew assembleRelease -PrequireSigning=true
 
-      - name: Verify the artifact before publishing
-        run: ./tools/verify-apk.sh app/build/outputs/apk/release/app-release.apk
+      # Play distributes bundles, not APKs, so both are built from the same signed inputs: the
+      # APK is what gets sideloaded from the Release page, the AAB is what goes to Play.
+      - name: Build signed bundle
+        env:
+          DAYBOOK_KEYSTORE: ${{ runner.temp }}/release.jks
+          DAYBOOK_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          DAYBOOK_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          DAYBOOK_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          DAYBOOK_VERSION_CODE: ${{ steps.version.outputs.code }}
+          DAYBOOK_VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: ./gradlew bundleRelease -PrequireSigning=true
 
-      - name: Name the artifact
+      - name: Verify the artifacts before publishing
+        run: |
+          ./tools/verify-apk.sh app/build/outputs/apk/release/app-release.apk
+          ./tools/verify-aab.sh app/build/outputs/bundle/release/app-release.aab
+
+      - name: Name the artifacts
         id: artifact
         run: |
-          SRC=app/build/outputs/apk/release/app-release.apk
-          DEST="daybook-${{ steps.version.outputs.name }}.apk"
-          cp "$SRC" "$DEST"
-          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+          NAME="daybook-${{ steps.version.outputs.name }}"
+          cp app/build/outputs/apk/release/app-release.apk "$NAME.apk"
+          cp app/build/outputs/bundle/release/app-release.aab "$NAME.aab"
+          echo "apk=$NAME.apk" >> "$GITHUB_OUTPUT"
+          echo "aab=$NAME.aab" >> "$GITHUB_OUTPUT"
 
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v${{ steps.version.outputs.name }}" \
-            "${{ steps.artifact.outputs.path }}" \
+            "${{ steps.artifact.outputs.apk }}" \
+            "${{ steps.artifact.outputs.aab }}" \
             --title "Daybook ${{ steps.version.outputs.name }}" \
             --generate-notes
 
