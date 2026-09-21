@@ -26,10 +26,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class SudokuState(
     val givens: List<Boolean>,
     val cells: List<Int>,
@@ -179,11 +180,6 @@ object Sudoku : PuzzleType {
         if (wrong != null) return s.withCell(wrong, s.solution[wrong])
         val blank = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
         return s.withCell(blank, s.solution[blank])
-    }
-
-    override fun reveal(state: PuzzleState): PuzzleState {
-        val s = state as SudokuState
-        return s.copy(cells = s.solution)
     }
 
     @Composable

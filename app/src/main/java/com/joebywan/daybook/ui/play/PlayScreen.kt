@@ -34,11 +34,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,15 +48,30 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.data.SavedGame
+import com.joebywan.daybook.puzzles.PuzzleState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 private val PlayDate = DateTimeFormatter.ofPattern("d MMM yyyy")
+
+/** Long enough that holding down a Sudoku digit is one write rather than a dozen. */
+private const val SAVE_DEBOUNCE_MS = 500L
+
+/**
+ * Rotation goes through the same JSON as the on-disk store: one format to get right, and a board
+ * that survives a turn of the phone is proof the stored one will load too.
+ */
+private val SavedGameSaver = Saver<SavedGame, String>(
+    save = { it.encode() },
+    restore = SavedGame::decode,
+)
 
 @Composable
 fun PlayScreen(
@@ -62,6 +79,8 @@ fun PlayScreen(
     difficulty: Difficulty,
     day: LocalDate?,
     seed: Long,
+    restore: suspend () -> SavedGame?,
+    persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
     onAgain: () -> Unit,
     onBack: () -> Unit,
@@ -76,7 +95,7 @@ fun PlayScreen(
     if (ready == null) {
         DealingBoard(puzzle, onBack)
     } else {
-        PlayBoard(puzzle, difficulty, day, ready, onSolved, onAgain, onBack)
+        PlayBoard(puzzle, difficulty, day, ready, restore, persist, onSolved, onAgain, onBack)
     }
 }
 
@@ -111,36 +130,81 @@ private fun PlayBoard(
     difficulty: Difficulty,
     day: LocalDate?,
     initial: PuzzleState,
+    restore: suspend () -> SavedGame?,
+    persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
     onAgain: () -> Unit,
     onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
 
-    var state by remember(initial) { mutableStateOf(initial) }
-    var history by remember(initial) { mutableStateOf(listOf<PuzzleState>()) }
-    var hints by remember(initial) { mutableIntStateOf(0) }
-    var seconds by remember(initial) { mutableIntStateOf(0) }
+    val pristine = remember(initial) { SavedGame(initial) }
+    var game by rememberSaveable(initial, stateSaver = SavedGameSaver) { mutableStateOf(pristine) }
+    // Saved alongside the game: without it, rotating a finished board would record the win twice.
+    var recorded by rememberSaveable(initial) { mutableStateOf(false) }
+    // Set as soon as the store has been asked, and itself saved, so the answer that arrived before
+    // the rotation is not thrown away by a second lookup afterwards.
+    var consulted by rememberSaveable(initial) { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
-    var recorded by remember(initial) { mutableStateOf(false) }
+
+    val state = game.state
+    val seconds = game.seconds
+
+    // Reads `game` rather than the values unpacked above: this runs from effects that outlive the
+    // composition that started them, where those locals would be frozen at their first value.
+    suspend fun flush() {
+        val current = game
+        when {
+            // A finished board must never come back as "in progress".
+            current.state.solved -> persist(null)
+            // Opened and never touched. Nothing to record, and nothing of anyone's to clear.
+            current == pristine -> Unit
+            // Restarted, or only ever selected a cell: no longer a game in progress.
+            current.state.moves == 0 -> persist(null)
+            else -> persist(current)
+        }
+    }
+
+    LaunchedEffect(initial) {
+        if (consulted) return@LaunchedEffect
+        val stored = restore()
+        // Reading the store takes a moment; a tap that landed in the meantime outranks it.
+        if (stored != null && game == pristine) game = stored
+        consulted = true
+    }
 
     LaunchedEffect(initial) {
         while (true) {
             delay(1000)
-            if (!state.solved) seconds++
+            if (!game.state.solved) game = game.copy(seconds = game.seconds + 1)
+        }
+    }
+
+    // Deliberately watches the board and not the clock: ticking the seconds is not progress worth
+    // a write, so a game abandoned without touching it keeps the time it had at the last move.
+    LaunchedEffect(initial) {
+        try {
+            snapshotFlow { game.state }.collectLatest {
+                delay(SAVE_DEBOUNCE_MS)
+                flush()
+            }
+        } finally {
+            // The screen is going away, possibly with the process; the write has to outlive it.
+            withContext(NonCancellable) { flush() }
         }
     }
 
     LaunchedEffect(state.solved) {
         if (state.solved && !recorded) {
             recorded = true
-            onSolved(seconds, hints)
+            onSolved(seconds, game.hints)
         }
     }
 
+    // Reads through `game` rather than the unpacked locals so that two taps landing in the same
+    // frame stack up properly instead of pushing the same board twice.
     fun push(next: PuzzleState) {
-        history = history + state
-        state = next
+        game = game.copy(state = next, history = game.history + game.state)
     }
 
     Column(
@@ -192,7 +256,7 @@ private fun PlayBoard(
         if (state.solved) {
             SolvedBar(
                 seconds = seconds,
-                hints = hints,
+                hints = game.hints,
                 accent = Color(puzzle.accent),
                 onAgain = onAgain,
                 onBack = onBack,
@@ -203,19 +267,19 @@ private fun PlayBoard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 ToolButton(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.weight(1f)) {
-                    history.lastOrNull()?.let {
-                        state = it
-                        history = history.dropLast(1)
+                    game.history.lastOrNull()?.let {
+                        game = game.copy(state = it, history = game.history.dropLast(1))
                     }
                 }
                 ToolButton(Icons.Default.Refresh, "Restart", Modifier.weight(1f)) {
-                    history = emptyList()
-                    state = initial
+                    game = game.copy(state = initial, history = emptyList())
                 }
-                ToolButton(Icons.Default.AutoAwesome, "Hint", Modifier.weight(1f)) {
-                    puzzle.hint(state)?.let {
-                        hints++
-                        push(it)
+                if (puzzle.offersHints) {
+                    ToolButton(Icons.Default.AutoAwesome, "Hint", Modifier.weight(1f)) {
+                        puzzle.hint(state)?.let {
+                            game = game.copy(hints = game.hints + 1)
+                            push(it)
+                        }
                     }
                 }
             }

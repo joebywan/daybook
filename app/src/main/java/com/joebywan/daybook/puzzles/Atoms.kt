@@ -22,16 +22,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
 /** An atom sits on a lattice point and needs exactly [bonds] bond-ends. */
+@Serializable
 data class Atom(val row: Int, val col: Int, val bonds: Int)
 
 /** A possible bond line between two atoms that face each other with nothing in between. */
+@Serializable
 data class Pair2(val a: Int, val b: Int, val horizontal: Boolean)
 
+@Serializable
 data class AtomsState(
     val size: Int,
     val atoms: List<Atom>,
@@ -289,11 +292,6 @@ object Atoms : PuzzleType {
         )
     }
 
-    override fun reveal(state: PuzzleState): PuzzleState {
-        val s = state as AtomsState
-        return s.copy(counts = s.solution)
-    }
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as AtomsState
@@ -324,6 +322,17 @@ object Atoms : PuzzleType {
             ) {
                 fun centre(atom: Atom) =
                     Offset((atom.col + 0.5f) * stepPx, (atom.row + 0.5f) * stepPx)
+
+                // The lattice the atoms stand on. Bonds run along these very lines, so the grid is
+                // drawn first and kept to a hairline at low alpha: heavy enough to answer "do these
+                // two line up?", far too faint to be mistaken for a bond.
+                val lattice = scheme.outline.copy(alpha = 0.40f)
+                val hair = maxOf(stepPx * 0.010f, 1f)
+                for (i in 0 until s.size) {
+                    val at = (i + 0.5f) * stepPx
+                    drawLine(lattice, Offset(at, 0f), Offset(at, size.height), strokeWidth = hair)
+                    drawLine(lattice, Offset(0f, at), Offset(size.width, at), strokeWidth = hair)
+                }
 
                 s.pairs.forEachIndexed { index, pair ->
                     val count = s.counts[index]

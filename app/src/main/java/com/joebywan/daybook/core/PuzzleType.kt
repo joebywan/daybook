@@ -1,28 +1,16 @@
 package com.joebywan.daybook.core
 
 import androidx.compose.runtime.Composable
-
-/**
- * A single in-progress puzzle. Implementations are immutable data classes: every interaction
- * returns a *new* state, which is what makes undo, hints and "show solution" fall out for free.
- */
-interface PuzzleState {
-    /** True once the board satisfies the puzzle's win condition. */
-    val solved: Boolean
-
-    /** Interactions so far. Shown on the results card and used for scoring. */
-    val moves: Int
-
-    /** Some puzzles (Tower) can be lost outright. Most never are. */
-    val failed: Boolean get() = false
-}
+import com.joebywan.daybook.puzzles.PuzzleState
 
 /**
  * One puzzle genre.
  *
  * ## Adding a puzzle
- * 1. Drop a file in `puzzles/` with a state class implementing [PuzzleState] and an object
- *    implementing [PuzzleType].
+ * 1. Drop a file in `puzzles/` with a `@Serializable` state class implementing [PuzzleState]
+ *    and an object implementing [PuzzleType]. The state class has to be in the `puzzles` package
+ *    itself: [PuzzleState] is sealed so that saved games serialize without a registry, and Kotlin
+ *    only allows implementations of a sealed type in its own package.
  * 2. Add that object to [PuzzleRegistry.all].
  *
  * That is the whole contract — the home screen, daily rotation, archive, streaks, stats, hints and
@@ -64,6 +52,6 @@ interface PuzzleType {
      */
     fun hint(state: PuzzleState): PuzzleState? = null
 
-    /** Fill in the full solution, for the "give up" path. Null if unsupported. */
-    fun reveal(state: PuzzleState): PuzzleState? = null
+    /** Whether this puzzle can offer a deducible next step. Drives whether the Hint button appears. */
+    val offersHints: Boolean get() = true
 }
