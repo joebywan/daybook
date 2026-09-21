@@ -106,10 +106,57 @@ object Tower : PuzzleType {
         0xFF9B6FD0, 0xFF48B9C4, 0xFFD97FB0, 0xFF9A8264,
     )
 
+    /**
+     * Board shape per tier as `(slots, colours, maxGuesses)`.
+     *
+     * The budget used to *fall* as the board grew — 10/10/9 over code spaces of 1,296 / 16,807 /
+     * 32,768 — so Expert handed you a 25x larger search than Standard and one fewer try to crack
+     * it. These numbers are picked so the budget rises with the difficulty, and so each tier is
+     * winnable by a person rather than only by a solver.
+     *
+     * Why these, tier by tier:
+     *
+     * | tier     | shape | code space | outcomes | floor | budget |
+     * |----------|-------|-----------:|---------:|------:|-------:|
+     * | STANDARD | 4x5   |        625 |       14 |     3 |     10 |
+     * | HARD     | 5x6   |      7,776 |       20 |     3 |     12 |
+     * | EXPERT   | 5x8   |     32,768 |       20 |     4 |     14 |
+     *
+     * "Outcomes" is the number of distinct (exact, misplaced) replies a guess can draw — every
+     * pair summing to at most `slots`, less the impossible one where `slots - 1` pegs are exact
+     * and the last is misplaced. "Floor" is the information-theoretic bound, `log(space) /
+     * log(outcomes)`: no strategy of any kind can average fewer guesses than that. It is a floor,
+     * not a target. Nobody reaches it, so it only tells us where the budget must not go.
+     *
+     * The useful bound is empirical, and it comes in two flavours (both measured, see
+     * `TowerBalanceTest`):
+     *
+     * - A perfect *consistent* solver — one that tracks every prior reply and guesses only codes
+     *   still possible — needs up to 7 guesses on 4x5, 8 on 5x6 and 9 on 5x8. Knuth's minimax
+     *   result of five guesses for 4x6 is not the relevant number here: it assumes an exhaustive
+     *   search over all codes at every turn, which is not what a person on a phone is doing.
+     * - A player has bounded working memory. Modelled as a solver that only filters against its
+     *   most recent few replies, 95% of games finish within 7 (4x5), 11 (5x6) and 19 (5x8) when
+     *   three replies are held in mind, or 5 / 7 / 11 when four are.
+     *
+     * So each budget clears the perfect solver's worst case by three to five spare guesses, and
+     * covers the bounded-memory player around the 95th percentile. Expert deliberately stops short
+     * of covering a sloppy player's tail — it is meant to be beatable, not free.
+     *
+     * Standard dropped from six colours to five. Six was the entry point purely because that is
+     * what the boxed game uses; at 1,296 codes it was landing the same ~4.6-guess average as Hard,
+     * which is not what a warm-up tier should feel like. Five colours halves the space and the
+     * board still plays as Mastermind rather than a toy.
+     *
+     * Colour counts are capped at [palette]'s eight entries, which is also the practical ceiling
+     * for the swatch `Row` on the board: eight swatches share the row's width evenly, leaving
+     * roughly 35dp each on a 360dp-wide phone. Any more and they stop being comfortably tappable,
+     * so a ninth colour needs a layout change, not just a longer palette.
+     */
     private fun shape(difficulty: Difficulty) = when (difficulty) {
-        Difficulty.STANDARD -> Triple(4, 6, 10)
-        Difficulty.HARD -> Triple(5, 7, 10)
-        Difficulty.EXPERT -> Triple(5, 8, 9)
+        Difficulty.STANDARD -> Triple(4, 5, 10)
+        Difficulty.HARD -> Triple(5, 6, 12)
+        Difficulty.EXPERT -> Triple(5, 8, 14)
     }
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
