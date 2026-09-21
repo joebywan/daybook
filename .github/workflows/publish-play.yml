@@ -1,0 +1,67 @@
+name: Publish to Google Play
+
+# Runs after a GitHub Release is published, and uploads that release's bundle to Play's internal
+# testing track. It is a no-op until PLAY_SERVICE_ACCOUNT_JSON exists, so it can sit here safely
+# before the Play Console side is set up.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to upload (defaults to the latest)'
+        required: false
+      track:
+        description: 'Play track'
+        required: false
+        default: internal
+        type: choice
+        options: [internal, alpha, beta, production]
+
+concurrency:
+  group: publish-play
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      # The secrets context is not usable in a job-level `if`, so the gate is a step.
+      - name: Is Play configured?
+        id: gate
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_JSON" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::PLAY_SERVICE_ACCOUNT_JSON is not set — skipping the Play upload. See README, 'Publishing to Google Play'."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.configured == 'true'
+
+      - name: Fetch the bundle from the release
+        if: steps.gate.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          mkdir -p play
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir play --pattern '*.aab'
+          ls -la play
+          test -n "$(ls -1 play/*.aab 2>/dev/null)" || { echo "::error::no .aab on release $TAG"; exit 1; }
+
+      - name: Upload to Play
+        if: steps.gate.outputs.configured == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.joebywan.daybook
+          releaseFiles: play/*.aab
+          track: ${{ inputs.track || 'internal' }}
+          status: completed
