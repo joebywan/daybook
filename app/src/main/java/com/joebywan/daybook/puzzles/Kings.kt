@@ -1,7 +1,9 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,14 +13,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
@@ -64,6 +73,71 @@ data class KingsState(
         }
         return copy(marks = marks.toMutableList().also { it[index] = next }, moves = moves + 1)
     }
+
+    /** Every cell a king on [index] rules out, the square it stands on included. */
+    fun eliminatedBy(index: Int): Set<Int> {
+        val r = index / size
+        val c = index % size
+        val out = mutableSetOf<Int>()
+        for (k in 0 until size) {
+            out += r * size + k
+            out += k * size + c
+        }
+        marks.indices.filterTo(out) { region[it] == region[index] }
+        for (dr in -1..1) for (dc in -1..1) {
+            val nr = r + dr
+            val nc = c + dc
+            if (nr in 0 until size && nc in 0 until size) out += nr * size + nc
+        }
+        return out
+    }
+
+    /**
+     * Derived from the kings on the board rather than written into [marks] on placement: stored
+     * auto-marks would have to be unpicked when a king moves, and telling them apart from the
+     * player's own pencilling — two kings can rule out the same square — is bookkeeping that goes
+     * wrong the first time someone undoes. Recomputing costs a few hundred set inserts per frame
+     * and keeps undo, restart and hints correct for free.
+     *
+     * Cells holding kings are excluded: a king is not a ruled-out square, it is the answer.
+     */
+    fun eliminated(): Set<Int> {
+        val kings = marks.indices.filter { marks[it] == Mark.KING }
+        if (kings.isEmpty()) return emptySet()
+        val out = mutableSetOf<Int>()
+        kings.forEach { out += eliminatedBy(it) }
+        return out - kings.toSet()
+    }
+
+    /**
+     * The mark a sweep starting on [index] lays down, or null when the gesture should paint
+     * nothing. A drag repeats one decision taken at its start; cycling each cell as the finger
+     * crossed it would leave a trail nobody could predict.
+     */
+    fun sweepMark(index: Int): Mark? = when (marks[index]) {
+        Mark.EMPTY -> Mark.BLOCKED
+        Mark.BLOCKED -> Mark.EMPTY
+        // Kings are placed deliberately; a sweep that began on one is almost certainly a stray
+        // finger rather than a request to clear the board's most expensive decision.
+        Mark.KING -> null
+    }
+
+    /**
+     * Applies one mark to a whole swept run in a single state. The screen pushes an undo entry per
+     * emission, so streaming a state per cell would cost a dozen taps on Undo to walk back one
+     * gesture. Kings in the path are stepped over rather than overwritten.
+     */
+    fun paint(cells: Collection<Int>, mark: Mark): KingsState {
+        val next = marks.toMutableList()
+        var changed = 0
+        for (i in cells) {
+            if (next[i] == Mark.KING || next[i] == mark) continue
+            next[i] = mark
+            changed++
+        }
+        // A sweep stands in for the taps it replaced, so it scores as that many moves.
+        return if (changed == 0) this else copy(marks = next, moves = moves + changed)
+    }
 }
 
 /**
@@ -82,6 +156,8 @@ object Kings : PuzzleType {
         "Place exactly one king in every row, every column and every coloured region.",
         "No two kings may touch, not even diagonally.",
         "Tap once to pencil in a blocked square, twice for a king, three times to clear.",
+        "Drag across a run of squares to mark them all in one sweep.",
+        "Faint dots appear on squares a king already rules out.",
     )
 
     private val regionColours = listOf(
@@ -236,13 +312,65 @@ object Kings : PuzzleType {
         val s = state as KingsState
         val scheme = MaterialTheme.colorScheme
         val conflicts = s.conflicts()
+        val eliminated = s.eliminated()
+
+        // The sweep in progress. Held here rather than in the board state so that the gesture can
+        // be drawn as it happens while still emitting exactly one state — and one undo entry —
+        // when the finger lifts.
+        var sweeping by remember(s.solution) { mutableStateOf<Mark?>(null) }
+        var swept by remember(s.solution) { mutableStateOf(emptySet<Int>()) }
+        val sweepMark = sweeping
 
         BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp)) {
             val cell = maxWidth / s.size
-            Box(Modifier.size(maxWidth)) {
+            val cellPx = with(LocalDensity.current) { cell.toPx() }
+
+            fun cellAt(offset: Offset): Int {
+                val r = (offset.y / cellPx).toInt().coerceIn(0, s.size - 1)
+                val c = (offset.x / cellPx).toInt().coerceIn(0, s.size - 1)
+                return r * s.size + c
+            }
+
+            // Tap and drag are read on the grid as a whole: per-cell `clickable` boxes only ever
+            // see the cell the finger went down on, which is the one thing a sweep is not about.
+            Box(
+                Modifier
+                    .size(maxWidth)
+                    .pointerInput(s, interactive) {
+                        if (!interactive) return@pointerInput
+                        detectTapGestures { offset -> onState(s.cycle(cellAt(offset))) }
+                    }
+                    .pointerInput(s, interactive) {
+                        if (!interactive) return@pointerInput
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val start = cellAt(offset)
+                                sweeping = s.sweepMark(start)
+                                swept = if (sweeping == null) emptySet() else setOf(start)
+                            },
+                            onDrag = { change, _ ->
+                                if (sweeping != null) swept = swept + cellAt(change.position)
+                            },
+                            onDragEnd = {
+                                val mark = sweeping
+                                if (mark != null && swept.isNotEmpty()) onState(s.paint(swept, mark))
+                                sweeping = null
+                                swept = emptySet()
+                            },
+                            onDragCancel = {
+                                sweeping = null
+                                swept = emptySet()
+                            },
+                        )
+                    }
+            ) {
                 for (r in 0 until s.size) {
                     for (c in 0 until s.size) {
                         val i = r * s.size + c
+                        val shown = when {
+                            sweepMark != null && i in swept && s.marks[i] != Mark.KING -> sweepMark
+                            else -> s.marks[i]
+                        }
                         Box(
                             Modifier
                                 .padding(start = cell * c, top = cell * r)
@@ -252,11 +380,10 @@ object Kings : PuzzleType {
                                 .background(
                                     Color(regionColours[s.region[i] % regionColours.size])
                                         .copy(alpha = 0.55f)
-                                )
-                                .clickable(enabled = interactive) { onState(s.cycle(i)) },
+                                ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            when (s.marks[i]) {
+                            when (shown) {
                                 Mark.KING -> Box(
                                     Modifier
                                         .fillMaxSize()
@@ -266,17 +393,42 @@ object Kings : PuzzleType {
                                             if (i in conflicts) scheme.error else scheme.onBackground
                                         )
                                 )
-                                Mark.BLOCKED -> Text(
-                                    "·",
-                                    fontSize = (cell.value * 0.6f).sp,
-                                    color = scheme.background.copy(alpha = 0.7f),
-                                )
-                                Mark.EMPTY -> Unit
+                                Mark.BLOCKED -> BlockedCross(cell, scheme.background)
+                                Mark.EMPTY -> if (i in eliminated) RuledOutDot(cell, scheme.background)
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    /**
+     * The player's own "not a king". A stroked X rather than a filled shape: big enough to read
+     * on a phone at arm's length, yet plainly a pencil mark beside the solid disc of a king.
+     */
+    @Composable
+    private fun BlockedCross(cell: Dp, colour: Color) {
+        Canvas(Modifier.fillMaxSize().padding(cell * 0.28f)) {
+            val ink = colour.copy(alpha = 0.85f)
+            val width = size.minDimension * 0.2f
+            drawLine(ink, Offset(0f, 0f), Offset(size.width, size.height), width, StrokeCap.Round)
+            drawLine(ink, Offset(0f, size.height), Offset(size.width, 0f), width, StrokeCap.Round)
+        }
+    }
+
+    /**
+     * A square ruled out by a king already on the board. Deliberately quieter and a different
+     * shape from [BlockedCross]: the player needs to see at a glance which marks are the board's
+     * own deductions and which are theirs to change.
+     */
+    @Composable
+    private fun RuledOutDot(cell: Dp, colour: Color) {
+        Box(
+            Modifier
+                .size(cell * 0.16f)
+                .clip(CircleShape)
+                .background(colour.copy(alpha = 0.45f))
+        )
     }
 }
