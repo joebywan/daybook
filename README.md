@@ -86,9 +86,59 @@ Run the generator tests (these are the ones worth keeping green):
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew test
 ```
 
+## Releases, CI and signing
+
+Every push to `main` builds a signed release APK and publishes it as a GitHub Release.
+Versions come out as `<version.txt>.<run number>` — bump `version.txt` for a meaningful
+version, otherwise the run number keeps `versionCode` rising on its own.
+
+**Signing is what makes updates install over the top.** Three things are checked before
+anything is published, because each has broken an Android release before:
+
+1. **Signed at all.** A green Gradle build proves nothing — with any signing variable missing,
+   AGP quietly emits `app-release-unsigned.apk` and exits zero. `-PrequireSigning=true` turns
+   that into a hard failure, and `tools/verify-apk.sh` rejects an artifact named `*unsigned*`.
+2. **Signed with *the* key.** The certificate SHA-256 is committed to `android/release-key.sha256`
+   and the build fails if the APK does not match it. A changed key means every installed copy has
+   to be uninstalled before the next version will install.
+3. **Not debuggable.** Release builds set `isDebuggable = false` explicitly and the artifact is
+   checked with `aapt2`. A debuggable APK is the profile Play Protect scrutinises hardest, and
+   declining its scan is what surfaces as Android's generic "App wasn't installed".
+
+`tools/apk-cert.py` reads the certificate out of the APK's own signing block rather than shelling
+out to `apksigner verify --print-certs`, which has been seen to print nothing on a CI runner and
+still exit zero — turning the guard into a no-op.
+
+CI builds `assembleRelease` too, never `assembleDebug`. Testing a different variant from the one
+that ships is how a broken release goes out repeatedly behind a green check.
+
+### Repository secrets
+
+| Secret | What |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | the keystore, `base64 -w0` |
+| `ANDROID_KEYSTORE_PASSWORD` | store password |
+| `ANDROID_KEY_ALIAS` | `daybook` |
+| `ANDROID_KEY_PASSWORD` | key password (same as the store password) |
+| `RENOVATE_TOKEN` | *optional* PAT — see below |
+
+GitHub secrets are write-only. The keystore and its password live outside the repo at
+`~/Documents/github/Claude/daybook-android-signing/` (0700, files 0600) and that is the only
+readable copy. Losing it means every installed copy must be uninstalled to update.
+
+## Dependency updates
+
+Renovate runs weekly from `.github/workflows/renovate.yml`, self-hosted so it needs no GitHub App
+installed. Patch bumps and GitHub Actions automerge; minor and major open a PR to look at.
+
+One caveat worth knowing: pull requests opened with the default `GITHUB_TOKEN` do **not** trigger
+other workflows, so CI does not run on Renovate's PRs as shipped. Either install the
+[Renovate App](https://github.com/apps/renovate) or add a PAT as `RENOVATE_TOKEN`, and CI will
+run on them — at which point automerge can safely be widened to minor updates.
+
 ## Not done yet
 
 - Pencil marks / candidate notes in Sudoku
 - Per-puzzle "give up and reveal" is implemented on the type but not wired to a button
 - No app icon beyond a placeholder vector
-- Release signing is not configured
+- No Play Store listing; releases are sideloaded APKs from the Releases page

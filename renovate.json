@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommitsDisabled"
+  ],
+  "timezone": "Australia/Sydney",
+  "schedule": ["before 9am on monday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "Action bumps are low risk and this repo's releases depend on them staying current.",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "automerge": true
+    },
+    {
+      "description": "Compose ships as a fleet; updating it piecemeal produces version skew.",
+      "matchPackagePatterns": ["^androidx\\.compose"],
+      "groupName": "Jetpack Compose"
+    },
+    {
+      "description": "AGP and Kotlin move together with the Compose compiler plugin.",
+      "matchPackageNames": [
+        "com.android.application",
+        "org.jetbrains.kotlin.android",
+        "org.jetbrains.kotlin.plugin.compose"
+      ],
+      "groupName": "Android Gradle plugin and Kotlin"
+    },
+    {
+      "description": "Patch bumps automerge. Minor and major wait for a look, since CI only runs on these PRs when RENOVATE_TOKEN is set.",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "platformAutomerge": true
+    }
+  ]
+}
