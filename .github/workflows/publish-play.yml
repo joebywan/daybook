@@ -1,9 +1,24 @@
 name: Publish to Google Play
 
-# Runs after a GitHub Release is published, and uploads that release's bundle to Play's internal
-# testing track. It is a no-op until PLAY_SERVICE_ACCOUNT_JSON exists, so it can sit here safely
-# before the Play Console side is set up.
+# Uploads a release's bundle to Play. A no-op until PLAY_SERVICE_ACCOUNT_JSON exists, so it can
+# sit here safely before the Play Console side is set up.
+#
+# release.yml calls this directly via workflow_call rather than relying on the `release: published`
+# event, because a release created with GITHUB_TOKEN does not trigger other workflows — so that
+# event alone would never fire for our own automated releases. The event is still listed so that a
+# release published by hand in the GitHub UI also reaches Play.
 on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag to upload'
+        required: true
+        type: string
+      track:
+        description: 'Play track'
+        required: false
+        type: string
+        default: internal
   release:
     types: [published]
   workflow_dispatch:

@@ -129,9 +129,13 @@ readable copy. Losing it means every installed copy must be uninstalled to updat
 ## Publishing to Google Play
 
 Every release already builds and attaches a signed `.aab` alongside the `.apk`. Once Play is set
-up, `.github/workflows/publish-play.yml` uploads that bundle to the **internal testing** track
-automatically whenever a GitHub Release is published. Until the `PLAY_SERVICE_ACCOUNT_JSON` secret
-exists the workflow logs a notice and does nothing, so it is safe sitting here unconfigured.
+up, `.github/workflows/publish-play.yml` uploads that bundle to the **internal testing** track.
+Until the `PLAY_SERVICE_ACCOUNT_JSON` secret exists the workflow logs a notice and does nothing, so
+it is safe sitting here unconfigured.
+
+`release.yml` calls it directly as a reusable workflow rather than letting it wait on the
+`release: published` event, because a release created with `GITHUB_TOKEN` does not trigger other
+workflows — the same quirk that stops CI running on Renovate's pull requests.
 
 ### Get the signing decision right first
 
