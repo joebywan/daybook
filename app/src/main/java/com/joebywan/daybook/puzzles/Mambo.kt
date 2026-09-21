@@ -1,7 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +40,12 @@ enum class Sym { NONE, SUN, MOON;
 @Serializable
 data class Link(val a: Int, val b: Int, val same: Boolean)
 
+/** Which of Mambo's three rules a group of cells is visibly breaking. */
+enum class Broken { TRIPLE, BALANCE, LINK }
+
+/** One rule break the player can see on the board, and the cells that show it. */
+data class Violation(val rule: Broken, val cells: List<Int>)
+
 @Serializable
 data class MamboState(
     val size: Int,
@@ -49,10 +57,54 @@ data class MamboState(
 ) : PuzzleState {
     override val solved: Boolean get() = cells == solution
 
-    /** Cells the player has filled that contradict the solution — drawn in red. */
-    fun conflicts(): Set<Int> = cells.indices.filter { i ->
-        cells[i] != Sym.NONE && cells[i] != solution[i]
-    }.toSet()
+    /**
+     * Every rule the board breaks on its own terms — [solution] is deliberately not consulted.
+     *
+     * Flagging cells that merely differ from the stored answer marks a player wrong the instant
+     * they deviate, using a deduction they have not made themselves. A wrong board is not yet an
+     * illegal one: the player is entitled to follow a mistaken line until it collides with a rule
+     * they can check by eye, which is the only thing reported here.
+     */
+    fun violations(): List<Violation> {
+        val out = mutableListOf<Violation>()
+        val half = size / 2
+
+        // Three in a line, scanning each run of three once along both axes.
+        for (r in 0 until size) for (c in 0 until size) {
+            val i = r * size + c
+            val sym = cells[i]
+            if (sym == Sym.NONE) continue
+            if (c + 2 < size && cells[i + 1] == sym && cells[i + 2] == sym) {
+                out += Violation(Broken.TRIPLE, listOf(i, i + 1, i + 2))
+            }
+            if (r + 2 < size && cells[i + size] == sym && cells[i + 2 * size] == sym) {
+                out += Violation(Broken.TRIPLE, listOf(i, i + size, i + 2 * size))
+            }
+        }
+
+        // A line already holding more than half of one symbol can never balance.
+        for (line in 0 until size) {
+            for (idx in listOf(rowOf(line), columnOf(line))) {
+                if (listOf(Sym.SUN, Sym.MOON).any { sym -> idx.count { cells[it] == sym } > half }) {
+                    out += Violation(Broken.BALANCE, idx)
+                }
+            }
+        }
+
+        // A printed link both of whose ends are filled in must hold.
+        for (link in links) {
+            val a = cells[link.a]
+            val b = cells[link.b]
+            if (a == Sym.NONE || b == Sym.NONE) continue
+            if ((a == b) != link.same) out += Violation(Broken.LINK, listOf(link.a, link.b))
+        }
+
+        return out
+    }
+
+    private fun rowOf(r: Int): List<Int> = (0 until size).map { r * size + it }
+
+    private fun columnOf(c: Int): List<Int> = (0 until size).map { it * size + c }
 
     fun withCell(index: Int, value: Sym): MamboState =
         copy(cells = cells.toMutableList().also { it[index] = value }, moves = moves + 1)
@@ -76,7 +128,8 @@ object Mambo : PuzzleType {
         "Each row and column must hold the same number of each.",
         "No three identical symbols may sit next to each other in a line.",
         "Cells joined by = must match; cells joined by x must differ.",
-        "Tap a cell to cycle sun, moon, empty.",
+        "Tap a cell to cycle moon, sun, empty.",
+        "Every puzzle can be solved by deduction alone.",
     )
 
     private fun sizeFor(difficulty: Difficulty) = when (difficulty) {
@@ -84,6 +137,9 @@ object Mambo : PuzzleType {
         Difficulty.HARD -> 8
         Difficulty.EXPERT -> 10
     }
+
+    /** Carving leaves exactly one seed cell; a second is there so the opening looks deliberate. */
+    private const val MIN_GIVENS = 2
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val rng = Rng(seed)
@@ -134,109 +190,161 @@ object Mambo : PuzzleType {
     }
 
     /**
-     * Reduces a full grid to a puzzle: offer every possible clue, keep shuffling them in until the
-     * solver reports a unique solution, then strip any clue the puzzle no longer needs.
+     * Reduces a full grid to a puzzle by stripping clues the rest of the board still implies.
+     *
+     * Every candidate removal is tested with [solvableByLogic] rather than a solution count: a
+     * board can have exactly one answer and still offer no legal next move, which is what forced
+     * the owner to guess. Testing against propagation is the same bar Mosaic holds itself to.
+     *
+     * Cell clues are offered for removal before links so the links — the part of the board that
+     * makes it a Mambo rather than a plain Takuzu — survive to carry the deduction.
      */
     private fun carve(rng: Rng, n: Int, solution: List<Sym>): Pair<List<Boolean>, List<Link>> {
-        val cellClues = (0 until n * n).map { Clue.Cell(it) }
-        val linkClues = buildList {
+        val givens = MutableList(n * n) { true }
+        val allLinks = buildList {
             for (r in 0 until n) for (c in 0 until n) {
                 val i = r * n + c
-                if (c + 1 < n) add(Clue.Join(Link(i, i + 1, solution[i] == solution[i + 1])))
-                if (r + 1 < n) add(Clue.Join(Link(i, i + n, solution[i] == solution[i + n])))
+                if (c + 1 < n) add(Link(i, i + 1, solution[i] == solution[i + 1]))
+                if (r + 1 < n) add(Link(i, i + n, solution[i] == solution[i + n]))
             }
         }
-        // Links carry more deductive weight than givens, so offer them first for a prettier board.
-        val pool = rng.shuffled(linkClues) + rng.shuffled(cellClues)
+        val kept = allLinks.toMutableList()
 
-        val chosen = mutableListOf<Clue>()
-        for (clue in pool) {
-            chosen += clue
-            if (uniquelySolvable(n, chosen, solution)) break
+        for (i in rng.shuffled((0 until n * n).toList())) {
+            givens[i] = false
+            if (!solvableByLogic(n, givens, kept, solution)) givens[i] = true
         }
-        // Minimise: drop anything the remaining clues already imply.
-        for (clue in rng.shuffled(chosen.toList())) {
-            val trimmed = chosen.filterNot { it === clue }
-            if (uniquelySolvable(n, trimmed, solution)) {
-                chosen.clear()
-                chosen += trimmed
-            }
+        for (link in rng.shuffled(allLinks)) {
+            kept.remove(link)
+            if (!solvableByLogic(n, givens, kept, solution)) kept += link
         }
 
-        val givens = MutableList(n * n) { false }
-        val links = mutableListOf<Link>()
-        chosen.forEach { clue ->
-            when (clue) {
-                is Clue.Cell -> givens[clue.index] = true
-                is Clue.Join -> links += clue.link
-            }
+        // Propagation needs a symbol to start from, so a board can never come out blank — but in
+        // practice it needs exactly one, and a single lone square reads as an accident rather than
+        // an anchor. Extra clues only ever add deductions, so topping up keeps the board solvable.
+        var short = MIN_GIVENS - givens.count { it }
+        for (i in rng.shuffled((0 until n * n).toList())) {
+            if (short <= 0) break
+            if (givens[i]) continue
+            givens[i] = true
+            short--
         }
-        return givens to links
+
+        return givens.toList() to kept.toList()
     }
 
-    private sealed interface Clue {
-        data class Cell(val index: Int) : Clue
-        data class Join(val link: Link) : Clue
-    }
+    // ---- solver -------------------------------------------------------------------------------
 
-    /** True when [clues] admit exactly one completion. */
-    private fun uniquelySolvable(n: Int, clues: List<Clue>, solution: List<Sym>): Boolean {
-        val grid = MutableList(n * n) { Sym.NONE }
-        val links = mutableListOf<Link>()
-        clues.forEach { clue ->
-            when (clue) {
-                is Clue.Cell -> grid[clue.index] = solution[clue.index]
-                is Clue.Join -> links += clue.link
-            }
-        }
-        return countSolutions(grid, n, links, 0, 0) == 1
-    }
-
-    /** Counts completions, abandoning the search as soon as a second one turns up. */
-    private fun countSolutions(
-        grid: MutableList<Sym>,
+    /**
+     * True when the clues drive the board to a full grid by propagation alone.
+     *
+     * A unique solution is not the same as a solvable one. `countSolutions` could only promise
+     * that exactly one answer existed, not that a player could ever reach it: boards passed that
+     * test while offering no first move at all. Propagation makes only forced deductions from the
+     * clues, so a grid it completes is both unique *and* reachable without a single guess — and no
+     * search is needed to know it.
+     */
+    private fun solvableByLogic(
         n: Int,
+        givens: List<Boolean>,
         links: List<Link>,
-        index: Int,
-        found: Int,
-    ): Int {
-        if (found >= 2) return found
-        if (index == n * n) return found + 1
-        if (grid[index] != Sym.NONE) {
-            return if (violates(grid, n, links, index)) found
-            else countSolutions(grid, n, links, index + 1, found)
-        }
-        var total = found
-        for (sym in listOf(Sym.SUN, Sym.MOON)) {
-            grid[index] = sym
-            if (!violates(grid, n, links, index)) {
-                total = countSolutions(grid, n, links, index + 1, total)
-            }
-            grid[index] = Sym.NONE
-            if (total >= 2) break
-        }
-        return total
+        solution: List<Sym>,
+    ): Boolean {
+        val grid = Array(n * n) { if (givens[it]) solution[it] else Sym.NONE }
+        return propagate(n, grid, links) && grid.none { it == Sym.NONE }
     }
 
-    private fun violates(grid: List<Sym>, n: Int, links: List<Link>, index: Int): Boolean {
-        if (!legalSoFar(grid, n, index)) return true
-        // Any link whose far end is already decided must hold now.
-        for (link in links) {
-            if (link.a != index && link.b != index) continue
-            val a = grid[link.a]
-            val b = grid[link.b]
-            if (a == Sym.NONE || b == Sym.NONE) continue
-            if ((a == b) != link.same) return true
+    /**
+     * Applies Mambo's three rules until nothing more can be deduced.
+     *
+     * Returns false if the clues contradict — which doubles as the three-in-a-line and
+     * over-filled-line checks, since both surface as an attempt to write two symbols into one
+     * cell.
+     */
+    private fun propagate(n: Int, grid: Array<Sym>, links: List<Link>): Boolean {
+        val half = n / 2
+        var ok = true
+        var changed = true
+
+        fun write(i: Int, sym: Sym) {
+            if (grid[i] == Sym.NONE) {
+                grid[i] = sym
+                changed = true
+            } else if (grid[i] != sym) {
+                ok = false
+            }
         }
-        return false
+
+        // Two of a kind force the opposite at either end, and across a gap between them.
+        fun trio(a: Int, b: Int, c: Int) {
+            val x = grid[a]
+            val y = grid[b]
+            val z = grid[c]
+            if (x != Sym.NONE && x == y) write(c, x.other())
+            if (y != Sym.NONE && y == z) write(a, y.other())
+            if (x != Sym.NONE && x == z) write(b, x.other())
+        }
+
+        // Once a line holds half its cells of one symbol, the rest must be the other.
+        fun balance(idx: IntArray) {
+            var sun = 0
+            var moon = 0
+            for (i in idx) when (grid[i]) {
+                Sym.SUN -> sun++
+                Sym.MOON -> moon++
+                Sym.NONE -> Unit
+            }
+            if (sun > half || moon > half) {
+                ok = false
+                return
+            }
+            if (sun == half) for (i in idx) if (grid[i] == Sym.NONE) write(i, Sym.MOON)
+            if (moon == half) for (i in idx) if (grid[i] == Sym.NONE) write(i, Sym.SUN)
+        }
+
+        val lines = buildList {
+            for (line in 0 until n) {
+                add(IntArray(n) { line * n + it })
+                add(IntArray(n) { it * n + line })
+            }
+        }
+
+        while (changed && ok) {
+            changed = false
+
+            for (r in 0 until n) for (c in 0 until n) {
+                val i = r * n + c
+                if (c + 2 < n) trio(i, i + 1, i + 2)
+                if (r + 2 < n) trio(i, i + n, i + 2 * n)
+            }
+
+            for (idx in lines) balance(idx)
+
+            // `=` carries a known symbol across, `x` carries its opposite.
+            for (link in links) {
+                val a = grid[link.a]
+                val b = grid[link.b]
+                if (a != Sym.NONE && b == Sym.NONE) {
+                    write(link.b, if (link.same) a else a.other())
+                } else if (b != Sym.NONE && a == Sym.NONE) {
+                    write(link.a, if (link.same) b else b.other())
+                } else if (a != Sym.NONE && b != Sym.NONE && (a == b) != link.same) {
+                    ok = false
+                }
+            }
+        }
+
+        return ok
     }
 
     // ---- play ---------------------------------------------------------------------------------
 
     override fun hint(state: PuzzleState): PuzzleState? {
         val s = state as MamboState
-        // Clear a wrong cell first; otherwise reveal an empty one.
-        val wrong = s.conflicts().minOrNull()
+        // A hint is asked for, so it may read the answer the live feedback must not.
+        val wrong = s.cells.indices.firstOrNull {
+            s.cells[it] != Sym.NONE && s.cells[it] != s.solution[it]
+        }
         if (wrong != null) return s.withCell(wrong, s.solution[wrong])
         val blank = s.cells.indices.firstOrNull { s.cells[it] == Sym.NONE } ?: return null
         return s.withCell(blank, s.solution[blank])
@@ -245,82 +353,125 @@ object Mambo : PuzzleType {
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as MamboState
-        val conflicts = s.conflicts()
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
-            val board = maxWidth
-            val cell = board / s.size
-            val cellPx = with(LocalDensity.current) { cell.toPx() }
-            Box(
-                Modifier
-                    .size(board)
-                    .pointerInput(s, interactive) {
-                        if (!interactive) return@pointerInput
-                        detectTapGestures { offset: Offset ->
-                            val c = (offset.x / cellPx).toInt().coerceIn(0, s.size - 1)
-                            val r = (offset.y / cellPx).toInt().coerceIn(0, s.size - 1)
-                            val i = r * s.size + c
-                            if (!s.givens[i]) {
-                                val next = when (s.cells[i]) {
-                                    Sym.NONE -> Sym.SUN
-                                    Sym.SUN -> Sym.MOON
-                                    Sym.MOON -> Sym.NONE
+        val scheme = MaterialTheme.colorScheme
+        val violations = s.violations()
+        // Each rule gets its own treatment so the board says *which* rule broke, not merely that
+        // something is wrong: a ring on the offending run, a halo down the unbalanced line, and
+        // the link badge itself turning red.
+        val ringed = violations.filter { it.rule == Broken.TRIPLE }.flatMap { it.cells }.toSet()
+        val haloed = violations.filter { it.rule == Broken.BALANCE }.flatMap { it.cells }.toSet()
+        val brokenLinks = violations
+            .filter { it.rule == Broken.LINK }
+            .map { it.cells[0] to it.cells[1] }
+            .toSet()
+
+        Column(Modifier.fillMaxWidth()) {
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
+                val board = maxWidth
+                val cell = board / s.size
+                val cellPx = with(LocalDensity.current) { cell.toPx() }
+                Box(
+                    Modifier
+                        .size(board)
+                        .pointerInput(s, interactive) {
+                            if (!interactive) return@pointerInput
+                            detectTapGestures { offset: Offset ->
+                                val c = (offset.x / cellPx).toInt().coerceIn(0, s.size - 1)
+                                val r = (offset.y / cellPx).toInt().coerceIn(0, s.size - 1)
+                                val i = r * s.size + c
+                                if (!s.givens[i]) {
+                                    val next = when (s.cells[i]) {
+                                        Sym.NONE -> Sym.MOON
+                                        Sym.MOON -> Sym.SUN
+                                        Sym.SUN -> Sym.NONE
+                                    }
+                                    onState(s.withCell(i, next))
                                 }
-                                onState(s.withCell(i, next))
                             }
                         }
-                    }
-            ) {
-                for (r in 0 until s.size) {
-                    for (c in 0 until s.size) {
-                        val i = r * s.size + c
-                        MamboCell(
-                            sym = s.cells[i],
-                            given = s.givens[i],
-                            conflicted = i in conflicts,
-                            modifier = Modifier
-                                .padding(start = cell * c, top = cell * r)
+                ) {
+                    // Drawn first so the cells sit on top and leave the halo showing as a frame.
+                    haloed.forEach { i ->
+                        Box(
+                            Modifier
+                                .padding(start = cell * (i % s.size), top = cell * (i / s.size))
                                 .size(cell)
-                                .padding(cell * 0.06f),
+                                .background(scheme.error.copy(alpha = 0.22f))
                         )
                     }
-                }
-                s.links.forEach { link ->
-                    val horizontal = link.b == link.a + 1
-                    val r = link.a / s.size
-                    val c = link.a % s.size
-                    val x = if (horizontal) cell * (c + 1) else cell * c + cell / 2
-                    val y = if (horizontal) cell * r + cell / 2 else cell * (r + 1)
-                    Box(
-                        Modifier
-                            .padding(start = x - cell * 0.16f, top = y - cell * 0.16f)
-                            .size(cell * 0.32f)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.onBackground),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = if (link.same) "=" else "x",
-                            color = MaterialTheme.colorScheme.background,
-                            fontWeight = FontWeight.Black,
-                            fontSize = (cell.value * 0.20f).sp,
-                        )
+                    for (r in 0 until s.size) {
+                        for (c in 0 until s.size) {
+                            val i = r * s.size + c
+                            MamboCell(
+                                sym = s.cells[i],
+                                given = s.givens[i],
+                                ringed = i in ringed,
+                                modifier = Modifier
+                                    .padding(start = cell * c, top = cell * r)
+                                    .size(cell)
+                                    .padding(cell * 0.06f),
+                            )
+                        }
+                    }
+                    s.links.forEach { link ->
+                        val horizontal = link.b == link.a + 1
+                        val r = link.a / s.size
+                        val c = link.a % s.size
+                        val x = if (horizontal) cell * (c + 1) else cell * c + cell / 2
+                        val y = if (horizontal) cell * r + cell / 2 else cell * (r + 1)
+                        val broken = (link.a to link.b) in brokenLinks
+                        Box(
+                            Modifier
+                                .padding(start = x - cell * 0.16f, top = y - cell * 0.16f)
+                                .size(cell * 0.32f)
+                                .clip(CircleShape)
+                                .background(if (broken) scheme.error else scheme.onBackground),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = if (link.same) "=" else "x",
+                                color = if (broken) scheme.onError else scheme.background,
+                                fontWeight = FontWeight.Black,
+                                fontSize = (cell.value * 0.20f).sp,
+                            )
+                        }
                     }
                 }
+            }
+
+            // Names the rule as well as showing it, so a red mark is never just "you are wrong".
+            val notes = violations.map { it.rule }.distinct().map {
+                when (it) {
+                    Broken.TRIPLE -> "Three identical symbols in a line"
+                    Broken.BALANCE -> "A line holds too many of one symbol"
+                    Broken.LINK -> "A linked pair breaks its = or x"
+                }
+            }
+            if (notes.isNotEmpty()) {
+                Text(
+                    notes.joinToString(" · "),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = scheme.error,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+                )
             }
         }
     }
 
     @Composable
-    private fun MamboCell(sym: Sym, given: Boolean, conflicted: Boolean, modifier: Modifier) {
+    private fun MamboCell(sym: Sym, given: Boolean, ringed: Boolean, modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
-        val fill = when {
-            conflicted -> scheme.error
-            sym == Sym.SUN -> Color(accent)
-            sym == Sym.MOON -> Color(0xFF8FC79A)
-            else -> scheme.surfaceVariant
+        val shape = RoundedCornerShape(22)
+        val fill = when (sym) {
+            Sym.SUN -> Color(accent)
+            Sym.MOON -> Color(0xFF8FC79A)
+            Sym.NONE -> scheme.surfaceVariant
         }
         Box(
-            modifier.clip(RoundedCornerShape(22)).background(fill),
+            modifier
+                .clip(shape)
+                .background(fill)
+                .then(if (ringed) Modifier.border(2.dp, scheme.error, shape) else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             if (sym != Sym.NONE) {
