@@ -24,12 +24,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class Fill { UNKNOWN, FILLED, EMPTY }
 
+@Serializable
 data class MosaicState(
     val width: Int,
     val height: Int,

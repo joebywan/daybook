@@ -20,12 +20,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
 
+@Serializable
 data class KingsState(
     val size: Int,
     val region: List<Int>,

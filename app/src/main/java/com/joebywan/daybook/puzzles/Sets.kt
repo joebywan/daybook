@@ -29,18 +29,20 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
 /**
  * A card is four traits, each with three values, so it encodes neatly as four base-3 digits:
  * count, shape, shading, colour.
  */
+@Serializable
 data class Card(val count: Int, val shape: Int, val shading: Int, val colour: Int) {
     val traits: List<Int> get() = listOf(count, shape, shading, colour)
 }
 
+@Serializable
 data class SetsState(
     val cards: List<Card>,
     val target: Int,

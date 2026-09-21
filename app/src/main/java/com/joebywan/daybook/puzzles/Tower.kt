@@ -30,13 +30,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
 /** Score for one submitted guess. */
 data class Feedback(val exact: Int, val misplaced: Int)
 
+@Serializable
 data class TowerState(
     val slots: Int,
     val colours: Int,

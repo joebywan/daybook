@@ -24,18 +24,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
 /** Empty, or one of the two symbols. */
+@Serializable
 enum class Sym { NONE, SUN, MOON;
     fun other(): Sym = when (this) { SUN -> MOON; MOON -> SUN; NONE -> NONE }
 }
 
 /** A constraint printed between two orthogonally adjacent cells. */
+@Serializable
 data class Link(val a: Int, val b: Int, val same: Boolean)
 
+@Serializable
 data class MamboState(
     val size: Int,
     val givens: List<Boolean>,

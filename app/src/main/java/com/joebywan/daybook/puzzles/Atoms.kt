@@ -22,16 +22,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
 /** An atom sits on a lattice point and needs exactly [bonds] bond-ends. */
+@Serializable
 data class Atom(val row: Int, val col: Int, val bonds: Int)
 
 /** A possible bond line between two atoms that face each other with nothing in between. */
+@Serializable
 data class Pair2(val a: Int, val b: Int, val horizontal: Boolean)
 
+@Serializable
 data class AtomsState(
     val size: Int,
     val atoms: List<Atom>,

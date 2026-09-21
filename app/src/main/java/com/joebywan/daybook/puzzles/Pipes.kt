@@ -16,9 +16,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
 /**
  * Pipe shapes are direction bitmasks: bit 0 up, 1 right, 2 down, 3 left. Rotating a piece is a
@@ -29,6 +29,7 @@ private const val RIGHT = 2
 private const val DOWN = 4
 private const val LEFT = 8
 
+@Serializable
 data class PipesState(
     val width: Int,
     val height: Int,

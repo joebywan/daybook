@@ -14,6 +14,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.ProgressStore
+import com.joebywan.daybook.data.savedGameKey
 import com.joebywan.daybook.ui.archive.ArchiveScreen
 import com.joebywan.daybook.ui.home.HomeScreen
 import com.joebywan.daybook.ui.play.PlayScreen
@@ -91,11 +92,17 @@ fun DaybookApp() {
                 } else {
                     DailySeed.practiceSeed(puzzle.id, current.difficulty, current.nonce)
                 }
+                val gameKey = savedGameKey(puzzle.id, current.difficulty, seed)
                 PlayScreen(
                     puzzle = puzzle,
                     difficulty = current.difficulty,
                     day = current.day,
                     seed = seed,
+                    restore = { store.savedGame(gameKey) },
+                    persist = { game ->
+                        if (game == null) store.clearSavedGame(gameKey)
+                        else store.saveGame(gameKey, game)
+                    },
                     onSolved = { seconds, hints ->
                         scope.launch {
                             store.record(

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // ---- release signing --------------------------------------------------------------------------
@@ -73,9 +74,10 @@ android {
             // scrutinises hardest, and declining its scan is what blocks an in-place update.
             isDebuggable = false
 
-            // Deliberately off. There is no reflection, no JNI and no serialisation here to
-            // protect, so shrinking buys about a megabyte in exchange for a class of failure that
-            // only ever shows up in the shipped build.
+            // Deliberately off. Saved games are serialised by class name — kotlinx.serialization
+            // writes the state class into the JSON — so shrinking would buy about a megabyte in
+            // exchange for a class of failure that only ever shows up in the shipped build, on
+            // someone's half-finished board.
             isMinifyEnabled = false
             isShrinkResources = false
 
@@ -112,6 +114,7 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.kotlinx.serialization.json)
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)

@@ -30,11 +30,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleState
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.serialization.Serializable
 
 /** An axis-aligned block of cells, inclusive on both corners. */
+@Serializable
 data class Block(val r0: Int, val c0: Int, val r1: Int, val c1: Int) {
     val area: Int get() = (r1 - r0 + 1) * (c1 - c0 + 1)
     fun contains(r: Int, c: Int) = r in r0..r1 && c in c0..c1
@@ -42,6 +43,7 @@ data class Block(val r0: Int, val c0: Int, val r1: Int, val c1: Int) {
         r0 <= other.r1 && other.r0 <= r1 && c0 <= other.c1 && other.c0 <= c1
 }
 
+@Serializable
 data class ShikakuState(
     val width: Int,
     val height: Int,
