@@ -18,6 +18,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      tag: v${{ steps.version.outputs.name }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -106,3 +108,12 @@ jobs:
       - name: Clean up the key
         if: always()
         run: rm -f "$RUNNER_TEMP/release.jks"
+
+  # Called directly rather than left to the `release: published` event: releases created with
+  # GITHUB_TOKEN do not trigger other workflows.
+  play:
+    needs: release
+    uses: ./.github/workflows/publish-play.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+    secrets: inherit
