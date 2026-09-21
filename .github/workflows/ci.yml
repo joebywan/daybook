@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-36 build-tools;36.0.0'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew test
+
+      # Deliberately assembleRelease, not assembleDebug. Building a different variant here from
+      # the one that ships is how a broken release goes out repeatedly behind a green check.
+      # Unsigned is fine: secrets are not exposed to pull requests from forks.
+      - name: Build release variant
+        run: ./gradlew assembleRelease

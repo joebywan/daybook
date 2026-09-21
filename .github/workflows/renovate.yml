@@ -1,0 +1,31 @@
+name: Renovate
+
+on:
+  schedule:
+    - cron: '0 17 * * 0'   # Monday morning, Australian time
+  workflow_dispatch:
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Self-hosted so this works without installing the Renovate GitHub App. If RENOVATE_TOKEN
+      # (a PAT) is set, Renovate's pull requests also trigger CI, which is what makes automerge
+      # safe; with the default GITHUB_TOKEN they do not.
+      - uses: renovatebot/github-action@v41
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN || github.token }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_PLATFORM: github
+          LOG_LEVEL: info
