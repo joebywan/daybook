@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,16 +24,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 
@@ -128,13 +136,20 @@ object Mambo : PuzzleType {
 
     override val id = "mambo"
     override val displayName = "Mambo"
-    override val tagline = "Balance two symbols, never three in a row"
+    override val tagline = "Balance two symbols, never three alike in a line"
     override val accent = 0xFF6E8FD8
+
+    /**
+     * The third line used to read "No three identical symbols may sit next to each other in a
+     * line", which a player took to forbid three *different* symbols sitting together — the
+     * negation had scope over the wrong word. Stating the limit as a count of how many may sit
+     * together leaves nothing for "identical" to attach itself to wrongly.
+     */
     override val rules = listOf(
         "Fill every cell with a sun or a moon.",
-        "Each row and column must hold the same number of each.",
-        "No three identical symbols may sit next to each other in a line.",
-        "Cells joined by = must match; cells joined by x must differ.",
+        "Each row and column holds equal numbers of suns and moons.",
+        "Never more than two of the same symbol side by side, in a row or column.",
+        "A = between two cells means they match; an x means they differ.",
         "Tap a cell to cycle moon, sun, empty.",
         "Every puzzle can be solved by deduction alone.",
     )
@@ -402,6 +417,174 @@ object Mambo : PuzzleType {
             }
         }
 
+    // ---- marks --------------------------------------------------------------------------------
+
+    /**
+     * What a link badge spans, as a fraction of a cell, before [LINK_BADGE_MIN] takes over.
+     */
+    private const val LINK_BADGE_RATIO = 0.32f
+
+    /**
+     * The smallest a link badge may be drawn, whatever the grid.
+     *
+     * A pure ratio is what made Expert unreadable: ten columns put the badge at 10.8dp, where the
+     * two bars of `=` close up and `x` blurs, and the two marks stop being tellable apart — which
+     * breaks the deduction silently, since a player who misreads a link is not told they did. The
+     * badge sits *between* cells rather than inside one, so the room it needs to grow into is
+     * mostly the gap, and the floor buys legibility for a little more overlap onto the tiles.
+     */
+    private val LINK_BADGE_MIN = 14.dp
+
+    /**
+     * A ceiling on the floor: the badge never covers more than this share of a cell.
+     *
+     * Without it a narrow enough display would let [LINK_BADGE_MIN] grow the badge over the
+     * symbols it is meant to sit between, and — because the badge is positioned by padding, which
+     * may not be negative — past the edge of the board entirely. Capped here, both are impossible
+     * by construction rather than by trusting that no such phone exists.
+     */
+    private const val LINK_BADGE_MAX_SHARE = 0.50f
+
+    /** Stroke weight of the marks inside a badge, as a fraction of it. */
+    private const val MARK_STROKE = 0.13f
+
+    /** `=`: bar length, then the centre-to-centre distance between the two bars. */
+    private const val EQUALS_SPAN = 0.56f
+    private const val EQUALS_GAP = 0.24f
+
+    /** `x`: the corner-to-corner box its two strokes cross. */
+    private const val CROSS_SPAN = 0.50f
+
+    /** How much of a cell's tile the sun or moon takes up. */
+    private const val MARK_SHARE = 0.48f
+
+    /** Sun: the core disc, then where its rays start, end, and how heavy they are. */
+    private const val SUN_CORE = 0.22f
+    private const val SUN_RAY_INNER = 0.30f
+    private const val SUN_RAY_OUTER = 0.44f
+    private const val SUN_RAY_WIDTH = 0.11f
+    private const val SUN_RAYS = 8
+
+    /**
+     * Moon: the disc bitten out of the full circle to leave a crescent, and the tilt.
+     *
+     * A near-equal bite set well off-centre is what keeps the crescent thick in the middle rather
+     * than a hairline — at Expert the whole mark is about 14dp, and a thin crescent would close up
+     * into the sun's own disc, which is the one confusion the two marks cannot afford.
+     */
+    private const val MOON_BITE_RADIUS = 0.86f
+    private const val MOON_BITE_OFFSET = 0.40f
+    private const val MOON_TILT = -25f
+
+    /** The badge diameter for a given cell, floored for legibility and capped so it still fits. */
+    private fun badgeFor(cell: Dp): Dp =
+        maxOf(cell * LINK_BADGE_RATIO, minOf(LINK_BADGE_MIN, cell * LINK_BADGE_MAX_SHARE))
+
+    /**
+     * The disc on the seam between two cells, carrying `=` for "these match" or `x` for "these
+     * differ".
+     *
+     * Both marks are stroked by hand rather than set as text. A font glyph is sized in sp and then
+     * hinted and antialiased by the platform, and at the sizes a 10x10 board leaves it, that
+     * process is what destroys it: the gap between the two bars of `=` is quantised away and `x`
+     * collapses into a smudge, leaving two dots of near-identical mass. Strokes keep their weight
+     * and spacing at any diameter, so the marks survive being shrunk.
+     *
+     * They are drawn to opposite emphases on purpose — `=` flat, wide and horizontal, `x` square
+     * and diagonal — because being individually readable is not enough. The pair has to separate
+     * by silhouette, before either is resolved as a symbol at all.
+     */
+    @Composable
+    private fun LinkBadge(diameter: Dp, same: Boolean, broken: Boolean, modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        val disc = if (broken) scheme.error else scheme.onBackground
+        val ink = if (broken) scheme.onError else scheme.background
+        Canvas(modifier.size(diameter)) {
+            drawCircle(disc)
+            val span = size.minDimension
+            val weight = span * MARK_STROKE
+            if (same) {
+                val half = span * EQUALS_SPAN / 2f
+                val gap = span * EQUALS_GAP / 2f
+                // Butt caps: flat ends read as bars, which is what separates them from the
+                // rounded strokes of the cross next to them on the board.
+                drawLine(
+                    ink, Offset(center.x - half, center.y - gap),
+                    Offset(center.x + half, center.y - gap), weight, StrokeCap.Butt,
+                )
+                drawLine(
+                    ink, Offset(center.x - half, center.y + gap),
+                    Offset(center.x + half, center.y + gap), weight, StrokeCap.Butt,
+                )
+            } else {
+                val half = span * CROSS_SPAN / 2f
+                drawLine(
+                    ink, Offset(center.x - half, center.y - half),
+                    Offset(center.x + half, center.y + half), weight, StrokeCap.Round,
+                )
+                drawLine(
+                    ink, Offset(center.x - half, center.y + half),
+                    Offset(center.x + half, center.y - half), weight, StrokeCap.Round,
+                )
+            }
+        }
+    }
+
+    /**
+     * The sun: a core disc ringed by detached rays.
+     *
+     * The rays stop short of the core rather than touching it because the mark is drawn at less
+     * than full opacity for a cell the player filled in, and overlapping strokes would each
+     * compose against the tile again and print their crossing darker than the rest of the mark.
+     * Keeping them apart means the whole sun carries exactly one alpha.
+     */
+    private fun DrawScope.drawSun(ink: Color) {
+        val span = size.minDimension
+        drawCircle(ink, radius = span * SUN_CORE)
+        repeat(SUN_RAYS) { i ->
+            val angle = (2.0 * PI * i / SUN_RAYS).toFloat()
+            val dx = cos(angle)
+            val dy = sin(angle)
+            drawLine(
+                ink,
+                Offset(
+                    center.x + dx * span * SUN_RAY_INNER,
+                    center.y + dy * span * SUN_RAY_INNER,
+                ),
+                Offset(
+                    center.x + dx * span * SUN_RAY_OUTER,
+                    center.y + dy * span * SUN_RAY_OUTER,
+                ),
+                span * SUN_RAY_WIDTH,
+                StrokeCap.Round,
+            )
+        }
+    }
+
+    /**
+     * The moon: a disc with a second disc taken out of it.
+     *
+     * Subtracted as a path rather than painted over in the tile colour. The cheaper trick only
+     * looks right while the thing behind the mark really is the flat fill, and would print a
+     * crescent-shaped hole the moment anything — a ring, a halo, a future highlight — were ever
+     * drawn under it.
+     */
+    private fun DrawScope.drawCrescent(ink: Color) {
+        val radius = size.minDimension / 2f
+        val full = Path().apply { addOval(Rect(center, radius)) }
+        val bite = Path().apply {
+            addOval(
+                Rect(
+                    Offset(center.x + radius * MOON_BITE_OFFSET, center.y),
+                    radius * MOON_BITE_RADIUS,
+                )
+            )
+        }
+        rotate(MOON_TILT) {
+            drawPath(Path.combine(PathOperation.Difference, full, bite), ink)
+        }
+    }
+
     // ---- home-grid motif ----------------------------------------------------------------------
 
     /**
@@ -429,8 +612,13 @@ object Mambo : PuzzleType {
      * The badge is drawn larger than [Board] would draw it, relative to the cell.
      *
      * On a full board the badge only has to be found once the player is already reading that
-     * seam; on an 80dp tile it is one of three things distinguishing Mambo from any other
-     * two-colour grid, and at the board's own 0.32 it renders as an unreadable dot.
+     * seam; on a tile it is one of three things distinguishing Mambo from any other two-colour
+     * grid, so it has to register before anything is being read at all.
+     *
+     * The board's absolute floor deliberately does not apply here. A motif is asked for at 32dp
+     * as well — a row icon in the puzzle picker — where its whole cell is barely 10dp, and a
+     * floor meant to keep a 10x10 board legible would there be wider than the cell it sits
+     * between. A motif can only scale by ratio.
      */
     private const val PREVIEW_BADGE = 0.44f
 
@@ -440,7 +628,6 @@ object Mambo : PuzzleType {
      */
     @Composable
     override fun Preview(modifier: Modifier) {
-        val scheme = MaterialTheme.colorScheme
         BoxWithConstraints(modifier) {
             // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
             // shorter box than it is wide should shrink rather than draw its bottom row outside.
@@ -462,21 +649,12 @@ object Mambo : PuzzleType {
             // Straddling the seam between the two suns on the top row, which is the pair it is
             // claiming must match.
             val badge = cell * PREVIEW_BADGE
-            Box(
-                Modifier
-                    .padding(start = cell - badge / 2, top = cell / 2 - badge / 2)
-                    .size(badge)
-                    .clip(CircleShape)
-                    .background(scheme.onBackground),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "=",
-                    color = scheme.background,
-                    fontWeight = FontWeight.Black,
-                    fontSize = (cell.value * 0.28f).sp,
-                )
-            }
+            LinkBadge(
+                diameter = badge,
+                same = true,
+                broken = false,
+                modifier = Modifier.padding(start = cell - badge / 2, top = cell / 2 - badge / 2),
+            )
         }
     }
 
@@ -561,28 +739,22 @@ object Mambo : PuzzleType {
                             )
                         }
                     }
+                    val badge = badgeFor(cell)
                     s.links.forEach { link ->
                         val horizontal = link.b == link.a + 1
                         val r = link.a / s.size
                         val c = link.a % s.size
                         val x = if (horizontal) cell * (c + 1) else cell * c + cell / 2
                         val y = if (horizontal) cell * r + cell / 2 else cell * (r + 1)
-                        val broken = (link.a to link.b) in brokenLinks
-                        Box(
-                            Modifier
-                                .padding(start = x - cell * 0.16f, top = y - cell * 0.16f)
-                                .size(cell * 0.32f)
-                                .clip(CircleShape)
-                                .background(if (broken) scheme.error else scheme.onBackground),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = if (link.same) "=" else "x",
-                                color = if (broken) scheme.onError else scheme.background,
-                                fontWeight = FontWeight.Black,
-                                fontSize = (cell.value * 0.20f).sp,
-                            )
-                        }
+                        LinkBadge(
+                            diameter = badge,
+                            same = link.same,
+                            broken = (link.a to link.b) in brokenLinks,
+                            modifier = Modifier.padding(
+                                start = x - badge / 2,
+                                top = y - badge / 2,
+                            ),
+                        )
                     }
                 }
             }
@@ -605,13 +777,29 @@ object Mambo : PuzzleType {
         }
     }
 
+    /**
+     * One cell: a tile in the symbol's colour, carrying the symbol drawn in the page colour.
+     *
+     * The two symbols were a plain disc and a rounded square while the rules called them a sun and
+     * a moon, so the board and its own instructions disagreed about what the player was placing.
+     * They are now drawn as what they are named.
+     *
+     * The mark is the background showing through rather than a colour of its own, which is what
+     * lets one alpha separate a clue from a cell the player filled: a given is the page at full
+     * strength, a placed symbol is the same shape sunk part-way back into its tile. Colouring the
+     * two differently instead would have spent a hue on a distinction that carries no meaning in
+     * the puzzle, and left the board with four symbol colours to tell apart instead of two.
+     */
     @Composable
     private fun MamboCell(sym: Sym, given: Boolean, ringed: Boolean, modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
         val shape = RoundedCornerShape(22)
         val fill = when (sym) {
-            Sym.SUN -> Color(accent)
-            Sym.MOON -> Color(0xFF8FC79A)
+            // The scheme's own amber, so the sun follows the theme into dark rather than staying
+            // a fixed daylight orange the page has to sit around.
+            Sym.SUN -> scheme.secondary
+            // Mambo's accent: the pale blue the puzzle is already known by on the home grid.
+            Sym.MOON -> Color(accent)
             Sym.NONE -> scheme.surfaceVariant
         }
         Box(
@@ -622,14 +810,10 @@ object Mambo : PuzzleType {
             contentAlignment = Alignment.Center,
         ) {
             if (sym != Sym.NONE) {
-                val mark = scheme.background.copy(alpha = if (given) 1f else 0.72f)
-                Box(
-                    Modifier
-                        .fillMaxWidth(0.42f)
-                        .aspectRatio(1f)
-                        .clip(if (sym == Sym.SUN) CircleShape else RoundedCornerShape(28))
-                        .background(mark)
-                )
+                val ink = scheme.background.copy(alpha = if (given) 1f else 0.72f)
+                Canvas(Modifier.fillMaxWidth(MARK_SHARE).aspectRatio(1f)) {
+                    if (sym == Sym.SUN) drawSun(ink) else drawCrescent(ink)
+                }
             }
         }
     }
