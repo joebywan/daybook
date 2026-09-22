@@ -171,6 +171,51 @@ object Sets : PuzzleType {
     fun slotWidth(available: Dp, target: Int): Dp =
         minOf(SLOT_MAX_WIDTH, (available - SLOT_GAP * (target - 1)) / target)
 
+    /** Gap between cards, and between rows of them. */
+    val CARD_GAP = 8.dp
+
+    /** A card is taller than it is wide: width / height, as [androidx.compose.ui.Modifier] asks. */
+    const val CARD_ASPECT = 0.78f
+
+    /** Inset as a fraction of the card, so shrinking a card shrinks its margin with it. */
+    private const val CARD_INSET = 0.1f
+
+    /**
+     * The card width below which the four traits stop reading.
+     *
+     * Calibrated against the thumbnails rather than guessed: a slot 43.8dp wide holds three card
+     * faces and was judged legible, so a board card at this width — wider than one of those faces
+     * by a factor of two — is no harder to read than the strip already sitting above it.
+     *
+     * The tightest screen the app is expected on (320x533dp, with a three-button navigation bar)
+     * lands at about 32dp at Expert, so this is a floor with a couple of dp of slack, not a target.
+     */
+    val CARD_MIN_WIDTH = 30.dp
+
+    fun boardRows(cards: Int) = (cards + 2) / 3
+
+    /**
+     * Card width for a board of [cards] given both of the pane's constraints.
+     *
+     * Width alone is what the grid used to size from, and four rows of a width-derived card are
+     * taller than the pane: at Hard and Expert the bottom row ran underneath the tool bar, on an
+     * emulator as well as on paper. The home-screen motifs had the identical bug for the identical
+     * reason, and [Mosaic]'s board is the fix already in this codebase — take the smaller of what
+     * the width allows and what the height allows, and let the board be as big as *both* permit.
+     */
+    fun cardWidth(available: Dp, availableHeight: Dp, cards: Int): Dp {
+        val rows = boardRows(cards)
+        val byWidth = (available - CARD_GAP * 2) / 3
+        val byHeight = (availableHeight - CARD_GAP * (rows - 1)) / rows * CARD_ASPECT
+        return minOf(byWidth, byHeight).coerceAtLeast(1.dp)
+    }
+
+    /** The grid's full height, the quantity [cardWidth] is solving to keep inside the pane. */
+    fun boardHeight(cardWidth: Dp, cards: Int): Dp {
+        val rows = boardRows(cards)
+        return cardWidth / CARD_ASPECT * rows + CARD_GAP * (rows - 1)
+    }
+
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (size, wanted) = shape(difficulty)
         require(wanted in 1..maxSets(size)) {
@@ -274,12 +319,6 @@ object Sets : PuzzleType {
         val s = state as SetsState
         val scheme = MaterialTheme.colorScheme
         val used = s.found.flatten().toSet()
-        // Used cards get a wash and a hairline rather than the grey-out a spent card would earn:
-        // they are still live, and the tint is only there to show where the found sets already run.
-        val usedTint = Color(accent).copy(alpha = 0.14f).compositeOver(scheme.surface)
-        // Stronger than [usedTint] because it answers a direct question — "which three were those?"
-        // — and has to be told apart from the wash at a glance.
-        val peekTint = Color(accent).copy(alpha = 0.34f).compositeOver(scheme.surface)
 
         // Which thumbnail is being peeked at. Deliberately not in SetsState: PlayScreen pushes an
         // undo entry for every state handed to it, so a look at a set you already banked would
@@ -303,52 +342,85 @@ object Sets : PuzzleType {
             FoundStrip(s, peeked) { slot -> peeked = if (peeked == slot) -1 else slot }
             Spacer(Modifier.height(10.dp))
 
-            s.cards.chunked(3).forEachIndexed { rowIndex, row ->
-                Row(
-                    Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    row.forEachIndexed { colIndex, card ->
-                        val index = rowIndex * 3 + colIndex
-                        val isSelected = index in s.selected
-                        val isPeeked = index in peekedCards
-                        val isUsed = index in used
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .aspectRatio(0.78f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    when {
-                                        isPeeked -> peekTint
-                                        isUsed -> usedTint
-                                        else -> scheme.surface
-                                    }
-                                )
-                                .border(
-                                    when {
-                                        isSelected -> 2.5.dp
-                                        isPeeked -> 2.dp
-                                        isUsed -> 1.dp
-                                        else -> 0.dp
-                                    },
-                                    Color(accent)
-                                        .copy(alpha = if (isSelected || isPeeked) 1f else 0.45f),
-                                    RoundedCornerShape(12.dp),
-                                )
-                                .clickable(enabled = interactive) {
+            // `fill = false` so the column still wraps its content and stays centred in the pane.
+            // The weight is here only to learn how much height is left once the counter and the
+            // strip have taken theirs — the quantity the old grid never asked for.
+            BoxWithConstraints(
+                Modifier.fillMaxWidth().weight(1f, fill = false),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                val width = cardWidth(maxWidth, maxHeight, s.cards.size)
+                Column(verticalArrangement = Arrangement.spacedBy(CARD_GAP)) {
+                    s.cards.chunked(3).forEachIndexed { rowIndex, row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(CARD_GAP)) {
+                            row.forEachIndexed { colIndex, card ->
+                                val index = rowIndex * 3 + colIndex
+                                BoardCard(
+                                    card = card,
+                                    width = width,
+                                    selected = index in s.selected,
+                                    peeked = index in peekedCards,
+                                    used = index in used,
+                                    interactive = interactive,
+                                ) {
                                     // A tap is the player moving on; leaving the highlight up
                                     // would tint cards they are now picking between.
                                     peeked = -1
                                     onState(tap(s, index))
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CardFace(card, inset = 10.dp)
+                                }
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * One card on the board.
+     *
+     * A used card gets a wash and a hairline rather than the grey-out a spent card would earn: it
+     * is still live, and the tint only shows where the found sets already run. A peeked card —
+     * one of the three behind a thumbnail the player is pointing at — is washed harder, because
+     * it answers a direct question and has to be told apart from that faint tint at a glance.
+     */
+    @Composable
+    private fun BoardCard(
+        card: Card,
+        width: Dp,
+        selected: Boolean,
+        peeked: Boolean,
+        used: Boolean,
+        interactive: Boolean,
+        onTap: () -> Unit,
+    ) {
+        val scheme = MaterialTheme.colorScheme
+        val corner = RoundedCornerShape(12.dp)
+        val fill = when {
+            peeked -> Color(accent).copy(alpha = 0.34f).compositeOver(scheme.surface)
+            used -> Color(accent).copy(alpha = 0.14f).compositeOver(scheme.surface)
+            else -> scheme.surface
+        }
+        Box(
+            Modifier
+                .width(width)
+                .height(width / CARD_ASPECT)
+                .clip(corner)
+                .background(fill)
+                .border(
+                    when {
+                        selected -> 2.5.dp
+                        peeked -> 2.dp
+                        used -> 1.dp
+                        else -> 0.dp
+                    },
+                    Color(accent).copy(alpha = if (selected || peeked) 1f else 0.45f),
+                    corner,
+                )
+                .clickable(enabled = interactive, onClick = onTap),
+            contentAlignment = Alignment.Center,
+        ) {
+            CardFace(card, inset = width * CARD_INSET)
         }
     }
 
@@ -434,8 +506,9 @@ object Sets : PuzzleType {
     }
 
     /**
-     * [inset] scales the symbols to the card: a full board card is ~100dp, a home tile's ~36dp,
-     * and a found-set thumbnail's barely 15dp, which is why its inset is a fraction of a card's.
+     * [inset] scales the symbols to the card: a board card runs from ~100dp down to under 40dp
+     * once the pane's height gets a say, a home tile's is ~36dp, and a found-set thumbnail's is
+     * barely 15dp — so the board passes a fraction of its own width rather than a fixed margin.
      */
     @Composable
     private fun CardFace(card: Card, inset: Dp) {
