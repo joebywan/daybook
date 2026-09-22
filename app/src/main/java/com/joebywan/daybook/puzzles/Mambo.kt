@@ -15,6 +15,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,11 +28,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 
 /** Empty, or one of the two symbols. */
@@ -350,17 +357,80 @@ object Mambo : PuzzleType {
         return s.withCell(blank, s.solution[blank])
     }
 
+    /**
+     * How long the board must sit untouched before a rule break is shown.
+     *
+     * The tap cycle runs empty -> moon -> sun, so *every* sun is a moon for as long as the
+     * player's finger takes to come back. That in-between moon can duplicate its neighbour or tip
+     * a line past half, and flagging it accuses the player of a board they were passing through
+     * rather than aiming at. Waiting for the hand to stop lets the transient go unremarked.
+     */
+    private const val SETTLE_MILLIS = 1000L
+
+    /**
+     * Lines permanently reserved for the caption under the board.
+     *
+     * The slot is held open whether or not anything is broken, because the caption used to sit in
+     * the layout flow: appearing and vanishing shunted the whole grid vertically, under a finger
+     * already on its way down. Two lines is the whole budget — all three rules can break at once,
+     * so [captionFor]'s wordings are cut to fit that worst case rather than the slot being grown
+     * to fit them, which would leave a blank third line under every board for the rest of the game.
+     */
+    const val CAPTION_LINES = 2
+
+    /**
+     * Characters a caption line is assumed to hold, used only to keep [captionFor]'s wordings
+     * honest in [CAPTION_LINES]. Deliberately pessimistic: sized for a 320dp-wide phone at
+     * `labelLarge`, so the real wrap on any ordinary display has room to spare.
+     */
+    const val CAPTION_LINE_CHARS = 38
+
+    /**
+     * Names the rules behind the marks currently on the board.
+     *
+     * Colour alone says only "you are wrong"; the caption is what turns a red ring into the
+     * specific rule it is complaining about, so it is never dropped, only bounded. Repeats
+     * collapse — six cells in three bad runs are still one rule, and listing it six times would
+     * blow the slot for no extra information.
+     */
+    fun captionFor(violations: List<Violation>): String =
+        violations.map { it.rule }.distinct().joinToString(" · ") {
+            when (it) {
+                Broken.TRIPLE -> "Three alike in a line"
+                Broken.BALANCE -> "A line is unbalanced"
+                Broken.LINK -> "A link is broken"
+            }
+        }
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as MamboState
         val scheme = MaterialTheme.colorScheme
-        val violations = s.violations()
+
+        val live = remember(s) { s.violations() }
+        // What the board is allowed to show, which lags [live] by the settle. Held here and not in
+        // MamboState on purpose: the play screen pushes an undo entry for every state it is
+        // handed, so a timer living in the state would make "a second passed" a step to undo.
+        var shown by remember(s.givens, s.links) { mutableStateOf(emptyList<Violation>()) }
+
+        LaunchedEffect(s) {
+            // A break the player has just repaired goes at once — the delay exists to avoid crying
+            // wolf, not to leave a stale accusation standing over a board that is now legal.
+            shown = shown.filter { it in live }
+            if (shown == live) return@LaunchedEffect
+            // Anything newly broken waits. The next tap hands in a new state, which cancels this
+            // effect mid-delay and starts the wait over, so the clock measures the pause after the
+            // last tap rather than the time since the first.
+            delay(SETTLE_MILLIS)
+            shown = live
+        }
+
         // Each rule gets its own treatment so the board says *which* rule broke, not merely that
         // something is wrong: a ring on the offending run, a halo down the unbalanced line, and
         // the link badge itself turning red.
-        val ringed = violations.filter { it.rule == Broken.TRIPLE }.flatMap { it.cells }.toSet()
-        val haloed = violations.filter { it.rule == Broken.BALANCE }.flatMap { it.cells }.toSet()
-        val brokenLinks = violations
+        val ringed = shown.filter { it.rule == Broken.TRIPLE }.flatMap { it.cells }.toSet()
+        val haloed = shown.filter { it.rule == Broken.BALANCE }.flatMap { it.cells }.toSet()
+        val brokenLinks = shown
             .filter { it.rule == Broken.LINK }
             .map { it.cells[0] to it.cells[1] }
             .toSet()
@@ -439,22 +509,21 @@ object Mambo : PuzzleType {
                 }
             }
 
-            // Names the rule as well as showing it, so a red mark is never just "you are wrong".
-            val notes = violations.map { it.rule }.distinct().map {
-                when (it) {
-                    Broken.TRIPLE -> "Three identical symbols in a line"
-                    Broken.BALANCE -> "A line holds too many of one symbol"
-                    Broken.LINK -> "A linked pair breaks its = or x"
-                }
-            }
-            if (notes.isNotEmpty()) {
-                Text(
-                    notes.joinToString(" · "),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = scheme.error,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
-                )
-            }
+            // Always composed, never wrapped in an `if`: with minLines equal to maxLines the Text
+            // measures to exactly CAPTION_LINES lines of its own style no matter what it holds, so
+            // an empty caption occupies the same height as a full one and the grid above it cannot
+            // move. Ellipsis is the backstop for a display narrower, or a font scale larger, than
+            // CAPTION_LINE_CHARS assumes — losing the tail of the sentence still beats a board
+            // that jumps.
+            Text(
+                text = captionFor(shown),
+                style = MaterialTheme.typography.labelLarge,
+                color = scheme.error,
+                minLines = CAPTION_LINES,
+                maxLines = CAPTION_LINES,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+            )
         }
     }
 
