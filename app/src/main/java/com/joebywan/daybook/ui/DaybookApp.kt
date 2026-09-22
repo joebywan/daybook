@@ -85,7 +85,10 @@ fun DaybookApp() {
         is Route.Play -> {
             val puzzle = PuzzleRegistry.byId(current.puzzleId)
             if (puzzle == null) {
-                route = Route.Home
+                // A saved route can name a puzzle that no longer exists. Navigating has to happen
+                // in an effect rather than inline: writing state while composing is what starts a
+                // recomposition loop.
+                LaunchedEffect(current.puzzleId) { route = Route.Home }
             } else {
                 val seed = if (current.day != null) {
                     DailySeed.seedFor(current.day, puzzle.id, current.difficulty)
