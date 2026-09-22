@@ -229,31 +229,38 @@ object Mosaic : PuzzleType {
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val spec = specFor(difficulty)
 
-        // Three passes, each giving up something rather than giving up the guarantee. The first
-        // insists on the tier's optimum. The second takes any optimum that was proved. The third
-        // stops searching and falls back on a limit that needs no search: flooding an area with a
-        // neighbour's colour always eats at least that neighbour, so a board of n areas always
-        // falls in n - 1 fills. Neither fallback has been needed by any tested seed, and the loose
-        // limit is still one that has been argued, which an unfinished search is not.
+        // Three passes, each giving up something rather than giving up the proof. The first insists
+        // on the tier's optimum; the second takes any optimum that was proved; the third keeps
+        // searching but pays for a deeper one, since a board that defeats the budget is usually
+        // expensive rather than unprovable.
+        //
+        // No pass ships a limit it has not proved. An earlier version let the last pass skip the
+        // search and use areaCount - 1 -- a limit that is always reachable, by the argument that a
+        // fill eats at least one neighbour, but which can sit far above what the board needs. That
+        // is how a board whose optimum was three shipped asking for seven, and the owner finished
+        // it with four fills spare. "Reachable" was never the property that mattered; "this is
+        // what the board is worth" is.
         for (pass in 0..2) {
             repeat(ATTEMPTS) { attempt ->
                 val rng = Rng(seed + attempt * 0x9E3779B9L + pass * 0x7F4A7C15L)
                 val board = MosaicState(spec.width, spec.height, spec.colours, 0, paint(rng, spec))
                 if (board.solved) return@repeat
-                if (pass == 2) return board.copy(limit = board.areaCount() - 1)
-                val line = solve(board) ?: return@repeat
+                val budget = if (pass == 2) SOLVE_BUDGET * 4 else SOLVE_BUDGET
+                val line = solve(board, budget) ?: return@repeat
                 if (pass == 0 && line.size !in spec.optimum) return@repeat
                 return board.copy(limit = line.size + spec.slack)
             }
         }
 
-        // Only reachable if blob growth painted one flat colour forty times running. Stripes cannot
-        // do that, and one fill per stripe always clears them.
+        // Only reachable if blob growth painted one flat colour forty times running, three passes
+        // over. Stripes cannot do that, and they are cheap to solve, so even this last resort
+        // ships a proved number; areaCount - 1 stands behind it purely so the function is total.
         val stripes = MosaicState(
             spec.width, spec.height, spec.colours, 0,
             List(spec.width * spec.height) { (it / spec.width) % spec.colours },
         )
-        return stripes.copy(limit = stripes.areaCount() - 1)
+        val line = solve(stripes, SOLVE_BUDGET * 4)
+        return stripes.copy(limit = (line?.size ?: (stripes.areaCount() - 1)) + spec.slack)
     }
 
     private const val ATTEMPTS = 40
