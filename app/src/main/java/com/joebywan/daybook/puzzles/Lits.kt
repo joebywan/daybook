@@ -9,12 +9,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
@@ -43,6 +51,12 @@ data class LitsState(
 
     fun toggle(index: Int): LitsState =
         copy(shaded = shaded.toMutableList().also { it[index] = !it[index] }, moves = moves + 1)
+
+    /** The letter of the tetromino each shaded square belongs to, where its region has settled. */
+    fun letters(): List<Lits.Piece?> = Lits.letters(width, height, region, shaded)
+
+    /** Squares no legal answer can shade while the shading already on the board stays put. */
+    fun impossible(): Set<Int> = Lits.impossible(width, height, region, shaded)
 }
 
 /**
@@ -66,10 +80,18 @@ object Lits : PuzzleType {
         "All shaded squares must form one connected area.",
         "Two tetrominoes of the same letter may not touch edge to edge, even across regions.",
         "Tap a square to shade or clear it.",
+        "A finished tetromino takes its letter's colour and carries the letter, so two blocks " +
+            "touching in one colour are the rule being broken.",
+        "Squares that can no longer be shaded are crossed off for you.",
     )
 
-    /** The four legal letters. A 2x2 block is deliberately not one of them. */
-    private enum class Piece { I, L, T, S }
+    /**
+     * The four legal letters. A 2x2 block is deliberately not one of them.
+     *
+     * Public because the letter is no longer only the solver's business: it is what the board
+     * colours a finished tetromino by, and what a test can pin that colouring against.
+     */
+    enum class Piece { I, L, T, S }
 
     private fun shape(difficulty: Difficulty) = when (difficulty) {
         Difficulty.STANDARD -> 6 to 6
@@ -151,6 +173,119 @@ object Lits : PuzzleType {
         }
 
         return isConnected((0 until n).filter { shaded[it] }, width, height)
+    }
+
+    // ---- what the board can show the player ---------------------------------------------------
+
+    /**
+     * The letter of the tetromino each shaded square belongs to, or null where there is not one.
+     *
+     * A region earns a letter only once its four squares are down and legal. Fewer than four, a
+     * fifth, a shape in two pieces or the forbidden 2x2 all leave every square of that region
+     * unnamed, because naming a half-shaded region would mean picking one of the shapes it could
+     * still become — and the colour would then flicker between letters as the player worked,
+     * asserting a deduction nobody has made.
+     *
+     * Public for the same reason [isSolved] is: the board and the tests should read the letters
+     * from one place.
+     */
+    fun letters(
+        width: Int,
+        height: Int,
+        region: List<Int>,
+        shaded: List<Boolean>,
+    ): List<Piece?> {
+        val n = width * height
+        if (region.size != n || shaded.size != n) return List(n) { null }
+
+        val out = arrayOfNulls<Piece>(n)
+        val quads = HashMap<Int, MutableList<Int>>()
+        for (cell in 0 until n) if (shaded[cell]) quads.getOrPut(region[cell]) { mutableListOf() } += cell
+        for (quad in quads.values) {
+            if (quad.size != 4 || !isConnected(quad, width, height)) continue
+            val piece = classify(quad, width) ?: continue
+            quad.forEach { out[it] = piece }
+        }
+        return out.asList()
+    }
+
+    /**
+     * Squares that cannot be shaded while everything already shaded stays where it is.
+     *
+     * Derived from the shading on every read rather than written into the state, exactly as
+     * `Kings.eliminated` is: a stored cross has to be retracted when the shading that justified it
+     * is rubbed out, and telling those apart from the player's own marks across undo, restart and
+     * hints is the bookkeeping that rots. Recomputing is a few hundred set operations.
+     *
+     * One rule decides it, rather than a list of special cases. Shading a square commits its region
+     * to *some* legal tetromino covering both that square and everything the region already holds,
+     * so the square is impossible exactly when no such tetromino survives contact with the rest of
+     * the board. That subsumes the obvious cases — a region already holding its four squares admits
+     * no five-square cover, and a square whose neighbours complete a 2x2 poisons every cover that
+     * includes it — and adds the ones a player would otherwise have to find by hand: a square its
+     * region simply cannot fit a tetromino around, and a square whose every remaining shape would
+     * land the region's letter against a finished tetromino of the same letter.
+     *
+     * Every clause reads only squares that are shaded *now*, so each cross means "not while the
+     * board says this", which is the same promise Kings' crosses make about the kings standing on
+     * it. Nothing here guesses at shading still to come: a cover is only condemned by squares the
+     * player has actually put down.
+     */
+    fun impossible(
+        width: Int,
+        height: Int,
+        region: List<Int>,
+        shaded: List<Boolean>,
+    ): Set<Int> {
+        val n = width * height
+        if (region.size != n || shaded.size != n) return emptySet()
+
+        val letters = letters(width, height, region, shaded)
+        val members = HashMap<Int, MutableList<Int>>()
+        for (cell in 0 until n) members.getOrPut(region[cell]) { mutableListOf() } += cell
+
+        /** Would this cover, standing on the shading already down, fill a 2x2 anywhere? */
+        fun fillsBlock(quad: List<Int>): Boolean = quad.any { cell ->
+            val r = cell / width
+            val c = cell % width
+            (-1..0).any { dr ->
+                (-1..0).any { dc ->
+                    val rr = r + dr
+                    val cc = c + dc
+                    rr >= 0 && cc >= 0 && rr + 1 < height && cc + 1 < width &&
+                        listOf(
+                            rr * width + cc, rr * width + cc + 1,
+                            (rr + 1) * width + cc, (rr + 1) * width + cc + 1,
+                        ).all { it in quad || shaded[it] }
+                }
+            }
+        }
+
+        /** Would this cover sit its letter against a region that has already settled on it? */
+        fun clashes(quad: List<Int>, piece: Piece): Boolean = quad.any { cell ->
+            neighbours(cell, width, height).any { next ->
+                next !in quad && shaded[next] && letters[next] == piece
+            }
+        }
+
+        val covers = HashMap<Int, List<kotlin.Pair<List<Int>, Piece>>>()
+        val out = mutableSetOf<Int>()
+        for (cell in 0 until n) {
+            if (shaded[cell]) continue
+            val id = region[cell]
+            val cells = members.getValue(id)
+            val forced = cells.filter { shaded[it] } + cell
+            if (forced.size > 4) {
+                out += cell
+                continue
+            }
+            val fits = covers.getOrPut(id) { tetrominoes(cells, width, height) }
+                .filter { it.first.containsAll(forced) }
+            if (fits.isEmpty() || fits.all { (quad, piece) -> fillsBlock(quad) || clashes(quad, piece) }) {
+                out += cell
+            }
+        }
+        return out
     }
 
     // ---- generation ---------------------------------------------------------------------------
@@ -683,6 +818,46 @@ object Lits : PuzzleType {
 
     // ---- play ---------------------------------------------------------------------------------
 
+    // ---- drawing ------------------------------------------------------------------------------
+
+    /**
+     * A colour per letter, so that the rule about touching tetrominoes becomes something a player
+     * can see rather than something the win condition knows privately. Every shaded square used to
+     * be the one accent, which made an L and an S identical on screen: the rule was enforced all
+     * along — LitsAuditTest pins that — but nobody could tell it was there.
+     *
+     * Blue, amber, green and vermillion: four hues that stay apart from each other, sit clear of
+     * the unshaded [androidx.compose.material3.ColorScheme.surfaceVariant] in both themes, and are
+     * mid-toned enough that the region walls — ink on parchment, parchment on ink — still read
+     * across them. They are deliberately not the scheme's own colours, which are a green and an
+     * amber that the board would then share with its own furniture.
+     *
+     * Hue is only half of it. Four colours is exactly where colour blindness stops being a corner
+     * case — green against vermillion is the common confusion, and blue against purple the next —
+     * so the letter is *also* written on the square. The glyph is what a player who cannot separate
+     * two of these hues reads instead, and it costs nothing: it says the same thing the rules
+     * already print.
+     */
+    private fun colourOf(piece: Piece): Long = when (piece) {
+        Piece.I -> 0xFF4C86D9
+        Piece.L -> 0xFFE0B23C
+        Piece.T -> 0xFF54B07A
+        Piece.S -> 0xFFD9584C
+    }
+
+    /**
+     * Shaded, but not yet anything: the puzzle's own accent, which is what every shaded square
+     * looked like before the letters had colours.
+     *
+     * A part-shaded region is a decision in progress, and this is the one tone on the board that
+     * makes no claim about which letter it will become. It is a warm neutral against four
+     * saturated hues, so "still working on it" and "settled into an L" are never each other.
+     */
+    private val inProgress = Color(accent)
+
+    /** The share of a cell a crossed-off square keeps clear, matching Kings' crosses. */
+    private const val CROSS_INSET = 0.28f
+
     override fun hint(state: PuzzleState): PuzzleState? {
         val s = state as LitsState
         val wrong = s.shaded.indices.firstOrNull { s.shaded[it] != s.solution[it] } ?: return null
@@ -708,7 +883,11 @@ object Lits : PuzzleType {
                     origin.y + (i / PREVIEW_SIDE) * step,
                 )
                 drawRect(
-                    color = if (previewShaded[i]) Color(accent) else scheme.surfaceVariant,
+                    // The motif's shading is a finished L, so the tile wears the L's colour —
+                    // otherwise the home grid would advertise a board that no longer exists. The
+                    // letter itself is left off: at a 20dp cell the glyph is a smudge, and the tile
+                    // has to read as LITS from across a grid, not be read word by word.
+                    color = if (previewShaded[i]) Color(colourOf(Piece.L)) else scheme.surfaceVariant,
                     topLeft = at,
                     size = Size(step, step),
                 )
@@ -716,7 +895,7 @@ object Lits : PuzzleType {
                     color = scheme.background.copy(alpha = 0.35f),
                     topLeft = at,
                     size = Size(step, step),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f),
+                    style = Stroke(width = 1f),
                 )
             }
 
@@ -744,7 +923,7 @@ object Lits : PuzzleType {
                 color = scheme.onBackground,
                 topLeft = Offset(origin.x + wall / 2f, origin.y + wall / 2f),
                 size = Size(side - wall, side - wall),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = wall),
+                style = Stroke(width = wall),
             )
         }
     }
@@ -753,6 +932,12 @@ object Lits : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as LitsState
         val scheme = MaterialTheme.colorScheme
+        val measurer = rememberTextMeasurer()
+
+        // Both are a function of the shading and nothing else, so they are recomputed when — and
+        // only when — the board changes, the way Mambo remembers its violations.
+        val letters = remember(s) { s.letters() }
+        val impossible = remember(s) { s.impossible() }
 
         BoxWithConstraints(Modifier.fillMaxWidth().padding(18.dp)) {
             val step = maxWidth / s.width
@@ -774,17 +959,73 @@ object Lits : PuzzleType {
                 for (i in 0 until s.width * s.height) {
                     val r = i / s.width
                     val c = i % s.width
+                    val at = Offset(c * stepPx, r * stepPx)
+                    val piece = letters[i]
                     drawRect(
-                        color = if (s.shaded[i]) Color(accent) else scheme.surfaceVariant,
-                        topLeft = Offset(c * stepPx, r * stepPx),
+                        color = when {
+                            !s.shaded[i] -> scheme.surfaceVariant
+                            piece == null -> inProgress
+                            else -> Color(colourOf(piece))
+                        },
+                        topLeft = at,
                         size = Size(stepPx, stepPx),
                     )
                     drawRect(
                         color = scheme.background.copy(alpha = 0.35f),
-                        topLeft = Offset(c * stepPx, r * stepPx),
+                        topLeft = at,
                         size = Size(stepPx, stepPx),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f),
+                        style = Stroke(width = 1f),
                     )
+                    // Marks go on before the walls, so a wall is never drawn under one: the walls
+                    // are what the player reads the regions from and they outrank both of these.
+                    if (piece != null) {
+                        // Written in whichever of the page and its ink is the darker, rather than
+                        // in the page colour Kings uses for its marks. All four letter colours are
+                        // mid-to-light, so a dark letter carries three to five times the contrast
+                        // of a pale one on every one of them — and the glyph is the channel a
+                        // player who cannot separate two of the hues is left with, so it is the one
+                        // place on this board where legibility outranks matching Kings' polarity.
+                        val glyph = listOf(scheme.background, scheme.onBackground)
+                            .minBy { it.luminance() }
+                        val layout = measurer.measure(
+                            piece.name,
+                            TextStyle(
+                                color = glyph.copy(alpha = 0.85f),
+                                fontSize = (stepPx * 0.42f).toSp(),
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        )
+                        drawText(
+                            layout,
+                            topLeft = Offset(
+                                at.x + (stepPx - layout.size.width) / 2f,
+                                at.y + (stepPx - layout.size.height) / 2f,
+                            ),
+                        )
+                    } else if (i in impossible) {
+                        // Kings' cross, at Kings' proportions, so the two boards agree that a cross
+                        // means "not here". Drawn in the ink rather than the page, which is the one
+                        // departure: Kings crosses saturated region tiles, while an unshaded LITS
+                        // square is surfaceVariant — a pale tint of the page — and a
+                        // background-coloured cross on it would be all but invisible.
+                        val inset = stepPx * CROSS_INSET
+                        val span = stepPx - inset * 2f
+                        val ink = scheme.onSurfaceVariant.copy(alpha = 0.55f)
+                        drawLine(
+                            ink,
+                            Offset(at.x + inset, at.y + inset),
+                            Offset(at.x + inset + span, at.y + inset + span),
+                            strokeWidth = span * 0.2f,
+                            cap = StrokeCap.Round,
+                        )
+                        drawLine(
+                            ink,
+                            Offset(at.x + inset, at.y + inset + span),
+                            Offset(at.x + inset + span, at.y + inset),
+                            strokeWidth = span * 0.2f,
+                            cap = StrokeCap.Round,
+                        )
+                    }
                 }
 
                 // Thick strokes wherever two different regions meet.
@@ -813,7 +1054,7 @@ object Lits : PuzzleType {
                     color = scheme.onBackground,
                     topLeft = Offset.Zero,
                     size = Size(stepPx * s.width, stepPx * s.height),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = edge),
+                    style = Stroke(width = edge),
                 )
             }
         }
