@@ -167,7 +167,10 @@ object Mosaic : PuzzleType {
      * @param blobs how many seeds the region growth starts from — the region count lands a little
      *   under this, because two neighbouring blobs that end up the same colour are one area.
      * @param optimum the band the *proven* optimal solution has to fall in for a board to ship.
-     * @param slack fills handed to the player over that optimum.
+     * @param slack fills handed to the player over that optimum. Zero on every tier: a limit
+     *   above the optimum rewards a wasted fill, which teaches the habit the puzzle exists to
+     *   break. Difficulty is carried by grid size, section count, palette and how long the optimal
+     *   line is -- not by how much of that line a player is allowed to miss.
      *
      * | tier     | grid  | blobs | colours | areas | optimum | slack | limit |
      * |----------|-------|------:|--------:|------:|--------:|------:|------:|
@@ -211,9 +214,9 @@ object Mosaic : PuzzleType {
     )
 
     private fun specFor(difficulty: Difficulty) = when (difficulty) {
-        Difficulty.STANDARD -> Spec(8, 12, 16, 3, 4..4, 1)
-        Difficulty.HARD -> Spec(9, 14, 20, 4, 5..5, 1)
-        Difficulty.EXPERT -> Spec(10, 16, 24, 5, 6..6, 1)
+        Difficulty.STANDARD -> Spec(8, 12, 16, 3, 4..4, 0)
+        Difficulty.HARD -> Spec(9, 14, 20, 4, 5..5, 0)
+        Difficulty.EXPERT -> Spec(10, 16, 24, 5, 6..6, 0)
     }
 
     // ---- generation ---------------------------------------------------------------------------
