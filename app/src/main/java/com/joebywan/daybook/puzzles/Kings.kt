@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -23,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -166,7 +166,7 @@ object Kings : PuzzleType {
         "No two kings may touch, not even diagonally.",
         "Tap once to pencil in a blocked square, twice for a king, three times to clear.",
         "Drag across a run of squares to mark them all in one sweep.",
-        "Faint dots appear on squares a king already rules out.",
+        "Squares a king already rules out are crossed off for you.",
     )
 
     private val regionColours = listOf(
@@ -544,17 +544,14 @@ object Kings : PuzzleType {
                             contentAlignment = Alignment.Center,
                         ) {
                             when (shown) {
-                                Mark.KING -> Box(
-                                    Modifier
-                                        .fillMaxSize()
-                                        .padding(cell * 0.22f)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (i in conflicts) scheme.error else scheme.onBackground
-                                        )
+                                Mark.KING -> Crown(
+                                    cell,
+                                    if (i in conflicts) scheme.error else scheme.onBackground,
                                 )
                                 Mark.BLOCKED -> BlockedCross(cell, scheme.background)
-                                Mark.EMPTY -> if (i in eliminated) RuledOutDot(cell, scheme.background)
+                                // A square the board has ruled out is a fact, not a suggestion, so
+                                // it is written in the same hand as the player's own crosses.
+                                Mark.EMPTY -> if (i in eliminated) BlockedCross(cell, scheme.background)
                             }
                         }
                     }
@@ -564,8 +561,11 @@ object Kings : PuzzleType {
     }
 
     /**
-     * The player's own "not a king". A stroked X rather than a filled shape: big enough to read
-     * on a phone at arm's length, yet plainly a pencil mark beside the solid disc of a king.
+     * "Not a king", whether the player pencilled it in or a king on the board ruled it out.
+     *
+     * Stroked rather than filled, and drawn in the page colour where [Crown] is drawn in the ink:
+     * opposite weight and opposite polarity, so a glance separates the crosses from the kings
+     * without having to resolve either shape.
      */
     @Composable
     private fun BlockedCross(cell: Dp, colour: Color) {
@@ -578,17 +578,37 @@ object Kings : PuzzleType {
     }
 
     /**
-     * A square ruled out by a king already on the board. Deliberately quieter and a different
-     * shape from [BlockedCross]: the player needs to see at a glance which marks are the board's
-     * own deductions and which are theirs to change.
+     * The king, as a crown.
+     *
+     * One filled silhouette — band and points in a single path — because a 9x9 board leaves the
+     * mark about twenty dp across, and at that size an outline, a rim or the circles a crown
+     * usually carries on its tips close up into a smudge long before the silhouette itself stops
+     * reading. Three points rather than five for the same reason: rendered at a 38px cell, five
+     * points came out as a comb.
      */
     @Composable
-    private fun RuledOutDot(cell: Dp, colour: Color) {
-        Box(
-            Modifier
-                .size(cell * 0.16f)
-                .clip(CircleShape)
-                .background(colour.copy(alpha = 0.45f))
-        )
+    private fun Crown(cell: Dp, colour: Color) {
+        Canvas(Modifier.fillMaxSize().padding(cell * 0.14f)) {
+            // Crowns are wider than they are tall, so the shape is sized off the width and then
+            // centred in the square the cell gives it.
+            val w = size.width
+            val h = w * 0.72f
+            val top = (size.height - h) / 2f
+            fun x(f: Float) = f * w
+            fun y(f: Float) = top + f * h
+            val crown = Path().apply {
+                moveTo(x(0.06f), y(1.00f))   // base, tucked in a little under the band
+                lineTo(x(0.00f), y(0.66f))
+                lineTo(x(0.00f), y(0.18f))   // left point
+                lineTo(x(0.265f), y(0.60f))
+                lineTo(x(0.50f), y(0.00f))   // centre point, the tallest
+                lineTo(x(0.735f), y(0.60f))
+                lineTo(x(1.00f), y(0.18f))   // right point
+                lineTo(x(1.00f), y(0.66f))
+                lineTo(x(0.94f), y(1.00f))
+                close()
+            }
+            drawPath(crown, colour)
+        }
     }
 }
