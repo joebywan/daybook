@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
@@ -48,6 +49,29 @@ private const val SPIN_MILLIS = 140
 
 /** Degrees in the quarter turn a tap performs; the tile is drawn wound back by this and unwinds. */
 private const val QUARTER = 90f
+
+/** Pipe width as a fraction of the cell. Everything else on a tile is sized from the result. */
+private const val PIPE_WIDTH = 0.18f
+
+/**
+ * How far an unfilled pipe is tinted from the tile it sits on towards the foreground colour.
+ *
+ * Applied as an opaque blend rather than as stroke alpha: two translucent strokes that overlap
+ * composite darker, which turned every join and every hub into a blob and made a joined run read
+ * as a chain of separate lozenges. Blended once and drawn solid, an overlap cannot show at all.
+ */
+private const val DRY_TINT = 0.38f
+
+/**
+ * How far past the cell edge an arm reaches, in device pixels.
+ *
+ * Two butt-capped strokes that stop on exactly the same coordinate share one antialiased edge and
+ * between them cover it only partly, so a hairline of background shows straight across the join —
+ * the very thing this drawing is trying to get rid of. Half a pixel of overlap closes that, and
+ * cannot itself be seen now that the pipe colours are opaque. It also stays inside the one-pixel
+ * gutter between neighbouring tile backgrounds, so a later tile's fill never clips it back off.
+ */
+private const val JOIN_BLEED_PX = 0.5f
 
 @Serializable
 data class PipesState(
@@ -234,7 +258,9 @@ object Pipes : PuzzleType {
         val s = state as PipesState
         val scheme = MaterialTheme.colorScheme
         val wet = Color(accent)
-        val dry = scheme.onSurfaceVariant.copy(alpha = 0.38f)
+        // Flattened against the tile background it will be drawn on, so it lands on the same tone
+        // the translucent version used to show while being opaque everywhere it overlaps itself.
+        val dry = scheme.onSurfaceVariant.copy(alpha = DRY_TINT).compositeOver(scheme.surface)
         val wetCells = remember(s.cells, s.source) { filled(s) }
 
         // One angle per tile, held outside the state so a rotation can be shown turning while the
@@ -288,7 +314,8 @@ object Pipes : PuzzleType {
                         }
                     }
             ) {
-                val stroke = cellPx * 0.18f
+                val stroke = cellPx * PIPE_WIDTH
+                val reach = cellPx * 0.5f + JOIN_BLEED_PX
                 for (i in s.cells.indices) {
                     val r = i / s.width
                     val c = i % s.width
@@ -305,16 +332,21 @@ object Pipes : PuzzleType {
                     )
 
                     if (mask != 0) {
-                        // A single-ended pipe is an endpoint; draw it as a stub with a cap.
+                        // A single-ended pipe is an endpoint: the run stops here, and the knob is
+                        // what says so.
                         val endpoint = Integer.bitCount(mask) == 1
                         rotate(degrees = spins[i].value, pivot = Offset(cx, cy)) {
+                            // Butt caps stop the stroke dead on the cell edge. A round cap would
+                            // instead push half a pipe width past it and into the neighbour, so
+                            // two joined arms overlapped by a full width — the "overlapping rather
+                            // than joining" the board reads as.
                             fun arm(dx: Float, dy: Float) {
                                 drawLine(
                                     color = pipeColour,
                                     start = Offset(cx, cy),
-                                    end = Offset(cx + dx * cellPx * 0.5f, cy + dy * cellPx * 0.5f),
+                                    end = Offset(cx + dx * reach, cy + dy * reach),
                                     strokeWidth = stroke,
-                                    cap = StrokeCap.Round,
+                                    cap = StrokeCap.Butt,
                                 )
                             }
                             if (mask and UP != 0) arm(0f, -1f)
@@ -322,9 +354,13 @@ object Pipes : PuzzleType {
                             if (mask and LEFT != 0) arm(-1f, 0f)
                             if (mask and RIGHT != 0) arm(1f, 0f)
 
+                            // Square-ended arms leave a notch on the outside of a bend, so the hub
+                            // stands in for the round join the stroke no longer draws itself: at
+                            // exactly half the pipe width it rounds the corner off without the
+                            // junction swelling wider than the run passing through it.
                             drawCircle(
                                 color = pipeColour,
-                                radius = if (endpoint) cellPx * 0.20f else stroke * 0.62f,
+                                radius = if (endpoint) cellPx * 0.20f else stroke * 0.5f,
                                 center = Offset(cx, cy),
                             )
                         }
