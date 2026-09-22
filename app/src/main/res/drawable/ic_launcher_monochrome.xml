@@ -1,0 +1,49 @@
+<!--
+  Daybook's themed-icon layer: the same sun-over-an-open-almanac, as one flat silhouette.
+
+  Android tints every pixel of this layer a single colour and keeps only its alpha, so nothing here
+  may lean on fill colour to be seen. What is left is the board's outline with the gutter slotted
+  out of it, and the rayed sun with clear air beneath it. Fill it flat black and both are still
+  there, which is the whole test.
+
+  The two parchment pages from ic_launcher_foreground.xml are dropped on purpose: they sit inside
+  the board and would only fill the slot back in. Everything else is copied verbatim, and must stay
+  in step with the foreground.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#000000"
+        android:pathData="M48.5,63
+            C41,59.7 33.3,56.4 26,54.5
+            C24.7,54 23.7,54.6 23.8,56
+            C24.2,61.4 25,66.2 26.4,71
+            C34.6,75 43,78.5 50.5,80.4
+            C51.8,80.8 56.2,80.8 57.5,80.4
+            C65,78.5 73.4,75 81.6,71
+            C83,66.2 83.8,61.4 84.2,56
+            C84.3,54.6 83.3,54 82,54.5
+            C74.7,56.4 67,59.7 59.5,63
+            L57.2,76
+            L50.8,76 Z" />
+
+    <path
+        android:fillColor="#000000"
+        android:pathData="M46,37 a8,8 0 1 1 16,0 a8,8 0 1 1 -16,0 Z" />
+
+    <path
+        android:fillColor="#000000"
+        android:pathData="M52.28,26.74 L55.72,26.74 L55.54,22.08 L52.46,22.08 Z
+            M60.04,28.53 L62.47,30.96 L65.64,27.54 L63.46,25.36 Z
+            M64.26,35.28 L64.26,38.72 L68.92,38.54 L68.92,35.46 Z
+            M62.47,43.04 L60.04,45.47 L63.46,48.64 L65.64,46.46 Z
+            M55.72,47.26 L52.28,47.26 L52.46,51.92 L55.54,51.92 Z
+            M47.96,45.47 L45.53,43.04 L42.36,46.46 L44.54,48.64 Z
+            M43.74,38.72 L43.74,35.28 L39.08,35.46 L39.08,38.54 Z
+            M45.53,30.96 L47.96,28.53 L44.54,25.36 L42.36,27.54 Z" />
+
+</vector>
