@@ -45,8 +45,16 @@ data class KingsState(
     override val moves: Int = 0,
 ) : PuzzleState {
 
-    override val solved: Boolean
-        get() = marks.indices.filter { marks[it] == Mark.KING }.toSet() == solution
+    /**
+     * Judged by the rules, never by comparison with [solution].
+     *
+     * This used to read `kings == solution`, which refused every legal placement but the one the
+     * generator happened to store — and a Kings board that admits a second answer is not rare
+     * enough for that to be theoretical: the board that exposed it had twenty-six. [solution] is
+     * still carried because [Kings.hint] has to nudge towards *some* answer, but it no longer
+     * decides anything.
+     */
+    override val solved: Boolean get() = Kings.isSolved(size, region, marks)
 
     /** Kings that break a rule, for live feedback. */
     fun conflicts(): Set<Int> {
@@ -143,8 +151,9 @@ data class KingsState(
 /**
  * Kings — the one-per-row/column/region placement puzzle.
  *
- * Generation picks a legal king layout first, then grows the colour regions around it, and only
- * keeps the result if a solver confirms the regions admit exactly one layout.
+ * Generation picks a legal king layout first, then hands the remaining squares to the colour
+ * regions one at a time, keeping the board provably single-answered at every step. Winning is
+ * judged by the rules, so any legal placement finishes the board — not just the one stored.
  */
 object Kings : PuzzleType {
 
@@ -171,27 +180,88 @@ object Kings : PuzzleType {
         Difficulty.EXPERT -> 9
     }
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
-        val n = sizeFor(difficulty)
-        var rng = Rng(seed)
+    // ---- the win condition ---------------------------------------------------------------
 
-        repeat(400) { attempt ->
-            val layout = randomLayout(rng, n)
-            if (layout != null) {
-                val regions = growRegions(rng, n, layout)
-                if (countSolutions(n, regions) == 1) {
-                    val kings = layout.mapIndexed { r, c -> r * n + c }.toSet()
-                    return KingsState(n, regions, List(n * n) { Mark.EMPTY }, kings)
-                }
-            }
-            rng = Rng(seed + attempt + 1)
+    /**
+     * Exactly one king per row, per column and per region, and no two kings touching.
+     *
+     * Lives on the object rather than on [KingsState] so the generator and the board agree on one
+     * statement of the rules: the bug that shipped was a board whose *stored* answer had two kings
+     * in a column, which a check written twice could have caught but a check written nowhere could
+     * not.
+     */
+    fun isSolved(n: Int, region: List<Int>, marks: List<Mark>): Boolean {
+        val kings = marks.indices.filter { marks[it] == Mark.KING }
+        if (kings.size != n) return false
+        val rows = BooleanArray(n)
+        val cols = BooleanArray(n)
+        val regions = HashSet<Int>()
+        for (k in kings) {
+            val r = k / n
+            val c = k % n
+            if (rows[r] || cols[c] || !regions.add(region[k])) return false
+            rows[r] = true
+            cols[c] = true
         }
+        for (a in kings) for (b in kings) {
+            if (a >= b) continue
+            val touching = kotlin.math.abs(a / n - b / n) <= 1 && kotlin.math.abs(a % n - b % n) <= 1
+            if (touching) return false
+        }
+        return true
+    }
 
-        // Fall back to a trivially legal board rather than failing to produce a puzzle.
-        val layout = fallbackLayout(n)
-        val regions = growRegions(Rng(seed), n, layout)
-        return KingsState(n, regions, List(n * n) { Mark.EMPTY },
-            layout.mapIndexed { r, c -> r * n + c }.toSet())
+    // ---- generation ----------------------------------------------------------------------
+
+    /**
+     * King layouts tried per board.
+     *
+     * A single carve completes between a third and two thirds of the time depending on the grid,
+     * and each failure is independent, so forty is a wide margin against ever reaching the
+     * unproved [lastResort] — not a budget that is expected to be spent. Boards cost a couple of
+     * carves on average, which at 9x9 is single-digit milliseconds.
+     */
+    private const val ATTEMPTS = 40
+
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        generateVerified(seed, difficulty) ?: lastResort(seed, sizeFor(difficulty))
+
+    /**
+     * The real generator: a board whose uniqueness has been *proved*, or null when no layout in
+     * the budget carved into one.
+     *
+     * Split out from [generate] so a test can assert this never abdicates. The version this
+     * replaced had the same two paths but no way to tell them apart, so nobody noticed that at 8x8
+     * and 9x9 the checked path failed on every single attempt and the unchecked fallback was what
+     * players actually got.
+     */
+    fun generateVerified(seed: Long, difficulty: Difficulty): KingsState? {
+        val n = sizeFor(difficulty)
+        for (attempt in 0 until ATTEMPTS) {
+            val rng = Rng(seed + attempt)
+            val layout = randomLayout(rng, n) ?: continue
+            val regions = carve(rng, n, layout) ?: continue
+            return KingsState(
+                n, regions, List(n * n) { Mark.EMPTY },
+                layout.mapIndexed { r, c -> r * n + c }.toSet(),
+            )
+        }
+        return null
+    }
+
+    /**
+     * Only reachable if every layout in the budget failed to carve, which has not been observed.
+     * It exists so [generate] is total — a daily puzzle must never throw — and it is deliberately
+     * the only path that ships a board without a proof of uniqueness. KingsRulesTest pins that it
+     * never fires. Winning is judged by the rules now, so even here a second answer would be a
+     * blemish rather than an unwinnable board.
+     */
+    private fun lastResort(seed: Long, n: Int): KingsState {
+        val layout = randomLayout(Rng(seed), n) ?: staircaseLayout(n)
+        return KingsState(
+            n, growRegions(Rng(seed), n, layout), List(n * n) { Mark.EMPTY },
+            layout.mapIndexed { r, c -> r * n + c }.toSet(),
+        )
     }
 
     /** A column per row: all distinct, and never within one column of the row above. */
@@ -214,12 +284,106 @@ object Kings : PuzzleType {
         return if (place(0)) cols.toList() else null
     }
 
-    private fun fallbackLayout(n: Int): List<Int> =
-        (0 until n).map { r -> (r * 2) % n }
+    /**
+     * Even columns top to bottom, then odd ones: distinct for every n, which `(r * 2) % n` was
+     * not. That expression repeated columns whenever n was even — at 8x8 it read 0,2,4,6,0,2,4,6 —
+     * so the fallback it fed stored an answer with two kings in a column, which no player could
+     * ever reach. Consecutive rows differ by two within each half and by n-2 or more across the
+     * join, so no two kings touch.
+     */
+    private fun staircaseLayout(n: Int): List<Int> {
+        val evens = (n + 1) / 2
+        return (0 until n).map { r -> if (r < evens) r * 2 else (r - evens) * 2 + 1 }
+    }
+
+    /**
+     * Hands the squares the kings do not stand on to the regions one at a time, never letting the
+     * board stop being uniquely solvable.
+     *
+     * Growing regions at random and checking afterwards was the losing strategy: at 8x8 and 9x9 a
+     * randomly grown partition essentially never admits exactly one layout, so four hundred
+     * attempts failed four hundred times and the unchecked fallback shipped. Handing out squares
+     * one by one inverts the problem. With every region exactly its own king's square each region
+     * has a single candidate and the board is trivially unique; giving a square to a region only
+     * ever *adds* placements that region might hold and never removes one, so the solution count
+     * is monotone and uniqueness can be re-checked after each square, offering the square to a
+     * different neighbour when it would introduce a second answer. Monotonicity also means this is
+     * not over-strict: a partition that is unique when finished was unique at every step along the
+     * way, so nothing is ruled out that the old approach could have found.
+     *
+     * A square no neighbour can take is set aside rather than treated as failure — claiming its
+     * other neighbours first can hand it a region that will take it — which is what carries the
+     * success rate from a few percent to essentially always. Returns null rather than a partial or
+     * unproved partition: the caller reseeds.
+     */
+    private fun carve(rng: Rng, n: Int, layout: List<Int>): List<Int>? {
+        val cells = n * n
+        val region = MutableList(cells) { -1 }
+        layout.forEachIndexed { r, c -> region[r * n + c] = r }
+        val sizes = IntArray(n) { 1 }
+        var remaining = cells - n
+
+        // Squares no region can take without adding a second answer, against the neighbours they
+        // were refused by: a square is worth revisiting once a new region reaches it.
+        val refused = HashMap<Int, Set<Int>>()
+
+        var guard = 0
+        while (remaining > 0 && guard++ < cells * 8) {
+            val open = (0 until cells).mapNotNull { cell ->
+                if (region[cell] != -1) return@mapNotNull null
+                val hosts = hostsOf(cell, n, region)
+                if (hosts.isEmpty() || refused[cell]?.containsAll(hosts) == true) null
+                else cell to hosts
+            }
+            if (open.isEmpty()) return null
+
+            // Fewest neighbours to choose from goes first. A sparse board has almost no alternative
+            // layouts to open up by accident, so a square is at its most acceptable early, and the
+            // squares with one candidate region are the ones a later step would find impossible.
+            // Taking them in that order roughly doubled how often a carve runs to completion.
+            val (cell, hosts) = rng.shuffled(open).minBy { it.second.size }
+            // Smallest region first, so no one region swallows the leftovers and the colours stay
+            // roughly the size a player expects to reason about.
+            val ordered = rng.shuffled(hosts.toList()).sortedBy { sizes[it] }
+
+            var chosen = -1
+            for (host in ordered) {
+                region[cell] = host
+                if (countSolutions(n, region) == 1) {
+                    chosen = host
+                    break
+                }
+                region[cell] = -1
+            }
+            if (chosen == -1) {
+                refused[cell] = hosts
+                continue
+            }
+            sizes[chosen]++
+            remaining--
+        }
+        return if (remaining == 0) region else null
+    }
+
+    /** The regions already touching [cell] edge-on, which are the only ones that may claim it. */
+    private fun hostsOf(cell: Int, n: Int, region: List<Int>): Set<Int> =
+        neighbours(cell, n).mapNotNullTo(HashSet()) { region[it].takeIf { id -> id != -1 } }
+
+    private fun neighbours(cell: Int, n: Int): List<Int> {
+        val r = cell / n
+        val c = cell % n
+        return listOfNotNull(
+            if (r > 0) cell - n else null,
+            if (r < n - 1) cell + n else null,
+            if (c > 0) cell - 1 else null,
+            if (c < n - 1) cell + 1 else null,
+        )
+    }
 
     /**
      * Flood-grows one region from each king until the board is covered. Every region is connected
-     * and holds exactly one king by construction.
+     * and holds exactly one king by construction — but nothing here looks at how many layouts the
+     * result admits, which is why only [lastResort] still uses it.
      */
     private fun growRegions(rng: Rng, n: Int, layout: List<Int>): List<Int> {
         val region = MutableList(n * n) { -1 }
@@ -227,14 +391,7 @@ object Kings : PuzzleType {
 
         val frontier = mutableListOf<Int>()
         fun pushNeighbours(index: Int) {
-            val r = index / n
-            val c = index % n
-            listOfNotNull(
-                if (r > 0) index - n else null,
-                if (r < n - 1) index + n else null,
-                if (c > 0) index - 1 else null,
-                if (c < n - 1) index + 1 else null,
-            ).forEach { if (region[it] == -1) frontier += it }
+            neighbours(index, n).forEach { if (region[it] == -1) frontier += it }
         }
         (0 until n * n).filter { region[it] != -1 }.forEach(::pushNeighbours)
 
@@ -242,14 +399,7 @@ object Kings : PuzzleType {
             val pick = rng.nextInt(frontier.size)
             val cell = frontier.removeAt(pick)
             if (region[cell] != -1) continue
-            val r = cell / n
-            val c = cell % n
-            val owners = listOfNotNull(
-                if (r > 0) region[cell - n] else null,
-                if (r < n - 1) region[cell + n] else null,
-                if (c > 0) region[cell - 1] else null,
-                if (c < n - 1) region[cell + 1] else null,
-            ).filter { it != -1 }
+            val owners = hostsOf(cell, n, region).toList()
             if (owners.isEmpty()) {
                 frontier += cell
                 continue
@@ -260,7 +410,17 @@ object Kings : PuzzleType {
         return region
     }
 
-    /** Counts legal king layouts for these regions, stopping at two. */
+    /**
+     * Counts legal king layouts for these regions, stopping at two.
+     *
+     * A square still unclaimed — region `-1` — holds no king, so a partly carved board counts only
+     * the layouts its finished regions already allow. That is what lets [carve] re-check after
+     * every single square instead of only at the end.
+     *
+     * One king per row is implicit in the walk, and n kings on n distinct regions means one each;
+     * consecutive rows are the only ones that can touch, so the previous row's column is the whole
+     * of the adjacency test.
+     */
     private fun countSolutions(n: Int, region: List<Int>): Int {
         val usedCols = BooleanArray(n)
         val usedRegions = BooleanArray(n)
@@ -276,7 +436,7 @@ object Kings : PuzzleType {
                 if (usedCols[c]) continue
                 if (row > 0 && kotlin.math.abs(prevCol - c) <= 1) continue
                 val reg = region[row * n + c]
-                if (usedRegions[reg]) continue
+                if (reg < 0 || usedRegions[reg]) continue
                 usedCols[c] = true
                 usedRegions[reg] = true
                 place(row + 1, c)
