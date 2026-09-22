@@ -267,18 +267,22 @@ object Sudoku : PuzzleType {
                             val i = r * 9 + c
                             val isSelected = s.selected == i
                             val sameValue = selectedValue != 0 && s.cells[i] == selectedValue
-                            val peerOfSelected = s.selected != null && i in peerTable[s.selected]
                             Box(
                                 Modifier
                                     .padding(start = cell * c, top = cell * r)
                                     .size(cell)
                                     .padding(1.dp)
                                     .clip(RoundedCornerShape(4.dp))
+                                    // The selected cell's row, column and box are deliberately
+                                    // left alone. Shading them restyled twenty of the eighty-one
+                                    // squares on every tap, so the board had to be re-read after
+                                    // each selection to find the 3x3 structure again -- the cost
+                                    // outweighed the help. Only the selection itself and cells
+                                    // holding the same digit react.
                                     .background(
                                         when {
                                             isSelected -> Color(accent).copy(alpha = 0.40f)
                                             sameValue -> Color(accent).copy(alpha = 0.20f)
-                                            peerOfSelected -> scheme.surface
                                             (r / 3 + c / 3) % 2 == 0 -> scheme.surfaceVariant
                                             else -> scheme.surface
                                         }
