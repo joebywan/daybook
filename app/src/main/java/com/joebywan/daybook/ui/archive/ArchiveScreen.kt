@@ -3,7 +3,6 @@ package com.joebywan.daybook.ui.archive
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -19,10 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +45,10 @@ private val RowDate = DateTimeFormatter.ofPattern("EEE d MMM yyyy")
  *
  * Past days are not stored or downloaded — each one is regenerated from its date, so this list can
  * run back to [DailySeed.EPOCH] at no cost.
+ *
+ * There is no back control on the screen; the system back button is the way out. With the arrow
+ * gone the heading starts at the same margin as the day rows below it, so the screen reads as one
+ * column rather than as a title indented behind something that is no longer there.
  */
 @Composable
 fun ArchiveScreen(
@@ -55,7 +56,6 @@ fun ArchiveScreen(
     today: LocalDate,
     completions: List<Completion>,
     onPlay: (LocalDate, Difficulty) -> Unit,
-    onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val puzzle = PuzzleRegistry.byId(puzzleId) ?: return
@@ -74,28 +74,19 @@ fun ArchiveScreen(
             .background(scheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 8.dp, top = 8.dp, bottom = 8.dp, end = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)
         ) {
-            Box(
-                Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = scheme.onSurfaceVariant)
-            }
-            Column {
-                Text(
-                    "${puzzle.displayName} archive",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = scheme.onBackground,
-                )
-                Text(
-                    "${days.size} days, all unlocked",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
+            Text(
+                "${puzzle.displayName} archive",
+                style = MaterialTheme.typography.titleLarge,
+                color = scheme.onBackground,
+            )
+            Text(
+                "${days.size} days, all unlocked",
+                style = MaterialTheme.typography.labelLarge,
+                color = scheme.onSurfaceVariant,
+            )
         }
 
         LazyColumn(

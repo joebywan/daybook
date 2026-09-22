@@ -1,9 +1,7 @@
 package com.joebywan.daybook.ui.stats
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -18,11 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,11 +31,14 @@ import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
 import java.time.LocalDate
 
+/**
+ * Lifetime numbers. There is no back control on the screen: the system back button is the way out,
+ * which is why the title sits on the same margin as the cards below it rather than behind an arrow.
+ */
 @Composable
 fun StatsScreen(
     today: LocalDate,
     completions: List<Completion>,
-    onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -51,20 +48,18 @@ fun StatsScreen(
             .background(scheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 8.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)
         ) {
-            Box(
-                Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = scheme.onSurfaceVariant)
-            }
             Text(
                 "Statistics",
                 style = MaterialTheme.typography.titleLarge,
                 color = scheme.onBackground,
+            )
+            Text(
+                "All time, on this device.",
+                style = MaterialTheme.typography.labelLarge,
+                color = scheme.onSurfaceVariant,
             )
         }
 

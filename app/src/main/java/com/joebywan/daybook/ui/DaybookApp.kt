@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -71,6 +72,18 @@ fun DaybookApp() {
         }
     }
 
+    // The screens have no back arrow of their own any more, so this is the only way out of one.
+    // It belongs here rather than on each screen because `route` lives here, and a screen that
+    // could send itself home would be a second, quieter copy of the navigation rules.
+    //
+    // Disabled on Home so the press falls through to the activity and closes the app: Home is the
+    // top of the task, and a back button that does nothing there is a trap. Nothing is lost by
+    // leaving a game this way — the board is saved on the way out and restored on the way back in.
+    //
+    // A dialog is a window of its own and takes the back press before the activity ever sees it,
+    // so this cannot fire while the archive picker or the rules sheet is open.
+    BackHandler(enabled = route != Route.Home) { route = Route.Home }
+
     when (val current = route) {
         Route.Home -> HomeScreen(
             today = today,
@@ -85,9 +98,9 @@ fun DaybookApp() {
             onLaunch = { puzzleId ->
                 route = when (mode) {
                     LaunchMode.DAILY -> Route.Play(puzzleId, difficulty, today)
-                    // A fresh nonce every tap is what makes a second practice game a new board
+                    // A fresh nonce every tap is what makes a second random game a new board
                     // rather than the one just finished.
-                    LaunchMode.PRACTICE ->
+                    LaunchMode.RANDOM ->
                         Route.Play(puzzleId, difficulty, null, System.nanoTime())
                 }
             },
@@ -98,7 +111,6 @@ fun DaybookApp() {
         Route.Stats -> StatsScreen(
             today = today,
             completions = completions,
-            onBack = { route = Route.Home },
         )
 
         is Route.Archive -> ArchiveScreen(
@@ -108,7 +120,6 @@ fun DaybookApp() {
             onPlay = { day, difficulty ->
                 route = Route.Play(current.puzzleId, difficulty, day)
             },
-            onBack = { route = Route.Home },
         )
 
         is Route.Play -> {
@@ -122,7 +133,7 @@ fun DaybookApp() {
                 val seed = if (current.day != null) {
                     DailySeed.seedFor(current.day, puzzle.id, current.difficulty)
                 } else {
-                    DailySeed.practiceSeed(puzzle.id, current.difficulty, current.nonce)
+                    DailySeed.randomSeed(puzzle.id, current.difficulty, current.nonce)
                 }
                 val gameKey = savedGameKey(puzzle.id, current.difficulty, seed)
                 PlayScreen(

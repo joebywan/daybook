@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
@@ -93,34 +92,32 @@ fun PlayScreen(
 
     val ready = generated
     if (ready == null) {
-        DealingBoard(puzzle, onBack)
+        DealingBoard(puzzle)
     } else {
         PlayBoard(puzzle, difficulty, day, ready, restore, persist, onSolved, onAgain, onBack)
     }
 }
 
+/**
+ * No header at all: the back arrow was the only thing in it, and a lone "How to play" button for
+ * rules you cannot yet see would be worse than the empty strip it would fill. Back out of a board
+ * still being dealt with the system back button, same as anywhere else.
+ */
 @Composable
-private fun DealingBoard(puzzle: PuzzleType, onBack: () -> Unit) {
+private fun DealingBoard(puzzle: PuzzleType) {
     val scheme = MaterialTheme.colorScheme
-    Column(
+    Box(
         Modifier
             .fillMaxSize()
             .background(scheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+        contentAlignment = Alignment.Center,
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconCircle(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
-        }
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            Text(
-                "Setting out ${puzzle.displayName}...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-            )
-        }
+        Text(
+            "Setting out ${puzzle.displayName}...",
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -213,12 +210,14 @@ private fun PlayBoard(
             .background(scheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
+        // Title at the start, the one remaining action at the end. Centring what is left over
+        // after removing the arrow would have hung the title 44dp off true, and padding the gap
+        // back out would keep reserving room for a control that no longer exists.
         Row(
-            Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
+            Modifier.fillMaxWidth().padding(start = 18.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconCircle(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.weight(1f)) {
                 Text(
                     puzzle.displayName,
                     style = MaterialTheme.typography.titleLarge,
@@ -228,7 +227,7 @@ private fun PlayBoard(
                     buildString {
                         append(difficulty.label)
                         append(" · ")
-                        append(day?.format(PlayDate) ?: "Practice")
+                        append(day?.format(PlayDate) ?: "Random")
                     },
                     style = MaterialTheme.typography.labelLarge,
                     color = scheme.onSurfaceVariant,

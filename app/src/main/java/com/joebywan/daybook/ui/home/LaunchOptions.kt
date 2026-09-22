@@ -39,7 +39,7 @@ import kotlinx.coroutines.flow.map
  */
 enum class LaunchMode(val label: String) {
     DAILY("Daily"),
-    PRACTICE("Practice"),
+    RANDOM("Random"),
 }
 
 /**
@@ -50,7 +50,7 @@ enum class LaunchMode(val label: String) {
  * holds solved days and half-finished boards.
  *
  * Only difficulty is stored. [LaunchMode] deliberately is not: a player who ends a session in
- * Practice would otherwise open the app the next morning to a grid that quietly hides the day's
+ * Random would otherwise open the app the next morning to a grid that quietly hides the day's
  * puzzles, and the daily is the whole point of the app.
  */
 class LaunchPreferences(private val context: Context) {
@@ -71,7 +71,7 @@ private val Context.launchStore: DataStore<Preferences> by preferencesDataStore(
 
 /**
  * The two choices that used to live on every card, hoisted above the grid: what difficulty, and
- * whether the tap opens today's puzzle or a fresh practice board.
+ * whether the tap opens today's puzzle or a freshly seeded random board.
  */
 @Composable
 fun LaunchOptions(

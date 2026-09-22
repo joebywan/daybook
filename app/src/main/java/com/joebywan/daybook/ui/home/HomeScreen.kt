@@ -124,7 +124,7 @@ fun HomeScreen(
         Spacer(Modifier.height(14.dp))
         PuzzleGrid(
             difficulty = difficulty,
-            // Practice boards are freshly seeded on every tap, so "solved today" says nothing
+            // Random boards are freshly seeded on every tap, so "solved today" says nothing
             // about the game a tile is about to start. The tiles keep their marks-shaped space
             // either way, so switching mode never shuffles the grid under a finger.
             doneToday = if (mode == LaunchMode.DAILY) doneToday else emptySet(),
