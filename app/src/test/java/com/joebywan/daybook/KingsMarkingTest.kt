@@ -69,8 +69,8 @@ class KingsMarkingTest {
         val placed = board(0 to Mark.BLOCKED, 24 to Mark.BLOCKED, 12 to Mark.KING)
         assertTrue(placed.eliminated().isNotEmpty())
 
-        // The third tap on a king clears it; nothing else in the board state changes.
-        val cleared = placed.cycle(12)
+        // A double tap on a king clears it; nothing else in the board state changes.
+        val cleared = placed.toggleKing(12)
         assertEquals(emptySet<Int>(), cleared.eliminated())
         assertEquals(Mark.BLOCKED, cleared.marks[0])
         assertEquals(Mark.BLOCKED, cleared.marks[24])
@@ -82,14 +82,59 @@ class KingsMarkingTest {
         val s = board(12 to Mark.KING)
         assertTrue(14 in s.eliminated())
 
-        val marked = s.cycle(14)
+        val marked = s.toggleMark(14)
         assertEquals(Mark.BLOCKED, marked.marks[14])
         assertEquals(s.eliminated(), marked.eliminated())
 
         // And it survives the king going away, because it was never an auto-mark.
-        val cleared = marked.cycle(12)
+        val cleared = marked.toggleKing(12)
         assertEquals(Mark.BLOCKED, cleared.marks[14])
         assertEquals(emptySet<Int>(), cleared.eliminated())
+    }
+
+    /**
+     * Replaces what the old three-step cycle pinned. A tap used to walk EMPTY -> BLOCKED -> KING,
+     * so a king cost two taps and a mark could not be rubbed out without passing through one; the
+     * two gestures are now independent, and that independence is the whole change.
+     */
+    @Test
+    fun `a single tap toggles the mark and never touches a king`() {
+        val s = board(1 to Mark.BLOCKED, 2 to Mark.KING)
+
+        assertEquals(Mark.BLOCKED, s.toggleMark(0).marks[0])
+        assertEquals(Mark.EMPTY, s.toggleMark(1).marks[1])
+        assertEquals(s.moves + 1, s.toggleMark(0).moves)
+
+        // Same instance, so the board knows nothing happened and has nothing to emit.
+        assertSame(s, s.toggleMark(2))
+    }
+
+    @Test
+    fun `a double tap crowns or uncrowns, mark or no mark`() {
+        val s = board(1 to Mark.BLOCKED, 2 to Mark.KING)
+
+        assertEquals(Mark.KING, s.toggleKing(0).marks[0])
+        // A pencilled-out square is not a lock: the deliberate gesture outranks the note.
+        assertEquals(Mark.KING, s.toggleKing(1).marks[1])
+        assertEquals(Mark.EMPTY, s.toggleKing(2).marks[2])
+        assertEquals(s.moves + 1, s.toggleKing(1).moves)
+    }
+
+    /**
+     * The screen holds the first tap of a pair back rather than emitting it, so the crown is built
+     * from the board as it stood before the pair began. Pinned here because it is what keeps a
+     * double tap to one entry in the undo history and one move on the clock.
+     */
+    @Test
+    fun `a double tap costs one move, not a mark plus a king`() {
+        val s = board()
+        // What the pair's first tap drew, and what it would have cost had it been emitted.
+        assertEquals(s.moves + 1, s.toggleMark(0).moves)
+
+        // The crown is built from the board the pair started on, not from the mark drawn over it.
+        val crowned = s.toggleKing(0)
+        assertEquals(Mark.KING, crowned.marks[0])
+        assertEquals(s.moves + 1, crowned.moves)
     }
 
     @Test

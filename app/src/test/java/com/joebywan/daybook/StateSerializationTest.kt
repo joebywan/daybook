@@ -82,7 +82,7 @@ class StateSerializationTest {
      */
     private fun mutate(state: PuzzleState): PuzzleState = when (state) {
         is AtomsState -> state.pairs.indices.take(2).fold(state) { acc, i -> acc.cycle(i) }
-        is KingsState -> state.cycle(0).cycle(1)
+        is KingsState -> state.toggleMark(0).toggleKing(1)
         is LitsState -> state.toggle(0)
         is MamboState -> state.withCell(state.cells.indices.first { !state.givens[it] }, Sym.SUN)
         is MosaicState -> state.flood(0, (state.cells[0] + 1) % state.colours)
