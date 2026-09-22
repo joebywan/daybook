@@ -93,6 +93,32 @@ object Atoms : PuzzleType {
         Difficulty.EXPERT -> 11 to 24
     }
 
+    /**
+     * The molecule on the home tile: four atoms at the corners of a 3x3 lattice, ringed by three
+     * single bonds and one double.
+     *
+     * Three lattice columns, not the seven a Standard board has. A real board shrunk to 80dp
+     * leaves atoms about 4dp across with unreadable numbers; a corner of one, drawn large, still
+     * says "numbers joined by bonds" — which is the whole shape of the game. Every atom's number
+     * matches the bonds it carries, so the tile shows a finished molecule and can be drawn in the
+     * board's own completed-atom colours throughout.
+     */
+    private const val PREVIEW_SIZE = 3
+    private val previewAtoms = listOf(
+        Atom(row = 0, col = 0, bonds = 3),
+        Atom(row = 0, col = 2, bonds = 3),
+        Atom(row = 2, col = 0, bonds = 2),
+        Atom(row = 2, col = 2, bonds = 2),
+    )
+
+    /** Indices into [previewAtoms], with how many bonds run between them. */
+    private val previewBonds = listOf(
+        Triple(0, 1, 2),
+        Triple(0, 2, 1),
+        Triple(2, 3, 1),
+        Triple(1, 3, 1),
+    )
+
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (n, wanted) = shape(difficulty)
 
@@ -290,6 +316,83 @@ object Atoms : PuzzleType {
             counts = s.counts.toMutableList().also { it[wrong] = s.solution[wrong] },
             moves = s.moves + 1,
         )
+    }
+
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        val measurer = rememberTextMeasurer()
+        val ink = Color(accent)
+
+        Canvas(modifier) {
+            val side = minOf(size.width, size.height)
+            val origin = Offset((size.width - side) / 2f, (size.height - side) / 2f)
+            val step = side / PREVIEW_SIZE
+            // Heavier than the board's own 0.34 radius and 0.055 bonds. Those ratios are tuned for
+            // a board eight times this wide, where a hairline still lands on several pixels; at
+            // tile size the same figure thins out to a smudge, so the whole motif is drawn a
+            // weight up to keep the ring and its numbers solid.
+            val radius = step * 0.40f
+            val stroke = step * 0.075f
+
+            fun centre(atom: Atom) = Offset(
+                origin.x + (atom.col + 0.5f) * step,
+                origin.y + (atom.row + 0.5f) * step,
+            )
+
+            val lattice = scheme.outline.copy(alpha = 0.55f)
+            for (i in 0 until PREVIEW_SIZE) {
+                val at = (i + 0.5f) * step
+                drawLine(
+                    lattice,
+                    Offset(origin.x + at, origin.y),
+                    Offset(origin.x + at, origin.y + side),
+                    strokeWidth = maxOf(step * 0.010f, 1f),
+                )
+                drawLine(
+                    lattice,
+                    Offset(origin.x, origin.y + at),
+                    Offset(origin.x + side, origin.y + at),
+                    strokeWidth = maxOf(step * 0.010f, 1f),
+                )
+            }
+
+            previewBonds.forEach { (a, b, count) ->
+                val from = centre(previewAtoms[a])
+                val to = centre(previewAtoms[b])
+                val horizontal = previewAtoms[a].row == previewAtoms[b].row
+                val shifts = if (count == 1) listOf(0f) else listOf(-step * 0.11f, step * 0.11f)
+                shifts.forEach { shift ->
+                    val dx = if (horizontal) 0f else shift
+                    val dy = if (horizontal) shift else 0f
+                    drawLine(
+                        color = ink,
+                        start = Offset(from.x + dx, from.y + dy),
+                        end = Offset(to.x + dx, to.y + dy),
+                        strokeWidth = stroke,
+                    )
+                }
+            }
+
+            previewAtoms.forEach { atom ->
+                val c = centre(atom)
+                drawCircle(color = scheme.background, radius = radius, center = c)
+                drawCircle(
+                    color = ink,
+                    radius = radius,
+                    center = c,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = step * 0.065f),
+                )
+                val layout = measurer.measure(
+                    atom.bonds.toString(),
+                    TextStyle(color = ink, fontSize = (step * 0.42f).toSp(), fontWeight = FontWeight.Bold),
+                )
+                drawText(
+                    layout,
+                    topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f),
+                )
+            }
+        }
     }
 
     @Composable

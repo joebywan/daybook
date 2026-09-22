@@ -402,6 +402,84 @@ object Mambo : PuzzleType {
             }
         }
 
+    // ---- home-grid motif ----------------------------------------------------------------------
+
+    /**
+     * A hand-picked 3x3 corner of a board. Written out rather than generated because the tile has
+     * to look the same on every device and every day; a motif that changed would make the home
+     * screen look unstable for no gain.
+     *
+     * Chosen so both symbols appear in both rows and columns — a corner that happened to be all
+     * suns would read as a colour swatch rather than as a two-symbol puzzle.
+     */
+    private val PREVIEW_CELLS = listOf(
+        Sym.SUN, Sym.SUN, Sym.MOON,
+        Sym.MOON, Sym.NONE, Sym.SUN,
+        Sym.NONE, Sym.MOON, Sym.SUN,
+    )
+
+    /** Which motif cells are clues; the rest take the softer mark a filled-in cell gets. */
+    private val PREVIEW_GIVENS = listOf(
+        true, true, false,
+        true, false, false,
+        false, false, true,
+    )
+
+    /**
+     * The badge is drawn larger than [Board] would draw it, relative to the cell.
+     *
+     * On a full board the badge only has to be found once the player is already reading that
+     * seam; on an 80dp tile it is one of three things distinguishing Mambo from any other
+     * two-colour grid, and at the board's own 0.32 it renders as an unreadable dot.
+     */
+    private const val PREVIEW_BADGE = 0.44f
+
+    /**
+     * Two symbols in a grid plus one link badge. The badge is the whole point: without it this is
+     * any checkerboard, and with it the tile states the one rule that is Mambo's own.
+     */
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        BoxWithConstraints(modifier) {
+            // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
+            // shorter box than it is wide should shrink rather than draw its bottom row outside.
+            val cell = minOf(maxWidth, maxHeight) / 3
+            for (r in 0 until 3) {
+                for (c in 0 until 3) {
+                    val i = r * 3 + c
+                    MamboCell(
+                        sym = PREVIEW_CELLS[i],
+                        given = PREVIEW_GIVENS[i],
+                        ringed = false,
+                        modifier = Modifier
+                            .padding(start = cell * c, top = cell * r)
+                            .size(cell)
+                            .padding(cell * 0.06f),
+                    )
+                }
+            }
+            // Straddling the seam between the two suns on the top row, which is the pair it is
+            // claiming must match.
+            val badge = cell * PREVIEW_BADGE
+            Box(
+                Modifier
+                    .padding(start = cell - badge / 2, top = cell / 2 - badge / 2)
+                    .size(badge)
+                    .clip(CircleShape)
+                    .background(scheme.onBackground),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "=",
+                    color = scheme.background,
+                    fontWeight = FontWeight.Black,
+                    fontSize = (cell.value * 0.28f).sp,
+                )
+            }
+        }
+    }
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as MamboState

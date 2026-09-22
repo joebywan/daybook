@@ -77,6 +77,30 @@ object Lits : PuzzleType {
         Difficulty.EXPERT -> 8 to 8
     }
 
+    /**
+     * The home tile: a 4x4 board carved into four four-square regions, with the top-left one
+     * shaded into its L.
+     *
+     * Four across rather than a Standard board's six, because what identifies LITS is the heavy
+     * region wall wandering across the grid, and at 80dp a six-wide board turns those walls into
+     * a texture. The four regions are deliberately interlocking rather than tidy blocks — two of
+     * them reach around each other — since a grid quartered into 2x2 squares would illustrate the
+     * one shape the rules forbid.
+     */
+    private const val PREVIEW_SIDE = 4
+    private val previewRegions = listOf(
+        0, 0, 1, 1,
+        0, 1, 1, 2,
+        0, 3, 2, 2,
+        3, 3, 3, 2,
+    )
+    private val previewShaded = listOf(
+        true, true, false, false,
+        true, false, false, false,
+        true, false, false, false,
+        false, false, false, false,
+    )
+
     // ---- the win condition --------------------------------------------------------------------
 
     /**
@@ -663,6 +687,66 @@ object Lits : PuzzleType {
         val s = state as LitsState
         val wrong = s.shaded.indices.firstOrNull { s.shaded[it] != s.solution[it] } ?: return null
         return s.toggle(wrong)
+    }
+
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+
+        Canvas(modifier) {
+            val side = minOf(size.width, size.height)
+            val origin = Offset((size.width - side) / 2f, (size.height - side) / 2f)
+            val step = side / PREVIEW_SIDE
+            // The board's wall is 6% of a cell. At tile size that is under two pixels and the
+            // regions stop reading as regions, so the motif takes the walls up to a tenth of a
+            // cell — the one thing about a LITS board that has to survive being shrunk.
+            val wall = step * 0.10f
+
+            for (i in 0 until PREVIEW_SIDE * PREVIEW_SIDE) {
+                val at = Offset(
+                    origin.x + (i % PREVIEW_SIDE) * step,
+                    origin.y + (i / PREVIEW_SIDE) * step,
+                )
+                drawRect(
+                    color = if (previewShaded[i]) Color(accent) else scheme.surfaceVariant,
+                    topLeft = at,
+                    size = Size(step, step),
+                )
+                drawRect(
+                    color = scheme.background.copy(alpha = 0.35f),
+                    topLeft = at,
+                    size = Size(step, step),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f),
+                )
+            }
+
+            for (i in 0 until PREVIEW_SIDE * PREVIEW_SIDE) {
+                val r = i / PREVIEW_SIDE
+                val c = i % PREVIEW_SIDE
+                if (c + 1 < PREVIEW_SIDE && previewRegions[i] != previewRegions[i + 1]) {
+                    drawLine(
+                        scheme.onBackground,
+                        Offset(origin.x + (c + 1) * step, origin.y + r * step),
+                        Offset(origin.x + (c + 1) * step, origin.y + (r + 1) * step),
+                        strokeWidth = wall,
+                    )
+                }
+                if (r + 1 < PREVIEW_SIDE && previewRegions[i] != previewRegions[i + PREVIEW_SIDE]) {
+                    drawLine(
+                        scheme.onBackground,
+                        Offset(origin.x + c * step, origin.y + (r + 1) * step),
+                        Offset(origin.x + (c + 1) * step, origin.y + (r + 1) * step),
+                        strokeWidth = wall,
+                    )
+                }
+            }
+            drawRect(
+                color = scheme.onBackground,
+                topLeft = Offset(origin.x + wall / 2f, origin.y + wall / 2f),
+                size = Size(side - wall, side - wall),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = wall),
+            )
+        }
     }
 
     @Composable

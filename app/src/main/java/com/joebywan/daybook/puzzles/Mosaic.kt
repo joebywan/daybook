@@ -747,6 +747,77 @@ object Mosaic : PuzzleType {
         return s.flood(move.cell, move.colour)
     }
 
+    // ---- home-grid motif ----------------------------------------------------------------------
+
+    /**
+     * A hand-picked 4x4 corner, as indexes into [palette]. Written out rather than generated so
+     * the tile looks the same on every device and every day.
+     *
+     * Four areas, two of them square and two not, because the shape of an area is the thing a
+     * player is reading when they choose where to pour; four squares in a row would say "grid"
+     * rather than "regions". Coarse on purpose — sixteen cells is the most that can carry a
+     * ten-percent outline at 80dp and still leave flat colour inside each area.
+     */
+    private val PREVIEW_CELLS = listOf(
+        0, 0, 1, 1,
+        0, 0, 1, 3,
+        2, 2, 3, 3,
+        2, 2, 3, 3,
+    )
+
+    /** Side of [PREVIEW_CELLS]; it is square, unlike a real board. */
+    private const val PREVIEW_SIDE = 4
+
+    /**
+     * Flat areas with the heavy seams between them, which is the whole of what Mosaic looks like.
+     * Drawn straight rather than through [MosaicState] so nothing here can spend a fill or touch
+     * the solver.
+     */
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        Canvas(modifier) {
+            val stepPx = size.minDimension / PREVIEW_SIDE
+            for (cell in PREVIEW_CELLS.indices) {
+                drawRect(
+                    color = Color(palette[PREVIEW_CELLS[cell]]),
+                    topLeft = Offset((cell % PREVIEW_SIDE) * stepPx, (cell / PREVIEW_SIDE) * stepPx),
+                    size = Size(stepPx, stepPx),
+                )
+            }
+
+            val edge = stepPx * 0.1f
+            for (cell in PREVIEW_CELLS.indices) {
+                val r = cell / PREVIEW_SIDE
+                val c = cell % PREVIEW_SIDE
+                if (c + 1 < PREVIEW_SIDE && PREVIEW_CELLS[cell] != PREVIEW_CELLS[cell + 1]) {
+                    drawLine(
+                        scheme.onBackground,
+                        Offset((c + 1) * stepPx, r * stepPx),
+                        Offset((c + 1) * stepPx, (r + 1) * stepPx),
+                        strokeWidth = edge,
+                    )
+                }
+                if (r + 1 < PREVIEW_SIDE &&
+                    PREVIEW_CELLS[cell] != PREVIEW_CELLS[cell + PREVIEW_SIDE]
+                ) {
+                    drawLine(
+                        scheme.onBackground,
+                        Offset(c * stepPx, (r + 1) * stepPx),
+                        Offset((c + 1) * stepPx, (r + 1) * stepPx),
+                        strokeWidth = edge,
+                    )
+                }
+            }
+            drawRect(
+                color = scheme.onBackground,
+                topLeft = Offset.Zero,
+                size = Size(stepPx * PREVIEW_SIDE, stepPx * PREVIEW_SIDE),
+                style = Stroke(width = edge),
+            )
+        }
+    }
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as MosaicState

@@ -253,6 +253,95 @@ object Pipes : PuzzleType {
      */
     override val offersHints = false
 
+    // ---- home-grid motif ----------------------------------------------------------------------
+
+    /**
+     * A hand-picked 3x3 corner: a corner, a T, a straight and two endpoints, arranged so the run
+     * back to the inlet is a shape the eye can follow.
+     *
+     * Not a generated board, because the tile has to look the same on every device and every day.
+     * The bottom-right pair is deliberately left pointing at nothing: half the puzzle is the
+     * difference between a pipe that has joined up and one that has not, and a motif where
+     * everything already met would only show the easy half.
+     */
+    private val PREVIEW_BOARD = PipesState(
+        width = 3,
+        height = 3,
+        cells = listOf(
+            DOWN or RIGHT, LEFT or RIGHT or DOWN, LEFT,
+            UP, UP or DOWN, UP or LEFT,
+            UP or RIGHT, UP, UP or LEFT,
+        ),
+        source = 0,
+    )
+
+    /**
+     * Read off [PREVIEW_BOARD] rather than listed separately, so the wet tiles cannot drift away
+     * from the tiles that are actually joined to the inlet. Nine cells, computed once.
+     */
+    private val PREVIEW_FILLED = filled(PREVIEW_BOARD)
+
+    /**
+     * Pipework at a size where the pipework is legible, rather than a whole board at a size where
+     * it is a texture. Wet and dry both appear, since the fill is what the puzzle is about.
+     */
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        val wet = Color(accent)
+        val dry = scheme.onSurfaceVariant.copy(alpha = DRY_TINT).compositeOver(scheme.surface)
+
+        Canvas(modifier) {
+            val cellPx = size.minDimension / PREVIEW_BOARD.width
+            val stroke = cellPx * PIPE_WIDTH
+            val reach = cellPx * 0.5f + JOIN_BLEED_PX
+            for (i in PREVIEW_BOARD.cells.indices) {
+                val r = i / PREVIEW_BOARD.width
+                val c = i % PREVIEW_BOARD.width
+                val cx = (c + 0.5f) * cellPx
+                val cy = (r + 0.5f) * cellPx
+                val mask = PREVIEW_BOARD.cells[i]
+                val isSource = i == PREVIEW_BOARD.source
+                val pipeColour = if (i in PREVIEW_FILLED) wet else dry
+
+                drawRect(
+                    color = if (isSource) wet.copy(alpha = 0.16f) else scheme.surface,
+                    topLeft = Offset(c * cellPx + 1f, r * cellPx + 1f),
+                    size = Size(cellPx - 2f, cellPx - 2f),
+                )
+
+                fun arm(dx: Float, dy: Float) {
+                    drawLine(
+                        color = pipeColour,
+                        start = Offset(cx, cy),
+                        end = Offset(cx + dx * reach, cy + dy * reach),
+                        strokeWidth = stroke,
+                        cap = StrokeCap.Butt,
+                    )
+                }
+                if (mask and UP != 0) arm(0f, -1f)
+                if (mask and DOWN != 0) arm(0f, 1f)
+                if (mask and LEFT != 0) arm(-1f, 0f)
+                if (mask and RIGHT != 0) arm(1f, 0f)
+                drawCircle(
+                    color = pipeColour,
+                    radius = if (Integer.bitCount(mask) == 1) cellPx * 0.20f else stroke * 0.5f,
+                    center = Offset(cx, cy),
+                )
+
+                if (isSource) {
+                    drawCircle(color = wet, radius = cellPx * 0.17f, center = Offset(cx, cy))
+                    drawCircle(
+                        color = wet,
+                        radius = cellPx * 0.31f,
+                        center = Offset(cx, cy),
+                        style = Stroke(width = stroke * 0.5f),
+                    )
+                }
+            }
+        }
+    }
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as PipesState

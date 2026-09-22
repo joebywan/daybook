@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -70,6 +71,21 @@ object Snap : PuzzleType {
         Difficulty.HARD -> 6 to 6
         Difficulty.EXPERT -> 6 to 7
     }
+
+    /**
+     * The home tile: a solved 3x3 board, spiralling in from 1 through 2 to 3.
+     *
+     * Three across rather than a real board's five, because the line is what identifies Snap and a
+     * five-wide grid at 80dp makes it a thread. A spiral was chosen over the obvious
+     * back-and-forth: a boustrophedon reads as stripes at a glance, whereas a spiral is
+     * unmistakably one line that had to find its own way round.
+     *
+     * The numbers sit at the path's first, fifth and last steps, so the illustration obeys the
+     * rule it is advertising — every square visited once, waypoints met in order.
+     */
+    private const val PREVIEW_SIDE = 3
+    private val previewPath = listOf(0, 1, 2, 5, 8, 7, 6, 3, 4)
+    private val previewWaypoints = listOf(1, 0, 0, 0, 3, 0, 0, 0, 2)
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (w, h) = shape(difficulty)
@@ -200,6 +216,67 @@ object Snap : PuzzleType {
      * side of it — there is no small enough piece of the answer to give away.
      */
     override val offersHints = false
+
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        val measurer = rememberTextMeasurer()
+
+        Canvas(modifier) {
+            val side = minOf(size.width, size.height)
+            val origin = Offset((size.width - side) / 2f, (size.height - side) / 2f)
+            val step = side / PREVIEW_SIDE
+            // The board's flat 2px gutter between squares; kept in device pixels so the squares
+            // stay squares rather than growing a proportionally fat gap at this scale.
+            val gutter = maxOf(step * 0.025f, 1f)
+
+            fun centre(cell: Int) = Offset(
+                origin.x + (cell % PREVIEW_SIDE + 0.5f) * step,
+                origin.y + (cell / PREVIEW_SIDE + 0.5f) * step,
+            )
+
+            for (cell in 0 until PREVIEW_SIDE * PREVIEW_SIDE) {
+                drawRoundRect(
+                    color = scheme.surfaceVariant,
+                    topLeft = Offset(
+                        origin.x + (cell % PREVIEW_SIDE) * step + gutter,
+                        origin.y + (cell / PREVIEW_SIDE) * step + gutter,
+                    ),
+                    size = Size(step - 2 * gutter, step - 2 * gutter),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(step * 0.32f),
+                )
+            }
+
+            val line = androidx.compose.ui.graphics.Path()
+            previewPath.forEachIndexed { i, cell ->
+                val at = centre(cell)
+                if (i == 0) line.moveTo(at.x, at.y) else line.lineTo(at.x, at.y)
+            }
+            drawPath(
+                line,
+                Color(accent),
+                style = Stroke(width = step * 0.26f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
+
+            previewWaypoints.forEachIndexed { cell, number ->
+                if (number == 0) return@forEachIndexed
+                val at = centre(cell)
+                drawCircle(scheme.onBackground, radius = step * 0.30f, center = at)
+                val layout = measurer.measure(
+                    number.toString(),
+                    TextStyle(
+                        color = scheme.background,
+                        fontSize = (step * 0.32f).toSp(),
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+                drawText(
+                    layout,
+                    topLeft = Offset(at.x - layout.size.width / 2f, at.y - layout.size.height / 2f),
+                )
+            }
+        }
+    }
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
