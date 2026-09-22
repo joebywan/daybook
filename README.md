@@ -31,7 +31,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Mambo | Takuzu / Binairo | Two symbols, balanced lines, never three alike, `=` and `x` links |
 | Pipes | Net | Rotate tiles until every pipe joins into one network |
 | Shikaku | Shikaku (Nikoli) | Cut the grid into rectangles, one number each, number = area |
-| Mosaic | Fill-a-Pix | Each number counts filled squares in its 3×3 neighbourhood |
+| Mosaic | Flood-fill (Kami family) | Recolour an area, merging it with its neighbours, until the board is one colour |
 | Sets | SET | Triples that are all-alike or all-different in four traits |
 | Atoms | Hashiwokakero (Bridges) | Bond atoms into one molecule, no crossings |
 | Snap | Hamiltonian path | One line through every square, numbers in ascending order |
@@ -45,13 +45,18 @@ Three difficulties each, which generally means a larger grid and fewer clues.
 Generators do not just emit a random board and hope. Each one either constructs a solution first
 and works backwards, or verifies with a solver that the clues admit **exactly one** answer:
 
-- **Sudoku, Mambo, Shikaku, Kings, Atoms** — carve or grow a board, then count solutions with a
-  backtracking solver and reject anything with two.
-- **Mosaic** — a stricter bar: clues are stripped only while the board stays solvable by
-  *propagation alone*, so it never requires a guess.
-- **LITS** — the shading is laid down first as a legal tetromino set, then regions are grown around
-  it, then the solver confirms uniqueness. (Regions drawn at random essentially never work; this
-  was rewritten once after a test caught the fallback firing on every board.)
+- **Sudoku, Shikaku, Atoms** — carve or grow a board, then count solutions with a backtracking
+  solver and reject anything with two.
+- **Mambo** — a stricter bar: clues are stripped only while the board stays solvable by
+  *propagation alone*, so it never requires a guess. Mosaic once held this bar too, before it
+  turned out to be the wrong puzzle entirely.
+- **Mosaic** — the move limit is the proven optimum, found by an exact search over every legal
+  fill. Exhausting the search budget yields nothing and the board is reseeded; a truncated search
+  must never become a shipped limit.
+- **LITS and Kings** — the answer is laid down first, then regions are grown around it one square
+  at a time with uniqueness rechecked at each step, because solution count only ever rises as a
+  region gains squares. Regions drawn at random essentially never admit one answer. Both were
+  rewritten after players hit boards the generator had never actually vetted.
 - **Snap** — a Hamiltonian path is generated, then numbers are added one at a time until no other
   path obeys them.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
@@ -193,6 +198,8 @@ run on them — at which point automerge can safely be widened to minor updates.
 ## Not done yet
 
 - Pencil marks / candidate notes in Sudoku
-- Per-puzzle "give up and reveal" is implemented on the type but not wired to a button
-- No app icon beyond a placeholder vector
+- The launcher icon is a placeholder, and its monochrome layer reuses the full-colour foreground,
+  so themed icons render as a flat blob
+- No accessibility work: the boards drawn with raw pointer input expose no click actions, so a
+  screen reader cannot operate them
 - Play Store listing not yet created — see "Publishing to Google Play" above

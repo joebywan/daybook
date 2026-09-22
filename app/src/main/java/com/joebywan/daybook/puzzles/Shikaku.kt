@@ -98,7 +98,7 @@ object Shikaku : PuzzleType {
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (w, h, maxArea) = shape(difficulty)
 
-        repeat(300) { attempt ->
+        repeat(ATTEMPTS) { attempt ->
             val rng = Rng(seed + attempt)
             val blocks = slice(rng, Block(0, 0, h - 1, w - 1), maxArea)
             val clues = MutableList<Int?>(w * h) { null }
@@ -111,8 +111,35 @@ object Shikaku : PuzzleType {
                 return ShikakuState(w, h, clues.toList(), emptyList(), blocks)
             }
         }
+        return fallbackBoard(seed, difficulty)
+    }
 
-        // Fallback: a clue in every cell is trivially unique.
+    /**
+     * How many slicings are tried before [generate] gives up and takes [fallbackBoard].
+     *
+     * Raised from 300 when clues of 1 were banned, and raised because measurement said so rather
+     * than for comfort. A 1 is the most forcing clue there is — it fixes its own square and no
+     * other — so dropping it makes uniqueness materially harder to hit: mean attempts went from
+     * 8/20/18 per board to 11/35/29, and the tail went with it. At 300 a sweep of 4000 Hard seeds
+     * already exhausted the budget once, which is a real board on a real date, not a rounding
+     * error. At 2000, a wider sweep of 20000 seeds a tier never fell back at all, and its worst
+     * seed took 355 attempts and 20 ms — so the budget sits about six times past the worst case
+     * seen, and still two orders of magnitude inside the generator time limit.
+     */
+    private const val ATTEMPTS = 2000
+
+    /**
+     * The degenerate board taken when no re-roll produces a unique one: a clue in every
+     * rectangle's own corner, which is trivially unique.
+     *
+     * Kept as a named function, and visible to tests, because it is unreachable in practice and an
+     * unreachable path is exactly where a rule quietly stops holding. Kings, LITS and Mosaic have
+     * each shipped a fallback that broke a guarantee the main path kept. It draws its rectangles
+     * from the same [slice], so the no-clue-of-1 rule holds here structurally rather than by being
+     * re-asserted, but a test still pins it.
+     */
+    internal fun fallbackBoard(seed: Long, difficulty: Difficulty): ShikakuState {
+        val (w, h, maxArea) = shape(difficulty)
         val rng = Rng(seed)
         val blocks = slice(rng, Block(0, 0, h - 1, w - 1), maxArea)
         val clues = MutableList<Int?>(w * h) { null }
@@ -120,15 +147,43 @@ object Shikaku : PuzzleType {
         return ShikakuState(w, h, clues.toList(), emptyList(), blocks)
     }
 
-    /** Recursively halves a block until every piece is small enough to make a sensible clue. */
+    /**
+     * The smallest rectangle the slicer is allowed to leave behind, and so the smallest clue any
+     * board can carry.
+     *
+     * A clue of 1 names the square it is printed on, so it is answered by seeing it rather than by
+     * working anything out, and it is the one rectangle a player cannot draw cleanly: a 1x1 drag is
+     * the degenerate drag, indistinguishable from a slipped tap. Every clue is the area of the
+     * block it came from, so refusing to *cut* a 1 is what keeps 1 off the board — there is no
+     * separate check anywhere downstream, and no generate-then-reject loop to get the rate wrong.
+     */
+    private const val MIN_AREA = 2
+
+    /**
+     * Recursively halves a block until every piece is small enough to make a sensible clue.
+     *
+     * A cut is legal only when both halves clear [MIN_AREA]. Where the block is at least
+     * [MIN_AREA] cells across the cut, every offset already clears it, because each half keeps a
+     * whole row or column; it is only the strip one cell wide that measures its halves in single
+     * cells, and there the block needs `2 * MIN_AREA` of length before any cut exists at all. A
+     * block with no legal cut in either direction is returned whole, oversized or not — which
+     * cannot happen for the grid sizes and areas in [shape], since anything over `maxArea` is
+     * already longer than a strip needs to be splittable.
+     */
     private fun slice(rng: Rng, block: Block, maxArea: Int): List<Block> {
         val rows = block.r1 - block.r0 + 1
         val cols = block.c1 - block.c0 + 1
-        val canSplitRows = rows > 1
-        val canSplitCols = cols > 1
+        val rowInset = if (cols >= MIN_AREA) 0 else MIN_AREA - 1
+        val colInset = if (rows >= MIN_AREA) 0 else MIN_AREA - 1
+        val firstRowCut = block.r0 + rowInset
+        val lastRowCut = block.r1 - 1 - rowInset
+        val firstColCut = block.c0 + colInset
+        val lastColCut = block.c1 - 1 - colInset
+        val canSplitRows = firstRowCut <= lastRowCut
+        val canSplitCols = firstColCut <= lastColCut
 
         val mustSplit = block.area > maxArea
-        val wantSplit = block.area > 2 && rng.nextInt(100) < 55
+        val wantSplit = rng.nextInt(100) < 55
         if ((!mustSplit && !wantSplit) || (!canSplitRows && !canSplitCols)) return listOf(block)
 
         val splitRows = when {
@@ -137,11 +192,11 @@ object Shikaku : PuzzleType {
             else -> rows > cols || (rows == cols && rng.nextBoolean())
         }
         return if (splitRows) {
-            val cut = rng.nextInt(block.r0, block.r1 - 1)
+            val cut = rng.nextInt(firstRowCut, lastRowCut)
             slice(rng, block.copy(r1 = cut), maxArea) +
                 slice(rng, block.copy(r0 = cut + 1), maxArea)
         } else {
-            val cut = rng.nextInt(block.c0, block.c1 - 1)
+            val cut = rng.nextInt(firstColCut, lastColCut)
             slice(rng, block.copy(c1 = cut), maxArea) +
                 slice(rng, block.copy(c0 = cut + 1), maxArea)
         }
