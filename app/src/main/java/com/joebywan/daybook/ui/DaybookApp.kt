@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.joebywan.daybook.core.DailySeed
@@ -17,6 +18,8 @@ import com.joebywan.daybook.data.ProgressStore
 import com.joebywan.daybook.data.savedGameKey
 import com.joebywan.daybook.ui.archive.ArchiveScreen
 import com.joebywan.daybook.ui.home.HomeScreen
+import com.joebywan.daybook.ui.home.LaunchMode
+import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import kotlinx.coroutines.launch
@@ -45,6 +48,20 @@ fun DaybookApp() {
     var route by remember { mutableStateOf<Route>(Route.Home) }
     var today by remember { mutableStateOf(LocalDate.now()) }
 
+    // The home grid's two selectors live here, not on the home screen: navigating into a puzzle
+    // destroys that screen, and a difficulty that reset after every game would be worse than the
+    // per-card pills it replaced.
+    val launchPrefs = remember { LaunchPreferences(context) }
+    val storedDifficulty by launchPrefs.difficulty.collectAsState(initial = null)
+    // A tap has to win over the store immediately. Reading the selection back out of DataStore
+    // would leave a window — however short — in which the grid is still set to the old tier and a
+    // tapped tile starts the wrong puzzle.
+    var pickedDifficulty by remember { mutableStateOf<Difficulty?>(null) }
+    val difficulty = pickedDifficulty ?: storedDifficulty ?: Difficulty.STANDARD
+    // Saveable rather than stored: it survives rotation and process death, but a cold start comes
+    // back to Daily, because that is what the app is for.
+    var mode by rememberSaveable { mutableStateOf(LaunchMode.DAILY) }
+
     // Roll the date over without needing the app to be restarted at midnight.
     LaunchedEffect(Unit) {
         while (true) {
@@ -58,9 +75,21 @@ fun DaybookApp() {
         Route.Home -> HomeScreen(
             today = today,
             completions = completions,
-            onPlay = { puzzleId, difficulty -> route = Route.Play(puzzleId, difficulty, today) },
-            onPractice = { puzzleId, difficulty ->
-                route = Route.Play(puzzleId, difficulty, null, System.nanoTime())
+            difficulty = difficulty,
+            onDifficulty = { picked ->
+                pickedDifficulty = picked
+                scope.launch { launchPrefs.setDifficulty(picked) }
+            },
+            mode = mode,
+            onMode = { mode = it },
+            onLaunch = { puzzleId ->
+                route = when (mode) {
+                    LaunchMode.DAILY -> Route.Play(puzzleId, difficulty, today)
+                    // A fresh nonce every tap is what makes a second practice game a new board
+                    // rather than the one just finished.
+                    LaunchMode.PRACTICE ->
+                        Route.Play(puzzleId, difficulty, null, System.nanoTime())
+                }
             },
             onArchive = { puzzleId -> route = Route.Archive(puzzleId) },
             onStats = { route = Route.Stats },
