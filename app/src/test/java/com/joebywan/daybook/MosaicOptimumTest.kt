@@ -97,8 +97,9 @@ class MosaicOptimumTest {
      * is the complaint this whole file exists for, so the gap is asserted, not merely reported.
      */
     @Test
-    fun `the limit leaves only the slack its tier means to give`() {
-        val slack = mapOf(Difficulty.STANDARD to 1, Difficulty.HARD to 1, Difficulty.EXPERT to 1)
+    fun `the limit is exactly the optimum on every tier`() {
+        // Zero everywhere: the limit IS the optimum, so only a perfect line finishes.
+        val slack = mapOf(Difficulty.STANDARD to 0, Difficulty.HARD to 0, Difficulty.EXPERT to 0)
         for ((tier, seed, board) in tierBoards()) {
             val optimum = Mosaic.solve(board)!!.size
             assertEquals(
