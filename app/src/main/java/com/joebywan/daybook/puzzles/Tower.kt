@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -107,6 +109,20 @@ object Tower : PuzzleType {
     )
 
     /**
+     * The home tile: two scored guess rows, newest on top, as the board stacks them.
+     *
+     * Four pegs and their pips is the whole of Tower's shape, and two rows is as many as fit at
+     * 80dp while a peg still reads as a peg. The pips go in a 2x2 block rather than the board's
+     * single row: four pips strung out beside four pegs leaves each one about 3dp across, where
+     * filled and hollow become the same grey dot, and the filled/hollow distinction is the only
+     * information a scored row carries.
+     */
+    private val previewGuesses = listOf(
+        listOf(2, 0, 3, 1) to Feedback(exact = 2, misplaced = 1),
+        listOf(0, 1, 2, 3) to Feedback(exact = 1, misplaced = 1),
+    )
+
+    /**
      * Board shape per tier as `(slots, colours, maxGuesses)`.
      *
      * The budget used to *fall* as the board grew — 10/10/9 over code spaces of 1,296 / 16,807 /
@@ -171,6 +187,72 @@ object Tower : PuzzleType {
         // Drop one correct peg into the working row.
         val slot = s.current.indices.firstOrNull { s.current[it] != s.secret[it] } ?: return null
         return s.withPeg(slot, s.secret[slot])
+    }
+
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        Column(
+            modifier,
+            verticalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterVertically),
+        ) {
+            previewGuesses.forEach { (guess, feedback) ->
+                Row(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(percent = 50))
+                        // A tint of the foreground rather than `surface`, because the tile's own
+                        // background is the grid's to choose: a surface plate on a surface tile
+                        // would be invisible, and then the pegs float with no row to sit in.
+                        .background(scheme.onSurface.copy(alpha = 0.08f)),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    guess.forEach { colour ->
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .padding(2.dp)
+                                .clip(CircleShape)
+                                .background(Color(palette[colour]))
+                        )
+                    }
+                    PreviewPips(Modifier.weight(1f), feedback)
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun PreviewPips(modifier: Modifier, feedback: Feedback) {
+        val scheme = MaterialTheme.colorScheme
+        Column(modifier.aspectRatio(1f).padding(1.5.dp)) {
+            repeat(2) { row ->
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    repeat(2) { column ->
+                        val pip = row * 2 + column
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(0.5.dp)
+                                .clip(CircleShape)
+                                .then(
+                                    when {
+                                        pip < feedback.exact ->
+                                            Modifier.background(scheme.onSurface)
+                                        pip < feedback.exact + feedback.misplaced ->
+                                            Modifier.border(1.2.dp, scheme.onSurface, CircleShape)
+                                        else ->
+                                            Modifier.background(scheme.outline.copy(alpha = 0.55f))
+                                    }
+                                )
+                        )
+                    }
+                }
+            }
+        }
     }
 
     @Composable

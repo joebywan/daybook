@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
@@ -82,6 +83,20 @@ object Sets : PuzzleType {
     )
 
     private val colours = listOf(0xFFD9584C, 0xFF4C86D9, 0xFF54B07A)
+
+    /**
+     * The two cards on the home tile.
+     *
+     * Picked, not generated, and picked to disagree on all four traits at once: two solid red
+     * ovals against three hatched green diamonds. A tile is ~80dp, so only two cards fit at a
+     * size where the count can still be counted and the hatching still reads as hatching — and
+     * the traits *are* the game, so a pair that differs on every one of them says more about
+     * Sets than three near-identical cards would.
+     */
+    private val previewCards = listOf(
+        Card(count = 1, shape = 0, shading = 0, colour = 0),
+        Card(count = 2, shape = 1, shading = 2, colour = 2),
+    )
 
     private const val DRAWS = 4000
 
@@ -180,6 +195,34 @@ object Sets : PuzzleType {
     }
 
     @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        val corner = RoundedCornerShape(8.dp)
+        Row(
+            modifier.padding(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            previewCards.forEach { card ->
+                Box(
+                    Modifier
+                        .weight(1f)
+                        // Taller than the board's 0.78 on purpose: the tile is square, and at two
+                        // cards wide the width is spoken for long before the height is, so the
+                        // spare height goes into the symbols rather than into margin.
+                        .aspectRatio(0.64f)
+                        .clip(corner)
+                        .background(scheme.surface)
+                        .border(1.dp, Color(accent).copy(alpha = 0.55f), corner),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CardFace(card, inset = 4.dp)
+                }
+            }
+        }
+    }
+
+    @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as SetsState
         val scheme = MaterialTheme.colorScheme
@@ -226,7 +269,7 @@ object Sets : PuzzleType {
                                 .clickable(enabled = interactive) { onState(tap(s, index)) },
                             contentAlignment = Alignment.Center,
                         ) {
-                            CardFace(card)
+                            CardFace(card, inset = 10.dp)
                         }
                     }
                 }
@@ -234,10 +277,11 @@ object Sets : PuzzleType {
         }
     }
 
+    /** [inset] scales the symbols to the card: a full board card is ~100dp, a home tile's ~36dp. */
     @Composable
-    private fun CardFace(card: Card) {
+    private fun CardFace(card: Card, inset: Dp) {
         val colour = Color(colours[card.colour])
-        Canvas(Modifier.fillMaxSize().padding(10.dp)) {
+        Canvas(Modifier.fillMaxSize().padding(inset)) {
             val slots = card.count + 1
             val slotHeight = size.height / 3f
             val symbolHeight = slotHeight * 0.74f
