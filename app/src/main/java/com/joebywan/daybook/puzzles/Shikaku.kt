@@ -232,6 +232,78 @@ object Shikaku : PuzzleType {
         return s.place(missing)
     }
 
+    // ---- home-grid motif ----------------------------------------------------------------------
+
+    /**
+     * A hand-picked 3x3 grid cut three ways. Written out rather than generated so the tile looks
+     * the same on every device and every day.
+     *
+     * Three rectangles of three different shapes — a row, a square and a column — because two
+     * would read as a split square and four at this size would read as a grid of cells. Their
+     * top-left corners land on three different slots of [hue], so no two share a colour.
+     */
+    private val PREVIEW_BLOCKS = listOf(
+        Block(0, 0, 0, 2),
+        Block(1, 0, 2, 1),
+        Block(1, 2, 2, 2),
+    )
+
+    /** One clue per rectangle, its area, sat where it sits on a real board: inside, off-centre. */
+    private val PREVIEW_CLUES = listOf<Int?>(
+        null, 3, null,
+        4, null, 2,
+        null, null, null,
+    )
+
+    /**
+     * A grid already cut up, rather than the blank grid with clues a real puzzle starts from. The
+     * tile has to say what the puzzle *is*, and the answer — coloured rectangles, one number each
+     * — is legible at 80dp in a way that scattered numbers on grey would not be.
+     */
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        val dark = scheme.background.luminance() < 0.5f
+        BoxWithConstraints(modifier) {
+            // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
+            // shorter box than it is wide should shrink rather than draw its bottom row outside.
+            val cell = minOf(maxWidth, maxHeight) / 3
+            for (r in 0 until 3) {
+                for (c in 0 until 3) {
+                    val owner = PREVIEW_BLOCKS.first { it.contains(r, c) }
+                    Box(
+                        Modifier
+                            .padding(start = cell * c, top = cell * r)
+                            .size(cell)
+                            .padding(0.7.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(owner.fill(dark)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        PREVIEW_CLUES[r * 3 + c]?.let { clue ->
+                            Text(
+                                clue.toString(),
+                                fontSize = (cell.value * 0.46f).sp,
+                                fontWeight = FontWeight.Bold,
+                                color = scheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
+            PREVIEW_BLOCKS.forEach { block ->
+                Box(
+                    Modifier
+                        .padding(start = cell * block.c0, top = cell * block.r0)
+                        .width(cell * (block.c1 - block.c0 + 1))
+                        .height(cell * (block.r1 - block.r0 + 1))
+                        .padding(1.dp)
+                        .border(2.dp, block.edge(dark), RoundedCornerShape(4.dp))
+                )
+            }
+        }
+    }
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as ShikakuState

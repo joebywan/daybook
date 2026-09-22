@@ -182,6 +182,75 @@ object Sudoku : PuzzleType {
         return s.withCell(blank, s.solution[blank])
     }
 
+    // ---- home-grid motif ----------------------------------------------------------------------
+
+    /**
+     * One hand-picked 3x3 box. Written out rather than taken from a generated board because the
+     * motif has to be identical on every device and every day: it is what the tile *is*, so a
+     * board that varied would make the home screen look unstable for no gain.
+     *
+     * Four digits, spread so no row or column of the box is empty and none is full — enough to
+     * read as a part-solved box at a glance, few enough that each digit stays large.
+     */
+    private val PREVIEW_DIGITS = listOf(
+        5, 0, 3,
+        0, 7, 0,
+        0, 0, 2,
+    )
+
+    /** Which of [PREVIEW_DIGITS] are printed clues; the rest were "entered" and take the accent. */
+    private val PREVIEW_GIVENS = listOf(
+        true, false, true,
+        false, true, false,
+        false, false, false,
+    )
+
+    /** The cell drawn as selected, so the tile carries the accent even in the empty half. */
+    private const val PREVIEW_SELECTED = 6
+
+    /**
+     * One 3x3 box rather than the whole grid: a 9x9 board at tile size is a grey smudge, whereas a
+     * single box keeps the digits big enough to be read as digits, which is what says "Sudoku"
+     * before the name under the tile is read.
+     */
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        BoxWithConstraints(modifier) {
+            // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
+            // shorter box than it is wide should shrink rather than draw its bottom row outside.
+            val cell = minOf(maxWidth, maxHeight) / 3
+            for (r in 0 until 3) {
+                for (c in 0 until 3) {
+                    val i = r * 3 + c
+                    val given = PREVIEW_GIVENS[i]
+                    Box(
+                        Modifier
+                            .padding(start = cell * c, top = cell * r)
+                            .size(cell)
+                            .padding(1.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                if (i == PREVIEW_SELECTED) Color(accent).copy(alpha = 0.40f)
+                                else scheme.surfaceVariant
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (PREVIEW_DIGITS[i] != 0) {
+                            Text(
+                                text = PREVIEW_DIGITS[i].toString(),
+                                fontSize = (cell.value * 0.52f).sp,
+                                fontWeight = if (given) FontWeight.Bold else FontWeight.Normal,
+                                color = if (given) scheme.onSurface else Color(accent),
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as SudokuState
