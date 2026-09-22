@@ -1,6 +1,10 @@
 package com.joebywan.daybook.core
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.joebywan.daybook.puzzles.PuzzleState
 
 /**
@@ -38,6 +42,23 @@ interface PuzzleType {
     val accent: Long
 
     fun generate(seed: Long, difficulty: Difficulty): PuzzleState
+
+    /**
+     * A small static motif for the home grid: a few cells of this puzzle's own board, enough to
+     * recognise it by shape rather than by reading its name.
+     *
+     * Must be cheap, and must NOT call [generate]. The home screen draws one of these for every
+     * registered puzzle on every composition, and generating real boards for eleven of them would
+     * cost hundreds of milliseconds on a screen that has to appear instantly. Hand-pick a fixed
+     * arrangement instead — it is an illustration, not a playable board, and it never changes.
+     *
+     * The default is a plain accent block, so a new puzzle appears in the grid before anyone has
+     * drawn its motif.
+     */
+    @Composable
+    fun Preview(modifier: Modifier) {
+        Box(modifier.background(Color(accent).copy(alpha = 0.55f)))
+    }
 
     /**
      * Draws the board and reports interactions back through [onState].
