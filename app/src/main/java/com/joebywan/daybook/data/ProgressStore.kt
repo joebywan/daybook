@@ -109,7 +109,7 @@ fun savedGameKey(puzzleId: String, difficulty: Difficulty, seed: Long): String =
 object SavedGames {
 
     /**
-     * Practice games mint a fresh seed every time they are started, so without a ceiling the store
+     * Random games mint a fresh seed every time they are started, so without a ceiling the store
      * would grow a board for every game ever abandoned. Enough to cover a morning's dabbling.
      */
     const val KEEP = 12

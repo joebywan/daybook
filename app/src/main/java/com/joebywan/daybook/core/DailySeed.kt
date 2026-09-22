@@ -21,8 +21,8 @@ object DailySeed {
         return h
     }
 
-    /** Practice games use a fresh seed each time; callers pass a counter or nanotime. */
-    fun practiceSeed(puzzleId: String, difficulty: Difficulty, nonce: Long): Long =
+    /** Random games use a fresh seed each time; callers pass a counter or nanotime. */
+    fun randomSeed(puzzleId: String, difficulty: Difficulty, nonce: Long): Long =
         mix(nonce xor puzzleId.stableHash() xor (difficulty.ordinal * 0x9E3779B9L))
 
     /**
