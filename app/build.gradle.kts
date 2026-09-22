@@ -93,6 +93,11 @@ android {
     kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+            // Without this the compiler stays silent about unused declarations and values that
+            // are assigned and never read -- verified by probing with a deliberately unused
+            // function, which produced no output at all. "Builds with no warnings" was therefore
+            // a much weaker claim than it sounded.
+            extraWarnings.set(true)
         }
     }
 

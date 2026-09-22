@@ -151,6 +151,13 @@ object Mosaic : PuzzleType {
      * this; a hint simply goes quiet. One number for both on purpose — a smaller hint budget would
      * mean the hardest Expert boards, the ones most worth a hint, are exactly the ones that never
      * offer one.
+     *
+     * It buys less than it used to, now that the search covers every fill rather than only the
+     * merging ones: an Expert board takes around thirty thousand nodes to prove and the worst
+     * measured runs to a hundred and thirty thousand. Raising the ceiling was still the wrong
+     * answer. A budget wide enough for the very worst board is a hint that makes a phone think for
+     * seconds, and a board this budget cannot prove is one reseed away from a board it can — the
+     * number is a cost ceiling, not a difficulty dial.
      */
     const val SOLVE_BUDGET = 400_000
 
@@ -164,25 +171,35 @@ object Mosaic : PuzzleType {
      *
      * | tier     | grid  | blobs | colours | areas | optimum | slack | limit |
      * |----------|-------|------:|--------:|------:|--------:|------:|------:|
-     * | STANDARD | 8x12  |    16 |       3 | 12-15 |       4 |     3 |     7 |
-     * | HARD     | 9x14  |    20 |       4 | 17-20 |       5 |     2 |     7 |
-     * | EXPERT   | 10x16 |    24 |       5 | 21-24 |       7 |     1 |     8 |
+     * | STANDARD | 8x12  |    16 |       3 | 11-16 |       4 |     1 |     5 |
+     * | HARD     | 9x14  |    20 |       4 | 16-20 |       5 |     1 |     6 |
+     * | EXPERT   | 10x16 |    24 |       5 | 21-24 |       6 |     1 |     7 |
      *
-     * The areas and optimum columns are measured, not hoped for — forty daily seeds per tier land
-     * in those ranges, and the optimum column is a single number because the band is a single
-     * number: a board whose proven optimum misses it is thrown back. That costs a couple of extra
-     * generations and buys a tier that plays the same on a Tuesday as on a Friday, which random
-     * blob growth does not otherwise give.
+     * The areas and optimum columns are measured, not hoped for — a hundred and twenty daily seeds
+     * per tier land in those ranges, and the optimum column is a single number because the band is
+     * a single number: a board whose proven optimum misses it is thrown back. That costs a few
+     * extra generations and buys a tier that plays the same on a Tuesday as on a Friday, which
+     * random blob growth does not otherwise give.
      *
-     * Three things make a tier harder, and only one of them is the limit. Palette size sets the
-     * floor on the optimum — every colour but the last costs a fill to retire — and it also widens
-     * every choice. Area count sets how far apart the ends of the board are in fills. Slack decides
-     * how much of the optimal line you are allowed to miss, and it is the sharpest of the three:
-     * Standard's three spare fills forgive a whole strategy, Expert's one forgives a single pour.
+     * **Every tier now forgives exactly one fill, and that is the fix, not an oversight.** Slack
+     * used to run 3 / 2 / 1 and a Standard board was reported finished with four of its seven
+     * fills unspent. Three spare fills on a four-fill optimum is not a forgiving tier, it is the
+     * absence of a constraint: there is no order of sensible pours that loses. One spare fill is
+     * the smallest slack that still lets a player misjudge a pour and recover, and the difference
+     * between the tiers is carried where it belongs — board size, palette, and how long the
+     * shortest line is.
      *
-     * Standard and Hard share a limit of seven on purpose. Hard is not harder because it allows
-     * fewer fills; it is harder because it is a bigger board, a fourth colour and one fewer chance
-     * to waste a fill.
+     * The bands are set from where the tier's boards actually fall, checked against a greedy player
+     * that always takes the fill swallowing the most areas. Over 120 seeds a tier, greedy lands
+     * inside the limit on 100% of Standard boards, 88% of Hard and 64% of Expert, which is the
+     * shape a difficulty curve should have: on Standard, play sensibly and you finish; on Expert,
+     * the obvious fill loses better than a third of the time.
+     *
+     * Expert's band moved from seven to six for both of those reasons at once. Six is where nine
+     * boards in ten naturally land, so proving one costs a tenth of what hunting for a seven did —
+     * and it is the *harder* band, because a seven-fill board has slack built into its own shape:
+     * greedy matched the optimum on 43% of the optimum-seven boards against 23% of the
+     * optimum-six ones.
      */
     private class Spec(
         val width: Int,
@@ -194,9 +211,9 @@ object Mosaic : PuzzleType {
     )
 
     private fun specFor(difficulty: Difficulty) = when (difficulty) {
-        Difficulty.STANDARD -> Spec(8, 12, 16, 3, 4..4, 3)
-        Difficulty.HARD -> Spec(9, 14, 20, 4, 5..5, 2)
-        Difficulty.EXPERT -> Spec(10, 16, 24, 5, 7..7, 1)
+        Difficulty.STANDARD -> Spec(8, 12, 16, 3, 4..4, 1)
+        Difficulty.HARD -> Spec(9, 14, 20, 4, 5..5, 1)
+        Difficulty.EXPERT -> Spec(10, 16, 24, 5, 6..6, 1)
     }
 
     // ---- generation ---------------------------------------------------------------------------
@@ -357,17 +374,33 @@ object Mosaic : PuzzleType {
     // ---- solver -------------------------------------------------------------------------------
 
     /**
-     * A search position: the areas of the board, as bitmasks over the areas the *board being
-     * searched* started with.
+     * A search position: the board's areas, some of them merged into bigger groups.
      *
-     * Bitmasks because merging is then an OR, and because the bits keep meaning the same thing all
-     * the way down the search, so a group's neighbour mask survives its neighbours merging without
-     * being rebuilt. Sixty-four areas is the ceiling that buys; the generated boards run to two
-     * dozen and flooding never splits an area, so a board in play can only ever have fewer.
+     * Groups are never renumbered. A group is named by the id of one of the areas the *board being
+     * searched* started with — the one that was flooded — and merging only ever widens that group's
+     * membership, so a name stays valid for the whole search and [Search.path] can hand back the
+     * area that was tapped without a translation table.
+     *
+     * Adjacency is carried in [nbr] and patched on each fill rather than rebuilt. That matters more
+     * than it looks: rebuilding it is quadratic in the group count and the search now visits enough
+     * positions that a quadratic step at every node dominates everything else.
+     *
+     * Sixty-four areas is the ceiling the masks buy; generated boards run to two dozen and flooding
+     * never splits an area, so a board in play can only ever have fewer.
+     *
+     * One invariant carries the merge logic: no two adjacent groups ever share a colour. It holds
+     * at the root because areas are read off the cell colours, and a fill keeps it by swallowing
+     * every same-coloured neighbour of the group it touches. Without it a fill would have to
+     * cascade — swallow a neighbour, then that neighbour's same-coloured neighbours, and so on —
+     * and with it, one pass over the flooded group's own neighbours is the whole of a merge.
      */
-    private class Position(val mask: LongArray, val border: LongArray, val hue: IntArray) {
-        val size get() = mask.size
-    }
+    private class Position(
+        val member: LongArray,
+        val nbr: LongArray,
+        val hue: IntArray,
+        val alive: Long,
+        val count: Int,
+    )
 
     /** Labels the board's areas and lifts them into a [Position], or null past the 64-area ceiling. */
     private fun positionOf(state: MosaicState): Pair<Position, IntArray>? {
@@ -377,212 +410,298 @@ object Mosaic : PuzzleType {
         val firstCell = ArrayList<Int>()
         for (i in 0 until n) {
             if (label[i] >= 0) continue
-            val id = firstCell.size
-            if (id >= 64) return null
+            if (firstCell.size >= 64) return null
             firstCell += i
-            for (cell in state.area(i)) label[cell] = id
+            for (cell in state.area(i)) label[cell] = firstCell.size - 1
         }
         val count = firstCell.size
-        val border = LongArray(count)
+        val nbr = LongArray(count)
         for (cell in 0 until n) {
             val c = cell % w
             if (c < w - 1 && label[cell] != label[cell + 1]) {
-                border[label[cell]] = border[label[cell]] or (1L shl label[cell + 1])
-                border[label[cell + 1]] = border[label[cell + 1]] or (1L shl label[cell])
+                nbr[label[cell]] = nbr[label[cell]] or (1L shl label[cell + 1])
+                nbr[label[cell + 1]] = nbr[label[cell + 1]] or (1L shl label[cell])
             }
             if (cell / w < state.height - 1 && label[cell] != label[cell + w]) {
-                border[label[cell]] = border[label[cell]] or (1L shl label[cell + w])
-                border[label[cell + w]] = border[label[cell + w]] or (1L shl label[cell])
+                nbr[label[cell]] = nbr[label[cell]] or (1L shl label[cell + w])
+                nbr[label[cell + w]] = nbr[label[cell + w]] or (1L shl label[cell])
             }
         }
         val position = Position(
             LongArray(count) { 1L shl it },
-            border,
+            nbr,
             IntArray(count) { state.cells[firstCell[it]] },
+            if (count == 64) -1L else (1L shl count) - 1,
+            count,
         )
         return position to firstCell.toIntArray()
     }
 
-    /** Which groups touch which, as a bitmask per group over group indices. */
-    private fun adjacency(pos: Position): LongArray {
-        val n = pos.size
-        val adj = LongArray(n)
-        for (i in 0 until n) {
-            for (j in i + 1 until n) {
-                if (pos.border[i] and pos.mask[j] != 0L) {
-                    adj[i] = adj[i] or (1L shl j)
-                    adj[j] = adj[j] or (1L shl i)
-                }
-            }
-        }
-        return adj
-    }
-
     /**
-     * A lower bound on the fills still needed. Admissible, so IDA* built on it returns a genuine
-     * optimum rather than a good-looking line.
+     * The exact shortest-line search.
      *
-     * Two bounds, whichever is larger:
+     * One instance per [solve] call, because it owns the scratch the hot path would otherwise
+     * allocate at every node — two breadth-first sweeps and a move list per position is enough
+     * garbage to show up in the generator's time budget.
      *
-     * - **Colours.** A fill recolours one group, so it can retire at most one colour from the
-     *   board. One colour must remain, hence `distinct - 1`.
-     * - **Distance.** A fill contracts a group and its same-coloured neighbours into one node. Any
-     *   shortest path crosses that blob at most once, spending at most two edges inside it and two
-     *   getting in and out, and those four collapse to two — so no distance shrinks by more than
-     *   two per fill. The board ends as one node, distance zero, so `ceil(spread / 2)` fills are
-     *   needed for a spread of `spread`.
-     *
-     * The spread is measured by double sweep (BFS from anywhere, then BFS from the farthest node
-     * found) rather than all-pairs. That is a lower bound on the true diameter, which keeps the
-     * bound admissible, and it costs two BFS per node instead of one per group.
+     * @param areas the board's area count, which is also the width of every scratch array.
+     * @param colours how many colours the *board* has, not how big [palette] is. A three-colour
+     *   board must not be searched as if five swatches were on offer: the player is never shown
+     *   them, and the phantom moves would treble the branching for nothing.
      */
-    private fun bound(pos: Position, adj: LongArray): Int {
-        if (pos.size <= 1) return 0
-        var present = 0L
-        for (colour in pos.hue) present = present or (1L shl colour)
-        val byColour = java.lang.Long.bitCount(present) - 1
-        val far = sweep(pos.size, adj, 0).first
-        val spread = sweep(pos.size, adj, far).second
-        return maxOf(byColour, (spread + 1) / 2)
-    }
+    private class Search(private val areas: Int, private val colours: Int, private val budget: Int) {
 
-    /**
-     * Order-independent hash of a position, for the transposition table.
-     *
-     * Summing per-group hashes rather than hashing the arrays in order sidesteps having to keep the
-     * groups in a canonical order after a merge. A collision could only ever make the search miss a
-     * line and report a *longer* optimum, which is a looser move limit rather than an unreachable
-     * one — but at 64 bits it is not something that happens.
-     */
-    private fun fingerprint(pos: Position): Long {
-        var sum = 0L
-        for (j in 0 until pos.size) {
-            var z = pos.mask[j] xor (pos.hue[j].toLong() * 0x517CC1B727220A95L)
-            z = (z xor (z ushr 33)) * -0x7ee3623a03d3c83fL
-            z = (z xor (z ushr 29)) * -0x3b314601e57a13adL
-            sum += z xor (z ushr 32)
-        }
-        return sum
-    }
+        private val dist = IntArray(areas)
+        private val queue = IntArray(areas)
+        private val gain = IntArray(colours)
+        private val bucket = IntArray(areas + 1)
+        private val path = IntArray(areas)
 
-    /** BFS from [from]; returns the farthest node and its distance. */
-    private fun sweep(n: Int, adj: LongArray, from: Int): Pair<Int, Int> {
-        val dist = IntArray(n) { -1 }
-        val queue = IntArray(n)
-        var head = 0
-        var tail = 0
-        dist[from] = 0
-        queue[tail++] = from
-        var far = from
-        var best = 0
-        while (head < tail) {
-            val u = queue[head++]
-            var bits = adj[u]
+        /**
+         * The deepest failed search per position.
+         *
+         * Fills commute far more often than they look like they should — two pours in either order
+         * land on the same board — so the same position turns up over and over under different move
+         * orders, and with every fill now on offer there are many more orders to arrive by. This
+         * table is what makes the full move set affordable at all. Entries stay valid as the
+         * ceiling rises, because "no line of r fills from here" does not stop being true.
+         */
+        private val failedAt = HashMap<Long, Int>()
+
+        private var spent = 0
+        private var reached = 0
+
+        /**
+         * Every legal fill, encoded as `group shl 4 or colour`, most promising first.
+         *
+         * *Every* fill: each live group paired with each colour but its own. An earlier version
+         * offered only colours a neighbour already wore, reasoning that a fill merging nothing
+         * merely repaints one area and can always be swapped for one that does. That is plausible,
+         * it was never proved, and the old KDoc said as much — a subset search can only report a
+         * line that is too long, which is a move limit too loose to constrain play.
+         *
+         * Searching the subset was in fact measured as harmless: across 9,630 boards — random small
+         * ones exhaustively, and 630 real tier boards — the restricted optimum never once exceeded
+         * the true one. The subset went anyway. A shipped move limit should not rest on a
+         * conjecture that happens to hold on the boards someone thought to check, and the cost of
+         * dropping it turned out to be affordable: branching rises from roughly the area count to
+         * `areas x (colours - 1)`, which the transposition table and the bound below absorb.
+         *
+         * Ordered by how many groups the fill swallows, because finding *a* win early is what lets
+         * the ceiling below it be refuted cheaply. Counting sort rather than comparison sort: with
+         * the full move set this list runs to a hundred entries at every node.
+         */
+        private fun candidates(pos: Position): IntArray {
+            val out = IntArray(pos.count * (colours - 1))
+            val score = IntArray(out.size)
+            var top = 0
+            var k = 0
+            var bits = pos.alive
             while (bits != 0L) {
-                val v = java.lang.Long.numberOfTrailingZeros(bits)
+                val i = java.lang.Long.numberOfTrailingZeros(bits)
                 bits = bits and (bits - 1)
-                if (dist[v] >= 0) continue
-                dist[v] = dist[u] + 1
-                if (dist[v] > best) {
-                    best = dist[v]
-                    far = v
+                java.util.Arrays.fill(gain, 0)
+                var near = pos.nbr[i]
+                while (near != 0L) {
+                    val j = java.lang.Long.numberOfTrailingZeros(near)
+                    near = near and (near - 1)
+                    gain[pos.hue[j]]++
                 }
-                queue[tail++] = v
+                for (colour in 0 until colours) {
+                    if (colour == pos.hue[i]) continue
+                    out[k] = (i shl 4) or colour
+                    score[k] = gain[colour]
+                    if (gain[colour] > top) top = gain[colour]
+                    k++
+                }
             }
-        }
-        return far to best
-    }
-
-    private fun play(pos: Position, group: Int, colour: Int, adj: LongArray): Position {
-        var mask = pos.mask[group]
-        var border = pos.border[group]
-        var eaten = 0L
-        var bits = adj[group]
-        while (bits != 0L) {
-            val j = java.lang.Long.numberOfTrailingZeros(bits)
-            bits = bits and (bits - 1)
-            if (pos.hue[j] != colour) continue
-            mask = mask or pos.mask[j]
-            border = border or pos.border[j]
-            eaten = eaten or (1L shl j)
-        }
-        border = border and mask.inv()
-
-        val out = pos.size - java.lang.Long.bitCount(eaten)
-        val nm = LongArray(out)
-        val nb = LongArray(out)
-        val nh = IntArray(out)
-        var k = 0
-        for (j in 0 until pos.size) {
-            if (eaten and (1L shl j) != 0L) continue
-            if (j == group) {
-                nm[k] = mask
-                nb[k] = border
-                nh[k] = colour
-            } else {
-                nm[k] = pos.mask[j]
-                nb[k] = pos.border[j]
-                nh[k] = pos.hue[j]
+            java.util.Arrays.fill(bucket, 0, top + 2, 0)
+            for (s in score) bucket[s]++
+            // Running totals from the top score down, so the highest-gain fills land first.
+            var at = 0
+            for (s in top downTo 0) {
+                val here = bucket[s]
+                bucket[s] = at
+                at += here
             }
-            k++
+            val sorted = IntArray(out.size)
+            for (i in out.indices) sorted[bucket[score[i]]++] = out[i]
+            return sorted
         }
-        return Position(nm, nb, nh)
-    }
 
-    /**
-     * Candidate fills, best-looking first, encoded as `group shl 4 or colour`.
-     *
-     * Only colours a neighbour already wears are offered. Pouring a colour nothing next door holds
-     * merges nothing — it only repaints one area — and dropping those cuts the branching factor by
-     * roughly the palette size at every level, which is the difference between proving an Expert
-     * board and not.
-     *
-     * That restriction is worth being precise about, because the shipped move limit rests on it. It
-     * is not proved here that no shortest line ever needs a non-merging fill. What *is* guaranteed
-     * is the direction of the error: searching a subset of the fills can only ever report a line
-     * that is too long, never one that is too short, so the worst a hidden shortcut could do is make
-     * a tier play a touch easier than intended. The line [solve] hands back is a real sequence of
-     * real fills either way, and the limit built from it is reachable by playing exactly that line.
-     *
-     * Ordering by how many groups the fill eats finds a solution early, which is what makes the
-     * final IDA* pass cheap.
-     */
-    private fun candidates(pos: Position, adj: LongArray): IntArray {
-        val n = pos.size
-        val gain = IntArray(n * palette.size)
-        for (i in 0 until n) {
-            var bits = adj[i]
+        /** The board after pouring [colour] into group [group], neighbours in that colour merged in. */
+        private fun play(pos: Position, group: Int, colour: Int): Position {
+            var eaten = 0L
+            var near = pos.nbr[group]
+            while (near != 0L) {
+                val j = java.lang.Long.numberOfTrailingZeros(near)
+                near = near and (near - 1)
+                if (pos.hue[j] == colour) eaten = eaten or (1L shl j)
+            }
+
+            val member = pos.member.copyOf()
+            val nbr = pos.nbr.copyOf()
+            val hue = pos.hue.copyOf()
+
+            var grown = pos.member[group]
+            var touching = pos.nbr[group]
+            var bits = eaten
             while (bits != 0L) {
                 val j = java.lang.Long.numberOfTrailingZeros(bits)
                 bits = bits and (bits - 1)
-                gain[i * palette.size + pos.hue[j]]++
+                grown = grown or pos.member[j]
+                touching = touching or pos.nbr[j]
             }
-        }
-        var found = 0
-        for (g in gain) if (g > 0) found++
-        val moves = IntArray(found)
-        val score = IntArray(found)
-        var k = 0
-        for (i in gain.indices) {
-            if (gain[i] == 0) continue
-            moves[k] = ((i / palette.size) shl 4) or (i % palette.size)
-            score[k] = gain[i]
-            k++
-        }
-        // Insertion sort: a handful of entries, and it keeps the order reproducible.
-        for (a in 1 until found) {
-            val m = moves[a]
-            val s = score[a]
-            var b = a - 1
-            while (b >= 0 && score[b] < s) {
-                moves[b + 1] = moves[b]
-                score[b + 1] = score[b]
-                b--
+            touching = touching and (eaten or (1L shl group)).inv()
+
+            member[group] = grown
+            nbr[group] = touching
+            hue[group] = colour
+            // Only the blob's own neighbours can have been pointing at something it swallowed.
+            var rim = touching
+            while (rim != 0L) {
+                val k = java.lang.Long.numberOfTrailingZeros(rim)
+                rim = rim and (rim - 1)
+                nbr[k] = (nbr[k] and eaten.inv()) or (1L shl group)
             }
-            moves[b + 1] = m
-            score[b + 1] = s
+            return Position(
+                member, nbr, hue,
+                pos.alive and eaten.inv(),
+                pos.count - java.lang.Long.bitCount(eaten),
+            )
         }
-        return moves
+
+        /** BFS from [from] over the live groups; returns the farthest one and its distance. */
+        private fun sweep(pos: Position, from: Int): Long {
+            java.util.Arrays.fill(dist, -1)
+            var head = 0
+            var tail = 0
+            dist[from] = 0
+            queue[tail++] = from
+            var far = from
+            var best = 0
+            while (head < tail) {
+                val u = queue[head++]
+                var bits = pos.nbr[u]
+                while (bits != 0L) {
+                    val v = java.lang.Long.numberOfTrailingZeros(bits)
+                    bits = bits and (bits - 1)
+                    if (dist[v] >= 0) continue
+                    dist[v] = dist[u] + 1
+                    if (dist[v] > best) {
+                        best = dist[v]
+                        far = v
+                    }
+                    queue[tail++] = v
+                }
+            }
+            return (far.toLong() shl 32) or best.toLong()
+        }
+
+        /**
+         * A lower bound on the fills still needed. Admissible, so IDA* built on it returns a
+         * genuine optimum rather than a good-looking line.
+         *
+         * Two bounds, whichever is larger:
+         *
+         * - **Colours.** A fill recolours one group, so it retires a colour only when that group
+         *   was the last one wearing it — at most one colour per fill. One colour must remain,
+         *   hence `distinct - 1`.
+         * - **Distance.** A fill contracts a group and its same-coloured neighbours into one node.
+         *   That set is a star centred on the flooded group, so it has diameter two, and
+         *   contracting a set of diameter two shortens no path by more than two. The board ends as
+         *   a single node at distance zero, so a spread of `s` needs `ceil(s / 2)` fills.
+         *
+         * The spread comes from a double sweep (BFS from anywhere, then BFS from the farthest node
+         * found) rather than all-pairs. That is a lower bound on the true diameter, which is what
+         * keeps the whole thing admissible, and it costs two BFS per node instead of one per group.
+         *
+         * A radius bound is tempting here and is wrong: two blobs can grow from opposite ends of
+         * the board and only meet on the last fill, so nothing forces the line to spread out of a
+         * single centre.
+         */
+        private fun bound(pos: Position): Int {
+            if (pos.count <= 1) return 0
+            var present = 0L
+            var bits = pos.alive
+            while (bits != 0L) {
+                val j = java.lang.Long.numberOfTrailingZeros(bits)
+                bits = bits and (bits - 1)
+                present = present or (1L shl pos.hue[j])
+            }
+            val byColour = java.lang.Long.bitCount(present) - 1
+            val first = sweep(pos, java.lang.Long.numberOfTrailingZeros(pos.alive))
+            val spread = sweep(pos, (first ushr 32).toInt()).toInt()
+            return maxOf(byColour, (spread + 1) / 2)
+        }
+
+        /**
+         * Order-independent hash of a position, for [failedAt].
+         *
+         * Summing per-group hashes sidesteps having to keep the groups in a canonical order, and
+         * hashing the *membership* mask rather than the group's name means two lines that merged
+         * the same areas by flooding different members of the blob collide on purpose — they are
+         * the same board.
+         *
+         * An accidental collision could only ever make the search miss a line and report a longer
+         * optimum, which is a looser move limit rather than an unreachable one — but at 64 bits it
+         * is not something that happens.
+         */
+        private fun fingerprint(pos: Position): Long {
+            var sum = 0L
+            var bits = pos.alive
+            while (bits != 0L) {
+                val j = java.lang.Long.numberOfTrailingZeros(bits)
+                bits = bits and (bits - 1)
+                var z = pos.member[j] xor (pos.hue[j].toLong() * 0x517CC1B727220A95L)
+                z = (z xor (z ushr 33)) * -0x7ee3623a03d3c83fL
+                z = (z xor (z ushr 29)) * -0x3b314601e57a13adL
+                sum += z xor (z ushr 32)
+            }
+            return sum
+        }
+
+        /** Depth-first under an `f = depth + bound` ceiling. True once a win is stored in [path]. */
+        private fun descend(pos: Position, depth: Int, ceiling: Int): Boolean {
+            if (pos.count <= 1) {
+                reached = depth
+                return true
+            }
+            if (spent++ > budget) return false
+            val remaining = ceiling - depth
+            if (bound(pos) > remaining) return false
+            val key = fingerprint(pos)
+            if ((failedAt[key] ?: -1) >= remaining) return false
+            for (move in candidates(pos)) {
+                path[depth] = move
+                if (descend(play(pos, move ushr 4, move and 15), depth + 1, ceiling)) return true
+                if (spent > budget) return false
+            }
+            failedAt[key] = remaining
+            return false
+        }
+
+        /** Runs the iterative deepening. Null means the budget ran out, never "no solution". */
+        fun run(root: Position, firstCell: IntArray): List<MosaicMove>? {
+            var ceiling = bound(root)
+            // Flooding any area with a neighbour's colour eats at least that neighbour, so this
+            // many fills always suffice and the ceiling can never run away.
+            val worst = root.count - 1
+            while (ceiling <= worst) {
+                if (descend(root, 0, ceiling)) {
+                    // Read back only as far as the win actually went. It always reaches the ceiling
+                    // — a shorter line would have been found at a lower one — but the path array
+                    // still holds stale entries past it, and trusting that invariant silently is
+                    // how a win grows a phantom extra fill.
+                    return (0 until reached).map {
+                        MosaicMove(firstCell[path[it] ushr 4], path[it] and 15)
+                    }
+                }
+                if (spent > budget) return null
+                ceiling++
+            }
+            return null
+        }
     }
 
     /**
@@ -594,65 +713,13 @@ object Mosaic : PuzzleType {
      * truncated search as a proof, and it is the reason the budget is spent across all IDA*
      * iterations rather than reset for each one.
      *
-     * Shortest over the fills [candidates] offers, which is every fill that merges something. See
-     * there for why that is the right set and which way the remaining doubt points.
+     * Shortest over every fill the player could make, which is what lets the move limit built from
+     * it actually constrain play rather than merely be reachable.
      */
     fun solve(state: MosaicState, budget: Int = SOLVE_BUDGET): List<MosaicMove>? {
         val (root, firstCell) = positionOf(state) ?: return null
-        if (root.size <= 1) return emptyList()
-        val path = IntArray(root.size)
-        var spent = 0
-        var reached = 0
-
-        // Fills commute far more often than they look like they should — two pours in either order
-        // land on the same board — so the same position turns up over and over under different move
-        // orders. Remembering the deepest search that failed on a position is what takes the proof
-        // of Expert boards from minutes to milliseconds. Entries stay valid as the ceiling rises,
-        // because "no line of r fills from here" does not stop being true.
-        val failedAt = HashMap<Long, Int>()
-
-        // Depth-first under an f = depth + bound ceiling, raising the ceiling a fill at a time. The
-        // first line found at a ceiling is optimal because the bound never overestimates.
-        fun descend(pos: Position, depth: Int, ceiling: Int): Boolean {
-            if (pos.size <= 1) {
-                reached = depth
-                return true
-            }
-            if (spent++ > budget) return false
-            val adj = adjacency(pos)
-            val remaining = ceiling - depth
-            if (bound(pos, adj) > remaining) return false
-            val key = fingerprint(pos)
-            if ((failedAt[key] ?: -1) >= remaining) return false
-            for (move in candidates(pos, adj)) {
-                val group = move ushr 4
-                val colour = move and 15
-                path[depth] = (java.lang.Long.numberOfTrailingZeros(pos.mask[group]) shl 4) or colour
-                if (descend(play(pos, group, colour, adj), depth + 1, ceiling)) return true
-                if (spent > budget) return false
-            }
-            failedAt[key] = remaining
-            return false
-        }
-
-        var ceiling = bound(root, adjacency(root))
-        // Flooding any area with a neighbour's colour eats at least that neighbour, so this many
-        // fills always suffice and the ceiling can never run away.
-        val worst = root.size - 1
-        while (ceiling <= worst) {
-            if (descend(root, 0, ceiling)) {
-                // Read back only as far as the win actually went. It always reaches the ceiling —
-                // a shorter line would have been found at a lower one — but the path array still
-                // holds stale entries past it, and trusting that invariant silently is how a win
-                // grows a phantom extra fill.
-                return (0 until reached).map {
-                    MosaicMove(firstCell[path[it] ushr 4], path[it] and 15)
-                }
-            }
-            if (spent > budget) return null
-            ceiling++
-        }
-        return null
+        if (root.count <= 1) return emptyList()
+        return Search(root.count, state.colours, budget).run(root, firstCell)
     }
 
     // ---- play ---------------------------------------------------------------------------------
