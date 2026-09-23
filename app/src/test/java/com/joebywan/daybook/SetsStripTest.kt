@@ -138,9 +138,11 @@ class SetsStripTest {
                         "$cards cards in ${width}x$height make a ${grid}-tall grid",
                         grid.value <= height.value + 0.01f,
                     )
+                    val columns = Sets.boardColumns(cards)
                     assertTrue(
                         "$cards cards in ${width}x$height make a row wider than the pane",
-                        (card * 3 + Sets.CARD_GAP * 2).value <= (width - 32.dp).value + 0.01f,
+                        (card * columns + Sets.CARD_GAP * (columns - 1)).value <=
+                            (width - 32.dp).value + 0.01f,
                     )
                 }
                 height += 10.dp
@@ -167,7 +169,8 @@ class SetsStripTest {
         // The regression guard proper: if someone drops back to sizing from width alone this is
         // the assertion that notices, because on an ordinary phone the two answers differ.
         val screen = 360.dp to 640.dp
-        val widthOnly = (360.dp - 32.dp - Sets.CARD_GAP * 2) / 3
+        val columns = Sets.boardColumns(12)
+        val widthOnly = (360.dp - 32.dp - Sets.CARD_GAP * (columns - 1)) / columns
         val actual = Sets.cardWidth(screen.first - 32.dp, gridBox(screen), 12)
         assertTrue(
             "twelve cards still size to $actual, the width-only answer",

@@ -101,6 +101,5 @@ cannot fail is not a test.
 
 ## Open
 
-Sudoku pencil marks; Sets laid out four-across at 12 cards (~37% larger cards); accessibility —
-seven boards use raw pointer input and expose no click actions, so a screen reader cannot operate
-them.
+Sudoku pencil marks; accessibility — seven boards use raw pointer input and expose no click
+actions, so a screen reader cannot operate them.
