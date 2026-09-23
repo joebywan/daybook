@@ -114,9 +114,10 @@ object Sets : PuzzleType {
      * Two axes decide how hard a board plays, and both have to climb or the ladder inverts — which
      * is how Expert once shipped easier than Standard. The first is how many triples must be
      * examined before you can be sure nothing is left: C(9,3) = 84, C(12,3) = 220. The second is
-     * how many discoveries the tier asks for. Twelve cards is the ceiling — the board lays out
-     * three to a row in a pane that does not scroll, so a fifth row would be cut off — so Expert
-     * climbs the second axis where Hard has already maxed the first.
+     * how many discoveries the tier asks for. Twelve cards is the ceiling — the pane does not
+     * scroll, and a board that size already lays out four to a row (see [boardColumns]) rather than
+     * three, so a fifth row would still be cut off — so Expert climbs the second axis where Hard
+     * has already maxed the first.
      */
     private fun shape(difficulty: Difficulty) = when (difficulty) {
         Difficulty.STANDARD -> 9 to 3   //  84 triples to scan, 3 sets to find
@@ -192,7 +193,21 @@ object Sets : PuzzleType {
      */
     val CARD_MIN_WIDTH = 30.dp
 
-    fun boardRows(cards: Int) = (cards + 2) / 3
+    /**
+     * Cards per row.
+     *
+     * Nine cards read cleanly as 3x3. Twelve do not divide the same way, and 3-across is what
+     * forced Hard and Expert into four rows — on the narrowest supported phone that priced the
+     * card right down to [CARD_MIN_WIDTH] with nothing left, because a fourth row is expensive in
+     * a pane that does not scroll. 4-across turns the same twelve cards into three rows instead,
+     * which is real slack rather than a floor reached on arrival.
+     */
+    fun boardColumns(cards: Int) = if (cards == 12) 4 else 3
+
+    fun boardRows(cards: Int): Int {
+        val columns = boardColumns(cards)
+        return (cards + columns - 1) / columns
+    }
 
     /**
      * Card width for a board of [cards] given both of the pane's constraints.
@@ -204,8 +219,9 @@ object Sets : PuzzleType {
      * the width allows and what the height allows, and let the board be as big as *both* permit.
      */
     fun cardWidth(available: Dp, availableHeight: Dp, cards: Int): Dp {
+        val columns = boardColumns(cards)
         val rows = boardRows(cards)
-        val byWidth = (available - CARD_GAP * 2) / 3
+        val byWidth = (available - CARD_GAP * (columns - 1)) / columns
         val byHeight = (availableHeight - CARD_GAP * (rows - 1)) / rows * CARD_ASPECT
         return minOf(byWidth, byHeight).coerceAtLeast(1.dp)
     }
@@ -350,11 +366,12 @@ object Sets : PuzzleType {
                 contentAlignment = Alignment.TopCenter,
             ) {
                 val width = cardWidth(maxWidth, maxHeight, s.cards.size)
+                val columns = boardColumns(s.cards.size)
                 Column(verticalArrangement = Arrangement.spacedBy(CARD_GAP)) {
-                    s.cards.chunked(3).forEachIndexed { rowIndex, row ->
+                    s.cards.chunked(columns).forEachIndexed { rowIndex, row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(CARD_GAP)) {
                             row.forEachIndexed { colIndex, card ->
-                                val index = rowIndex * 3 + colIndex
+                                val index = rowIndex * columns + colIndex
                                 BoardCard(
                                     card = card,
                                     width = width,
