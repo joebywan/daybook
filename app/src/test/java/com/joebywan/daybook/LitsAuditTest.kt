@@ -137,19 +137,7 @@ class LitsAuditTest {
             if (s.shaded[r * w + c] && s.shaded[r * w + c + 1] &&
                 s.shaded[(r + 1) * w + c] && s.shaded[(r + 1) * w + c + 1]) return false
         }
-        val shaded = s.shaded.indices.filter { s.shaded[it] }
-        if (shaded.isEmpty()) return false
-        val seen = HashSet<Int>(); val stack = ArrayDeque<Int>()
-        stack.addLast(shaded[0]); seen += shaded[0]
-        while (stack.isNotEmpty()) {
-            val x = stack.removeLast()
-            val r = x / w; val c = x % w
-            listOfNotNull(
-                if (r > 0) x - w else null, if (r < h - 1) x + w else null,
-                if (c > 0) x - 1 else null, if (c < w - 1) x + 1 else null,
-            ).forEach { if (s.shaded[it] && seen.add(it)) stack.addLast(it) }
-        }
-        if (seen.size != shaded.size) return false
+        // No connectivity rule: separate pieces of shading are allowed in this version of LITS.
         val letter = byRegion.mapValues { (_, cells) -> letterOf(cells, w) }
         for ((ra, ca) in byRegion) for ((rb, cb) in byRegion) {
             if (ra >= rb || letter[ra] != letter[rb]) continue

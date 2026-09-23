@@ -87,10 +87,37 @@ class LitsRulesTest {
     }
 
     @Test
-    fun `shading that falls into two separate pieces is rejected`() {
+    fun `shading that falls into two separate pieces is accepted`() {
         // Two legal I tetrominoes, four squares each, no 2x2, and too far apart to count as one
-        // same-letter contact. The only thing wrong is that they never touch.
-        assertFalse(Lits.isSolved(4, 4, TWO_COLUMNS, shade(16, 0, 4, 8, 12, 3, 7, 11, 15)))
+        // same-letter contact. They never touch, which this version of LITS does not require.
+        assertTrue(Lits.isSolved(4, 4, TWO_COLUMNS, shade(16, 0, 4, 8, 12, 3, 7, 11, 15)))
+    }
+
+    @Test
+    fun `the disconnected answer a player was refused on 23 Sept 2026 Expert is accepted`() {
+        // Transcribed from the player's screenshot. The T in the middle (rows 3 to 5) touches no
+        // other shading; every region still holds a legal tetromino.
+        val seed = DailySeed.seedFor(LocalDate.of(2026, 9, 23), "lits", Difficulty.EXPERT)
+        val state = Lits.generate(seed, Difficulty.EXPERT) as LitsState
+        val picture = listOf(
+            "I S S . T . . S",
+            "I . S S T T S S",
+            "I . T . T . S .",
+            "I T T T . T . I",
+            "S . . . T T . I",
+            "S S . T . T . I",
+            ". S T T T . L I",
+            ". . . . L L L .",
+        )
+        val shaded = picture.flatMap { row -> row.split(" ").map { it != "." } }
+        assertEquals(state.width * state.height, shaded.size)
+        val played = state.copy(shaded = shaded)
+        assertEquals(
+            "the screenshot's letters should be what the board shows",
+            picture.flatMap { row -> row.split(" ").map { if (it == ".") null else it } },
+            played.letters().map { it?.name },
+        )
+        assertTrue(played.solved)
     }
 
     @Test
@@ -117,7 +144,10 @@ class LitsRulesTest {
     }
 
     /**
-     * Every legal shading of [state]'s regions, counted to a stop of [cap].
+     * Every legal *connected* shading of [state]'s regions, counted to a stop of [cap].
+     *
+     * Connected because that is what the generator proves unique: it still insists on one area
+     * when choosing boards, even though the win condition no longer does.
      *
      * No node budget on purpose. The bug this guards against was a search that gave up quietly and
      * let the caller read the result as a proof of uniqueness, so a count from here is either

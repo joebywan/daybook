@@ -62,22 +62,24 @@ data class LitsState(
 /**
  * LITS.
  *
- * Shade a four-square tetromino in each region so the shading forms one connected area, contains
- * no full two-by-two block, and never puts two tetrominoes of the same letter edge to edge.
+ * Shade a four-square tetromino in each region so the shading contains no full two-by-two block
+ * and never puts two tetrominoes of the same letter edge to edge. Unlike classic LITS, the shading
+ * does not have to form one connected area.
  *
  * Generation partitions the grid, enumerates each region's legal tetrominoes, and keeps the
- * partition only when the solver *proves* the board has exactly one global solution.
+ * partition only when the solver *proves* the board has exactly one solution whose shading is also
+ * connected. That extra condition only shapes which boards ship; the win check does not ask for it,
+ * so a disconnected answer that keeps every other rule is accepted.
  */
 object Lits : PuzzleType {
 
     override val id = "lits"
     override val displayName = "LITS"
-    override val tagline = "One tetromino per region, all joined up"
+    override val tagline = "One tetromino in every region"
     override val accent = 0xFF9A8264
     override val rules = listOf(
         "Shade exactly four squares in every region, forming an L, I, T or S tetromino.",
         "A 2x2 square of shading is never allowed.",
-        "All shaded squares must form one connected area.",
         "Two tetrominoes of the same letter may not touch edge to edge, even across regions.",
         "Tap a square to shade or clear it.",
         "A finished tetromino takes its letter's colour and carries the letter, so two blocks " +
@@ -172,7 +174,11 @@ object Lits : PuzzleType {
             }
         }
 
-        return isConnected((0 until n).filter { shaded[it] }, width, height)
+        // No connectivity check. The shading may fall into separate pieces: a board with a legal
+        // tetromino in every region, no 2x2 and no same-letter contact is finished. A player's
+        // disconnected answer on the 23 Sept 2026 Expert board used to be refused, with every
+        // other square already crossed off and nothing saying why.
+        return true
     }
 
     // ---- what the board can show the player ---------------------------------------------------
