@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,7 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -52,6 +56,25 @@ data class LitsState(
     fun toggle(index: Int): LitsState =
         copy(shaded = shaded.toMutableList().also { it[index] = !it[index] }, moves = moves + 1)
 
+    /**
+     * Sets every square in [cells] to [on] in a single state, for a drag across the board.
+     *
+     * One state for the whole drag because the play screen pushes an undo entry per state: one
+     * Undo walks back one gesture. The drag repeats the decision taken on its first square, as
+     * Kings' sweep does, rather than flipping each square it crosses. It scores one move per
+     * square actually changed, the taps it stands in for.
+     */
+    fun paint(cells: Collection<Int>, on: Boolean): LitsState {
+        val next = shaded.toMutableList()
+        var changed = 0
+        for (i in cells) {
+            if (next[i] == on) continue
+            next[i] = on
+            changed++
+        }
+        return if (changed == 0) this else copy(shaded = next, moves = moves + changed)
+    }
+
     /** The letter of the tetromino each shaded square belongs to, where its region has settled. */
     fun letters(): List<Lits.Piece?> = Lits.letters(width, height, region, shaded)
 
@@ -62,24 +85,26 @@ data class LitsState(
 /**
  * LITS.
  *
- * Shade a four-square tetromino in each region so the shading forms one connected area, contains
- * no full two-by-two block, and never puts two tetrominoes of the same letter edge to edge.
+ * Shade a four-square tetromino in each region so the shading contains no full two-by-two block
+ * and never puts two tetrominoes of the same letter edge to edge. Unlike classic LITS, the shading
+ * does not have to form one connected area.
  *
  * Generation partitions the grid, enumerates each region's legal tetrominoes, and keeps the
- * partition only when the solver *proves* the board has exactly one global solution.
+ * partition only when the solver *proves* the board has exactly one solution whose shading is also
+ * connected. That extra condition only shapes which boards ship; the win check does not ask for it,
+ * so a disconnected answer that keeps every other rule is accepted.
  */
 object Lits : PuzzleType {
 
     override val id = "lits"
     override val displayName = "LITS"
-    override val tagline = "One tetromino per region, all joined up"
+    override val tagline = "One tetromino in every region"
     override val accent = 0xFF9A8264
     override val rules = listOf(
         "Shade exactly four squares in every region, forming an L, I, T or S tetromino.",
         "A 2x2 square of shading is never allowed.",
-        "All shaded squares must form one connected area.",
         "Two tetrominoes of the same letter may not touch edge to edge, even across regions.",
-        "Tap a square to shade or clear it.",
+        "Tap a square to shade or clear it, or drag across several to do the same to each.",
         "A finished tetromino takes its letter's colour and carries the letter, so two blocks " +
             "touching in one colour are the rule being broken.",
         "Squares that can no longer be shaded are crossed off for you.",
@@ -172,7 +197,11 @@ object Lits : PuzzleType {
             }
         }
 
-        return isConnected((0 until n).filter { shaded[it] }, width, height)
+        // No connectivity check. The shading may fall into separate pieces: a board with a legal
+        // tetromino in every region, no 2x2 and no same-letter contact is finished. A player's
+        // disconnected answer on the 23 Sept 2026 Expert board used to be refused, with every
+        // other square already crossed off and nothing saying why.
+        return true
     }
 
     // ---- what the board can show the player ---------------------------------------------------
@@ -307,6 +336,25 @@ object Lits : PuzzleType {
     private const val ATTEMPTS = 150
     private const val WALL_TRIES = 2
 
+    /**
+     * The most squares a region may hold, four of them its tetromino.
+     *
+     * Uncapped, one region in six or so came out at eight squares or more (fourteen at worst on
+     * Expert), big enough to nearly hold two tetrominoes. Most of such a region is squares that
+     * end up crossed off, which makes the board easier without making it more interesting. Six
+     * was tried and leaves too little room: almost no board could then be proved unique.
+     */
+    private const val MAX_REGION = 7
+
+    /**
+     * Piece layouts laid down per attempt, keeping the one with the most tetrominoes. More pieces
+     * means fewer spare squares to share out, which is what lets the regions fit under
+     * [MAX_REGION]. Measured over 40 days per tier: from one layout, 17 of 40 Expert boards could
+     * be proved unique under the cap; from 24, 39 of 40. Twelve was no faster, because the boards
+     * it could not prove under the cap paid for the uncapped retry.
+     */
+    private const val LAYOUTS = 24
+
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (w, h) = shape(difficulty)
         val n = w * h
@@ -320,31 +368,39 @@ object Lits : PuzzleType {
         // first and the regions drawn around it — so the first one built is kept as a floor. Only
         // its *uniqueness* is ever in doubt.
         var floor: LitsState? = null
-        var searches = 0
 
-        for (attempt in 0 until ATTEMPTS) {
-            if (searches >= SEARCH_BUDGET) break
-            val rng = Rng(seed + attempt)
-            val placed = placeTetrominoes(rng, w, h, targetPieces, minPieces) ?: continue
-            val shading = List(n) { cell -> placed.any { cell in it.first } }
-
-            // The shading is fixed at this point; only the walls are still free, so a couple of
-            // partitions are carved per layout of pieces before giving up on it.
-            for (wallTry in 0 until WALL_TRIES) {
+        // Capped first. Should no board be provable under the cap, a proved board with one larger
+        // region still beats the unproved floor, so the cap is dropped rather than the proof.
+        for (cap in listOf(MAX_REGION, Int.MAX_VALUE)) {
+            var searches = 0
+            for (attempt in 0 until ATTEMPTS) {
                 if (searches >= SEARCH_BUDGET) break
-                val (region, intact) = carve(rng, w, h, placed) { searches++ }
-                if (floor == null) floor = LitsState(w, h, region, List(n) { false }, shading)
-                if (!intact) continue
+                val rng = Rng(seed + attempt)
+                val placed = (0 until LAYOUTS)
+                    .mapNotNull { placeTetrominoes(rng, w, h, targetPieces, minPieces) }
+                    .maxByOrNull { it.size } ?: continue
+                // Too few pieces to share the grid out under the cap, so no partition can exist.
+                if (placed.size.toLong() * cap < n) continue
+                val shading = List(n) { cell -> placed.any { cell in it.first } }
 
-                val options = placed.indices.map { r ->
-                    tetrominoes(region.indices.filter { region[it] == r }, w, h)
-                }
-                if (options.any { it.isEmpty() }) continue
-                searches++
-                // Only an exactly-one verdict may ship. Truncated is explicitly not one.
-                val verdict = search(w, h, options)
-                if (verdict is Verdict.ExactlyOne) {
-                    return LitsState(w, h, region, List(n) { false }, verdict.shading)
+                // The shading is fixed at this point; only the walls are still free, so a couple
+                // of partitions are carved per layout of pieces before giving up on it.
+                for (wallTry in 0 until WALL_TRIES) {
+                    if (searches >= SEARCH_BUDGET) break
+                    val (region, intact) = carve(rng, w, h, placed, cap) { searches++ }
+                    if (floor == null) floor = LitsState(w, h, region, List(n) { false }, shading)
+                    if (!intact) continue
+
+                    val options = placed.indices.map { r ->
+                        tetrominoes(region.indices.filter { region[it] == r }, w, h)
+                    }
+                    if (options.any { it.isEmpty() }) continue
+                    searches++
+                    // Only an exactly-one verdict may ship. Truncated is explicitly not one.
+                    val verdict = search(w, h, options)
+                    if (verdict is Verdict.ExactlyOne) {
+                        return LitsState(w, h, region, List(n) { false }, verdict.shading)
+                    }
                 }
             }
         }
@@ -367,7 +423,7 @@ object Lits : PuzzleType {
         } ?: listOf(listOf(0, w, 2 * w, 3 * w) to Piece.I)
         return LitsState(
             w, h,
-            carve(Rng(seed), w, h, placed) {}.first,
+            carve(Rng(seed), w, h, placed, Int.MAX_VALUE) {}.first,
             List(n) { false },
             List(n) { cell -> placed.any { cell in it.first } },
         )
@@ -391,12 +447,16 @@ object Lits : PuzzleType {
      * Returns the partition together with whether the invariant held the whole way. A run that
      * cannot place a square without breaking it finishes the partition anyway, so the caller still
      * has a legal board to fall back on, and is told not to trust it as unique.
+     *
+     * No region grows past [maxRegion] squares while the invariant holds; a square whose every
+     * neighbouring region is full is set aside like one that would break uniqueness.
      */
     private fun carve(
         rng: Rng,
         w: Int,
         h: Int,
         placed: List<kotlin.Pair<List<Int>, Piece>>,
+        maxRegion: Int,
         onSearch: () -> Unit,
     ): kotlin.Pair<List<Int>, Boolean> {
         val n = w * h
@@ -426,6 +486,7 @@ object Lits : PuzzleType {
             val cell = rng.pick(open)
             // Smallest region first, so no one region swallows the leftovers.
             val hosts = rng.shuffled(hostsOf(cell, w, h, region).toList()).sortedBy { sizes[it] }
+                .filter { !intact || sizes[it] < maxRegion }
 
             var chosen = -1
             if (intact) {
@@ -442,7 +503,8 @@ object Lits : PuzzleType {
                     }
                 }
                 if (chosen == -1) {
-                    refused[cell] = hosts.toSet()
+                    // Every neighbouring region, including any the cap skipped over.
+                    refused[cell] = hostsOf(cell, w, h, region)
                     continue
                 }
             } else {
@@ -934,14 +996,28 @@ object Lits : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
 
+        // A drag in progress: what it sets squares to (decided by its first square) and the squares
+        // it has crossed. Held here rather than in LitsState because the play screen pushes an undo
+        // entry for every state it is handed; the drag emits one state, when the finger lifts.
+        var painting by remember(s) { mutableStateOf<Boolean?>(null) }
+        var swept by remember(s) { mutableStateOf(emptySet<Int>()) }
+        val shown = painting?.let { s.paint(swept, it) } ?: s
+
         // Both are a function of the shading and nothing else, so they are recomputed when — and
-        // only when — the board changes, the way Mambo remembers its violations.
-        val letters = remember(s) { s.letters() }
-        val impossible = remember(s) { s.impossible() }
+        // only when — the shading on show changes, the way Mambo remembers its violations. During
+        // a drag that is the preview, so letters and crosses follow the finger.
+        val letters = remember(shown.shaded) { shown.letters() }
+        val impossible = remember(shown.shaded) { shown.impossible() }
 
         BoxWithConstraints(Modifier.fillMaxWidth().padding(18.dp)) {
             val step = maxWidth / s.width
             val stepPx = with(LocalDensity.current) { step.toPx() }
+
+            fun cellAt(offset: Offset): Int {
+                val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
+                val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
+                return r * s.width + c
+            }
 
             Canvas(
                 Modifier
@@ -949,11 +1025,30 @@ object Lits : PuzzleType {
                     .height(step * s.height)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
-                        detectTapGestures { offset: Offset ->
-                            val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
-                            val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
-                            onState(s.toggle(r * s.width + c))
-                        }
+                        detectTapGestures { offset: Offset -> onState(s.toggle(cellAt(offset))) }
+                    }
+                    .pointerInput(s, interactive) {
+                        if (!interactive) return@pointerInput
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val start = cellAt(offset)
+                                painting = !s.shaded[start]
+                                swept = setOf(start)
+                            },
+                            onDrag = { change, _ -> swept = swept + cellAt(change.position) },
+                            onDragEnd = {
+                                val next = painting?.let { s.paint(swept, it) } ?: s
+                                painting = null
+                                swept = emptySet()
+                                // A drag that changed nothing is not a move, and the screen would
+                                // push an undo entry for it all the same.
+                                if (next !== s) onState(next)
+                            },
+                            onDragCancel = {
+                                painting = null
+                                swept = emptySet()
+                            },
+                        )
                     }
             ) {
                 for (i in 0 until s.width * s.height) {
@@ -963,7 +1058,7 @@ object Lits : PuzzleType {
                     val piece = letters[i]
                     drawRect(
                         color = when {
-                            !s.shaded[i] -> scheme.surfaceVariant
+                            !shown.shaded[i] -> scheme.surfaceVariant
                             piece == null -> inProgress
                             else -> Color(colourOf(piece))
                         },
