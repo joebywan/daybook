@@ -127,6 +127,28 @@ class LitsRulesTest {
         assertFalse(Lits.isSolved(5, 4, STAIRCASE, shade(20, 0, 5, 10, 11, 1, 2, 3, 8)))
     }
 
+    // ---- dragging --------------------------------------------------------------------------------
+
+    @Test
+    fun `a drag sets every square it crosses the same way, in one state`() {
+        val blank = LitsState(4, 4, TWO_COLUMNS, List(16) { false }, List(16) { false })
+        val start = blank.toggle(5)
+        val dragged = start.paint(listOf(4, 5, 6), on = true)
+        assertEquals(shade(16, 4, 5, 6), dragged.shaded)
+        assertEquals("one move per square that changed", start.moves + 2, dragged.moves)
+
+        val cleared = dragged.paint(listOf(5, 6, 7), on = false)
+        assertEquals(shade(16, 4), cleared.shaded)
+        assertEquals(dragged.moves + 2, cleared.moves)
+    }
+
+    @Test
+    fun `a drag that changes nothing is not a new state`() {
+        val board = LitsState(4, 4, TWO_COLUMNS, shade(16, 0, 1), List(16) { false })
+        assertTrue(board.paint(listOf(0, 1), on = true) === board)
+        assertTrue(board.paint(listOf(2, 3), on = false) === board)
+    }
+
     // ---- uniqueness is proven, never assumed --------------------------------------------------
 
     @Test

@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,7 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -52,6 +56,25 @@ data class LitsState(
     fun toggle(index: Int): LitsState =
         copy(shaded = shaded.toMutableList().also { it[index] = !it[index] }, moves = moves + 1)
 
+    /**
+     * Sets every square in [cells] to [on] in a single state, for a drag across the board.
+     *
+     * One state for the whole drag because the play screen pushes an undo entry per state: one
+     * Undo walks back one gesture. The drag repeats the decision taken on its first square, as
+     * Kings' sweep does, rather than flipping each square it crosses. It scores one move per
+     * square actually changed, the taps it stands in for.
+     */
+    fun paint(cells: Collection<Int>, on: Boolean): LitsState {
+        val next = shaded.toMutableList()
+        var changed = 0
+        for (i in cells) {
+            if (next[i] == on) continue
+            next[i] = on
+            changed++
+        }
+        return if (changed == 0) this else copy(shaded = next, moves = moves + changed)
+    }
+
     /** The letter of the tetromino each shaded square belongs to, where its region has settled. */
     fun letters(): List<Lits.Piece?> = Lits.letters(width, height, region, shaded)
 
@@ -81,7 +104,7 @@ object Lits : PuzzleType {
         "Shade exactly four squares in every region, forming an L, I, T or S tetromino.",
         "A 2x2 square of shading is never allowed.",
         "Two tetrominoes of the same letter may not touch edge to edge, even across regions.",
-        "Tap a square to shade or clear it.",
+        "Tap a square to shade or clear it, or drag across several to do the same to each.",
         "A finished tetromino takes its letter's colour and carries the letter, so two blocks " +
             "touching in one colour are the rule being broken.",
         "Squares that can no longer be shaded are crossed off for you.",
@@ -940,14 +963,28 @@ object Lits : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
 
+        // A drag in progress: what it sets squares to (decided by its first square) and the squares
+        // it has crossed. Held here rather than in LitsState because the play screen pushes an undo
+        // entry for every state it is handed; the drag emits one state, when the finger lifts.
+        var painting by remember(s) { mutableStateOf<Boolean?>(null) }
+        var swept by remember(s) { mutableStateOf(emptySet<Int>()) }
+        val shown = painting?.let { s.paint(swept, it) } ?: s
+
         // Both are a function of the shading and nothing else, so they are recomputed when — and
-        // only when — the board changes, the way Mambo remembers its violations.
-        val letters = remember(s) { s.letters() }
-        val impossible = remember(s) { s.impossible() }
+        // only when — the shading on show changes, the way Mambo remembers its violations. During
+        // a drag that is the preview, so letters and crosses follow the finger.
+        val letters = remember(shown.shaded) { shown.letters() }
+        val impossible = remember(shown.shaded) { shown.impossible() }
 
         BoxWithConstraints(Modifier.fillMaxWidth().padding(18.dp)) {
             val step = maxWidth / s.width
             val stepPx = with(LocalDensity.current) { step.toPx() }
+
+            fun cellAt(offset: Offset): Int {
+                val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
+                val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
+                return r * s.width + c
+            }
 
             Canvas(
                 Modifier
@@ -955,11 +992,30 @@ object Lits : PuzzleType {
                     .height(step * s.height)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
-                        detectTapGestures { offset: Offset ->
-                            val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
-                            val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
-                            onState(s.toggle(r * s.width + c))
-                        }
+                        detectTapGestures { offset: Offset -> onState(s.toggle(cellAt(offset))) }
+                    }
+                    .pointerInput(s, interactive) {
+                        if (!interactive) return@pointerInput
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val start = cellAt(offset)
+                                painting = !s.shaded[start]
+                                swept = setOf(start)
+                            },
+                            onDrag = { change, _ -> swept = swept + cellAt(change.position) },
+                            onDragEnd = {
+                                val next = painting?.let { s.paint(swept, it) } ?: s
+                                painting = null
+                                swept = emptySet()
+                                // A drag that changed nothing is not a move, and the screen would
+                                // push an undo entry for it all the same.
+                                if (next !== s) onState(next)
+                            },
+                            onDragCancel = {
+                                painting = null
+                                swept = emptySet()
+                            },
+                        )
                     }
             ) {
                 for (i in 0 until s.width * s.height) {
@@ -969,7 +1025,7 @@ object Lits : PuzzleType {
                     val piece = letters[i]
                     drawRect(
                         color = when {
-                            !s.shaded[i] -> scheme.surfaceVariant
+                            !shown.shaded[i] -> scheme.surfaceVariant
                             piece == null -> inProgress
                             else -> Color(colourOf(piece))
                         },

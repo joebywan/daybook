@@ -71,7 +71,7 @@ Then check on the emulator; several bugs only appeared there.
 
 ## Tests
 
-113 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
+115 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
 Shikaku and Mosaic tests each carry their own solver or rule checker, deliberately written on a
 different principle so the two cannot share a blind spot. `LitsAuditTest` and `MosaicOptimumTest`
 are differential; `LitsMarkingTest` brute-forces every legal shading of a fixed board.
