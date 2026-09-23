@@ -96,9 +96,20 @@ class LitsRulesTest {
     @Test
     fun `the disconnected answer a player was refused on 23 Sept 2026 Expert is accepted`() {
         // Transcribed from the player's screenshot. The T in the middle (rows 3 to 5) touches no
-        // other shading; every region still holds a legal tetromino.
-        val seed = DailySeed.seedFor(LocalDate.of(2026, 9, 23), "lits", Difficulty.EXPERT)
-        val state = Lits.generate(seed, Difficulty.EXPERT) as LitsState
+        // other shading; every region still holds a legal tetromino. The regions are written out
+        // rather than regenerated from the seed, because capping region size changed the board
+        // that date now produces.
+        val region = listOf(
+            2, 1, 1, 0, 0, 3, 3, 3,
+            2, 2, 1, 1, 0, 0, 3, 3,
+            2, 5, 5, 1, 0, 9, 3, 3,
+            2, 5, 5, 5, 0, 9, 3, 4,
+            8, 8, 8, 8, 9, 9, 4, 4,
+            8, 8, 7, 7, 9, 9, 9, 4,
+            7, 8, 7, 7, 7, 6, 6, 4,
+            7, 7, 7, 6, 6, 6, 6, 4,
+        )
+        val state = LitsState(8, 8, region, List(64) { false }, List(64) { false })
         val picture = listOf(
             "I S S . T . . S",
             "I . S S T T S S",
@@ -125,6 +136,21 @@ class LitsRulesTest {
         // Two L tetrominoes — one a rotation of the other, which the rule counts as the same
         // letter — meeting edge to edge at squares 0 and 1.
         assertFalse(Lits.isSolved(5, 4, STAIRCASE, shade(20, 0, 5, 10, 11, 1, 2, 3, 8)))
+    }
+
+    // ---- region size ---------------------------------------------------------------------------
+
+    @Test
+    fun `generated regions hold at most seven squares`() {
+        // Uncapped, about one region in six came out at eight squares or more, up to fourteen:
+        // nearly room for two tetrominoes, most of it squares that only ever get crossed off.
+        for (difficulty in Difficulty.entries) {
+            for (seed in seeds(difficulty, 10)) {
+                val state = Lits.generate(seed, difficulty) as LitsState
+                val largest = state.region.groupingBy { it }.eachCount().values.max()
+                assertTrue("lits/${difficulty.name}/$seed has a $largest-square region", largest <= 7)
+            }
+        }
     }
 
     // ---- dragging --------------------------------------------------------------------------------

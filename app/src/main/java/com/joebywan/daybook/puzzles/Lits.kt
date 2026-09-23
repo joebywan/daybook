@@ -336,6 +336,25 @@ object Lits : PuzzleType {
     private const val ATTEMPTS = 150
     private const val WALL_TRIES = 2
 
+    /**
+     * The most squares a region may hold, four of them its tetromino.
+     *
+     * Uncapped, one region in six or so came out at eight squares or more (fourteen at worst on
+     * Expert), big enough to nearly hold two tetrominoes. Most of such a region is squares that
+     * end up crossed off, which makes the board easier without making it more interesting. Six
+     * was tried and leaves too little room: almost no board could then be proved unique.
+     */
+    private const val MAX_REGION = 7
+
+    /**
+     * Piece layouts laid down per attempt, keeping the one with the most tetrominoes. More pieces
+     * means fewer spare squares to share out, which is what lets the regions fit under
+     * [MAX_REGION]. Measured over 40 days per tier: from one layout, 17 of 40 Expert boards could
+     * be proved unique under the cap; from 24, 39 of 40. Twelve was no faster, because the boards
+     * it could not prove under the cap paid for the uncapped retry.
+     */
+    private const val LAYOUTS = 24
+
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (w, h) = shape(difficulty)
         val n = w * h
@@ -349,31 +368,39 @@ object Lits : PuzzleType {
         // first and the regions drawn around it — so the first one built is kept as a floor. Only
         // its *uniqueness* is ever in doubt.
         var floor: LitsState? = null
-        var searches = 0
 
-        for (attempt in 0 until ATTEMPTS) {
-            if (searches >= SEARCH_BUDGET) break
-            val rng = Rng(seed + attempt)
-            val placed = placeTetrominoes(rng, w, h, targetPieces, minPieces) ?: continue
-            val shading = List(n) { cell -> placed.any { cell in it.first } }
-
-            // The shading is fixed at this point; only the walls are still free, so a couple of
-            // partitions are carved per layout of pieces before giving up on it.
-            for (wallTry in 0 until WALL_TRIES) {
+        // Capped first. Should no board be provable under the cap, a proved board with one larger
+        // region still beats the unproved floor, so the cap is dropped rather than the proof.
+        for (cap in listOf(MAX_REGION, Int.MAX_VALUE)) {
+            var searches = 0
+            for (attempt in 0 until ATTEMPTS) {
                 if (searches >= SEARCH_BUDGET) break
-                val (region, intact) = carve(rng, w, h, placed) { searches++ }
-                if (floor == null) floor = LitsState(w, h, region, List(n) { false }, shading)
-                if (!intact) continue
+                val rng = Rng(seed + attempt)
+                val placed = (0 until LAYOUTS)
+                    .mapNotNull { placeTetrominoes(rng, w, h, targetPieces, minPieces) }
+                    .maxByOrNull { it.size } ?: continue
+                // Too few pieces to share the grid out under the cap, so no partition can exist.
+                if (placed.size.toLong() * cap < n) continue
+                val shading = List(n) { cell -> placed.any { cell in it.first } }
 
-                val options = placed.indices.map { r ->
-                    tetrominoes(region.indices.filter { region[it] == r }, w, h)
-                }
-                if (options.any { it.isEmpty() }) continue
-                searches++
-                // Only an exactly-one verdict may ship. Truncated is explicitly not one.
-                val verdict = search(w, h, options)
-                if (verdict is Verdict.ExactlyOne) {
-                    return LitsState(w, h, region, List(n) { false }, verdict.shading)
+                // The shading is fixed at this point; only the walls are still free, so a couple
+                // of partitions are carved per layout of pieces before giving up on it.
+                for (wallTry in 0 until WALL_TRIES) {
+                    if (searches >= SEARCH_BUDGET) break
+                    val (region, intact) = carve(rng, w, h, placed, cap) { searches++ }
+                    if (floor == null) floor = LitsState(w, h, region, List(n) { false }, shading)
+                    if (!intact) continue
+
+                    val options = placed.indices.map { r ->
+                        tetrominoes(region.indices.filter { region[it] == r }, w, h)
+                    }
+                    if (options.any { it.isEmpty() }) continue
+                    searches++
+                    // Only an exactly-one verdict may ship. Truncated is explicitly not one.
+                    val verdict = search(w, h, options)
+                    if (verdict is Verdict.ExactlyOne) {
+                        return LitsState(w, h, region, List(n) { false }, verdict.shading)
+                    }
                 }
             }
         }
@@ -396,7 +423,7 @@ object Lits : PuzzleType {
         } ?: listOf(listOf(0, w, 2 * w, 3 * w) to Piece.I)
         return LitsState(
             w, h,
-            carve(Rng(seed), w, h, placed) {}.first,
+            carve(Rng(seed), w, h, placed, Int.MAX_VALUE) {}.first,
             List(n) { false },
             List(n) { cell -> placed.any { cell in it.first } },
         )
@@ -420,12 +447,16 @@ object Lits : PuzzleType {
      * Returns the partition together with whether the invariant held the whole way. A run that
      * cannot place a square without breaking it finishes the partition anyway, so the caller still
      * has a legal board to fall back on, and is told not to trust it as unique.
+     *
+     * No region grows past [maxRegion] squares while the invariant holds; a square whose every
+     * neighbouring region is full is set aside like one that would break uniqueness.
      */
     private fun carve(
         rng: Rng,
         w: Int,
         h: Int,
         placed: List<kotlin.Pair<List<Int>, Piece>>,
+        maxRegion: Int,
         onSearch: () -> Unit,
     ): kotlin.Pair<List<Int>, Boolean> {
         val n = w * h
@@ -455,6 +486,7 @@ object Lits : PuzzleType {
             val cell = rng.pick(open)
             // Smallest region first, so no one region swallows the leftovers.
             val hosts = rng.shuffled(hostsOf(cell, w, h, region).toList()).sortedBy { sizes[it] }
+                .filter { !intact || sizes[it] < maxRegion }
 
             var chosen = -1
             if (intact) {
@@ -471,7 +503,8 @@ object Lits : PuzzleType {
                     }
                 }
                 if (chosen == -1) {
-                    refused[cell] = hosts.toSet()
+                    // Every neighbouring region, including any the cap skipped over.
+                    refused[cell] = hostsOf(cell, w, h, region)
                     continue
                 }
             } else {
