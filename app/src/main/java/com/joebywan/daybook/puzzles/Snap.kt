@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -63,7 +65,8 @@ object Snap : PuzzleType {
         "Draw one continuous line from 1 to the highest number.",
         "The line must pass through every square exactly once.",
         "It must reach the numbered squares in ascending order.",
-        "Drag to draw. Drag back along the line to rub it out.",
+        "Drag to draw. Lift off and carry on from the end whenever you like.",
+        "Drag back along the line, or start again from a square on it, to rub it out.",
     )
 
     private fun shape(difficulty: Difficulty) = when (difficulty) {
@@ -87,40 +90,87 @@ object Snap : PuzzleType {
     private val previewPath = listOf(0, 1, 2, 5, 8, 7, 6, 3, 4)
     private val previewWaypoints = listOf(1, 0, 0, 0, 3, 0, 0, 0, 2)
 
+    /**
+     * How many numbers a board may carry. Roughly a third of the squares, which is where a Snap
+     * board stops reading as a dot-to-dot and starts asking the player to work the line out.
+     *
+     * This is a ceiling the generator must come in under, not a target: [trim] takes away every
+     * number the rest of the board already implies, and most boards land well below the cap. A
+     * seed that cannot be forced within it is abandoned for the next one.
+     */
+    private fun clueBudget(w: Int, h: Int): Int = maxOf(4, (w * h) / 3)
+
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (w, h) = shape(difficulty)
+        val budget = clueBudget(w, h)
 
-        repeat(80) { attempt ->
+        repeat(160) { attempt ->
             val rng = Rng(seed + attempt)
             val path = hamiltonian(rng, w, h) ?: return@repeat
-
-            // Start and end are always numbered; add interior numbers until the answer is forced.
-            val marks = MutableList(w * h) { 0 }
-            val chosen = mutableListOf(0, path.lastIndex)
-
-            fun relabel() {
-                for (i in marks.indices) marks[i] = 0
-                chosen.sorted().forEachIndexed { rank, at -> marks[path[at]] = rank + 1 }
-            }
-            relabel()
-
-            var guard = 0
-            while (countPaths(w, h, marks) != 1 && guard++ < w * h) {
-                val candidates = (1 until path.lastIndex).filterNot { it in chosen }
-                if (candidates.isEmpty()) break
-                chosen += rng.pick(candidates)
-                relabel()
-            }
-            if (countPaths(w, h, marks) == 1) {
-                return SnapState(w, h, marks.toList(), emptyList())
-            }
+            val chosen = force(rng, w, h, path, budget) ?: return@repeat
+            return SnapState(w, h, labels(w, h, path, chosen), emptyList())
         }
 
-        // Fallback: number every square along a simple boustrophedon path.
+        // Fallback: number every square along a simple boustrophedon path. Trivially the one
+        // answer, and trivially no fun — `FallbackTest` asserts the clue budget precisely so that
+        // this showing up in a shipped board fails the build rather than reaching a player.
         val marks = MutableList(w * h) { 0 }
         val path = boustrophedon(w, h)
         path.forEachIndexed { rank, cell -> marks[cell] = rank + 1 }
         return SnapState(w, h, marks.toList(), emptyList())
+    }
+
+    /** The numbers a board carries: the chosen steps of [path], ranked along it. */
+    private fun labels(w: Int, h: Int, path: List<Int>, chosen: List<Int>): List<Int> {
+        val marks = MutableList(w * h) { 0 }
+        chosen.sorted().forEachIndexed { rank, at -> marks[path[at]] = rank + 1 }
+        return marks
+    }
+
+    /**
+     * Numbers to pin [path] down as the only answer, or null if this path cannot be pinned down
+     * inside [budget].
+     *
+     * Numbers go on at random until the board is forced, and then [trim] takes back every one the
+     * others already imply. Adding and then subtracting matters: the order clues arrive in decides
+     * which ones end up carrying their weight, and a clue that was essential when it went on is
+     * very often redundant by the time five more have joined it. Stopping at the first forced
+     * board — which is what this used to do — left every one of those passengers on the grid, and
+     * was why boards arrived with two thirds of their squares numbered.
+     */
+    private fun force(rng: Rng, w: Int, h: Int, path: List<Int>, budget: Int): List<Int>? {
+        val chosen = mutableListOf(0, path.lastIndex)
+        while (true) {
+            when (classify(w, h, labels(w, h, path, chosen))) {
+                Verdict.UNIQUE -> return trim(rng, w, h, path, chosen, budget)
+                Verdict.MANY -> Unit
+                // NONE cannot happen — `path` itself obeys the numbers — and UNPROVED is not a
+                // proof of anything. Either way this seed is finished.
+                else -> return null
+            }
+            val candidates = (1 until path.lastIndex).filterNot { it in chosen }
+            if (candidates.isEmpty()) return null
+            chosen += rng.pick(candidates)
+        }
+    }
+
+    /**
+     * Takes away every number the rest of the board already implies, and reports failure if what
+     * is left still exceeds [budget].
+     *
+     * The two ends stay: a line may only begin at 1, so the board needs somewhere to start, and
+     * the highest number is what tells the player where it is meant to finish. Everything between
+     * them has to earn its place by being the difference between one answer and several. The order
+     * clues are offered up in is shuffled, because dropping them in path order would strip the
+     * early ones and leave a board whose numbers all huddle at the end.
+     */
+    private fun trim(rng: Rng, w: Int, h: Int, path: List<Int>, chosen: List<Int>, budget: Int): List<Int>? {
+        var kept = chosen.toList()
+        for (at in rng.shuffled(kept.filter { it != 0 && it != path.lastIndex })) {
+            val without = kept - at
+            if (classify(w, h, labels(w, h, path, without)) == Verdict.UNIQUE) kept = without
+        }
+        return kept.takeIf { it.size <= budget }
     }
 
     private fun boustrophedon(w: Int, h: Int): List<Int> = buildList {
@@ -175,18 +225,86 @@ object Snap : PuzzleType {
             seen.size == s.waypoints.count { it > 0 }
     }
 
-    /** Counts Hamiltonian paths obeying the numbers, stopping at two. */
-    private fun countPaths(w: Int, h: Int, marks: List<Int>): Int {
+    /**
+     * What a bounded search is allowed to say.
+     *
+     * Only [UNIQUE] is a proof, and only a proof may ship. The count this replaced was an Int that
+     * a caller could read as "one solution" when what had actually happened was that the search
+     * ran out of budget and returned quietly — the same shape of mistake LITS made, which is why
+     * the give-up case is a name here rather than a number.
+     */
+    private enum class Verdict { NONE, UNIQUE, MANY, UNPROVED }
+
+    /**
+     * Generous, because it is only spent when the pruning below has already failed to decide the
+     * board, and because a board that cannot be decided is thrown away rather than shipped — so
+     * the cost of a budget set too low is worse puzzles, not wrong ones.
+     */
+    private const val NODE_BUDGET = 400_000
+
+    /** Classifies the Hamiltonian paths obeying [marks], stopping once two are in hand. */
+    private fun classify(w: Int, h: Int, marks: List<Int>): Verdict {
         val n = w * h
         val total = marks.count { it > 0 }
         val start = marks.indexOf(1)
-        if (start < 0) return 0
+        if (start < 0) return Verdict.NONE
+
+        val nbr = Array(n) { neighbours(it, w, h).toIntArray() }
         val seen = BooleanArray(n)
+        val stack = IntArray(n)
+        val stamp = IntArray(n)
+        var era = 0
         var found = 0
         var nodes = 0
+        var gaveUp = false
+
+        /**
+         * Whether the unvisited squares could still hold the rest of the line: all of them reachable
+         * from [head], none of them walled off with no way out, and no more than two of them left
+         * with a single way out — a square with one exit can only be an end of the line, and a line
+         * has two ends.
+         *
+         * This is what makes a sparsely numbered board decidable at all. Without it the search is
+         * still wandering the same dead end when the budget runs out, which is the whole reason the
+         * old generator kept piling numbers on: it was not that the board needed them, it was that
+         * nothing could prove otherwise in time.
+         */
+        fun viable(head: Int, remaining: Int): Boolean {
+            era++
+            var top = 0
+            var reached = 0
+            for (x in nbr[head]) if (!seen[x] && stamp[x] != era) {
+                stamp[x] = era
+                stack[top++] = x
+                reached++
+            }
+            while (top > 0) {
+                val cur = stack[--top]
+                for (x in nbr[cur]) if (!seen[x] && stamp[x] != era) {
+                    stamp[x] = era
+                    stack[top++] = x
+                    reached++
+                }
+            }
+            if (reached != remaining) return false
+
+            var ends = 0
+            for (v in 0 until n) {
+                if (seen[v]) continue
+                var degree = 0
+                for (x in nbr[v]) if (!seen[x] || x == head) degree++
+                if (degree == 0) return false
+                if (degree == 1 && ++ends > 2) return false
+            }
+            return true
+        }
 
         fun walk(cell: Int, depth: Int, nextLabel: Int) {
-            if (found >= 2 || nodes++ > 400_000) return
+            if (found >= 2) return
+            if (nodes++ > NODE_BUDGET) {
+                gaveUp = true
+                return
+            }
             val label = marks[cell]
             var expecting = nextLabel
             if (label > 0) {
@@ -196,17 +314,24 @@ object Snap : PuzzleType {
             seen[cell] = true
             if (depth == n) {
                 if (expecting == total + 1) found++
-            } else {
-                for (next in neighbours(cell, w, h)) {
+            } else if (viable(cell, n - depth)) {
+                for (next in nbr[cell]) {
                     if (!seen[next]) walk(next, depth + 1, expecting)
-                    if (found >= 2) break
+                    if (found >= 2 || gaveUp) break
                 }
             }
             seen[cell] = false
         }
 
         walk(start, 1, 1)
-        return found
+        return when {
+            // Two answers in hand is a proof however the search ended; one is only a proof if the
+            // search finished looking for a second.
+            found >= 2 -> Verdict.MANY
+            gaveUp -> Verdict.UNPROVED
+            found == 1 -> Verdict.UNIQUE
+            else -> Verdict.NONE
+        }
     }
 
     // ---- play ---------------------------------------------------------------------------------
@@ -284,6 +409,13 @@ object Snap : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
 
+        // The gesture detector below is keyed on the numbers, which never change while a board is
+        // being played, so its coroutine is never restarted and whatever it captured at launch is
+        // what it keeps. Capturing `s` there pinned it to the board as first composed — the one
+        // with no line on it — so every drag after the first reset to an empty path and wiped the
+        // line. Read the live board through this instead.
+        val latest by rememberUpdatedState(s)
+
         BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp)) {
             val step = maxWidth / s.width
             val stepPx = with(LocalDensity.current) { step.toPx() }
@@ -317,10 +449,10 @@ object Snap : PuzzleType {
                     .height(step * s.height)
                     .pointerInput(s.waypoints, interactive) {
                         if (!interactive) return@pointerInput
-                        var working = s
+                        var working = latest
                         detectDragGestures(
                             onDragStart = { offset ->
-                                working = s
+                                working = latest
                                 val cell = cellAt(offset)
                                 // Starting on the line trims it back to that point.
                                 working = if (cell in working.path) {

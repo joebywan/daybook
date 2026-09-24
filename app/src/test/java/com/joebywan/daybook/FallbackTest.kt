@@ -53,6 +53,11 @@ class FallbackTest {
         }
     }
 
+    /**
+     * Asserts the clue budget, not merely "fewer than every square". The loose version passed
+     * happily while Expert boards shipped 39 numbers out of 42 — true, and useless, because the
+     * fallback is not the only way to ruin a board with numbers.
+     */
     @Test
     fun `snap never falls back to numbering every square`() {
         for (difficulty in Difficulty.entries) {
@@ -60,8 +65,8 @@ class FallbackTest {
                 val state = Snap.generate(seed, difficulty) as SnapState
                 val numbered = state.waypoints.count { it > 0 }
                 assertTrue(
-                    "snap/${difficulty.name}/$seed fell back ($numbered of ${state.cellCount} numbered)",
-                    numbered < state.cellCount,
+                    "snap/${difficulty.name}/$seed numbers $numbered of ${state.cellCount} squares",
+                    numbered <= state.cellCount / 3,
                 )
             }
         }
