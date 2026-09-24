@@ -1,6 +1,6 @@
 # Daybook
 
-A daily logic-puzzle app for Android. Ten puzzle types, a new set every day, the entire back
+A daily logic-puzzle app for Android. Eleven puzzle types, a new set every day, the entire back
 catalogue open from day one.
 
 No ads. No subscription. No accounts. No network permission in the manifest at all.
@@ -35,7 +35,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Sets | SET | Triples that are all-alike or all-different in four traits |
 | Atoms | Hashiwokakero (Bridges) | Bond atoms into one molecule, no crossings |
 | Snap | Hamiltonian path | One line through every square, numbers in ascending order |
-| LITS | LITS (Nikoli) | One L/I/T/S tetromino per region, connected, no 2×2, no same letter touching |
+| LITS | LITS (Nikoli) | One L/I/T/S tetromino per region, no 2×2, no same letter touching |
 | Tower | Mastermind | Break the hidden colour code from scored guesses |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -56,14 +56,33 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
 - **LITS and Kings** — the answer is laid down first, then regions are grown around it one square
   at a time with uniqueness rechecked at each step, because solution count only ever rises as a
   region gains squares. Regions drawn at random essentially never admit one answer. Both were
-  rewritten after players hit boards the generator had never actually vetted.
-- **Snap** — a Hamiltonian path is generated, then numbers are added one at a time until no other
-  path obeys them.
+  rewritten after players hit boards the generator had never actually vetted. LITS additionally
+  caps regions at seven squares, keeping the densest of 24 piece layouts per attempt, after about
+  one region in six came out at eight or more.
+- **Snap** — a Hamiltonian path is generated, then numbers are added until no other path obeys
+  them, and then **taken back off again**: every number the rest of the board already implies is
+  removed, and a board still over its clue budget is abandoned for a different seed. Stopping at
+  the first forced board, which is what this used to do, left every redundant clue on the grid and
+  shipped Expert boards with 39 of 42 squares numbered.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
 
-`app/src/test/.../FallbackTest.kt` exists specifically to catch a generator quietly degrading to
-its safety fallback, which would otherwise still pass every solvability test.
+Two things make that harder than it sounds, and both have gone wrong here:
+
+**A bounded search that gives up must say so.** A solver with a node budget that returns quietly
+looks exactly like a solver that finished, so "I ran out of time" gets read as "exactly one
+answer". Snap's solver returns a verdict whose give-up case is a *name*, not a number a caller can
+misread, and only the proved case may ship. Mosaic reseeds rather than trusting a truncated search
+for its move limit. LITS shipped the bug before either did.
+
+**An assertion has to be able to fail.** `app/src/test/.../FallbackTest.kt` exists to catch a
+generator quietly degrading to its safety fallback, which would otherwise pass every solvability
+test. It has twice needed tightening after passing on boards that were plainly broken — once when
+LITS fell back on every single board, and once when it asserted only that Snap numbered *fewer than
+every* square while Snap was numbering 39 of 42.
+
+Generation is not always instant: LITS takes roughly 0.1–0.5s and up to 2s on a bad seed, so boards
+are generated off the main thread behind a dealing animation.
 
 ## Adding a puzzle
 
@@ -198,8 +217,6 @@ run on them — at which point automerge can safely be widened to minor updates.
 ## Not done yet
 
 - Pencil marks / candidate notes in Sudoku
-- The launcher icon is a placeholder, and its monochrome layer reuses the full-colour foreground,
-  so themed icons render as a flat blob
-- No accessibility work: the boards drawn with raw pointer input expose no click actions, so a
-  screen reader cannot operate them
+- No accessibility work: the eight boards drawn with raw pointer input expose no click actions, so
+  a screen reader cannot operate them
 - Play Store listing not yet created — see "Publishing to Google Play" above
