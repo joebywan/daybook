@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -61,6 +66,16 @@ data class AtomsState(
         return copy(counts = counts.toMutableList().also { it[pair] = next }, moves = moves + 1)
     }
 
+    /**
+     * Lays down a first bond, the way a drag does. Unlike [cycle] it never takes a bond away and
+     * never clears one that crosses: a drag that would be illegal or that lands on a bond already
+     * drawn returns null, so the caller emits no state and the player gets no stray undo step.
+     */
+    fun link(pair: Int): AtomsState? {
+        if (counts[pair] != 0 || crosses(pair)) return null
+        return copy(counts = counts.toMutableList().also { it[pair] = 1 }, moves = moves + 1)
+    }
+
     private fun crosses(pair: Int): Boolean =
         pairs.indices.any { other ->
             other != pair && counts[other] > 0 && Atoms.cross(this, pair, other)
@@ -85,6 +100,7 @@ object Atoms : PuzzleType {
         "At most two bonds may join the same pair. Bonds may never cross.",
         "Every atom must end up connected into a single molecule.",
         "Tap between two atoms to cycle none, one, two.",
+        "Or drag from one atom towards another to bond them.",
     )
 
     private fun shape(difficulty: Difficulty) = when (difficulty) {
@@ -402,6 +418,14 @@ object Atoms : PuzzleType {
         val measurer = rememberTextMeasurer()
         val overloaded = s.overloaded()
 
+        // The drag in progress. Transient UI state, so it lives here and never in AtomsState:
+        // PlayScreen pushes an undo entry for every state it is handed, and a drag must cost
+        // exactly one — the bond it lays down, at the end. Keyed on the board, which also clears
+        // it: a new state tears the gesture detector below down, and cancelling a coroutine is not
+        // guaranteed to run onDragCancel, so nothing else is certain to retire a stale preview.
+        var dragFrom by remember(s) { mutableStateOf<Int?>(null) }
+        var dragAt by remember(s) { mutableStateOf<Offset?>(null) }
+
         BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp)) {
             val step = maxWidth / s.size
             val stepPx = with(LocalDensity.current) { step.toPx() }
@@ -411,6 +435,36 @@ object Atoms : PuzzleType {
                 Modifier
                     .width(step * s.size)
                     .height(step * s.size)
+                    // Drag first, so that once it claims the pointer the tap detector sees the
+                    // consumed moves and cancels itself. A clean tap consumes nothing and still
+                    // reaches the detector below.
+                    .pointerInput(s, interactive) {
+                        if (!interactive) return@pointerInput
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                dragFrom = atomAt(s, offset, stepPx)
+                                dragAt = offset
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                dragAt = change.position
+                            },
+                            onDragEnd = {
+                                val from = dragFrom
+                                val at = dragAt
+                                if (from != null && at != null) {
+                                    val target = dragTarget(s, from, at, stepPx)
+                                    if (target != null) s.link(target)?.let(onState)
+                                }
+                                dragFrom = null
+                                dragAt = null
+                            },
+                            onDragCancel = {
+                                dragFrom = null
+                                dragAt = null
+                            },
+                        )
+                    }
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
                         detectTapGestures { offset: Offset ->
@@ -455,6 +509,24 @@ object Atoms : PuzzleType {
                     }
                 }
 
+                // The bond the finger is reaching for, drawn faint under the atoms so the player
+                // can see which neighbour a drag has locked on to before lifting off.
+                val from = dragFrom
+                val at = dragAt
+                if (from != null && at != null) {
+                    val target = dragTarget(s, from, at, stepPx)
+                    val end = if (target == null) at else {
+                        val pair = s.pairs[target]
+                        centre(s.atoms[if (pair.a == from) pair.b else pair.a])
+                    }
+                    drawLine(
+                        color = Color(accent).copy(alpha = if (target == null) 0.25f else 0.55f),
+                        start = centre(s.atoms[from]),
+                        end = end,
+                        strokeWidth = stepPx * 0.055f,
+                    )
+                }
+
                 s.atoms.forEachIndexed { index, atom ->
                     val c = centre(atom)
                     val complete = s.degree(index) == atom.bonds
@@ -487,6 +559,53 @@ object Atoms : PuzzleType {
                 }
             }
         }
+    }
+
+    /**
+     * The atom a drag starts on. The reach is a little wider than the drawn circle (0.34) so a
+     * finger landing on the rim still counts, but stays well inside half a lattice step so it can
+     * never claim the neighbouring cell.
+     */
+    internal fun atomAt(s: AtomsState, point: Offset, stepPx: Float): Int? =
+        s.atoms.indices.firstOrNull { index ->
+            val a = s.atoms[index]
+            val dx = point.x - (a.col + 0.5f) * stepPx
+            val dy = point.y - (a.row + 0.5f) * stepPx
+            kotlin.math.hypot(dx, dy) <= stepPx * 0.42f
+        }
+
+    /**
+     * The bond a drag out of [from] is reaching for, or null while it is reaching for nothing.
+     *
+     * A drag need not arrive at the far atom, and need not stop there either. What is measured is
+     * the corridor, not the segment: how far the finger has travelled *along* the line out of
+     * [from], and how far it has strayed *across* it. Arriving is not required because on an
+     * Expert board a bond can run a third of the screen; stopping short of the far atom is not
+     * required because fingers overshoot, and a drag that ends just past the target used to be a
+     * silent no-op. Half a step of travel is required, so that a wobble inside the atom does not
+     * lay down whichever bond happens to point nearest.
+     */
+    internal fun dragTarget(s: AtomsState, from: Int, point: Offset, stepPx: Float): Int? {
+        val ax = (s.atoms[from].col + 0.5f) * stepPx
+        val ay = (s.atoms[from].row + 0.5f) * stepPx
+        var best: Int? = null
+        var bestAcross = stepPx * 0.34f
+        s.pairs.forEachIndexed { index, pair ->
+            if (pair.a != from && pair.b != from) return@forEachIndexed
+            val other = s.atoms[if (pair.a == from) pair.b else pair.a]
+            val dx = (other.col + 0.5f) * stepPx - ax
+            val dy = (other.row + 0.5f) * stepPx - ay
+            val length = kotlin.math.hypot(dx, dy)
+            if (length == 0f) return@forEachIndexed
+            val along = ((point.x - ax) * dx + (point.y - ay) * dy) / length
+            if (along < stepPx * 0.5f) return@forEachIndexed
+            val across = kotlin.math.abs((point.x - ax) * dy - (point.y - ay) * dx) / length
+            if (across < bestAcross) {
+                bestAcross = across
+                best = index
+            }
+        }
+        return best
     }
 
     /** Perpendicular distance from a tap to a bond line, used for hit-testing. */
