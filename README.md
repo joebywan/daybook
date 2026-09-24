@@ -5,6 +5,26 @@ catalogue open from day one.
 
 No ads. No subscription. No accounts. No network permission in the manifest at all.
 
+| Every puzzle, every day | Sudoku | Mosaic | Snap |
+|---|---|---|---|
+| ![The home screen, showing all eleven puzzles for today](docs/screenshots/home.png) | ![A Sudoku board](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
+
+## Install it
+
+**[Download the latest release](https://github.com/joebywan/daybook/releases/latest)** and open the
+`daybook-<version>.apk` on your phone.
+
+- Take the **`.apk`**, not the `.aab`. The bundle next to it is for Google Play and Android cannot
+  install it directly.
+- Needs **Android 8.0 or newer** (API 26).
+- Android will ask you to allow installs from whichever app you opened it with — your browser or
+  file manager — the first time. That prompt is the usual one for anything not from the Play Store.
+- Later releases install straight over the top, keeping your streaks and statistics, because every
+  build is signed with the same key. See [Releases, CI and signing](#releases-ci-and-signing) for
+  why that is checked so carefully.
+
+Not on Google Play yet — see [Publishing to Google Play](#publishing-to-google-play).
+
 ## Why it works offline and for free
 
 Every daily puzzle is *generated on the device* from its date:

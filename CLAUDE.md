@@ -83,6 +83,12 @@ all failed at true size in ways nobody predicted — a crown read as a comb, pag
 Atoms as a wireframe. A Java2D harness driving the real geometry is the established approach.
 Then check on the emulator; several bugs only appeared there.
 
+**README screenshots go stale silently.** `docs/screenshots/*.png` are emulator captures at half
+scale (540x1200), taken on a *clean install* so the home screen shows a 0-day streak and unplayed
+boards rather than whatever the session happened to leave behind. Nothing checks them, so a change
+to a board's look or to the home grid means recapturing them in the same pass — the home shot in
+particular names the puzzle count in its alt text.
+
 **Write agent patches early.** One agent lost a complete implementation by leaving
 `git diff --cached > patch` until the end and dying on a rate limit.
 
