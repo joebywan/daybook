@@ -1,6 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import android.os.SystemClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -37,6 +36,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import kotlin.time.TimeSource
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -569,6 +569,13 @@ object Kings : PuzzleType {
     private const val DOUBLE_TAP_MS = 300L
 
     /**
+     * Where tap times are measured from. The stdlib's monotonic clock rather than Android's
+     * `SystemClock.uptimeMillis()` so this file also compiles for the web build; only differences
+     * between two taps are ever read, so the origin does not matter.
+     */
+    private val tapClock = TimeSource.Monotonic.markNow()
+
+    /**
      * A tap whose mark is already on the board but not yet in the undo history.
      *
      * [base] earns its place twice. A second tap on the same square builds its king from there, so
@@ -642,7 +649,7 @@ object Kings : PuzzleType {
             // squares the player only meant to cross off on the way past.
             fun tap(offset: Offset) {
                 val i = cellAt(offset)
-                val now = SystemClock.uptimeMillis()
+                val now = tapClock.elapsedNow().inWholeMilliseconds
                 val live = pending?.takeIf { it.base === s }
                 val board = live?.after ?: s
 
