@@ -248,15 +248,18 @@ object Atoms : PuzzleType {
         val counts = IntArray(pairs.size)
         val degree = IntArray(atoms.size)
         val incident = Array(atoms.size) { a ->
-            pairs.indices.filter { pairs[it].a == a || pairs[it].b == a }
+            pairs.indices.filter { pairs[it].a == a || pairs[it].b == a }.toIntArray()
         }
         // Capacity still available to each atom if all its untouched pairs were maxed out.
         var found = 0
 
-        fun crossesNow(index: Int): Boolean {
+        // Which pairs each pair would cross, worked out once: the geometry never changes during the
+        // search, only which of those pairs carry a bond, and re-deriving it at every node was most
+        // of the cost of an Expert board.
+        val crossing = Array(pairs.size) { index ->
             val one = pairs[index]
-            return pairs.indices.any { other ->
-                other != index && counts[other] > 0 && run {
+            pairs.indices.filter { other ->
+                other != index && run {
                     val two = pairs[other]
                     if (one.horizontal == two.horizontal) return@run false
                     val (h, v) = if (one.horizontal) one to two else two to one
@@ -268,7 +271,12 @@ object Atoms : PuzzleType {
                     val vHi = maxOf(atoms[v.a].row, atoms[v.b].row)
                     vCol in (hLo + 1) until hHi && hRow in (vLo + 1) until vHi
                 }
-            }
+            }.toIntArray()
+        }
+
+        fun crossesNow(index: Int): Boolean {
+            for (other in crossing[index]) if (counts[other] > 0) return true
+            return false
         }
 
         fun feasible(upTo: Int): Boolean {
