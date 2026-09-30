@@ -270,8 +270,8 @@ internal object SudokuTeacher {
                     focus = u.cells.toSet(),
                     cited = u.cells.toSet() + blockers(s, u, d, cell),
                     nudge = "Look at ${u.name}.",
-                    explanation = "Where can $d go in ${u.name}? Every other empty cell there already " +
-                        "sees a $d in its row, column or box, so the $d must go in the glowing cell.",
+                    explanation = "Every other empty cell in ${u.name} already sees a $d in its row, " +
+                        "column or box. So ${u.name}'s $d goes in the glowing cell.",
                 )
             }
         }
