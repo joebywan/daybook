@@ -60,7 +60,33 @@ data class AtomsState(
     override val moves: Int = 0,
 ) : PuzzleState {
 
-    override val solved: Boolean get() = counts == solution
+    /**
+     * Checked against the rules, not the stored answer (CLAUDE.md): every atom carries its number,
+     * nothing crosses, and it is all one molecule.
+     */
+    override val solved: Boolean
+        get() = atoms.indices.all { degree(it) == atoms[it].bonds } &&
+            pairs.indices.none { p -> counts[p] > 0 && crosses(p) } &&
+            connected()
+
+    private fun connected(): Boolean {
+        val seen = BooleanArray(atoms.size)
+        val stack = ArrayDeque<Int>()
+        seen[0] = true
+        stack.addLast(0)
+        while (stack.isNotEmpty()) {
+            val a = stack.removeLast()
+            pairs.forEachIndexed { p, pair ->
+                if (counts[p] == 0 || (pair.a != a && pair.b != a)) return@forEachIndexed
+                val b = if (pair.a == a) pair.b else pair.a
+                if (!seen[b]) {
+                    seen[b] = true
+                    stack.addLast(b)
+                }
+            }
+        }
+        return seen.all { it }
+    }
 
     fun degree(atom: Int): Int =
         pairs.indices.sumOf { if (pairs[it].a == atom || pairs[it].b == atom) counts[it] else 0 }
@@ -146,12 +172,22 @@ object Atoms : PuzzleType {
         Triple(1, 3, 1),
     )
 
+    /**
+     * The first attempts grow molecules exactly as the generator always has, including letting an
+     * atom land on a bond already laid; the answers that breaks are rejected rather than prevented,
+     * so every board that was already sound keeps its seed's attempt and so its layout. Only boards
+     * that used to be broken, or that used to fall back to the three-atom chain (3% of Expert),
+     * reach the strict attempts after them, which never put an atom on a bond.
+     */
+    private const val LEGACY_ATTEMPTS = 200
+    private const val ATTEMPTS = 600
+
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (n, wanted) = shape(difficulty)
 
-        repeat(200) { attempt ->
+        repeat(ATTEMPTS) { attempt ->
             val rng = Rng(seed + attempt)
-            val built = grow(rng, n, wanted) ?: return@repeat
+            val built = grow(rng, n, wanted, strict = attempt >= LEGACY_ATTEMPTS) ?: return@repeat
             val (atoms, bonds) = built
             if (atoms.size < 4) return@repeat
             val pairs = pairsFor(atoms, n)
@@ -159,6 +195,15 @@ object Atoms : PuzzleType {
                 bonds[p.a to p.b] ?: bonds[p.b to p.a] ?: 0
             }
             if (solution.sum() == 0) return@repeat
+            // In the legacy attempts a new atom can land in the middle of a bond laid earlier,
+            // which splits it: [pairsFor] no longer sees that line, so the bond falls out of the
+            // solution while both its ends still count it in their numbers. Unchecked, 4% of
+            // Standard, 14% of Hard and 35% of Expert boards stored an answer that broke the rules,
+            // and the unique answer the solver proved was some other bonding. See [LEGACY_ATTEMPTS].
+            if (atoms.indices.any { a ->
+                    pairs.indices.sumOf { if (pairs[it].a == a || pairs[it].b == a) solution[it] else 0 } != atoms[a].bonds
+                }
+            ) return@repeat
             if (countSolutions(atoms, pairs) != 1) return@repeat
             return AtomsState(n, atoms, pairs, List(pairs.size) { 0 }, solution)
         }
@@ -171,7 +216,7 @@ object Atoms : PuzzleType {
     }
 
     /** Grows a connected molecule by sprouting new atoms off existing ones. */
-    private fun grow(rng: Rng, n: Int, wanted: Int): kotlin.Pair<List<Atom>, Map<kotlin.Pair<Int, Int>, Int>>? {
+    private fun grow(rng: Rng, n: Int, wanted: Int, strict: Boolean): kotlin.Pair<List<Atom>, Map<kotlin.Pair<Int, Int>, Int>>? {
         val occupied = HashMap<kotlin.Pair<Int, Int>, Int>()   // cell -> atom index
         val positions = mutableListOf<kotlin.Pair<Int, Int>>()
         val bonds = HashMap<kotlin.Pair<Int, Int>, Int>()
@@ -191,6 +236,7 @@ object Atoms : PuzzleType {
             val nc = c + dc * distance
             if (nr !in 0 until n || nc !in 0 until n) continue
             if (occupied.containsKey(nr to nc)) continue
+            if (strict && (nr to nc) in used) continue
 
             // The line between must be clear of atoms and of bonds running the other way.
             val between = (1 until distance).map { step -> (r + dr * step) to (c + dc * step) }

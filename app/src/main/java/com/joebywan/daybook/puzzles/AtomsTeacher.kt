@@ -189,6 +189,10 @@ internal object AtomsTeacher {
     /** The next thing to show this player, or null on a solved board. */
     fun teach(s: AtomsState): Step? {
         if (s.solved) return null
+        // Games saved before the generator checked its answers can carry one that breaks the rules
+        // (see [Atoms.generate]). Its bonds cannot be trusted to call anything a mistake, or to
+        // point at, so such a board gets reasoning only.
+        if (!s.copy(counts = s.solution).solved) return deduce(s.atoms, s.pairs, s.counts)
         mistake(s)?.let { return it }
         return deduce(s.atoms, s.pairs, s.counts) ?: fallback(s)
     }
