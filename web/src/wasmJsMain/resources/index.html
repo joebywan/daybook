@@ -9,11 +9,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Kings">
+  <meta name="apple-mobile-web-app-title" content="Daybook">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#F6F1E7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#11201C" media="(prefers-color-scheme: dark)">
-  <title>Daybook Kings</title>
+  <title>Daybook</title>
+  <meta name="description" content="Daily logic puzzles. No ads, no account, works offline.">
+  <!-- All relative: the app is served from a subpath. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
   <style>
     :root { --bg: #F6F1E7; --fg: #41504B; }
     @media (prefers-color-scheme: dark) { :root { --bg: #11201C; --fg: #E6DECD; } }
@@ -43,8 +48,25 @@
   </style>
 </head>
 <body>
-  <div id="loading">Setting out Kings…</div>
+  <div id="loading">Opening Daybook…</div>
   <div id="app"></div>
   <script src="daybook.js"></script>
+  <script>
+    // Offline after the first visit: see sw.js. The worker only starts controlling the page after
+    // this load, so the page tells it everything it fetched — once at load, and once more when the
+    // app has certainly finished loading its wasm, which is when stale files may be pruned.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready).then(reg => {
+          const send = prune => {
+            const urls = performance.getEntriesByType('resource').map(e => e.name).concat([location.href]);
+            if (reg.active) reg.active.postMessage({ type: 'cache-urls', urls, prune });
+          };
+          send(false);
+          setTimeout(() => send(true), 6000);
+        }).catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

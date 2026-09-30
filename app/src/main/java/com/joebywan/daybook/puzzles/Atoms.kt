@@ -1,5 +1,10 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -10,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,9 +33,13 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
 import kotlinx.serialization.Serializable
 
 /** An atom sits on a lattice point and needs exactly [bonds] bond-ends. */
@@ -49,7 +60,33 @@ data class AtomsState(
     override val moves: Int = 0,
 ) : PuzzleState {
 
-    override val solved: Boolean get() = counts == solution
+    /**
+     * Checked against the rules, not the stored answer (CLAUDE.md): every atom carries its number,
+     * nothing crosses, and it is all one molecule.
+     */
+    override val solved: Boolean
+        get() = atoms.indices.all { degree(it) == atoms[it].bonds } &&
+            pairs.indices.none { p -> counts[p] > 0 && crosses(p) } &&
+            connected()
+
+    private fun connected(): Boolean {
+        val seen = BooleanArray(atoms.size)
+        val stack = ArrayDeque<Int>()
+        seen[0] = true
+        stack.addLast(0)
+        while (stack.isNotEmpty()) {
+            val a = stack.removeLast()
+            pairs.forEachIndexed { p, pair ->
+                if (counts[p] == 0 || (pair.a != a && pair.b != a)) return@forEachIndexed
+                val b = if (pair.a == a) pair.b else pair.a
+                if (!seen[b]) {
+                    seen[b] = true
+                    stack.addLast(b)
+                }
+            }
+        }
+        return seen.all { it }
+    }
 
     fun degree(atom: Int): Int =
         pairs.indices.sumOf { if (pairs[it].a == atom || pairs[it].b == atom) counts[it] else 0 }
@@ -99,7 +136,7 @@ object Atoms : PuzzleType {
         "Bonds run straight, horizontally or vertically, between two atoms.",
         "At most two bonds may join the same pair. Bonds may never cross.",
         "Every atom must end up connected into a single molecule.",
-        "Tap between two atoms to cycle none, one, two.",
+        "Tap between two atoms to cycle none, one, two, and back to none.",
         "Or drag from one atom towards another to bond them.",
     )
 
@@ -135,12 +172,22 @@ object Atoms : PuzzleType {
         Triple(1, 3, 1),
     )
 
+    /**
+     * The first attempts grow molecules exactly as the generator always has, including letting an
+     * atom land on a bond already laid; the answers that breaks are rejected rather than prevented,
+     * so every board that was already sound keeps its seed's attempt and so its layout. Only boards
+     * that used to be broken, or that used to fall back to the three-atom chain (3% of Expert),
+     * reach the strict attempts after them, which never put an atom on a bond.
+     */
+    private const val LEGACY_ATTEMPTS = 200
+    private const val ATTEMPTS = 600
+
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (n, wanted) = shape(difficulty)
 
-        repeat(200) { attempt ->
+        repeat(ATTEMPTS) { attempt ->
             val rng = Rng(seed + attempt)
-            val built = grow(rng, n, wanted) ?: return@repeat
+            val built = grow(rng, n, wanted, strict = attempt >= LEGACY_ATTEMPTS) ?: return@repeat
             val (atoms, bonds) = built
             if (atoms.size < 4) return@repeat
             val pairs = pairsFor(atoms, n)
@@ -148,6 +195,15 @@ object Atoms : PuzzleType {
                 bonds[p.a to p.b] ?: bonds[p.b to p.a] ?: 0
             }
             if (solution.sum() == 0) return@repeat
+            // In the legacy attempts a new atom can land in the middle of a bond laid earlier,
+            // which splits it: [pairsFor] no longer sees that line, so the bond falls out of the
+            // solution while both its ends still count it in their numbers. Unchecked, 4% of
+            // Standard, 14% of Hard and 35% of Expert boards stored an answer that broke the rules,
+            // and the unique answer the solver proved was some other bonding. See [LEGACY_ATTEMPTS].
+            if (atoms.indices.any { a ->
+                    pairs.indices.sumOf { if (pairs[it].a == a || pairs[it].b == a) solution[it] else 0 } != atoms[a].bonds
+                }
+            ) return@repeat
             if (countSolutions(atoms, pairs) != 1) return@repeat
             return AtomsState(n, atoms, pairs, List(pairs.size) { 0 }, solution)
         }
@@ -160,7 +216,7 @@ object Atoms : PuzzleType {
     }
 
     /** Grows a connected molecule by sprouting new atoms off existing ones. */
-    private fun grow(rng: Rng, n: Int, wanted: Int): kotlin.Pair<List<Atom>, Map<kotlin.Pair<Int, Int>, Int>>? {
+    private fun grow(rng: Rng, n: Int, wanted: Int, strict: Boolean): kotlin.Pair<List<Atom>, Map<kotlin.Pair<Int, Int>, Int>>? {
         val occupied = HashMap<kotlin.Pair<Int, Int>, Int>()   // cell -> atom index
         val positions = mutableListOf<kotlin.Pair<Int, Int>>()
         val bonds = HashMap<kotlin.Pair<Int, Int>, Int>()
@@ -180,6 +236,7 @@ object Atoms : PuzzleType {
             val nc = c + dc * distance
             if (nr !in 0 until n || nc !in 0 until n) continue
             if (occupied.containsKey(nr to nc)) continue
+            if (strict && (nr to nc) in used) continue
 
             // The line between must be clear of atoms and of bonds running the other way.
             val between = (1 until distance).map { step -> (r + dr * step) to (c + dc * step) }
@@ -194,6 +251,9 @@ object Atoms : PuzzleType {
 
         if (positions.size < 4) return null
 
+        // The only walk over a hashed collection here, and a sum, so its order cannot matter. The
+        // three hash containers are otherwise only probed, never iterated, which is what keeps the
+        // JVM and the web (where hash order differs) on the same board; keep it that way.
         val degrees = IntArray(positions.size)
         bonds.forEach { (pair, count) ->
             degrees[pair.first] += count
@@ -245,15 +305,18 @@ object Atoms : PuzzleType {
         val counts = IntArray(pairs.size)
         val degree = IntArray(atoms.size)
         val incident = Array(atoms.size) { a ->
-            pairs.indices.filter { pairs[it].a == a || pairs[it].b == a }
+            pairs.indices.filter { pairs[it].a == a || pairs[it].b == a }.toIntArray()
         }
         // Capacity still available to each atom if all its untouched pairs were maxed out.
         var found = 0
 
-        fun crossesNow(index: Int): Boolean {
+        // Which pairs each pair would cross, worked out once: the geometry never changes during the
+        // search, only which of those pairs carry a bond, and re-deriving it at every node was most
+        // of the cost of an Expert board.
+        val crossing = Array(pairs.size) { index ->
             val one = pairs[index]
-            return pairs.indices.any { other ->
-                other != index && counts[other] > 0 && run {
+            pairs.indices.filter { other ->
+                other != index && run {
                     val two = pairs[other]
                     if (one.horizontal == two.horizontal) return@run false
                     val (h, v) = if (one.horizontal) one to two else two to one
@@ -265,7 +328,12 @@ object Atoms : PuzzleType {
                     val vHi = maxOf(atoms[v.a].row, atoms[v.b].row)
                     vCol in (hLo + 1) until hHi && hRow in (vLo + 1) until vHi
                 }
-            }
+            }.toIntArray()
+        }
+
+        fun crossesNow(index: Int): Boolean {
+            for (other in crossing[index]) if (counts[other] > 0) return true
+            return false
         }
 
         fun feasible(upTo: Int): Boolean {
@@ -323,15 +391,151 @@ object Atoms : PuzzleType {
         return found
     }
 
-    // ---- play ---------------------------------------------------------------------------------
+    // ---- the walkthrough ---------------------------------------------------------------------
 
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as AtomsState
-        val wrong = s.counts.indices.firstOrNull { s.counts[it] != s.solution[it] } ?: return null
-        return s.copy(
-            counts = s.counts.toMutableList().also { it[wrong] = s.solution[wrong] },
-            moves = s.moves + 1,
+    /**
+     * The walkthrough's board, on a 5x5 lattice so every atom and every gap is big enough to aim at
+     * while learning the gestures:
+     *
+     * ```
+     * 2 . . . .
+     * . . . . .
+     * 3 . 3 . 2
+     * . . . . .
+     * . . 2 . 2
+     * ```
+     *
+     * Hand-built so the moves the frames teach are moves the board needs, in order: the top 2 has one
+     * neighbour, so it takes a double bond (drag, then tap); a double between the bottom two 2s would
+     * close them off (so it is shown, and cleared); that leaves the bottom-right 2 needing a bond
+     * upward. The ring C–R–Q–P could otherwise go three ways, and only the all-single one keeps the
+     * molecule in one piece — AtomsTeachingTest proves the answer is unique.
+     */
+    internal val TUTORIAL_ATOMS = listOf(
+        Atom(0, 0, 2),
+        Atom(2, 0, 3),
+        Atom(2, 2, 3),
+        Atom(2, 4, 2),
+        Atom(4, 2, 2),
+        Atom(4, 4, 2),
+    )
+    private const val TUTORIAL_N = 5
+    internal val TUTORIAL_PAIRS: List<Pair2> by lazy { pairsFor(TUTORIAL_ATOMS, TUTORIAL_N) }
+
+    /** Line by line, in [TUTORIAL_PAIRS] order: top 2 to the 3 below, then the ring. */
+    internal val TUTORIAL_SOLUTION = listOf(2, 1, 1, 1, 1, 1)
+
+    private fun tutorialBoard(vararg counts: Int) = AtomsState(
+        TUTORIAL_N, TUTORIAL_ATOMS, TUTORIAL_PAIRS,
+        if (counts.isEmpty()) List(TUTORIAL_PAIRS.size) { 0 } else counts.toList(),
+        TUTORIAL_SOLUTION,
+    )
+
+    /**
+     * Accepts exactly [counts] and nothing else. Strict on purpose: each frame's board is written for
+     * the one before it. Drag and tap both reach a first bond, and both are fine.
+     */
+    private fun only(vararg counts: Int): (PuzzleState) -> Boolean = { next ->
+        next is AtomsState && next.counts == counts.toList()
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val n = TUTORIAL_ATOMS.size
+        fun line(p: Int) = AtomsTeacher.pairCell(n, p)
+        val solved = tutorialBoard(*TUTORIAL_SOLUTION.toIntArray())
+        listOf(
+            TutorialFrame(
+                state = solved,
+                caption = "Each atom's number is how many bonds it carries. This 3 has three: " +
+                    "one to the left, one to the right and one below.",
+                highlight = BoardHighlight(strong = setOf(2, line(1), line(2), line(3)), soft = setOf(1, 3, 4)),
+            ),
+            TutorialFrame(
+                state = solved,
+                caption = "Two atoms can share one bond or two, never more. Bonds run straight, never " +
+                    "cross, and every atom must join one molecule.",
+                highlight = BoardHighlight(strong = setOf(0, 1, line(0))),
+            ),
+            TutorialFrame(
+                state = tutorialBoard(),
+                caption = "This 2 has only one neighbour, the 3 below, so both its bonds go there. " +
+                    "Drag from the 2 down to the 3 to lay the first.",
+                highlight = BoardHighlight(strong = setOf(0), soft = setOf(1, line(0))),
+                accepts = only(1, 0, 0, 0, 0, 0),
+                retry = "Drag from the glowing 2 down to the 3.",
+                done = "Bonded.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(1, 0, 0, 0, 0, 0),
+                caption = "It needs two. Tap the bond itself to make it a double.",
+                highlight = BoardHighlight(strong = setOf(line(0)), soft = setOf(0, 1)),
+                accepts = only(2, 0, 0, 0, 0, 0),
+                retry = "Tap once on the glowing bond.",
+                done = "Doubled. A full atom turns blue.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(2, 0, 0, 0, 0, 2),
+                caption = "A double bond here would fill both 2s and cut them off from the rest of the " +
+                    "molecule, so it can't be right. Tap it once to clear it.",
+                highlight = BoardHighlight(strong = setOf(line(5)), soft = setOf(4, 5)),
+                accepts = only(2, 0, 0, 0, 0, 0),
+                retry = "Tap once on the glowing double bond.",
+                done = "Cleared. A tap goes none, one, two, and back to none.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(2, 0, 0, 0, 0, 0),
+                caption = "So those two 2s share one bond at most, and the corner 2 needs two. At least " +
+                    "one must go up to the 2 above. Tap the gap between them.",
+                highlight = BoardHighlight(strong = setOf(line(4)), soft = setOf(3, 4, 5)),
+                accepts = only(2, 0, 0, 0, 1, 0),
+                retry = "Tap once in the glowing gap.",
+                done = "Bonded.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(2, 0, 0, 0, 1, 0),
+                caption = "Your turn: finish the molecule. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
         )
+    }
+
+    // ---- teaching --------------------------------------------------------------------------
+
+    /**
+     * A mistake to take back or a step to reason out — see [AtomsTeacher]. Replaces the old
+     * `hint()`, which copied a line straight out of [AtomsState.solution] and taught nothing.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as AtomsState
+        val step = AtomsTeacher.teach(s) ?: return null
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = step.targets,
+            mistake = step.technique == AtomsTeacher.MISTAKE,
+            fallback = step.technique == AtomsTeacher.FALLBACK,
+            applyTo = { now -> applyStep(now as AtomsState, step) },
+            reachedBy = { now ->
+                val a = now as AtomsState
+                // An overshoot is not "that's it": a double where the step asked for one bond that
+                // the answer does not have is the next hint's mistake, not this one's success.
+                step.raise.all { (p, to) -> a.counts[p] >= to && a.counts[p] <= a.solution[p] } &&
+                    step.clear.all { a.counts[it] <= a.solution[it] }
+            },
+        )
+    }
+
+    /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
+    private fun applyStep(s: AtomsState, step: AtomsTeacher.Step): AtomsState {
+        val next = s.counts.toMutableList()
+        var changed = 0
+        step.clear.forEach { if (next[it] != 0) { next[it] = 0; changed++ } }
+        step.raise.forEach { (p, to) -> if (next[p] < to) { next[p] = to; changed++ } }
+        return if (changed == 0) s else s.copy(counts = next, moves = s.moves + changed)
     }
 
     @Composable
@@ -417,6 +621,23 @@ object Atoms : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
         val overloaded = s.overloaded()
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // A glow that breathes is findable at a glance on an Expert board; a static ring is not much
+        // louder than the atoms themselves. Only runs while something glows, and is read in the
+        // draw phase, so it repaints without recomposing the board every frame.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
+        // Highlight cells: atom a is cell a, line p is cell atoms.size + p (AtomsTeacher.pairCell).
+        fun named(cell: Int) = highlight.isEmpty || cell in highlight.strong || cell in highlight.soft
 
         // The drag in progress. Transient UI state, so it lives here and never in AtomsState:
         // PlayScreen pushes an undo entry for every state it is handed, and a drag must cost
@@ -440,16 +661,20 @@ object Atoms : PuzzleType {
                     // reaches the detector below.
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
+                        // The overload that hands over the touch-down itself. The plain one reports
+                        // where the finger crossed the touch slop, and on the web that slop is wider
+                        // than an Expert atom's reach, so no drag there could ever start on an atom.
                         detectDragGestures(
-                            onDragStart = { offset ->
-                                dragFrom = atomAt(s, offset, stepPx)
-                                dragAt = offset
+                            orientationLock = null,
+                            onDragStart = { down, _, _ ->
+                                dragFrom = atomAt(s, down.position, stepPx)
+                                dragAt = down.position
                             },
                             onDrag = { change, _ ->
                                 change.consume()
                                 dragAt = change.position
                             },
-                            onDragEnd = {
+                            onDragEnd = { _ ->
                                 val from = dragFrom
                                 val at = dragAt
                                 if (from != null && at != null) {
@@ -491,9 +716,25 @@ object Atoms : PuzzleType {
                     drawLine(lattice, Offset(0f, at), Offset(size.width, at), strokeWidth = hair)
                 }
 
+                // Lines a hint names, drawn as a wide glow along the line whether or not it holds a
+                // bond yet: "this gap" has to be findable before anything is in it.
+                s.pairs.forEachIndexed { index, pair ->
+                    val cell = AtomsTeacher.pairCell(s.atoms.size, index)
+                    val strong = cell in highlight.strong
+                    if (!strong && cell !in highlight.soft) return@forEachIndexed
+                    drawLine(
+                        color = glow.copy(alpha = if (strong) 0.38f * pulse.value else 0.14f),
+                        start = centre(s.atoms[pair.a]),
+                        end = centre(s.atoms[pair.b]),
+                        strokeWidth = stepPx * if (strong) 0.30f else 0.20f,
+                    )
+                }
+
                 s.pairs.forEachIndexed { index, pair ->
                     val count = s.counts[index]
                     if (count == 0) return@forEachIndexed
+                    // Everything a highlight does not name steps back.
+                    val ink = Color(accent).copy(alpha = if (named(AtomsTeacher.pairCell(s.atoms.size, index))) 1f else 0.28f)
                     val from = centre(s.atoms[pair.a])
                     val to = centre(s.atoms[pair.b])
                     val offsets = if (count == 1) listOf(0f) else listOf(-stepPx * 0.09f, stepPx * 0.09f)
@@ -501,7 +742,7 @@ object Atoms : PuzzleType {
                         val dx = if (pair.horizontal) 0f else shift
                         val dy = if (pair.horizontal) shift else 0f
                         drawLine(
-                            color = Color(accent),
+                            color = ink,
                             start = Offset(from.x + dx, from.y + dy),
                             end = Offset(to.x + dx, to.y + dy),
                             strokeWidth = stepPx * 0.055f,
@@ -530,21 +771,38 @@ object Atoms : PuzzleType {
                 s.atoms.forEachIndexed { index, atom ->
                     val c = centre(atom)
                     val complete = s.degree(index) == atom.bonds
+                    val fade = if (named(index)) 1f else 0.28f
                     drawCircle(color = scheme.background, radius = radius, center = c)
                     drawCircle(
                         color = when {
                             index in overloaded -> scheme.error
                             complete -> Color(accent)
                             else -> scheme.onBackground
-                        },
+                        }.copy(alpha = fade),
                         radius = radius,
                         center = c,
                         style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.05f),
                     )
+                    // The named atoms get a ring outside their own: strong pulses, soft is quiet.
+                    if (index in highlight.strong) {
+                        drawCircle(
+                            color = glow.copy(alpha = pulse.value),
+                            radius = radius + stepPx * 0.09f,
+                            center = c,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.07f),
+                        )
+                    } else if (index in highlight.soft) {
+                        drawCircle(
+                            color = glow.copy(alpha = 0.5f),
+                            radius = radius + stepPx * 0.07f,
+                            center = c,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.03f),
+                        )
+                    }
                     val layout = measurer.measure(
                         atom.bonds.toString(),
                         TextStyle(
-                            color = if (complete) Color(accent) else scheme.onBackground,
+                            color = (if (complete) Color(accent) else scheme.onBackground).copy(alpha = fade),
                             fontSize = (step.value * 0.34f).sp,
                             fontWeight = FontWeight.Bold,
                         ),

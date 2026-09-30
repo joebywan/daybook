@@ -43,6 +43,7 @@ import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.jvmHashSetOrder
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -632,7 +633,12 @@ object Lits : PuzzleType {
         free: (Int) -> Boolean,
     ): List<kotlin.Pair<List<Int>, Piece>> {
         if (!free(cell)) return emptyList()
-        val seen = HashSet<List<Int>>()
+        // In the order they were first found, which is the same on every platform. The caller
+        // picks from the result with the Rng, and the Android boards were generated from the order
+        // a HashSet<List<Int>> iterates on the JVM, so that order is reproduced exactly rather than
+        // left to the platform: Kotlin/Wasm's HashSet walks in insertion order and carved different
+        // boards. The hash is AbstractList.hashCode over Integer elements.
+        val seen = LinkedHashSet<List<Int>>()
 
         fun grow(current: List<Int>) {
             if (current.size == 4) {
@@ -648,7 +654,8 @@ object Lits : PuzzleType {
         }
         grow(listOf(cell))
 
-        return seen.mapNotNull { quad -> classify(quad, w)?.let { quad to it } }
+        return jvmHashSetOrder(seen) { quad -> quad.fold(1) { h, e -> 31 * h + e } }
+            .mapNotNull { quad -> classify(quad, w)?.let { quad to it } }
     }
 
     /**
@@ -661,6 +668,8 @@ object Lits : PuzzleType {
      * connected, so while squares remain unclaimed at least one of them touches a region — and
      * keeps the regions close to the same size without needing a cap to enforce it.
      */
+    // Its order reaches the Rng (carve shuffles and picks from it). `toSet()` keeps first-seen order
+    // on every platform, so it is the neighbour order, never a hash order.
     private fun hostsOf(cell: Int, w: Int, h: Int, region: List<Int>): Set<Int> =
         neighbours(cell, w, h).map { region[it] }.filter { it != -1 }.toSet()
 

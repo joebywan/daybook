@@ -1,13 +1,10 @@
 package com.joebywan.daybook.ui.theme
 
-import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
+import com.joebywan.daybook.platform.SystemBarsAppearance
+import com.joebywan.daybook.platform.platformTypography
 
 @Composable
 fun DaybookTheme(
@@ -15,13 +12,8 @@ fun DaybookTheme(
     content: @Composable () -> Unit,
 ) {
     val scheme = if (darkTheme) DarkScheme else LightScheme
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            // Bar colours come from enableEdgeToEdge(); only the icon tint is set here.
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-        }
-    }
-    MaterialTheme(colorScheme = scheme, typography = DaybookTypography, content = content)
+    // Only the status-bar icon tint on Android; see the platform seam.
+    SystemBarsAppearance(darkTheme)
+    // The same styles everywhere; the web swaps in bundled fonts, having no system ones.
+    MaterialTheme(colorScheme = scheme, typography = platformTypography(DaybookTypography), content = content)
 }

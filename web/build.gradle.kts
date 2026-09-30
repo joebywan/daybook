@@ -7,19 +7,16 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// The puzzle code is compiled from app/'s own source files, not copied: one Kings, one seed hash.
-// Each file listed here must stay free of android.* and java.* — see CLAUDE.md, "Web build".
+// The whole app is compiled from app/'s own source files, not copied: one set of puzzles, one shell.
+// Everything under app/src/main/java is on the web except the files named here, which need
+// Android; each has a web counterpart (platform/WebPlatform.kt and web/'s storage). A new file in
+// app/ is therefore on the web by default, and must stay free of android.* and java.* unless it is
+// added here — see CLAUDE.md, "Web build".
 val appSources = "../app/src/main/java"
-val sharedFromApp = listOf(
-    "com/joebywan/daybook/core/Difficulty.kt",
-    "com/joebywan/daybook/core/PuzzleType.kt",
-    "com/joebywan/daybook/core/Rng.kt",
-    "com/joebywan/daybook/core/SeedHash.kt",
-    "com/joebywan/daybook/core/Teaching.kt",
-    "com/joebywan/daybook/puzzles/PuzzleState.kt",
-    "com/joebywan/daybook/puzzles/Kings.kt",
-    "com/joebywan/daybook/puzzles/KingsTeacher.kt",
-    "com/joebywan/daybook/ui/theme/Palette.kt",
+val androidOnly = listOf(
+    "com/joebywan/daybook/MainActivity.kt",
+    "com/joebywan/daybook/data/DataStoreKeyValueStore.kt",
+    "com/joebywan/daybook/platform/AndroidPlatform.kt",
 )
 
 kotlin {
@@ -41,17 +38,29 @@ kotlin {
 
     sourceSets {
         val wasmJsMain by getting {
+            // The patterns apply to web/'s own source directory as well as app/'s, so a web file
+            // must never share a path with one of androidOnly.
             kotlin.srcDir(appSources)
-            kotlin.include(sharedFromApp)
-            kotlin.include("com/joebywan/daybook/web/**")
+            kotlin.exclude(androidOnly)
             dependencies {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
                 implementation(compose.ui)
                 implementation(libs.kotlinx.serialization.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
+                // The shell's icons are the same Material ones Android uses. Kotlin/Wasm drops
+                // every icon nothing references, so the whole set costs only the few in use.
+                implementation(compose.materialIconsExtended)
+                // The bundled fonts; see platformTypography in platform/WebPlatform.kt.
+                implementation(compose.components.resources)
             }
         }
     }
 }
 
+compose.resources {
+    packageOfResClass = "com.joebywan.daybook.web.resources"
+    generateResClass = always
+}

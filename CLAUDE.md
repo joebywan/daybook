@@ -31,7 +31,8 @@ sounded. Do not turn it off.
 
 ## Teaching: hints that explain, and walkthroughs
 
-Kings is the pilot; the other ten still use the old `hint()` and have no walkthrough. The contract
+Kings was the pilot; Atoms, Mosaic, Pipes and Tower have followed, and the other six still use the
+old `hint()` with no walkthrough. The contract
 lives in `core/Teaching.kt` and `core/PuzzleType.kt`, all with defaults, so a board adopts it one
 file at a time and nothing else has to change:
 
@@ -66,8 +67,8 @@ Measured coverage (500 boards per tier, walked from empty by hints alone; the fa
 | Expert | 49% | 22% | 22% | 6% | 1.6% (7%) | 0.6% |
 
 Adopting it for another puzzle: write a `XTeacher` whose reasoning entry point takes only visible
-state; override `teach` and `tutorial`; read `LocalBoardHighlight` in `Board`; if the puzzle is on
-the web list, add the teacher file to `sharedFromApp`. Test soundness against an independent solver
+state; override `teach` and `tutorial`; read `LocalBoardHighlight` in `Board` (the web compiles the
+new file automatically, so keep it free of `java.*`). Test soundness against an independent solver
 and measure the fallback rate — don't assume it.
 
 ## Rules that keep being relearned
@@ -135,54 +136,146 @@ particular names the puzzle count in its alt text.
 
 ## Web build (`web/`)
 
-A feasibility slice: Kings alone, in a browser, via Compose Multiplatform on Kotlin/Wasm
-(`wasmJs`). Compose Multiplatform 1.9.3 on the repo's Kotlin 2.2.10 — no Kotlin upgrade needed.
+The whole app — all eleven puzzles, home, play, archive, stats, walkthroughs, saves — in a
+browser, via Compose Multiplatform 1.9.3 on Kotlin/Wasm (`wasmJs`) with the repo's Kotlin 2.2.10.
+Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for WasmGC.
 
-- **One copy of the code.** `web/build.gradle.kts` compiles files straight out of
-  `app/src/main/java` through an include list (`sharedFromApp`). Anything on that list must stay
-  free of `android.*` and `java.*`; that is why the seed arithmetic lives in `core/SeedHash.kt`
-  (`DailySeed` keeps the `LocalDate` API and delegates), the palette in `ui/theme/Palette.kt`, and
-  Kings times double taps with `kotlin.time.TimeSource.Monotonic` rather than `SystemClock`.
-- **Build:** `./gradlew :web:wasmJsBrowserDistribution` →
-  `web/build/dist/wasmJs/productionExecutable/` (~12 MB, ~4 MB gzipped; Skia's wasm is 8 MB of it).
-  Serve it with `python3 -m http.server 8765 --bind 0.0.0.0` from that directory (Python maps
-  `.wasm` to `application/wasm`, which streaming instantiation requires). Needs Safari 18.2+ /
-  iOS 18.2+ for WasmGC.
-- **Test hooks:** `?date=YYYY-MM-DD`, `?tier=hard`, and `?dump` (prints the `WebParityTest`
-  fingerprints, the board's bounds and `SOLVED`; `&range=N` adds every tier for N days from
-  2026-01-01). Diff that against the JVM to prove parity.
+### How it is put together
+
+- **One copy of the code.** `web/build.gradle.kts` compiles `app/src/main/java` itself, minus an
+  `androidOnly` list (`MainActivity`, `DataStoreKeyValueStore`, `platform/AndroidPlatform.kt`). A
+  new file in app/ is on the web by default, so it must stay free of `android.*` and `java.*` —
+  `Integer.bitCount`, `sortedSetOf`, `String.format`, `System.*` and `java.time` all fail the wasm
+  compile. That is why the seed arithmetic is `core/SeedHash.kt`, dates are
+  `kotlinx.datetime.LocalDate`, and Kings times double taps with `TimeSource.Monotonic`. The
+  patterns apply to web/'s own source directory too, so a web file must never share a path with
+  one on that list.
+- **Platform seam, not expect/actual.** Shared files call top-level functions in
+  `com.joebywan.daybook.platform`; app/ defines them in `platform/AndroidPlatform.kt` (the exact code
+  the screens used to run inline), web/ in `platform/WebPlatform.kt`. Same names, same package, one
+  file per build; a signature added to one and not the other is a compile error in the other build.
+  It covers dates and formatting, storage, back, the backup controls, board generation and fonts.
+- **Dates are `kotlinx.datetime.LocalDate`.** Nothing on disk stores a date object (completions hold
+  an epoch-day number), so saves are untouched; `CompletionFormatTest` pins that. Tests keep writing
+  `java.time` dates through `JavaDates.kt`. Formatting goes through the seam so Android keeps its
+  locale-aware `DateTimeFormatter`; the web spells out English names.
+- **Storage is `data/KeyValueStore`.** Android: the same two DataStore files and keys as ever
+  (`DataStoreKeyValueStore`). Web: `localStorage`, key `file.key`, sets as JSON arrays. The web
+  backup (Stats screen, export/import) is every one of those entries, so it needs no change when a
+  store does — a browser can drop a site's storage and there is no cloud backup behind it.
+- **Back** is the browser's history (one entry pushed per enabled back handler), plus a visible
+  arrow via the seam's `BackButton`, because a home-screen web app on iOS has no back gesture.
+  Android's `BackButton` draws nothing.
+- **Offline:** `sw.js` is network-first for unhashed files (page, `daybook.js`, manifest) and
+  cache-first for the content-hashed `.wasm`; the page posts its resource list to the worker, since
+  the first visit loads before the worker controls it. `manifest.webmanifest` and the icons make it
+  installable to the home screen.
+- **Generation on one thread.** Android generates off the main thread (`generateBoard` in the seam
+  is the `withContext(Dispatchers.Default)` it always was). Wasm has one thread, so the web's
+  `generateBoard` first waits until "Setting out …" has been *painted* (`requestAnimationFrame` →
+  `setTimeout`), and `prepareBoards` — called by `DaybookApp` while Home is showing, a no-op on
+  Android — makes today's eleven boards at the grid's tier in advance, one per turn of the event
+  loop, into a small cache. A tap usually finds its board ready. A board already underway cannot be
+  interrupted, so a tap during a slow LITS pre-generation still waits for it.
+- **Fonts.** A browser lends wasm none of its fonts; without help, text falls back to the one font
+  Compose ships, which has no `→` and no serif. `platformTypography` in the seam swaps the bundled
+  Noto Serif Bold (Android's serif) into the serif styles and preloads a few arrows from Noto Sans
+  Symbols, which Skia then uses as a fallback for glyphs the default lacks. Both live in
+  `web/src/wasmJsMain/composeResources/font`, cut down to Latin-1 plus common punctuation (and the
+  arrows) with glyph ids kept, so kerning still applies: 134 KB + 17 KB, 57 KB + 5 KB gzipped,
+  against 612 KB for the whole serif. `tools/subset-font.py` cut them: it keeps glyph ids, empties every other
+  glyph, rewrites `cmap` and drops `GSUB` (whose ligatures would land on emptied glyphs); a new
+  non-Latin-1 character in a serif string needs the font re-cut. Check any non-ASCII glyph in a
+  shared string by rendering it.
+- The Material icons: `compose.materialIconsExtended` costs 4.5 KB of wasm (<1 KB gzipped) over the
+  core set, because Kotlin/Wasm drops every unreferenced icon.
+
+### Building, serving, testing
+
+- **Build:** `./gradlew :web:wasmJsBrowserDistribution` → `web/build/dist/wasmJs/productionExecutable/`
+  (~12.8 MB without source maps, ~4.5 MB gzipped: Skia's wasm is 8.4 MB, the app's 3.6 MB). Serve it with `python3 -m http.server <port> --bind 0.0.0.0` from that directory
+  (Python maps `.wasm` to `application/wasm`, which streaming instantiation requires).
 - The Node/Yarn/Binaryen downloads are declared in `settings.gradle.kts`, because
   `FAIL_ON_PROJECT_REPOS` rejects the repositories the Kotlin plugin adds per project. Switching the
-  plugin's own URL off needs `convention(null)` as well as `set(null)` — `set(null)` alone falls back
-  to the convention, which *is* the URL.
+  plugin's own URL off needs `convention(null)` as well as `set(null)` — `set(null)` alone falls
+  back to the convention, which *is* the URL.
+- **Query hooks:** `?date=YYYY-MM-DD` is the app's "today"; `?tier=standard|hard|expert` sets the
+  home grid's difficulty (it persists, as a tap would); `?puzzle=<id>` opens that puzzle's daily
+  board instead of Home. `?dump` prints every puzzle's `core/ParityFingerprint` line to the
+  console — `PARITY` for the dates the per-puzzle parity tests pin, `TODAY` for `?date`/`?tier` —
+  and `&range=N` adds `RANGE` lines for every tier of N days from 2026-01-01 plus `TIMING` per
+  puzzle and tier, ending with `DUMP DONE`. `&puzzle=<id>` narrows the dump to one puzzle, which
+  lets a harness run the eleven in parallel pages.
+- **Parity:** `DAYBOOK_PARITY_DUMP=<file> ./gradlew :app:testDebugUnitTest --tests
+  '*WebParityDumpTest*'` writes the JVM's year in the same order; strip `RANGE ` from the page's
+  lines and the files must be identical. The same file, taken before and after a change, is how
+  Android boards are proved unchanged. `WebParityTest`, `LitsWebParityTest`,
+  `MosaicAtomsWebParityTest`, `WebParityShikakuSnapSudokuTest` and
+  `WebParityMamboPipesSetsTowerTest` pin a few boards per puzzle outright.
+- **Timings** (a year's worst board per tier, Chromium, eleven pages sharing the CPU): LITS
+  1.9 / 3.2 / 4.5 s, Mosaic Expert 0.3 s, Snap 0.4 s, Sudoku Expert 0.1 s, the rest under 0.06 s.
+  WebKit ran LITS ~2x slower under the same contention (Expert up to 11 s; ~4.6 s alone). LITS
+  means are 0.3-0.8 s (Chromium) — the pre-generation above is what hides them.
+- Dark theme follows `prefers-color-scheme`; Playwright's `color_scheme="dark"` context option is
+  enough to screenshot it.
 
-Learned the hard way:
+### Learned the hard way
 
 **Hash iteration order is a platform detail — never let it reach the `Rng`.** Kings shuffled a
 `HashSet`'s `toList()`. The JVM walks small integers ascending, Kotlin/Wasm in insertion order, so
 the same seed carved a different board in the browser: seeds and stored answers matched, regions did
-not, on 3 of 9 boards. Sorting first reproduces the JVM's order, so no Android board changed
-(verified on 1095 boards against origin/main). **Every other generator needs the same audit before
-it goes on the web** — `grep -n "HashSet\|HashMap\|toSet()\|groupBy" puzzles/` and follow each one
-to see whether its order reaches the `Rng` or a "first"/"min" pick.
+not. Sorting first reproduced the JVM's order, so no Android board changed. **Any new generator code
+needs the same audit** — `grep -n "HashSet\|HashMap\|toSet()\|groupBy\|distinct" puzzles/` and
+follow each one to see whether its order reaches the `Rng` or a "first"/"min" pick. Probe-only
+hash containers (Atoms, `MosaicTeacher`'s memo) are fine; say so in a comment.
+
+**When the order is already baked into Android boards, replay it — don't pick a new one.** LITS
+picked with the `Rng` from a `HashSet<List<Int>>` (`quadsContaining`); iterating it in insertion
+order, as Wasm does, changed all 1095 boards of a year. List hashes collide enough that plain
+"sort by bucket" is wrong too: buckets reach nine deep, which on the JVM doubles a small table early
+or turns a bucket into a red-black tree bin. `core/JvmHashOrder.kt` replays `java.util.HashMap`
+exactly and `JvmHashOrderTest` diffs it against the real `HashSet`.
+
+**Wasm is not what makes a generator slow.** Mosaic and Atoms Expert ran within 1.2-1.5x of the warm
+JVM; the search itself was the cost. Both were sped up with changes that leave every node and budget
+count alone (Atoms precomputes which pairs cross; Mosaic skips the two BFS when the colour bound
+already prunes), so no board moved. Profile on the JVM first. LITS runs ~2.5x (Chromium) to ~4x
+(WebKit) the warm JVM, roughly half in `placeTetrominoes`' candidate enumeration; its slowest
+boards take seconds, which is what the pre-generation above is for.
 
 **Compose web reads `TouchEvent`s for fingers, not `PointerEvent`s.** Synthetic `pointerdown` with
 `pointerType: 'touch'` does nothing. Playwright's `touchscreen.tap` works in WebKit; for a touch
 drag, dispatch `TouchEvent`s built with `document.createTouch`/`createTouchList` (WebKit on Linux has
 no `Touch` constructor). In Chromium, CDP `Input.dispatchTouchEvent` is real touch.
 
-**Playwright's Linux WebKit loses WebGL from screenshots when `is_mobile` is on** — a page that only
-calls `gl.clear(red)` comes out blank too, so it is the harness, not Compose. Emulate the phone with
-`has_touch` and `device_scale_factor` instead. Separately, headless WebKit dropped Compose's *first*
-frame until the first touch; `nudgeFirstFrame()` in `Main.kt` asks for a spare frame. Whether real
-Safari needs it is unknown — check on an iPhone before removing it.
+**Compose's touch slop on the web is far wider than Android's** (over 12px, under 20px; Android's is
+8dp). `detectDragGestures`' plain `onDragStart(offset)` gives that slop-crossing point, not the
+down, so a gesture that must *start on* something small misses: no Atoms Expert drag could ever
+begin on an atom. Use the overload whose `onDragStart` receives the `down` change. A touch-drag test
+with small steps hides this; step 10px+ per move.
 
-Also: Playwright's sync API only delivers console events while it is inside a Playwright call, so
-wait with `page.wait_for_timeout`, never `time.sleep`.
+**Animations belong to a scope that outlives the state that started them.** Pipes' spins ran as
+children of `LaunchedEffect(s.cells)`; every tap restarts that effect, so a tap on one tile
+cancelled another's turn mid-way and left it frozen at a slant (on Android too). They now run in a
+`rememberCoroutineScope`.
+
+**Headless WebKit is not Safari.** With `is_mobile` on, Playwright's Linux WebKit loses WebGL from
+screenshots — emulate the phone with `has_touch` and `device_scale_factor` instead. It dropped
+Compose's *first* frame until the first touch (`nudgeFirstFrame()` in `Main.kt` asks for a spare
+one), does not repaint after a screen change until something prompts a frame, and sometimes skips an
+animation's last frame; harnesses dispatch a `resize` after each tap and before a settled
+screenshot. Whether real Safari needs any of this is unknown — check on an iPhone before removing
+`nudgeFirstFrame()`.
+
+**Harness odds and ends.** Playwright's sync API only delivers console events while it is inside a
+Playwright call, so wait with `page.wait_for_timeout`, never `time.sleep`. `pkill -f "http.server
+8775"` matches the shell running it; write `http[.]server`. When several worktrees build at once,
+one `./gradlew --stop` stops every daemon on the machine and kills the others' builds mid-run — use
+`--no-daemon`, or a private `-Dorg.gradle.daemon.registry.base=<own dir>`.
 
 ## Tests
 
-140 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
+About 200 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
 Shikaku, Mosaic and Snap tests each carry their own solver or rule checker, deliberately written on
 a different principle so the two cannot share a blind spot. `LitsAuditTest` and `MosaicOptimumTest`
 are differential; `LitsMarkingTest` brute-forces every legal shading of a fixed board.
