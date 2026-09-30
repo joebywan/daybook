@@ -451,16 +451,20 @@ object Atoms : PuzzleType {
                     // reaches the detector below.
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
+                        // The overload that hands over the touch-down itself. The plain one reports
+                        // where the finger crossed the touch slop, and on the web that slop is wider
+                        // than an Expert atom's reach, so no drag there could ever start on an atom.
                         detectDragGestures(
-                            onDragStart = { offset ->
-                                dragFrom = atomAt(s, offset, stepPx)
-                                dragAt = offset
+                            orientationLock = null,
+                            onDragStart = { down, _, _ ->
+                                dragFrom = atomAt(s, down.position, stepPx)
+                                dragAt = down.position
                             },
                             onDrag = { change, _ ->
                                 change.consume()
                                 dragAt = change.position
                             },
-                            onDragEnd = {
+                            onDragEnd = { _ ->
                                 val from = dragFrom
                                 val at = dragAt
                                 if (from != null && at != null) {

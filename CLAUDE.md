@@ -139,6 +139,19 @@ Safari needs it is unknown — check on an iPhone before removing it.
 Also: Playwright's sync API only delivers console events while it is inside a Playwright call, so
 wait with `page.wait_for_timeout`, never `time.sleep`.
 
+**Mosaic and Atoms on the web** (`?puzzle=mosaic`, `?puzzle=atoms`; page in
+`web/.../MosaicAtomsPage.kt`). `?dump&range=N` adds a `TIMING` line per tier; `MosaicAtomsWebParityTest`
+pins the JVM side, and `DAYBOOK_PARITY_DUMP=<dir>` makes it write a year of fingerprints to diff.
+- **Wasm is not what makes a generator slow.** Mosaic Expert and Atoms Expert ran within 1.2-1.5x
+  of the warm JVM; the search itself was the cost. Both were fixed with changes that leave every
+  node and budget count alone (Atoms precomputes which pairs cross; Mosaic skips the two BFS when
+  the colour bound already prunes), so no board moved. Profile on the JVM first.
+- **Compose's touch slop on the web is far wider than Android's** (measured
+  over 12px, under 20px; Android's is 8dp). `detectDragGestures`' plain `onDragStart(offset)` gives that
+  slop-crossing point, not the down, so a gesture that must *start on* something small misses: no
+  Atoms Expert drag could ever begin on an atom. Use the overload whose `onDragStart` receives the
+  `down` change. A touch-drag test with small steps hides this; step 10px+ per move.
+
 ## Tests
 
 130 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
