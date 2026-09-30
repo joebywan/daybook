@@ -182,7 +182,19 @@ object Atoms : PuzzleType {
     private const val LEGACY_ATTEMPTS = 200
     private const val ATTEMPTS = 600
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        generateVerified(seed, difficulty) ?: lastResort()
+
+    /**
+     * The real generator: a board whose one answer [countSolutions] has *proved* (its search is
+     * exhaustive, with no node budget to run out), or null when no attempt produced one.
+     *
+     * Split out from [generate] so the two paths cannot be mistaken for each other. Before the
+     * strict attempts existed, 13 Expert days of 2026 quietly shipped the three-atom chain, and the
+     * `FallbackTest` of the time sampled too few seeds to see it; it now asserts, over a whole
+     * year of daily seeds on every tier, that this never returns null.
+     */
+    fun generateVerified(seed: Long, difficulty: Difficulty): AtomsState? {
         val (n, wanted) = shape(difficulty)
 
         repeat(ATTEMPTS) { attempt ->
@@ -207,8 +219,17 @@ object Atoms : PuzzleType {
             if (countSolutions(atoms, pairs) != 1) return@repeat
             return AtomsState(n, atoms, pairs, List(pairs.size) { 0 }, solution)
         }
+        return null
+    }
 
-        // Fallback: a short chain always has a unique answer.
+    /**
+     * A three-atom chain, which trivially has one answer. It exists only so [generate] is total — a
+     * daily puzzle must never throw — and is not a puzzle anyone should be handed. Unreachable in
+     * practice: over two years of daily seeds, a tenth of Expert boards need the strict attempts
+     * and each strict attempt is proved unique about 40% of the time, so four hundred of them all
+     * failing is astronomically unlikely. `FallbackTest` pins that [generateVerified] never gives up.
+     */
+    private fun lastResort(): AtomsState {
         val atoms = listOf(Atom(0, 0, 1), Atom(0, 2, 2), Atom(2, 2, 1))
         val pairs = pairsFor(atoms, 3)
         val solution = pairs.map { 1 }
