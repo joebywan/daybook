@@ -67,6 +67,20 @@ private data class Day(val year: Int, val month: Int, val day: Int) {
         }
 
         fun today(): Day = localDateCode().let { Day(it / 10000, it / 100 % 100, it % 100) }
+
+        /** The inverse of [SeedHash.epochDay] (Hinnant's civil-from-days), for the parity dump. */
+        fun ofEpochDay(epochDay: Long): Day {
+            val z = epochDay + 719468
+            val era = z.floorDiv(146097L)
+            val doe = z - era * 146097
+            val yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365
+            val doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
+            val mp = (5 * doy + 2) / 153
+            val d = (doy - (153 * mp + 2) / 5 + 1).toInt()
+            val m = (if (mp < 10) mp + 3 else mp - 9).toInt()
+            val y = (yoe + era * 400 + if (m <= 2) 1 else 0).toInt()
+            return Day(y, m, d)
+        }
     }
 }
 
@@ -97,6 +111,12 @@ fun main() {
     if (debug) {
         for (d in PARITY_DAYS) for (t in Difficulty.entries) println("PARITY ${fingerprint(d, t)}")
         println("TODAY ${fingerprint(day, tier)}")
+        // ?dump&range=N: every tier for N days from 2026-01-01, to diff against the JVM.
+        val range = params["range"]?.toIntOrNull() ?: 0
+        val start = Day(2026, 1, 1).epochDay
+        for (i in 0 until range) {
+            for (t in Difficulty.entries) println("RANGE ${fingerprint(Day.ofEpochDay(start + i), t)}")
+        }
     }
 
     ComposeViewport(viewportContainerId = "app") {

@@ -368,7 +368,7 @@ object Kings : PuzzleType {
             val (cell, hosts) = rng.shuffled(open).minBy { it.second.size }
             // Smallest region first, so no one region swallows the leftovers and the colours stay
             // roughly the size a player expects to reason about.
-            val ordered = rng.shuffled(hosts.toList()).sortedBy { sizes[it] }
+            val ordered = rng.shuffled(hosts.sorted()).sortedBy { sizes[it] }
 
             var chosen = -1
             for (host in ordered) {
@@ -389,7 +389,15 @@ object Kings : PuzzleType {
         return if (remaining == 0) region else null
     }
 
-    /** The regions already touching [cell] edge-on, which are the only ones that may claim it. */
+    /**
+     * The regions already touching [cell] edge-on, which are the only ones that may claim it.
+     *
+     * A hash set, so callers that hand these to the [Rng] must sort them first. Hash iteration
+     * order is a platform detail: the JVM happens to walk small integers in ascending order and
+     * Kotlin/Wasm walks them in insertion order, and before the callers sorted, the same seed
+     * carved a different board in the browser than on the phone. Sorting matches what the JVM
+     * already did, so no board on Android changed.
+     */
     private fun hostsOf(cell: Int, n: Int, region: List<Int>): Set<Int> =
         neighbours(cell, n).mapNotNullTo(HashSet()) { region[it].takeIf { id -> id != -1 } }
 
@@ -423,7 +431,7 @@ object Kings : PuzzleType {
             val pick = rng.nextInt(frontier.size)
             val cell = frontier.removeAt(pick)
             if (region[cell] != -1) continue
-            val owners = hostsOf(cell, n, region).toList()
+            val owners = hostsOf(cell, n, region).sorted()
             if (owners.isEmpty()) {
                 frontier += cell
                 continue
