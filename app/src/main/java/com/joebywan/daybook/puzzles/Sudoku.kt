@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
@@ -183,6 +184,42 @@ object Sudoku : PuzzleType {
         if (wrong != null) return s.withCell(wrong, s.solution[wrong])
         val blank = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
         return s.withCell(blank, s.solution[blank])
+    }
+
+    // ---- teaching --------------------------------------------------------------------------
+
+    /**
+     * A mistake to take back or a step to reason out — see [SudokuTeacher]. The old [hint] dropped
+     * a digit straight out of [SudokuState.solution] and taught nothing; it stays only as the
+     * contract's default path. The teacher reasons from the visible digits alone.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as SudokuState
+        val step = SudokuTeacher.teach(s) ?: return null
+        val cell = step.cell
+        val digit = step.digit
+        val mistake = step.technique == SudokuTeacher.MISTAKE
+        val wrong = s.cells[cell]
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = setOf(cell),
+            mistake = mistake,
+            fallback = step.technique == SudokuTeacher.FALLBACK,
+            // One state, so one undo entry; the cell is selected so the player sees where it went.
+            applyTo = { now ->
+                val t = now as SudokuState
+                if (t.cells[cell] == digit) t else t.withCell(cell, digit).select(cell)
+            },
+            reachedBy = { now ->
+                val t = now as SudokuState
+                // A mistake is dealt with once that digit is gone, whatever replaced it.
+                if (mistake) t.cells[cell] != wrong else t.cells[cell] == digit
+            },
+        )
     }
 
     // ---- home-grid motif ----------------------------------------------------------------------
