@@ -1,5 +1,10 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -9,9 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -26,9 +35,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -337,10 +349,147 @@ object Snap : PuzzleType {
     // ---- play ---------------------------------------------------------------------------------
 
     /**
-     * The path is a single chain, so any tile a hint filled in would pin down the stretch either
-     * side of it — there is no small enough piece of the answer to give away.
+     * No hints, on purpose, and measured rather than assumed.
+     *
+     * A line only grows from its end, so a hint can only ever be "the next square is this one". A
+     * teacher reasoning from the end of the line was written and walked over 100 boards per tier
+     * (the corner with two ways in, the only way on, ruling a way out because it steps on a number
+     * early, cuts off a pocket or strands a square, and following forced moves ahead): it explained
+     * the easy squares and then had nothing to say at the real choices. It fell back to pointing at
+     * the answer on 6% of steps on Standard, 13% on Hard and 16% on Expert, and on 89%, 100% and
+     * 100% of boards. Following forced moves all the way down instead of eight deep barely moved it
+     * (5.6 / 12.4 / 15.4%). The choices those were are exactly what the sparse numbering exists to
+     * leave the player, so hints here would mean explaining the obvious squares and handing out
+     * the interesting ones — tracing by numbers again. The walkthrough teaches the reasoning instead.
      */
     override val offersHints = false
+
+    // ---- walkthrough --------------------------------------------------------------------------
+
+    /**
+     * The walkthrough board, 4x4:
+     * ```
+     *  .  1  .  .
+     *  .  4  .  .
+     *  .  2  .  .
+     *  .  .  3  .
+     * ```
+     * It has exactly one answer ([TUTORIAL_SOLUTION]), proved in `SnapTutorialTest` by an
+     * enumerator that shares nothing with this file. Every square of it can be reasoned with what
+     * the frames teach: corners with two ways in, the only way on, and numbers never met early.
+     */
+    internal const val TUTORIAL_W = 4
+    internal val TUTORIAL_WAYPOINTS = listOf(
+        0, 1, 0, 0,
+        0, 4, 0, 0,
+        0, 2, 0, 0,
+        0, 0, 3, 0,
+    )
+    internal val TUTORIAL_SOLUTION = listOf(1, 0, 4, 8, 12, 13, 9, 10, 14, 15, 11, 7, 3, 2, 6, 5)
+
+    private fun tutorialBoard(path: List<Int>) = SnapState(TUTORIAL_W, TUTORIAL_W, TUTORIAL_WAYPOINTS, path)
+
+    /** The answer's first [n] squares. */
+    private fun answerTo(n: Int) = TUTORIAL_SOLUTION.take(n)
+
+    /**
+     * Accepts exactly the line [path], however many moves it took. Strict, as Pipes' is: each
+     * frame's board is written for the one before it. It also has to be, because the board emits
+     * one state per square: a drag that starts on the end of the line first hands in the line
+     * unchanged, and every square of a wrong turn is a state of its own. Those are all refused and
+     * not applied, while the board keeps following the drag, so the one wanted state still arrives.
+     */
+    private fun line(path: List<Int>): (PuzzleState) -> Boolean = { next ->
+        next is SnapState && next.path == path
+    }
+
+    /**
+     * Every gesture the board has, each on a move whose reason the caption gives: start on 1, lift
+     * and carry on from the end, cut the line back by starting on a square of it, and drag back
+     * along it. Each gesture frame wants exactly one emitted state, because the runner applies only
+     * the states a frame accepts. The two mistake boards are the line as the frame before left it
+     * plus a wrong turn, so the story stays one line.
+     */
+    override val tutorial: List<TutorialFrame> by lazy {
+        val corner = 0
+        val below = 4
+        val numbered = TUTORIAL_WAYPOINTS.indices.filter { TUTORIAL_WAYPOINTS[it] > 0 }.toSet()
+        listOf(
+            TutorialFrame(
+                state = tutorialBoard(TUTORIAL_SOLUTION),
+                caption = "Draw one line from 1 to the highest number. It passes through every " +
+                    "square exactly once, and meets the numbers in order: 1, 2, 3, 4.",
+                highlight = BoardHighlight(strong = numbered),
+            ),
+            TutorialFrame(
+                state = tutorialBoard(emptyList()),
+                caption = "A corner touches only two squares. The line must come in by one and " +
+                    "leave by the other, unless it ends there, and only the last number is an end.",
+                highlight = BoardHighlight(strong = setOf(corner), soft = setOf(1, below)),
+            ),
+            TutorialFrame(
+                state = tutorialBoard(emptyList()),
+                caption = "Lines start on 1. Leave 1 any other way and this corner is left one way " +
+                    "in: a dead end. Put your finger on 1 and drag into the corner.",
+                highlight = BoardHighlight(strong = setOf(1, corner)),
+                accepts = line(answerTo(2)),
+                retry = "Start on 1 and drag into the glowing corner.",
+                done = "Every line starts on 1.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(answerTo(2)),
+                caption = "Lift your finger whenever you like: the line stays. Put it back on the " +
+                    "end of the line and drag down, the corner's only other way out.",
+                highlight = BoardHighlight(strong = setOf(below), soft = setOf(corner)),
+                accepts = line(answerTo(3)),
+                retry = "From the end of the line, drag down one square.",
+                done = "Carry on from the end any time.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(answerTo(3)),
+                caption = "The square to the right is 4, but 2 and 3 have to come first. So the " +
+                    "line can only go down.",
+                highlight = BoardHighlight(strong = setOf(8), soft = setOf(5)),
+                accepts = line(answerTo(4)),
+                retry = "Drag down one square from the end of the line.",
+                done = "Numbers come in order, never early.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(answerTo(4) + listOf(9, 10)),
+                caption = "Say you dashed for 2. Now the bottom corner has one way in: a dead end, " +
+                    "but the line must end on 4. Put your finger on the glowing square to cut back to it.",
+                highlight = BoardHighlight(strong = setOf(8), soft = setOf(12)),
+                accepts = line(answerTo(4)),
+                retry = "Start a drag on the glowing square of the line.",
+                done = "Everything after it is gone.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(answerTo(4)),
+                caption = "Take the corner now, while it still has two ways in. Leave it a pocket " +
+                    "with one way in and the line can't finish. Drag into it.",
+                highlight = BoardHighlight(strong = setOf(12), soft = setOf(8, 13)),
+                accepts = line(answerTo(5)),
+                retry = "Drag down into the corner from the end of the line.",
+                done = "The corner's safe.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(answerTo(6) + 14),
+                caption = "This line reached 3 before 2. Drag from 3 back along the line, one " +
+                    "square, to rub that step out.",
+                highlight = BoardHighlight(strong = setOf(14), soft = setOf(13), warning = true),
+                accepts = line(answerTo(6)),
+                retry = "Drag from 3 back one square along the line.",
+                done = "Rubbed out. Only 2 is left to go to.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(answerTo(6)),
+                caption = "Your turn: finish the line. Every square once, 2 then 3, ending on 4. " +
+                    "Watch for squares down to two ways in.",
+                freePlay = true,
+                done = "Solved. That's Snap.",
+            ),
+        )
+    }
 
     @Composable
     override fun Preview(modifier: Modifier) {
@@ -415,6 +564,20 @@ object Snap : PuzzleType {
         // with no line on it — so every drag after the first reset to an empty path and wiped the
         // line. Read the live board through this instead.
         val latest by rememberUpdatedState(s)
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // Breathes, as Kings' and Pipes' do, so a glowing square is findable at a glance. Only runs
+        // while something glows, and is read in the draw phase.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
 
         BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp)) {
             val step = maxWidth / s.width
@@ -515,6 +678,35 @@ object Snap : PuzzleType {
                         layout,
                         topLeft = Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f),
                     )
+                }
+
+                if (!highlight.isEmpty) {
+                    // Everything the highlight does not name steps back under a veil in the page
+                    // colour, line and numbers included, so the named squares read at once.
+                    for (cell in 0 until s.cellCount) {
+                        if (cell in highlight.strong || cell in highlight.soft) continue
+                        drawRect(
+                            color = scheme.background.copy(alpha = 0.62f),
+                            topLeft = Offset((cell % s.width) * stepPx, (cell / s.width) * stepPx),
+                            size = Size(stepPx, stepPx),
+                        )
+                    }
+                    // Outlines last, so a neighbour drawn later never paints over half of one.
+                    val strongW = 4.dp.toPx()
+                    val softW = 1.5.dp.toPx()
+                    val corner = CornerRadius(stepPx * 0.16f)
+                    for (cell in 0 until s.cellCount) {
+                        val strong = cell in highlight.strong
+                        if (!strong && cell !in highlight.soft) continue
+                        val w = if (strong) strongW else softW
+                        drawRoundRect(
+                            color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
+                            topLeft = Offset((cell % s.width) * stepPx + w / 2, (cell / s.width) * stepPx + w / 2),
+                            size = Size(stepPx - w, stepPx - w),
+                            cornerRadius = corner,
+                            style = Stroke(w),
+                        )
+                    }
                 }
             }
         }
