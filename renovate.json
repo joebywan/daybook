@@ -17,6 +17,11 @@
       "automerge": true
     },
     {
+      "description": "gradle/actions v6 moved caching into a proprietary component whose Terms of Use you accept by upgrading. Held at v5 (MIT) until the owner decides.",
+      "matchPackageNames": ["gradle/actions"],
+      "allowedVersions": "<6"
+    },
+    {
       "description": "Compose ships as a fleet; updating it piecemeal produces version skew.",
       "matchPackagePatterns": ["^androidx\\.compose"],
       "groupName": "Jetpack Compose"
