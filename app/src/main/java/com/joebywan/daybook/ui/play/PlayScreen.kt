@@ -1,6 +1,5 @@
 package com.joebywan.daybook.ui.play
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +51,10 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.SavedGame
+import com.joebywan.daybook.platform.BackButton
+import com.joebywan.daybook.platform.PlatformBackHandler
+import com.joebywan.daybook.platform.formatClock
+import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.HintSlotHeight
@@ -64,10 +67,10 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.LocalDate
 
-private val PlayDate = DateTimeFormatter.ofPattern("d MMM yyyy")
+/** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
+private const val PLAY_DATE = "d MMM yyyy"
 
 /** Long enough that holding down a Sudoku digit is one write rather than a dozen. */
 private const val SAVE_DEBOUNCE_MS = 500L
@@ -263,7 +266,7 @@ private fun PlayBoard(
     }
 
     if (showTutorial) {
-        BackHandler { showTutorial = false }
+        PlatformBackHandler(enabled = true) { showTutorial = false }
         TutorialRunner(
             puzzle = puzzle,
             onClose = { showTutorial = false },
@@ -287,6 +290,8 @@ private fun PlayBoard(
             Modifier.fillMaxWidth().padding(start = 18.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Nothing on Android, where the system back button is the way out.
+            BackButton(onBack)
             Column(Modifier.weight(1f)) {
                 Text(
                     puzzle.displayName,
@@ -297,7 +302,7 @@ private fun PlayBoard(
                     buildString {
                         append(difficulty.label)
                         append(" · ")
-                        append(day?.format(PlayDate) ?: "Random")
+                        append(day?.let { formatDate(it, PLAY_DATE) } ?: "Random")
                     },
                     style = MaterialTheme.typography.labelLarge,
                     color = scheme.onSurfaceVariant,
@@ -309,7 +314,7 @@ private fun PlayBoard(
         }
 
         Text(
-            text = "%d:%02d".format(seconds / 60, seconds % 60),
+            text = formatClock(seconds),
             style = MaterialTheme.typography.titleMedium,
             color = scheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
@@ -416,7 +421,7 @@ private fun SolvedBar(
         Text("Solved", style = MaterialTheme.typography.titleLarge, color = accent)
         Text(
             buildString {
-                append("%d:%02d".format(seconds / 60, seconds % 60))
+                append(formatClock(seconds))
                 if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
             },
             style = MaterialTheme.typography.bodyMedium,

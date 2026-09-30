@@ -134,7 +134,9 @@ fun main() {
     }
 
     ComposeViewport(viewportContainerId = "app") {
-        KingsPage(day, tier, debug)
+        // ?dump keeps the bare board the parity and touch harnesses drive; otherwise the whole
+        // app (WebApp.kt), which reads ?date and ?tier itself.
+        if (debug) KingsPage(day, tier, debug) else DaybookWebApp(params["date"], params["tier"])
     }
     removeLoadingNote()
     nudgeFirstFrame()

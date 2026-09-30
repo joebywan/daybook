@@ -180,6 +180,46 @@ Safari needs it is unknown — check on an iPhone before removing it.
 Also: Playwright's sync API only delivers console events while it is inside a Playwright call, so
 wait with `page.wait_for_timeout`, never `time.sleep`.
 
+### The app shell on the web
+
+The whole app — `DaybookApp`, home, play, archive, stats, theme, `ProgressStore` — compiles from
+app/ (`shellFromApp` in `web/build.gradle.kts`). Without `?dump` the page is the full app; `?dump`
+still gives the bare Kings board the harnesses drive. `?date=` sets the app's "today", `?tier=`
+writes the home grid's difficulty (it persists, like a tap would).
+
+- **Platform seam, not expect/actual.** Shared files call top-level functions in
+  `com.joebywan.daybook.platform`; app/ defines them in `platform/AndroidPlatform.kt` (the exact code
+  the screens used to run inline), web/ in `platform/WebPlatform.kt`. Same names, same package, one
+  file per build. The include patterns apply to app/'s source directory *and* web/'s own, so a web
+  file must never share a path with an app/ file — hence the named `webOwnFiles` list.
+- **Dates are `kotlinx.datetime.LocalDate`.** Nothing on disk stores a date object (completions hold an
+  epoch-day number), so saves are untouched; `CompletionFormatTest` pins that. Tests keep writing
+  `java.time` dates through `JavaDates.kt`: Kotlin falls through to an extension when the member
+  overload is inapplicable, so no test needed editing. Formatting goes through the seam so Android
+  keeps its locale-aware `DateTimeFormatter`; the web spells out English names.
+- **Storage is `data/KeyValueStore`.** Android: the same two DataStore files and keys as ever
+  (`DataStoreKeyValueStore`). Web: `localStorage`, key `file.key`, sets as JSON arrays. The web backup
+  (Stats screen) is simply every one of those entries, so it needs no change when a store does.
+- **`core/WebPuzzleRegistry.kt` is TEMPORARY** — Kings only, because app/'s `PuzzleRegistry` names all
+  eleven puzzles. Once they are all in `sharedFromApp`, delete it and share the real one.
+- **Back** is the browser's history on the web (one entry pushed while off Home), plus a visible
+  arrow via the seam's `BackButton`, because a home-screen web app on iOS has no back gesture.
+  Android's `BackButton` draws nothing.
+- **Offline:** `sw.js` is network-first for unhashed files (page, `daybook.js`, manifest) and
+  cache-first for the content-hashed `.wasm`; the page posts its resource list to the worker, since
+  the first visit loads before the worker controls it. Verified with the server actually stopped.
+- **Headless WebKit does not repaint after a screen change** until something prompts a frame: the
+  new screen is composed (state and storage are right) but the canvas shows the old one. Harnesses
+  dispatch a `resize` after each tap. Whether real Safari does this is unknown — check on an iPhone.
+- **The web has no system fonts:** text falls back to the one font Compose ships, which has no `→`
+  (U+2192) — Kings' walkthrough offer line ends in a tofu box on the web. Check any non-ASCII glyph
+  in a shared string by rendering it; the em dash, `·` and `•` are fine.
+- The Material icons: `compose.materialIconsExtended` costs 4.5 KB of wasm (<1 KB gzipped) over the
+  core set, because Kotlin/Wasm drops every unreferenced icon.
+- **Another worktree's `./gradlew --stop` kills your daemon mid-build** ("stop command received").
+  Give parallel agents their own registry: `-Dorg.gradle.daemon.registry.base=<own dir>`. And
+  `pkill -f "http.server 8775"` matches the shell running it; write `http[.]server`.
+
 ## Tests
 
 140 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
