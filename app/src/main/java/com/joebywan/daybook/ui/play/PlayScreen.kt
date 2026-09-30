@@ -267,7 +267,9 @@ private fun PlayBoard(
         TutorialRunner(
             puzzle = puzzle,
             onClose = { showTutorial = false },
-            modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
+            // Painted before the insets are taken, so the status bar strip is the page colour
+            // rather than whatever the window shows through it.
+            modifier = Modifier.background(scheme.background).windowInsetsPadding(WindowInsets.safeDrawing),
         )
         return
     }

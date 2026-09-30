@@ -945,7 +945,7 @@ object Kings : PuzzleType {
                                     when {
                                         strong -> Modifier.drawWithContent {
                                             drawContent()
-                                            val w = 3.dp.toPx()
+                                            val w = 4.dp.toPx()
                                             drawRoundRect(
                                                 glow.copy(alpha = pulse.value),
                                                 topLeft = Offset(w / 2, w / 2),
