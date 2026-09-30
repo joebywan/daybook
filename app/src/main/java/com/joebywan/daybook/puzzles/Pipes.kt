@@ -325,7 +325,7 @@ object Pipes : PuzzleType {
                 if (mask and RIGHT != 0) arm(1f, 0f)
                 drawCircle(
                     color = pipeColour,
-                    radius = if (Integer.bitCount(mask) == 1) cellPx * 0.20f else stroke * 0.5f,
+                    radius = if (mask.countOneBits() == 1) cellPx * 0.20f else stroke * 0.5f,
                     center = Offset(cx, cy),
                 )
 
@@ -423,7 +423,7 @@ object Pipes : PuzzleType {
                     if (mask != 0) {
                         // A single-ended pipe is an endpoint: the run stops here, and the knob is
                         // what says so.
-                        val endpoint = Integer.bitCount(mask) == 1
+                        val endpoint = mask.countOneBits() == 1
                         rotate(degrees = spins[i].value, pivot = Offset(cx, cy)) {
                             // Butt caps stop the stroke dead on the cell edge. A round cap would
                             // instead push half a pipe width past it and into the neighbour, so
