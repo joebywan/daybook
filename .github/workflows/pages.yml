@@ -23,19 +23,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
       # web/ compiles files out of app/, and the build configures both projects.
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
         with:
           packages: 'platforms;android-36 build-tools;36.0.0'
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       - name: Build web distribution
         run: ./gradlew :web:wasmJsBrowserDistribution
@@ -44,7 +44,7 @@ jobs:
       - name: Drop the source map
         run: rm -f web/build/dist/wasmJs/productionExecutable/*.map
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: web/build/dist/wasmJs/productionExecutable
 
@@ -56,4 +56,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
