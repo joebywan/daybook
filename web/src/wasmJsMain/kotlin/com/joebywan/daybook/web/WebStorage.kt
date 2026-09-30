@@ -70,6 +70,9 @@ class LocalStorageKeyValueStore(private val name: String) : KeyValueStore {
         write(key, value)
     }
 
+    /** [string]'s current value, read straight away, for start-up code that is not in a coroutine. */
+    fun read(key: String): String? = lsGet(storageKey(key))
+
     /** [putString] without the suspension, for start-up code that is not in a coroutine. */
     fun write(key: String, value: String) {
         lsSet(storageKey(key), value)

@@ -2,15 +2,21 @@ package com.joebywan.daybook.platform
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.DataStoreKeyValueStore
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.preferencesFile
+import com.joebywan.daybook.puzzles.PuzzleState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
@@ -81,3 +87,18 @@ const val OFFERS_BACKUP: Boolean = false
 /** The backup controls on the stats screen; never shown on Android (see [OFFERS_BACKUP]). */
 @Composable
 fun BackupControls() = Unit
+
+/** A board, generated off the main thread so a slow one never freezes the frame. */
+suspend fun generateBoard(puzzle: PuzzleType, seed: Long, difficulty: Difficulty): PuzzleState =
+    withContext(Dispatchers.Default) { puzzle.generate(seed, difficulty) }
+
+/**
+ * Called while the home grid is showing. Android generates each board off the main thread when it
+ * is opened, which is quick enough, so there is nothing to get ready in advance.
+ */
+@Suppress("UNUSED_PARAMETER", "RedundantSuspendModifier")
+suspend fun prepareBoards(day: LocalDate, difficulty: Difficulty) = Unit
+
+/** The app's typography as it is: Android's system fonts cover every style and glyph. */
+@Composable
+fun platformTypography(base: Typography): Typography = base

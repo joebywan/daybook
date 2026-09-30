@@ -5,14 +5,12 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import org.junit.Assert.assertEquals
-import org.junit.Assume.assumeTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 
 /**
- * LITS boards as the web build (`web/`) must reproduce them. The page prints the same lines under
- * `?puzzle=lits&dump` (see CLAUDE.md, "Web build"), so the two can be diffed.
+ * LITS boards as the web build (`web/`) must reproduce them. The page prints the same lines, each
+ * prefixed with `lits`, under `?dump` (see CLAUDE.md, "Web build", and [WebParityDumpTest]).
  *
  * LITS is where hash order came closest to the `Rng`: `quadsContaining` used to pick a candidate
  * out of a `HashSet<List<Int>>`, whose order the JVM and Kotlin/Wasm do not share. These lines were
@@ -27,21 +25,6 @@ class LitsWebParityTest {
         assertEquals(LITS_FINGERPRINTS, lines)
     }
 
-    /**
-     * `LITS_DUMP=/path/file ./gradlew :app:testDebugUnitTest --tests '*LitsWebParityTest*'` writes
-     * every tier for [DUMP_DAYS] days from 2026-01-01, the same lines as the page's `RANGE` output.
-     */
-    @Test
-    fun `dump a year of LITS boards when asked`() {
-        val path = System.getenv("LITS_DUMP")
-        assumeTrue(!path.isNullOrEmpty())
-        val start = LocalDate.of(2026, 1, 1)
-        val text = (0 until DUMP_DAYS).joinToString("") { day ->
-            Difficulty.entries.joinToString("") { fingerprint(start.plusDays(day.toLong()), it) + "\n" }
-        }
-        File(path!!).writeText(text)
-    }
-
     private fun fingerprint(date: LocalDate, tier: Difficulty): String {
         val seed = DailySeed.seedFor(date, Lits.id, tier)
         val s = Lits.generate(seed, tier) as LitsState
@@ -50,8 +33,6 @@ class LitsWebParityTest {
     }
 
     private companion object {
-        const val DUMP_DAYS = 365
-
         val PARITY_DATES = listOf(
             LocalDate.of(2026, 1, 1),
             LocalDate.of(2026, 9, 30),

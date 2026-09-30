@@ -11,16 +11,13 @@ import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.SudokuState
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 
 /**
  * Pins Shikaku, Snap and Sudoku boards so the web build can be diffed against the app.
  *
- * The web page prints lines in exactly this format under `?dump` (`PARITY3` for the pinned dates,
- * `RANGE3` for `&range=N`); see `web/.../ShikakuSnapSudoku.kt`. Setting the environment variable
- * `DAYBOOK_DUMP3=<file>` also writes a full year from 2026-01-01, every tier, to that file, which
- * is what the JVM-before/after and JVM-vs-wasm diffs are taken from.
+ * The web page prints lines in exactly this format under `?dump`; [WebParityDumpTest] writes the
+ * JVM's side of a whole year, which is what the JVM-before/after and JVM-vs-wasm diffs are taken from.
  */
 class WebParityShikakuSnapSudokuTest {
 
@@ -29,17 +26,6 @@ class WebParityShikakuSnapSudokuTest {
         val lines = PARITY_DATES.flatMap { date -> PUZZLES.flatMap { p -> Difficulty.entries.map { fingerprint(p, date, it) } } }
         lines.forEach(::println)
         assertEquals(FINGERPRINTS, lines)
-    }
-
-    @Test
-    fun `a year of boards, written out when asked`() {
-        val out = System.getenv("DAYBOOK_DUMP3") ?: return
-        val start = LocalDate.of(2026, 1, 1)
-        val lines = (0 until 365).flatMap { i ->
-            val date = start.plusDays(i.toLong())
-            PUZZLES.flatMap { p -> Difficulty.entries.map { fingerprint(p, date, it) } }
-        }
-        File(out).writeText(lines.joinToString("") { "$it\n" })
     }
 
     private fun fingerprint(p: PuzzleType, date: LocalDate, tier: Difficulty): String {

@@ -19,6 +19,7 @@ import com.joebywan.daybook.data.savedGameKey
 import com.joebywan.daybook.platform.PlatformBackHandler
 import com.joebywan.daybook.platform.currentDate
 import com.joebywan.daybook.platform.freshNonce
+import com.joebywan.daybook.platform.prepareBoards
 import com.joebywan.daybook.platform.rememberKeyValueStore
 import com.joebywan.daybook.ui.archive.ArchiveScreen
 import com.joebywan.daybook.ui.home.HomeScreen
@@ -42,8 +43,12 @@ sealed interface Route {
     ) : Route
 }
 
+/**
+ * The whole app. [startAt] is where it opens — Home unless something asked for a particular
+ * screen, which on the web is a `?puzzle=` link.
+ */
 @Composable
-fun DaybookApp() {
+fun DaybookApp(startAt: Route = Route.Home) {
     val progressFile = rememberKeyValueStore(KeyValueStore.PROGRESS)
     val store = remember(progressFile) { ProgressStore(progressFile) }
     val scope = rememberCoroutineScope()
@@ -52,7 +57,7 @@ fun DaybookApp() {
     // flash up for the instant before their "already offered" loads.
     val tutorialsOffered by store.tutorialsOffered.collectAsState(initial = null)
 
-    var route by remember { mutableStateOf<Route>(Route.Home) }
+    var route by remember { mutableStateOf(startAt) }
     var today by remember { mutableStateOf(currentDate()) }
 
     // The home grid's two selectors live here, not on the home screen: navigating into a puzzle
@@ -94,28 +99,33 @@ fun DaybookApp() {
     PlatformBackHandler(enabled = route != Route.Home) { route = Route.Home }
 
     when (val current = route) {
-        Route.Home -> HomeScreen(
-            today = today,
-            completions = completions,
-            difficulty = difficulty,
-            onDifficulty = { picked ->
-                pickedDifficulty = picked
-                scope.launch { launchPrefs.setDifficulty(picked) }
-            },
-            mode = mode,
-            onMode = { mode = it },
-            onLaunch = { puzzleId ->
-                route = when (mode) {
-                    LaunchMode.DAILY -> Route.Play(puzzleId, difficulty, today)
-                    // A fresh nonce every tap is what makes a second random game a new board
-                    // rather than the one just finished.
-                    LaunchMode.RANDOM ->
-                        Route.Play(puzzleId, difficulty, null, freshNonce())
-                }
-            },
-            onArchive = { puzzleId -> route = Route.Archive(puzzleId) },
-            onStats = { route = Route.Stats },
-        )
+        Route.Home -> {
+            // Nothing on Android. On the web, today's boards are generated while the grid is being
+            // read, so the tap that opens one does not have to wait for it; see the platform seam.
+            LaunchedEffect(today, difficulty) { prepareBoards(today, difficulty) }
+            HomeScreen(
+                today = today,
+                completions = completions,
+                difficulty = difficulty,
+                onDifficulty = { picked ->
+                    pickedDifficulty = picked
+                    scope.launch { launchPrefs.setDifficulty(picked) }
+                },
+                mode = mode,
+                onMode = { mode = it },
+                onLaunch = { puzzleId ->
+                    route = when (mode) {
+                        LaunchMode.DAILY -> Route.Play(puzzleId, difficulty, today)
+                        // A fresh nonce every tap is what makes a second random game a new board
+                        // rather than the one just finished.
+                        LaunchMode.RANDOM ->
+                            Route.Play(puzzleId, difficulty, null, freshNonce())
+                    }
+                },
+                onArchive = { puzzleId -> route = Route.Archive(puzzleId) },
+                onStats = { route = Route.Stats },
+            )
+        }
 
         Route.Stats -> StatsScreen(
             today = today,

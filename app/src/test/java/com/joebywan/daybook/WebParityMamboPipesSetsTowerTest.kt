@@ -14,16 +14,12 @@ import com.joebywan.daybook.puzzles.Tower
 import com.joebywan.daybook.puzzles.TowerState
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 
 /**
  * Mambo, Pipes, Sets and Tower on the web route, pinned the way [WebParityTest] pins Kings. The
- * web page prints the same lines under `?puzzle=<id>&dump` (see `web/.../MoreBoards.kt`), so the
- * two can be diffed line for line.
- *
- * Set `DAYBOOK_PARITY_DUMP` to a file path to also write every tier for 365 days from 2026-01-01
- * — the JVM half of the year-long diff against the browser, and against origin/main.
+ * web page prints the same lines under `?dump`, so the two can be diffed line for line;
+ * [WebParityDumpTest] writes the JVM's side of a whole year.
  */
 class WebParityMamboPipesSetsTowerTest {
 
@@ -43,21 +39,6 @@ class WebParityMamboPipesSetsTowerTest {
         assertEquals(FINGERPRINTS, lines.map { it.hashCode() })
     }
 
-    @Test
-    fun `dump a year of boards when asked`() {
-        val out = System.getenv("DAYBOOK_PARITY_DUMP") ?: return
-        val start = LocalDate.of(2026, 1, 1)
-        val lines = PUZZLES.flatMap { id ->
-            (0 until 365).flatMap { i ->
-                val date = start.plusDays(i.toLong())
-                Difficulty.entries.map { tier ->
-                    fingerprint(id, date.toString(), tier, DailySeed.seedFor(date, id, tier))
-                }
-            }
-        }
-        File(out).writeText(lines.joinToString("\n", postfix = "\n"))
-    }
-
     companion object {
         val PUZZLES = listOf(Mambo.id, Pipes.id, Sets.id, Tower.id)
 
@@ -67,7 +48,7 @@ class WebParityMamboPipesSetsTowerTest {
             LocalDate.of(2027, 2, 28),
         )
 
-        /** Same format as `boardFingerprint` in the web build's MoreBoards.kt. */
+        /** Same format as the web's `?dump` lines, which come from `core/ParityFingerprint.kt`. */
         fun fingerprint(id: String, date: String, tier: Difficulty, seed: Long): String {
             val head = "$id $date ${tier.name} seed=$seed"
             return when (id) {
