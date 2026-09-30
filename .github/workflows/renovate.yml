@@ -17,12 +17,14 @@ jobs:
   renovate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Self-hosted so this works without installing the Renovate GitHub App. If RENOVATE_TOKEN
       # (a PAT) is set, Renovate's pull requests also trigger CI, which is what makes automerge
       # safe; with the default GITHUB_TOKEN they do not.
-      - uses: renovatebot/github-action@v41
+      # This action publishes only full version tags; a bare major like `@v41` does not resolve,
+      # and every run failed at "Set up job" until it was pinned exactly. Renovate bumps it.
+      - uses: renovatebot/github-action@v46.3.6
         with:
           token: ${{ secrets.RENOVATE_TOKEN || github.token }}
         env:
