@@ -629,8 +629,12 @@ object Mosaic : PuzzleType {
          * A radius bound is tempting here and is wrong: two blobs can grow from opposite ends of
          * the board and only meet on the last fill, so nothing forces the line to spread out of a
          * single centre.
+         *
+         * Past [cutoff] the exact value stops mattering — the caller only asks whether the bound
+         * exceeds what is left — so a colour count already over it is returned without the two
+         * sweeps. That changes no answer, only how often the sweeps run.
          */
-        private fun bound(pos: Position): Int {
+        private fun bound(pos: Position, cutoff: Int = Int.MAX_VALUE): Int {
             if (pos.count <= 1) return 0
             var present = 0L
             var bits = pos.alive
@@ -640,6 +644,7 @@ object Mosaic : PuzzleType {
                 present = present or (1L shl pos.hue[j])
             }
             val byColour = present.countOneBits() - 1
+            if (byColour > cutoff) return byColour
             val first = sweep(pos, pos.alive.countTrailingZeroBits())
             val spread = sweep(pos, (first ushr 32).toInt()).toInt()
             return maxOf(byColour, (spread + 1) / 2)
@@ -679,7 +684,7 @@ object Mosaic : PuzzleType {
             }
             if (spent++ > budget) return false
             val remaining = ceiling - depth
-            if (bound(pos) > remaining) return false
+            if (bound(pos, remaining) > remaining) return false
             val key = fingerprint(pos)
             if ((failedAt[key] ?: -1) >= remaining) return false
             for (move in candidates(pos)) {
