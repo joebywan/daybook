@@ -1,5 +1,10 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,29 +21,41 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -372,6 +389,174 @@ object Mambo : PuzzleType {
         return s.withCell(blank, s.solution[blank])
     }
 
+    // ---- teaching -----------------------------------------------------------------------------
+
+    /**
+     * A mistake to take back or a step to reason out — see [MamboTeacher]. Replaces [hint], which
+     * copied a square straight out of [MamboState.solution] and taught nothing; [hint] stays only
+     * as the contract's fallback for a puzzle that does not teach.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as MamboState
+        val step = MamboTeacher.teach(s) ?: return null
+        val base = s.cells
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = step.targets,
+            mistake = step.technique == MamboTeacher.MISTAKE,
+            fallback = step.technique == MamboTeacher.FALLBACK,
+            applyTo = { now -> applyStep(now as MamboState, step) },
+            reachedBy = { now ->
+                val m = now as MamboState
+                // A sun is two taps, and the moon on the way is not "that's it": only the symbol the
+                // step names counts. A mistake is reached once the wrong symbol is gone, whether the
+                // player cleared it or tapped it round to the right one.
+                step.places.all { (i, sym) -> m.cells[i] == sym } &&
+                    step.clears.all { m.cells[it] != base[it] }
+            },
+        )
+    }
+
+    /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
+    private fun applyStep(s: MamboState, step: MamboTeacher.Step): MamboState {
+        val next = s.cells.toMutableList()
+        var changed = 0
+        step.clears.forEach { if (!s.givens[it] && next[it] != Sym.NONE) { next[it] = Sym.NONE; changed++ } }
+        step.places.forEach { (i, sym) -> if (!s.givens[i] && next[i] != sym) { next[i] = sym; changed++ } }
+        return if (changed == 0) s else s.copy(cells = next, moves = s.moves + changed)
+    }
+
+    // ---- walkthrough --------------------------------------------------------------------------
+
+    private const val TUTORIAL_N = 6
+
+    /**
+     * The walkthrough's answer, reading order (S sun, M moon):
+     * ```
+     * S M M S S M
+     * S M S S M M
+     * M S S M M S
+     * S S M M S M
+     * M M S S M S
+     * M S M M S S
+     * ```
+     *
+     * Hand-picked (by a search over random grids) so the moves the frames teach are moves the board
+     * needs, in order, and every one but the sun is a single tap: column 3's two given suns push a
+     * moon above them; the x in row 2 turns the given sun beside it into a moon; row 4's gap between
+     * two moons is a sun, placed in two taps so the player sees the tap cycle and the red ring on
+     * the way; and column 3 then has its three suns, leaving one moon. MamboTeachingTest proves the
+     * board has exactly one answer and that the simple techniques finish it.
+     */
+    internal val TUTORIAL_SOLUTION: List<Sym> = "SMMSSM SMSSMM MSSMMS SSMMSM MMSSMS MSMMSS"
+        .filter { it != ' ' }
+        .map { if (it == 'S') Sym.SUN else Sym.MOON }
+
+    internal val TUTORIAL_GIVENS = setOf(8, 13, 14, 20, 21, 23, 26, 30)
+
+    internal val TUTORIAL_LINKS = listOf(Link(7, 8, false), Link(29, 35, true), Link(32, 33, true))
+
+    private fun tutorialBoard(vararg placed: Pair<Int, Sym>): MamboState {
+        val cells = MutableList(TUTORIAL_N * TUTORIAL_N) {
+            if (it in TUTORIAL_GIVENS) TUTORIAL_SOLUTION[it] else Sym.NONE
+        }
+        placed.forEach { (i, sym) -> cells[i] = sym }
+        return MamboState(
+            size = TUTORIAL_N,
+            givens = List(TUTORIAL_N * TUTORIAL_N) { it in TUTORIAL_GIVENS },
+            cells = cells,
+            links = TUTORIAL_LINKS,
+            solution = TUTORIAL_SOLUTION,
+        )
+    }
+
+    /**
+     * Accepts exactly [base] with [cell] set to [sym] and nothing else. Strict on purpose: each
+     * frame's board is written for the one before it.
+     */
+    private fun only(base: MamboState, cell: Int, sym: Sym): (PuzzleState) -> Boolean = { next ->
+        next is MamboState && next.cells.indices.all { i -> next.cells[i] == if (i == cell) sym else base.cells[i] }
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val solved = tutorialBoard().copy(cells = TUTORIAL_SOLUTION)
+        val start = tutorialBoard()
+        val capped = tutorialBoard(2 to Sym.MOON)
+        val linked = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON)
+        val passing = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON, 22 to Sym.MOON)
+        val filled = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON, 22 to Sym.SUN)
+        val counted = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON, 22 to Sym.SUN, 32 to Sym.MOON)
+        listOf(
+            TutorialFrame(
+                state = solved,
+                caption = "Fill every square with a sun or a moon. Each row and each column holds " +
+                    "three of each, like the glowing row.",
+                highlight = BoardHighlight(strong = (0 until TUTORIAL_N).toSet()),
+            ),
+            TutorialFrame(
+                state = solved,
+                caption = "Never more than two alike side by side. An = between two squares means " +
+                    "they match; an x means they differ.",
+                highlight = BoardHighlight(strong = setOf(7, 8), soft = setOf(29, 35, 32, 33)),
+            ),
+            TutorialFrame(
+                state = start,
+                caption = "Two suns sit together in column 3, so the square above them must be a " +
+                    "moon, or there'd be three suns. Tap it once for a moon.",
+                highlight = BoardHighlight(strong = setOf(2), soft = setOf(8, 14)),
+                accepts = only(start, 2, Sym.MOON),
+                retry = "Tap the glowing square once.",
+                done = "A moon.",
+            ),
+            TutorialFrame(
+                state = capped,
+                caption = "The x says these two differ. The right one is a sun, so the glowing one is " +
+                    "a moon. Tap it once.",
+                highlight = BoardHighlight(strong = setOf(7), soft = setOf(8)),
+                accepts = only(capped, 7, Sym.MOON),
+                retry = "Tap the glowing square once.",
+                done = "A moon.",
+            ),
+            TutorialFrame(
+                state = linked,
+                caption = "In row 4, the gap between two moons must be a sun. A tap goes moon, then " +
+                    "sun, then empty, so start with one tap.",
+                highlight = BoardHighlight(strong = setOf(22), soft = setOf(21, 23)),
+                accepts = only(linked, 22, Sym.MOON),
+                retry = "Tap the glowing square once.",
+                done = "That's three moons together, for now.",
+            ),
+            TutorialFrame(
+                state = passing,
+                caption = "Three moons together breaks the rules, so after a moment the board rings " +
+                    "them in red. Tap again to make it a sun.",
+                highlight = BoardHighlight(strong = setOf(22), soft = setOf(21, 23)),
+                accepts = only(passing, 22, Sym.SUN),
+                retry = "Tap the glowing square once more.",
+                done = "A sun, and the red ring goes.",
+            ),
+            TutorialFrame(
+                state = filled,
+                caption = "Column 3 now has its three suns, so its last square must be a moon. " +
+                    "Tap it once.",
+                highlight = BoardHighlight(strong = setOf(32), soft = setOf(8, 14, 26)),
+                accepts = only(filled, 32, Sym.MOON),
+                retry = "Tap the glowing square once.",
+                done = "A moon.",
+            ),
+            TutorialFrame(
+                state = counted,
+                caption = "Your turn: finish the board. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
+        )
+    }
+
     /**
      * How long the board must sit untouched before a rule break is shown.
      *
@@ -691,15 +876,39 @@ object Mambo : PuzzleType {
             .map { it.cells[0] to it.cells[1] }
             .toSet()
 
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // A glow that breathes is findable at a glance on a 10x10 board; a static ring is not much
+        // louder than the violation rings. Only runs while something glows, and is read in the draw
+        // phase, so it repaints the rings without recomposing the board every frame.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
+        fun named(i: Int) = highlight.isEmpty || i in highlight.strong || i in highlight.soft
+
         Column(Modifier.fillMaxWidth()) {
-            BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
-                val board = maxWidth
+            // Sized from both axes (CLAUDE.md). The caption below is measured first, because it
+            // carries no weight, and the grid gets what height is left: under the hint slot a
+            // teaching puzzle reserves, a short phone has less height than width to give, and a
+            // grid sized from width alone would push its own caption down over the hint panel.
+            BoxWithConstraints(
+                Modifier.weight(1f, fill = false).fillMaxWidth().padding(12.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                val board = if (constraints.hasBoundedHeight) minOf(maxWidth, maxHeight) else maxWidth
                 val cell = board / s.size
                 val cellPx = with(LocalDensity.current) { cell.toPx() }
                 Box(
                     Modifier
                         .size(board)
-                        .pointerInput(s, interactive) {
+                        .pointerInput(s, interactive, cellPx) {
                             if (!interactive) return@pointerInput
                             detectTapGestures { offset: Offset ->
                                 val c = (offset.x / cellPx).toInt().coerceIn(0, s.size - 1)
@@ -732,6 +941,14 @@ object Mambo : PuzzleType {
                                 sym = s.cells[i],
                                 given = s.givens[i],
                                 ringed = i in ringed,
+                                look = when {
+                                    i in highlight.strong -> Look.STRONG
+                                    i in highlight.soft -> Look.SOFT
+                                    named(i) -> Look.PLAIN
+                                    else -> Look.DIM
+                                },
+                                glow = glow,
+                                pulse = { pulse.value },
                                 modifier = Modifier
                                     .padding(start = cell * c, top = cell * r)
                                     .size(cell)
@@ -750,10 +967,11 @@ object Mambo : PuzzleType {
                             diameter = badge,
                             same = link.same,
                             broken = (link.a to link.b) in brokenLinks,
-                            modifier = Modifier.padding(
-                                start = x - badge / 2,
-                                top = y - badge / 2,
-                            ),
+                            modifier = Modifier
+                                .padding(start = x - badge / 2, top = y - badge / 2)
+                                // A link steps back with the squares it joins unless the hint
+                                // names one of them, so the one it leans on stands out.
+                                .alpha(if (named(link.a) || named(link.b)) 1f else DIM_ALPHA),
                         )
                     }
                 }
@@ -791,7 +1009,15 @@ object Mambo : PuzzleType {
      * the puzzle, and left the board with four symbol colours to tell apart instead of two.
      */
     @Composable
-    private fun MamboCell(sym: Sym, given: Boolean, ringed: Boolean, modifier: Modifier) {
+    private fun MamboCell(
+        sym: Sym,
+        given: Boolean,
+        ringed: Boolean,
+        modifier: Modifier,
+        look: Look = Look.PLAIN,
+        glow: Color = Color.Unspecified,
+        pulse: () -> Float = { 1f },
+    ) {
         val scheme = MaterialTheme.colorScheme
         val shape = RoundedCornerShape(22)
         val fill = when (sym) {
@@ -801,12 +1027,33 @@ object Mambo : PuzzleType {
             // Mambo's accent: the pale blue the puzzle is already known by on the home grid.
             Sym.MOON -> Color(accent)
             Sym.NONE -> scheme.surfaceVariant
+        }.let {
+            // Stepping back means fading toward the page, not going see-through: the violation halo
+            // is drawn under the tiles and would bleed through a translucent one.
+            if (look == Look.DIM) it.copy(alpha = DIM_ALPHA).compositeOver(scheme.background) else it
         }
         Box(
             modifier
                 .clip(shape)
                 .background(fill)
-                .then(if (ringed) Modifier.border(2.dp, scheme.error, shape) else Modifier),
+                .then(if (ringed) Modifier.border(2.dp, scheme.error, shape) else Modifier)
+                .then(
+                    when (look) {
+                        Look.STRONG -> Modifier.drawWithContent {
+                            drawContent()
+                            val w = 3.dp.toPx()
+                            drawRoundRect(
+                                glow.copy(alpha = pulse()),
+                                topLeft = Offset(w / 2, w / 2),
+                                size = Size(size.width - w, size.height - w),
+                                cornerRadius = CornerRadius(size.minDimension * 0.22f),
+                                style = Stroke(w),
+                            )
+                        }
+                        Look.SOFT -> Modifier.border(1.5.dp, glow.copy(alpha = 0.5f), shape)
+                        else -> Modifier
+                    }
+                ),
             contentAlignment = Alignment.Center,
         ) {
             if (sym != Sym.NONE) {
@@ -817,4 +1064,10 @@ object Mambo : PuzzleType {
             }
         }
     }
+
+    /** How a hint asks a square to be drawn: glowing, quietly marked, as usual, or stepped back. */
+    private enum class Look { STRONG, SOFT, PLAIN, DIM }
+
+    /** How far a square or link the hint does not name fades toward the page. */
+    private const val DIM_ALPHA = 0.4f
 }
