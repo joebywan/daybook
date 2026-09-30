@@ -53,10 +53,11 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import com.joebywan.daybook.platform.formatDate
+import kotlinx.datetime.LocalDate
 
-private val HeaderDate = DateTimeFormatter.ofPattern("EEEE d MMMM")
+/** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
+private const val HEADER_DATE = "EEEE d MMMM"
 
 /**
  * Eleven puzzles at three columns is four rows, and four rows of tiles plus a header and the
@@ -167,7 +168,7 @@ private fun Header(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            today.format(HeaderDate),
+            formatDate(today, HEADER_DATE),
             style = MaterialTheme.typography.bodyMedium,
             color = scheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),

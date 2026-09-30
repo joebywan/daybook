@@ -1,21 +1,17 @@
 package com.joebywan.daybook.data
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.platform.currentTimeMillis
 import com.joebywan.daybook.puzzles.PuzzleState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.time.LocalDate
-
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "daybook")
 
 /**
  * Lenient on purpose. A board saved by an older build whose state class has since gained or lost a
@@ -36,7 +32,7 @@ data class Completion(
     val hints: Int,
 ) {
     fun encode(): String =
-        listOf(puzzleId, difficulty.name, day?.toEpochDay()?.toString() ?: "-", seconds, hints)
+        listOf(puzzleId, difficulty.name, day?.toEpochDays()?.toString() ?: "-", seconds, hints)
             .joinToString("|")
 
     companion object {
@@ -46,7 +42,7 @@ data class Completion(
             return Completion(
                 puzzleId = parts[0],
                 difficulty = Difficulty.fromKey(parts[1]),
-                day = parts[2].toLongOrNull()?.let(LocalDate::ofEpochDay),
+                day = parts[2].toLongOrNull()?.let { LocalDate.fromEpochDays(it) },
                 seconds = parts[3].toIntOrNull() ?: return null,
                 hints = parts[4].toIntOrNull() ?: return null,
             )
@@ -127,17 +123,16 @@ object SavedGames {
 
 /**
  * All saved progress. Local only — there is no account, no sync and no network permission.
+ *
+ * [store] is the [KeyValueStore.PROGRESS] file: DataStore on Android, `localStorage` on the web.
  */
-class ProgressStore(private val context: Context) {
+class ProgressStore(private val store: KeyValueStore) {
 
     val completions: Flow<List<Completion>> =
-        context.dataStore.data.map { prefs ->
-            prefs[KEY_COMPLETIONS].orEmpty().mapNotNull(Completion::decode)
-        }
+        store.stringSet(KEY_COMPLETIONS).map { raw -> raw.mapNotNull(Completion::decode) }
 
     suspend fun record(completion: Completion) {
-        context.dataStore.edit { prefs ->
-            val existing = prefs[KEY_COMPLETIONS].orEmpty()
+        store.updateStringSet(KEY_COMPLETIONS) { existing ->
             // A given daily puzzle is only ever recorded once; re-solves do not inflate stats.
             val isDuplicate = completion.day != null && existing.any { raw ->
                 val other = Completion.decode(raw)
@@ -145,37 +140,35 @@ class ProgressStore(private val context: Context) {
                     other.difficulty == completion.difficulty &&
                     other.day == completion.day
             }
-            if (!isDuplicate) {
-                prefs[KEY_COMPLETIONS] = existing + completion.encode()
-            }
+            if (isDuplicate) existing else existing + completion.encode()
         }
     }
 
     /** The game in progress on this board, if one was left behind. */
     suspend fun savedGame(key: String): SavedGame? =
-        SavedGames.find(context.dataStore.data.first().savedGames(), key)
+        SavedGames.find(store.stringSet(KEY_SAVED).first().savedGames(), key)
 
     suspend fun saveGame(key: String, game: SavedGame) {
-        context.dataStore.edit { prefs ->
-            val entry = StoredGame(key, System.currentTimeMillis(), game)
-            prefs[KEY_SAVED] = SavedGames.upsert(prefs.savedGames(), entry).encodeAll()
+        store.updateStringSet(KEY_SAVED) { raw ->
+            val entry = StoredGame(key, currentTimeMillis(), game)
+            SavedGames.upsert(raw.savedGames(), entry).encodeAll()
         }
     }
 
     suspend fun clearSavedGame(key: String) {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_SAVED] = SavedGames.without(prefs.savedGames(), key).encodeAll()
+        store.updateStringSet(KEY_SAVED) { raw ->
+            SavedGames.without(raw.savedGames(), key).encodeAll()
         }
     }
 
-    private fun Preferences.savedGames(): List<StoredGame> =
-        this[KEY_SAVED].orEmpty().mapNotNull(StoredGame::decode)
+    private fun Set<String>.savedGames(): List<StoredGame> = mapNotNull(StoredGame::decode)
 
     private fun List<StoredGame>.encodeAll(): Set<String> = map(StoredGame::encode).toSet()
 
     private companion object {
-        val KEY_COMPLETIONS = stringSetPreferencesKey("completions")
-        val KEY_SAVED = stringSetPreferencesKey("saved_games")
+        // DataStore keys on Android; they name what is already on every phone, so never rename.
+        const val KEY_COMPLETIONS = "completions"
+        const val KEY_SAVED = "saved_games"
     }
 }
 
@@ -194,12 +187,12 @@ object Stats {
     fun currentStreak(all: List<Completion>, today: LocalDate): Int {
         val days = all.mapNotNull { it.day }.toSet()
         if (days.isEmpty()) return 0
-        var cursor = if (today in days) today else today.minusDays(1)
+        var cursor = if (today in days) today else today.minus(1, DateTimeUnit.DAY)
         if (cursor !in days) return 0
         var streak = 0
         while (cursor in days) {
             streak++
-            cursor = cursor.minusDays(1)
+            cursor = cursor.minus(1, DateTimeUnit.DAY)
         }
         return streak
     }
@@ -210,7 +203,7 @@ object Stats {
         var best = 1
         var run = 1
         for (i in 1..days.lastIndex) {
-            run = if (days[i - 1].plusDays(1) == days[i]) run + 1 else 1
+            run = if (days[i - 1].plus(1, DateTimeUnit.DAY) == days[i]) run + 1 else 1
             if (run > best) best = run
         }
         return best

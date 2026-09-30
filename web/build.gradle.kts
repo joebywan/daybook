@@ -20,6 +20,30 @@ val sharedFromApp = listOf(
     "com/joebywan/daybook/ui/theme/Palette.kt",
 )
 
+// The app shell — navigation, screens, theme, saves — compiled from app/ as well. Where these files
+// need the platform (storage, dates, back button) they call platform/, which each build supplies:
+// app/'s AndroidPlatform.kt there, and web/'s WebPlatform.kt here.
+val shellFromApp = listOf(
+    "com/joebywan/daybook/core/DailySeed.kt",
+    "com/joebywan/daybook/data/KeyValueStore.kt",
+    "com/joebywan/daybook/data/ProgressStore.kt",
+    "com/joebywan/daybook/ui/DaybookApp.kt",
+    "com/joebywan/daybook/ui/archive/ArchiveScreen.kt",
+    "com/joebywan/daybook/ui/home/HomeScreen.kt",
+    "com/joebywan/daybook/ui/home/LaunchOptions.kt",
+    "com/joebywan/daybook/ui/play/PlayScreen.kt",
+    "com/joebywan/daybook/ui/stats/StatsScreen.kt",
+    "com/joebywan/daybook/ui/theme/Theme.kt",
+)
+
+// web/'s own files outside its `web` package. Named rather than globbed, because the include
+// patterns apply to app/'s source directory too, and app/ has files in these packages.
+val webOwnFiles = listOf(
+    "com/joebywan/daybook/platform/WebPlatform.kt",
+    // TEMPORARY until every puzzle is in sharedFromApp; see the file.
+    "com/joebywan/daybook/core/WebPuzzleRegistry.kt",
+)
+
 kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
@@ -41,6 +65,8 @@ kotlin {
         val wasmJsMain by getting {
             kotlin.srcDir(appSources)
             kotlin.include(sharedFromApp)
+            kotlin.include(shellFromApp)
+            kotlin.include(webOwnFiles)
             kotlin.include("com/joebywan/daybook/web/**")
             dependencies {
                 implementation(compose.runtime)
@@ -48,6 +74,11 @@ kotlin {
                 implementation(compose.material3)
                 implementation(compose.ui)
                 implementation(libs.kotlinx.serialization.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.datetime)
+                // The shell's icons are the same Material ones Android uses. Kotlin/Wasm drops
+                // every icon nothing references, so the whole set costs only the few in use.
+                implementation(compose.materialIconsExtended)
             }
         }
     }

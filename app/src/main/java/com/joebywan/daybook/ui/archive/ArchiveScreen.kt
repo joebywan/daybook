@@ -35,10 +35,14 @@ import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import com.joebywan.daybook.platform.BackButton
+import com.joebywan.daybook.platform.formatDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 
-private val RowDate = DateTimeFormatter.ofPattern("EEE d MMM yyyy")
+/** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
+private const val ROW_DATE = "EEE d MMM yyyy"
 
 /**
  * The whole back catalogue, free.
@@ -56,12 +60,13 @@ fun ArchiveScreen(
     today: LocalDate,
     completions: List<Completion>,
     onPlay: (LocalDate, Difficulty) -> Unit,
+    onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val puzzle = PuzzleRegistry.byId(puzzleId) ?: return
     val days = remember(today) {
-        generateSequence(today) { it.minusDays(1) }
-            .takeWhile { !it.isBefore(DailySeed.EPOCH) }
+        generateSequence(today) { it.minus(1, DateTimeUnit.DAY) }
+            .takeWhile { it >= DailySeed.EPOCH }
             .toList()
     }
     val done = completions.filter { it.puzzleId == puzzleId }
@@ -74,26 +79,30 @@ fun ArchiveScreen(
             .background(scheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)
-        ) {
-            Text(
-                "${puzzle.displayName} archive",
-                style = MaterialTheme.typography.titleLarge,
-                color = scheme.onBackground,
-            )
-            Text(
-                "${days.size} days, all unlocked",
-                style = MaterialTheme.typography.labelLarge,
-                color = scheme.onSurfaceVariant,
-            )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // Nothing on Android, where the system back button is the way out.
+            BackButton(onBack)
+            Column(
+                Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)
+            ) {
+                Text(
+                    "${puzzle.displayName} archive",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = scheme.onBackground,
+                )
+                Text(
+                    "${days.size} days, all unlocked",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = scheme.onSurfaceVariant,
+                )
+            }
         }
 
         LazyColumn(
             contentPadding = PaddingValues(18.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(days, key = { it.toEpochDay() }) { day ->
+            items(days, key = { it.toEpochDays() }) { day ->
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -102,7 +111,7 @@ fun ArchiveScreen(
                         .padding(14.dp),
                 ) {
                     Text(
-                        day.format(RowDate) + if (day == today) "  ·  today" else "",
+                        formatDate(day, ROW_DATE) + if (day == today) "  ·  today" else "",
                         style = MaterialTheme.typography.titleMedium,
                         color = scheme.onSurface,
                     )

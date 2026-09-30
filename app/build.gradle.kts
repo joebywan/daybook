@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.datetime)
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)
