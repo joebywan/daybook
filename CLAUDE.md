@@ -211,6 +211,9 @@ writes the home grid's difficulty (it persists, like a tap would).
 - **Headless WebKit does not repaint after a screen change** until something prompts a frame: the
   new screen is composed (state and storage are right) but the canvas shows the old one. Harnesses
   dispatch a `resize` after each tap. Whether real Safari does this is unknown — check on an iPhone.
+- **The web has no system fonts:** text falls back to the one font Compose ships, which has no `→`
+  (U+2192) — Kings' walkthrough offer line ends in a tofu box on the web. Check any non-ASCII glyph
+  in a shared string by rendering it; the em dash, `·` and `•` are fine.
 - The Material icons: `compose.materialIconsExtended` costs 4.5 KB of wasm (<1 KB gzipped) over the
   core set, because Kotlin/Wasm drops every unreferenced icon.
 - **Another worktree's `./gradlew --stop` kills your daemon mid-build** ("stop command received").
