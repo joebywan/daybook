@@ -131,10 +131,16 @@ fun main() {
         for (i in 0 until range) {
             for (t in Difficulty.entries) println("RANGE ${fingerprint(Day.ofEpochDay(start + i), t)}")
         }
+        dumpShikakuSnapSudoku(
+            PARITY_DAYS.map { "$it" to it.epochDay },
+            (0 until range).map { Day.ofEpochDay(start + it).let { d -> "$d" to d.epochDay } },
+        )
     }
 
+    val other = params["puzzle"]?.let(::shikakuSnapSudoku)
     ComposeViewport(viewportContainerId = "app") {
-        KingsPage(day, tier, debug)
+        if (other != null) ShikakuSnapSudokuPage(other, "$day", day.epochDay, tier, debug)
+        else KingsPage(day, tier, debug)
     }
     removeLoadingNote()
     nudgeFirstFrame()
