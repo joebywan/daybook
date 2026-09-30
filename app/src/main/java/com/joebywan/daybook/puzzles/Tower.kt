@@ -432,8 +432,8 @@ object Tower : PuzzleType {
         if (!look.strong && !look.soft) this
         else drawWithContent {
             drawContent()
-            val w = (if (look.strong) 3.dp else 1.5.dp).toPx()
-            val gap = 2.dp.toPx()
+            val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
+            val gap = 1.dp.toPx()
             val colour = if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f)
             val out = gap + w / 2
             if (round) {
@@ -504,7 +504,7 @@ object Tower : PuzzleType {
                         val look = highlight.look(TowerTeacher.CURRENT + slot)
                         Box(
                             Modifier
-                                .padding(3.dp)
+                                .padding(horizontal = 4.dp, vertical = 3.dp)
                                 .size(34.dp)
                                 .ring(look, glow, pulse, round = true)
                                 .dimmed(look)
@@ -611,7 +611,7 @@ object Tower : PuzzleType {
             )
             guess.forEachIndexed { slot, colour ->
                 Box(
-                    Modifier.padding(horizontal = 3.dp, vertical = 2.dp).size(26.dp)
+                    Modifier.padding(horizontal = 4.dp, vertical = 2.dp).size(26.dp)
                         .ring(pegs[slot], glow, pulse, round = true)
                         .dimmed(pegs[slot])
                         .clip(CircleShape)

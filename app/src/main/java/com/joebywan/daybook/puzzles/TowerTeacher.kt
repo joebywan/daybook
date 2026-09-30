@@ -17,11 +17,14 @@ package com.joebywan.daybook.puzzles
  * - [ONE_CHANGE] — two guesses differ in one slot only and the filled count moved, so the slot was
  *   right in the guess that scored higher.
  * - [ONLY_LEFT] — every colour but one is ruled out of a slot. Colours are ruled out of a slot by a
- *   guess that scored nothing (its colours are nowhere), by a guess with no filled pips (none of
+ *   guess that scored nothing (its colours are nowhere), by a guess with a pip for every peg (the
+ *   code uses only its colours), by a guess with no filled pips (none of
  *   its pegs is in place), by two guesses that differ only there and scored the same (neither colour
  *   is right there), or by a guess whose filled pips are all used up by slots already known.
  * - [ACCOUNTED] — a guess's filled pips must sit on the pegs not already ruled out, because exactly
  *   that many are left.
+ * - [WHAT_IF] — supposing a slot were anything but one colour, a step or two of the rules above
+ *   leaves some guess unable to score what it scored, or some slot with no colour.
  *
  * Only facts that can be explained are ever learned: a fact whose sentence would not fit the hint
  * panel is not added, so nothing later can lean on a fact the player was never shown. Facts are
@@ -38,15 +41,23 @@ internal object TowerTeacher {
     const val ONE_CHANGE = "one-change"
     const val ONLY_LEFT = "only-colour-left"
     const val ACCOUNTED = "pips-accounted"
+    const val WHAT_IF = "what-if"
     const val SUBMIT = "submit"
     const val ONLY_CODE = "only-code-left"
     const val CONSISTENT = "consistent-guess"
 
     /** The one-sentence slot facts. */
-    val FACTS = listOf(ONE_CHANGE, ONLY_LEFT, ACCOUNTED)
+    val FACTS = listOf(ONE_CHANGE, ONLY_LEFT, ACCOUNTED, WHAT_IF)
 
     /** Every step [deduce] can produce, for reports. */
-    val TECHNIQUES = listOf(OPENER, ONE_CHANGE, ONLY_LEFT, ACCOUNTED, SUBMIT, ONLY_CODE, CONSISTENT, MISTAKE)
+    val TECHNIQUES = listOf(OPENER, ONE_CHANGE, ONLY_LEFT, ACCOUNTED, WHAT_IF, SUBMIT, ONLY_CODE, CONSISTENT, MISTAKE)
+
+    /**
+     * How many rule steps a [WHAT_IF] may walk through between its supposition and the
+     * contradiction. As with Kings, past two it stops being a sentence anyone can hold while
+     * looking at the board — and the panel's length limit usually says so first.
+     */
+    const val MAX_CHAIN = 2
 
     /**
      * The hint panel shows four lines of body text, about 170 characters on a phone. A fact whose
@@ -118,6 +129,9 @@ internal object TowerTeacher {
         /** Guess [g] scored no pips at all, so none of its colours is in the code. */
         data class Nothing(val g: Int) : Why
 
+        /** Guess [g] scored a pip for every peg, so the code uses only its colours. */
+        data class Complete(val g: Int) : Why
+
         /** Guess [g] had this colour in this slot and scored no filled pips. */
         data class NoFilled(val g: Int) : Why
 
@@ -179,6 +193,9 @@ internal object TowerTeacher {
                 if (fb.exact + fb.misplaced == 0) {
                     for (c in guesses[g]) if (absent[c] == null) absent[c] = Why.Nothing(g)
                 }
+                if (fb.exact + fb.misplaced == slots) {
+                    for (c in 0 until colours) if (c !in guesses[g] && absent[c] == null) absent[c] = Why.Complete(g)
+                }
                 if (fb.exact == 0) {
                     for (i in 0 until slots) {
                         val c = guesses[g][i]
@@ -216,9 +233,58 @@ internal object TowerTeacher {
             }
             var changed = true
             while (changed) {
-                changed = accounted() || onlyLeft()
+                changed = accounted() || onlyLeft() || whatIf()
             }
         }
+
+        /**
+         * One [WHAT_IF]: the shortest supposition "slot i isn't x" that the rules walk into a
+         * contradiction, over every open slot and colour. True if it learned anything.
+         */
+        private fun whatIf(): Boolean {
+            for (chain in 0..MAX_CHAIN) {
+                for (i in 0 until slots) {
+                    if (known[i] != null) continue
+                    for (x in 0 until colours) {
+                        if (excluded(i, x) != null) continue
+                        val sim = sim()
+                        sim.out[i][x] = true
+                        val steps = mutableListOf<Pair<String, Int>>()
+                        var clash = sim.contradiction()
+                        while (clash == null && steps.size < chain) {
+                            steps += sim.derive() ?: break
+                            clash = sim.contradiction()
+                        }
+                        if (clash == null || steps.size != chain) continue
+                        val name = colourNames[x]
+                        val walk = steps.joinToString(", then ") { it.first }
+                        val text = "If slot ${i + 1} weren't $name, " +
+                            (if (walk.isEmpty()) "" else "$walk, and ") +
+                            "${clash.first}. So slot ${i + 1} is $name."
+                        if (text.length > MAX_EXPLANATION) continue
+                        val rows = (steps.map { it.second } + clash.second).filter { it >= 0 }.distinct().sorted()
+                        add(
+                            Fact(
+                                i, x, WHAT_IF,
+                                nudge = "What must slot ${i + 1} be? Try supposing otherwise.",
+                                explanation = text,
+                                focus = rows.flatMap { rowCells(it) }.toSet() + (CURRENT + i),
+                                cited = rows.map { PIPS + it }.toSet(),
+                            ),
+                        )
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+
+        private fun sim() = Sim(
+            slots, colours, guesses, feedback,
+            IntArray(slots) { known[it]?.colour ?: -1 },
+            BooleanArray(colours) { absent[it] != null },
+            Array(slots) { i -> BooleanArray(colours) { ruledOut[i][it] != null } },
+        )
 
         private fun rowCells(g: Int): Set<Int> = (0 until slots).map { peg(slots, g, it) }.toSet() + (PIPS + g)
 
@@ -270,7 +336,12 @@ internal object TowerTeacher {
                 }
                 if (wrong.isNotEmpty()) {
                     val reasons = wrong.map { whyClause(it, excluded(it, guess[it])!!) }.distinct()
-                    add(pegs(wrong) + " can't be" + (if (right.isEmpty()) " one" else "") + " (${join(reasons)})")
+                    val which = when {
+                        right.isNotEmpty() -> ""
+                        wrong.size == 1 -> " one"
+                        else -> " any"
+                    }
+                    add(pegs(wrong) + " can't be$which (${join(reasons)})")
                 }
             }
             val rest = if (open.size == 1) "its last peg is right" else "its other pegs are right"
@@ -314,6 +385,7 @@ internal object TowerTeacher {
             for (r in reasons) {
                 val key = when (val w = r.second) {
                     is Why.Nothing -> "nothing"
+                    is Why.Complete -> "complete ${w.g}"
                     is Why.NoFilled -> "nofilled"
                     is Why.SameScore -> "same ${w.a} ${w.b}"
                     is Why.Accounted -> "accounted"
@@ -328,6 +400,7 @@ internal object TowerTeacher {
                 val guessesWord = guessList(rows)
                 val clause = when (val w = why[0]) {
                     is Why.Nothing -> "$guessesWord scored nothing"
+                    is Why.Complete -> "guess ${w.g + 1} has a pip for every peg"
                     is Why.NoFilled ->
                         "$guessesWord had ${if (group.size == 1) "it" else "them"} there, no filled pip"
                     is Why.SameScore -> "guesses ${w.a + 1} and ${w.b + 1} differ only there, same score"
@@ -342,6 +415,7 @@ internal object TowerTeacher {
         /** The guesses a reason cites. */
         fun whyRows(w: Why): List<Int> = when (w) {
             is Why.Nothing -> listOf(w.g)
+            is Why.Complete -> listOf(w.g)
             is Why.NoFilled -> listOf(w.g)
             is Why.SameScore -> listOf(w.a, w.b)
             is Why.Accounted -> listOf(w.g)
@@ -351,6 +425,7 @@ internal object TowerTeacher {
         /** A reason as a short clause, for inside brackets. */
         fun whyClause(slot: Int, w: Why): String = when (w) {
             is Why.Nothing -> "guess ${w.g + 1} scored nothing"
+            is Why.Complete -> "guess ${w.g + 1} has a pip for every peg"
             is Why.NoFilled -> "guess ${w.g + 1} had it there, no filled pip"
             is Why.SameScore -> "guesses ${w.a + 1} and ${w.b + 1} differ only there, same score"
             is Why.Accounted -> "guess ${w.g + 1}'s filled pips are used up"
@@ -362,6 +437,8 @@ internal object TowerTeacher {
             val name = colourNames[colour]
             return when (w) {
                 is Why.Nothing -> "Guess ${w.g + 1} scored nothing, so $name isn't in the code."
+                is Why.Complete -> "Guess ${w.g + 1} has a pip for every peg, so the code uses only its colours, " +
+                    "and $name isn't one of them."
                 is Why.NoFilled -> "Guess ${w.g + 1} had $name in slot ${slot + 1} and no filled pips, " +
                     "so slot ${slot + 1} isn't $name."
                 is Why.SameScore -> "Guesses ${w.a + 1} and ${w.b + 1} differ only in slot ${slot + 1} and have the " +
@@ -375,6 +452,84 @@ internal object TowerTeacher {
                     if (head.length + 1 + why.length <= MAX_EXPLANATION) "$head $why" else head
                 }
             }
+        }
+    }
+
+    /**
+     * The rules again, stripped of their words, for walking a supposition. Each [derive] applies
+     * one rule and says what it found; [contradiction] says what can no longer happen. Both return
+     * the guess they lean on (or -1) so the hint can point at it.
+     */
+    private class Sim(
+        val slots: Int,
+        val colours: Int,
+        val guesses: List<List<Int>>,
+        val feedback: List<Feedback>,
+        val known: IntArray,
+        val absent: BooleanArray,
+        val out: Array<BooleanArray>,
+    ) {
+        fun excluded(i: Int, c: Int) = (known[i] >= 0 && known[i] != c) || absent[c] || out[i][c]
+
+        fun contradiction(): Pair<String, Int>? {
+            for (i in 0 until slots) {
+                if (known[i] < 0 && (0 until colours).all { excluded(i, it) }) {
+                    return "slot ${i + 1} would have no colour left" to -1
+                }
+            }
+            for (g in guesses.indices) {
+                val guess = guesses[g]
+                val f = feedback[g].exact
+                val right = (0 until slots).count { known[it] == guess[it] }
+                val open = (0 until slots).count { known[it] != guess[it] && !excluded(it, guess[it]) }
+                if (right > f) return "guess ${g + 1} would have more than ${count(f, "filled pip")}" to g
+                if (right + open < f) return "guess ${g + 1} couldn't reach its ${count(f, "filled pip")}" to g
+            }
+            // Pips of either kind count colours: guess g can't match more of a colour than the code
+            // could still hold, nor fewer than the code is already known to hold.
+            for (g in guesses.indices) {
+                val guess = guesses[g]
+                val t = feedback[g].exact + feedback[g].misplaced
+                var most = 0
+                var least = 0
+                for (c in 0 until colours) {
+                    val inGuess = guess.count { it == c }
+                    if (inGuess == 0) continue
+                    most += minOf(inGuess, (0 until slots).count { !excluded(it, c) })
+                    least += minOf(inGuess, known.count { it == c })
+                }
+                if (most < t) return "guess ${g + 1} couldn't reach its ${count(t, "pip")}" to g
+                if (least > t) return "guess ${g + 1} would have more than ${count(t, "pip")}" to g
+            }
+            return null
+        }
+
+        fun derive(): Pair<String, Int>? {
+            for (g in guesses.indices) {
+                val guess = guesses[g]
+                val f = feedback[g].exact
+                val right = (0 until slots).filter { known[it] == guess[it] }
+                val open = (0 until slots).filter { known[it] != guess[it] && !excluded(it, guess[it]) }
+                if (open.isEmpty()) continue
+                if (f == right.size) {
+                    open.forEach { out[it][guess[it]] = true }
+                    return "guess ${g + 1}'s filled pips would be used up" to g
+                }
+                if (f - right.size == open.size) {
+                    open.forEach { known[it] = guess[it] }
+                    val where = (if (open.size == 1) "slot " else "slots ") + join(open.map { "${it + 1}" })
+                    return "guess ${g + 1}'s filled pips would have to include $where" to g
+                }
+            }
+            for (i in 0 until slots) {
+                if (known[i] >= 0) continue
+                val left = (0 until colours).filter { !excluded(i, it) }
+                if (left.size == 1) {
+                    known[i] = left[0]
+                    return "slot ${i + 1} would have to be ${colourNames[left[0]]}" to -1
+                }
+            }
+            return null
         }
     }
 
@@ -529,12 +684,12 @@ internal object TowerTeacher {
             focus = empty.map { CURRENT + it }.toSet(),
             cited = emptySet(),
             targets = empty.map { CURRENT + it }.toSet(),
-            nudge = if (only) "Only one code still fits." else "No single slot is certain yet. Try a guess that fits every score.",
+            nudge = if (only) "Only one code still fits." else "Nothing short to read off yet. Try a guess that fits every score.",
             explanation = when {
                 only && space.size == 1 -> "Checked against every score, only one code still fits: $names."
                 only -> "With the pegs you've placed, only one code fits every score: $names."
-                else -> "No one slot can be read off the scores yet, so here's a guess that fits every " +
-                    "score so far: $names."
+                else -> "No slot has a short reason yet, so here's a guess that fits every score " +
+                    "so far: $names."
             },
         )
     }
