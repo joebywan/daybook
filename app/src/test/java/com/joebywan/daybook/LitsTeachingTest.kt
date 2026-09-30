@@ -213,6 +213,7 @@ class LitsTeachingTest {
             var uniqueFallback = 0
             var choiceSteps = 0
             var chainSteps = 0
+            var slowest = 0L
             for (seed in seeds(perTier, difficulty, "lits-coverage")) {
                 var s = Lits.generate(seed, difficulty) as LitsState
                 val unique = LitsOracle.answers(s.width, s.height, s.region, cap = 2).size == 1
@@ -221,7 +222,9 @@ class LitsTeachingTest {
                 var guard = 0
                 while (!s.solved) {
                     assertTrue("$difficulty/$seed: walk did not finish", guard++ < 200)
+                    val started = System.nanoTime()
                     val d = Lits.teach(s)!!
+                    slowest = maxOf(slowest, (System.nanoTime() - started) / 1_000_000)
                     assertFalse("$difficulty/$seed: a mistake on a board built from hints", d.mistake)
                     assertFits("$difficulty/$seed ${d.technique}", d)
                     stepCounts[d.technique] = stepCounts.getValue(d.technique) + 1
@@ -252,6 +255,7 @@ class LitsTeachingTest {
                 "  fallback: $choiceSteps steps a genuine choice, $chainSteps a longer chain; " +
                     "reached on $uniqueFallback of ${perTier - several} one-answer boards"
             )
+            report.appendLine("  slowest hint: $slowest ms (warm JVM)")
             // Measured at zero on every tier when this was written: on a board with one answer the
             // techniques always finish. More than one in fifty would mean they had stopped covering
             // what the generator makes.
@@ -415,6 +419,13 @@ class LitsTeachingTest {
             s = d.apply(s) as LitsState
         }
         assertEquals(Lits.TUTORIAL_SOLUTION, shadedOf(s))
+    }
+
+    @Test
+    fun `every walkthrough caption fits the panel`() {
+        for ((i, f) in Lits.tutorial.withIndex()) {
+            assertTrue("frame ${i + 1} caption is ${f.caption.length} chars", f.caption.length <= 170)
+        }
     }
 
     @Test

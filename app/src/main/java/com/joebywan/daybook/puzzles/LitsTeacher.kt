@@ -289,17 +289,29 @@ internal object LitsTeacher {
         if (offAnswer.isEmpty()) return null
         // Prefer the square whose clearing alone rescues the board: that one is the mistake, and
         // the others may only look wrong because of it.
-        val wrong = if (found is Search.NoAnswer) {
+        val rescuer = if (found is Search.NoAnswer) {
             offAnswer.firstOrNull { c ->
                 extend(layout, shaded.copyOf().also { it[c] = false }, emptySet()) is Search.Found
-            } ?: offAnswer.first()
+            }
         } else {
-            offAnswer.first()
+            null
         }
-        return explainMistake(layout, shaded, wrong)
+        val known = when {
+            rescuer != null -> Blame.RESCUES
+            found is Search.NoAnswer -> Blame.STUCK
+            else -> Blame.UNPROVED
+        }
+        return explainMistake(layout, shaded, rescuer ?: offAnswer.first(), known)
     }
 
-    private fun explainMistake(layout: Layout, shaded: BooleanArray, wrong: Int): Step {
+    /**
+     * What the search proved about a mistake, so its last-resort line claims no more: that clearing it
+     * alone rescues the board; that the shading as a whole has no answer but no one square is to
+     * blame; or nothing, because the search ran out ([Search.Unknown]).
+     */
+    private enum class Blame { RESCUES, STUCK, UNPROVED }
+
+    private fun explainMistake(layout: Layout, shaded: BooleanArray, wrong: Int, known: Blame): Step {
         val k = layout.of[wrong]
         val region = layout.cellsOf[k]
         val sight = Sight(layout, shaded, BooleanArray(layout.n))
@@ -334,7 +346,11 @@ internal object LitsTeacher {
                 region,
             )
         }
-        return step("This square can't be part of any finished board.", emptyList())
+        return when (known) {
+            Blame.RESCUES -> step("With the rest of your shading, this square can't be part of any finished board.", emptyList())
+            Blame.STUCK -> step("Your shading can't all be kept, and this square isn't in the answer.", emptyList())
+            Blame.UNPROVED -> step("This square isn't in the answer this board was made with.", emptyList())
+        }
     }
 
     /**
@@ -348,6 +364,8 @@ internal object LitsTeacher {
         val open = reference.sorted().filter { !shaded[it] }
         if (open.isEmpty()) return null
         val byTightness = open.sortedBy { sight.cand(layout.of[it]).size }
+        // A square every answer shades if one exists; otherwise the first square some answer leaves
+        // empty, so "a choice" is said of the very square pointed at; otherwise, unproved, the first.
         var pick = byTightness.first()
         var verdict: Search = Search.Unknown
         for (c in byTightness) {
@@ -357,7 +375,10 @@ internal object LitsTeacher {
                 verdict = v
                 break
             }
-            if (verdict is Search.Unknown && v is Search.Found) verdict = v
+            if (verdict is Search.Unknown && v is Search.Found) {
+                pick = c
+                verdict = v
+            }
         }
         val home = layout.cellsOf[layout.of[pick]].toSet()
         return when (verdict) {
