@@ -74,15 +74,15 @@ internal object SetsTeacher {
     /** One clause per trait, in [describe]'s order: what [a] and [b] say the third must be. */
     private fun walk(a: Card, b: Card): String {
         val t = third(a, b)
+        // Two different values are named low to high whichever card came first, so the same pair
+        // always reads the same way: "one and two need three", never "two and one".
+        fun clause(x: Int, y: Int, need: Int, names: List<String>, alike: String) =
+            if (x == y) alike else "${names[minOf(x, y)]} and ${names[maxOf(x, y)]} need ${names[need]}"
         val parts = listOf(
-            if (a.count == b.count) "both have ${counts[a.count]}"
-            else "${counts[a.count]} and ${counts[b.count]} need ${counts[t.count]}",
-            if (a.shading == b.shading) "both are ${shadings[a.shading]}"
-            else "${shadings[a.shading]} and ${shadings[b.shading]} need ${shadings[t.shading]}",
-            if (a.colour == b.colour) "both are ${colourNames[a.colour]}"
-            else "${colourNames[a.colour]} and ${colourNames[b.colour]} need ${colourNames[t.colour]}",
-            if (a.shape == b.shape) "both are ${shapes[a.shape]}s"
-            else "${shapesWithArticle[a.shape]} and ${shapesWithArticle[b.shape]} need ${shapesWithArticle[t.shape]}",
+            clause(a.count, b.count, t.count, counts, "both have ${counts[a.count]}"),
+            clause(a.shading, b.shading, t.shading, shadings, "both are ${shadings[a.shading]}"),
+            clause(a.colour, b.colour, t.colour, colourNames, "both are ${colourNames[a.colour]}"),
+            clause(a.shape, b.shape, t.shape, shapesWithArticle, "both are ${shapes[a.shape]}s"),
         )
         return parts.joinToString("; ").cap()
     }
@@ -110,7 +110,7 @@ internal object SetsTeacher {
         val pair = values.first { v -> values.count { it == v } == 2 }
         val odd = values.first { it != pair }
         return when (trait) {
-            0 -> "two show ${counts[pair]} and one shows ${counts[odd]}"
+            0 -> "two have ${counts[pair]} symbol${if (pair > 0) "s" else ""} and one has ${counts[odd]}"
             1 -> "two are ${shadings[pair]} and one is ${shadings[odd]}"
             2 -> "two are ${colourNames[pair]} and one is ${colourNames[odd]}"
             else -> "two are ${shapes[pair]}s and one is ${shapesWithArticle[odd]}"
