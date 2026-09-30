@@ -220,6 +220,11 @@ writes the home grid's difficulty (it persists, like a tap would).
   Give parallel agents their own registry: `-Dorg.gradle.daemon.registry.base=<own dir>`. And
   `pkill -f "http.server 8775"` matches the shell running it; write `http[.]server`.
 
+Dark theme in the browser follows `prefers-color-scheme`: Playwright's `color_scheme="dark"`
+context option is enough to screenshot it. And when several worktrees build at once, one
+`./gradlew --stop` stops every daemon on the machine, killing the others' builds mid-run — use
+`--no-daemon` there.
+
 ## Tests
 
 140 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
