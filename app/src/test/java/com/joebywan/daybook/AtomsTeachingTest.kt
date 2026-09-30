@@ -264,6 +264,7 @@ class AtomsTeachingTest {
             val stepCounts = AtomsTeacher.TECHNIQUES.associateWith { 0 }.toMutableMap()
             val boardCounts = AtomsTeacher.TECHNIQUES.associateWith { 0 }.toMutableMap()
             var totalSteps = 0
+            var longest = ""
             for (seed in seeds(perTier, difficulty, "atoms-coverage")) {
                 var s = Atoms.generate(seed, difficulty) as AtomsState
                 val used = mutableSetOf<String>()
@@ -271,6 +272,7 @@ class AtomsTeachingTest {
                 while (!s.solved) {
                     assertTrue("$difficulty/$seed: walk did not finish", guard++ < 300)
                     val d = Atoms.teach(s)!!
+                    if (d.explanation.length > longest.length) longest = d.explanation
                     stepCounts[d.technique] = stepCounts.getValue(d.technique) + 1
                     used += d.technique
                     totalSteps++
@@ -288,6 +290,9 @@ class AtomsTeachingTest {
                     )
                 )
             }
+            report.appendLine("  longest explanation, ${longest.length} characters: $longest")
+            // The panel shows four lines and ellipsizes the rest; about 200 characters fit.
+            assertTrue("$difficulty: an explanation too long for the panel: $longest", longest.length <= 230)
             val fallbackBoards = boardCounts.getValue(AtomsTeacher.FALLBACK)
             assertTrue(
                 "$difficulty: the fallback is reached on $fallbackBoards/$perTier boards",

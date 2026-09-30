@@ -708,7 +708,7 @@ object Atoms : PuzzleType {
                     val strong = cell in highlight.strong
                     if (!strong && cell !in highlight.soft) return@forEachIndexed
                     drawLine(
-                        color = glow.copy(alpha = if (strong) 0.30f * pulse.value else 0.14f),
+                        color = glow.copy(alpha = if (strong) 0.38f * pulse.value else 0.14f),
                         start = centre(s.atoms[pair.a]),
                         end = centre(s.atoms[pair.b]),
                         strokeWidth = stepPx * if (strong) 0.30f else 0.20f,

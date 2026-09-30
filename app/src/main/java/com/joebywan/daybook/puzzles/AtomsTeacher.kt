@@ -206,7 +206,7 @@ internal object AtomsTeacher {
         // otherwise be what makes this one look wrong.
         val counts = s.counts.indices.map { if (it == wrong) s.counts[it] else minOf(s.counts[it], s.solution[it]) }
         val sight = sightOf(s.atoms, s.pairs, counts)
-        val howToClear = if (s.counts[wrong] == 2) "Tap it once to clear it." else "Tap it until it's gone."
+        val howToClear = if (s.counts[wrong] == 2) "Tap it once to clear it." else "Tap it twice to clear it."
         val line = pairCell(n, wrong)
         fun step(explanation: String, cited: Set<Int>) = Step(
             technique = MISTAKE,
@@ -235,7 +235,7 @@ internal object AtomsTeacher {
         propagate(sight)?.let { chain ->
             return step("With this bond, ${chain.phrase(sight, lead = false)}.", chain.cited(sight))
         }
-        return step("This bond isn't part of the answer. Take it back and look again.", emptySet())
+        return step("This bond isn't part of the answer, so look again once it's gone.", emptySet())
     }
 
     /**
@@ -337,7 +337,10 @@ internal object AtomsTeacher {
         }
         // Why each line out of this atom has the room it has, when that room is less than a
         // stranger to the board would assume.
-        val reasons = mutableListOf<String>()
+        val crossedTo = mutableListOf<String>()
+        val shutOut = mutableListOf<String>()
+        val shutDouble = mutableListOf<String>()
+        var pairOnly = true
         val citedExtra = mutableSetOf<Int>()
         for (p in lines) {
             val b = s.other(p, a)
@@ -347,20 +350,33 @@ internal object AtomsTeacher {
             val isolated = s.cap(p, WITH_ISOLATION)
             when {
                 level >= WITH_CROSSING && crossed < basic -> {
-                    reasons += "the way to $who is blocked by a bond crossing it"
+                    crossedTo += who
                     s.crossedBy(p)?.let { citedExtra += pairCell(n, it) }
                 }
                 level >= WITH_ISOLATION && isolated < crossed -> {
                     val group = s.component(s.pairs[p].a, extra = p)
                     citedExtra += group
-                    reasons += if (isolated == 0) {
-                        "a bond to $who would close ${if (group.size == 2) "the two of them" else "that group"} " +
-                            "off from the rest, so that's out"
-                    } else {
-                        "two bonds to $who would close ${if (group.size == 2) "the two of them" else "that group"} " +
-                            "off from the rest, so it can take one at most"
-                    }
+                    if (group.size != 2) pairOnly = false
+                    if (isolated == 0) shutOut += who else shutDouble += who
                 }
+            }
+        }
+        val shut = when {
+            shutOut.size + shutDouble.size > 1 -> "close a group off"
+            pairOnly -> "finish both and cut them off"
+            else -> "finish that whole group and cut it off"
+        }
+        val reasons = buildList {
+            if (crossedTo.isNotEmpty()) add("a bond crosses the way to ${join(crossedTo)}")
+            when (shutOut.size) {
+                0 -> Unit
+                1 -> add("a bond to ${shutOut[0]} would $shut, so that's out")
+                else -> add("a bond to ${join(shutOut, "or")} would $shut, so those are out")
+            }
+            when (shutDouble.size) {
+                0 -> Unit
+                1 -> add("a double to ${shutDouble[0]} would $shut, so one at most")
+                else -> add("a double to ${join(shutDouble, "or")} would $shut, so one each at most")
             }
         }
         val prefix = if (reasons.isEmpty()) "" else reasons.joinToString("; ").cap() + ". "
@@ -373,7 +389,7 @@ internal object AtomsTeacher {
                 val others = lines.filter { it != p }
                 val otherWhy = if (others.isEmpty()) "" else {
                     val full = others.filter { s.cap(it, BASIC) == 0 }.map { s.other(it, a) }
-                    if (full.isNotEmpty() && reasons.isEmpty()) " (its other neighbours have no room left)" else ""
+                    if (full.isNotEmpty() && reasons.isEmpty()) " (the others are full)" else ""
                 }
                 val goes = when {
                     f.need == 1 && s.degree(a) > 0 -> "its last bond goes there"
@@ -381,31 +397,50 @@ internal object AtomsTeacher {
                     s.degree(a) > 0 -> "its remaining ${numberWord(f.need)} go there"
                     else -> "${if (f.need == 2) "both" else "all"} its bonds go there"
                 }
-                "This $x has only one neighbour it can still bond with, the ${s.atoms[b].bonds} " +
-                    "${where(s.atoms[a], s.atoms[b])}$otherWhy, so $goes."
+                if (reasons.isEmpty()) {
+                    "This $x has only one neighbour it can still bond with, the ${s.atoms[b].bonds} " +
+                        "${where(s.atoms[a], s.atoms[b])}$otherWhy, so $goes."
+                } else {
+                    "That leaves this $x one neighbour, the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}, so $goes."
+                }
             }
             ALL_FORCED -> {
                 val parts = f.raise.entries.sortedBy { it.key }.map { (p, to) ->
-                    "${numberWord(to - s.lo[p])} ${where(s.atoms[a], s.atoms[s.other(p, a)])}"
+                    "${numberWord(to - s.lo[p])} ${way(s.atoms[a], s.atoms[s.other(p, a)])}"
                 }
-                "This $x $needWords, and its neighbours have room for exactly that, " +
-                    "so it takes every bond it can: ${join(parts)}."
+                "This $x $needWords and its neighbours can take exactly that, so every one is used: ${join(parts)}."
             }
             else -> {
                 val spare = f.room - f.need
                 val targets = f.raise.entries.sortedBy { it.key }
                 val each = targets.size == lines.count { s.cap(it, level) > 0 } && targets.all { it.value - s.lo[it.key] == 1 }
                 val tail = if (each && targets.size > 1) {
-                    "so each neighbour with room gets at least one bond"
+                    "Leave out any neighbour and the rest fall short, so each gets at least one bond."
                 } else {
-                    val parts = targets.map { (p, to) ->
-                        val b = s.other(p, a)
-                        "the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])} gets at least ${numberWord(to - s.lo[p])}"
+                    // Lines alike in room and in what they are owed read as one sentence.
+                    targets.groupBy { (p, to) -> s.cap(p, level) to (to - s.lo[p]) }.entries.joinToString(" ") { (key, group) ->
+                        val (room, owed) = key
+                        val names = group.map { (p, _) ->
+                            val b = s.other(p, a)
+                            "the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}"
+                        }
+                        if (names.size == 1) {
+                            "${names[0].cap()} can take ${numberWord(room)}, so it gets at least ${numberWord(owed)}."
+                        } else {
+                            "${join(names).cap()} can each take ${numberWord(room)}, so each gets at least ${numberWord(owed)}."
+                        }
                     }
-                    "so ${join(parts)}"
                 }
-                "This $x $needWords, and its neighbours have room for ${numberWord(f.room)}. " +
-                    "Only ${numberWord(spare)} of that room can go unused, $tail."
+                val usable = lines.filter { s.cap(it, level) > 0 }
+                if (reasons.isNotEmpty() && usable.size == 2 && targets.size == 1) {
+                    // Two neighbours, one just capped by the reason above: the other must make up the rest.
+                    val (p, to) = targets[0]
+                    val b = s.other(p, a)
+                    "This $x $needWords, so the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])} gets at least " +
+                        "${numberWord(to - s.lo[p])}."
+                } else {
+                    "This $x $needWords and its neighbours can take ${numberWord(f.room)}, so only ${numberWord(spare)} can go spare. $tail"
+                }
             }
         }
         val targets = f.raise.keys.map { pairCell(n, it) }.toSet()
@@ -471,7 +506,7 @@ internal object AtomsTeacher {
         fun phrase(s: Sight, lead: Boolean): String {
             val steps = forced.map { f ->
                 val a = s.atoms[f.atom]
-                val where = f.raise.keys.sorted().map { where(a, s.atoms[s.other(it, f.atom)]) }
+                val where = f.raise.keys.sorted().map { way(a, s.atoms[s.other(it, f.atom)]) }
                 "the ${a.bonds} would have to bond ${join(where)}"
             }
             val end = when (dead) {
@@ -540,7 +575,7 @@ internal object AtomsTeacher {
             cited = chain.cited(s) + pr.a + pr.b,
             targets = setOf(line),
             nudge = "What if these two ${if (s.lo[p] == 0) "stayed apart" else "got no more bonds"}?",
-            explanation = "Suppose the ${a.bonds} and the ${b.bonds} $suppose. Then " +
+            explanation = "Suppose this ${a.bonds} and ${b.bonds} $suppose. Then " +
                 "${chain.phrase(s, lead = false)}. So they need $need.",
         )
     }
@@ -555,12 +590,20 @@ internal object AtomsTeacher {
         else -> "below"
     }
 
+    /** The same, as one word for lists: "left", "above". */
+    private fun way(from: Atom, to: Atom): String = when {
+        to.row == from.row && to.col > from.col -> "right"
+        to.row == from.row -> "left"
+        to.row < from.row -> "above"
+        else -> "below"
+    }
+
     private fun bondsWord(k: Int) = if (k == 1) "one bond" else "${numberWord(k)} bonds"
 
-    private fun join(words: List<String>): String = when (words.size) {
+    private fun join(words: List<String>, and: String = "and"): String = when (words.size) {
         0 -> ""
         1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " and " + words.last()
+        else -> words.dropLast(1).joinToString(", ") + " $and " + words.last()
     }
 
     private fun numberWord(k: Int) =
