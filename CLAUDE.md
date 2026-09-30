@@ -139,6 +139,16 @@ Safari needs it is unknown — check on an iPhone before removing it.
 Also: Playwright's sync API only delivers console events while it is inside a Playwright call, so
 wait with `page.wait_for_timeout`, never `time.sleep`.
 
+**Mambo, Pipes, Sets and Tower** (`web/.../MoreBoards.kt`): `?puzzle=mambo|pipes|sets|tower`
+picks the board (Kings stays the default), `?dump` prints its fingerprints in
+`WebParityMamboPipesSetsTowerTest`'s format, and `&time` adds `TIME` lines with per-tier
+generation times. The page prints `BOARD` (the board's real bounds) and `STATE` (moves / solved /
+undo depth) for a harness. None of the four had hash order reaching the `Rng`; Pipes only needed
+`Integer.bitCount` → `countOneBits()`. **Pipes' spin is cancelled by the next tap:** each state
+restarts `LaunchedEffect(s.cells)`, which cancels the previous tile's still-running `launch`, so
+tapping another tile within `SPIN_MILLIS` leaves the first frozen at a slant (Android too — shared
+code). A harness that taps faster than 140 ms will screenshot a crooked, yet solved, board.
+
 ## Tests
 
 130 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
