@@ -166,6 +166,19 @@ not, on 3 of 9 boards. Sorting first reproduces the JVM's order, so no Android b
 it goes on the web** — `grep -n "HashSet\|HashMap\|toSet()\|groupBy" puzzles/` and follow each one
 to see whether its order reaches the `Rng` or a "first"/"min" pick.
 
+**When the order is already baked into Android boards, replay it — don't pick a new one.** LITS
+picked with the `Rng` from a `HashSet<List<Int>>` (`quadsContaining`); iterating it in insertion
+order, as Wasm does, changed all 1095 boards of a year. List hashes collide enough that plain
+"sort by bucket" is wrong too: buckets reach nine deep, which on the JVM doubles a small table early
+or turns a bucket into a red-black tree bin (root moved to the front, new nodes linked after their
+tree parent). `core/JvmHashOrder.kt` replays `java.util.HashMap` exactly and `JvmHashOrderTest`
+diffs it against the real `HashSet`; mutating any of those paths makes it fail. `?puzzle=lits`
+selects LITS on the web; `?dump` adds `LITS-PARITY`/`LITS-TODAY`/`LITS-RANGE` lines matching
+`LitsWebParityTest` (`LITS_DUMP=file` makes that test write a year). LITS generation runs ~2.5x
+(Chromium) to ~4x (WebKit) the warm JVM: medians 0.3-0.45 s in WebKit, but the slowest boards
+take 2.5-4.5 s there (they take ~1 s on the JVM too). Roughly half is `placeTetrominoes`'
+candidate enumeration and a quarter the uniqueness `search`; the hash replay is ~2%.
+
 **Compose web reads `TouchEvent`s for fingers, not `PointerEvent`s.** Synthetic `pointerdown` with
 `pointerType: 'touch'` does nothing. Playwright's `touchscreen.tap` works in WebKit; for a touch
 drag, dispatch `TouchEvent`s built with `document.createTouch`/`createTouchList` (WebKit on Linux has

@@ -24,7 +24,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -32,128 +31,52 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.ComposeViewport
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.SeedHash
-import com.joebywan.daybook.puzzles.Kings
-import com.joebywan.daybook.puzzles.KingsState
+import com.joebywan.daybook.puzzles.Lits
+import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.theme.DarkScheme
 import com.joebywan.daybook.ui.theme.DaybookTypography
 import com.joebywan.daybook.ui.theme.LightScheme
+import kotlin.time.TimeSource
+
+/** Same line format as LitsWebParityTest in app/, so the two can be diffed. */
+private fun litsFingerprint(day: Day, tier: Difficulty): String {
+    val seed = SeedHash.daily(day.epochDay, Lits.id, tier)
+    val s = Lits.generate(seed, tier) as LitsState
+    return "$day ${tier.name} seed=$seed regions=${s.region.joinToString("") { it.toString(36) }} " +
+        "shading=${s.solution.joinToString("") { if (it) "1" else "0" }}"
+}
 
 /**
- * The device's local calendar date as yyyymmdd, read from one `Date` so the three fields cannot
- * straddle midnight. Local, not UTC, because the app's `LocalDate.now()` is the phone's local date.
+ * The LITS lines of `?dump`: `LITS-PARITY` for the days `LitsWebParityTest` pins, `LITS-TODAY`
+ * with how long the board took to generate, and with `&range=N` a `LITS-RANGE` line per tier for
+ * N days from 2026-01-01.
  */
-private fun localDateCode(): Int =
-    js("(() => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); })()")
-
-private fun locationSearch(): String = js("window.location.search")
-
-private fun removeLoadingNote(): Unit = js("document.getElementById('loading')?.remove()")
-
-/**
- * Asks Compose for one more frame shortly after start-up, and again whenever the page is shown
- * from the back-forward cache. Headless WebKit drops the very first WebGL frame Compose draws and
- * shows an empty page until the first touch; Chromium does not. Whether iOS Safari does is not
- * known, and one spare frame is cheap insurance against a blank board on launch. A resize event is
- * what makes Compose re-measure and redraw without any state of ours changing.
- */
-private fun nudgeFirstFrame(): Unit = js("""(() => {
-    const nudge = () => requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event('resize'))));
-    nudge();
-    setTimeout(nudge, 300);
-    window.addEventListener('pageshow', nudge);
-})()""")
-
-/** A calendar date the way the app's `LocalDate` would print it. */
-internal data class Day(val year: Int, val month: Int, val day: Int) {
-    val epochDay: Long get() = SeedHash.epochDay(year, month, day)
-    override fun toString(): String =
-        "$year-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}"
-
-    companion object {
-        fun parse(text: String): Day? {
-            val parts = text.split('-').map { it.toIntOrNull() ?: return null }
-            if (parts.size != 3 || parts[1] !in 1..12 || parts[2] !in 1..31) return null
-            return Day(parts[0], parts[1], parts[2])
-        }
-
-        fun today(): Day = localDateCode().let { Day(it / 10000, it / 100 % 100, it % 100) }
-
-        /** The inverse of [SeedHash.epochDay] (Hinnant's civil-from-days), for the parity dump. */
-        fun ofEpochDay(epochDay: Long): Day {
-            val z = epochDay + 719468
-            val era = z.floorDiv(146097L)
-            val doe = z - era * 146097
-            val yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365
-            val doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
-            val mp = (5 * doy + 2) / 153
-            val d = (doy - (153 * mp + 2) / 5 + 1).toInt()
-            val m = (if (mp < 10) mp + 3 else mp - 9).toInt()
-            val y = (yoe + era * 400 + if (m <= 2) 1 else 0).toInt()
-            return Day(y, m, d)
-        }
+internal fun dumpLits(today: Day, tier: Difficulty, range: Int) {
+    for (d in PARITY_DAYS) for (t in Difficulty.entries) println("LITS-PARITY ${litsFingerprint(d, t)}")
+    val mark = TimeSource.Monotonic.markNow()
+    val line = litsFingerprint(today, tier)
+    println("LITS-TODAY $line ms=${mark.elapsedNow().inWholeMilliseconds}")
+    val start = Day(2026, 1, 1).epochDay
+    for (i in 0 until range) {
+        for (t in Difficulty.entries) println("LITS-RANGE ${litsFingerprint(Day.ofEpochDay(start + i), t)}")
     }
 }
 
-private fun query(): Map<String, String> =
-    locationSearch().removePrefix("?").split('&').filter { it.isNotEmpty() }.associate {
-        val eq = it.indexOf('=')
-        if (eq < 0) it to "" else it.substring(0, eq) to it.substring(eq + 1)
-    }
-
-/** Same line format as WebParityTest in app/, so the two can be diffed. */
-private fun fingerprint(day: Day, tier: Difficulty): String {
-    val seed = SeedHash.daily(day.epochDay, Kings.id, tier)
-    val s = Kings.generate(seed, tier) as KingsState
-    return "$day ${tier.name} seed=$seed regions=${s.region.joinToString("")} " +
-        "kings=${s.solution.sorted().joinToString(",")}"
-}
-
-internal val PARITY_DAYS = listOf(Day(2026, 1, 1), Day(2026, 9, 30), Day(2027, 2, 28))
-
-@OptIn(ExperimentalComposeUiApi::class)
-fun main() {
-    val params = query()
-    val day = params["date"]?.let(Day::parse) ?: Day.today()
-    val tier = params["tier"]?.let { Difficulty.fromKey(it.uppercase()) } ?: Difficulty.STANDARD
-    val debug = "dump" in params
-
-    println("daybook: date=$day epochDay=${day.epochDay}")
-    if (debug) {
-        for (d in PARITY_DAYS) for (t in Difficulty.entries) println("PARITY ${fingerprint(d, t)}")
-        println("TODAY ${fingerprint(day, tier)}")
-        // ?dump&range=N: every tier for N days from 2026-01-01, to diff against the JVM.
-        val range = params["range"]?.toIntOrNull() ?: 0
-        val start = Day(2026, 1, 1).epochDay
-        for (i in 0 until range) {
-            for (t in Difficulty.entries) println("RANGE ${fingerprint(Day.ofEpochDay(start + i), t)}")
-        }
-        dumpLits(day, tier, range)
-    }
-
-    ComposeViewport(viewportContainerId = "app") {
-        // ?dump keeps the bare board the parity and touch harnesses drive; otherwise the whole
-        // app (WebApp.kt), which reads ?date and ?tier itself.
-        if (debug) KingsPage(day, tier, debug) else DaybookWebApp(params["date"], params["tier"])
-    }
-    removeLoadingNote()
-    nudgeFirstFrame()
-}
-
+/** `?puzzle=lits`: the same page as Kings', holding a LITS board. */
 @Composable
-private fun KingsPage(day: Day, startTier: Difficulty, debug: Boolean) {
+internal fun LitsPage(day: Day, startTier: Difficulty, debug: Boolean) {
     val scheme = if (isSystemInDarkTheme()) DarkScheme else LightScheme
     MaterialTheme(colorScheme = scheme, typography = DaybookTypography) {
         var tier by remember { mutableStateOf(startTier) }
         val initial = remember(tier) {
-            Kings.generate(SeedHash.daily(day.epochDay, Kings.id, tier), tier) as KingsState
+            val mark = TimeSource.Monotonic.markNow()
+            val s = Lits.generate(SeedHash.daily(day.epochDay, Lits.id, tier), tier) as LitsState
+            if (debug) println("LITS-GENERATED ${tier.name} ms=${mark.elapsedNow().inWholeMilliseconds}")
+            s
         }
-        // Undo mirrors the app's PlayScreen: every state the board hands over is one entry. The
-        // board's own transient gesture state lives inside Kings.Board, so this never sees a
-        // half-finished drag.
         var history by remember(initial) { mutableStateOf(listOf<PuzzleState>(initial)) }
         val state = history.last()
         val density = LocalDensity.current
@@ -166,7 +89,7 @@ private fun KingsPage(day: Day, startTier: Difficulty, debug: Boolean) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "Kings",
+                Lits.displayName,
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -193,8 +116,6 @@ private fun KingsPage(day: Day, startTier: Difficulty, debug: Boolean) {
                 }
             }
 
-            // Sized from both axes: the board is a square no bigger than either the width or the
-            // height left over, so a short landscape window shrinks it instead of clipping it.
             BoxWithConstraints(
                 Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center,
@@ -209,12 +130,13 @@ private fun KingsPage(day: Day, startTier: Difficulty, debug: Boolean) {
                                 val d = density.density
                                 println(
                                     "BOARD x=${r.left / d} y=${r.top / d} side=${r.width / d} " +
-                                        "pad=14 n=${initial.size}",
+                                        "pad=18 n=${initial.width}",
                                 )
                             }
                         },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Kings.Board(
+                    Lits.Board(
                         state = state,
                         onState = { history = history + it },
                         interactive = !state.solved,
@@ -222,12 +144,11 @@ private fun KingsPage(day: Day, startTier: Difficulty, debug: Boolean) {
                 }
             }
 
-            // Reserved at a fixed two lines, so the message appearing never moves the board.
             Text(
                 if (state.solved) {
                     "Solved in ${state.moves} moves."
                 } else {
-                    "Tap to cross out, double-tap to crown. One king per row, column and colour; no two touching."
+                    "Shade a tetromino in every region: no 2x2, no two same letters touching."
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (state.solved) {
