@@ -10,6 +10,7 @@ import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.SnapState
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -25,17 +26,30 @@ class FallbackTest {
         DailySeed.seedFor(LocalDate.of(2026, 5, 1).plusDays(it.toLong()), "probe", Difficulty.HARD)
     }
 
+    /**
+     * A whole year of real daily seeds on every tier, not the twenty probe seeds the others use.
+     * Before the strict attempts, 13 Expert days of 2026 (2026-01-09 the first) shipped the
+     * three-atom chain — 3.6%, which twenty seeds miss about half the time. Run against that
+     * generator, this test names all thirteen. It asserts on [Atoms.generateVerified], the path
+     * that carries a proof, so no property the fallback happens to share can let it through.
+     */
     @Test
-    fun `atoms never falls back to the three-atom chain`() {
+    fun `atoms proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds) {
-                val state = Atoms.generate(seed, difficulty) as AtomsState
-                assertTrue(
-                    "atoms/${difficulty.name}/$seed fell back (${state.atoms.size} atoms)",
-                    state.atoms.size >= 8,
-                )
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Atoms.id, difficulty)
+                val proved = Atoms.generateVerified(seed, difficulty)
+                if (proved == null) {
+                    gaveUp += "$date/${difficulty.name}"
+                    continue
+                }
+                assertEquals("atoms $date/${difficulty.name}", proved, Atoms.generate(seed, difficulty) as AtomsState)
             }
         }
+        assertTrue("atoms fell back to the three-atom chain on ${gaveUp.size} boards: $gaveUp", gaveUp.isEmpty())
     }
 
     @Test
