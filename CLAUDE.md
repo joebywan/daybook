@@ -139,6 +139,15 @@ Safari needs it is unknown — check on an iPhone before removing it.
 Also: Playwright's sync API only delivers console events while it is inside a Playwright call, so
 wait with `page.wait_for_timeout`, never `time.sleep`.
 
+**Shikaku, Snap, Sudoku** (`?puzzle=shikaku|snap|sudoku`; `?dump` adds `PARITY3`/`RANGE3` lines
+matching `WebParityShikakuSnapSudokuTest`, whose `DAYBOOK_DUMP3=<file>` env var writes the JVM's
+year). The trap that is not a hash: `sortedSetOf` is JVM-only, so it fails the wasm compile rather
+than drifting — Sudoku's peer table now builds the same ascending order from a mask. Snap is the
+slow one in wasm: mean ~50 ms, worst ~450 ms a board in WebKit (Standard), under the JVM's gen
+budget but the first place to look if a tier ever feels laggy. `onGloballyPositioned` does not fire
+again when a tier change leaves the board's bounds unchanged (Sudoku is always 9x9), so a harness
+must key "new board loaded" on something else, e.g. the page's `GENERATED` line.
+
 ## Tests
 
 130 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
