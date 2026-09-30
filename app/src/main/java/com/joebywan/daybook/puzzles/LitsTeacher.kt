@@ -12,7 +12,7 @@ package com.joebywan.daybook.puzzles
  * of shading, no two tetrominoes of one letter edge to edge across a wall. **Not** connectivity: the
  * win check stopped asking for it (PR #15), so a step that leaned on "the shading must join up" would
  * be arguing from a rule the board does not have. The generator still proves uniqueness only among
- * connected shadings, which leaves about a third of boards with more than one answer under the real
+ * connected shadings, which leaves a sixth to a half of boards (by tier) with more than one answer under the real
  * rules; on those, reasoning runs out where the answers part, and the fallback says so.
  *
  * The player has one mark — shading — and the board crosses off what can't be shaded by itself
@@ -438,7 +438,7 @@ internal object LitsTeacher {
                     "Only one L, I, T or S fits in this region$around, so shade it."
                 } else {
                     "Every L, I, T or S that fits in this region$around covers ${these(todo)}, so " +
-                        "${they(todo)} shaded whichever shape it turns out to be."
+                        "${they(todo)} shaded whichever it is."
                 },
             )
         }
@@ -465,12 +465,12 @@ internal object LitsTeacher {
             val witnesses = dropped.flatMap { witnessesOf(s, it) }.toSet()
             val blockDropped = dropped.any { s.fillsBlock(it) }
             val clashing = dropped.filter { s.clashes(it) }.map { it.piece }.distinct().sortedBy { it.ordinal }
-            val why = buildList {
-                if (blockDropped) add("finish a 2x2 block with the shading beside it")
-                if (clashing.isNotEmpty()) {
-                    add("be " + join(clashing.map { article(it) }, "or") + " touching " +
-                        (if (clashing.size == 1) "the ${clashing[0].name}" else "the same letter") + " next door")
-                }
+            val why = when {
+                clashing.isEmpty() -> "would finish a 2x2 with the shading beside them"
+                !blockDropped && clashing.size == 1 ->
+                    "would make ${article(clashing[0])} touching the ${clashing[0].name} next door"
+                !blockDropped -> "would touch a tetromino of their own letter"
+                else -> "would finish a 2x2 or touch their own letter next door"
             }
             return Step(
                 technique = technique,
@@ -478,8 +478,8 @@ internal object LitsTeacher {
                 focus = cells,
                 cited = cells + witnesses,
                 nudge = "Look at the glowing region.",
-                explanation = "Some shapes in this region would ${join(why, "or")}. " +
-                    "Every shape that's left covers ${these(todo)}, so shade ${them(todo)}.",
+                explanation = "Shapes here that $why are out. Every shape left covers ${these(todo)}, " +
+                    "so shade ${them(todo)}.",
             )
         }
         return null
@@ -512,21 +512,21 @@ internal object LitsTeacher {
             var why = 0
             for (t in dropped) for (b in s.killers(k, t)) for (u in s.cand(b)) why = why or s.conflict(t, u)
             val reason = when (why) {
-                BLOCK -> "would finish a 2x2 block with it"
-                LETTER -> "would touch it with the same letter"
-                else -> "would finish a 2x2 block with it or touch it with the same letter"
+                BLOCK -> "no shape that avoids a 2x2 with them"
+                LETTER -> "no shape that avoids touching their letter"
+                else -> "no legal shape beside them"
             }
             val cells = s.layout.cellsOf[k].toSet()
             val next = victims.flatMap { s.layout.cellsOf[it] }.toSet()
-            val whose = if (victims.size == 1) "the marked region next door" else "one of the marked regions next door"
+            val whose = if (victims.size == 1) "the marked region" else "a marked region"
             return Step(
                 technique = NEIGHBOUR,
                 shades = todo,
                 focus = cells,
                 cited = cells + next,
                 nudge = "Look at the glowing region, and at what's next to it.",
-                explanation = "Some shapes here would leave $whose with nowhere to go: every shape it " +
-                    "has left $reason. Every shape that's left here covers ${these(todo)}.",
+                explanation = "Some shapes here would leave $whose $reason. Every shape left " +
+                    "covers ${these(todo)}, so shade ${them(todo)}.",
             )
         }
         return null
@@ -587,9 +587,13 @@ internal object LitsTeacher {
         val (x, chain) = best ?: return null
         val emptied = s.layout.cellsOf[chain.emptied]
         val home = s.layout.of[x]
-        val steps = chain.forced.map { (k, cells) ->
-            (if (k == home) "its own region would have to shade " else "a region nearby would have to shade ") +
-                if (cells.size == 1) "a marked square" else "${numberWord(cells.size)} marked squares"
+        val steps = chain.forced.mapIndexed { i, (k, cells) ->
+            val count = if (cells.size == 1) "a marked square" else "${numberWord(cells.size)} marked squares"
+            when {
+                i == 0 && k == home -> "its own region would need $count"
+                i == 0 -> "a nearby region would need $count"
+                else -> "then another ${if (cells.size == 1) "one" else numberWord(cells.size)}"
+            }
         }
         val tail = "the marked region would have no legal shape left"
         return Step(
@@ -599,8 +603,8 @@ internal object LitsTeacher {
             cited = (chain.forced.flatMap { it.second } + emptied).toSet(),
             nudge = "What if the glowing square stayed empty?",
             explanation = "If the glowing square stayed empty, " +
-                (if (steps.isEmpty()) tail else steps.joinToString(", then ") + ", and then $tail") +
-                ". So it must be shaded.",
+                (if (steps.isEmpty()) tail else steps.joinToString(", ") + ", leaving the marked region no shape") +
+                ". So shade it.",
         )
     }
 
@@ -615,10 +619,4 @@ internal object LitsTeacher {
     private fun them(cells: List<Int>) = if (cells.size == 1) "it" else "them"
 
     private fun they(cells: List<Int>) = if (cells.size == 1) "it's" else "they're"
-
-    private fun join(words: List<String>, conj: String): String = when (words.size) {
-        0 -> ""
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " $conj " + words.last()
-    }
 }
