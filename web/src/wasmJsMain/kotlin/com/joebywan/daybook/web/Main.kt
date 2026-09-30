@@ -68,7 +68,7 @@ private fun nudgeFirstFrame(): Unit = js("""(() => {
 })()""")
 
 /** A calendar date the way the app's `LocalDate` would print it. */
-private data class Day(val year: Int, val month: Int, val day: Int) {
+internal data class Day(val year: Int, val month: Int, val day: Int) {
     val epochDay: Long get() = SeedHash.epochDay(year, month, day)
     override fun toString(): String =
         "$year-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}"
@@ -122,6 +122,13 @@ fun main() {
     val debug = "dump" in params
 
     println("daybook: date=$day epochDay=${day.epochDay}")
+    mosaicAtomsPuzzles[params["puzzle"]]?.let { type ->
+        if (debug) dumpMosaicAtoms(type, day, tier, params["range"]?.toIntOrNull() ?: 0)
+        ComposeViewport(viewportContainerId = "app") { MosaicAtomsPage(type, day, tier, debug) }
+        removeLoadingNote()
+        nudgeFirstFrame()
+        return
+    }
     if (debug) {
         for (d in PARITY_DAYS) for (t in Difficulty.entries) println("PARITY ${fingerprint(d, t)}")
         println("TODAY ${fingerprint(day, tier)}")

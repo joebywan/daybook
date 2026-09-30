@@ -508,12 +508,12 @@ object Mosaic : PuzzleType {
             var k = 0
             var bits = pos.alive
             while (bits != 0L) {
-                val i = java.lang.Long.numberOfTrailingZeros(bits)
+                val i = bits.countTrailingZeroBits()
                 bits = bits and (bits - 1)
-                java.util.Arrays.fill(gain, 0)
+                gain.fill(0)
                 var near = pos.nbr[i]
                 while (near != 0L) {
-                    val j = java.lang.Long.numberOfTrailingZeros(near)
+                    val j = near.countTrailingZeroBits()
                     near = near and (near - 1)
                     gain[pos.hue[j]]++
                 }
@@ -525,7 +525,7 @@ object Mosaic : PuzzleType {
                     k++
                 }
             }
-            java.util.Arrays.fill(bucket, 0, top + 2, 0)
+            bucket.fill(0, 0, top + 2)
             for (s in score) bucket[s]++
             // Running totals from the top score down, so the highest-gain fills land first.
             var at = 0
@@ -544,7 +544,7 @@ object Mosaic : PuzzleType {
             var eaten = 0L
             var near = pos.nbr[group]
             while (near != 0L) {
-                val j = java.lang.Long.numberOfTrailingZeros(near)
+                val j = near.countTrailingZeroBits()
                 near = near and (near - 1)
                 if (pos.hue[j] == colour) eaten = eaten or (1L shl j)
             }
@@ -557,7 +557,7 @@ object Mosaic : PuzzleType {
             var touching = pos.nbr[group]
             var bits = eaten
             while (bits != 0L) {
-                val j = java.lang.Long.numberOfTrailingZeros(bits)
+                val j = bits.countTrailingZeroBits()
                 bits = bits and (bits - 1)
                 grown = grown or pos.member[j]
                 touching = touching or pos.nbr[j]
@@ -570,20 +570,20 @@ object Mosaic : PuzzleType {
             // Only the blob's own neighbours can have been pointing at something it swallowed.
             var rim = touching
             while (rim != 0L) {
-                val k = java.lang.Long.numberOfTrailingZeros(rim)
+                val k = rim.countTrailingZeroBits()
                 rim = rim and (rim - 1)
                 nbr[k] = (nbr[k] and eaten.inv()) or (1L shl group)
             }
             return Position(
                 member, nbr, hue,
                 pos.alive and eaten.inv(),
-                pos.count - java.lang.Long.bitCount(eaten),
+                pos.count - eaten.countOneBits(),
             )
         }
 
         /** BFS from [from] over the live groups; returns the farthest one and its distance. */
         private fun sweep(pos: Position, from: Int): Long {
-            java.util.Arrays.fill(dist, -1)
+            dist.fill(-1)
             var head = 0
             var tail = 0
             dist[from] = 0
@@ -594,7 +594,7 @@ object Mosaic : PuzzleType {
                 val u = queue[head++]
                 var bits = pos.nbr[u]
                 while (bits != 0L) {
-                    val v = java.lang.Long.numberOfTrailingZeros(bits)
+                    val v = bits.countTrailingZeroBits()
                     bits = bits and (bits - 1)
                     if (dist[v] >= 0) continue
                     dist[v] = dist[u] + 1
@@ -635,12 +635,12 @@ object Mosaic : PuzzleType {
             var present = 0L
             var bits = pos.alive
             while (bits != 0L) {
-                val j = java.lang.Long.numberOfTrailingZeros(bits)
+                val j = bits.countTrailingZeroBits()
                 bits = bits and (bits - 1)
                 present = present or (1L shl pos.hue[j])
             }
-            val byColour = java.lang.Long.bitCount(present) - 1
-            val first = sweep(pos, java.lang.Long.numberOfTrailingZeros(pos.alive))
+            val byColour = present.countOneBits() - 1
+            val first = sweep(pos, pos.alive.countTrailingZeroBits())
             val spread = sweep(pos, (first ushr 32).toInt()).toInt()
             return maxOf(byColour, (spread + 1) / 2)
         }
@@ -661,7 +661,7 @@ object Mosaic : PuzzleType {
             var sum = 0L
             var bits = pos.alive
             while (bits != 0L) {
-                val j = java.lang.Long.numberOfTrailingZeros(bits)
+                val j = bits.countTrailingZeroBits()
                 bits = bits and (bits - 1)
                 var z = pos.member[j] xor (pos.hue[j].toLong() * 0x517CC1B727220A95L)
                 z = (z xor (z ushr 33)) * -0x7ee3623a03d3c83fL

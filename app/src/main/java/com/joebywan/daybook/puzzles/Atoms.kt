@@ -194,6 +194,9 @@ object Atoms : PuzzleType {
 
         if (positions.size < 4) return null
 
+        // The only walk over a hashed collection here, and a sum, so its order cannot matter. The
+        // three hash containers are otherwise only probed, never iterated, which is what keeps the
+        // JVM and the web (where hash order differs) on the same board; keep it that way.
         val degrees = IntArray(positions.size)
         bonds.forEach { (pair, count) ->
             degrees[pair.first] += count
