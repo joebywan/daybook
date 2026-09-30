@@ -1,7 +1,13 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -14,7 +20,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -23,20 +31,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
+import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
-import kotlin.time.TimeSource
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -56,8 +72,8 @@ data class KingsState(
      * This used to read `kings == solution`, which refused every legal placement but the one the
      * generator happened to store — and a Kings board that admits a second answer is not rare
      * enough for that to be theoretical: the board that exposed it had twenty-six. [solution] is
-     * still carried because [Kings.hint] has to nudge towards *some* answer, but it no longer
-     * decides anything.
+     * still carried because [Kings.teach] has to know which of the player's moves are mistakes, but
+     * it no longer decides anything.
      */
     override val solved: Boolean get() = Kings.isSolved(size, region, marks)
 
@@ -193,6 +209,7 @@ object Kings : PuzzleType {
         "Squares a king already rules out are crossed off for you.",
     )
 
+    /** [KingsTeacher] names these in its explanations, index for index; keep the two in step. */
     private val regionColours = listOf(
         0xFF7C6BB5, 0xFF4C86D9, 0xFF54B07A, 0xFFE0B23C, 0xFFD9584C,
         0xFF48B9C4, 0xFFD97FB0, 0xFF9A8264, 0xFF6FA86F, 0xFFB5705A,
@@ -481,22 +498,171 @@ object Kings : PuzzleType {
         return found
     }
 
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as KingsState
-        val wrong = s.marks.indices.firstOrNull {
-            s.marks[it] == Mark.KING && it !in s.solution
-        }
-        if (wrong != null) {
-            return s.copy(
-                marks = s.marks.toMutableList().also { it[wrong] = Mark.EMPTY },
-                moves = s.moves + 1,
-            )
-        }
-        val missing = s.solution.firstOrNull { s.marks[it] != Mark.KING } ?: return null
-        return s.copy(
-            marks = s.marks.toMutableList().also { it[missing] = Mark.KING },
-            moves = s.moves + 1,
+    // ---- the walkthrough ---------------------------------------------------------------------
+
+    /**
+     * The walkthrough's board, 5x5 so every square is big enough to aim at while learning the
+     * gestures:
+     *
+     * ```
+     * purple purple blue   green  green
+     * yellow yellow blue   green  green
+     * yellow yellow yellow green  green
+     * yellow yellow red    green  green
+     * yellow red    red    red    red
+     * ```
+     *
+     * Hand-built so that the moves the frames teach are the moves the board actually needs, in that
+     * order: the square next to purple is out because it would empty blue, which leaves purple one
+     * square, whose king then shows off what it rules out, after which blue sitting in one column
+     * clears a run of three to sweep. KingsTutorialTest proves it has exactly one answer.
+     */
+    internal val TUTORIAL_REGIONS = listOf(
+        0, 0, 1, 2, 2,
+        3, 3, 1, 2, 2,
+        3, 3, 3, 2, 2,
+        3, 3, 4, 2, 2,
+        3, 4, 4, 4, 4,
+    )
+    internal val TUTORIAL_SOLUTION = setOf(0, 7, 14, 16, 23)
+    private const val TUTORIAL_N = 5
+
+    private fun tutorialBoard(kings: Set<Int> = emptySet(), crosses: Set<Int> = emptySet()) = KingsState(
+        TUTORIAL_N, TUTORIAL_REGIONS,
+        List(TUTORIAL_N * TUTORIAL_N) {
+            when (it) {
+                in kings -> Mark.KING
+                in crosses -> Mark.BLOCKED
+                else -> Mark.EMPTY
+            }
+        },
+        TUTORIAL_SOLUTION,
+    )
+
+    /**
+     * Accepts exactly [base] with [changes] made and nothing else. Strict on purpose: each frame's
+     * board is written for the one before it, so a frame that let a stray cross through would hand
+     * the next frame a board its caption does not describe.
+     */
+    private fun only(base: KingsState, changes: Map<Int, Mark>): (PuzzleState) -> Boolean = { next ->
+        next is KingsState && next.marks.indices.all { i -> next.marks[i] == (changes[i] ?: base.marks[i]) }
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val solved = tutorialBoard(kings = TUTORIAL_SOLUTION)
+        val empty = tutorialBoard()
+        val purpleOne = tutorialBoard(crosses = setOf(1))
+        val crowned = tutorialBoard(kings = setOf(0), crosses = setOf(1))
+        val swept = tutorialBoard(kings = setOf(0), crosses = setOf(1, 12, 17, 22))
+        val row3 = (10..14).toSet()
+        val column2 = setOf(1, 6, 11, 16, 21)
+        val blue = setOf(2, 7)
+        listOf(
+            TutorialFrame(
+                state = solved,
+                caption = "Every row, every column and every colour holds exactly one king. " +
+                    "Here are one row, one column and blue, each with its one king.",
+                highlight = BoardHighlight(strong = row3 + column2 + blue),
+            ),
+            TutorialFrame(
+                state = solved,
+                caption = "Kings can't touch, not even corner to corner. None of the eight squares " +
+                    "around a king can hold another.",
+                highlight = BoardHighlight(strong = setOf(7), soft = setOf(1, 2, 3, 6, 8, 11, 12, 13)),
+            ),
+            TutorialFrame(
+                state = empty,
+                caption = "A king on the glowing square would share a row with one blue square and " +
+                    "touch the other, leaving blue nowhere. Tap it to cross it out.",
+                highlight = BoardHighlight(strong = setOf(1), soft = blue),
+                accepts = only(empty, mapOf(1 to Mark.BLOCKED)),
+                retry = "Tap the glowing square once.",
+                done = "Crossed out. That square can never hold a king.",
+            ),
+            TutorialFrame(
+                state = purpleOne,
+                caption = "Purple has only one square left, so its king must go there. " +
+                    "Double-tap it to crown it.",
+                highlight = BoardHighlight(strong = setOf(0), soft = setOf(1)),
+                accepts = only(purpleOne, mapOf(0 to Mark.KING)),
+                retry = "Double-tap the glowing square: two quick taps.",
+                done = "Crowned.",
+            ),
+            TutorialFrame(
+                state = crowned,
+                caption = "A king rules out its row, its column, its colour and the squares around " +
+                    "it. The board crosses those off for you.",
+                highlight = BoardHighlight(strong = setOf(0), soft = crowned.eliminated()),
+            ),
+            TutorialFrame(
+                state = crowned,
+                caption = "Blue sits entirely in column 3, so column 3's king is blue. Drag down the " +
+                    "glowing squares to cross them all out in one sweep.",
+                highlight = BoardHighlight(strong = setOf(12, 17, 22), soft = blue),
+                accepts = only(crowned, mapOf(12 to Mark.BLOCKED, 17 to Mark.BLOCKED, 22 to Mark.BLOCKED)),
+                retry = "Drag along all three glowing squares in one sweep.",
+                done = "Swept.",
+            ),
+            TutorialFrame(
+                state = swept,
+                caption = "Your turn: finish the board. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
         )
+    }
+
+    // ---- teaching --------------------------------------------------------------------------
+
+    /**
+     * A mistake to take back or a step to reason out — see [KingsTeacher]. Replaces the old
+     * `hint()`, which placed a king straight out of [KingsState.solution] and taught nothing.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as KingsState
+        val step = KingsTeacher.teach(s) ?: return null
+        val base = s.marks
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = step.targets,
+            mistake = step.technique == KingsTeacher.MISTAKE,
+            fallback = step.technique == KingsTeacher.FALLBACK,
+            applyTo = { now -> applyStep(now as KingsState, step) },
+            reachedBy = { now ->
+                val k = now as KingsState
+                // Ruled out by a *correct* king counts as crossed: the player who crowns the king
+                // that sweeps a row has done more than the hint asked. A wrong king's sweep does not
+                // count, or the hint would clear itself on the back of a mistake.
+                val ruled = k.marks.indices
+                    .filter { k.marks[it] == Mark.KING && it in k.solution }
+                    .flatMap { k.eliminatedBy(it) }
+                    .toSet()
+                step.kings.all { k.marks[it] == Mark.KING } &&
+                    step.crosses.all { k.marks[it] == Mark.BLOCKED || it in ruled } &&
+                    step.clears.all { k.marks[it] != base[it] }
+            },
+        )
+    }
+
+    /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
+    private fun applyStep(s: KingsState, step: KingsTeacher.Step): KingsState {
+        val ruled = s.eliminated()
+        val next = s.marks.toMutableList()
+        var changed = 0
+        fun set(i: Int, mark: Mark) {
+            if (next[i] != mark) {
+                next[i] = mark
+                changed++
+            }
+        }
+        step.clears.forEach { set(it, Mark.EMPTY) }
+        step.kings.forEach { set(it, Mark.KING) }
+        step.crosses.filter { next[it] == Mark.EMPTY && it !in ruled }.forEach { set(it, Mark.BLOCKED) }
+        return if (changed == 0) s else s.copy(marks = next, moves = s.moves + changed)
     }
 
     // ---- drawing -------------------------------------------------------------------------
@@ -629,6 +795,21 @@ object Kings : PuzzleType {
         val shown = held?.after ?: s
         val conflicts = shown.conflicts()
         val eliminated = shown.eliminated()
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // A glow that breathes is findable at a glance on a 9x9 board; a static outline is not much
+        // louder than the gaps between squares. Only runs while something glows, and is read in
+        // the draw phase, so it repaints the outlines without recomposing the board every frame.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
 
         // Keyed on the board as well as the tap: a board that moved underneath a held tap restarts
         // this, and [held] is null the second time round, so the stale mark is quietly dropped.
@@ -745,6 +926,11 @@ object Kings : PuzzleType {
                             sweepMark != null && i in swept && shown.marks[i] != Mark.KING -> sweepMark
                             else -> shown.marks[i]
                         }
+                        val strong = i in highlight.strong
+                        val soft = !strong && i in highlight.soft
+                        // Everything the highlight does not name steps back, so the named squares
+                        // read without having to hunt for their outlines.
+                        val fill = if (highlight.isEmpty || strong || soft) 0.55f else 0.22f
                         Box(
                             Modifier
                                 .padding(start = cell * c, top = cell * r)
@@ -753,7 +939,26 @@ object Kings : PuzzleType {
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(
                                     Color(regionColours[s.region[i] % regionColours.size])
-                                        .copy(alpha = 0.55f)
+                                        .copy(alpha = fill)
+                                )
+                                .then(
+                                    when {
+                                        strong -> Modifier.drawWithContent {
+                                            drawContent()
+                                            val w = 3.dp.toPx()
+                                            drawRoundRect(
+                                                glow.copy(alpha = pulse.value),
+                                                topLeft = Offset(w / 2, w / 2),
+                                                size = Size(size.width - w, size.height - w),
+                                                cornerRadius = CornerRadius(4.dp.toPx()),
+                                                style = Stroke(w),
+                                            )
+                                        }
+                                        soft -> Modifier.border(
+                                            1.5.dp, glow.copy(alpha = 0.5f), RoundedCornerShape(4.dp),
+                                        )
+                                        else -> Modifier
+                                    }
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
