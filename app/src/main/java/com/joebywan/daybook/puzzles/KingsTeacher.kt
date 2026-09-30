@@ -46,14 +46,6 @@ internal object KingsTeacher {
     const val MAX_CHAIN = 2
 
     /**
-     * Names for [Kings]' region colours, index for index. A player says "the purple one", never
-     * "region 3".
-     */
-    private val colourNames = listOf(
-        "purple", "blue", "green", "yellow", "red", "teal", "pink", "brown", "sage", "rust",
-    )
-
-    /**
      * One step: what to crown, cross or clear, where to look, and why.
      *
      * [clears] is only ever a mistake being taken back.
@@ -74,13 +66,12 @@ internal object KingsTeacher {
     private enum class Kind { REGION, ROW, COLUMN }
 
     /** A row, a column or a colour region: somewhere that needs exactly one king. */
-    private class House(val kind: Kind, val id: Int, val cells: List<Int>) {
-        val name: String
-            get() = when (kind) {
-                Kind.REGION -> colourNames[id % colourNames.size]
-                Kind.ROW -> "row ${id + 1}"
-                Kind.COLUMN -> "column ${id + 1}"
-            }
+    private class House(val kind: Kind, val id: Int, val cells: List<Int>, colour: String = "") {
+        val name: String = when (kind) {
+            Kind.REGION -> colour
+            Kind.ROW -> "row ${id + 1}"
+            Kind.COLUMN -> "column ${id + 1}"
+        }
     }
 
     /**
@@ -92,6 +83,8 @@ internal object KingsTeacher {
         val region: List<Int>,
         val kings: List<Int>,
         val blocked: BooleanArray,
+        /** Each region's colour, by name, as the board paints it. */
+        val names: List<String> = Kings.regionNames(n, region),
     ) {
         private val ruledOut = BooleanArray(n * n).also { out ->
             for (k in kings) for (c in attacks(n, region, k)) out[c] = true
@@ -100,7 +93,7 @@ internal object KingsTeacher {
         /** Regions first: "purple" is the first thing a player reads a Kings board by. */
         val houses: List<House> = buildList {
             region.distinct().sorted().forEach { id ->
-                add(House(Kind.REGION, id, region.indices.filter { region[it] == id }))
+                add(House(Kind.REGION, id, region.indices.filter { region[it] == id }, names[id]))
             }
             for (r in 0 until n) add(House(Kind.ROW, r, List(n) { r * n + it }))
             for (c in 0 until n) add(House(Kind.COLUMN, c, List(n) { it * n + c }))
@@ -112,7 +105,7 @@ internal object KingsTeacher {
 
         fun satisfied(h: House) = h.cells.any { it in kings }
 
-        fun withKing(cell: Int) = Sight(n, region, kings + cell, blocked)
+        fun withKing(cell: Int) = Sight(n, region, kings + cell, blocked, names)
 
         fun unsatisfied(kind: Kind) = houses.filter { it.kind == kind && !satisfied(it) }
     }
@@ -207,7 +200,7 @@ internal object KingsTeacher {
             val why = when {
                 other / n == wr -> "shares a row with another king"
                 other % n == wc -> "shares a column with another king"
-                region[other] == region[wrong] -> "is the second king in ${colourNames[region[wrong] % colourNames.size]}"
+                region[other] == region[wrong] -> "is the second king in ${Kings.regionNames(n, region)[region[wrong]]}"
                 kotlin.math.abs(other / n - wr) <= 1 && kotlin.math.abs(other % n - wc) <= 1 ->
                     "touches another king"
                 else -> null
@@ -357,7 +350,7 @@ internal object KingsTeacher {
                     .filter { lineOf(s.n, lineKind, it) !in lines }
                     .distinct().sorted()
                 if (crosses.isEmpty()) continue
-                val colours = ids.map { colourNames[it % colourNames.size] }
+                val colours = ids.map { s.names[it] }
                 return Step(
                     technique = technique,
                     crosses = crosses,

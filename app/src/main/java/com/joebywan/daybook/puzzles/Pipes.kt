@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -497,7 +498,7 @@ object Pipes : PuzzleType {
                 if (mask and RIGHT != 0) arm(1f, 0f)
                 drawCircle(
                     color = pipeColour,
-                    radius = if (Integer.bitCount(mask) == 1) cellPx * 0.20f else stroke * 0.5f,
+                    radius = if (mask.countOneBits() == 1) cellPx * 0.20f else stroke * 0.5f,
                     center = Offset(cx, cy),
                 )
 
@@ -542,6 +543,11 @@ object Pipes : PuzzleType {
         // board itself has already moved on. Only the grid shape resets them.
         val spins = remember(s.width, s.height) { List(s.width * s.height) { Animatable(0f) } }
         val shown = remember(s.width, s.height) { s.cells.toMutableList() }
+        // The turns run here rather than in the effect below. Every tap hands in a new state, which
+        // restarts that effect and cancels its children: a spin launched there was cut off by the
+        // next tap on any *other* tile, leaving the first frozen at a slant. Only the same tile's
+        // own next turn (snapTo, below) may interrupt a spin, and it carries the angle on.
+        val spinScope = rememberCoroutineScope()
 
         LaunchedEffect(s.cells) {
             val before = shown.toList()
@@ -559,7 +565,7 @@ object Pipes : PuzzleType {
                     else -> 0f
                 }
                 val spin = spins[i]
-                launch {
+                spinScope.launch {
                     if (wound == 0f) {
                         spin.snapTo(0f)
                     } else {
@@ -609,7 +615,7 @@ object Pipes : PuzzleType {
                     if (mask != 0) {
                         // A single-ended pipe is an endpoint: the run stops here, and the knob is
                         // what says so.
-                        val endpoint = Integer.bitCount(mask) == 1
+                        val endpoint = mask.countOneBits() == 1
                         rotate(degrees = spins[i].value, pivot = Offset(cx, cy)) {
                             // Butt caps stop the stroke dead on the cell edge. A round cap would
                             // instead push half a pipe width past it and into the neighbour, so

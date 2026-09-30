@@ -84,14 +84,17 @@ object Sudoku : PuzzleType {
         val c = i % 9
         val br = r / 3 * 3
         val bc = c / 3 * 3
-        val set = sortedSetOf<Int>()
+        // Ascending, the order the java.util.TreeSet this used to be walked them in. Only
+        // membership reaches the generator today, but a fixed order keeps it that way on every
+        // platform. Not sortedSetOf, which is JVM-only and would keep this file off the web.
+        val peers = BooleanArray(81)
         for (k in 0 until 9) {
-            set += r * 9 + k
-            set += k * 9 + c
-            set += (br + k / 3) * 9 + (bc + k % 3)
+            peers[r * 9 + k] = true
+            peers[k * 9 + c] = true
+            peers[(br + k / 3) * 9 + (bc + k % 3)] = true
         }
-        set -= i
-        set.toIntArray()
+        peers[i] = false
+        (0 until 81).filter { peers[it] }.toIntArray()
     }
 
     fun peers(index: Int): IntArray = peerTable[index]

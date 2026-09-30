@@ -14,8 +14,8 @@ import java.time.LocalDate
  * [SeedHash.epochDay] and [SeedHash.daily] instead of [DailySeed.seedFor]. These pin the two
  * routes to the same board.
  *
- * The web page prints the same lines, in the same format, under `?dump` (see CLAUDE.md, "Web
- * build"); diffing the two is how parity with the browser is checked.
+ * The web page prints the same lines, prefixed with `kings`, under `?dump` (see CLAUDE.md, "Web
+ * build", and [WebParityDumpTest]); diffing the two is how parity with the browser is checked.
  */
 class WebParityTest {
 

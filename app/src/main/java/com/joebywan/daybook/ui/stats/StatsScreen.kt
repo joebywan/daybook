@@ -29,7 +29,11 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
-import java.time.LocalDate
+import com.joebywan.daybook.platform.BackButton
+import com.joebywan.daybook.platform.BackupControls
+import com.joebywan.daybook.platform.OFFERS_BACKUP
+import com.joebywan.daybook.platform.formatClock
+import kotlinx.datetime.LocalDate
 
 /**
  * Lifetime numbers. There is no back control on the screen: the system back button is the way out,
@@ -39,6 +43,7 @@ import java.time.LocalDate
 fun StatsScreen(
     today: LocalDate,
     completions: List<Completion>,
+    onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -48,19 +53,23 @@ fun StatsScreen(
             .background(scheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)
-        ) {
-            Text(
-                "Statistics",
-                style = MaterialTheme.typography.titleLarge,
-                color = scheme.onBackground,
-            )
-            Text(
-                "All time, on this device.",
-                style = MaterialTheme.typography.labelLarge,
-                color = scheme.onSurfaceVariant,
-            )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // Nothing on Android, where the system back button is the way out.
+            BackButton(onBack)
+            Column(
+                Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)
+            ) {
+                Text(
+                    "Statistics",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = scheme.onBackground,
+                )
+                Text(
+                    "All time, on this device.",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = scheme.onSurfaceVariant,
+                )
+            }
         }
 
         LazyColumn(
@@ -107,7 +116,7 @@ fun StatsScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             Text(
-                                if (best == null) "—" else "%d:%02d".format(best / 60, best % 60),
+                                if (best == null) "—" else formatClock(best),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = scheme.onSurface,
                             )
@@ -120,6 +129,11 @@ fun StatsScreen(
                         }
                     }
                 }
+            }
+
+            // A web page has no system backup to fall back on; Android does, so this is web-only.
+            if (OFFERS_BACKUP) {
+                item { BackupControls() }
             }
         }
     }

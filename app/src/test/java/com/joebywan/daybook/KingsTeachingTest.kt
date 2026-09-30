@@ -246,13 +246,14 @@ class KingsTeachingTest {
 
     @Test
     fun `a wrong king is addressed first, and why it is wrong is explained when it can be`() {
-        // r0c1 rules out both blue squares: one shares its row, the other touches it.
+        // r0c1 rules out both squares of region 1: one shares its row, the other touches it.
         val s = tutorialBoard(kings = setOf(1))
         val d = Kings.teach(s)!!
         assertTrue(d.mistake)
         assertEquals(setOf(1), d.targets)
-        assertTrue("explanation should name blue: ${d.explanation}", "blue" in d.explanation)
-        assertTrue("the cited squares should include blue", d.cited.containsAll(setOf(2, 7)))
+        val colour = Kings.regionNames(5, Kings.TUTORIAL_REGIONS)[1]
+        assertTrue("explanation should name $colour: ${d.explanation}", colour in d.explanation)
+        assertTrue("the cited squares should include region 1", d.cited.containsAll(setOf(2, 7)))
         val fixed = d.apply(s) as KingsState
         assertEquals(Mark.EMPTY, fixed.marks[1])
         assertTrue(d.isReached(fixed))
@@ -277,12 +278,13 @@ class KingsTeachingTest {
 
     @Test
     fun `a cross on an answer square is flagged, with the last-square reason when it is one`() {
-        // Purple is {0, 1}; with 1 crossed, crossing 0 as well takes purple's last square.
+        // Region 0 is {0, 1}; with 1 crossed, crossing 0 as well takes its last square.
         val s = tutorialBoard(crosses = setOf(0, 1))
         val d = Kings.teach(s)!!
         assertTrue(d.mistake)
         assertEquals(setOf(0), d.targets)
-        assertTrue("should say it is purple's last square: ${d.explanation}", "purple" in d.explanation)
+        val colour = Kings.regionNames(5, Kings.TUTORIAL_REGIONS)[0]
+        assertTrue("should say it is $colour's last square: ${d.explanation}", colour in d.explanation)
         assertTrue(d.isReached(s.toggleMark(0)))
 
         for (difficulty in Difficulty.entries) {
@@ -339,12 +341,12 @@ class KingsTeachingTest {
         val sweep = frames[5].accepts!!
         assertTrue(sweep(board(5).paint(listOf(12, 17, 22), Mark.BLOCKED)))
         assertFalse("one square of the three", sweep(board(5).toggleMark(12)))
-        assertFalse("a sweep through blue", sweep(board(5).paint(listOf(7, 12, 17, 22), Mark.BLOCKED)))
+        assertFalse("a sweep through region 1", sweep(board(5).paint(listOf(7, 12, 17, 22), Mark.BLOCKED)))
         assertEquals(board(6).marks, board(5).paint(listOf(12, 17, 22), Mark.BLOCKED).marks)
 
         // Each explained move is actually true on its board.
         assertTrue(1 !in Kings.TUTORIAL_SOLUTION)
-        assertEquals("purple has one open square in frame 4", setOf(0), openCells(board(3)).filter { Kings.TUTORIAL_REGIONS[it] == 0 }.toSet())
+        assertEquals("region 0 has one open square in frame 4", setOf(0), openCells(board(3)).filter { Kings.TUTORIAL_REGIONS[it] == 0 }.toSet())
         assertTrue(listOf(12, 17, 22).none { it in Kings.TUTORIAL_SOLUTION })
 
         // 7: free play, finishable by hints without the fallback.

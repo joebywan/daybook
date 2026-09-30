@@ -1,6 +1,5 @@
 package com.joebywan.daybook.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -10,13 +9,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.ProgressStore
 import com.joebywan.daybook.data.savedGameKey
+import com.joebywan.daybook.platform.PlatformBackHandler
+import com.joebywan.daybook.platform.currentDate
+import com.joebywan.daybook.platform.freshNonce
+import com.joebywan.daybook.platform.prepareBoards
+import com.joebywan.daybook.platform.rememberKeyValueStore
 import com.joebywan.daybook.ui.archive.ArchiveScreen
 import com.joebywan.daybook.ui.home.HomeScreen
 import com.joebywan.daybook.ui.home.LaunchMode
@@ -24,7 +28,7 @@ import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 /** Where the app currently is. Hand-rolled because four screens do not need a nav graph. */
 sealed interface Route {
@@ -39,23 +43,28 @@ sealed interface Route {
     ) : Route
 }
 
+/**
+ * The whole app. [startAt] is where it opens — Home unless something asked for a particular
+ * screen, which on the web is a `?puzzle=` link.
+ */
 @Composable
-fun DaybookApp() {
-    val context = LocalContext.current
-    val store = remember { ProgressStore(context) }
+fun DaybookApp(startAt: Route = Route.Home) {
+    val progressFile = rememberKeyValueStore(KeyValueStore.PROGRESS)
+    val store = remember(progressFile) { ProgressStore(progressFile) }
     val scope = rememberCoroutineScope()
     val completions by store.completions.collectAsState(initial = emptyList())
     // Null until the store has answered, so a returning player never sees the walkthrough offer
     // flash up for the instant before their "already offered" loads.
     val tutorialsOffered by store.tutorialsOffered.collectAsState(initial = null)
 
-    var route by remember { mutableStateOf<Route>(Route.Home) }
-    var today by remember { mutableStateOf(LocalDate.now()) }
+    var route by remember { mutableStateOf(startAt) }
+    var today by remember { mutableStateOf(currentDate()) }
 
     // The home grid's two selectors live here, not on the home screen: navigating into a puzzle
     // destroys that screen, and a difficulty that reset after every game would be worse than the
     // per-card pills it replaced.
-    val launchPrefs = remember { LaunchPreferences(context) }
+    val launchFile = rememberKeyValueStore(KeyValueStore.LAUNCH)
+    val launchPrefs = remember(launchFile) { LaunchPreferences(launchFile) }
     val storedDifficulty by launchPrefs.difficulty.collectAsState(initial = null)
     // A tap has to win over the store immediately. Reading the selection back out of DataStore
     // would leave a window — however short — in which the grid is still set to the old tier and a
@@ -70,7 +79,7 @@ fun DaybookApp() {
     LaunchedEffect(Unit) {
         while (true) {
             kotlinx.coroutines.delay(30_000)
-            val now = LocalDate.now()
+            val now = currentDate()
             if (now != today) today = now
         }
     }
@@ -85,35 +94,43 @@ fun DaybookApp() {
     //
     // A dialog is a window of its own and takes the back press before the activity ever sees it,
     // so this cannot fire while the archive picker or the rules sheet is open.
-    BackHandler(enabled = route != Route.Home) { route = Route.Home }
+    //
+    // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
+    PlatformBackHandler(enabled = route != Route.Home) { route = Route.Home }
 
     when (val current = route) {
-        Route.Home -> HomeScreen(
-            today = today,
-            completions = completions,
-            difficulty = difficulty,
-            onDifficulty = { picked ->
-                pickedDifficulty = picked
-                scope.launch { launchPrefs.setDifficulty(picked) }
-            },
-            mode = mode,
-            onMode = { mode = it },
-            onLaunch = { puzzleId ->
-                route = when (mode) {
-                    LaunchMode.DAILY -> Route.Play(puzzleId, difficulty, today)
-                    // A fresh nonce every tap is what makes a second random game a new board
-                    // rather than the one just finished.
-                    LaunchMode.RANDOM ->
-                        Route.Play(puzzleId, difficulty, null, System.nanoTime())
-                }
-            },
-            onArchive = { puzzleId -> route = Route.Archive(puzzleId) },
-            onStats = { route = Route.Stats },
-        )
+        Route.Home -> {
+            // Nothing on Android. On the web, today's boards are generated while the grid is being
+            // read, so the tap that opens one does not have to wait for it; see the platform seam.
+            LaunchedEffect(today, difficulty) { prepareBoards(today, difficulty) }
+            HomeScreen(
+                today = today,
+                completions = completions,
+                difficulty = difficulty,
+                onDifficulty = { picked ->
+                    pickedDifficulty = picked
+                    scope.launch { launchPrefs.setDifficulty(picked) }
+                },
+                mode = mode,
+                onMode = { mode = it },
+                onLaunch = { puzzleId ->
+                    route = when (mode) {
+                        LaunchMode.DAILY -> Route.Play(puzzleId, difficulty, today)
+                        // A fresh nonce every tap is what makes a second random game a new board
+                        // rather than the one just finished.
+                        LaunchMode.RANDOM ->
+                            Route.Play(puzzleId, difficulty, null, freshNonce())
+                    }
+                },
+                onArchive = { puzzleId -> route = Route.Archive(puzzleId) },
+                onStats = { route = Route.Stats },
+            )
+        }
 
         Route.Stats -> StatsScreen(
             today = today,
             completions = completions,
+            onBack = { route = Route.Home },
         )
 
         is Route.Archive -> ArchiveScreen(
@@ -123,6 +140,7 @@ fun DaybookApp() {
             onPlay = { day, difficulty ->
                 route = Route.Play(current.puzzleId, difficulty, day)
             },
+            onBack = { route = Route.Home },
         )
 
         is Route.Play -> {
@@ -163,7 +181,7 @@ fun DaybookApp() {
                         }
                     },
                     onAgain = {
-                        route = Route.Play(puzzle.id, current.difficulty, null, System.nanoTime())
+                        route = Route.Play(puzzle.id, current.difficulty, null, freshNonce())
                     },
                     tutorialOffered = tutorialsOffered?.let { puzzle.id in it },
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },

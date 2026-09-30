@@ -251,6 +251,9 @@ object Atoms : PuzzleType {
 
         if (positions.size < 4) return null
 
+        // The only walk over a hashed collection here, and a sum, so its order cannot matter. The
+        // three hash containers are otherwise only probed, never iterated, which is what keeps the
+        // JVM and the web (where hash order differs) on the same board; keep it that way.
         val degrees = IntArray(positions.size)
         bonds.forEach { (pair, count) ->
             degrees[pair.first] += count
@@ -302,15 +305,18 @@ object Atoms : PuzzleType {
         val counts = IntArray(pairs.size)
         val degree = IntArray(atoms.size)
         val incident = Array(atoms.size) { a ->
-            pairs.indices.filter { pairs[it].a == a || pairs[it].b == a }
+            pairs.indices.filter { pairs[it].a == a || pairs[it].b == a }.toIntArray()
         }
         // Capacity still available to each atom if all its untouched pairs were maxed out.
         var found = 0
 
-        fun crossesNow(index: Int): Boolean {
+        // Which pairs each pair would cross, worked out once: the geometry never changes during the
+        // search, only which of those pairs carry a bond, and re-deriving it at every node was most
+        // of the cost of an Expert board.
+        val crossing = Array(pairs.size) { index ->
             val one = pairs[index]
-            return pairs.indices.any { other ->
-                other != index && counts[other] > 0 && run {
+            pairs.indices.filter { other ->
+                other != index && run {
                     val two = pairs[other]
                     if (one.horizontal == two.horizontal) return@run false
                     val (h, v) = if (one.horizontal) one to two else two to one
@@ -322,7 +328,12 @@ object Atoms : PuzzleType {
                     val vHi = maxOf(atoms[v.a].row, atoms[v.b].row)
                     vCol in (hLo + 1) until hHi && hRow in (vLo + 1) until vHi
                 }
-            }
+            }.toIntArray()
+        }
+
+        fun crossesNow(index: Int): Boolean {
+            for (other in crossing[index]) if (counts[other] > 0) return true
+            return false
         }
 
         fun feasible(upTo: Int): Boolean {
@@ -650,16 +661,20 @@ object Atoms : PuzzleType {
                     // reaches the detector below.
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
+                        // The overload that hands over the touch-down itself. The plain one reports
+                        // where the finger crossed the touch slop, and on the web that slop is wider
+                        // than an Expert atom's reach, so no drag there could ever start on an atom.
                         detectDragGestures(
-                            onDragStart = { offset ->
-                                dragFrom = atomAt(s, offset, stepPx)
-                                dragAt = offset
+                            orientationLock = null,
+                            onDragStart = { down, _, _ ->
+                                dragFrom = atomAt(s, down.position, stepPx)
+                                dragAt = down.position
                             },
                             onDrag = { change, _ ->
                                 change.consume()
                                 dragAt = change.position
                             },
-                            onDragEnd = {
+                            onDragEnd = { _ ->
                                 val from = dragFrom
                                 val at = dragAt
                                 if (from != null && at != null) {

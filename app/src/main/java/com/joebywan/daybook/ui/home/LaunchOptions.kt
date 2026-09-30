@@ -1,6 +1,5 @@
 package com.joebywan.daybook.ui.home
 
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,12 +20,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.data.KeyValueStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -45,6 +40,8 @@ enum class LaunchMode(val label: String) {
 /**
  * The difficulty the grid is set to, remembered between launches.
  *
+ * [store] is the [KeyValueStore.LAUNCH] file.
+ *
  * Separate from `ProgressStore` and from its DataStore file on purpose: this is a view setting,
  * not progress. Losing it costs one tap, so it must never be able to interfere with the file that
  * holds solved days and half-finished boards.
@@ -53,21 +50,19 @@ enum class LaunchMode(val label: String) {
  * Random would otherwise open the app the next morning to a grid that quietly hides the day's
  * puzzles, and the daily is the whole point of the app.
  */
-class LaunchPreferences(private val context: Context) {
+class LaunchPreferences(private val store: KeyValueStore) {
 
     val difficulty: Flow<Difficulty> =
-        context.launchStore.data.map { prefs -> Difficulty.fromKey(prefs[KEY_DIFFICULTY].orEmpty()) }
+        store.string(KEY_DIFFICULTY).map { Difficulty.fromKey(it.orEmpty()) }
 
     suspend fun setDifficulty(difficulty: Difficulty) {
-        context.launchStore.edit { prefs -> prefs[KEY_DIFFICULTY] = difficulty.name }
+        store.putString(KEY_DIFFICULTY, difficulty.name)
     }
 
     private companion object {
-        val KEY_DIFFICULTY = stringPreferencesKey("difficulty")
+        const val KEY_DIFFICULTY = "difficulty"
     }
 }
-
-private val Context.launchStore: DataStore<Preferences> by preferencesDataStore(name = "daybook_launch")
 
 /**
  * The two choices that used to live on every card, hoisted above the grid: what difficulty, and
