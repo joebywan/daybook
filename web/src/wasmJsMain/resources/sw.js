@@ -12,7 +12,6 @@ const CACHE = 'daybook-v1';
 const NETWORK_TIMEOUT_MS = 4000;
 const SHELL = [
   './',
-  'index.html',
   'daybook.js',
   'manifest.webmanifest',
   'icons/icon-180.png',
@@ -62,6 +61,7 @@ async function networkFirst(request) {
     if (response.ok) cache.put(key, response.clone());
     return response;
   });
+  network.catch(() => {});
   const timeout = new Promise(resolve => setTimeout(resolve, NETWORK_TIMEOUT_MS));
   try {
     const first = await Promise.race([network, timeout]);
@@ -105,7 +105,8 @@ self.addEventListener('message', event => {
     for (const raw of data.urls) {
       let url;
       try { url = new URL(raw, self.registration.scope); } catch (e) { continue; }
-      if (!inScope(url) || url.pathname.endsWith('.map')) continue;
+      // The worker's own script is the browser's to update, never the cache's.
+      if (!inScope(url) || url.pathname.endsWith('.map') || url.pathname.endsWith('/sw.js')) continue;
       const request = new Request(url.href);
       const key = cacheKey(request);
       wanted.add(key);
