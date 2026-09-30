@@ -139,6 +139,11 @@ Safari needs it is unknown — check on an iPhone before removing it.
 Also: Playwright's sync API only delivers console events while it is inside a Playwright call, so
 wait with `page.wait_for_timeout`, never `time.sleep`.
 
+Dark theme in the browser follows `prefers-color-scheme`: Playwright's `color_scheme="dark"`
+context option is enough to screenshot it. And when several worktrees build at once, one
+`./gradlew --stop` stops every daemon on the machine, killing the others' builds mid-run — use
+`--no-daemon` there.
+
 ## Tests
 
 130 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,

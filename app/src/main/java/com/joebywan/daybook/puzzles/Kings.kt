@@ -198,9 +198,9 @@ object Kings : PuzzleType {
     /**
      * One colour per region of the largest board (9x9, nine regions), drawn opaque.
      *
-     * Chosen by search to be as far apart from each other as possible: the closest pair is
-     * CIEDE2000 22 apart (salmon and mustard; the 0.55-alpha set this replaced had two greens 4.5
-     * apart once blended, which is what a player noticed). Two further limits shaped them: every
+     * Chosen by search to be as far apart from each other as possible: the closest pair, green
+     * and mint, is CIEDE2000 22 apart, where the 0.55-alpha set this replaced had two greens 4.5
+     * apart once blended — the complaint that prompted it. Two further limits shaped them: every
      * colour keeps at least 4.5:1 contrast with [MarkInk], so the marks read on all of them, and
      * lightness and chroma stay short of neon. Under simulated deuteranopia and protanopia
      * (Machado 2009, full severity) the closest pairs are about 11 apart — orange/green,
