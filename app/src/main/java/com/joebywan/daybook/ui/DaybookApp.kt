@@ -86,6 +86,8 @@ fun DaybookApp() {
     //
     // A dialog is a window of its own and takes the back press before the activity ever sees it,
     // so this cannot fire while the archive picker or the rules sheet is open.
+    //
+    // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
     PlatformBackHandler(enabled = route != Route.Home) { route = Route.Home }
 
     when (val current = route) {
