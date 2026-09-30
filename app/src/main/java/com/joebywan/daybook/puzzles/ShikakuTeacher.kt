@@ -22,8 +22,8 @@ package com.joebywan.daybook.puzzles
  *    rectangles covers it.
  * 3. [COMMON_CELLS] — squares every rectangle of one number covers, which no other number can use;
  *    taking them away leaves another number a single rectangle.
- * 4. [WHAT_IF] — a number with two or three rectangles, where every one but one leaves another
- *    number no room, or a square nothing can cover, straight away.
+ * 4. [WHAT_IF] — a number where every rectangle but one leaves another number no room, or a
+ *    square nothing can cover, straight away.
  *
  * Cell indices, as [com.joebywan.daybook.core.Deduction] and the board's highlight use them, are
  * `row * width + col`. Every loop walks cells and clues in reading order and nothing iterates a
@@ -42,10 +42,11 @@ internal object ShikakuTeacher {
     val TECHNIQUES = listOf(ONLY_FITS, ONLY_REACHES, COMMON_CELLS, WHAT_IF, FALLBACK)
 
     /**
-     * The most rectangles a [WHAT_IF] may rule out for one number. Each has to be named as a reason
-     * in one sentence; past two the sentence stops being something to check against the board.
+     * The most different reasons a [WHAT_IF] may give for ruling a number's other rectangles out.
+     * However many rectangles there are, each has to die for a reason the sentence names; past two
+     * reasons it stops being something to check against the board.
      */
-    const val MAX_WHAT_IF_OPTIONS = 3
+    const val MAX_WHAT_IF_REASONS = 2
 
     /** One step: a rectangle to draw, or a mistaken one to remove, and why. */
     class Step(
@@ -304,39 +305,43 @@ internal object ShikakuTeacher {
     }
 
     private fun whatIf(s: Sight): Step? {
-        for (size in 2..MAX_WHAT_IF_OPTIONS) {
-            for (a in s.open) {
-                val opts = s.options(a)
-                if (opts.size != size) continue
-                val deaths = opts.map { deadEnd(s, a, it) }
-                if (deaths.count { it == null } != 1) continue
-                val keep = opts[deaths.indexOf(null)]
-                val n = s.clues[a]!!
-                val witnesses = deaths.filterNotNull()
-                val phrases = witnesses.map { d ->
-                    when (d) {
-                        is NoRoom -> "leave the ${s.clues[d.clue]} no room"
-                        is Uncovered -> "leave a marked square no number can reach"
-                    }
-                }.distinct()
-                val which = if (witnesses.size == 1) "its other rectangle" else "either of its other rectangles"
-                val cited = witnesses.map { d ->
-                    when (d) {
-                        is NoRoom -> d.clue
-                        is Uncovered -> d.cell
-                    }
-                }.toSet()
-                return Step(
-                    technique = WHAT_IF,
-                    place = keep,
-                    focus = setOf(a),
-                    cited = cited + a,
-                    targets = s.cellsOf(keep).toSet(),
-                    nudge = "What if the glowing $n went another way?",
-                    explanation = "Suppose the $n took $which. That would ${join(phrases, "or")}. " +
-                        "So the $n takes this rectangle.",
-                )
+        // Fewest rectangles first: the fewer there are to rule out, the easier the step is to check.
+        val byChoices = s.open.filter { s.options(it).size >= 2 }.sortedBy { s.options(it).size * s.w * s.h + it }
+        for (a in byChoices) {
+            val opts = s.options(a)
+            val deaths = opts.map { deadEnd(s, a, it) }
+            if (deaths.count { it == null } != 1) continue
+            val keep = opts[deaths.indexOf(null)]
+            val n = s.clues[a]!!
+            val witnesses = deaths.filterNotNull()
+            val phrases = witnesses.map { d ->
+                when (d) {
+                    is NoRoom -> "leave the marked ${s.clues[d.clue]} no room"
+                    is Uncovered -> "leave a marked square no number can reach"
+                }
+            }.distinct()
+            if (phrases.size > MAX_WHAT_IF_REASONS) continue
+            val which = when (witnesses.size) {
+                1 -> "its other rectangle"
+                2 -> "either of its other rectangles"
+                else -> "any of its other ${numberWord(witnesses.size)} rectangles"
             }
+            val cited = witnesses.map { d ->
+                when (d) {
+                    is NoRoom -> d.clue
+                    is Uncovered -> d.cell
+                }
+            }.toSet()
+            return Step(
+                technique = WHAT_IF,
+                place = keep,
+                focus = setOf(a),
+                cited = cited + a,
+                targets = s.cellsOf(keep).toSet(),
+                nudge = "What if the glowing $n went another way?",
+                explanation = "Suppose the $n took $which. That would ${join(phrases, "or")}. " +
+                    "So the $n takes this rectangle.",
+            )
         }
         return null
     }
