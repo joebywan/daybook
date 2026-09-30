@@ -133,7 +133,10 @@ or turns a bucket into a red-black tree bin (root moved to the front, new nodes 
 tree parent). `core/JvmHashOrder.kt` replays `java.util.HashMap` exactly and `JvmHashOrderTest`
 diffs it against the real `HashSet`; mutating any of those paths makes it fail. `?puzzle=lits`
 selects LITS on the web; `?dump` adds `LITS-PARITY`/`LITS-TODAY`/`LITS-RANGE` lines matching
-`LitsWebParityTest` (`LITS_DUMP=file` makes that test write a year).
+`LitsWebParityTest` (`LITS_DUMP=file` makes that test write a year). LITS generation runs ~2.5x
+(Chromium) to ~4x (WebKit) the warm JVM: medians 0.3-0.45 s in WebKit, but the slowest boards
+take 2.5-4.5 s there (they take ~1 s on the JVM too). Roughly half is `placeTetrominoes`'
+candidate enumeration and a quarter the uniqueness `search`; the hash replay is ~2%.
 
 **Compose web reads `TouchEvent`s for fingers, not `PointerEvent`s.** Synthetic `pointerdown` with
 `pointerType: 'touch'` does nothing. Playwright's `touchscreen.tap` works in WebKit; for a touch
