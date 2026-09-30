@@ -1,5 +1,10 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,8 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,8 +43,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
 
@@ -51,6 +63,17 @@ data class MosaicState(
     val limit: Int,
     val cells: List<Int>,
     override val moves: Int = 0,
+    /**
+     * The board before the first fill, and every fill since as `cell * 8 + colour`. Only the hint
+     * reads them: a board that can no longer be finished has to be able to say *which* fill lost it
+     * and how far back Undo has to go, and the cells alone cannot say that because a fill is not
+     * reversible. Both are the player's own moves, so nothing here is hidden from them.
+     *
+     * Empty on a board that has never been filled, and [start] stays empty on a game saved before
+     * these existed — the hint then says "undo back" without naming the fill.
+     */
+    val start: List<Int> = emptyList(),
+    val trail: List<Int> = emptyList(),
 ) : PuzzleState {
 
     override val solved: Boolean get() = cells.all { it == cells[0] }
@@ -115,7 +138,12 @@ data class MosaicState(
         if (cells[index] == colour) return this
         val next = cells.toMutableList()
         for (cell in area(index)) next[cell] = colour
-        return copy(cells = next, moves = moves + 1)
+        return copy(
+            cells = next,
+            moves = moves + 1,
+            start = if (moves == 0) cells else start,
+            trail = trail + (index * 8 + colour),
+        )
     }
 }
 
@@ -747,6 +775,183 @@ object Mosaic : PuzzleType {
         return s.flood(move.cell, move.colour)
     }
 
+    // ---- teaching ---------------------------------------------------------------------------
+
+    /**
+     * A board that can no longer be finished, or a fill still on an optimal line and the reason for
+     * it — see [MosaicTeacher]. Replaces nothing: [hint] stays as the fallback for a board the
+     * teacher's search cannot decide inside its budget.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as MosaicState
+        val step = MosaicTeacher.teach(s) ?: return null
+        val mistake = step.technique == MosaicTeacher.MISTAKE
+        val base = s.cells
+        val after = if (mistake) null else s.flood(step.cell, step.colour).cells
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = step.targets,
+            mistake = mistake,
+            fallback = step.technique == MosaicTeacher.KEEPS,
+            applyTo = { now ->
+                val m = now as MosaicState
+                when {
+                    // "Show me" on a lost board goes back to where it could still be done: the
+                    // same board Undo would reach, as one state, so one more Undo returns here.
+                    mistake -> step.rewind ?: m
+                    // A fill is only meaningful on the board it was worked out for.
+                    m.cells == base -> m.flood(step.cell, step.colour)
+                    else -> m
+                }
+            },
+            reachedBy = { now ->
+                val m = now as MosaicState
+                if (mistake) {
+                    val rewind = step.rewind
+                    // Back on the good line: a prefix of the fills that still finished.
+                    rewind != null && m.moves <= step.rewindTo &&
+                        (m.moves == 0 || (m.start == rewind.start && m.trail == rewind.trail.take(m.moves)))
+                } else {
+                    m.cells == after
+                }
+            },
+        )
+    }
+
+    // ---- the walkthrough ---------------------------------------------------------------------
+
+    /**
+     * The walkthrough's board, 5x5, three colours, finished in exactly three fills:
+     *
+     * ```
+     * R R G R B
+     * R R G R B
+     * R R G B R
+     * R R B G G
+     * G G B B B
+     * ```
+     *
+     * Hand-picked, by exhaustive search, so that each fill the frames teach is the *only* fill that
+     * keeps the board inside its limit at that point, and so that each is the teacher's own choice
+     * for the reason the caption gives: first the biggest swallow (the blue corner, poured green,
+     * takes three green areas), then counting (two fills for three colours, and green is the only
+     * colour down to one patch), then the finish. MosaicTeachingTest proves all three.
+     */
+    internal val TUTORIAL_CELLS = listOf(
+        1, 1, 0, 1, 2,
+        1, 1, 0, 1, 2,
+        1, 1, 0, 2, 1,
+        1, 1, 2, 0, 0,
+        0, 0, 2, 2, 2,
+    )
+
+    /**
+     * The "your turn" board: 6x6, three colours, four fills and none spare, with plenty of ways to
+     * go right and to go wrong. The teacher finishes it without its fallback.
+     */
+    internal val PRACTICE_CELLS = listOf(
+        0, 0, 0, 1, 2, 2,
+        0, 0, 2, 2, 2, 2,
+        0, 0, 2, 2, 2, 2,
+        0, 0, 0, 1, 0, 0,
+        0, 2, 2, 2, 1, 0,
+        0, 1, 1, 0, 0, 2,
+    )
+
+    /** The three fills the walkthrough teaches, as (cell, colour). */
+    internal val TUTORIAL_FILLS = listOf(17 to 0, 2 to 1, 0 to 2)
+
+    private fun tutorialBoard() = MosaicState(5, 5, 3, 3, TUTORIAL_CELLS)
+
+    /**
+     * Accepts exactly the board [base] reaches by pouring [colour] into [cell]'s area, from any cell
+     * of that area. Strict otherwise: each frame's caption is written for the board the one before
+     * it leaves.
+     */
+    private fun pour(base: MosaicState, cell: Int, colour: Int): (PuzzleState) -> Boolean {
+        val want = base.flood(cell, colour).cells
+        return { next -> next is MosaicState && next.cells == want }
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val start = tutorialBoard()
+        val (c1, k1) = TUTORIAL_FILLS[0]
+        val (c2, k2) = TUTORIAL_FILLS[1]
+        val (c3, k3) = TUTORIAL_FILLS[2]
+        val second = start.flood(c1, k1)
+        val third = second.flood(c2, k2)
+        val redArea = start.area(0).toSet()
+        listOf(
+            TutorialFrame(
+                state = start,
+                caption = "Touching cells of one colour make an area, outlined in black. " +
+                    "Turn the whole board one colour.",
+                highlight = BoardHighlight(strong = redArea),
+            ),
+            TutorialFrame(
+                state = start,
+                caption = "The line above the board counts your fills. The limit is the fewest fills " +
+                    "this board can be done in: here 3, with none to spare.",
+            ),
+            TutorialFrame(
+                state = start,
+                caption = "Pick green below, then tap the glowing blue area. It joins every green " +
+                    "area it touches: three at once, more than any other fill can.",
+                highlight = BoardHighlight(strong = start.area(c1).toSet(), soft = greenNeighbours(start, c1)),
+                accepts = pour(start, c1, k1),
+                retry = "Pick green from the swatches, then tap the glowing area.",
+                done = "Four areas became one. The bigger it grows, the more each fill takes.",
+            ),
+            TutorialFrame(
+                state = second,
+                caption = "2 fills left, 3 colours. A fill wipes out a colour only by covering its last " +
+                    "patch, so both fills must. Green is down to one patch: pour red into it.",
+                highlight = BoardHighlight(strong = second.area(c2).toSet()),
+                accepts = pour(second, c2, k2),
+                retry = "Pick red, then tap the big green area.",
+                done = "Green is gone. Two colours, one fill.",
+            ),
+            TutorialFrame(
+                state = third,
+                caption = "Every other area touches the red one, and they're all blue. " +
+                    "Pour blue into red to finish.",
+                highlight = BoardHighlight(strong = third.area(c3).toSet()),
+                accepts = pour(third, c3, k3),
+                retry = "Pick blue, then tap the red area.",
+                done = "One colour, three fills: the least it could take.",
+            ),
+            TutorialFrame(
+                state = MosaicState(6, 6, 3, 4, PRACTICE_CELLS),
+                caption = "Your turn: 4 fills, none spare. Out of fills or stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
+        )
+    }
+
+    /** Cells of the areas a fill of [cell]'s area with green would swallow, for the first lesson. */
+    private fun greenNeighbours(s: MosaicState, cell: Int): Set<Int> {
+        val mine = s.area(cell).toSet()
+        val out = mutableSetOf<Int>()
+        for (x in mine) {
+            val r = x / s.width
+            val c = x % s.width
+            for (y in listOf(
+                if (r > 0) x - s.width else -1,
+                if (r < s.height - 1) x + s.width else -1,
+                if (c > 0) x - 1 else -1,
+                if (c < s.width - 1) x + 1 else -1,
+            )) {
+                if (y >= 0 && y !in mine && s.cells[y] == 0) out += s.area(y).toList()
+            }
+        }
+        return out
+    }
+
     // ---- home-grid motif ----------------------------------------------------------------------
 
     /**
@@ -829,6 +1034,20 @@ object Mosaic : PuzzleType {
         // reset the swatch.
         var selected by rememberSaveable(s.colours) { mutableIntStateOf(0) }
         val live = interactive && !s.failed
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // A rim that breathes is findable at a glance; a still one is not much louder than the
+        // seams. Only runs while something glows, and is read in the draw phase.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
 
         Column(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -904,6 +1123,53 @@ object Mosaic : PuzzleType {
                         size = Size(stepPx * s.width, stepPx * s.height),
                         style = Stroke(width = edge),
                     )
+
+                    if (!highlight.isEmpty) {
+                        // Everything the hint does not name steps back, so the glow is findable on
+                        // a 160-cell board full of outlines.
+                        for (cell in s.cells.indices) {
+                            if (cell in highlight.strong || cell in highlight.soft) continue
+                            drawRect(
+                                color = scheme.background.copy(alpha = 0.62f),
+                                topLeft = Offset((cell % s.width) * stepPx, (cell / s.width) * stepPx),
+                                size = Size(stepPx, stepPx),
+                            )
+                        }
+
+                        // A rim just inside the outline of a set of cells: one stroke per cell side
+                        // that faces out of the set, inset by half its width so a neighbour's dimming
+                        // cannot cover it.
+                        fun rim(set: Set<Int>, width: Float, colour: Color) {
+                            val h = width / 2
+                            for (cell in set) {
+                                val r = cell / s.width
+                                val c = cell % s.width
+                                val x0 = c * stepPx
+                                val y0 = r * stepPx
+                                val x1 = x0 + stepPx
+                                val y1 = y0 + stepPx
+                                if (r == 0 || cell - s.width !in set) {
+                                    drawLine(colour, Offset(x0, y0 + h), Offset(x1, y0 + h), width)
+                                }
+                                if (r == s.height - 1 || cell + s.width !in set) {
+                                    drawLine(colour, Offset(x0, y1 - h), Offset(x1, y1 - h), width)
+                                }
+                                if (c == 0 || cell - 1 !in set) {
+                                    drawLine(colour, Offset(x0 + h, y0), Offset(x0 + h, y1), width)
+                                }
+                                if (c == s.width - 1 || cell + 1 !in set) {
+                                    drawLine(colour, Offset(x1 - h, y0), Offset(x1 - h, y1), width)
+                                }
+                            }
+                        }
+
+                        rim(highlight.soft - highlight.strong, stepPx * 0.1f, glow.copy(alpha = 0.55f))
+                        // A halo in the page colour under the glow, so a strong rim reads as
+                        // something other than one more of the black seams between areas.
+                        val a = pulse.value
+                        rim(highlight.strong, stepPx * 0.3f, scheme.background.copy(alpha = 0.9f * a))
+                        rim(highlight.strong, stepPx * 0.16f, glow.copy(alpha = a))
+                    }
                 }
             }
 
