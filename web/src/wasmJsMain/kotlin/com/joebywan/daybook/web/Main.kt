@@ -141,6 +141,7 @@ fun main() {
         dumpLits(day, tier, range)
     }
 
+    val other = params["puzzle"]?.let(::shikakuSnapSudoku)
     ComposeViewport(viewportContainerId = "app") {
         // ?dump keeps the bare board the parity and touch harnesses drive; otherwise the whole
         // app (WebApp.kt), which reads ?date and ?tier itself.

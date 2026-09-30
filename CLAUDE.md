@@ -249,6 +249,14 @@ pins the JVM side, and `DAYBOOK_PARITY_DUMP=<dir>` makes it write a year of fing
   slop-crossing point, not the down, so a gesture that must *start on* something small misses: no
   Atoms Expert drag could ever begin on an atom. Use the overload whose `onDragStart` receives the
   `down` change. A touch-drag test with small steps hides this; step 10px+ per move.
+**Shikaku, Snap, Sudoku** (`?puzzle=shikaku|snap|sudoku`; `?dump` adds `PARITY3`/`RANGE3` lines
+matching `WebParityShikakuSnapSudokuTest`, whose `DAYBOOK_DUMP3=<file>` env var writes the JVM's
+year). The trap that is not a hash: `sortedSetOf` is JVM-only, so it fails the wasm compile rather
+than drifting — Sudoku's peer table now builds the same ascending order from a mask. Snap is the
+slow one in wasm: mean ~50 ms, worst ~450 ms a board in WebKit (Standard), under the JVM's gen
+budget but the first place to look if a tier ever feels laggy. `onGloballyPositioned` does not fire
+again when a tier change leaves the board's bounds unchanged (Sudoku is always 9x9), so a harness
+must key "new board loaded" on something else, e.g. the page's `GENERATED` line.
 
 ## Tests
 
