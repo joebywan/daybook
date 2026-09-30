@@ -144,10 +144,12 @@ picks the board (Kings stays the default), `?dump` prints its fingerprints in
 `WebParityMamboPipesSetsTowerTest`'s format, and `&time` adds `TIME` lines with per-tier
 generation times. The page prints `BOARD` (the board's real bounds) and `STATE` (moves / solved /
 undo depth) for a harness. None of the four had hash order reaching the `Rng`; Pipes only needed
-`Integer.bitCount` → `countOneBits()`. **Pipes' spin is cancelled by the next tap:** each state
-restarts `LaunchedEffect(s.cells)`, which cancels the previous tile's still-running `launch`, so
-tapping another tile within `SPIN_MILLIS` leaves the first frozen at a slant (Android too — shared
-code). A harness that taps faster than 140 ms will screenshot a crooked, yet solved, board.
+`Integer.bitCount` → `countOneBits()`. **Pipes' spins run in a `rememberCoroutineScope`, not the
+`LaunchedEffect(s.cells)` that starts them:** every tap restarts that effect, and while the spins
+were its children a tap on one tile cancelled another's turn mid-way and left it frozen at a slant
+(Android too). Headless WebKit separately sometimes skips presenting an animation's last frame, so
+the harness dispatches a `resize` before a settled screenshot — a redraw reads the real angle, so
+it cannot hide a spin that is genuinely stuck (checked: the unfixed build still fails with it).
 
 ## Tests
 
