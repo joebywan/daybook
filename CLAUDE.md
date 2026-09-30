@@ -31,8 +31,8 @@ sounded. Do not turn it off.
 
 ## Teaching: hints that explain, and walkthroughs
 
-Kings was the pilot; Atoms, Mambo, Mosaic, Pipes and Tower have followed, and the other five still use
-the old `hint()` with no walkthrough. The contract
+Kings was the pilot; Atoms, Mosaic, Pipes and Tower have followed, and the other six still use the
+old `hint()` with no walkthrough. The contract
 lives in `core/Teaching.kt` and `core/PuzzleType.kt`, all with defaults, so a board adopts it one
 file at a time and nothing else has to change:
 
@@ -65,13 +65,6 @@ Measured coverage (500 boards per tier, walked from empty by hints alone; the fa
 | Standard | 47% of steps | 24% | 24% | 3% | 1.2% (7% of boards) | 0.2% of boards |
 | Hard | 48% | 23% | 24% | 5% | 1.1% (6%) | 0.6% |
 | Expert | 49% | 22% | 22% | 6% | 1.6% (7%) | 0.6% |
-
-Mambo (`MamboTeacher`): pair, sandwich, link and quota-met finish every generated board, because the
-carver keeps only boards its propagation solves with exactly those four rules. Quota-almost-met,
-a one-round what-if and the fallback are 0% on 500 boards per tier; the several-answer walk is what
-exercises them. Its Board sizes the grid from the height left after its own two-line caption, so
-under the hint slot a short phone shrinks the grid instead of pushing the caption onto the panel.
-A sun is two taps (moon, then sun), so walkthrough frames that want a sun take it in two frames.
 
 Adopting it for another puzzle: write a `XTeacher` whose reasoning entry point takes only visible
 state; override `teach` and `tutorial`; read `LocalBoardHighlight` in `Board` (the web compiles the
