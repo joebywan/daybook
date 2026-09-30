@@ -122,6 +122,13 @@ fun main() {
     val debug = "dump" in params
 
     println("daybook: date=$day epochDay=${day.epochDay}")
+    mosaicAtomsPuzzles[params["puzzle"]]?.let { type ->
+        if (debug) dumpMosaicAtoms(type, day, tier, params["range"]?.toIntOrNull() ?: 0)
+        ComposeViewport(viewportContainerId = "app") { MosaicAtomsPage(type, day, tier, debug) }
+        removeLoadingNote()
+        nudgeFirstFrame()
+        return
+    }
     if (debug) {
         for (d in PARITY_DAYS) for (t in Difficulty.entries) println("PARITY ${fingerprint(d, t)}")
         println("TODAY ${fingerprint(day, tier)}")
