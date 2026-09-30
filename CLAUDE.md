@@ -31,8 +31,8 @@ sounded. Do not turn it off.
 
 ## Teaching: hints that explain, and walkthroughs
 
-Kings was the pilot; Atoms, Mosaic, Pipes and Tower have followed, and the other six still use the
-old `hint()` with no walkthrough. The contract
+Kings was the pilot; Atoms, Mosaic, Pipes, Shikaku and Tower have followed, and the other five still
+use the old `hint()` with no walkthrough. The contract
 lives in `core/Teaching.kt` and `core/PuzzleType.kt`, all with defaults, so a board adopts it one
 file at a time and nothing else has to change:
 
@@ -76,7 +76,10 @@ and measure the fallback rate — don't assume it.
 **Never ship a board the generator has not proved.** Kings, LITS, Mosaic and Shikaku each had a
 fallback that was reachable and unvetted, and in three of them that fallback was what players
 actually got. LITS's real generator had *never once run*. When you add a fallback, ask what
-fraction of seeds reach it, and measure rather than assume.
+fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
+Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
+about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
+Kings and Atoms expose `generateVerified` (null when nothing was proved), which is what tests assert.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

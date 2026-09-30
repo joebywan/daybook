@@ -12,6 +12,7 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  issues: write          # the Dependency Dashboard is an issue
 
 jobs:
   renovate:

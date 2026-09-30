@@ -1,5 +1,11 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -15,24 +21,33 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
 import kotlinx.serialization.Serializable
 
 /** An axis-aligned block of cells, inclusive on both corners. */
@@ -287,6 +302,152 @@ object Shikaku : PuzzleType {
         return s.place(missing)
     }
 
+    // ---- walkthrough --------------------------------------------------------------------------
+
+    /**
+     * The walkthrough's board, 5x5:
+     * ```
+     * . 4 . 6 .      A A B B B
+     * . . . . .      A A B B B
+     * . . . 6 .      C D D E E
+     * 3 . . . .      C D D E E
+     * . . 6 . .      C D D E E
+     * ```
+     * Found by searching small boards for one whose hint walk runs the techniques in teaching order:
+     * the top 6 fits only one way, then the 4 and the 3 are each the only number reaching a square,
+     * then the middle 6's squares leave the bottom 6 one rectangle, and the last 6 fits. The frames
+     * follow that walk; ShikakuTeachingTest proves the answer is unique and the moves are the hints'.
+     */
+    internal val TUTORIAL_CLUES = listOf<Int?>(
+        null, 4, null, 6, null,
+        null, null, null, null, null,
+        null, null, null, 6, null,
+        3, null, null, null, null,
+        null, null, 6, null, null,
+    )
+    private const val TUTORIAL_SIZE = 5
+    internal val TUTORIAL_TOP_SIX = Block(0, 2, 1, 4)
+    internal val TUTORIAL_FOUR = Block(0, 0, 1, 1)
+    internal val TUTORIAL_THREE = Block(2, 0, 4, 0)
+    internal val TUTORIAL_LOW_SIX = Block(2, 1, 4, 2)
+    internal val TUTORIAL_MID_SIX = Block(2, 3, 4, 4)
+    internal val TUTORIAL_SOLUTION = listOf(TUTORIAL_TOP_SIX, TUTORIAL_FOUR, TUTORIAL_THREE, TUTORIAL_LOW_SIX, TUTORIAL_MID_SIX)
+
+    /** The right size for the 4, and wrong: it leaves the corner square nothing can reach. */
+    internal val TUTORIAL_WRONG_FOUR = Block(0, 1, 3, 1)
+
+    private fun tutorialBoard(vararg blocks: Block) =
+        ShikakuState(TUTORIAL_SIZE, TUTORIAL_SIZE, TUTORIAL_CLUES, blocks.toList(), TUTORIAL_SOLUTION)
+
+    private fun cellsOf(b: Block) = (b.r0..b.r1).flatMap { r -> (b.c0..b.c1).map { c -> r * TUTORIAL_SIZE + c } }.toSet()
+
+    /**
+     * Accepts a board holding exactly [blocks] and nothing else. Strict on purpose: each frame's board
+     * is written for the one before it.
+     */
+    private fun only(vararg blocks: Block): (PuzzleState) -> Boolean = { next ->
+        next is ShikakuState && next.blocks.toSet() == blocks.toSet()
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val top = TUTORIAL_TOP_SIX
+        val four = TUTORIAL_FOUR
+        val three = TUTORIAL_THREE
+        val low = TUTORIAL_LOW_SIX
+        listOf(
+            TutorialFrame(
+                state = tutorialBoard(*TUTORIAL_SOLUTION.toTypedArray()),
+                caption = "Split the grid into rectangles. Each holds exactly one number, and that number " +
+                    "is its area: this 6 covers six squares.",
+                highlight = BoardHighlight(strong = cellsOf(top)),
+            ),
+            TutorialFrame(
+                state = tutorialBoard(),
+                caption = "This 6 needs six squares, and any other shape would run off the grid or take " +
+                    "in another number. Drag from one corner to the opposite corner to draw it.",
+                highlight = BoardHighlight(strong = cellsOf(top), soft = setOf(1, 13)),
+                accepts = only(top),
+                retry = "Drag from one glowing corner to the opposite one.",
+                done = "Drawn.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(top, TUTORIAL_WRONG_FOUR),
+                caption = "This 4 is the right size, but then no number could reach the corner square, and " +
+                    "every square needs one. Tap the rectangle to remove it.",
+                highlight = BoardHighlight(strong = cellsOf(TUTORIAL_WRONG_FOUR), soft = setOf(0), warning = true),
+                accepts = only(top),
+                retry = "Tap the glowing rectangle once.",
+                done = "Removed. A tap takes any rectangle away.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(top),
+                caption = "Only the 4 can reach the glowing corner, and just one of its rectangles covers " +
+                    "it. Draw that one.",
+                highlight = BoardHighlight(strong = setOf(0), soft = setOf(1)),
+                accepts = only(top, four),
+                retry = "Draw the 4's rectangle over the glowing corner.",
+                done = "Drawn.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(top, four),
+                caption = "The same goes for the glowing square: only the 3 can reach it now. Draw the 3.",
+                highlight = BoardHighlight(strong = setOf(10), soft = setOf(15)),
+                accepts = only(top, four, three),
+                retry = "Draw the 3's rectangle over the glowing square.",
+                done = "Drawn.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(top, four, three),
+                caption = "Every rectangle this 6 can make covers the square below it, so the other 6 " +
+                    "can't use that square. That leaves the other 6 one rectangle. Draw it.",
+                highlight = BoardHighlight(strong = setOf(13, 18), soft = setOf(22)),
+                accepts = only(top, four, three, low),
+                retry = "Draw the bottom 6's rectangle, clear of the glowing squares.",
+                done = "Drawn.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(top, four, three, low),
+                caption = "Your turn: finish the grid. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
+        )
+    }
+
+    // ---- teaching -----------------------------------------------------------------------------
+
+    /**
+     * A mistake to take back or a step to reason out — see [ShikakuTeacher]. Replaces [hint] on the
+     * play screen, which drew a rectangle straight out of [ShikakuState.solution] and taught nothing.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as ShikakuState
+        val step = ShikakuTeacher.teach(s) ?: return null
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = step.targets,
+            mistake = step.technique == ShikakuTeacher.MISTAKE,
+            fallback = step.technique == ShikakuTeacher.FALLBACK,
+            applyTo = { now -> applyStep(now as ShikakuState, step) },
+            reachedBy = { now ->
+                val t = now as ShikakuState
+                (step.place == null || step.place in t.blocks) && (step.remove == null || step.remove !in t.blocks)
+            },
+        )
+    }
+
+    /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
+    private fun applyStep(s: ShikakuState, step: ShikakuTeacher.Step): ShikakuState {
+        var next = s
+        step.remove?.let { if (it in next.blocks) next = next.copy(blocks = next.blocks - it, moves = next.moves + 1) }
+        step.place?.let { if (it !in next.blocks) next = next.place(it) }
+        return next
+    }
+
     // ---- home-grid motif ----------------------------------------------------------------------
 
     /**
@@ -364,6 +525,20 @@ object Shikaku : PuzzleType {
         val s = state as ShikakuState
         val scheme = MaterialTheme.colorScheme
         val dark = scheme.background.luminance() < 0.5f
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // Breathes, as the other teaching boards' do, so a glowing square is findable at a glance on
+        // a 9x11 board. Only runs while something glows, and is read in the draw phase.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
         var dragFrom by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
         var dragTo by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
 
@@ -399,15 +574,19 @@ object Shikaku : PuzzleType {
                     }
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
+                        // The overload that hands over the touch-down itself. The plain one reports
+                        // where the finger crossed the touch slop, which on the web is wide enough
+                        // to start a rectangle a square away from the corner the player pressed.
                         detectDragGestures(
-                            onDragStart = { offset ->
-                                dragFrom = cellAt(offset)
+                            orientationLock = null,
+                            onDragStart = { down, _, _ ->
+                                dragFrom = cellAt(down.position)
                                 dragTo = dragFrom
                             },
                             onDrag = { change, _ ->
                                 dragTo = cellAt(change.position)
                             },
-                            onDragEnd = {
+                            onDragEnd = { _ ->
                                 val from = dragFrom
                                 val to = dragTo
                                 if (from != null && to != null) {
@@ -468,6 +647,41 @@ object Shikaku : PuzzleType {
                             .padding(1.dp)
                             .border(2.dp, block.edge(dark), RoundedCornerShape(4.dp))
                     )
+                }
+
+                // What a hint names. Everything else steps back under a veil in the page colour, so
+                // the named squares read without hunting; strong squares pulse, soft ones are quiet.
+                if (!highlight.isEmpty) {
+                    Canvas(Modifier.matchParentSize()) {
+                        val strongW = 4.dp.toPx()
+                        val softW = 1.5.dp.toPx()
+                        val corner = CornerRadius(4.dp.toPx())
+                        for (i in s.clues.indices) {
+                            val strong = i in highlight.strong
+                            val soft = !strong && i in highlight.soft
+                            val topLeft = Offset((i % s.width) * cellPx, (i / s.width) * cellPx)
+                            if (!strong && !soft) {
+                                drawRect(scheme.background.copy(alpha = 0.62f), topLeft, Size(cellPx, cellPx))
+                                continue
+                            }
+                            val w = if (strong) strongW else softW
+                            if (strong) {
+                                drawRoundRect(
+                                    color = glow.copy(alpha = 0.16f * pulse.value),
+                                    topLeft = topLeft,
+                                    size = Size(cellPx, cellPx),
+                                    cornerRadius = corner,
+                                )
+                            }
+                            drawRoundRect(
+                                color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
+                                topLeft = Offset(topLeft.x + w / 2, topLeft.y + w / 2),
+                                size = Size(cellPx - w, cellPx - w),
+                                cornerRadius = corner,
+                                style = Stroke(w),
+                            )
+                        }
+                    }
                 }
 
                 // The drag is set apart on three counts at once — the theme's own green, a washed

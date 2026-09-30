@@ -1,5 +1,10 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -10,11 +15,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -28,7 +36,11 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.jvmHashSetOrder
@@ -661,7 +673,7 @@ object Lits : PuzzleType {
     private fun hostsOf(cell: Int, w: Int, h: Int, region: List<Int>): Set<Int> =
         neighbours(cell, w, h).map { region[it] }.filter { it != -1 }.toSet()
 
-    private fun neighbours(cell: Int, w: Int, h: Int): List<Int> {
+    internal fun neighbours(cell: Int, w: Int, h: Int): List<Int> {
         val r = cell / w
         val c = cell % w
         return buildList {
@@ -672,8 +684,8 @@ object Lits : PuzzleType {
         }
     }
 
-    /** Every four-square legal tetromino that fits inside [cells]. */
-    private fun tetrominoes(cells: List<Int>, w: Int, h: Int): List<kotlin.Pair<List<Int>, Piece>> {
+    /** Every four-square legal tetromino that fits inside [cells]. Internal for [LitsTeacher]. */
+    internal fun tetrominoes(cells: List<Int>, w: Int, h: Int): List<kotlin.Pair<List<Int>, Piece>> {
         val out = mutableListOf<kotlin.Pair<List<Int>, Piece>>()
         val list = cells.sorted()
         for (a in list.indices) for (b in a + 1 until list.size)
@@ -935,6 +947,154 @@ object Lits : PuzzleType {
         return s.toggle(wrong)
     }
 
+    // ---- teaching -----------------------------------------------------------------------------
+
+    /**
+     * A mistake to take back or a step to reason out — see [LitsTeacher]. Replaces the old [hint],
+     * which toggled a square straight out of [LitsState.solution] and taught nothing.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as LitsState
+        val step = LitsTeacher.teach(s) ?: return null
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = step.targets,
+            mistake = step.technique == LitsTeacher.MISTAKE,
+            fallback = step.technique == LitsTeacher.FALLBACK,
+            applyTo = { now -> applyStep(now as LitsState, step) },
+            reachedBy = { now ->
+                val l = now as LitsState
+                step.shades.all { l.shaded[it] } && step.clears.all { !l.shaded[it] }
+            },
+        )
+    }
+
+    /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
+    private fun applyStep(s: LitsState, step: LitsTeacher.Step): LitsState =
+        s.paint(step.clears, false).paint(step.shades, true)
+
+    // ---- the walkthrough ------------------------------------------------------------------------
+
+    /**
+     * The walkthrough's board, 5x5 so every square is big enough to aim at while learning the
+     * gestures. Regions, with the answer's shading marked `#`:
+     *
+     * ```
+     * 1 .  0 #  0 #  0 #  3 .
+     * 1 .  1 .  1 .  0 #  3 #
+     * 2 #  2 .  1 #  3 .  3 #
+     * 2 #  2 #  1 #  3 .  3 #
+     * 2 #  2 .  1 #  1 #  3 #
+     * ```
+     *
+     * Chosen, from a few hundred boards carved the way the generator carves them, because the moves
+     * the frames teach are the moves it actually needs, in that order: the top region is exactly
+     * four squares (a drag); its L crosses off the middle region's top, leaving that region exactly
+     * four squares (a second drag); that L then crosses off both squares that would make the left
+     * region an L too, so the left region's bump is forced (a tap). LitsTeachingTest proves it has
+     * exactly one answer under the win check's rules, and walks it with the hints.
+     */
+    internal val TUTORIAL_REGIONS = listOf(
+        1, 0, 0, 0, 3,
+        1, 1, 1, 0, 3,
+        2, 2, 1, 3, 3,
+        2, 2, 1, 3, 3,
+        2, 2, 1, 1, 3,
+    )
+    internal val TUTORIAL_SOLUTION = setOf(1, 2, 3, 8, 9, 10, 12, 14, 15, 16, 17, 19, 20, 22, 23, 24)
+    private const val TUTORIAL_SIDE = 5
+    internal val TUTORIAL_TOP = setOf(1, 2, 3, 8)
+    internal val TUTORIAL_MIDDLE = setOf(12, 17, 22, 23)
+    internal const val TUTORIAL_BUMP = 16
+
+    private fun tutorialBoard(shaded: Set<Int>) = LitsState(
+        TUTORIAL_SIDE, TUTORIAL_SIDE, TUTORIAL_REGIONS,
+        List(TUTORIAL_SIDE * TUTORIAL_SIDE) { it in shaded },
+        List(TUTORIAL_SIDE * TUTORIAL_SIDE) { it in TUTORIAL_SOLUTION },
+    )
+
+    /**
+     * Accepts exactly [shaded] and nothing else. Strict on purpose, as Kings' is: each frame's board
+     * is written for the one before it, and one tap at a time is not a drag.
+     */
+    private fun exactly(shaded: Set<Int>): (PuzzleState) -> Boolean = { next ->
+        next is LitsState && next.shaded.indices.all { next.shaded[it] == (it in shaded) }
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val solved = tutorialBoard(TUTORIAL_SOLUTION)
+        val top = TUTORIAL_TOP
+        val middle = top + TUTORIAL_MIDDLE
+        val bumped = middle + TUTORIAL_BUMP
+        val leftT = setOf(10, 15, 16, 20)
+        listOf(
+            TutorialFrame(
+                state = solved,
+                caption = "Shade four squares in every region so they make an L, I, T or S. The " +
+                    "thick lines are the walls. Here's a finished board; the glowing T is one region's.",
+                highlight = BoardHighlight(strong = leftT, soft = setOf(11, 21)),
+            ),
+            TutorialFrame(
+                state = solved,
+                caption = "Shading never fills a 2x2 square. Three squares of this block are shaded, " +
+                    "so the glowing one has to stay empty.",
+                highlight = BoardHighlight(strong = setOf(7), soft = setOf(2, 3, 8)),
+            ),
+            TutorialFrame(
+                state = solved,
+                caption = "Two tetrominoes of the same letter may not touch along an edge, even across " +
+                    "a wall. These two L's meet only at a corner, which is allowed.",
+                highlight = BoardHighlight(strong = top + TUTORIAL_MIDDLE),
+            ),
+            TutorialFrame(
+                state = tutorialBoard(emptySet()),
+                caption = "The top region has exactly four squares, so its tetromino is the whole " +
+                    "region. Drag through all four glowing squares to shade them.",
+                highlight = BoardHighlight(strong = top),
+                accepts = exactly(top),
+                retry = "Drag through all four glowing squares in one go.",
+                done = "Shaded. A finished shape wears its letter.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(top + 7),
+                caption = "Suppose you'd shaded the glowing square too: it fills a 2x2 with the L. " +
+                    "Tap a shaded square to clear it.",
+                highlight = BoardHighlight(strong = setOf(7), soft = setOf(2, 3, 8)),
+                accepts = exactly(top),
+                retry = "Tap the glowing square once.",
+                done = "Cleared. A drag that starts on a shaded square clears too.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(top),
+                caption = "Squares that can't be shaded any more are crossed off for you. The middle " +
+                    "region has exactly four squares left, so drag through them.",
+                highlight = BoardHighlight(strong = TUTORIAL_MIDDLE, soft = setOf(0, 5, 6, 7)),
+                accepts = exactly(middle),
+                retry = "Drag through the four glowing squares in one go.",
+                done = "Another L, touching the first only at a corner.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(middle),
+                caption = "On the left, the crossed squares would make an L touching the middle L, or " +
+                    "fill a 2x2 with it. What's left is a T. Tap its bump to shade it.",
+                highlight = BoardHighlight(strong = setOf(TUTORIAL_BUMP), soft = setOf(10, 11, 15, 20, 21)),
+                accepts = exactly(bumped),
+                retry = "Tap the glowing square once.",
+                done = "That's the T's bump.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(bumped),
+                caption = "Your turn: finish the board. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
+        )
+    }
+
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
@@ -1017,6 +1177,24 @@ object Lits : PuzzleType {
         // a drag that is the preview, so letters and crosses follow the finger.
         val letters = remember(shown.shaded) { shown.letters() }
         val impossible = remember(shown.shaded) { shown.impossible() }
+
+        // What a hint or the walkthrough is pointing at. Everything it does not name is dimmed, so
+        // the named squares can be found at a glance; [BoardHighlight.strong] squares get a
+        // breathing outline and [BoardHighlight.soft] ones a quiet one — the same language as Kings.
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        val dim = scheme.background
+        // Read only inside the draw lambda, so the pulse repaints the outlines without recomposing.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
 
         BoxWithConstraints(Modifier.fillMaxWidth().padding(18.dp)) {
             val step = maxWidth / s.width
@@ -1132,6 +1310,19 @@ object Lits : PuzzleType {
                     }
                 }
 
+                // Dimming goes over the marks but under the walls, so the regions stay readable
+                // however much of the board has stepped back.
+                if (!highlight.isEmpty) {
+                    for (i in 0 until s.width * s.height) {
+                        if (i in highlight.strong || i in highlight.soft) continue
+                        drawRect(
+                            color = dim.copy(alpha = 0.62f),
+                            topLeft = Offset((i % s.width) * stepPx, (i / s.width) * stepPx),
+                            size = Size(stepPx, stepPx),
+                        )
+                    }
+                }
+
                 // Thick strokes wherever two different regions meet.
                 val edge = stepPx * 0.06f
                 for (i in 0 until s.width * s.height) {
@@ -1160,6 +1351,25 @@ object Lits : PuzzleType {
                     size = Size(stepPx * s.width, stepPx * s.height),
                     style = Stroke(width = edge),
                 )
+
+                // Outlines last, on top of the walls: a glow that a wall half-covers is a glow the
+                // player has to hunt for.
+                val strongWidth = 4.dp.toPx()
+                val softWidth = 1.5.dp.toPx()
+                val radius = CornerRadius(4.dp.toPx())
+                for (i in 0 until s.width * s.height) {
+                    val strong = i in highlight.strong
+                    if (!strong && i !in highlight.soft) continue
+                    val stroke = if (strong) strongWidth else softWidth
+                    val inset = edge / 2f + stroke / 2f
+                    drawRoundRect(
+                        color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
+                        topLeft = Offset((i % s.width) * stepPx + inset, (i / s.width) * stepPx + inset),
+                        size = Size(stepPx - inset * 2f, stepPx - inset * 2f),
+                        cornerRadius = radius,
+                        style = Stroke(stroke),
+                    )
+                }
             }
         }
     }
