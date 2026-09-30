@@ -53,6 +53,20 @@ private fun locationSearch(): String = js("window.location.search")
 
 private fun removeLoadingNote(): Unit = js("document.getElementById('loading')?.remove()")
 
+/**
+ * Asks Compose for one more frame shortly after start-up, and again whenever the page is shown
+ * from the back-forward cache. Headless WebKit drops the very first WebGL frame Compose draws and
+ * shows an empty page until the first touch; Chromium does not. Whether iOS Safari does is not
+ * known, and one spare frame is cheap insurance against a blank board on launch. A resize event is
+ * what makes Compose re-measure and redraw without any state of ours changing.
+ */
+private fun nudgeFirstFrame(): Unit = js("""(() => {
+    const nudge = () => requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event('resize'))));
+    nudge();
+    setTimeout(nudge, 300);
+    window.addEventListener('pageshow', nudge);
+})()""")
+
 /** A calendar date the way the app's `LocalDate` would print it. */
 private data class Day(val year: Int, val month: Int, val day: Int) {
     val epochDay: Long get() = SeedHash.epochDay(year, month, day)
@@ -123,6 +137,7 @@ fun main() {
         KingsPage(day, tier, debug)
     }
     removeLoadingNote()
+    nudgeFirstFrame()
 }
 
 @Composable

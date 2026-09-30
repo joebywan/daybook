@@ -92,9 +92,56 @@ particular names the puzzle count in its alt text.
 **Write agent patches early.** One agent lost a complete implementation by leaving
 `git diff --cached > patch` until the end and dying on a rate limit.
 
+## Web build (`web/`)
+
+A feasibility slice: Kings alone, in a browser, via Compose Multiplatform on Kotlin/Wasm
+(`wasmJs`). Compose Multiplatform 1.9.3 on the repo's Kotlin 2.2.10 — no Kotlin upgrade needed.
+
+- **One copy of the code.** `web/build.gradle.kts` compiles files straight out of
+  `app/src/main/java` through an include list (`sharedFromApp`). Anything on that list must stay
+  free of `android.*` and `java.*`; that is why the seed arithmetic lives in `core/SeedHash.kt`
+  (`DailySeed` keeps the `LocalDate` API and delegates), the palette in `ui/theme/Palette.kt`, and
+  Kings times double taps with `kotlin.time.TimeSource.Monotonic` rather than `SystemClock`.
+- **Build:** `./gradlew :web:wasmJsBrowserDistribution` →
+  `web/build/dist/wasmJs/productionExecutable/` (~12 MB, ~4 MB gzipped; Skia's wasm is 8 MB of it).
+  Serve it with `python3 -m http.server 8765 --bind 0.0.0.0` from that directory (Python maps
+  `.wasm` to `application/wasm`, which streaming instantiation requires). Needs Safari 18.2+ /
+  iOS 18.2+ for WasmGC.
+- **Test hooks:** `?date=YYYY-MM-DD`, `?tier=hard`, and `?dump` (prints the `WebParityTest`
+  fingerprints, the board's bounds and `SOLVED`; `&range=N` adds every tier for N days from
+  2026-01-01). Diff that against the JVM to prove parity.
+- The Node/Yarn/Binaryen downloads are declared in `settings.gradle.kts`, because
+  `FAIL_ON_PROJECT_REPOS` rejects the repositories the Kotlin plugin adds per project. Switching the
+  plugin's own URL off needs `convention(null)` as well as `set(null)` — `set(null)` alone falls back
+  to the convention, which *is* the URL.
+
+Learned the hard way:
+
+**Hash iteration order is a platform detail — never let it reach the `Rng`.** Kings shuffled a
+`HashSet`'s `toList()`. The JVM walks small integers ascending, Kotlin/Wasm in insertion order, so
+the same seed carved a different board in the browser: seeds and stored answers matched, regions did
+not, on 3 of 9 boards. Sorting first reproduces the JVM's order, so no Android board changed
+(verified on 1095 boards against origin/main). **Every other generator needs the same audit before
+it goes on the web** — `grep -n "HashSet\|HashMap\|toSet()\|groupBy" puzzles/` and follow each one
+to see whether its order reaches the `Rng` or a "first"/"min" pick.
+
+**Compose web reads `TouchEvent`s for fingers, not `PointerEvent`s.** Synthetic `pointerdown` with
+`pointerType: 'touch'` does nothing. Playwright's `touchscreen.tap` works in WebKit; for a touch
+drag, dispatch `TouchEvent`s built with `document.createTouch`/`createTouchList` (WebKit on Linux has
+no `Touch` constructor). In Chromium, CDP `Input.dispatchTouchEvent` is real touch.
+
+**Playwright's Linux WebKit loses WebGL from screenshots when `is_mobile` is on** — a page that only
+calls `gl.clear(red)` comes out blank too, so it is the harness, not Compose. Emulate the phone with
+`has_touch` and `device_scale_factor` instead. Separately, headless WebKit dropped Compose's *first*
+frame until the first touch; `nudgeFirstFrame()` in `Main.kt` asks for a spare frame. Whether real
+Safari needs it is unknown — check on an iPhone before removing it.
+
+Also: Playwright's sync API only delivers console events while it is inside a Playwright call, so
+wait with `page.wait_for_timeout`, never `time.sleep`.
+
 ## Tests
 
-128 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
+130 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
 Shikaku, Mosaic and Snap tests each carry their own solver or rule checker, deliberately written on
 a different principle so the two cannot share a blind spot. `LitsAuditTest` and `MosaicOptimumTest`
 are differential; `LitsMarkingTest` brute-forces every legal shading of a fixed board.

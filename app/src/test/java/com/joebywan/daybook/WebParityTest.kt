@@ -14,8 +14,8 @@ import java.time.LocalDate
  * [SeedHash.epochDay] and [SeedHash.daily] instead of [DailySeed.seedFor]. These pin the two
  * routes to the same board.
  *
- * [KINGS_FINGERPRINTS] is also what the web page prints with `?dump`; the Playwright check in
- * `web/` compares the browser's output against this list line for line.
+ * The web page prints the same lines, in the same format, under `?dump` (see CLAUDE.md, "Web
+ * build"); diffing the two is how parity with the browser is checked.
  */
 class WebParityTest {
 
