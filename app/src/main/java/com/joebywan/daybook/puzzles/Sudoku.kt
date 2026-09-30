@@ -1,5 +1,10 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,18 +22,30 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -222,6 +239,132 @@ object Sudoku : PuzzleType {
         )
     }
 
+    // ---- walkthrough ---------------------------------------------------------------------------
+
+    /**
+     * A finished grid with ten cells open, one of them the only gap in row 1. Most people know the
+     * rules, so the walkthrough is the rules in a line and then the real gestures: select, place,
+     * clear. SudokuTeachingTest proves the open board has only this answer.
+     */
+    internal val TUTORIAL_SOLUTION = listOf(
+        8, 2, 3, 1, 6, 4, 5, 7, 9,
+        1, 9, 4, 2, 7, 5, 6, 8, 3,
+        5, 6, 7, 9, 8, 3, 1, 4, 2,
+        9, 4, 1, 8, 5, 2, 3, 6, 7,
+        7, 8, 5, 6, 3, 1, 9, 2, 4,
+        6, 3, 2, 4, 9, 7, 8, 5, 1,
+        2, 5, 6, 3, 4, 9, 7, 1, 8,
+        4, 7, 9, 5, 1, 8, 2, 3, 6,
+        3, 1, 8, 7, 2, 6, 4, 9, 5,
+    )
+    internal val TUTORIAL_OPEN = setOf(4, 10, 24, 30, 38, 42, 52, 58, 63, 80)
+
+    /** Row 1's only gap: a 6. */
+    private const val TUTORIAL_FIRST = 4
+
+    /** Where the walkthrough's wrong digit goes: a 9 where the answer is 5. */
+    private const val TUTORIAL_WRONG = 38
+
+    private fun tutorialBoard(entered: Map<Int, Int> = emptyMap(), selected: Int? = null): SudokuState {
+        val cells = TUTORIAL_SOLUTION.mapIndexed { i, v -> if (i in TUTORIAL_OPEN) entered[i] ?: 0 else v }
+        return SudokuState(
+            givens = TUTORIAL_SOLUTION.indices.map { it !in TUTORIAL_OPEN },
+            cells = cells,
+            solution = TUTORIAL_SOLUTION,
+            selected = selected,
+        )
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val row1 = (0 until 9).toSet()
+        val start = tutorialBoard()
+        val chosen = tutorialBoard(selected = TUTORIAL_FIRST)
+        val placed = mapOf(TUTORIAL_FIRST to 6)
+        val wrong = tutorialBoard(placed + (TUTORIAL_WRONG to 9), selected = TUTORIAL_WRONG)
+        // The 9s the wrong one clashes with: one in its column, one in its box.
+        val clashes = peers(TUTORIAL_WRONG).filter { wrong.cells[it] == 9 }.toSet()
+        listOf(
+            TutorialFrame(
+                state = start,
+                caption = "Fill every row, column and 3x3 box with the digits 1 to 9, each once. " +
+                    "The bold digits are given.",
+                highlight = BoardHighlight(strong = row1),
+            ),
+            TutorialFrame(
+                state = start,
+                caption = "Row 1 has one empty cell left. Tap it to select it.",
+                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST), soft = row1),
+                accepts = { next -> next is SudokuState && next.cells == start.cells && next.selected == TUTORIAL_FIRST },
+                retry = "Tap the glowing cell in row 1.",
+                done = "Selected.",
+            ),
+            TutorialFrame(
+                state = chosen,
+                caption = "Row 1 holds every digit but 6, so it's a 6. Tap 6 below.",
+                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST, SudokuTeacher.pad(6)), soft = row1),
+                accepts = { next -> next is SudokuState && next.cells == tutorialBoard(placed).cells },
+                retry = "Tap the 6 in the row of digits below.",
+                done = "Row 1 is complete.",
+            ),
+            TutorialFrame(
+                state = wrong,
+                caption = "A digit that clashes turns red: this 9 shares a column and a box with a 9. " +
+                    "It's selected, so tap 9 again to clear it.",
+                highlight = BoardHighlight(
+                    strong = setOf(TUTORIAL_WRONG, SudokuTeacher.pad(9)),
+                    soft = clashes,
+                    warning = true,
+                ),
+                accepts = { next -> next is SudokuState && next.cells == tutorialBoard(placed).cells },
+                retry = "Tap the 9 in the row of digits below.",
+                done = "Cleared.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(placed),
+                caption = "Your turn: finish the board. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
+        )
+    }
+
+    // ---- drawing ------------------------------------------------------------------------------
+
+    /**
+     * What [LocalBoardHighlight] asks of one cell or key. Cells not named step back while anything
+     * is highlighted, so the named ones read on a busy 9x9 board; the digit keys glow when named but
+     * never dim, because the move a hint asks for is made with them.
+     */
+    private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
+
+    private fun BoardHighlight.look(index: Int, dims: Boolean = true): Look {
+        val strong = index in this.strong
+        val soft = !strong && index in this.soft
+        return Look(strong, soft, dims && !isEmpty && !strong && !soft)
+    }
+
+    /**
+     * A ring drawn just inside the element, since the cells sit a dp apart and a ring outside would
+     * cross into the next one. Breathing in [glow] for strong, a quiet fixed line for soft; read in
+     * the draw phase so the pulse repaints without recomposing.
+     */
+    private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, corner: Float): Modifier =
+        if (!look.strong && !look.soft) this
+        else drawWithContent {
+            drawContent()
+            val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
+            val colour = if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f)
+            drawRoundRect(
+                colour,
+                topLeft = Offset(w / 2, w / 2),
+                size = Size(size.width - w, size.height - w),
+                cornerRadius = CornerRadius(corner.dp.toPx()),
+                style = Stroke(w),
+            )
+        }
+
+    private fun Modifier.dimmed(look: Look): Modifier = if (look.dim) alpha(0.3f) else this
+
     // ---- home-grid motif ----------------------------------------------------------------------
 
     /**
@@ -297,6 +440,19 @@ object Sudoku : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val conflicts = s.conflicts()
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // Breathes only while something glows, as on Kings.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
 
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -307,11 +463,14 @@ object Sudoku : PuzzleType {
                             val i = r * 9 + c
                             val isSelected = s.selected == i
                             val sameValue = selectedValue != 0 && s.cells[i] == selectedValue
+                            val look = highlight.look(i)
                             Box(
                                 Modifier
                                     .padding(start = cell * c, top = cell * r)
                                     .size(cell)
                                     .padding(1.dp)
+                                    .dimmed(look)
+                                    .ring(look, glow, pulse, corner = 4f)
                                     .clip(RoundedCornerShape(4.dp))
                                     // The selected cell's row, column and box are deliberately
                                     // left alone. Shading them restyled twenty of the eighty-one
@@ -361,6 +520,7 @@ object Sudoku : PuzzleType {
                         Modifier
                             .weight(1f)
                             .height(48.dp)
+                            .ring(highlight.look(SudokuTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (remaining == 0) scheme.surfaceVariant else scheme.surface)
                             .clickable(enabled = interactive && s.selected != null) {

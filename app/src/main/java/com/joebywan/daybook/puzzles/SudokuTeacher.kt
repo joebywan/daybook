@@ -25,8 +25,17 @@ package com.joebywan.daybook.puzzles
  *    box within a line), then the single that the elimination makes.
  * 6. [NAKED_PAIR] / [HIDDEN_PAIR] — two cells that between them must hold two digits, then the
  *    single that follows.
- * 7. [TWO_STEP] — two of the eliminations above, together, before a single appears. Kept distinct
- *    because the explanation has to carry both and is correspondingly longer.
+ * 7. [WHAT_IF] — a cell with two digits left, or a digit with two places left in a unit: suppose
+ *    one, follow at most [MAX_CHAIN] forced singles, reach a cell or unit with nothing left, so it
+ *    is the other. As Kings' what-if, bounded so one sentence can carry it.
+ *
+ * Tried and dropped, measured on 300 Expert boards: two eliminations chained before a single (0
+ * boards once its explanation had to fit the panel), X-wing and XY-wing (together 16 boards of
+ * the 114 reaching the fallback). Even every elimination above applied to a fixpoint before looking
+ * for a single left 95 Expert boards needing the fallback somewhere: the 24-clue Expert boards are
+ * dug for uniqueness, not rated, and many need chains no four-line hint can carry. Without pencil
+ * marks a step cannot leave eliminations behind for the next one, so every step has to end in a
+ * placement, and that is the ceiling here.
  *
  * Orders never come from a hash: every loop walks cells, units or digits in index order, so the same
  * board gets the same hint on every platform (CLAUDE.md, "Hash iteration order").
@@ -40,7 +49,7 @@ internal object SudokuTeacher {
     const val LOCKED = "locked-candidates"
     const val NAKED_PAIR = "naked-pair"
     const val HIDDEN_PAIR = "hidden-pair"
-    const val TWO_STEP = "two-eliminations"
+    const val WHAT_IF = "what-if"
     const val FALLBACK = "fallback"
     const val MISTAKE = "mistake"
 
@@ -50,10 +59,16 @@ internal object SudokuTeacher {
      */
     const val MAX_EXPLANATION = 200
 
+    /** How many forced digits a [WHAT_IF] may walk through before it stops being followable. */
+    const val MAX_CHAIN = 2
+
+    /** Highlight index of digit [d]'s key under the board; 0..80 are the cells. */
+    fun pad(d: Int): Int = 81 + d
+
     /** Every technique in the order [deduce] tries them, for reports. */
     val TECHNIQUES = listOf(
         FULL_HOUSE, HIDDEN_SINGLE_BOX, HIDDEN_SINGLE_LINE, NAKED_SINGLE,
-        LOCKED, NAKED_PAIR, HIDDEN_PAIR, TWO_STEP, FALLBACK,
+        LOCKED, NAKED_PAIR, HIDDEN_PAIR, WHAT_IF, FALLBACK,
     )
 
     /**
@@ -221,7 +236,7 @@ internal object SudokuTeacher {
             ?: hiddenSingle(sight, null)
             ?: nakedSingle(sight)
             ?: withElimination(sight)
-            ?: twoEliminations(sight)
+            ?: whatIf(sight)
     }
 
     private fun fullHouse(s: Sight): Step? {
@@ -436,25 +451,99 @@ internal object SudokuTeacher {
         return null
     }
 
-    /** Two eliminations from the list above, the second found on the board the first leaves. */
-    private fun twoEliminations(s: Sight): Step? {
-        for (first in eliminations(s)) {
-            val mid = s.copyWithout(first.removed)
-            for (second in eliminations(mid)) {
-                val after = mid.copyWithout(second.removed)
-                val single = singleAfter(after, second.removed) ?: continue
-                val text = "${first.reason} Then: ${second.reason.decap()} ${single.sentence()}"
-                if (text.length > MAX_EXPLANATION) continue
-                return Step(
-                    TWO_STEP, single.cell, single.digit,
-                    focus = first.where,
-                    cited = first.pattern + second.pattern + (single.unit?.cells.orEmpty()),
-                    nudge = first.nudge,
-                    explanation = text,
-                )
-            }
+    // ---- what if: a short chain of forced digits that ends in a contradiction ----------------------
+
+    /** How a supposed digit breaks the board: a cell with no digit left, or a unit with no place for one. */
+    private class Contradiction(val cell: Int?, val unit: Unit?, val digit: Int) {
+        fun phrase(afterForced: Boolean): String =
+            if (cell != null) "${if (afterForced) "another" else "the"} marked cell would have no digit left"
+            else "${unit!!.name} would have nowhere left for a $digit"
+
+        fun cells(): Set<Int> = if (cell != null) setOf(cell) else unit!!.cells.toSet()
+    }
+
+    /** The digits a supposition forces, in order, and where it breaks. */
+    private class Chain(val forced: List<Pair<Int, Int>>, val broken: Contradiction)
+
+    private fun contradiction(s: Sight): Contradiction? {
+        for (c in 0 until 81) if (s.cells[c] == 0 && s.cand[c] == 0) return Contradiction(c, null, 0)
+        for (u in units) for (d in 1..9) {
+            if (!s.holds(u, d) && s.places(u, d).isEmpty()) return Contradiction(null, u, d)
         }
         return null
+    }
+
+    /** A single on [s]: hidden in a box, hidden in a line, then naked. The same order [deduce] uses. */
+    private fun anySingle(s: Sight): Pair<Int, Int>? {
+        for (boxFirst in listOf(true, false)) for (u in units) {
+            if ((u.kind == Kind.BOX) != boxFirst) continue
+            for (d in 1..9) {
+                if (s.holds(u, d)) continue
+                val places = s.places(u, d)
+                if (places.size == 1) return places[0] to d
+            }
+        }
+        for (c in 0 until 81) if (s.cells[c] == 0 && s.cand[c].countOneBits() == 1) return c to digitsOf(s.cand[c])[0]
+        return null
+    }
+
+    /** With [cell] supposed to be [digit], the forced singles up to [MAX_CHAIN] and where they break. */
+    private fun chainFrom(s: Sight, cell: Int, digit: Int): Chain? {
+        var cells = s.cells.toMutableList().also { it[cell] = digit }
+        val forced = mutableListOf<Pair<Int, Int>>()
+        while (true) {
+            val cur = sightOf(cells)
+            contradiction(cur)?.let { return Chain(forced.toList(), it) }
+            if (forced.size == MAX_CHAIN) return null
+            val (c, d) = anySingle(cur) ?: return null
+            forced += c to d
+            cells = cells.toMutableList().also { it[c] = d }
+        }
+    }
+
+    private fun whatIf(s: Sight): Step? {
+        var best: Step? = null
+        var bestLength = Int.MAX_VALUE
+        fun consider(target: Int, digit: Int, supposed: Int, supposedDigit: Int, lead: String, close: String) {
+            val chain = chainFrom(s, supposed, supposedDigit) ?: return
+            if (chain.forced.size >= bestLength) return
+            val digits = chain.forced.mapIndexed { i, (_, d) ->
+                if (chain.forced.take(i).any { it.second == d }) "another $d" else "a $d"
+            }
+            val middle = when (digits.size) {
+                0 -> ""
+                1 -> "that would force ${digits[0]} into a marked cell, and then "
+                else -> "that would force ${digits.joinToString(" and then ")} into marked cells, and then "
+            }
+            val text = "$lead, $middle${chain.broken.phrase(digits.isNotEmpty())}. $close"
+            if (text.length > MAX_EXPLANATION) return
+            bestLength = chain.forced.size
+            best = Step(
+                WHAT_IF, target, digit,
+                focus = setOf(target, supposed),
+                cited = chain.forced.map { it.first }.toSet() + chain.broken.cells() + supposed,
+                nudge = if (supposed == target) "What if the glowing cell were $supposedDigit?"
+                else "What if this $digit went in the other place?",
+                explanation = text,
+            )
+        }
+        // A cell with two digits left: suppose one, and it breaks, so it's the other.
+        for (c in 0 until 81) {
+            if (s.cells[c] != 0 || s.cand[c].countOneBits() != 2) continue
+            val (a, b) = digitsOf(s.cand[c])
+            consider(c, b, c, a, "If the glowing cell were $a", "So it can't be $a, and must be $b.")
+            consider(c, a, c, b, "If the glowing cell were $b", "So it can't be $b, and must be $a.")
+        }
+        // A digit with two places left in a unit: suppose one, and it breaks, so it's the other.
+        for (u in units) for (d in 1..9) {
+            if (s.holds(u, d)) continue
+            val places = s.places(u, d)
+            if (places.size != 2) continue
+            val (p, q) = places
+            consider(p, d, q, d, "${u.name.cap()} has two places for $d. If it went in the other one", "So $d goes in the glowing cell.")
+            consider(q, d, p, d, "${u.name.cap()} has two places for $d. If it went in the other one", "So $d goes in the glowing cell.")
+        }
+        return best
     }
 
     // ---- small helpers -----------------------------------------------------------------------------
