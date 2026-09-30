@@ -1,5 +1,10 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,18 +27,31 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
 import kotlinx.serialization.Serializable
 
 /** Score for one submitted guess. */
@@ -55,20 +73,7 @@ data class TowerState(
 
     val ready: Boolean get() = current.none { it < 0 }
 
-    fun score(guess: List<Int>): Feedback {
-        var exact = 0
-        val secretLeft = IntArray(colours)
-        val guessLeft = IntArray(colours)
-        for (i in guess.indices) {
-            if (guess[i] == secret[i]) exact++ else {
-                secretLeft[secret[i]]++
-                guessLeft[guess[i]]++
-            }
-        }
-        var misplaced = 0
-        for (c in 0 until colours) misplaced += minOf(secretLeft[c], guessLeft[c])
-        return Feedback(exact, misplaced)
-    }
+    fun score(guess: List<Int>): Feedback = TowerTeacher.score(guess, secret, colours)
 
     fun withPeg(slot: Int, colour: Int): TowerState =
         copy(current = current.toMutableList().also { it[slot] = colour }, moves = moves + 1)
@@ -182,13 +187,6 @@ object Tower : PuzzleType {
         return TowerState(slots, colours, tries, secret, emptyList(), List(slots) { -1 })
     }
 
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as TowerState
-        // Drop one correct peg into the working row.
-        val slot = s.current.indices.firstOrNull { s.current[it] != s.secret[it] } ?: return null
-        return s.withPeg(slot, s.secret[slot])
-    }
-
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
@@ -255,11 +253,222 @@ object Tower : PuzzleType {
         }
     }
 
+    // ---- the walkthrough ---------------------------------------------------------------------
+
+    /**
+     * The walkthrough's code: three slots, four colours (red, blue, green, yellow), and the code
+     * green red blue. Small so every peg is easy to aim at, and so the whole argument fits on one
+     * screen:
+     *
+     * ```
+     * guess 1  yellow yellow yellow   nothing        -> yellow is nowhere
+     * guess 2  red    red    blue     two filled
+     * guess 3  blue   red    blue     two filled     -> made in the walkthrough; only slot 1
+     *                                                   changed and the score didn't, so slot 1
+     *                                                   is neither red nor blue: green
+     * ```
+     *
+     * After guess 3, guess 2's two filled pips can't include slot 1, so they are its red and blue:
+     * the code is green red blue, and TowerTeachingTest proves it is the only one that fits.
+     */
+    internal val TUTORIAL_CODE = listOf(2, 0, 1)
+    internal val TUTORIAL_GUESSES = listOf(listOf(3, 3, 3), listOf(0, 0, 1), listOf(1, 0, 1))
+    private const val TUTORIAL_SLOTS = 3
+    private const val TUTORIAL_COLOURS = 4
+    private const val TUTORIAL_BUDGET = 6
+
+    private fun tutorialBoard(guesses: Int, current: List<Int> = List(TUTORIAL_SLOTS) { -1 }) = TowerState(
+        TUTORIAL_SLOTS, TUTORIAL_COLOURS, TUTORIAL_BUDGET, TUTORIAL_CODE,
+        TUTORIAL_GUESSES.take(guesses), current,
+    )
+
+    /**
+     * Accepts exactly [guesses] submitted and [current] in the row, nothing else — each frame's
+     * board is written for the one before it.
+     */
+    private fun only(guesses: Int, current: List<Int>): (PuzzleState) -> Boolean = { next ->
+        next is TowerState && next.guesses == TUTORIAL_GUESSES.take(guesses) && next.current == current
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val c = TowerTeacher.CURRENT
+        val sw = TowerTeacher.SWATCH
+        val p = TowerTeacher.PIPS
+        fun row(g: Int) = (0 until TUTORIAL_SLOTS).map { TowerTeacher.peg(TUTORIAL_SLOTS, g, it) }.toSet()
+        val copied = listOf(0, 0, 1)
+        val changed = listOf(1, 0, 1)
+        val green = listOf(2, -1, -1)
+        listOf(
+            TutorialFrame(
+                state = tutorialBoard(2),
+                caption = "A code of three pegs is hidden. Each guess scores a filled pip per peg in the " +
+                    "right colour and slot, and a hollow pip per right colour in the wrong slot.",
+                highlight = BoardHighlight(strong = setOf(p + 0, p + 1)),
+            ),
+            TutorialFrame(
+                state = tutorialBoard(2),
+                caption = "Guess 1 was all yellow and scored nothing, so yellow isn't in the code. " +
+                    "Guess 2 has two filled pips, but pips never say which pegs earned them.",
+                highlight = BoardHighlight(strong = row(0) + (p + 0), soft = setOf(p + 1)),
+            ),
+            TutorialFrame(
+                state = tutorialBoard(2, copied),
+                caption = "Your row copies guess 2. Change only slot 1, and the new score tells you about " +
+                    "that slot alone. Tap blue, then the glowing slot.",
+                highlight = BoardHighlight(strong = setOf(sw + 1, c + 0), soft = row(1)),
+                accepts = only(2, changed),
+                retry = "Tap blue below first, then the glowing slot.",
+                done = "Now your row differs from guess 2 in slot 1 only.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(2, changed),
+                caption = "A full row can be scored. Tap Submit.",
+                highlight = BoardHighlight(strong = setOf(TowerTeacher.SUBMIT_BUTTON)),
+                accepts = only(3, List(TUTORIAL_SLOTS) { -1 }),
+                retry = "Tap Submit, at the end of your row.",
+                done = "Scored: two filled pips again.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(3),
+                caption = "Guesses 2 and 3 differ only in slot 1 and scored the same, so slot 1 is neither " +
+                    "red nor blue. Yellow is out, so slot 1 is green.",
+                highlight = BoardHighlight(
+                    strong = setOf(TowerTeacher.peg(TUTORIAL_SLOTS, 1, 0), TowerTeacher.peg(TUTORIAL_SLOTS, 2, 0)),
+                    soft = setOf(p + 1, p + 2),
+                ),
+            ),
+            TutorialFrame(
+                state = tutorialBoard(3),
+                caption = "Build your next guess on what you know. Tap green, then slot 1.",
+                highlight = BoardHighlight(strong = setOf(sw + 2, c + 0)),
+                accepts = only(3, green),
+                retry = "Tap green below first, then the glowing slot.",
+                done = "Slot 1 is green.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(3, green),
+                caption = "Your turn: finish the code and submit it. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Cracked. That's all there is to it.",
+            ),
+        )
+    }
+
+    // ---- teaching --------------------------------------------------------------------------
+
+    /**
+     * A mistake to take back or a step to reason out — see [TowerTeacher]. Replaces the old
+     * `hint()`, which dropped a peg straight out of [TowerState.secret] and taught nothing. The
+     * teacher is handed the guesses and their scores, never the code.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as TowerState
+        if (s.solved || s.failed) return null
+        val feedback = s.guesses.map(s::score)
+        val step = TowerTeacher.deduce(s.slots, s.colours, s.guesses, feedback, s.current) ?: return null
+        val base = s
+        fun fits(code: List<Int>) = TowerTeacher.consistent(code, base.guesses, feedback, base.colours)
+        fun newGuesses(now: TowerState) = now.guesses.drop(base.guesses.size)
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = step.targets,
+            mistake = step.technique == TowerTeacher.MISTAKE,
+            fallback = step.technique == TowerTeacher.CONSISTENT || step.technique == TowerTeacher.ONLY_CODE,
+            applyTo = { now -> applyMove(now as TowerState, step.move) },
+            reachedBy = { now ->
+                val t = now as TowerState
+                when (val m = step.move) {
+                    is TowerTeacher.Move.Place ->
+                        t.current[m.slot] == m.colour || newGuesses(t).any { it[m.slot] == m.colour }
+                    // Any row that fits the scores does: the suggestion was one of many.
+                    is TowerTeacher.Move.Fill ->
+                        (t.ready && fits(t.current)) || newGuesses(t).any(::fits)
+                    is TowerTeacher.Move.Clear ->
+                        m.slots.any { t.current[it] != base.current[it] } || newGuesses(t).isNotEmpty()
+                    TowerTeacher.Move.Submit -> newGuesses(t).isNotEmpty()
+                }
+            },
+        )
+    }
+
+    /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
+    private fun applyMove(s: TowerState, move: TowerTeacher.Move): TowerState = when (move) {
+        is TowerTeacher.Move.Place ->
+            if (s.current[move.slot] == move.colour) s else s.withPeg(move.slot, move.colour)
+        is TowerTeacher.Move.Fill ->
+            if (s.current == move.code) s else s.copy(current = move.code, moves = s.moves + 1)
+        is TowerTeacher.Move.Clear -> {
+            val next = s.current.toMutableList().also { row -> move.slots.forEach { row[it] = -1 } }
+            if (next == s.current) s else s.copy(current = next, moves = s.moves + 1)
+        }
+        TowerTeacher.Move.Submit -> s.submit()
+    }
+
+    // ---- drawing -------------------------------------------------------------------------
+
+    /**
+     * What [LocalBoardHighlight] asks of one element. [dim] steps everything unnamed back so the
+     * named pegs read without hunting; controls (swatches, Submit) glow when named but never dim,
+     * because the move a hint asks for is made with them.
+     */
+    private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
+
+    private fun BoardHighlight.look(index: Int, dims: Boolean = true): Look {
+        val strong = index in this.strong
+        val soft = !strong && index in this.soft
+        return Look(strong, soft, dims && !isEmpty && !strong && !soft)
+    }
+
+    /**
+     * A ring drawn just outside the element, so the peg's own colour is untouched: breathing in
+     * [glow] for strong, a quiet fixed line for soft. Read in the draw phase so the pulse repaints
+     * without recomposing. Apply before the element's own `clip`, or the ring is clipped away.
+     */
+    private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, round: Boolean): Modifier =
+        if (!look.strong && !look.soft) this
+        else drawWithContent {
+            drawContent()
+            val w = (if (look.strong) 3.dp else 1.5.dp).toPx()
+            val gap = 2.dp.toPx()
+            val colour = if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f)
+            val out = gap + w / 2
+            if (round) {
+                drawCircle(colour, radius = size.minDimension / 2 + out, style = Stroke(w))
+            } else {
+                drawRoundRect(
+                    colour,
+                    topLeft = Offset(-out, -out),
+                    size = Size(size.width + 2 * out, size.height + 2 * out),
+                    cornerRadius = CornerRadius(8.dp.toPx() + out),
+                    style = Stroke(w),
+                )
+            }
+        }
+
+    private fun Modifier.dimmed(look: Look): Modifier = if (look.dim) alpha(0.3f) else this
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as TowerState
         val scheme = MaterialTheme.colorScheme
         var selectedColour by remember(s.secret) { mutableIntStateOf(0) }
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // Breathes only while something glows, as on Kings.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
 
         Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
 
@@ -275,8 +484,8 @@ object Tower : PuzzleType {
                 verticalArrangement = Arrangement.spacedBy(6.dp),
                 reverseLayout = true,
             ) {
-                items(s.guesses.reversed()) { guess ->
-                    GuessRow(guess, s.score(guess), s.slots)
+                items(s.guesses.indices.reversed().toList()) { g ->
+                    GuessRow(g, s.guesses[g], s.score(s.guesses[g]), s.slots, highlight, glow, pulse)
                 }
             }
 
@@ -292,10 +501,13 @@ object Tower : PuzzleType {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     s.current.forEachIndexed { slot, colour ->
+                        val look = highlight.look(TowerTeacher.CURRENT + slot)
                         Box(
                             Modifier
                                 .padding(3.dp)
                                 .size(34.dp)
+                                .ring(look, glow, pulse, round = true)
+                                .dimmed(look)
                                 .clip(CircleShape)
                                 .background(
                                     if (colour >= 0) Color(palette[colour]) else scheme.surfaceVariant
@@ -312,6 +524,7 @@ object Tower : PuzzleType {
                         style = MaterialTheme.typography.labelLarge,
                         color = if (s.ready) scheme.primary else scheme.outline,
                         modifier = Modifier
+                            .ring(highlight.look(TowerTeacher.SUBMIT_BUTTON, dims = false), glow, pulse, round = false)
                             .clip(RoundedCornerShape(10.dp))
                             .clickable(enabled = interactive && s.ready) { onState(s.submit()) }
                             .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -329,6 +542,7 @@ object Tower : PuzzleType {
                             Modifier
                                 .weight(1f)
                                 .height(40.dp)
+                                .ring(highlight.look(TowerTeacher.SWATCH + colour, dims = false), glow, pulse, round = false)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(Color(palette[colour]))
                                 .border(
@@ -361,9 +575,23 @@ object Tower : PuzzleType {
         }
     }
 
+    /**
+     * One scored guess. Numbered, because hints speak of "guess 2" and the number has to be
+     * findable on the board, not counted up from the top.
+     */
     @Composable
-    private fun GuessRow(guess: List<Int>, feedback: Feedback, slots: Int) {
+    private fun GuessRow(
+        index: Int,
+        guess: List<Int>,
+        feedback: Feedback,
+        slots: Int,
+        highlight: BoardHighlight,
+        glow: Color,
+        pulse: State<Float>,
+    ) {
         val scheme = MaterialTheme.colorScheme
+        val pegs = guess.indices.map { highlight.look(TowerTeacher.peg(slots, index, it)) }
+        val pips = highlight.look(TowerTeacher.PIPS + index)
         Row(
             Modifier
                 .fillMaxWidth()
@@ -372,14 +600,32 @@ object Tower : PuzzleType {
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            guess.forEach { colour ->
+            Text(
+                "${index + 1}",
+                style = MaterialTheme.typography.labelMedium,
+                color = scheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .width(18.dp)
+                    .then(if (pegs.all { it.dim } && pips.dim) Modifier.alpha(0.3f) else Modifier),
+            )
+            guess.forEachIndexed { slot, colour ->
                 Box(
-                    Modifier.padding(2.dp).size(26.dp).clip(CircleShape)
+                    Modifier.padding(horizontal = 3.dp, vertical = 2.dp).size(26.dp)
+                        .ring(pegs[slot], glow, pulse, round = true)
+                        .dimmed(pegs[slot])
+                        .clip(CircleShape)
                         .background(Color(palette[colour]))
                 )
             }
             Spacer(Modifier.weight(1f))
-            Row(Modifier.width(66.dp), horizontalArrangement = Arrangement.End) {
+            Row(
+                Modifier
+                    .ring(pips, glow, pulse, round = false)
+                    .dimmed(pips)
+                    .width(66.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
                 repeat(feedback.exact) {
                     Box(
                         Modifier.padding(1.dp).size(9.dp).clip(CircleShape)
