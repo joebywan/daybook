@@ -1,6 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import android.os.SystemClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -37,6 +36,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import kotlin.time.TimeSource
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -368,7 +368,7 @@ object Kings : PuzzleType {
             val (cell, hosts) = rng.shuffled(open).minBy { it.second.size }
             // Smallest region first, so no one region swallows the leftovers and the colours stay
             // roughly the size a player expects to reason about.
-            val ordered = rng.shuffled(hosts.toList()).sortedBy { sizes[it] }
+            val ordered = rng.shuffled(hosts.sorted()).sortedBy { sizes[it] }
 
             var chosen = -1
             for (host in ordered) {
@@ -389,7 +389,15 @@ object Kings : PuzzleType {
         return if (remaining == 0) region else null
     }
 
-    /** The regions already touching [cell] edge-on, which are the only ones that may claim it. */
+    /**
+     * The regions already touching [cell] edge-on, which are the only ones that may claim it.
+     *
+     * A hash set, so callers that hand these to the [Rng] must sort them first. Hash iteration
+     * order is a platform detail: the JVM happens to walk small integers in ascending order and
+     * Kotlin/Wasm walks them in insertion order, and before the callers sorted, the same seed
+     * carved a different board in the browser than on the phone. Sorting matches what the JVM
+     * already did, so no board on Android changed.
+     */
     private fun hostsOf(cell: Int, n: Int, region: List<Int>): Set<Int> =
         neighbours(cell, n).mapNotNullTo(HashSet()) { region[it].takeIf { id -> id != -1 } }
 
@@ -423,7 +431,7 @@ object Kings : PuzzleType {
             val pick = rng.nextInt(frontier.size)
             val cell = frontier.removeAt(pick)
             if (region[cell] != -1) continue
-            val owners = hostsOf(cell, n, region).toList()
+            val owners = hostsOf(cell, n, region).sorted()
             if (owners.isEmpty()) {
                 frontier += cell
                 continue
@@ -569,6 +577,13 @@ object Kings : PuzzleType {
     private const val DOUBLE_TAP_MS = 300L
 
     /**
+     * Where tap times are measured from. The stdlib's monotonic clock rather than Android's
+     * `SystemClock.uptimeMillis()` so this file also compiles for the web build; only differences
+     * between two taps are ever read, so the origin does not matter.
+     */
+    private val tapClock = TimeSource.Monotonic.markNow()
+
+    /**
      * A tap whose mark is already on the board but not yet in the undo history.
      *
      * [base] earns its place twice. A second tap on the same square builds its king from there, so
@@ -642,7 +657,7 @@ object Kings : PuzzleType {
             // squares the player only meant to cross off on the way past.
             fun tap(offset: Offset) {
                 val i = cellAt(offset)
-                val now = SystemClock.uptimeMillis()
+                val now = tapClock.elapsedNow().inWholeMilliseconds
                 val live = pending?.takeIf { it.base === s }
                 val board = live?.after ?: s
 

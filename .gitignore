@@ -9,6 +9,8 @@
 .cxx
 local.properties
 /app/build/
+/web/build/
+/.kotlin/
 *.keystore
 !debug.keystore
 keystore.properties
