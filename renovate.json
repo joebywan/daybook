@@ -22,8 +22,18 @@
       "allowedVersions": "<6"
     },
     {
+      "description": "CI's JDK stays on 17: Gradle 8.14 refuses to run on newer. Move it with the Gradle 9 upgrade, deliberately.",
+      "matchDepNames": ["java-jdk"],
+      "allowedVersions": "17"
+    },
+    {
+      "description": "The -compat builds are a migration aid for libraries stuck on the 0.6 API, not a release to adopt.",
+      "matchPackageNames": ["org.jetbrains.kotlinx:kotlinx-datetime"],
+      "allowedVersions": "!/compat/"
+    },
+    {
       "description": "Compose ships as a fleet; updating it piecemeal produces version skew.",
-      "matchPackagePatterns": ["^androidx\\.compose"],
+      "matchPackageNames": ["/^androidx\\.compose/"],
       "groupName": "Jetpack Compose"
     },
     {
