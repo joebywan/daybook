@@ -2,6 +2,10 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -13,8 +17,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -25,9 +32,13 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -84,6 +95,12 @@ data class PipesState(
      */
     val source: Int,
     override val moves: Int = 0,
+    /**
+     * Tiles the player has turned. Every tile starts scrambled, so a tile sitting the wrong way is
+     * only the player's mistake if they turned it; the hint reads this to tell the two apart.
+     * Defaulted, so games saved before it existed still load.
+     */
+    val turned: Set<Int> = emptySet(),
 ) : PuzzleState {
 
     override val solved: Boolean get() = Pipes.fullyJoined(this) && Pipes.connected(this)
@@ -92,6 +109,7 @@ data class PipesState(
         copy(
             cells = cells.toMutableList().also { it[index] = Pipes.rotateCw(it[index]) },
             moves = moves + 1,
+            turned = turned + index,
         )
 }
 
@@ -247,11 +265,165 @@ object Pipes : PuzzleType {
      */
     fun connected(s: PipesState): Boolean = filled(s).size == s.cells.size
 
+    // ---- the walkthrough ---------------------------------------------------------------------
+
     /**
-     * Every tile starts at a random rotation, so no single one can be settled on its own — the
-     * network only resolves once the board is read as a whole.
+     * The walkthrough's board, 3x3 so every tile is big enough to aim at while learning:
+     *
+     * ```
+     * ┌  ┬  ╴
+     * │  ├  ╴
+     * ╵  └  ╴
+     * ```
+     *
+     * Hand-built so that the tiles the frames teach are settled by the border alone — the straight
+     * on the left edge, the corner bend, the T on the top edge — and then by a neighbour: the end in
+     * the bottom corner that the straight now points into. Each starts exactly one tap short, so a
+     * frame's one move is one tap (a rejected tap is not applied, so a two-tap move could never
+     * land). PipesTeachingTest proves the board has exactly one answer and that hints alone finish
+     * it from the "your turn" frame, with no mistake and no fallback.
      */
-    override val offersHints = false
+    internal val TUTORIAL_SOLUTION = listOf(
+        RIGHT or DOWN, LEFT or RIGHT or DOWN, LEFT,
+        UP or DOWN, UP or RIGHT or DOWN, LEFT,
+        UP, UP or RIGHT, LEFT,
+    )
+
+    /** The scramble the walkthrough starts from: every tile the frames teach is one tap short. */
+    internal val TUTORIAL_START = listOf(
+        UP or RIGHT, UP or RIGHT or DOWN, DOWN,
+        LEFT or RIGHT, LEFT or RIGHT or DOWN, UP,
+        LEFT, RIGHT or DOWN, UP,
+    )
+    private const val TUTORIAL_W = 3
+    private const val TUTORIAL_SOURCE = 4
+
+    private fun tutorialBoard(cells: List<Int>) = PipesState(TUTORIAL_W, TUTORIAL_W, cells, TUTORIAL_SOURCE)
+
+    /** [TUTORIAL_START] with the listed tiles already turned to their answer. */
+    private fun tutorialAfter(vararg settled: Int) =
+        tutorialBoard(TUTORIAL_START.mapIndexed { i, m -> if (i in settled) TUTORIAL_SOLUTION[i] else m })
+
+    /**
+     * Accepts exactly [base] with [cell] turned to its answer and nothing else. Strict on purpose:
+     * each frame's board is written for the one before it, so a frame that let a stray turn through
+     * would hand the next frame a board its caption does not describe.
+     */
+    private fun only(base: PipesState, cell: Int): (PuzzleState) -> Boolean = { next ->
+        next is PipesState && next.cells.indices.all { i ->
+            next.cells[i] == if (i == cell) TUTORIAL_SOLUTION[i] else base.cells[i]
+        }
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val solved = tutorialBoard(TUTORIAL_SOLUTION)
+        val start = tutorialAfter()
+        val straight = tutorialAfter(3)
+        val corner = tutorialAfter(3, 0)
+        val tee = tutorialAfter(3, 0, 1)
+        val end = tutorialAfter(3, 0, 1, 6)
+        listOf(
+            TutorialFrame(
+                state = solved,
+                caption = "Each tile's pipes are fixed; only the way it faces can change. Turn the " +
+                    "tiles until every pipe joins into one network, with no loose ends and no loops.",
+            ),
+            TutorialFrame(
+                state = solved,
+                caption = "Water comes in at the ringed tile and fills every pipe joined back to it. " +
+                    "When the whole board runs full, it's solved.",
+                highlight = BoardHighlight(strong = setOf(TUTORIAL_SOURCE)),
+            ),
+            TutorialFrame(
+                state = start,
+                caption = "No pipe can point off the board, so a straight against the border has to " +
+                    "run along it. Tap the glowing tile to turn it a quarter.",
+                highlight = BoardHighlight(strong = setOf(3)),
+                accepts = only(start, 3),
+                retry = "Tap the glowing tile once.",
+                done = "Now it runs along the edge, the only way it fits.",
+            ),
+            TutorialFrame(
+                state = straight,
+                caption = "In a corner, a bend can't point off either edge, so it can only face into " +
+                    "the board. Each tap turns a tile clockwise. Tap it.",
+                highlight = BoardHighlight(strong = setOf(0)),
+                accepts = only(straight, 0),
+                retry = "Tap the glowing tile once.",
+                done = "Four taps take a tile all the way round.",
+            ),
+            TutorialFrame(
+                state = corner,
+                caption = "A T can't point off the board either, so its flat side has to face the " +
+                    "border. Tap it.",
+                highlight = BoardHighlight(strong = setOf(1)),
+                accepts = only(corner, 1),
+                retry = "Tap the glowing tile once.",
+                done = "Flat side to the border.",
+            ),
+            TutorialFrame(
+                state = tee,
+                caption = "The straight above now points down into this end, and every opening has " +
+                    "to meet another. So this end must point up. Tap it.",
+                highlight = BoardHighlight(strong = setOf(6), soft = setOf(3)),
+                accepts = only(tee, 6),
+                retry = "Tap the glowing tile once.",
+                done = "Joined. A set tile tells you about the tiles beside it.",
+            ),
+            TutorialFrame(
+                state = end,
+                caption = "Your turn: finish the board. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
+        )
+    }
+
+    // ---- teaching --------------------------------------------------------------------------
+
+    /**
+     * A mistake to take back or a tile to reason out — see [PipesTeacher]. Pipes had no hints at all
+     * before this: a tile's turn cannot be read off the tile alone, but the border and the tiles
+     * already set pin every tile of every generated board, one at a time.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as PipesState
+        val step = PipesTeacher.teach(s) ?: return null
+        val wrong = step.wrong
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = setOf(step.cell),
+            mistake = step.technique == PipesTeacher.MISTAKE,
+            fallback = step.technique == PipesTeacher.FALLBACK,
+            applyTo = { now -> turnTo(now as PipesState, step.cell, step.mask) },
+            reachedBy = { now ->
+                val p = now as PipesState
+                // A mistake is taken back by turning the tile off the wrong way; the next hint looks
+                // again if the new way is wrong too.
+                if (wrong != null) p.cells[step.cell] != wrong else p.cells[step.cell] == step.mask
+            },
+        )
+    }
+
+    /** "Show me": [cell] turned clockwise until it reads [mask]. One state, so one undo entry. */
+    private fun turnTo(s: PipesState, cell: Int, mask: Int): PipesState {
+        var m = s.cells[cell]
+        var taps = 0
+        while (m != mask && taps < 4) {
+            m = rotateCw(m)
+            taps++
+        }
+        if (m != mask || taps == 0) return s
+        return s.copy(
+            cells = s.cells.toMutableList().also { it[cell] = mask },
+            moves = s.moves + taps,
+            turned = s.turned + cell,
+        )
+    }
 
     // ---- home-grid motif ----------------------------------------------------------------------
 
@@ -351,6 +523,20 @@ object Pipes : PuzzleType {
         // the translucent version used to show while being opaque everywhere it overlaps itself.
         val dry = scheme.onSurfaceVariant.copy(alpha = DRY_TINT).compositeOver(scheme.surface)
         val wetCells = remember(s.cells, s.source) { filled(s) }
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // Breathes, as Kings' does, so a glowing tile is findable at a glance on an 8x11 board. Only
+        // runs while something glows, and is read in the draw phase.
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
 
         // One angle per tile, held outside the state so a rotation can be shown turning while the
         // board itself has already moved on. Only the grid shape resets them.
@@ -464,6 +650,36 @@ object Pipes : PuzzleType {
                             radius = cellPx * 0.31f,
                             center = Offset(cx, cy),
                             style = Stroke(width = stroke * 0.5f),
+                        )
+                    }
+
+                    // Everything a hint does not name steps back, so the named tiles read without
+                    // hunting for their outlines. A veil in the page colour rather than a fainter
+                    // pipe, so wet and dry stay tellable apart underneath.
+                    if (!highlight.isEmpty && i !in highlight.strong && i !in highlight.soft) {
+                        drawRect(
+                            color = scheme.background.copy(alpha = 0.62f),
+                            topLeft = Offset(c * cellPx, r * cellPx),
+                            size = Size(cellPx, cellPx),
+                        )
+                    }
+                }
+
+                // Outlines last, so a neighbour drawn later never paints over half of one.
+                if (!highlight.isEmpty) {
+                    val strongW = 4.dp.toPx()
+                    val softW = 1.5.dp.toPx()
+                    val corner = CornerRadius(4.dp.toPx())
+                    for (i in s.cells.indices) {
+                        val strong = i in highlight.strong
+                        if (!strong && i !in highlight.soft) continue
+                        val w = if (strong) strongW else softW
+                        drawRoundRect(
+                            color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
+                            topLeft = Offset((i % s.width) * cellPx + w / 2, (i / s.width) * cellPx + w / 2),
+                            size = Size(cellPx - w, cellPx - w),
+                            cornerRadius = corner,
+                            style = Stroke(w),
                         )
                     }
                 }
