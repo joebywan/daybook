@@ -427,9 +427,9 @@ internal object MosaicTeacher {
         val g = search.gain(root, group, colour)
         val best = (0 until colours).filter { it != root.hue[group] }.maxOf { search.gain(root, group, it) }
         return when {
-            g > 0 && g == best && g == 1 -> "it joins the ${name(colour)} area next to it"
-            g > 0 && g == best -> "that joins the most of its neighbours"
-            else -> "that colour keeps you within the limit"
+            g > 0 && g == best && g == 1 -> "it joins the ${name(colour)} area beside it"
+            g > 0 && g == best -> "it joins the most neighbours"
+            else -> "that colour keeps you in the limit"
         }
     }
 
@@ -464,7 +464,7 @@ internal object MosaicTeacher {
         val which = if (lone.size == 1) {
             "Only ${name(a.hue[g])} is down to one patch: pour ${name(c)} into it."
         } else {
-            "Pour ${name(c)} into the glowing ${name(a.hue[g])} patch; " +
+            "Pour ${name(c)} into the glowing ${name(a.hue[g])} patch: " +
                 "${colourReason(search, root, colours, g, c)}."
         }
         return fill(
@@ -529,35 +529,39 @@ internal object MosaicTeacher {
             val order = (0 until colours).filter { it != a.hue[g] }
                 .sortedWith(compareByDescending<Int> { search.gain(root, g, it) }.thenBy { it })
             val c = order.firstOrNull { search.keeps(root, g, it, r) } ?: continue
-            val warn = if (biggestLoses(a, root, colours, r, search)) " (The biggest swallow falls short here.)" else ""
+            val warn = if (biggestLoses(a, root, colours, r, search)) " The biggest swallow falls short here." else ""
             return fill(
                 a, CENTRE, g, c,
                 focus = a.cellsOf(g),
                 cited = swallowed(a, g, c),
                 nudge = "Think about growing from the middle.",
-                explanation = "No area sits more centrally: every other is at most $least away from the " +
-                    "glowing one. Grow it: pour ${name(c)} in, ${colourReason(search, root, colours, g, c)}.$warn",
+                explanation = "Every other area is at most $least steps from the glowing one; none is more " +
+                    "central. Grow it with ${name(c)}: ${colourReason(search, root, colours, g, c)}.$warn",
             )
         }
         return null
     }
 
     private fun keeps(a: Areas, root: Pos, r: Int, search: Search): Step? {
-        val m = search.moves(root).firstOrNull { search.keeps(root, it / 8, it % 8, r) } ?: return null
+        // Up to two keeping fills: the first to teach, the second only to know whether it is alone.
+        // "The only fill that works" is a fact the player can use — everything else loses — even
+        // where no rule of thumb explains why.
+        val safe = search.moves(root).asSequence().filter { search.keeps(root, it / 8, it % 8, r) }.take(2).toList()
+        val m = safe.firstOrNull() ?: return null
         val g = m / 8
         val c = m % 8
-        val warn = if (biggestLoses(a, root, search.colours, r, search)) {
-            " The fill that swallows the most would leave you short."
+        val warn = if (biggestLoses(a, root, search.colours, r, search)) " The biggest swallow falls short." else ""
+        val claim = if (safe.size == 1) {
+            "it's the only fill that stays in the limit: pour ${name(c)} into the glowing area."
         } else {
-            ""
+            "pouring ${name(c)} into the glowing area stays in the limit."
         }
         return fill(
             a, KEEPS, g, c,
             focus = a.cellsOf(g),
             cited = swallowed(a, g, c),
             nudge = "Try growing the glowing area.",
-            explanation = "No simple rule singles this out, but it keeps you within the limit: pour " +
-                "${name(c)} in and ${fills(r - 1)} can still finish.$warn",
+            explanation = "No rule of thumb explains this one, but $claim$warn",
         )
     }
 

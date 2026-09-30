@@ -155,7 +155,7 @@ class MosaicTeachingTest {
         val next = s.flood(step.cell, step.colour)
         assertTrue("$label ${step.technique}: the taught fill cannot finish in ${r - 1}", winsWithin(next, r - 1))
         assertEquals("$label: targets are not the flooded area", s.area(step.cell).toSet(), step.targets)
-        assertTrue("$label: explanation too long for the panel (${step.explanation.length})", step.explanation.length <= 200)
+        assertTrue("$label: explanation too long for the panel (${step.explanation.length})", step.explanation.length <= 180)
         assertTrue("$label: nudge too long", step.nudge.length <= 60)
         when (step.technique) {
             MosaicTeacher.FINISH -> assertTrue("$label: finish does not finish", next.solved)
@@ -175,7 +175,7 @@ class MosaicTeachingTest {
                 val ecc = eccentricities(s)
                 assertEquals("$label: not the most central area", ecc.values.min(), ecc.getValue(s.area(step.cell).min()))
             }
-            MosaicTeacher.KEEPS -> assertTrue("$label: the fallback must say so", "No simple rule" in step.explanation)
+            MosaicTeacher.KEEPS -> assertTrue("$label: the fallback must say so", "No rule of thumb" in step.explanation)
             else -> throw AssertionError("$label: unexpected technique ${step.technique}")
         }
     }
@@ -267,7 +267,7 @@ class MosaicTeachingTest {
         assertEquals("$label: the named fill is not the player's", s.trail.take(j + 1), slipped.trail)
         assertFalse("$label: the named fill did not lose it", winsWithin(slipped, slipped.limit - slipped.moves))
         assertTrue("$label: should tell them how far to undo: ${step.explanation}", "Undo" in step.explanation)
-        assertTrue("$label: explanation too long (${step.explanation.length})", step.explanation.length <= 200)
+        assertTrue("$label: explanation too long (${step.explanation.length})", step.explanation.length <= 180)
         assertEquals("$label: glow is not the cells the slip filled", back.area(s.trail[j] / 8).toSet(), step.focus)
 
         val d = Mosaic.teach(s)!!
