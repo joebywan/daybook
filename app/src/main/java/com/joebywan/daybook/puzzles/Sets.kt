@@ -1,5 +1,10 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,13 +26,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -37,9 +47,13 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
 import kotlinx.serialization.Serializable
 
 /**
@@ -59,6 +73,11 @@ data class SetsState(
     val selected: List<Int>,
     val lastWrong: Boolean = false,
     val lastRepeat: Boolean = false,
+    /**
+     * The three cards of a pick the board just rejected as not a set, so a hint can say which trait
+     * broke it. Cleared by the next tap, like [lastWrong]; defaulted so older saves still load.
+     */
+    val lastPick: List<Int> = emptyList(),
     override val moves: Int = 0,
 ) : PuzzleState {
     override val solved: Boolean get() = found.size == target
@@ -272,7 +291,7 @@ object Sets : PuzzleType {
      * selection without the wrong-answer flash.
      */
     fun tap(s: SetsState, index: Int): SetsState {
-        val stepped = s.copy(lastWrong = false, lastRepeat = false, moves = s.moves + 1)
+        val stepped = s.copy(lastWrong = false, lastRepeat = false, lastPick = emptyList(), moves = s.moves + 1)
         if (index in s.selected) return stepped.copy(selected = s.selected - index)
 
         val picked = s.selected + index
@@ -282,7 +301,7 @@ object Sets : PuzzleType {
         val trio = picked.sorted()
         return when {
             !isSet(s.cards[a], s.cards[b], s.cards[c]) ->
-                stepped.copy(selected = emptyList(), lastWrong = true)
+                stepped.copy(selected = emptyList(), lastWrong = true, lastPick = picked)
             trio in s.found ->
                 stepped.copy(selected = emptyList(), lastRepeat = true)
             else ->
@@ -298,7 +317,139 @@ object Sets : PuzzleType {
             selected = emptyList(),
             lastWrong = false,
             lastRepeat = false,
+            lastPick = emptyList(),
             moves = s.moves + 1,
+        )
+    }
+
+    // ---- teaching --------------------------------------------------------------------------
+
+    /**
+     * A pick to rethink or a set to find — see [SetsTeacher]. Replaces the old `hint()`, which put
+     * a whole set straight into the strip and taught nothing about how it was found.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as SetsState
+        val step = SetsTeacher.teach(s) ?: return null
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = step.targets,
+            mistake = step.mistake,
+            applyTo = { now -> SetsTeacher.apply(now as SetsState, step) },
+            reachedBy = { now -> SetsTeacher.isReached(now as SetsState, step) },
+        )
+    }
+
+    // ---- the walkthrough -------------------------------------------------------------------
+
+    /**
+     * Six cards holding exactly two sets, which share card 5:
+     * ```
+     * 0 three outlined red diamonds    1 one solid red oval          2 three striped green ovals
+     * 3 two striped blue ovals         4 three outlined blue rects   5 three outlined green ovals
+     * ```
+     * {1, 3, 5} is the set the frames build; {0, 4, 5} is left for "your turn" and runs through
+     * card 5, so finishing the board needs the rule that used cards stay in play. {1, 2, 3} is the
+     * near miss: the same trio with card 2's stripes where card 5's outline should be, so shading
+     * is the one trait that breaks. SetsTeachingTest proves the board holds those two sets and no
+     * others.
+     */
+    internal val TUTORIAL_CARDS = listOf(
+        Card(count = 2, shape = 1, shading = 1, colour = 0),
+        Card(count = 0, shape = 0, shading = 0, colour = 0),
+        Card(count = 2, shape = 0, shading = 2, colour = 2),
+        Card(count = 1, shape = 0, shading = 2, colour = 1),
+        Card(count = 2, shape = 2, shading = 1, colour = 1),
+        Card(count = 2, shape = 0, shading = 1, colour = 2),
+    )
+    internal val TUTORIAL_SET = listOf(1, 3, 5)
+    internal val TUTORIAL_NEAR_MISS = listOf(1, 2, 3)
+
+    private fun tutorialBoard(selected: List<Int> = emptyList(), found: List<List<Int>> = emptyList()) =
+        SetsState(TUTORIAL_CARDS, target = 2, found = found, selected = selected)
+
+    /**
+     * Accepts exactly the board with [selected] picked and [found] claimed. A pick is a tap per
+     * card, and the runner applies one accepted state per frame, so each tap is its own frame.
+     */
+    private fun only(selected: List<Int>, found: List<List<Int>> = emptyList()): (PuzzleState) -> Boolean = { next ->
+        next is SetsState && next.selected == selected && next.found == found && !next.lastWrong
+    }
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val fresh = tutorialBoard()
+        val claimed = tutorialBoard(found = listOf(TUTORIAL_SET))
+        val (a, b, c) = TUTORIAL_SET
+        val cards = TUTORIAL_CARDS
+        listOf(
+            TutorialFrame(
+                state = fresh,
+                caption = "Each card has a count, a shading, a colour and a shape. These three are a set: " +
+                    "one, two, three; solid, striped, outlined; three colours; all ovals.",
+                highlight = BoardHighlight(strong = TUTORIAL_SET.toSet()),
+            ),
+            TutorialFrame(
+                state = fresh,
+                caption = "These three are not: " +
+                    SetsTeacher.notASet(TUTORIAL_NEAR_MISS.map { cards[it] }).replaceFirstChar { it.lowercaseChar() },
+                highlight = BoardHighlight(strong = TUTORIAL_NEAR_MISS.toSet(), warning = true),
+            ),
+            TutorialFrame(
+                state = fresh,
+                caption = "Tap a card to pick it. Pick the glowing card, the three striped green ovals.",
+                highlight = BoardHighlight(strong = setOf(2)),
+                accepts = only(listOf(2)),
+                retry = "Tap the glowing card.",
+                done = "Picked: a picked card gets a bold outline.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(selected = listOf(2)),
+                caption = "Picked the wrong card? Tap it again to let it go.",
+                highlight = BoardHighlight(strong = setOf(2)),
+                accepts = only(emptyList()),
+                retry = "Tap the glowing card again.",
+                done = "Let go.",
+            ),
+            TutorialFrame(
+                state = fresh,
+                caption = "Now build a set, one tap per card. Pick the ${SetsTeacher.describe(cards[a])}.",
+                highlight = BoardHighlight(strong = setOf(a)),
+                accepts = only(listOf(a)),
+                retry = "Tap the glowing card.",
+                done = "Picked.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(selected = listOf(a)),
+                caption = "And the ${SetsTeacher.describe(cards[b])}.",
+                highlight = BoardHighlight(strong = setOf(b), soft = setOf(a)),
+                accepts = only(listOf(a, b)),
+                retry = "Tap the glowing card.",
+                done = "Any two cards point to exactly one third.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(selected = listOf(a, b)),
+                caption = SetsTeacher.walkToThird(cards[a], cards[b]) + " Find it and tap it.",
+                highlight = BoardHighlight(soft = setOf(a, b)),
+                accepts = only(emptyList(), listOf(TUTORIAL_SET)),
+                retry = "Look for ${SetsTeacher.describe(cards[c])}.",
+                done = "A set! It moves to the strip above.",
+            ),
+            TutorialFrame(
+                state = claimed,
+                caption = "Cards are never used up: a tinted card can go in another set. " +
+                    "Tap a found set in the strip to light up its cards.",
+                highlight = BoardHighlight(strong = setOf(c)),
+            ),
+            TutorialFrame(
+                state = claimed,
+                caption = "Your turn: one set left, and it uses a tinted card. Stuck? Hint shows you how to find it.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
         )
     }
 
@@ -335,6 +486,21 @@ object Sets : PuzzleType {
         val s = state as SetsState
         val scheme = MaterialTheme.colorScheme
         val used = s.found.flatten().toSet()
+        val highlight = LocalBoardHighlight.current
+        // Ink on a light card, in both themes; the error colour for a pick that went wrong.
+        val glow = if (highlight.warning) scheme.error else scheme.onSurface
+        // A glow that breathes is findable at a glance among twelve cards; read in the draw phase,
+        // so it repaints the outline without recomposing the board every frame (as Kings does).
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
 
         // Which thumbnail is being peeked at. Deliberately not in SetsState: PlayScreen pushes an
         // undo entry for every state handed to it, so a look at a set you already banked would
@@ -379,6 +545,14 @@ object Sets : PuzzleType {
                                     peeked = index in peekedCards,
                                     used = index in used,
                                     interactive = interactive,
+                                    look = when {
+                                        index in highlight.strong -> Look.STRONG
+                                        index in highlight.soft -> Look.SOFT
+                                        highlight.isEmpty -> Look.PLAIN
+                                        else -> Look.DIM
+                                    },
+                                    glow = glow,
+                                    pulse = pulse,
                                 ) {
                                     // A tap is the player moving on; leaving the highlight up
                                     // would tint cards they are now picking between.
@@ -401,6 +575,9 @@ object Sets : PuzzleType {
      * one of the three behind a thumbnail the player is pointing at — is washed harder, because
      * it answers a direct question and has to be told apart from that faint tint at a glance.
      */
+    /** How a card answers the hint's highlight. */
+    private enum class Look { PLAIN, STRONG, SOFT, DIM }
+
     @Composable
     private fun BoardCard(
         card: Card,
@@ -409,6 +586,9 @@ object Sets : PuzzleType {
         peeked: Boolean,
         used: Boolean,
         interactive: Boolean,
+        look: Look,
+        glow: Color,
+        pulse: State<Float>,
         onTap: () -> Unit,
     ) {
         val scheme = MaterialTheme.colorScheme
@@ -422,6 +602,9 @@ object Sets : PuzzleType {
             Modifier
                 .width(width)
                 .height(width / CARD_ASPECT)
+                // Everything the highlight does not name steps back, so the named cards read at
+                // a glance without hunting for their outlines.
+                .alpha(if (look == Look.DIM) 0.4f else 1f)
                 .clip(corner)
                 .background(fill)
                 .border(
@@ -433,6 +616,37 @@ object Sets : PuzzleType {
                     },
                     Color(accent).copy(alpha = if (selected || peeked) 1f else 0.45f),
                     corner,
+                )
+                .then(
+                    when (look) {
+                        // Inside the selection border rather than over it, so a glowing card that
+                        // is also picked still shows both.
+                        Look.STRONG -> Modifier.drawWithContent {
+                            drawContent()
+                            val w = 4.dp.toPx()
+                            val inset = 3.dp.toPx() + w / 2
+                            drawRoundRect(
+                                glow.copy(alpha = pulse.value),
+                                topLeft = Offset(inset, inset),
+                                size = Size(size.width - inset * 2, size.height - inset * 2),
+                                cornerRadius = CornerRadius(9.dp.toPx()),
+                                style = Stroke(w),
+                            )
+                        }
+                        Look.SOFT -> Modifier.drawWithContent {
+                            drawContent()
+                            val w = 1.5.dp.toPx()
+                            val inset = 3.dp.toPx() + w / 2
+                            drawRoundRect(
+                                glow.copy(alpha = 0.5f),
+                                topLeft = Offset(inset, inset),
+                                size = Size(size.width - inset * 2, size.height - inset * 2),
+                                cornerRadius = CornerRadius(9.dp.toPx()),
+                                style = Stroke(w),
+                            )
+                        }
+                        else -> Modifier
+                    }
                 )
                 .clickable(enabled = interactive, onClick = onTap),
             contentAlignment = Alignment.Center,
