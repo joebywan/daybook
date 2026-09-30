@@ -257,6 +257,17 @@ slow one in wasm: mean ~50 ms, worst ~450 ms a board in WebKit (Standard), under
 budget but the first place to look if a tier ever feels laggy. `onGloballyPositioned` does not fire
 again when a tier change leaves the board's bounds unchanged (Sudoku is always 9x9), so a harness
 must key "new board loaded" on something else, e.g. the page's `GENERATED` line.
+**Mambo, Pipes, Sets and Tower** (`web/.../MoreBoards.kt`): `?puzzle=mambo|pipes|sets|tower`
+picks the board (Kings stays the default), `?dump` prints its fingerprints in
+`WebParityMamboPipesSetsTowerTest`'s format, and `&time` adds `TIME` lines with per-tier
+generation times. The page prints `BOARD` (the board's real bounds) and `STATE` (moves / solved /
+undo depth) for a harness. None of the four had hash order reaching the `Rng`; Pipes only needed
+`Integer.bitCount` → `countOneBits()`. **Pipes' spins run in a `rememberCoroutineScope`, not the
+`LaunchedEffect(s.cells)` that starts them:** every tap restarts that effect, and while the spins
+were its children a tap on one tile cancelled another's turn mid-way and left it frozen at a slant
+(Android too). Headless WebKit separately sometimes skips presenting an animation's last frame, so
+the harness dispatches a `resize` before a settled screenshot — a redraw reads the real angle, so
+it cannot hide a spin that is genuinely stuck (checked: the unfixed build still fails with it).
 
 ## Tests
 

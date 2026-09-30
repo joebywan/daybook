@@ -120,6 +120,11 @@ fun main() {
     val day = params["date"]?.let(Day::parse) ?: Day.today()
     val tier = params["tier"]?.let { Difficulty.fromKey(it.uppercase()) } ?: Difficulty.STANDARD
     val debug = "dump" in params
+    // ?puzzle=mambo|pipes|sets|tower (MoreBoards.kt); no parameter keeps Kings.
+    val more = moreBoard(params["puzzle"])
+    val fingerprint: (Day, Difficulty) -> String = if (more == null) ::fingerprint else { d, t ->
+        boardFingerprint(more, d.toString(), t, SeedHash.daily(d.epochDay, more.id, t))
+    }
 
     println("daybook: date=$day epochDay=${day.epochDay}")
     mosaicAtomsPuzzles[params["puzzle"]]?.let { type ->
