@@ -27,6 +27,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -193,10 +195,118 @@ object Kings : PuzzleType {
         "Squares a king already rules out are crossed off for you.",
     )
 
+    /**
+     * One colour per region of the largest board (9x9, nine regions), drawn opaque.
+     *
+     * Chosen by search to be as far apart from each other as possible: the closest pair is
+     * CIEDE2000 22 apart (salmon and mustard; the 0.55-alpha set this replaced had two greens 4.5
+     * apart once blended, which is what a player noticed). Two further limits shaped them: every
+     * colour keeps at least 4.5:1 contrast with [MarkInk], so the marks read on all of them, and
+     * lightness and chroma stay short of neon. Under simulated deuteranopia and protanopia
+     * (Machado 2009, full severity) the closest pairs are about 11 apart — orange/green,
+     * teal/violet, teal/raspberry — and [regionPalette] keeps those pairs off neighbouring regions
+     * where it can.
+     *
+     * Opaque, and the same in both themes: the tiles carry their own ground, so the marks on them
+     * are drawn in a fixed ink rather than the theme's.
+     */
     private val regionColours = listOf(
-        0xFF7C6BB5, 0xFF4C86D9, 0xFF54B07A, 0xFFE0B23C, 0xFFD9584C,
-        0xFF48B9C4, 0xFFD97FB0, 0xFF9A8264, 0xFF6FA86F, 0xFFB5705A,
+        0xFFEF9E8D, // salmon
+        0xFFC86D05, // burnt orange
+        0xFFDDC152, // mustard
+        0xFF509B58, // green
+        0xFF83E0C1, // mint
+        0xFF3E9CAD, // teal
+        0xFFA2C6FF, // sky
+        0xFF8975DB, // violet
+        0xFFCF5E8A, // raspberry
     )
+
+    /**
+     * How different two [regionColours] look, as the worst of CIEDE2000 for normal vision and for
+     * simulated deuteranopia and protanopia, rounded. Generated offline from the hex values above;
+     * regenerate it if they change.
+     */
+    private val colourDistance = listOf(
+        intArrayOf(0, 19, 12, 12, 12, 24, 33, 37, 19),
+        intArrayOf(19, 0, 17, 11, 30, 39, 49, 50, 24),
+        intArrayOf(12, 17, 0, 16, 20, 40, 47, 59, 29),
+        intArrayOf(12, 11, 16, 0, 22, 29, 42, 44, 14),
+        intArrayOf(12, 30, 20, 22, 0, 25, 24, 35, 18),
+        intArrayOf(24, 39, 40, 29, 25, 0, 16, 11, 11),
+        intArrayOf(33, 49, 47, 42, 24, 16, 0, 19, 27),
+        intArrayOf(37, 50, 59, 44, 35, 11, 19, 0, 17),
+        intArrayOf(19, 24, 29, 14, 18, 11, 27, 17, 0),
+    )
+
+    /**
+     * Which of [regionColours] each region is painted in: region `r` gets `regionColours[result[r]]`.
+     *
+     * Display only — nothing here reaches the generator, the [Rng] or the saved game, and the same
+     * regions always get the same colours. It starts from region `r` → colour `r` and swaps pairs
+     * of colours (including the ones a smaller board leaves unused) while that makes the closest
+     * pair of *touching* regions look further apart, or, at the same closest pair, the touching
+     * pairs further apart in total. A local search, not an exhaustive one: on a year of Expert
+     * boards it lifts the median colour-blind distance between neighbours from 11 to about 17.
+     */
+    internal fun regionPalette(n: Int, region: List<Int>): IntArray {
+        val count = regionColours.size
+        if (n > count) return IntArray(n) { it % count }
+        // Touching pairs in a fixed order, from a matrix rather than a hash set, so the result
+        // cannot depend on the platform's iteration order.
+        val touching = Array(n) { BooleanArray(n) }
+        for (i in 0 until n * n) {
+            val r = i / n
+            val c = i % n
+            if (c + 1 < n && region[i] != region[i + 1]) {
+                touching[region[i]][region[i + 1]] = true
+                touching[region[i + 1]][region[i]] = true
+            }
+            if (r + 1 < n && region[i] != region[i + n]) {
+                touching[region[i]][region[i + n]] = true
+                touching[region[i + n]][region[i]] = true
+            }
+        }
+        val edges = buildList {
+            for (a in 0 until n) for (b in a + 1 until n) if (touching[a][b]) add(a to b)
+        }
+        val colour = IntArray(count) { it }
+        fun score(): Long {
+            var worst = Int.MAX_VALUE
+            var total = 0
+            for ((a, b) in edges) {
+                val d = colourDistance[colour[a]][colour[b]]
+                worst = minOf(worst, d)
+                total += d
+            }
+            return worst.toLong() * 1_000_000 + total
+        }
+        var best = score()
+        var improved = true
+        while (improved) {
+            improved = false
+            for (i in 0 until n) {
+                for (j in i + 1 until count) {
+                    colour[i] = colour[j].also { colour[j] = colour[i] }
+                    val s = score()
+                    if (s > best) {
+                        best = s
+                        improved = true
+                    } else {
+                        colour[i] = colour[j].also { colour[j] = colour[i] }
+                    }
+                }
+            }
+        }
+        return colour.copyOf(n)
+    }
+
+    /**
+     * The ink every mark on a tile is drawn in, in both themes: the app's own dark ink, because
+     * the tiles are opaque and light enough that the theme's light-on-dark text colour would
+     * vanish on half of them. At least 4.5:1 against every region colour.
+     */
+    private val MarkInk = Color(0xFF11201C)
 
     private fun sizeFor(difficulty: Difficulty) = when (difficulty) {
         Difficulty.STANDARD -> 7
@@ -508,11 +618,12 @@ object Kings : PuzzleType {
      * full column of a third — because a motif of three neat rows reads as a colour chart and a
      * Kings board never looks like that.
      *
-     * Colours 0, 1 and 3: purple, blue and amber. [regionColours] holds two greens and two reds
-     * that would blur into each other at thumbnail size, so the three picked here are the ones
-     * furthest apart.
+     * Colours 7, 4 and 1: violet, mint and burnt orange, the three of [regionColours] furthest
+     * apart from one another (CIEDE2000 30 at the closest, colour-blind vision included), because
+     * all three regions touch and a thumbnail has no room for subtlety. Violet leads as the
+     * nearest to Kings' own accent.
      */
-    private val motifRegions = listOf(0, 0, 3, 0, 1, 3, 1, 1, 3)
+    private val motifRegions = listOf(7, 7, 1, 7, 4, 1, 4, 4, 1)
 
     /**
      * Legal, not merely decorative: both crosses sit diagonally against the crown, which is
@@ -533,7 +644,6 @@ object Kings : PuzzleType {
      */
     @Composable
     override fun Preview(modifier: Modifier) {
-        val scheme = MaterialTheme.colorScheme
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             // Square and centred in whatever shape the grid hands over. `maxHeight` is infinite
             // when the tile is free to grow, and taking the smaller leaves the width in charge.
@@ -548,14 +658,12 @@ object Kings : PuzzleType {
                                 .size(cell)
                                 .padding(1.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(
-                                    Color(regionColours[motifRegions[i]]).copy(alpha = 0.55f)
-                                ),
+                                .background(Color(regionColours[motifRegions[i]])),
                             contentAlignment = Alignment.Center,
                         ) {
                             when (motifMarks[i]) {
-                                Mark.KING -> Crown(cell, scheme.onBackground)
-                                Mark.BLOCKED -> BlockedCross(cell, scheme.background)
+                                Mark.KING -> Crown(cell, MarkInk)
+                                Mark.BLOCKED -> BlockedCross(cell)
                                 Mark.EMPTY -> Unit
                             }
                         }
@@ -629,6 +737,7 @@ object Kings : PuzzleType {
         val shown = held?.after ?: s
         val conflicts = shown.conflicts()
         val eliminated = shown.eliminated()
+        val palette = remember(s.region) { regionPalette(s.size, s.region) }
 
         // Keyed on the board as well as the tap: a board that moved underneath a held tap restarts
         // this, and [held] is null the second time round, so the stale mark is quietly dropped.
@@ -751,21 +860,21 @@ object Kings : PuzzleType {
                                 .size(cell)
                                 .padding(1.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(
-                                    Color(regionColours[s.region[i] % regionColours.size])
-                                        .copy(alpha = 0.55f)
-                                ),
+                                .background(Color(regionColours[palette[s.region[i]]])),
                             contentAlignment = Alignment.Center,
                         ) {
                             when (mark) {
-                                Mark.KING -> Crown(
-                                    cell,
-                                    if (i in conflicts) scheme.error else scheme.onBackground,
-                                )
-                                Mark.BLOCKED -> BlockedCross(cell, scheme.background)
+                                // A clashing crown is filled in the error colour, which on a red
+                                // or orange tile would be all but invisible, so it keeps an ink rim.
+                                Mark.KING -> if (i in conflicts) {
+                                    Crown(cell, scheme.error, rim = MarkInk)
+                                } else {
+                                    Crown(cell, MarkInk)
+                                }
+                                Mark.BLOCKED -> BlockedCross(cell)
                                 // A square the board has ruled out is a fact, not a suggestion, so
                                 // it is written in the same hand as the player's own crosses.
-                                Mark.EMPTY -> if (i in eliminated) BlockedCross(cell, scheme.background)
+                                Mark.EMPTY -> if (i in eliminated) BlockedCross(cell)
                             }
                         }
                     }
@@ -777,14 +886,15 @@ object Kings : PuzzleType {
     /**
      * "Not a king", whether the player pencilled it in or a king on the board ruled it out.
      *
-     * Stroked rather than filled, and drawn in the page colour where [Crown] is drawn in the ink:
-     * opposite weight and opposite polarity, so a glance separates the crosses from the kings
-     * without having to resolve either shape.
+     * Stroked rather than filled, and a shade lighter than [Crown]'s solid ink, so a glance
+     * separates the crosses from the kings by weight without having to resolve either shape. It
+     * used to be drawn in the page colour for opposite polarity as well, but on opaque tiles as
+     * light as these a pale cross drops to 1.4:1; at 75% ink it keeps at least 3:1 on every tile.
      */
     @Composable
-    private fun BlockedCross(cell: Dp, colour: Color) {
+    private fun BlockedCross(cell: Dp) {
         Canvas(Modifier.fillMaxSize().padding(cell * 0.28f)) {
-            val ink = colour.copy(alpha = 0.85f)
+            val ink = MarkInk.copy(alpha = 0.75f)
             val width = size.minDimension * 0.2f
             drawLine(ink, Offset(0f, 0f), Offset(size.width, size.height), width, StrokeCap.Round)
             drawLine(ink, Offset(0f, size.height), Offset(size.width, 0f), width, StrokeCap.Round)
@@ -799,9 +909,13 @@ object Kings : PuzzleType {
      * usually carries on its tips close up into a smudge long before the silhouette itself stops
      * reading. Three points rather than five for the same reason: rendered at a 38px cell, five
      * points came out as a comb.
+     *
+     * [rim], when given, is a thin ring of that colour round the silhouette: a clashing crown is
+     * filled in the error colour, which has too little contrast with the warmer tiles to carry the
+     * shape on its own.
      */
     @Composable
-    private fun Crown(cell: Dp, colour: Color) {
+    private fun Crown(cell: Dp, colour: Color, rim: Color? = null) {
         Canvas(Modifier.fillMaxSize().padding(cell * 0.14f)) {
             // Crowns are wider than they are tall, so the shape is sized off the width and then
             // centred in the square the cell gives it.
@@ -821,6 +935,10 @@ object Kings : PuzzleType {
                 lineTo(x(1.00f), y(0.66f))
                 lineTo(x(0.94f), y(1.00f))
                 close()
+            }
+            if (rim != null) {
+                // Drawn first and twice the width wanted, so the fill covers its inner half.
+                drawPath(crown, rim, style = Stroke(width = w * 0.12f, join = StrokeJoin.Round))
             }
             drawPath(crown, colour)
         }
