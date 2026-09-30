@@ -15,8 +15,10 @@ val sharedFromApp = listOf(
     "com/joebywan/daybook/core/PuzzleType.kt",
     "com/joebywan/daybook/core/Rng.kt",
     "com/joebywan/daybook/core/SeedHash.kt",
+    "com/joebywan/daybook/core/Teaching.kt",
     "com/joebywan/daybook/puzzles/PuzzleState.kt",
     "com/joebywan/daybook/puzzles/Kings.kt",
+    "com/joebywan/daybook/puzzles/KingsTeacher.kt",
     "com/joebywan/daybook/ui/theme/Palette.kt",
 )
 

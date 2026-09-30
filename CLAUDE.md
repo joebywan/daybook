@@ -29,6 +29,47 @@ sounded. Do not turn it off.
 - `Preview(modifier)` draws a fixed motif for the home grid. **Never call `generate()` in it** —
   eleven of them draw on every composition.
 
+## Teaching: hints that explain, and walkthroughs
+
+Kings is the pilot; the other ten still use the old `hint()` and have no walkthrough. The contract
+lives in `core/Teaching.kt` and `core/PuzzleType.kt`, all with defaults, so a board adopts it one
+file at a time and nothing else has to change:
+
+- `teach(state): Deduction?` — a mistake to take back, or one step reasoned from what the player can
+  see: nudge + focus cells, explanation + cited cells, targets, and `apply`/`isReached` closures.
+  Null means "not adopted", and `PlayScreen` falls back to `hint()`.
+- `LocalBoardHighlight` — a CompositionLocal, **not** a `Board` parameter, so boards that ignore it
+  compile untouched (other sessions are porting boards; do not add a parameter to all eleven).
+- `tutorial: List<TutorialFrame>` — played by `ui/tutorial/TutorialRunner.kt` on the puzzle's real
+  `Board`. A frame's `accepts` predicate gates the move; rejected states are not applied.
+- UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the
+  panel confirms and clears when `isReached` sees it. Only an explicit "Show me" applies it. **One
+  hint is counted per deduction opened**; explaining and Show me are free. The panel sits in a fixed
+  `HintSlotHeight` reserved under the board for every teaching puzzle, so it never moves the board.
+- The walkthrough is offered once, as one passive line in that slot on a player's first visit;
+  `ProgressStore.tutorialsOffered` records it the moment it is shown. "How to play" opens the
+  walkthrough; the rules list is its "Rules" summary.
+
+**The solver must not be able to see the answer.** `KingsTeacher.deduce(n, region, marks)` takes no
+solution, so a step it explains cannot lean on one — a guarantee of the signature. The answer is read
+only to flag mistakes and for the fallback, which says openly that it is pointing at the answer.
+Soundness on a *unique* board cannot tell reasoning from peeking (every true fact is derivable), so
+`KingsTeachingTest` also walks boards with several answers and requires each step to hold for every
+answer still possible.
+
+Measured coverage (500 boards per tier, walked from empty by hints alone; the fallback is under 1%):
+
+| tier | last square | locked to a line | would empty | N confined | what-if | fallback |
+|---|---|---|---|---|---|---|
+| Standard | 47% of steps | 24% | 24% | 3% | 1.2% (7% of boards) | 0.2% of boards |
+| Hard | 48% | 23% | 24% | 5% | 1.1% (6%) | 0.6% |
+| Expert | 49% | 22% | 22% | 6% | 1.6% (7%) | 0.6% |
+
+Adopting it for another puzzle: write a `XTeacher` whose reasoning entry point takes only visible
+state; override `teach` and `tutorial`; read `LocalBoardHighlight` in `Board`; if the puzzle is on
+the web list, add the teacher file to `sharedFromApp`. Test soundness against an independent solver
+and measure the fallback rate — don't assume it.
+
 ## Rules that keep being relearned
 
 **Never ship a board the generator has not proved.** Kings, LITS, Mosaic and Shikaku each had a
@@ -141,7 +182,7 @@ wait with `page.wait_for_timeout`, never `time.sleep`.
 
 ## Tests
 
-130 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
+140 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
 Shikaku, Mosaic and Snap tests each carry their own solver or rule checker, deliberately written on
 a different principle so the two cannot share a blind spot. `LitsAuditTest` and `MosaicOptimumTest`
 are differential; `LitsMarkingTest` brute-forces every legal shading of a fixed board.

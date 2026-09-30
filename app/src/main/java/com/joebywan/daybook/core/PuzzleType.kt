@@ -35,7 +35,12 @@ interface PuzzleType {
     /** One line, shown on the home card. */
     val tagline: String
 
-    /** How to play, shown before the first game and from the in-game menu. */
+    /**
+     * How to play, as a short summary. Shown from the in-game "How to play" button — directly for a
+     * puzzle with no [tutorial], and from inside the walkthrough for one that has. Nothing shows it
+     * unasked: first-time players of a puzzle with a walkthrough are offered that instead, as one
+     * passive line under the board, once.
+     */
     val rules: List<String>
 
     /** ARGB accent used for this puzzle's card and board highlights. */
@@ -70,8 +75,28 @@ interface PuzzleType {
     /**
      * Reveal one deducible step, or null if the puzzle offers no hints. Hints are unlimited and
      * free here; they cost a hint-count on the results card and nothing else.
+     *
+     * The old hint: the move goes straight onto the board. Only used when [teach] returns null, so
+     * a puzzle that has not adopted teaching keeps exactly this behaviour.
      */
     fun hint(state: PuzzleState): PuzzleState? = null
+
+    /**
+     * The next thing to learn on this board: a mistake of the player's to take back, or a step
+     * they could have reasoned from what they can see. Null means "not adopted" (the screen falls
+     * back to [hint]) or "nothing left" on a solved board.
+     *
+     * Must reason only from what the player can see. The stored answer may decide what counts as a
+     * mistake, and may supply a last-resort square flagged [Deduction.fallback], but a step
+     * presented as reasoning must never lean on a fact only the answer knows.
+     */
+    fun teach(state: PuzzleState): Deduction? = null
+
+    /**
+     * A walkthrough played on this puzzle's own [Board], or empty for none. The "How to play"
+     * button opens it when present, and a first-time player is offered it once.
+     */
+    val tutorial: List<TutorialFrame> get() = emptyList()
 
     /** Whether this puzzle can offer a deducible next step. Drives whether the Hint button appears. */
     val offersHints: Boolean get() = true
