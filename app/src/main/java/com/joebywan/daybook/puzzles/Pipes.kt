@@ -280,8 +280,8 @@ object Pipes : PuzzleType {
      * on the left edge, the corner bend, the T on the top edge — and then by a neighbour: the end in
      * the bottom corner that the straight now points into. Each starts exactly one tap short, so a
      * frame's one move is one tap (a rejected tap is not applied, so a two-tap move could never
-     * land). PipesTeachingTest proves the board has exactly one answer and
-     * that the border and the neighbours alone reach it.
+     * land). PipesTeachingTest proves the board has exactly one answer and that hints alone finish
+     * it from the "your turn" frame, with no mistake and no fallback.
      */
     internal val TUTORIAL_SOLUTION = listOf(
         RIGHT or DOWN, LEFT or RIGHT or DOWN, LEFT,
