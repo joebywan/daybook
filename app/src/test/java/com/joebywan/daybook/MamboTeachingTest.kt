@@ -36,7 +36,7 @@ class MamboTeachingTest {
 
     /** Every row of length [n] with n/2 of each symbol and no three alike together. */
     private fun legalRows(n: Int): List<List<Sym>> = (0 until (1 shl n)).mapNotNull { bits ->
-        if (Integer.bitCount(bits) != n / 2) return@mapNotNull null
+        if (bits.countOneBits() != n / 2) return@mapNotNull null
         val row = (0 until n).map { if (bits shr it and 1 == 1) Sym.SUN else Sym.MOON }
         if ((0 until n - 2).any { row[it] == row[it + 1] && row[it] == row[it + 2] }) null else row
     }
