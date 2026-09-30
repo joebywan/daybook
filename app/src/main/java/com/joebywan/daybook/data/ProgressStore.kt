@@ -168,6 +168,20 @@ class ProgressStore(private val context: Context) {
         }
     }
 
+    /**
+     * Puzzles whose walkthrough has been offered. The offer is one passive line under the board,
+     * shown on a player's first visit and never again — recorded as soon as it is shown, not when
+     * it is taken up, because an offer that returned until accepted would be nagging.
+     */
+    val tutorialsOffered: Flow<Set<String>> =
+        context.dataStore.data.map { prefs -> prefs[KEY_TUTORIALS_OFFERED].orEmpty() }
+
+    suspend fun markTutorialOffered(puzzleId: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_TUTORIALS_OFFERED] = prefs[KEY_TUTORIALS_OFFERED].orEmpty() + puzzleId
+        }
+    }
+
     private fun Preferences.savedGames(): List<StoredGame> =
         this[KEY_SAVED].orEmpty().mapNotNull(StoredGame::decode)
 
@@ -176,6 +190,7 @@ class ProgressStore(private val context: Context) {
     private companion object {
         val KEY_COMPLETIONS = stringSetPreferencesKey("completions")
         val KEY_SAVED = stringSetPreferencesKey("saved_games")
+        val KEY_TUTORIALS_OFFERED = stringSetPreferencesKey("tutorials_offered")
     }
 }
 

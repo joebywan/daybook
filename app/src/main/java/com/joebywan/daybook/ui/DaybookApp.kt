@@ -45,6 +45,9 @@ fun DaybookApp() {
     val store = remember { ProgressStore(context) }
     val scope = rememberCoroutineScope()
     val completions by store.completions.collectAsState(initial = emptyList())
+    // Null until the store has answered, so a returning player never sees the walkthrough offer
+    // flash up for the instant before their "already offered" loads.
+    val tutorialsOffered by store.tutorialsOffered.collectAsState(initial = null)
 
     var route by remember { mutableStateOf<Route>(Route.Home) }
     var today by remember { mutableStateOf(LocalDate.now()) }
@@ -162,6 +165,8 @@ fun DaybookApp() {
                     onAgain = {
                         route = Route.Play(puzzle.id, current.difficulty, null, System.nanoTime())
                     },
+                    tutorialOffered = tutorialsOffered?.let { puzzle.id in it },
+                    onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
                     onBack = { route = Route.Home },
                 )
             }
