@@ -82,7 +82,8 @@ private fun fingerprint(type: PuzzleType, day: Day, tier: Difficulty): String =
  * the pinned dates, `TODAY` for `?date`/`?tier`, and with `&range=N` a `RANGE` line for every tier
  * of N days from 2026-01-01 plus a `TIMING` line per puzzle and tier. `WebParityDumpTest` writes the
  * JVM's side of the range in the same order, so the two diff directly. `&puzzle=<id>` narrows it to
- * one puzzle, which lets a harness split a year across pages.
+ * one puzzle, which lets a harness split a year across pages. `&times` adds a `TIME <id> <date>
+ * <tier> <ms>` line per board, for a distribution rather than only the mean and worst.
  */
 private fun dump(params: Map<String, String>, today: Day, tier: Difficulty) {
     val only = params["puzzle"]?.let(PuzzleRegistry::byId)
@@ -90,6 +91,7 @@ private fun dump(params: Map<String, String>, today: Day, tier: Difficulty) {
     for (type in types) for (d in PARITY_DAYS) for (t in Difficulty.entries) println("PARITY ${fingerprint(type, d, t)}")
     for (type in types) println("TODAY ${fingerprint(type, today, tier)}")
     val range = params["range"]?.toIntOrNull() ?: 0
+    val times = "times" in params
     val start = Day(2026, 1, 1).epochDay
     for (type in types) {
         val worst = LongArray(Difficulty.entries.size)
@@ -97,8 +99,11 @@ private fun dump(params: Map<String, String>, today: Day, tier: Difficulty) {
         for (i in 0 until range) {
             for (t in Difficulty.entries) {
                 val began = TimeSource.Monotonic.markNow()
-                val line = fingerprint(type, Day.ofEpochDay(start + i), t)
-                val ms = began.elapsedNow().inWholeMilliseconds
+                val day = Day.ofEpochDay(start + i)
+                val line = fingerprint(type, day, t)
+                val elapsed = began.elapsedNow()
+                val ms = elapsed.inWholeMilliseconds
+                if (times) println("TIME ${type.id} $day ${t.name} ${elapsed.inWholeMicroseconds / 1000.0}")
                 worst[t.ordinal] = maxOf(worst[t.ordinal], ms)
                 total[t.ordinal] += ms
                 println("RANGE $line")

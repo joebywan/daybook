@@ -371,6 +371,7 @@ object Lits : PuzzleType {
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
         val (w, h) = shape(difficulty)
         val n = w * h
+        val g = geometry(w, h)
         // Denser shading means a more constrained — and far more often unique — board, but the
         // no-2x2 rule caps it near two thirds of the grid, so the generator aims at a fifth of the
         // squares' worth of pieces and settles for a sixth.
@@ -390,27 +391,28 @@ object Lits : PuzzleType {
                 if (searches >= SEARCH_BUDGET) break
                 val rng = Rng(seed + attempt)
                 val placed = (0 until LAYOUTS)
-                    .mapNotNull { placeTetrominoes(rng, w, h, targetPieces, minPieces) }
+                    .mapNotNull { placeTetrominoes(rng, g, targetPieces, minPieces) }
                     .maxByOrNull { it.size } ?: continue
                 // Too few pieces to share the grid out under the cap, so no partition can exist.
                 if (placed.size.toLong() * cap < n) continue
-                val shading = List(n) { cell -> placed.any { cell in it.first } }
+                val shadingMask = placed.fold(0L) { acc, q -> acc or g.mask[q] }
+                val shading = List(n) { cell -> shadingMask and (1L shl cell) != 0L }
 
                 // The shading is fixed at this point; only the walls are still free, so a couple
                 // of partitions are carved per layout of pieces before giving up on it.
                 for (wallTry in 0 until WALL_TRIES) {
                     if (searches >= SEARCH_BUDGET) break
-                    val (region, intact) = carve(rng, w, h, placed, cap) { searches++ }
+                    val (region, intact) = carve(rng, g, placed, cap) { searches++ }
                     if (floor == null) floor = LitsState(w, h, region, List(n) { false }, shading)
                     if (!intact) continue
 
-                    val options = placed.indices.map { r ->
-                        tetrominoes(region.indices.filter { region[it] == r }, w, h)
-                    }
+                    val masks = LongArray(placed.size)
+                    region.forEachIndexed { cell, r -> masks[r] = masks[r] or (1L shl cell) }
+                    val options = Array(placed.size) { g.tetrominoesIn(masks[it]) }
                     if (options.any { it.isEmpty() }) continue
                     searches++
                     // Only an exactly-one verdict may ship. Truncated is explicitly not one.
-                    val verdict = search(w, h, options)
+                    val verdict = search(g, options)
                     if (verdict is Verdict.ExactlyOne) {
                         return LitsState(w, h, region, List(n) { false }, verdict.shading)
                     }
@@ -431,14 +433,16 @@ object Lits : PuzzleType {
      */
     private fun lastResort(seed: Long, w: Int, h: Int): LitsState {
         val n = w * h
+        val g = geometry(w, h)
         val placed = (0 until 64).firstNotNullOfOrNull {
-            placeTetrominoes(Rng(seed + 7717L + it), w, h, 4, 4)
-        } ?: listOf(listOf(0, w, 2 * w, 3 * w) to Piece.I)
+            placeTetrominoes(Rng(seed + 7717L + it), g, 4, 4)
+        } ?: intArrayOf(g.idOf(1L or (1L shl w) or (1L shl 2 * w) or (1L shl 3 * w)))
+        val shading = placed.fold(0L) { acc, q -> acc or g.mask[q] }
         return LitsState(
             w, h,
-            carve(Rng(seed), w, h, placed, Int.MAX_VALUE) {}.first,
+            carve(Rng(seed), g, placed, Int.MAX_VALUE) {}.first,
             List(n) { false },
-            List(n) { cell -> placed.any { cell in it.first } },
+            List(n) { cell -> shading and (1L shl cell) != 0L },
         )
     }
 
@@ -463,53 +467,63 @@ object Lits : PuzzleType {
      *
      * No region grows past [maxRegion] squares while the invariant holds; a square whose every
      * neighbouring region is full is set aside like one that would break uniqueness.
+     *
+     * Squares are sets of bits in a `Long` (see [Geometry]); every list the `Rng` picks from is
+     * still in ascending square order, as it was when these were `List<Int>`s.
      */
     private fun carve(
         rng: Rng,
-        w: Int,
-        h: Int,
-        placed: List<kotlin.Pair<List<Int>, Piece>>,
+        g: Geometry,
+        placed: IntArray,
         maxRegion: Int,
         onSearch: () -> Unit,
     ): kotlin.Pair<List<Int>, Boolean> {
-        val n = w * h
-        val region = MutableList(n) { -1 }
-        placed.forEachIndexed { index, (quad, _) -> quad.forEach { region[it] = index } }
+        val n = g.n
+        val region = IntArray(n) { -1 }
+        val masks = LongArray(placed.size) { g.mask[placed[it]] }
+        var claimed = 0L
+        masks.forEachIndexed { index, m ->
+            claimed = claimed or m
+            forEachBit(m) { region[it] = index }
+        }
         val sizes = IntArray(placed.size) { 4 }
-        val cells = Array(placed.size) { placed[it].first.toMutableList() }
-        val opts = Array(placed.size) { tetrominoes(cells[it], w, h) }
+        val opts = Array(placed.size) { g.tetrominoesIn(masks[it]) }
 
         var intact = true
-        var remaining = region.count { it == -1 }
-        // Squares no region can take without adding a second answer. They are set aside rather
-        // than fatal: claiming their other neighbours can give them a region that will.
-        val refused = HashMap<Int, Set<Int>>()
+        var remaining = n - claimed.countOneBits()
+        // Squares no region can take without adding a second answer, as the regions (bits) that
+        // refused them. They are set aside rather than fatal: claiming their other neighbours can
+        // give them a region that will. No bits and "never refused" read the same, because a
+        // frontier square always has a neighbouring region.
+        val refused = LongArray(n)
 
         var guard = 0
         while (remaining > 0 && guard++ < n * 8) {
-            val frontier = (0 until n).filter { cell ->
-                region[cell] == -1 && neighbours(cell, w, h).any { region[it] != -1 }
+            val frontier = g.spread(claimed) and claimed.inv()
+            if (frontier == 0L) break
+            var open = frontier
+            if (intact) forEachBit(frontier) { cell ->
+                if (hostBits(g, cell, region) and refused[cell].inv() == 0L) {
+                    open = open and (1L shl cell).inv()
+                }
             }
-            if (frontier.isEmpty()) break
-            val open = if (!intact) frontier else frontier.filter { cell ->
-                refused[cell]?.containsAll(hostsOf(cell, w, h, region)) != true
-            }
-            if (open.isEmpty()) { intact = false; continue }
+            if (open == 0L) { intact = false; continue }
 
-            val cell = rng.pick(open)
+            val cell = nthBit(open, rng.nextInt(open.countOneBits()))
+            val bit = 1L shl cell
             // Smallest region first, so no one region swallows the leftovers.
-            val hosts = rng.shuffled(hostsOf(cell, w, h, region).toList()).sortedBy { sizes[it] }
+            val hosts = rng.shuffled(hostsOf(g, cell, region)).sortedBy { sizes[it] }
                 .filter { !intact || sizes[it] < maxRegion }
 
             var chosen = -1
             if (intact) {
                 for (host in hosts) {
-                    val grown = tetrominoes(cells[host] + cell, w, h)
+                    val grown = g.tetrominoesIn(masks[host] or bit)
                     if (grown.isEmpty()) continue
                     val trial = opts.copyOf()
                     trial[host] = grown
                     onSearch()
-                    if (search(w, h, trial.asList()) is Verdict.ExactlyOne) {
+                    if (search(g, trial) is Verdict.ExactlyOne) {
                         chosen = host
                         opts[host] = grown
                         break
@@ -517,14 +531,15 @@ object Lits : PuzzleType {
                 }
                 if (chosen == -1) {
                     // Every neighbouring region, including any the cap skipped over.
-                    refused[cell] = hostsOf(cell, w, h, region)
+                    refused[cell] = hostBits(g, cell, region)
                     continue
                 }
             } else {
+                // Once the invariant is broken the options are never searched again.
                 chosen = hosts.first()
-                opts[chosen] = tetrominoes(cells[chosen] + cell, w, h)
             }
-            cells[chosen] += cell
+            masks[chosen] = masks[chosen] or bit
+            claimed = claimed or bit
             region[cell] = chosen
             sizes[chosen]++
             remaining--
@@ -536,8 +551,8 @@ object Lits : PuzzleType {
         while (region.contains(-1) && sweep++ < n) {
             for (cell in 0 until n) {
                 if (region[cell] != -1) continue
-                val hosts = hostsOf(cell, w, h, region)
-                if (hosts.isNotEmpty()) region[cell] = rng.pick(hosts.toList())
+                val hosts = hostsOf(g, cell, region)
+                if (hosts.isNotEmpty()) region[cell] = rng.pick(hosts)
             }
         }
         return region.map { if (it == -1) 0 else it } to intact
@@ -546,7 +561,8 @@ object Lits : PuzzleType {
     // ---- building a solution first --------------------------------------------------------
 
     /**
-     * Lays down [target] tetrominoes that already satisfy every LITS rule.
+     * Lays down [target] tetrominoes that already satisfy every LITS rule, as [Geometry] placement
+     * ids.
      *
      * Building the answer before the regions is what makes this generator work at all: regions
      * drawn at random almost never admit a legal shading, let alone exactly one. Each new piece is
@@ -554,40 +570,16 @@ object Lits : PuzzleType {
      */
     private fun placeTetrominoes(
         rng: Rng,
-        w: Int,
-        h: Int,
+        g: Geometry,
         target: Int,
         floor: Int,
-    ): List<kotlin.Pair<List<Int>, Piece>>? {
-        val n = w * h
-        val shaded = BooleanArray(n)
-        val pieceAt = arrayOfNulls<Piece>(n)
-        val placed = mutableListOf<kotlin.Pair<List<Int>, Piece>>()
-
-        fun makesSquare(quad: List<Int>): Boolean {
-            for (cell in quad) {
-                val r = cell / w
-                val c = cell % w
-                for (dr in -1..0) for (dc in -1..0) {
-                    val rr = r + dr
-                    val cc = c + dc
-                    if (rr < 0 || cc < 0 || rr + 1 >= h || cc + 1 >= w) continue
-                    if (listOf(
-                            rr * w + cc, rr * w + cc + 1,
-                            (rr + 1) * w + cc, (rr + 1) * w + cc + 1,
-                        ).all { it in quad || shaded[it] }
-                    ) return true
-                }
-            }
-            return false
-        }
-
-        fun touchesSameLetter(quad: List<Int>, piece: Piece): Boolean =
-            quad.any { cell ->
-                neighbours(cell, w, h).any { next ->
-                    next !in quad && shaded[next] && pieceAt[next] == piece
-                }
-            }
+    ): IntArray? {
+        var shaded = 0L
+        val letter = LongArray(Piece.entries.size)
+        val placed = IntArray(target)
+        var count = 0
+        val found = IntArray(g.mostHolding)
+        val legal = IntArray(g.mostHolding)
 
         // [target] is an ambition, not a requirement: the denser the shading the more constrained
         // the board, but past about two thirds of the grid the no-2x2 rule makes a full house
@@ -595,67 +587,58 @@ object Lits : PuzzleType {
         // is what keeps a near-miss layout cheap, and near misses are the common case.
         var guard = 0
         var idle = 0
-        while (placed.size < target && guard++ < target * 300 && idle < 120) {
+        while (count < target && guard++ < target * 300 && idle < 120) {
             // After the first piece, only grow from squares touching what is already shaded.
-            val seedCells = if (placed.isEmpty()) {
-                (0 until n).filter { !shaded[it] }
-            } else {
-                (0 until n).filter { cell ->
-                    !shaded[cell] && neighbours(cell, w, h).any { shaded[it] }
-                }
-            }
-            if (seedCells.isEmpty()) break
+            val seedCells = if (count == 0) g.full else g.spread(shaded) and shaded.inv()
+            if (seedCells == 0L) break
+            val from = nthBit(seedCells, rng.nextInt(seedCells.countOneBits()))
 
-            val from = rng.pick(seedCells)
-            val candidates = quadsContaining(from, w, h) { !shaded[it] }
-                .filter { (quad, piece) -> !makesSquare(quad) && !touchesSameLetter(quad, piece) }
-            if (candidates.isEmpty()) {
+            // Every tetromino through [from] on free squares, in the order the old walk first found
+            // them — a placement on free squares is reached by exactly the paths it always was, so
+            // dropping the rest keeps the order of what remains. The Rng picks from these in the
+            // order a JVM HashSet holding all of them (the 2x2 blocks included) iterates in.
+            var kept = 0
+            var fitting = 0
+            for (q in g.holding[from]) {
+                if (g.mask[q] and shaded != 0L) continue
+                found[kept++] = q
+                if (fits(g, q, shaded, letter)) legal[fitting++] = q
+            }
+            if (fitting == 0) {
                 idle++
                 continue
             }
             idle = 0
 
-            val (quad, piece) = rng.pick(candidates)
-            quad.forEach { shaded[it] = true; pieceAt[it] = piece }
-            placed += quad to piece
+            // The hash order only matters when there is a choice to make; the Rng is drawn from
+            // either way.
+            val index = rng.nextInt(fitting)
+            val pick = if (fitting == 1) {
+                legal[0]
+            } else {
+                jvmHashSetOrder(found.asList().subList(0, kept)) { g.hash[it] }
+                    .filter { fits(g, it, shaded, letter) }[index]
+            }
+            shaded = shaded or g.mask[pick]
+            val p = g.piece[pick]
+            letter[p] = letter[p] or g.mask[pick]
+            placed[count++] = pick
         }
 
         // Four is the hard floor FallbackTest pins: fewer regions than that and the board reads as
         // a puzzle that gave up.
-        return if (placed.size >= maxOf(4, floor)) placed else null
+        return if (count >= maxOf(4, floor)) placed.copyOf(count) else null
     }
 
-    /** Every legal tetromino that covers [cell] using only squares [free] allows. */
-    private fun quadsContaining(
-        cell: Int,
-        w: Int,
-        h: Int,
-        free: (Int) -> Boolean,
-    ): List<kotlin.Pair<List<Int>, Piece>> {
-        if (!free(cell)) return emptyList()
-        // In the order they were first found, which is the same on every platform. The caller
-        // picks from the result with the Rng, and the Android boards were generated from the order
-        // a HashSet<List<Int>> iterates on the JVM, so that order is reproduced exactly rather than
-        // left to the platform: Kotlin/Wasm's HashSet walks in insertion order and carved different
-        // boards. The hash is AbstractList.hashCode over Integer elements.
-        val seen = LinkedHashSet<List<Int>>()
-
-        fun grow(current: List<Int>) {
-            if (current.size == 4) {
-                seen += current
-                return
-            }
-            for (c in current) {
-                for (next in neighbours(c, w, h)) {
-                    if (next in current || !free(next)) continue
-                    grow((current + next).sorted())
-                }
-            }
-        }
-        grow(listOf(cell))
-
-        return jvmHashSetOrder(seen) { quad -> quad.fold(1) { h, e -> 31 * h + e } }
-            .mapNotNull { quad -> classify(quad, w)?.let { quad to it } }
+    /**
+     * Whether placement [q] could join [shaded]: a letter, not the 2x2 block, completing no 2x2
+     * block with what is down and touching no piece of its own letter.
+     */
+    private fun fits(g: Geometry, q: Int, shaded: Long, letter: LongArray): Boolean {
+        val p = g.piece[q]
+        if (p < 0) return false
+        if (g.rim[q] and letter[p] != 0L) return false
+        return !g.makesSquare(q, shaded or g.mask[q])
     }
 
     /**
@@ -668,10 +651,180 @@ object Lits : PuzzleType {
      * connected, so while squares remain unclaimed at least one of them touches a region — and
      * keeps the regions close to the same size without needing a cap to enforce it.
      */
-    // Its order reaches the Rng (carve shuffles and picks from it). `toSet()` keeps first-seen order
-    // on every platform, so it is the neighbour order, never a hash order.
-    private fun hostsOf(cell: Int, w: Int, h: Int, region: List<Int>): Set<Int> =
-        neighbours(cell, w, h).map { region[it] }.filter { it != -1 }.toSet()
+    // Its order reaches the Rng (carve shuffles and picks from it): first-seen, in neighbour order
+    // (up, down, left, right), never a hash order.
+    private fun hostsOf(g: Geometry, cell: Int, region: IntArray): List<Int> {
+        val out = ArrayList<Int>(4)
+        for (next in g.adjacent[cell]) {
+            val r = region[next]
+            if (r != -1 && r !in out) out += r
+        }
+        return out
+    }
+
+    /** The regions next to [cell], as bits. */
+    private fun hostBits(g: Geometry, cell: Int, region: IntArray): Long {
+        var bits = 0L
+        for (next in g.adjacent[cell]) {
+            val r = region[next]
+            if (r != -1) bits = bits or (1L shl r)
+        }
+        return bits
+    }
+
+    /** The [k]th lowest set bit of [bits], counting from zero. */
+    private fun nthBit(bits: Long, k: Int): Int {
+        var rest = bits
+        repeat(k) { rest = rest and (rest - 1) }
+        return rest.countTrailingZeroBits()
+    }
+
+    private inline fun forEachBit(bits: Long, action: (Int) -> Unit) {
+        var rest = bits
+        while (rest != 0L) {
+            action(rest.countTrailingZeroBits())
+            rest = rest and (rest - 1)
+        }
+    }
+
+    /**
+     * A w x h grid (at most 64 squares) worked out once for the generator: squares as bits of a
+     * `Long`, and every four-square connected placement, the 2x2 block included, as an id with its
+     * mask, letter, 2x2 blocks and rim.
+     *
+     * Two orders are recorded because the `Rng` sees them. [holding] is the order the old
+     * `quadsContaining` walk first reached each placement through a square, and [byLowest] lists
+     * the legal placements in the lexicographic order of their squares, which is the order the old
+     * `tetrominoes` enumerated a region's four-square subsets in.
+     */
+    private class Geometry(val w: Int, val h: Int) {
+        val n = w * h
+        val full: Long = if (n == 64) -1L else (1L shl n) - 1
+        private val notFirstColumn: Long
+        private val notLastColumn: Long
+
+        val adjacent: Array<IntArray> = Array(n) { neighbours(it, w, h).toIntArray() }
+
+        val mask: LongArray
+        /** [Piece] ordinal, or -1 for the 2x2 block. */
+        val piece: IntArray
+        /** `List<Int>.hashCode()` of the sorted squares, which is what the JVM HashSet hashed. */
+        val hash: IntArray
+        private val blocks: Array<LongArray>
+        /** Squares edge-adjacent to the placement and not in it. */
+        val rim: LongArray
+        val holding: Array<IntArray>
+        private val byLowest: Array<IntArray>
+        val mostHolding: Int
+
+        init {
+            require(n <= 64) { "LITS boards are at most 64 squares" }
+            var first = 0L
+            var last = 0L
+            for (cell in 0 until n) {
+                if (cell % w != 0) first = first or (1L shl cell)
+                if (cell % w != w - 1) last = last or (1L shl cell)
+            }
+            notFirstColumn = first
+            notLastColumn = last
+
+            // The old walk, run once per square on an empty board.
+            val ids = HashMap<List<Int>, Int>()   // probe only: ids are labels, never an order
+            val shapes = ArrayList<List<Int>>()
+            holding = Array(n) { cell ->
+                val order = ArrayList<Int>()
+                val seen = HashSet<Int>()          // probe only
+                fun grow(current: List<Int>) {
+                    if (current.size == 4) {
+                        val id = ids.getOrPut(current) { shapes += current; shapes.size - 1 }
+                        if (seen.add(id)) order += id
+                        return
+                    }
+                    for (c in current) {
+                        for (next in neighbours(c, w, h)) {
+                            if (next in current) continue
+                            grow((current + next).sorted())
+                        }
+                    }
+                }
+                grow(listOf(cell))
+                order.toIntArray()
+            }
+            mostHolding = holding.maxOf { it.size }
+
+            val count = shapes.size
+            mask = LongArray(count) { shapes[it].fold(0L) { m, c -> m or (1L shl c) } }
+            piece = IntArray(count) { classify(shapes[it], w)?.ordinal ?: -1 }
+            hash = IntArray(count) { shapes[it].fold(1) { acc, e -> 31 * acc + e } }
+            blocks = Array(count) { q ->
+                val out = ArrayList<Long>()
+                for (cell in shapes[q]) {
+                    val r = cell / w
+                    val c = cell % w
+                    for (rr in r - 1..r) for (cc in c - 1..c) {
+                        if (rr < 0 || cc < 0 || rr + 1 >= h || cc + 1 >= w) continue
+                        val block = (1L shl rr * w + cc) or (1L shl rr * w + cc + 1) or
+                            (1L shl (rr + 1) * w + cc) or (1L shl (rr + 1) * w + cc + 1)
+                        if (block !in out) out += block
+                    }
+                }
+                out.toLongArray()
+            }
+            rim = LongArray(count) { q -> spread(mask[q]) and mask[q].inv() }
+
+            val lexicographic = Comparator<Int> { a, b ->
+                val x = shapes[a]
+                val y = shapes[b]
+                var d = 0
+                for (i in 0 until 4) {
+                    d = x[i].compareTo(y[i])
+                    if (d != 0) break
+                }
+                d
+            }
+            byLowest = Array(n) { cell ->
+                (0 until count).filter { piece[it] >= 0 && shapes[it][0] == cell }
+                    .sortedWith(lexicographic).toIntArray()
+            }
+        }
+
+        /** [bits] and every square edge-adjacent to one of them. */
+        fun spread(bits: Long): Long =
+            bits or ((bits shl 1) and notFirstColumn) or ((bits ushr 1) and notLastColumn) or
+                ((bits shl w) and full) or (bits ushr w)
+
+        /** Does [shaded] (which includes placement [q]) fill a 2x2 block touching [q]? */
+        fun makesSquare(q: Int, shaded: Long): Boolean {
+            for (block in blocks[q]) if (block and shaded.inv() == 0L) return true
+            return false
+        }
+
+        /** Every legal tetromino inside [cells], in the old `tetrominoes` order. */
+        fun tetrominoesIn(cells: Long): IntArray {
+            var size = 0
+            var buffer = IntArray(40)
+            forEachBit(cells) { cell ->
+                for (q in byLowest[cell]) {
+                    if (mask[q] and cells.inv() != 0L) continue
+                    if (size == buffer.size) buffer = buffer.copyOf(size * 2)
+                    buffer[size++] = q
+                }
+            }
+            return buffer.copyOf(size)
+        }
+
+        fun idOf(cells: Long): Int = mask.indices.first { mask[it] == cells }
+    }
+
+    private var geometries: List<Geometry> = emptyList()
+
+    /**
+     * Built once per board size. Racing threads may each build one; the loser's is dropped, and a
+     * [Geometry] is immutable once constructed.
+     */
+    private fun geometry(w: Int, h: Int): Geometry =
+        geometries.firstOrNull { it.w == w && it.h == h }
+            ?: Geometry(w, h).also { geometries = geometries + it }
 
     internal fun neighbours(cell: Int, w: Int, h: Int): List<Int> {
         val r = cell / w
@@ -787,76 +940,60 @@ object Lits : PuzzleType {
      * only tested at the leaf, so the search walked whole subtrees whose shading had already been
      * cut in two by regions it had finished with.
      */
-    private fun search(
-        w: Int,
-        h: Int,
-        options: List<List<kotlin.Pair<List<Int>, Piece>>>,
-    ): Verdict {
-        val n = w * h
-        val shaded = BooleanArray(n)
-        val pieceAt = arrayOfNulls<Piece>(n)
-        var first: List<Boolean>? = null
-        var count = 0
-        var nodes = 0
-        var truncated = false
+    private fun search(g: Geometry, options: Array<IntArray>): Verdict {
+        val s = Search(g, options)
+        s.place(0)
 
+        // Order matters: two answers in hand is proof of ambiguity whether or not the budget also
+        // ran out, but one answer plus a truncated search proves nothing at all.
+        return when {
+            s.count >= 2 -> Verdict.Ambiguous
+            s.truncated -> Verdict.Truncated
+            s.found -> Verdict.ExactlyOne(List(g.n) { s.first and (1L shl it) != 0L })
+            else -> Verdict.None
+        }
+    }
+
+    /**
+     * [search]'s state, on bitmasks. It visits exactly the nodes the list-based search it replaced
+     * did, in the same order — the same prunes, only cheaper — so [NODE_BUDGET] truncates exactly
+     * the searches it always did.
+     */
+    private class Search(private val g: Geometry, options: Array<IntArray>) {
         // Fewest choices first. Region order does not change the answer, only how fast it is found.
-        val order = options.indices.sortedBy { options[it].size }
+        private val order = options.indices.sortedBy { options[it].size }
+        private val choices = Array(options.size) { options[order[it]] }
 
         // undecided[d] marks the squares still owned by regions this search has not reached at
         // depth d — the only squares through which shading may still be joined up.
-        val undecided = Array(options.size + 1) { BooleanArray(n) }
-        for (d in options.indices.reversed()) {
-            undecided[d + 1].copyInto(undecided[d])
-            for (cell in 0 until n) {
-                if (options[order[d]].any { cell in it.first }) undecided[d][cell] = true
+        private val undecided = LongArray(options.size + 1)
+        private var shaded = 0L
+        private val letter = LongArray(Piece.entries.size)
+        var first = 0L
+        var found = false
+        var count = 0
+        private var nodes = 0
+        var truncated = false
+
+        init {
+            for (d in options.indices.reversed()) {
+                var cells = undecided[d + 1]
+                for (q in choices[d]) cells = cells or g.mask[q]
+                undecided[d] = cells
             }
         }
-
-        fun makesSquare(quad: List<Int>): Boolean {
-            for (cell in quad) {
-                val r = cell / w
-                val c = cell % w
-                // Check every 2x2 block that includes this square.
-                for (dr in -1..0) for (dc in -1..0) {
-                    val rr = r + dr
-                    val cc = c + dc
-                    if (rr < 0 || cc < 0 || rr + 1 >= h || cc + 1 >= w) continue
-                    val block = listOf(
-                        rr * w + cc, rr * w + cc + 1,
-                        (rr + 1) * w + cc, (rr + 1) * w + cc + 1,
-                    )
-                    if (block.all { shaded[it] }) return true
-                }
-            }
-            return false
-        }
-
-        fun touchesSameLetter(quad: List<Int>, piece: Piece): Boolean =
-            quad.any { cell ->
-                neighbours(cell, w, h).any { next ->
-                    next !in quad && shaded[next] && pieceAt[next] == piece
-                }
-            }
 
         /** Can every shaded square still reach every other, allowing for squares not yet decided? */
-        fun stillJoinable(open: BooleanArray): Boolean {
-            val start = (0 until n).firstOrNull { shaded[it] } ?: return true
-            val seen = BooleanArray(n)
-            val stack = ArrayDeque<Int>()
-            stack.addLast(start)
-            seen[start] = true
-            var reached = 1   // [start] is itself shaded
-            while (stack.isNotEmpty()) {
-                val cell = stack.removeLast()
-                for (next in neighbours(cell, w, h)) {
-                    if (seen[next] || !(shaded[next] || open[next])) continue
-                    seen[next] = true
-                    if (shaded[next]) reached++
-                    stack.addLast(next)
-                }
+        private fun stillJoinable(open: Long): Boolean {
+            if (shaded == 0L) return true
+            val through = shaded or open
+            var reached = shaded and -shaded
+            while (true) {
+                val next = g.spread(reached) and through
+                if (next == reached) break
+                reached = next
             }
-            return reached == (0 until n).count { shaded[it] }
+            return shaded and reached.inv() == 0L
         }
 
         fun place(depth: Int) {
@@ -865,37 +1002,32 @@ object Lits : PuzzleType {
                 truncated = true
                 return
             }
-            if (depth == options.size) {
+            if (depth == choices.size) {
                 // undecided[size] is empty, so this is plain connectivity.
                 if (stillJoinable(undecided[depth])) {
                     count++
-                    if (first == null) first = shaded.toList()
+                    if (!found) {
+                        found = true
+                        first = shaded
+                    }
                 }
                 return
             }
-            for ((quad, piece) in options[order[depth]]) {
-                quad.forEach { shaded[it] = true; pieceAt[it] = piece }
-                if (!makesSquare(quad) &&
-                    !touchesSameLetter(quad, piece) &&
+            for (q in choices[depth]) {
+                val m = g.mask[q]
+                val p = g.piece[q]
+                shaded = shaded or m
+                if (!g.makesSquare(q, shaded) &&
+                    g.rim[q] and letter[p] == 0L &&
                     stillJoinable(undecided[depth + 1])
                 ) {
+                    letter[p] = letter[p] or m
                     place(depth + 1)
+                    letter[p] = letter[p] and m.inv()
                 }
-                quad.forEach { shaded[it] = false; pieceAt[it] = null }
+                shaded = shaded and m.inv()
                 if (count >= 2 || truncated) return
             }
-        }
-
-        place(0)
-
-        // Order matters: two answers in hand is proof of ambiguity whether or not the budget also
-        // ran out, but one answer plus a truncated search proves nothing at all.
-        val witness = first
-        return when {
-            count >= 2 -> Verdict.Ambiguous
-            truncated -> Verdict.Truncated
-            witness != null -> Verdict.ExactlyOne(witness)
-            else -> Verdict.None
         }
     }
 
