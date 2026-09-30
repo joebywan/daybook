@@ -15,8 +15,10 @@ val sharedFromApp = listOf(
     "com/joebywan/daybook/core/PuzzleType.kt",
     "com/joebywan/daybook/core/Rng.kt",
     "com/joebywan/daybook/core/SeedHash.kt",
+    "com/joebywan/daybook/core/Teaching.kt",
     "com/joebywan/daybook/puzzles/PuzzleState.kt",
     "com/joebywan/daybook/puzzles/Kings.kt",
+    "com/joebywan/daybook/puzzles/KingsTeacher.kt",
     "com/joebywan/daybook/ui/theme/Palette.kt",
 )
 
@@ -33,7 +35,9 @@ val shellFromApp = listOf(
     "com/joebywan/daybook/ui/home/LaunchOptions.kt",
     "com/joebywan/daybook/ui/play/PlayScreen.kt",
     "com/joebywan/daybook/ui/stats/StatsScreen.kt",
+    "com/joebywan/daybook/ui/teach/Hints.kt",
     "com/joebywan/daybook/ui/theme/Theme.kt",
+    "com/joebywan/daybook/ui/tutorial/TutorialRunner.kt",
 )
 
 // web/'s own files outside its `web` package. Named rather than globbed, because the include

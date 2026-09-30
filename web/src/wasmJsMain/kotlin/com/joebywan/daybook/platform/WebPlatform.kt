@@ -89,46 +89,49 @@ fun rememberKeyValueStore(name: String): KeyValueStore = remember(name) { WebSto
 
 private fun pushHistoryEntry(): Unit = js("history.pushState({ daybook: true }, '')")
 
-private fun historyBack(): Unit = js("history.back()")
+private fun historyGo(delta: Int): Unit = js("history.go(delta)")
 
 private fun onPopState(handler: () -> Unit): Unit = js("window.addEventListener('popstate', () => handler())")
+
+private fun later(action: () -> Unit): Unit = js("setTimeout(() => action(), 0)")
 
 /**
  * The browser's back button (and Safari's edge swipe) standing in for Android's.
  *
- * While a screen other than Home is showing, one history entry of ours sits on top of the page's
- * own; back pops it and [onBack] runs. Leaving by an in-app control takes that entry back off, so
- * back from Home still leaves the page as it would close the app on a phone. The pop that removal
- * causes is skipped rather than treated as the player's.
+ * Every enabled [PlatformBackHandler] owns one history entry of ours on top of the page's own, so
+ * back runs the innermost one — the walkthrough before the screen under it, as on Android. A handler
+ * that goes away by other means (an in-app control) takes its entry back off, so back from Home still
+ * leaves the page as it would close the app on a phone; the pop that causes is skipped rather than
+ * treated as the player's. Removals in one frame are batched into a single `history.go`, because
+ * several `history.back()` calls in a row are not reliably all honoured.
  */
 private object WebHistory {
-    private var pushed = false
+    class Entry(val onBack: () -> Unit)
+
+    private val stack = mutableListOf<Entry>()
     private var skipPops = 0
-    var handler: (() -> Unit)? = null
+    private var pendingRemovals = 0
 
     init {
         onPopState {
-            if (skipPops > 0) {
-                skipPops--
-            } else if (pushed) {
-                pushed = false
-                handler?.invoke()
+            if (skipPops > 0) skipPops-- else stack.removeLastOrNull()?.onBack?.invoke()
+        }
+    }
+
+    fun push(onBack: () -> Unit): Entry {
+        pushHistoryEntry()
+        return Entry(onBack).also(stack::add)
+    }
+
+    fun remove(entry: Entry) {
+        // Already gone if the player's own back press is what removed it.
+        if (!stack.remove(entry)) return
+        if (pendingRemovals++ == 0) {
+            later {
+                skipPops++
+                historyGo(-pendingRemovals)
+                pendingRemovals = 0
             }
-        }
-    }
-
-    fun enable() {
-        if (!pushed) {
-            pushHistoryEntry()
-            pushed = true
-        }
-    }
-
-    fun disable() {
-        if (pushed) {
-            pushed = false
-            skipPops++
-            historyBack()
         }
     }
 }
@@ -137,16 +140,8 @@ private object WebHistory {
 fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
     val latest by rememberUpdatedState(onBack)
     DisposableEffect(enabled) {
-        if (enabled) {
-            WebHistory.handler = { latest() }
-            WebHistory.enable()
-        }
-        onDispose {
-            if (enabled) {
-                WebHistory.handler = null
-                WebHistory.disable()
-            }
-        }
+        val entry = if (enabled) WebHistory.push { latest() } else null
+        onDispose { entry?.let(WebHistory::remove) }
     }
 }
 

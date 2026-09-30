@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,12 +48,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.platform.BackButton
+import com.joebywan.daybook.platform.PlatformBackHandler
 import com.joebywan.daybook.platform.formatClock
 import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.teach.HintPanel
+import com.joebywan.daybook.ui.teach.HintSlotHeight
+import com.joebywan.daybook.ui.teach.WatchHint
+import com.joebywan.daybook.ui.teach.buttonLabel
+import com.joebywan.daybook.ui.teach.rememberHintSession
+import com.joebywan.daybook.ui.tutorial.TutorialRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -86,6 +95,8 @@ fun PlayScreen(
     onSolved: (seconds: Int, hints: Int) -> Unit,
     onAgain: () -> Unit,
     onBack: () -> Unit,
+    tutorialOffered: Boolean? = null,
+    onTutorialOffered: () -> Unit = {},
 ) {
     // The harder boards take hundreds of milliseconds to generate, which would freeze the frame if
     // it happened during composition. It runs off the main thread and the screen waits for it.
@@ -97,7 +108,10 @@ fun PlayScreen(
     if (ready == null) {
         DealingBoard(puzzle)
     } else {
-        PlayBoard(puzzle, difficulty, day, ready, restore, persist, onSolved, onAgain, onBack)
+        PlayBoard(
+            puzzle, difficulty, day, ready, restore, persist, onSolved, onAgain, onBack,
+            tutorialOffered, onTutorialOffered,
+        )
     }
 }
 
@@ -135,6 +149,8 @@ private fun PlayBoard(
     onSolved: (seconds: Int, hints: Int) -> Unit,
     onAgain: () -> Unit,
     onBack: () -> Unit,
+    tutorialOffered: Boolean?,
+    onTutorialOffered: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -146,6 +162,24 @@ private fun PlayBoard(
     // the rotation is not thrown away by a second lookup afterwards.
     var consulted by rememberSaveable(initial) { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
+    // The walkthrough draws over the game rather than replacing the route, so the board, its undo
+    // stack and its clock are exactly where they were when the player comes back.
+    var showTutorial by rememberSaveable(initial) { mutableStateOf(false) }
+    val hasTutorial = puzzle.tutorial.isNotEmpty()
+    // Whether this puzzle gets the space under the board at all. Fixed per puzzle, so it can never
+    // be the thing that moves a board; puzzles that neither teach nor have a walkthrough keep the
+    // layout they always had.
+    val teaches = remember(initial) { hasTutorial || puzzle.teach(initial) != null }
+    val hintSession = rememberHintSession(initial)
+    // Offered on this visit, and only this one. Saved, so a rotation keeps the line it already
+    // showed rather than losing it to the store's "already offered".
+    var offering by rememberSaveable(initial) { mutableStateOf(false) }
+    LaunchedEffect(tutorialOffered) {
+        if (tutorialOffered == false && hasTutorial && !offering) {
+            offering = true
+            onTutorialOffered()
+        }
+    }
 
     val state = game.state
     val seconds = game.seconds
@@ -176,7 +210,7 @@ private fun PlayBoard(
     LaunchedEffect(initial) {
         while (true) {
             delay(1000)
-            if (!game.state.solved) game = game.copy(seconds = game.seconds + 1)
+            if (!game.state.solved && !showTutorial) game = game.copy(seconds = game.seconds + 1)
         }
     }
 
@@ -205,6 +239,42 @@ private fun PlayBoard(
     // frame stack up properly instead of pushing the same board twice.
     fun push(next: PuzzleState) {
         game = game.copy(state = next, history = game.history + game.state)
+    }
+
+    WatchHint(hintSession, state)
+    LaunchedEffect(state.solved) { if (state.solved) hintSession.clear() }
+
+    /**
+     * Hint, for a puzzle that teaches: nudge, then explain, then — only on a third, explicit tap —
+     * "Show me". **One hint is counted per deduction opened**, on the first tap; the explanation
+     * and "Show me" for the same deduction are free. A player who needed the nudge was helped,
+     * and charging again for reading the reasoning would punish the very thing hints are for.
+     * Puzzles that do not teach keep the old hint: the move goes straight on and costs one.
+     */
+    fun onHint() {
+        val taught = hintSession.tap(
+            puzzle, state,
+            onOpened = { game = game.copy(hints = game.hints + 1) },
+            onApply = ::push,
+        )
+        if (!taught) {
+            puzzle.hint(state)?.let {
+                game = game.copy(hints = game.hints + 1)
+                push(it)
+            }
+        }
+    }
+
+    if (showTutorial) {
+        PlatformBackHandler(enabled = true) { showTutorial = false }
+        TutorialRunner(
+            puzzle = puzzle,
+            onClose = { showTutorial = false },
+            // Painted before the insets are taken, so the status bar strip is the page colour
+            // rather than whatever the window shows through it.
+            modifier = Modifier.background(scheme.background).windowInsetsPadding(WindowInsets.safeDrawing),
+        )
+        return
     }
 
     Column(
@@ -238,7 +308,9 @@ private fun PlayBoard(
                     color = scheme.onSurfaceVariant,
                 )
             }
-            IconCircle(Icons.AutoMirrored.Filled.HelpOutline, "How to play") { showRules = true }
+            IconCircle(Icons.AutoMirrored.Filled.HelpOutline, "How to play") {
+                if (hasTutorial) showTutorial = true else showRules = true
+            }
         }
 
         Text(
@@ -250,11 +322,31 @@ private fun PlayBoard(
         )
 
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            puzzle.Board(
-                state = state,
-                onState = { next -> push(next) },
-                interactive = !state.solved,
-            )
+            CompositionLocalProvider(LocalBoardHighlight provides hintSession.highlight) {
+                puzzle.Board(
+                    state = state,
+                    onState = { next -> push(next) },
+                    interactive = !state.solved,
+                )
+            }
+        }
+
+        if (teaches && !state.solved) {
+            Box(Modifier.fillMaxWidth().height(HintSlotHeight).padding(horizontal = 18.dp)) {
+                when {
+                    hintSession.active -> HintPanel(hintSession, Color(puzzle.accent), onAction = ::onHint)
+                    offering -> Text(
+                        "New to ${puzzle.displayName}? One-minute walkthrough →",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color(puzzle.accent),
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showTutorial = true }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                    )
+                }
+            }
         }
 
         if (state.solved) {
@@ -271,20 +363,19 @@ private fun PlayBoard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 ToolButton(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.weight(1f)) {
+                    // A hint reasoned from a board that has just been taken back may lean on a king
+                    // that is no longer there.
+                    hintSession.clear()
                     game.history.lastOrNull()?.let {
                         game = game.copy(state = it, history = game.history.dropLast(1))
                     }
                 }
                 ToolButton(Icons.Default.Refresh, "Restart", Modifier.weight(1f)) {
+                    hintSession.clear()
                     game = game.copy(state = initial, history = emptyList())
                 }
                 if (puzzle.offersHints) {
-                    ToolButton(Icons.Default.AutoAwesome, "Hint", Modifier.weight(1f)) {
-                        puzzle.hint(state)?.let {
-                            game = game.copy(hints = game.hints + 1)
-                            push(it)
-                        }
-                    }
+                    ToolButton(Icons.Default.AutoAwesome, hintSession.buttonLabel(), Modifier.weight(1f), ::onHint)
                 }
             }
         }

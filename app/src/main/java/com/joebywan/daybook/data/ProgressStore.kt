@@ -161,6 +161,17 @@ class ProgressStore(private val store: KeyValueStore) {
         }
     }
 
+    /**
+     * Puzzles whose walkthrough has been offered. The offer is one passive line under the board,
+     * shown on a player's first visit and never again — recorded as soon as it is shown, not when
+     * it is taken up, because an offer that returned until accepted would be nagging.
+     */
+    val tutorialsOffered: Flow<Set<String>> = store.stringSet(KEY_TUTORIALS_OFFERED)
+
+    suspend fun markTutorialOffered(puzzleId: String) {
+        store.updateStringSet(KEY_TUTORIALS_OFFERED) { offered -> offered + puzzleId }
+    }
+
     private fun Set<String>.savedGames(): List<StoredGame> = mapNotNull(StoredGame::decode)
 
     private fun List<StoredGame>.encodeAll(): Set<String> = map(StoredGame::encode).toSet()
@@ -169,6 +180,7 @@ class ProgressStore(private val store: KeyValueStore) {
         // DataStore keys on Android; they name what is already on every phone, so never rename.
         const val KEY_COMPLETIONS = "completions"
         const val KEY_SAVED = "saved_games"
+        const val KEY_TUTORIALS_OFFERED = "tutorials_offered"
     }
 }
 
