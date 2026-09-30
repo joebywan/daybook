@@ -168,6 +168,7 @@ object Mosaic : PuzzleType {
         "A flooded area merges with every neighbouring area already in that colour — " +
             "growing one big blob is how you cover ground quickly.",
         "Turn the whole board one colour before the fills run out.",
+        "The limit is the fewest fills the board can be done in, so every fill has to count.",
         "Tapping an area in its own colour does nothing and costs nothing.",
     )
 
@@ -1163,12 +1164,14 @@ object Mosaic : PuzzleType {
                             }
                         }
 
-                        rim(highlight.soft - highlight.strong, stepPx * 0.1f, glow.copy(alpha = 0.55f))
-                        // A halo in the page colour under the glow, so a strong rim reads as
-                        // something other than one more of the black seams between areas.
+                        rim(highlight.soft - highlight.strong, stepPx * 0.07f, glow.copy(alpha = 0.5f))
+                        // A band of page colour just inside the glow, so a strong rim reads as
+                        // something other than one more of the black seams between areas. Widths
+                        // checked in a rendered mock, light and dark: much wider and the band eats
+                        // a one-cell arm's colour.
                         val a = pulse.value
-                        rim(highlight.strong, stepPx * 0.3f, scheme.background.copy(alpha = 0.9f * a))
-                        rim(highlight.strong, stepPx * 0.16f, glow.copy(alpha = a))
+                        rim(highlight.strong, stepPx * 0.2f, scheme.background.copy(alpha = 0.9f * a))
+                        rim(highlight.strong, stepPx * 0.11f, glow.copy(alpha = a))
                     }
                 }
             }
