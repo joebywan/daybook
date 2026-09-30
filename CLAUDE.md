@@ -31,8 +31,8 @@ sounded. Do not turn it off.
 
 ## Teaching: hints that explain, and walkthroughs
 
-Kings was the pilot; Atoms, Mosaic, Pipes and Tower have followed, and the other six still use the
-old `hint()` with no walkthrough. The contract
+Kings was the pilot; Atoms, Mosaic, Pipes, Shikaku and Tower have followed, and the other five still
+use the old `hint()` with no walkthrough. The contract
 lives in `core/Teaching.kt` and `core/PuzzleType.kt`, all with defaults, so a board adopts it one
 file at a time and nothing else has to change:
 
