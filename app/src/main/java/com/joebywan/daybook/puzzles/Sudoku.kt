@@ -44,6 +44,9 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.core.highlightGrid
+import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
@@ -470,7 +473,7 @@ object Sudoku : PuzzleType {
             val cell = side / 9
             val padWidth = maxWidth
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(side)) {
+                Box(Modifier.size(side).highlightGrid(9, 9)) {
                     for (r in 0 until 9) {
                         for (c in 0 until 9) {
                             val i = r * 9 + c
@@ -523,7 +526,7 @@ object Sudoku : PuzzleType {
                 Spacer(Modifier.height(PAD_GAP))
 
                 Row(
-                    Modifier.width(padWidth),
+                    Modifier.width(padWidth).keepClear(),
                     horizontalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
                     (1..9).forEach { digit ->
@@ -532,6 +535,7 @@ object Sudoku : PuzzleType {
                             Modifier
                                 .weight(1f)
                                 .height(PAD_HEIGHT)
+                                .highlightAnchor(SudokuTeacher.pad(digit))
                                 .ring(highlight.look(SudokuTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (remaining == 0) scheme.surfaceVariant else scheme.surface)

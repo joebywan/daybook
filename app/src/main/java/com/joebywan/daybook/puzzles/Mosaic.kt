@@ -47,6 +47,8 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.Rng
@@ -1078,6 +1080,7 @@ object Mosaic : PuzzleType {
                     Modifier
                         .width(step * s.width)
                         .height(step * s.height)
+                        .highlightGrid(s.width, s.height)
                         .pointerInput(s, live, selected) {
                             if (!live) return@pointerInput
                             detectTapGestures { offset: Offset ->
@@ -1182,7 +1185,7 @@ object Mosaic : PuzzleType {
             }
 
             Row(
-                Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                Modifier.fillMaxWidth().padding(bottom = 4.dp).keepClear(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
             ) {
                 repeat(s.colours) { colour ->
