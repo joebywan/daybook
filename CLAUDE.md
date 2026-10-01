@@ -179,7 +179,7 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   `setTimeout`), and `prepareBoards` — called by `DaybookApp` while Home is showing, a no-op on
   Android — makes today's eleven boards at the grid's tier in advance, one per turn of the event
   loop, into a small cache. A tap usually finds its board ready. A board already underway cannot be
-  interrupted, so a tap during a slow LITS pre-generation still waits for it.
+  interrupted, so a tap during a slow pre-generation still waits for it.
 - **Fonts.** A browser lends wasm none of its fonts; without help, text falls back to the one font
   Compose ships, which has no `→` and no serif. `platformTypography` in the seam swaps the bundled
   Noto Serif Bold (Android's serif) into the serif styles and preloads a few arrows from Noto Sans
@@ -208,17 +208,20 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   console — `PARITY` for the dates the per-puzzle parity tests pin, `TODAY` for `?date`/`?tier` —
   and `&range=N` adds `RANGE` lines for every tier of N days from 2026-01-01 plus `TIMING` per
   puzzle and tier, ending with `DUMP DONE`. `&puzzle=<id>` narrows the dump to one puzzle, which
-  lets a harness run the eleven in parallel pages.
+  lets a harness run the eleven in parallel pages; `&times` adds a `TIME <id> <date> <tier> <ms>`
+  line per board, for medians and percentiles.
 - **Parity:** `DAYBOOK_PARITY_DUMP=<file> ./gradlew :app:testDebugUnitTest --tests
   '*WebParityDumpTest*'` writes the JVM's year in the same order; strip `RANGE ` from the page's
   lines and the files must be identical. The same file, taken before and after a change, is how
   Android boards are proved unchanged. `WebParityTest`, `LitsWebParityTest`,
   `MosaicAtomsWebParityTest`, `WebParityShikakuSnapSudokuTest` and
-  `WebParityMamboPipesSetsTowerTest` pin a few boards per puzzle outright.
-- **Timings** (a year's worst board per tier, Chromium, eleven pages sharing the CPU): LITS
-  1.9 / 3.2 / 4.5 s, Mosaic Expert 0.3 s, Snap 0.4 s, Sudoku Expert 0.1 s, the rest under 0.06 s.
-  WebKit ran LITS ~2x slower under the same contention (Expert up to 11 s; ~4.6 s alone). LITS
-  means are 0.3-0.8 s (Chromium) — the pre-generation above is what hides them.
+  `WebParityMamboPipesSetsTowerTest` pin a few boards per puzzle outright. For LITS alone,
+  `DAYBOOK_LITS_DUMP=<file>` (`DAYBOOK_LITS_DAYS`, default 730) runs `LitsYearDumpTest`: the same
+  lines over two years plus per-board JVM times in `<file>.times`.
+- **Timings** (a year's worst board per tier, Chromium, eleven pages sharing the CPU): Mosaic
+  Expert 0.3 s, Snap 0.4 s, Sudoku Expert 0.1 s, the rest under 0.1 s. LITS was 1.9 / 3.2 / 4.5 s
+  (WebKit up to 11 s) until its generator moved to bitmasks; over 2026-2027 its worst board is now
+  46 / 75 / 93 ms in Chromium and 52 / 80 / 99 ms in WebKit, alone (see below).
 - Dark theme follows `prefers-color-scheme`; Playwright's `color_scheme="dark"` context option is
   enough to screenshot it.
 
@@ -242,9 +245,16 @@ exactly and `JvmHashOrderTest` diffs it against the real `HashSet`.
 **Wasm is not what makes a generator slow.** Mosaic and Atoms Expert ran within 1.2-1.5x of the warm
 JVM; the search itself was the cost. Both were sped up with changes that leave every node and budget
 count alone (Atoms precomputes which pairs cross; Mosaic skips the two BFS when the colour bound
-already prunes), so no board moved. Profile on the JVM first. LITS runs ~2.5x (Chromium) to ~4x
-(WebKit) the warm JVM, roughly half in `placeTetrominoes`' candidate enumeration; its slowest
-boards take seconds, which is what the pre-generation above is for.
+already prunes), so no board moved. Profile on the JVM first. LITS was the exception to the
+headline, not the rule: ~2.5x (Chromium) to ~4x (WebKit) the warm JVM, because it was allocation —
+`List<Int>` quads, `listOf` per 2x2 check, a `HashSet` per connectivity test, and a fresh recursive
+walk per candidate lookup. On `Long` bitmasks over a per-size table of every placement it is ~20x
+faster on the JVM and ~35x in Chromium, with every board byte-identical, by the same rule as Mosaic
+and Atoms: each `Rng` draw and every list it picks from keep their order (`quadsContaining`'s walk
+is run once per square and *filtered*, which keeps the HashSet insertion order `JvmHashOrder`
+replays; the replay only runs when there are two or more candidates, but `nextInt(1)` is still
+drawn), and the search visits the same nodes, so `NODE_BUDGET` truncates exactly where it did.
+The proof is `LitsYearDumpTest` before and after, plus the wasm `?dump&range=730` in both browsers.
 
 **Compose web reads `TouchEvent`s for fingers, not `PointerEvent`s.** Synthetic `pointerdown` with
 `pointerType: 'touch'` does nothing. Playwright's `touchscreen.tap` works in WebKit; for a touch
