@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -457,7 +458,7 @@ object Snap : PuzzleType {
             TutorialFrame(
                 state = tutorialBoard(answerTo(4) + listOf(9, 10)),
                 caption = "Say you dashed for 2. Now the bottom corner has one way in: a dead end, " +
-                    "but the line must end on 4. Put your finger on the glowing square to cut back to it.",
+                    "but the line must end on 4. Start a drag on the glowing square to cut back to it.",
                 highlight = BoardHighlight(strong = setOf(8), soft = setOf(12)),
                 accepts = line(answerTo(4)),
                 retry = "Start a drag on the glowing square of the line.",
@@ -579,8 +580,10 @@ object Snap : PuzzleType {
             )
         }
 
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp)) {
-            val step = maxWidth / s.width
+        // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
+        // the hint slot.
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+            val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
             val stepPx = with(LocalDensity.current) { step.toPx() }
 
             fun cellAt(offset: Offset): Int {

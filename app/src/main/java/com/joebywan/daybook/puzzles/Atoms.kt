@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -668,8 +669,10 @@ object Atoms : PuzzleType {
         var dragFrom by remember(s) { mutableStateOf<Int?>(null) }
         var dragAt by remember(s) { mutableStateOf<Offset?>(null) }
 
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp)) {
-            val step = maxWidth / s.size
+        // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
+        // the hint slot.
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+            val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.size, maxHeight / s.size) else maxWidth / s.size
             val stepPx = with(LocalDensity.current) { step.toPx() }
             val radius = stepPx * 0.34f
 

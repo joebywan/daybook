@@ -31,45 +31,75 @@ sounded. Do not turn it off.
 
 ## Teaching: hints that explain, and walkthroughs
 
-Kings was the pilot; Atoms, Mosaic, Pipes, Shikaku and Tower have followed, and the other five still
-use the old `hint()` with no walkthrough. The contract
-lives in `core/Teaching.kt` and `core/PuzzleType.kt`, all with defaults, so a board adopts it one
-file at a time and nothing else has to change:
+All eleven puzzles teach. The shared pieces are `core/Teaching.kt` (the contract), `ui/teach/Hints.kt`
+(the session, the panel, `WatchHint`), `ui/tutorial/TutorialRunner.kt` and `ui/play/PlayScreen.kt`;
+each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthrough
+(`offersHints = false`). Everything in the contract has a default, so a board adopts it alone:
 
 - `teach(state): Deduction?` — a mistake to take back, or one step reasoned from what the player can
   see: nudge + focus cells, explanation + cited cells, targets, and `apply`/`isReached` closures.
   Null means "not adopted", and `PlayScreen` falls back to `hint()`.
 - `LocalBoardHighlight` — a CompositionLocal, **not** a `Board` parameter, so boards that ignore it
-  compile untouched (other sessions are porting boards; do not add a parameter to all eleven).
-- `tutorial: List<TutorialFrame>` — played by `ui/tutorial/TutorialRunner.kt` on the puzzle's real
-  `Board`. A frame's `accepts` predicate gates the move; rejected states are not applied.
+  compile untouched. Strong cells get the outline; everything else dims.
+- `tutorial: List<TutorialFrame>` — played by `TutorialRunner` on the puzzle's real `Board`. A frame's
+  `accepts` gates the move; a refused state is dropped, so **a walkthrough move must be a single
+  emitted state** — unless the frame sets `passes`, which admits the intermediate states of a
+  several-step move (Sets' three taps, Mambo's second tap, Snap's drag) without ending the frame.
+  The "your turn" frame shows Hint only when the puzzle offers hints.
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the
   panel confirms and clears when `isReached` sees it. Only an explicit "Show me" applies it. **One
-  hint is counted per deduction opened**; explaining and Show me are free. The panel sits in a fixed
-  `HintSlotHeight` reserved under the board for every teaching puzzle, so it never moves the board.
-- The walkthrough is offered once, as one passive line in that slot on a player's first visit;
-  `ProgressStore.tutorialsOffered` records it the moment it is shown. "How to play" opens the
-  walkthrough; the rules list is its "Rules" summary.
+  hint is counted per deduction opened**; explaining and Show me are free.
+- The panel sits in a fixed `HintSlotHeight` (156dp: five lines at 390dp, ~210 characters) reserved
+  under the board for every teaching puzzle, so it never moves the board. Longer text scrolls inside
+  the slot behind a fade rather than clipping. Boards size from both axes to leave it room.
+- `teach` runs on `Dispatchers.Default` (the Hint button reads "Thinking..." meanwhile): Mosaic's
+  hardest hint took 1.2 s on the emulator, which on the main thread was a frozen frame.
+- An open hint re-checks itself when the board changes some other way. If the teacher's next step on
+  the new board is the same kind (mistake/step) touching the same cells, it stays; otherwise it
+  **closes quietly** — no swapped text, no new charge; the next Hint reasons afresh.
+- Across recreation (rotation is locked off, but theme, font size and process death remain) the
+  route, the game and the hint's stage are saved; the deduction is re-derived from the board.
+- The walkthrough is offered once, as one passive line in the slot on a player's first visit;
+  `ProgressStore.tutorialsOffered` records it the moment it is shown. "How to play" opens it; the
+  rules list is its "Rules" summary.
 
-**The solver must not be able to see the answer.** `KingsTeacher.deduce(n, region, marks)` takes no
-solution, so a step it explains cannot lean on one — a guarantee of the signature. The answer is read
+**The solver must not be able to see the answer.** Each teacher's reasoning entry point takes only
+visible state, so a step cannot lean on the answer — a guarantee of the signature. The answer is read
 only to flag mistakes and for the fallback, which says openly that it is pointing at the answer.
-Soundness on a *unique* board cannot tell reasoning from peeking (every true fact is derivable), so
-`KingsTeachingTest` also walks boards with several answers and requires each step to hold for every
-answer still possible.
+Soundness on a *unique* board cannot tell reasoning from peeking, so the tests also walk boards with
+several answers and require each step to hold for every answer still possible.
 
-Measured coverage (500 boards per tier, walked from empty by hints alone; the fallback is under 1%):
+What each teaches, and how often a player walking a board by hints alone reaches the fallback
+(200 daily boards per tier from 2026-01-01, Standard / Hard / Expert, share of boards):
 
-| tier | last square | locked to a line | would empty | N confined | what-if | fallback |
-|---|---|---|---|---|---|---|
-| Standard | 47% of steps | 24% | 24% | 3% | 1.2% (7% of boards) | 0.2% of boards |
-| Hard | 48% | 23% | 24% | 5% | 1.1% (6%) | 0.6% |
-| Expert | 49% | 22% | 22% | 6% | 1.6% (7%) | 0.6% |
+| puzzle | teaches | fallback |
+|---|---|---|
+| Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement (no pencil marks) | 0.5 / 6 / 34% (1% of Expert steps: Expert is dug for uniqueness, not rated) |
+| Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
+| Mambo | pair, sandwich, link, quota, almost, what-if | 0 (boards are carved so the first four finish them) |
+| Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
+| Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
+| Mosaic | finish, count fills against colours, biggest swallow, centre; fallback offers a proven fill | 1.5 / 9 / 12.5% |
+| Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
+| Atoms | one neighbour, all forced, at least one, crossing, isolation, only way out, what-if | 0 / 0 / 0.5% |
+| Snap | walkthrough only: corners, dead ends, cutting back, rubbing out | no hints |
+| LITS | whole region, overlap, avoid 2x2 / letter clash, neighbour, what-if | 42 / 23 / 30% — nearly all on boards with several answers under the win check, where reasoning must stop (the test holds unique boards under 2%) |
+| Tower | one change, only colour left, accounted for, what-if; else a guess that fits every score | every board, 28-35% of turns: Mastermind is mostly choosing a guess |
 
-Adopting it for another puzzle: write a `XTeacher` whose reasoning entry point takes only visible
-state; override `teach` and `tutorial`; read `LocalBoardHighlight` in `Board` (the web compiles the
-new file automatically, so keep it free of `java.*`). Test soundness against an independent solver
-and measure the fallback rate — don't assume it.
+Adopting it, or changing a teacher — the lessons of eleven of them:
+
+- **Measure the fallback rate; don't assume it.** Test soundness against an independent solver.
+- **A mistake means "no legal answer keeps this", not "differs from the stored answer".** LITS and
+  Pipes have boards with several answers, and calling a correct move wrong is the PR #15 bug again.
+- **Check that a generator's stored answer obeys its own rules.** Atoms' did not on 4-35% of boards
+  by tier, and every mistake judged against it was suspect.
+- **Fix a generator by rejecting and retrying after the existing attempts**, so the daily boards
+  that were already sound keep their layout.
+- **A mistake that can't be read off the board needs a history in state.** Mosaic keeps its fills
+  (`MosaicState.trail`) to say which one lost the board.
+- **Teachers only learn facts they can explain.** Tower drops a fact whose sentence would not fit,
+  so no later step can lean on something the player was never shown.
+- Keep teacher files free of `java.*`: the web compiles them automatically.
 
 ## Rules that keep being relearned
 
@@ -90,7 +120,9 @@ correct solutions this way. Keep the stored solution for hints; let a validator 
 
 **Size layouts from both axes.** Three home-screen motifs and the Sets board each drew outside
 their box because height fell out of width via `aspectRatio` and nothing consulted the height
-available. `Mosaic.Board` has the right shape: `minOf(maxWidth / w, maxHeight / h)`.
+available. `Mosaic.Board` has the right shape: `minOf(maxWidth / w, maxHeight / h)`. Seven more boards
+sized from width alone until the taller hint slot ran Pipes' 5x7 board a row under the panel at
+390dp, and Sudoku over the header on a 693dp-tall screen; all eleven now consult the height.
 
 **`PlayScreen` pushes an undo entry for every state it is handed.** Transient UI state —
 selected colour, palette choice, drag in progress, a settle timer — must live in
@@ -148,8 +180,8 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
 - **One copy of the code.** `web/build.gradle.kts` compiles `app/src/main/java` itself, minus an
   `androidOnly` list (`MainActivity`, `DataStoreKeyValueStore`, `platform/AndroidPlatform.kt`). A
   new file in app/ is on the web by default, so it must stay free of `android.*` and `java.*` —
-  `Integer.bitCount`, `sortedSetOf`, `String.format`, `System.*` and `java.time` all fail the wasm
-  compile. That is why the seed arithmetic is `core/SeedHash.kt`, dates are
+  `Integer.bitCount`, `sortedSetOf`, `toSortedSet`, `java.util.Arrays`, `String.format`, `System.*`
+  and `java.time` all fail the wasm compile. That is why the seed arithmetic is `core/SeedHash.kt`, dates are
   `kotlinx.datetime.LocalDate`, and Kings times double taps with `TimeSource.Monotonic`. The
   patterns apply to web/'s own source directory too, so a web file must never share a path with
   one on that list.
@@ -279,6 +311,10 @@ one), does not repaint after a screen change until something prompts a frame, an
 animation's last frame; harnesses dispatch a `resize` after each tap and before a settled
 screenshot. Whether real Safari needs any of this is unknown — check on an iPhone before removing
 `nudgeFirstFrame()`.
+
+**The shared browser pane.** Several sessions drive the one browser pane at once, so always pass
+a `tabId`, and pick a local server port of your own. The hidden pane needs a `resize` event to
+repaint after a tap, like headless WebKit.
 
 **Harness odds and ends.** Playwright's sync API only delivers console events while it is inside a
 Playwright call, so wait with `page.wait_for_timeout`, never `time.sleep`. `pkill -f "http.server

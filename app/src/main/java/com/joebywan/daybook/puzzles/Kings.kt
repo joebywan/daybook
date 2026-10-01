@@ -946,8 +946,10 @@ object Kings : PuzzleType {
             onState(held.after)
         }
 
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp)) {
-            val cell = maxWidth / s.size
+        // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
+        // the hint slot.
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp), contentAlignment = Alignment.Center) {
+            val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.size, maxHeight / s.size) else maxWidth / s.size
             val cellPx = with(LocalDensity.current) { cell.toPx() }
 
             fun cellAt(offset: Offset): Int {
@@ -994,7 +996,7 @@ object Kings : PuzzleType {
             // see the cell the finger went down on, which is the one thing a sweep is not about.
             Box(
                 Modifier
-                    .size(maxWidth)
+                    .size(cell * s.size)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
                         detectTapGestures { offset -> tap(offset) }
