@@ -93,7 +93,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 
 | puzzle | teaches | fallback |
 |---|---|---|
-| Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement (no pencil marks) | 0.5 / 6 / 34% (1% of Expert steps: Expert is dug for uniqueness, not rated) |
+| Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | 0.5 / 6 / 34% (1% of Expert steps: Expert is dug for uniqueness, not rated) |
 | Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
 | Mambo | pair, sandwich, link, quota, almost, what-if | 0 (boards are carved so the first four finish them) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
@@ -174,7 +174,9 @@ If a gesture detector must outlive state changes, read the board through `rememb
 never the captured value.
 
 **Derive, don't store, anything computed from board state.** Kings' eliminations and LITS's
-impossible squares are recomputed per render. Storing them means owning which to retract when a
+impossible squares are recomputed per render. Sudoku's pencil marks (`SudokuState.notes`, a 9-bit mask
+per cell, defaulted so old saves load) are stored, but a note a placed peer digit rules out is only
+hidden (`visibleNotes`); the notes mode is `rememberSaveable` in the board, not state. Storing them means owning which to retract when a
 piece is lifted, which is where the feature rots.
 
 **Verify by rendering, not reasoning.** Icons, motifs, crescents, pipe joints and crosses have
@@ -416,7 +418,7 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 
 ## Open
 
-Sudoku pencil marks; accessibility — eight boards use raw pointer input and expose no click
+Accessibility — eight boards use raw pointer input and expose no click
 actions, so a screen reader cannot operate them.
 
 **The full list of outstanding work is `docs/TODO.md`.** Keep it current as you work: add what you

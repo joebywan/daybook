@@ -36,7 +36,6 @@ from a measurement or review, so you can check it is still true.
   generation is off the main thread and it would animate. (b) Both: show the message only if generation
   takes longer than ~150 ms, so quick boards do not flash it. The web cannot animate while generating
   (one thread). Since the LITS speed-up the slowest board is under 0.1 s, so this is low urgency. *S.*
-- [ ] **Sudoku pencil marks.** (also in `CLAUDE.md` Open and the README) *M–L.*
 - [ ] **Accessibility.** Eight boards use raw pointer input and expose no click actions, so a screen reader
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
