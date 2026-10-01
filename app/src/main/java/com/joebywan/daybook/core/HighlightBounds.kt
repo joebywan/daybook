@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.IntSize
 
 /**
@@ -38,6 +39,15 @@ class HighlightBounds {
         get() = parts.values.reduceOrNull { a, b ->
             Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom))
         }
+
+    private val keep = mutableStateMapOf<Any, Rect>()
+
+    /** Controls the player needs while a hint is up (a digit pad, a palette), in window coordinates. */
+    val keepClear: Collection<Rect> get() = keep.values
+
+    internal fun setKeepClear(key: Any, rect: Rect?) {
+        if (rect == null) keep.remove(key) else if (keep[key] != rect) keep[key] = rect
+    }
 
     internal fun set(key: Any, rect: Rect?) {
         if (rect == null) parts.remove(key) else if (parts[key] != rect) parts[key] = rect
@@ -89,4 +99,18 @@ fun Modifier.highlightGrid(cols: Int, rows: Int): Modifier = reportHighlight { s
 /** Reports this whole node when [index] is one of the highlight's. */
 fun Modifier.highlightAnchor(index: Int): Modifier = reportHighlight { size, highlight ->
     if (index in highlight.strong || index in highlight.soft) Rect(0f, 0f, size.width.toFloat(), size.height.toFloat()) else null
+}
+
+/**
+ * Marks this node as a control the hint popover should stay off when it can: a digit pad or a
+ * colour palette the player reaches for to make the move the hint describes. Weighed against the
+ * highlight when the popover picks a side; never a reason to hide the popover.
+ */
+fun Modifier.keepClear(): Modifier = composed {
+    val sink = LocalHighlightBounds.current ?: return@composed this
+    val key = remember { Any() }
+    DisposableEffect(sink) { onDispose { sink.setKeepClear(key, null) } }
+    this.onGloballyPositioned {
+        if (it.isAttached) sink.setKeepClear(key, Rect(it.positionInWindow(), Offset(it.positionInWindow().x + it.size.width, it.positionInWindow().y + it.size.height)))
+    }
 }

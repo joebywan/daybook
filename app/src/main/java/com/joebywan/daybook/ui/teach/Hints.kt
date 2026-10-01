@@ -366,6 +366,7 @@ fun HintPopover(
     session: HintSession,
     accent: Color,
     highlight: Rect?,
+    keepClear: Collection<Rect>,
     origin: Offset,
     safeTop: Float,
     boardTop: Float,
@@ -388,15 +389,21 @@ fun HintPopover(
     val minTop = safeTop + gap
     val maxBottom = toolbarTop - gap
 
+    // How much of the highlight (heavily) and of the controls the player needs (lightly) a popover
+    // of height [h] at [y] would cover, in pixels of height.
+    fun cost(y: Float, h: Float): Float {
+        fun overlap(r: Rect) = maxOf(0f, minOf(y + h, r.bottom) - maxOf(y, r.top))
+        return (if (hl == null) 0f else overlap(hl) * 4f) + keepClear.sumOf { overlap(it).toDouble() }.toFloat()
+    }
     fun above(h: Float): Pair<Float, Float> {
         var y = boardTop + gap
         if (hl != null) y = minOf(y, hl.top - h - gap)
         y = maxOf(y, minTop)
-        return y to if (hl == null) 0f else maxOf(0f, y + h - hl.top)
+        return y to cost(y, h)
     }
     fun below(h: Float): Pair<Float, Float> {
         val y = maxBottom - h
-        return y to if (hl == null) 0f else maxOf(0f, hl.bottom - y)
+        return y to cost(y, h)
     }
     fun choose(h: Float): Triple<Boolean, Float, Float> {
         val a = above(h)

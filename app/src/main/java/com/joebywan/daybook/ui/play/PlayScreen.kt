@@ -445,6 +445,7 @@ private fun PlayBoard(
             session = hintSession,
             accent = Color(puzzle.accent),
             highlight = highlightBounds.rect,
+            keepClear = highlightBounds.keepClear,
             origin = overlayOrigin,
             // Where the popover may sit: from just under the clock (or, to clear a highlight, the
             // status bar) down to just above the toolbar, which it never covers.

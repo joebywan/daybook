@@ -49,6 +49,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
@@ -496,6 +497,7 @@ object Tower : PuzzleType {
                 Row(
                     Modifier
                         .fillMaxWidth()
+                        .keepClear()
                         .clip(RoundedCornerShape(14.dp))
                         .background(scheme.surface)
                         .padding(10.dp),
@@ -537,7 +539,7 @@ object Tower : PuzzleType {
                 Spacer(Modifier.height(12.dp))
 
                 Row(
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().keepClear(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     repeat(s.colours) { colour ->

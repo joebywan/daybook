@@ -44,6 +44,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
@@ -525,7 +526,7 @@ object Sudoku : PuzzleType {
                 Spacer(Modifier.height(PAD_GAP))
 
                 Row(
-                    Modifier.width(padWidth),
+                    Modifier.width(padWidth).keepClear(),
                     horizontalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
                     (1..9).forEach { digit ->
