@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.InsertChart
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -94,6 +95,7 @@ fun HomeScreen(
     onLaunch: (String) -> Unit,
     onArchive: (String) -> Unit,
     onStats: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val doneToday = remember(completions, today) {
@@ -119,6 +121,7 @@ fun HomeScreen(
             streak = streak,
             onArchive = { pickingArchive = true },
             onStats = onStats,
+            onSettings = onSettings,
         )
         Spacer(Modifier.height(14.dp))
         LaunchOptions(difficulty, onDifficulty, mode, onMode)
@@ -150,6 +153,7 @@ private fun Header(
     streak: Int,
     onArchive: () -> Unit,
     onStats: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -164,6 +168,8 @@ private fun Header(
         HeaderButton(Icons.Default.History, "Archive", onArchive)
         Spacer(Modifier.width(8.dp))
         HeaderButton(Icons.Default.InsertChart, "Statistics", onStats)
+        Spacer(Modifier.width(8.dp))
+        HeaderButton(Icons.Default.Settings, "Settings", onSettings)
     }
     Row(
         Modifier.fillMaxWidth().padding(top = 2.dp),

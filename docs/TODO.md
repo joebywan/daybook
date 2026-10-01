@@ -40,12 +40,6 @@ from a measurement or review, so you can check it is still true.
   Backspace/Delete/0 clear it, and arrow keys move the selection (the board is mouse/touch only today).
   Boards are in `puzzles/Sudoku.kt`; emit one state per key like a tap does, and keep it free of
   `android.*`/`java.*` since the web compiles it. *S–M.*
-- [ ] **Settings toggle to hide the timer during play.** For players who fixate on the clock and find it
-  stressful. Hides only the running clock on the play screen (`ui/play/PlayScreen.kt`); the time is
-  still recorded, still shown on the solved card, and still counts on Stats. The owner's call, settled:
-  hide it in-game, show it at the end. There is no settings screen yet, so this needs one (or a place
-  on Stats) plus a `KeyValueStore` key that Android and the web share. The clock sits under the hint
-  popover, so check the popover's placement still holds with it gone. *S–M.*
 - [ ] **Endgame popup: congratulations frame, a ding, and the right next steps.** Today `SolvedBar` (`ui/play/PlayScreen.kt`) has only
   "Another" (a random board, same tier) and "Done". Replace with options that depend on daily vs random
   and on what is already done. The aim is to offer choices without repeating what the player has done.
@@ -78,7 +72,7 @@ from a measurement or review, so you can check it is still true.
     the APK and the offline cache small and avoids licensing. Keep it short and low in volume. Browsers
     only allow audio after a tap, which a solved puzzle always follows. It should be silent when the
     device is on silent or vibrate, and it needs an on/off switch, which belongs with the timer toggle
-    on the same new settings screen. It defaults to on, provided the owner has approved how the sound
+    on the Settings screen (`ui/settings/SettingsScreen.kt`, one more `item`; the key goes in `LaunchPreferences`). It defaults to on, provided the owner has approved how the sound
     actually sounds: render a few candidates to a WAV, send them over, and wait for a pick before
     shipping it.
   - *Needs:* `Route.Play` already carries tier and day, so the buttons are route changes in
