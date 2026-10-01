@@ -1,8 +1,46 @@
 name: CI
+
 on:
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write   # only used by the workflow_dispatch steps below
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - run: echo "throwaway dispatch test, no pull_request trigger on purpose"
+      # Renovate's pull requests are made with GITHUB_TOKEN, which triggers no workflows, so
+      # tools/dispatch-ci-for-renovate.sh runs this workflow by hand on their branches. The
+      # check run a dispatched run produces is NOT counted by the pull request (its rollup stays
+      # empty and the required `build` check stays unmet; shown by experiment), but a commit
+      # status named `build` is. So a dispatched run reports itself as one. pull_request runs
+      # need none of this: their check run counts.
+      - name: Report pending (dispatched run)
+        if: github.event_name == 'workflow_dispatch'
+        run: >
+          gh api "repos/${{ github.repository }}/statuses/${{ github.sha }}"
+          -f state=pending -f context=build -f description="Dispatched CI is running"
+          -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - run: echo 'throwaway: stands in for the gradle build; no pull_request trigger on purpose'
+
+      - name: Report result (dispatched run)
+        if: always() && github.event_name == 'workflow_dispatch'
+        env:
+          RESULT: ${{ job.status }}
+        run: |
+          case "$RESULT" in
+            success) state=success ;;
+            cancelled) state=error ;;   # the dispatch script runs it again on error
+            *) state=failure ;;
+          esac
+          gh api "repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            -f state="$state" -f context=build -f description="Dispatched CI: $RESULT" \
+            -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
