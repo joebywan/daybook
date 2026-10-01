@@ -365,7 +365,7 @@ private fun PlayBoard(
             if (teaches && offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
                 Box(Modifier.matchParentSize().background(scheme.background), contentAlignment = Alignment.Center) {
                     Text(
-                        "New to ${puzzle.displayName}? One-minute walkthrough →",
+                        "New to ${puzzle.displayName}? One-minute walkthrough",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(puzzle.accent),
                         maxLines = 1,
