@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,6 +42,7 @@ import com.joebywan.daybook.ui.teach.HintSlotHeight
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
+import kotlinx.coroutines.launch
 
 /** Why the caption area says what it says. */
 private enum class Status { WAITING, RETRY, DONE }
@@ -81,9 +83,14 @@ fun TutorialRunner(
     var showRules by remember { mutableStateOf(false) }
     val hints = rememberHintSession(index)
     val last = index == frames.lastIndex
+    val scope = rememberCoroutineScope()
+    fun onHint() {
+        val asked = board
+        scope.launch { hints.tap(puzzle, asked, onOpened = {}, onApply = { board = it }) }
+    }
 
     if (frame.freePlay) {
-        WatchHint(hints, board)
+        WatchHint(hints, puzzle, board)
         LaunchedEffect(board.solved) { if (board.solved) hints.clear() }
     }
 
@@ -138,6 +145,10 @@ fun TutorialRunner(
                                 board = next
                                 moved = Status.DONE
                             }
+                            frame.passes?.invoke(next) == true -> {
+                                board = next
+                                moved = Status.WAITING
+                            }
                             else -> moved = Status.RETRY
                         }
                     },
@@ -152,9 +163,7 @@ fun TutorialRunner(
             Modifier.fillMaxWidth().height(HintSlotHeight).padding(horizontal = 18.dp),
         ) {
             if (frame.freePlay && hints.active) {
-                HintPanel(hints, accent, onAction = {
-                    hints.tap(puzzle, board, onOpened = {}, onApply = { board = it })
-                })
+                HintPanel(hints, accent, onAction = ::onHint)
             } else {
                 Column(Modifier.fillMaxSize()) {
                     Text(
@@ -190,9 +199,10 @@ fun TutorialRunner(
                 enabled = index > 0,
                 modifier = Modifier.weight(1f),
             ) { Text("Back") }
-            if (frame.freePlay && !board.solved) {
+            // Only where a hint can answer: Snap's teaching is its walkthrough, with no hints.
+            if (frame.freePlay && !board.solved && puzzle.offersHints) {
                 OutlinedButton(
-                    onClick = { hints.tap(puzzle, board, onOpened = {}, onApply = { board = it }) },
+                    onClick = ::onHint,
                     modifier = Modifier.weight(1f),
                 ) { Text(hints.buttonLabel()) }
             }

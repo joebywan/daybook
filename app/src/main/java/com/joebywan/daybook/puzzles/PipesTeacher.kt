@@ -212,6 +212,9 @@ internal object PipesTeacher {
         val parts = mutableListOf<String>()
         var whichever = false
         var loop = false
+        // Settled sides by what they say: 0 set and open, 1 set and closed, 2 free and open, 3 free
+        // and closed. Walked in that order, so the wording is the same whatever side came first.
+        val sides = Array(4) { mutableListOf<Int>() }
         for (d in 0 until 4) {
             val why = f.why[d] ?: continue
             if (f.status[d] == UNKNOWN) continue
@@ -231,11 +234,21 @@ internal object PipesTeacher {
             val open = f.status[d] == OPEN
             cited += why.from
             if (why.fromFixed) setNeighbours += why.from else whichever = true
-            parts += when {
-                why.fromFixed && open -> "the tile ${towards[d]} is set and points into it"
-                why.fromFixed -> "the tile ${towards[d]} is set and doesn't point at it"
-                open -> "the tile ${towards[d]} points into it whichever way it can turn"
-                else -> "the tile ${towards[d]} can't point at it, whichever way it can turn"
+            sides[(if (why.fromFixed) 0 else 2) + (if (open) 0 else 1)] += d
+        }
+        // Neighbours that say the same thing share one clause: "the tiles to the right and to the
+        // left can't point at it whichever way they turn", not the same clause twice, which ran
+        // the longest explanations past what the panel shows at once.
+        for (kind in 0 until 4) {
+            val ds = sides[kind]
+            if (ds.isEmpty()) continue
+            val one = ds.size == 1
+            val tiles = (if (one) "the tile " else "the tiles ") + join(ds.map { towards[it] })
+            parts += tiles + when (kind) {
+                0 -> if (one) " is set and points into it" else " are set and point into it"
+                1 -> if (one) " is set and doesn't point at it" else " are set and don't point at it"
+                2 -> if (one) " points into it whichever way it turns" else " point into it whichever way they turn"
+                else -> " can't point at it whichever way " + (if (one) "it turns" else "they turn")
             }
         }
         val technique = when {
@@ -266,7 +279,7 @@ internal object PipesTeacher {
             addAll(parts)
         }
         return Reason(
-            "${join(all).cap()}. That leaves only one way round for it.",
+            "${clauses(all).cap()}. That leaves only one way round for it.",
             citedSorted, technique, setNeighbours,
         )
     }
@@ -503,6 +516,12 @@ internal object PipesTeacher {
         0 -> ""
         1 -> words[0]
         else -> words.dropLast(1).joinToString(", ") + " and " + words.last()
+    }
+
+    /** Whole clauses, which may carry their own "and": a semicolon keeps them apart. */
+    private fun clauses(parts: List<String>): String = when (parts.size) {
+        1 -> parts[0]
+        else -> parts.joinToString("; ")
     }
 
     private fun String.cap() = replaceFirstChar { it.uppercaseChar() }

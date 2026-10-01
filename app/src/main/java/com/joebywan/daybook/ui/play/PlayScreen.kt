@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -66,6 +67,7 @@ import com.joebywan.daybook.ui.tutorial.TutorialRunner
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 
@@ -172,6 +174,7 @@ private fun PlayBoard(
     // layout they always had.
     val teaches = remember(initial) { hasTutorial || puzzle.teach(initial) != null }
     val hintSession = rememberHintSession(initial)
+    val hintScope = rememberCoroutineScope()
     // Offered on this visit, and only this one. Saved, so a rotation keeps the line it already
     // showed rather than losing it to the store's "already offered".
     var offering by rememberSaveable(initial) { mutableStateOf(false) }
@@ -242,7 +245,7 @@ private fun PlayBoard(
         game = game.copy(state = next, history = game.history + game.state)
     }
 
-    WatchHint(hintSession, state)
+    WatchHint(hintSession, puzzle, state)
     LaunchedEffect(state.solved) { if (state.solved) hintSession.clear() }
 
     /**
@@ -253,15 +256,19 @@ private fun PlayBoard(
      * Puzzles that do not teach keep the old hint: the move goes straight on and costs one.
      */
     fun onHint() {
-        val taught = hintSession.tap(
-            puzzle, state,
-            onOpened = { game = game.copy(hints = game.hints + 1) },
-            onApply = ::push,
-        )
-        if (!taught) {
-            puzzle.hint(state)?.let {
-                game = game.copy(hints = game.hints + 1)
-                push(it)
+        val asked = game.state
+        hintScope.launch {
+            val taught = hintSession.tap(
+                puzzle, asked,
+                onOpened = { game = game.copy(hints = game.hints + 1) },
+                onApply = ::push,
+            )
+            // The old hint lands on the board, so only on the board it was asked about.
+            if (!taught && game.state == asked) {
+                puzzle.hint(asked)?.let {
+                    game = game.copy(hints = game.hints + 1)
+                    push(it)
+                }
             }
         }
     }

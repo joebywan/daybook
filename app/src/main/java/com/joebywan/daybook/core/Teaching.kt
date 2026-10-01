@@ -86,6 +86,12 @@ val LocalBoardHighlight = compositionLocalOf { BoardHighlight.None }
  * walkthrough on a board its later frames were not written for. [done] replaces the caption once
  * the move is made.
  *
+ * [passes] admits the steps on the way to a move that takes more than one emitted state — Sets'
+ * three taps, Mambo's second tap for a sun, Snap's drag a square at a time. A state it allows is
+ * applied but does not end the frame; [accepts] still decides which state does. Null (the default)
+ * keeps the strict rule above, which is what every frame written before it relies on: a move there
+ * must be a single emitted state, or the runner drops it.
+ *
  * With [freePlay] set, every move is applied, the puzzle's hints are available, and the frame ends
  * when the board is solved — the "your turn" frame at the end.
  */
@@ -97,4 +103,5 @@ class TutorialFrame(
     val retry: String = "Try the glowing square.",
     val done: String = "That's it.",
     val freePlay: Boolean = false,
+    val passes: ((PuzzleState) -> Boolean)? = null,
 )
