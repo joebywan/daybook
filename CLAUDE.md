@@ -389,6 +389,9 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   changes) merges without waiting ~10 minutes for CI: `gh pr merge <n> --merge --admin`. Anything
   else waits for green CI. Nothing in the workflows pushes commits to `main` (releases are created
   with `gh release create`), so the rule does not get in their way.
+- Renovate's PRs get their `build` from `tools/dispatch-ci-for-renovate.sh`, which dispatches
+  `ci.yml` on their branch; a dispatched run posts a `build` commit status because its check run
+  alone does not satisfy the ruleset. Keep those steps in `ci.yml` and the job named `build`.
 - Commits use `4845431+joebywan@users.noreply.github.com`. The personal address must never reach
   a commit or a remote. No `Co-Authored-By: Claude` trailer.
 - Push to `main` builds a signed APK and publishes a GitHub Release automatically.
