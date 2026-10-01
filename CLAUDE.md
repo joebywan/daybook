@@ -144,6 +144,9 @@ sized from width alone until the taller hint slot ran Pipes' 5x7 board a row und
 390dp, and Sudoku over the header on a 693dp-tall screen; all eleven now consult the height
 (audited at 390x844, 390x664 and 360x640: every grid is within a cell of the box on its binding axis,
 and the same size before and after solving).
+Check the *short* end too: a phone browser with both toolbars showing is ~540dp tall, where the old
+reserved 156dp hint slot left Pipes a board a third of the width (the hint is now a popover, so the
+board keeps the whole box). Test layouts at 375x537 as well as a tall screen.
 
 **`PlayScreen` pushes an undo entry for every state it is handed.** Transient UI state —
 selected colour, palette choice, drag in progress, a settle timer — must live in
@@ -303,6 +306,21 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   41 / 62 / 85 ms to 57 / 69 / 118 ms; those browser figures predate it and were not re-measured.
 - Dark theme follows `prefers-color-scheme`; Playwright's `color_scheme="dark"` context option is
   enough to screenshot it.
+- **Check any web layout change in Playwright WebKit as well as Chromium.** There is no iOS
+  Simulator on Linux, and WebKit is the engine behind every iPhone browser, so it is the nearest
+  stand-in. Emulate the phone with `has_touch=True`, `device_scale_factor=2` and a *short* viewport:
+  **375x537** is an iPhone with both Safari toolbars showing, the size that exposed the board
+  shrinking under the reserved hint slot (a 750dp-tall screen hid it). Run it against
+  `?puzzle=<id>` on a local `http.server` of the build, with a `resize` dispatched before the
+  screenshot (see "Headless WebKit is not Safari" below). Set-up that works without sudo:
+  ```bash
+  python3 -m venv /tmp/pwenv && . /tmp/pwenv/bin/activate && pip install playwright
+  python -m playwright install webkit chromium     # its install-deps step needs sudo; skip it
+  apt download libavif16 && tar xzf libavif16.tar.gz && for d in libavif16/*.deb; do dpkg -x $d root; done
+  cp root/usr/lib/x86_64-linux-gnu/lib{avif,yuv,gav1}.so* ~/.cache/ms-playwright/webkit-*/minibrowser-wpe/sys/lib/
+  ```
+  The copy into `sys/lib` is needed because the launcher overwrites `LD_LIBRARY_PATH`; `libavif16`
+  is the one library missing on Ubuntu 24.04. `p.webkit.launch()` then works headless.
 
 ### Learned the hard way
 
