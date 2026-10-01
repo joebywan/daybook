@@ -42,10 +42,9 @@ import com.joebywan.daybook.puzzles.PuzzleState
 import kotlinx.coroutines.delay
 
 /**
- * Height reserved under the board for the hint panel, the walkthrough offer and the "that's it"
- * line. Fixed, and reserved whether or not anything is showing, because feedback must never move
- * the board (CLAUDE.md) — a panel that grew into place would shift every square under a finger
- * that was already on its way to one.
+ * Height of the hint panel's slot under the board, while a hint is open (the play screen eases it
+ * open and shut; the board gives up the room only then). The walkthrough's own screen still keeps
+ * it permanently.
  *
  * Five lines of body text plus a row of buttons: at 390dp that holds about 210 characters, which
  * covers every explanation the teachers produce bar Pipes' and Atoms' longest (measured, up to
@@ -326,3 +325,6 @@ fun HintPanel(
         }
     }
 }
+
+/** The one-line walkthrough offer's height, reserved only on a puzzle's first visit. */
+val OfferLineHeight = 40.dp

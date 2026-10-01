@@ -1,5 +1,11 @@
 package com.joebywan.daybook.ui.play
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,6 +68,7 @@ import com.joebywan.daybook.platform.generateBoard
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.HintSlotHeight
+import com.joebywan.daybook.ui.teach.OfferLineHeight
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
@@ -347,11 +354,25 @@ private fun PlayBoard(
             }
         }
 
-        if (teaches && !state.solved) {
-            Box(Modifier.fillMaxWidth().height(slotHeight).padding(horizontal = 18.dp)) {
+        // The space under the board is reserved only while there is something in it: the hint
+        // panel, or the one-line walkthrough offer on a first visit. It eases open and shut, so a
+        // hint the player asked for shrinks the board smoothly and a closing one gives it back,
+        // rather than every teaching puzzle carrying a blank band all game. Solving changes
+        // nothing: the solved card takes the toolbar's own space (below), and a hint is cleared
+        // before the board is measured again.
+        val slotTarget = when {
+            !teaches -> 0.dp
+            hintSession.active && !state.solved -> slotHeight
+            offering -> OfferLineHeight
+            else -> 0.dp
+        }
+        val slot by animateDpAsState(slotTarget, tween(200), label = "hintSlot")
+        if (slot > 0.dp) {
+            Box(Modifier.fillMaxWidth().height(slot).padding(horizontal = 18.dp).clipToBounds()) {
                 when {
-                    hintSession.active -> HintPanel(hintSession, Color(puzzle.accent), onAction = ::onHint)
-                    offering -> Text(
+                    hintSession.active && !state.solved ->
+                        HintPanel(hintSession, Color(puzzle.accent), onAction = ::onHint)
+                    offering && !state.solved -> Text(
                         "New to ${puzzle.displayName}? One-minute walkthrough →",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(puzzle.accent),
@@ -359,26 +380,25 @@ private fun PlayBoard(
                             .align(Alignment.Center)
                             .clip(RoundedCornerShape(12.dp))
                             .clickable { showTutorial = true }
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                     )
                 }
             }
         }
 
-        if (state.solved) {
-            SolvedBar(
-                seconds = seconds,
-                hints = game.hints,
-                accent = Color(puzzle.accent),
-                onAgain = onAgain,
-                onBack = onBack,
-            )
-        } else {
+        // The toolbar is always laid out; once solved it is hidden and the solved card is drawn
+        // over exactly the same box, so the board above never changes size on completion.
+        Box {
+            val solved = state.solved
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = buttonPad),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = buttonPad)
+                    .then(if (solved) Modifier.alpha(0f).clearAndSetSemantics { } else Modifier),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 ToolButton(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.weight(1f)) {
+                    if (solved) return@ToolButton
                     // A hint reasoned from a board that has just been taken back may lean on a king
                     // that is no longer there.
                     hintSession.clear()
@@ -387,12 +407,25 @@ private fun PlayBoard(
                     }
                 }
                 ToolButton(Icons.Default.Refresh, "Restart", Modifier.weight(1f)) {
+                    if (solved) return@ToolButton
                     hintSession.clear()
                     game = game.copy(state = initial, history = emptyList())
                 }
                 if (puzzle.offersHints) {
-                    ToolButton(Icons.Default.AutoAwesome, hintSession.buttonLabel(), Modifier.weight(1f), ::onHint)
+                    ToolButton(Icons.Default.AutoAwesome, hintSession.buttonLabel(), Modifier.weight(1f)) {
+                        if (!solved) onHint()
+                    }
                 }
+            }
+            if (solved) {
+                SolvedBar(
+                    seconds = seconds,
+                    hints = game.hints,
+                    accent = Color(puzzle.accent),
+                    onAgain = onAgain,
+                    onBack = onBack,
+                    modifier = Modifier.matchParentSize().padding(horizontal = 18.dp, vertical = buttonPad / 2),
+                )
             }
         }
     }
@@ -423,31 +456,31 @@ private fun SolvedBar(
     accent: Color,
     onAgain: () -> Unit,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(18.dp)
+    // One row, sized by the toolbar it covers, so it never costs the board any height.
+    Row(
+        modifier
             .clip(RoundedCornerShape(20.dp))
             .background(accent.copy(alpha = 0.18f))
-            .padding(18.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .pointerInput(Unit) {}
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Solved", style = MaterialTheme.typography.titleLarge, color = accent)
-        Text(
-            buildString {
-                append(formatClock(seconds))
-                if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurface,
-        )
-        Spacer(Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TextButton(onClick = onAgain) { Text("Another") }
-            TextButton(onClick = onBack) { Text("Done") }
+        Column(Modifier.weight(1f)) {
+            Text("Solved", style = MaterialTheme.typography.titleLarge, color = accent)
+            Text(
+                buildString {
+                    append(formatClock(seconds))
+                    if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurface,
+            )
         }
+        TextButton(onClick = onAgain) { Text("Another") }
+        TextButton(onClick = onBack) { Text("Done") }
     }
 }
 
