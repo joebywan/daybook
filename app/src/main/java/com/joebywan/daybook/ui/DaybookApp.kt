@@ -27,6 +27,7 @@ import com.joebywan.daybook.ui.home.HomeScreen
 import com.joebywan.daybook.ui.home.LaunchMode
 import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.play.PlayScreen
+import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -35,6 +36,7 @@ import kotlinx.datetime.LocalDate
 sealed interface Route {
     data object Home : Route
     data object Stats : Route
+    data object Settings : Route
     data class Archive(val puzzleId: String) : Route
     data class Play(
         val puzzleId: String,
@@ -50,6 +52,7 @@ private val RouteSaver = Saver<Route, String>(
         when (r) {
             Route.Home -> "home"
             Route.Stats -> "stats"
+            Route.Settings -> "settings"
             is Route.Archive -> "archive|${r.puzzleId}"
             is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}"
         }
@@ -58,6 +61,7 @@ private val RouteSaver = Saver<Route, String>(
         val f = text.split('|')
         when (f[0]) {
             "stats" -> Route.Stats
+            "settings" -> Route.Settings
             "archive" -> Route.Archive(f[1])
             "play" -> Route.Play(
                 puzzleId = f[1],
@@ -101,6 +105,10 @@ fun DaybookApp(startAt: Route = Route.Home) {
     // tapped tile starts the wrong puzzle.
     var pickedDifficulty by remember { mutableStateOf<Difficulty?>(null) }
     val difficulty = pickedDifficulty ?: storedDifficulty ?: Difficulty.STANDARD
+    // Same reasoning as the difficulty: a flip of the switch shows at once, not after the store answers.
+    val storedShowTimer by launchPrefs.showTimer.collectAsState(initial = true)
+    var pickedShowTimer by remember { mutableStateOf<Boolean?>(null) }
+    val showTimer = pickedShowTimer ?: storedShowTimer
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
     // back to Daily, because that is what the app is for.
     var mode by rememberSaveable { mutableStateOf(LaunchMode.DAILY) }
@@ -154,12 +162,22 @@ fun DaybookApp(startAt: Route = Route.Home) {
                 },
                 onArchive = { puzzleId -> route = Route.Archive(puzzleId) },
                 onStats = { route = Route.Stats },
+                onSettings = { route = Route.Settings },
             )
         }
 
         Route.Stats -> StatsScreen(
             today = today,
             completions = completions,
+            onBack = { route = Route.Home },
+        )
+
+        Route.Settings -> SettingsScreen(
+            showTimer = showTimer,
+            onShowTimer = { show ->
+                pickedShowTimer = show
+                scope.launch { launchPrefs.setShowTimer(show) }
+            },
             onBack = { route = Route.Home },
         )
 
@@ -215,6 +233,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
                     },
                     tutorialOffered = tutorialsOffered?.let { puzzle.id in it },
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
+                    showTimer = showTimer,
                     onBack = { route = Route.Home },
                 )
             }

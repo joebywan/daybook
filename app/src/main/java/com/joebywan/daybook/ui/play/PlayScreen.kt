@@ -111,6 +111,7 @@ fun PlayScreen(
     onBack: () -> Unit,
     tutorialOffered: Boolean? = null,
     onTutorialOffered: () -> Unit = {},
+    showTimer: Boolean = true,
 ) {
     // The harder boards take hundreds of milliseconds to generate, which would freeze the frame if
     // it happened during composition. Android runs it off the main thread; the web has only one
@@ -125,7 +126,7 @@ fun PlayScreen(
     } else {
         PlayBoard(
             puzzle, difficulty, day, ready, restore, persist, onSolved, onAgain, onBack,
-            tutorialOffered, onTutorialOffered,
+            tutorialOffered, onTutorialOffered, showTimer,
         )
     }
 }
@@ -166,6 +167,7 @@ private fun PlayBoard(
     onBack: () -> Unit,
     tutorialOffered: Boolean?,
     onTutorialOffered: () -> Unit,
+    showTimer: Boolean,
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -357,10 +359,14 @@ private fun PlayBoard(
             Modifier.fillMaxWidth().padding(bottom = 4.dp),
             contentAlignment = Alignment.Center,
         ) {
+            // Hidden by the player's setting: still laid out, so the row, the board and the hint
+            // popover (placed from this row's bottom) are exactly where they would be with it.
+            // The time keeps counting and is shown on the solved card.
             Text(
                 text = formatClock(seconds),
                 style = MaterialTheme.typography.titleMedium,
                 color = scheme.onSurfaceVariant,
+                modifier = if (showTimer) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
             )
             if (teaches && offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
                 Box(Modifier.matchParentSize().background(scheme.background), contentAlignment = Alignment.Center) {
