@@ -148,11 +148,10 @@ without editing it.
 **`solved` checks the rules, not a stored answer.** Kings and LITS both rejected correct solutions by comparing
 to the stored one. Keep the stored solution for the teacher; let a validator decide. References:
 `KingsState.solved` -> `Kings.isSolved`; `Mambo.isSolved`; `AtomsState.solved`; `Snap.obeysRules`;
-`PipesState.solved`. Tests for the principle: `test/KingsRulesTest` `a legal placement wins, whether or not it
+`PipesState.solved`; `Sudoku.isSolved`; `Shikaku.isSolved`. Tests for the principle: `test/KingsRulesTest` `a legal placement wins, whether or not it
 is the stored one`, `test/MamboSolvedTest`, `test/LitsAuditTest` `validator agrees with an independent checker`.
-Two puzzles still compare to the stored answer (`SudokuState.solved` is `cells == solution`;
-`ShikakuState.solved` is `blocks.toSet() == solution.toSet()`); that is equivalent only while uniqueness is
-proved, so it is a matrix item, not a pattern to copy.
+`test/SolvedRulesTest` covers Sudoku and Shikaku: a legal fill that is not the stored one wins, near misses
+do not, and both are cross-checked against an independent checker.
 
 **An independent checker, in tests.** New tests are written on a different principle from the code they
 check, so the two cannot share a blind spot. Exemplars: `test/SnapCluesTest` (naive DFS, no budget, order
@@ -471,11 +470,11 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 
 | | Tiers | Proved gen | Rules `solved` | Indep. check | Teacher | Tutorial | Highlight | Parity pin | Preview | Text-fit |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Sudoku | Y clues 38/30/24 | Y dug to uniqueness (`countSolutions`), no fallback | P `cells == solution` | Y `SudokuTeachingTest` enumerator | Y | Y 6 | Y grid + anchor + keepClear | Y | Y | Y 200 |
+| Sudoku | Y clues 38/30/24 | Y dug to uniqueness (`countSolutions`), no fallback | Y `Sudoku.isSolved` | Y `SudokuTeachingTest` enumerator | Y | Y 6 | Y grid + anchor + keepClear | Y | Y | Y 200 |
 | Kings | Y 7/8/9 | Y `generateVerified`, `lastResort` | Y | Y `KingsRulesTest` | Y | Y 7 | Y grid | Y `WebParityTest` | Y | N |
 | Mambo | Y 6/8/10 | Y by construction (carve to propagation-solvable) | Y | Y `MamboRulesTest`, `MamboSolvedTest` | Y | Y 8 | Y grid | Y | Y | Y 200 |
 | Pipes | Y | n/a no uniqueness claimed | Y | Y `PipesTeachingTest` enumerator | Y | Y 7 | Y grid | Y | Y | P sentences, not length |
-| Shikaku | Y | P `countTilings` loop + `fallbackBoard`, no `generateVerified` | P `blocks == solution` | Y `ShikakuClueTest` | Y | Y 7 | Y grid | Y | Y | Y |
+| Shikaku | Y | P `countTilings` loop + `fallbackBoard`, no `generateVerified` | Y `Shikaku.isSolved` | Y `ShikakuClueTest` | Y | Y 7 | Y grid | Y | Y | Y |
 | Mosaic | Y slack 0 | Y `solve` or null; last pass stripes | Y (all one colour) | Y `MosaicOptimumTest` BFS | Y | Y 6 | Y grid + keepClear | Y | Y | Y 180 |
 | Sets | Y | n/a target = sets present; `error()` after 4000 draws | Y | Y `SetsRulesTest` plays the handler | Y no fallback | Y 9 | Y grid | Y | Y | Y |
 | Atoms | Y | Y `generateVerified`, year test | Y | Y `AtomsTeachingTest` enumerator | Y | Y 7 | Y custom | Y | Y | P 230 in coverage |
@@ -485,9 +484,11 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 
 Details behind the P/N cells:
 
-- **Sudoku, Shikaku `solved`:** compare to a stored answer. Equivalent only while uniqueness holds; the
-  Shikaku `fallbackBoard` (a clue in each rectangle's corner) is unique by construction, so it is
-  safe today. If either generator ever ships a multi-answer board, both reject correct play.
+- **Sudoku, Shikaku teachers' `mistake`:** `solved` is now the rules, but both teachers still judge a
+  mistake by difference from the stored answer (Sudoku: a digit != `solution`; Shikaku: a block not in
+  `solution`). Right only while the board has one answer, which both generators prove (the Shikaku
+  `fallbackBoard`, a clue in each rectangle's corner, is unique by construction). Not yet a "no legal
+  answer keeps this" check.
 - **Shikaku, Snap proved generation:** the proof exists (exhaustive count; `Verdict.UNIQUE`) but `generate`
   does not expose a `generateVerified` null-on-failure split, so no test asserts "the fallback is never
   reached over a year". Their fallbacks are pinned by property (`ShikakuClueTest` `the fallback board carries
@@ -513,7 +514,8 @@ Details behind the P/N cells:
    mechanism is untested dead API until something needs it.
 2. `generateVerified` is not a universal convention (Kings, Atoms, LITS only). Shikaku and Snap should get
    one and a year-long `FallbackTest` entry; Sets and Mambo a year-long test of their "cannot fail" path.
-3. `SudokuState.solved` and `ShikakuState.solved` should check the rules (section 4).
+3. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
+   while their boards are unique, which the generators prove.
 4. Kings (and Pipes, Atoms captions) have no text-fit test.
 5. Accessibility (section 11), already in CLAUDE.md "Open".
 6. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.

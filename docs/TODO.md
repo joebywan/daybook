@@ -15,10 +15,6 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **Sudoku and Shikaku decide `solved` by comparing to the stored answer** (`SudokuState.solved` is
-  `cells == solution`; `ShikakuState.solved` is `blocks.toSet() == solution.toSet()`). Safe only while
-  the board has exactly one solution; Kings and LITS both once rejected correct answers this way. Make
-  both check the rules, keep the answer for hints only. *M.* (`docs/PUZZLE_STANDARDS.md` §4, §12)
 - [ ] **Sets can fail outright.** `Sets.generate` throws via `error()` after 4000 redraws, and its tests
   walk only 12 seeds. Measure the failure rate over a few years of daily seeds, then make failure
   impossible or structural. *M.*
