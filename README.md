@@ -106,15 +106,21 @@ are generated off the main thread behind a dealing animation.
 
 ## Adding a puzzle
 
-Two steps.
+**Start with [`docs/PUZZLE_STANDARDS.md`](docs/PUZZLE_STANDARDS.md)**: what every puzzle must have (three
+tiers, proved boards, hints that guide, an interactive walkthrough, the tests), which existing puzzle
+to copy for each part, and a [step-by-step recipe](docs/PUZZLE_STANDARDS.md#13-adding-a-new-puzzle-the-recipe).
+
+The wiring itself is two lines of code:
 
 1. Add a file under `puzzles/` with a state class implementing `PuzzleState` and an object
    implementing `PuzzleType`.
 2. Add that object to `PuzzleRegistry.all`.
 
-Home screen, daily rotation, archive, streaks, statistics, hints, undo, restart and the results
-card all pick it up automatically. `generate(seed, difficulty)` must be pure — that is the only
-hard rule, and it is what keeps the archive free.
+Home screen, daily rotation, archive, streaks, statistics, undo, restart and the results card then
+pick it up automatically. That is only the wiring, though: a finished puzzle also needs its web-parity
+entries and tests, and, to match the others, hints and a walkthrough. `generate(seed, difficulty)` must
+be pure, which is what keeps the archive free, and must give the same board on Android and in the
+browser (see the standards doc, sections 4 and 5).
 
 ## Building
 
