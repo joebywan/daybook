@@ -1,7 +1,7 @@
 # Daybook — working notes for Claude
 
-A daily logic-puzzle Android app. Eleven puzzles, generated on device, no ads, no
-subscription, no network. Read this before changing anything; it exists so you don't
+A daily logic-puzzle Android app. Daily puzzles, generated on device, no ads, no
+subscription, works offline. Read this before changing anything; it exists so you don't
 rediscover what has already been learned here the hard way.
 
 ## Build
@@ -227,6 +227,20 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   cache-first for the content-hashed `.wasm`; the page posts its resource list to the worker, since
   the first visit loads before the worker controls it. `manifest.webmanifest` and the icons make it
   installable to the home screen.
+- **Favicon and link preview.** `favicon.svg` (the launcher mark simplified for a tab: no rays,
+  bigger sun lifted clear of a wider book — a sun touching the book reads as a head), `favicon.ico`
+  (16/32/48) and `icons/icon-16|32.png` are rendered from that SVG by hand (Chromium screenshot at
+  each size, ICO via Pillow); the 192 PNG the page used to link mushed the rays at 16px. They are
+  `rel="icon"` links in `index.html`, *relative* (the page is always at `/daybook/`); the domain
+  root's `/favicon.ico` belongs to another site. The link preview (`og:*`, `twitter:*`) uses
+  *absolute* `https://knowhowit.com.au/daybook/...` URLs, since a crawler has no base. The card is
+  `web/src/wasmJsMain/resources/social-preview.png` (1200x630), emitted with the repo's 1280x640
+  card by `python3 docs/social-preview/make.py`; both PNGs are committed. It lives under `web/`
+  because `docs/**` does not trigger the pages workflow, so a copy under docs/ would never deploy.
+  No puzzle count in any public text (it ages). The favicons are in `sw.js`'s precache, the card is
+  not (crawlers do not run the worker); changing the SHELL list means bumping `CACHE`, whose old
+  names `activate` deletes. Link unfurls are cached by the platforms: after a change, re-scrape in
+  Facebook's Sharing Debugger; Discord and Slack refresh on their own schedule.
 - **Generation on one thread.** Android generates off the main thread (`generateBoard` in the seam
   is the `withContext(Dispatchers.Default)` it always was). Wasm has one thread, so the web's
   `generateBoard` first waits until "Setting out …" has been *painted* (`requestAnimationFrame` →

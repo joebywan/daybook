@@ -8,12 +8,16 @@
 //    they are cache-first, and a deploy simply asks for new names.
 // Every path is relative to this file, because the app is served from a subpath.
 
-const CACHE = 'daybook-v1';
+const CACHE = 'daybook-v2';
 const NETWORK_TIMEOUT_MS = 4000;
 const SHELL = [
   './',
   'daybook.js',
   'manifest.webmanifest',
+  'favicon.svg',
+  'favicon.ico',
+  'icons/icon-16.png',
+  'icons/icon-32.png',
   'icons/icon-180.png',
   'icons/icon-192.png',
   'icons/icon-512.png',
