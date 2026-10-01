@@ -398,3 +398,6 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 
 Sudoku pencil marks; accessibility — eight boards use raw pointer input and expose no click
 actions, so a screen reader cannot operate them.
+
+**The full list of outstanding work is `docs/TODO.md`.** Keep it current as you work: add what you
+find but are not fixing, delete what you finish, in the same PR.

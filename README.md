@@ -236,6 +236,8 @@ run on them — at which point automerge can safely be widened to minor updates.
 
 ## Not done yet
 
+The maintained list is [`docs/TODO.md`](docs/TODO.md); the headlines:
+
 - Pencil marks / candidate notes in Sudoku
 - No accessibility work: the eight boards drawn with raw pointer input expose no click actions, so
   a screen reader cannot operate them
