@@ -9,8 +9,10 @@ package com.joebywan.daybook.puzzles
  * mistakes, and for [FALLBACK], which says openly that it is pointing at the answer.
  *
  * Candidates are *derived* from the visible digits on every call (a digit is a candidate for an
- * empty cell when no cell in its row, column or box holds it). There are no pencil marks to read or
- * write, so a step can never end on "cross 7 off here": every step ends in one digit placed. The
+ * empty cell when no cell in its row, column or box holds it). The player's pencil marks
+ * ([SudokuState.notes]) are deliberately never read, so notes cannot change what is suggested or
+ * what is called a mistake, and a step never writes one: it can never end on "cross 7 off here",
+ * every step ends in one digit placed. The
  * eliminating techniques therefore carry their consequence with them — "7 is locked to row 2 in this
  * box, and that leaves the glowing cell as the only place for 7 in row 2" — and the move is the
  * placement.
@@ -33,9 +35,9 @@ package com.joebywan.daybook.puzzles
  * boards once its explanation had to fit the panel), X-wing and XY-wing (together 16 boards of
  * the 114 reaching the fallback). Even every elimination above applied to a fixpoint before looking
  * for a single left 95 Expert boards needing the fallback somewhere: the 24-clue Expert boards are
- * dug for uniqueness, not rated, and many need chains no four-line hint can carry. Without pencil
- * marks a step cannot leave eliminations behind for the next one, so every step has to end in a
- * placement, and that is the ceiling here.
+ * dug for uniqueness, not rated, and many need chains no four-line hint can carry. A step cannot
+ * leave eliminations behind for the next one, so every step has to end in a placement, and that
+ * is the ceiling here.
  *
  * Orders never come from a hash: every loop walks cells, units or digits in index order, so the same
  * board gets the same hint on every platform (CLAUDE.md, "Hash iteration order").
@@ -64,6 +66,9 @@ internal object SudokuTeacher {
 
     /** Highlight index of digit [d]'s key under the board; 0..80 are the cells. */
     fun pad(d: Int): Int = 81 + d
+
+    /** The pencil key beside the digit keys. A highlight index, though no step asks for it. */
+    const val NOTES_KEY = 91
 
     /** Every technique in the order [deduce] tries them, for reports. */
     val TECHNIQUES = listOf(

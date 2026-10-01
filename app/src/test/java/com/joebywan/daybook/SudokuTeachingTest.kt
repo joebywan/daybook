@@ -274,6 +274,48 @@ class SudokuTeachingTest {
         assertEquals(s.solution[cell], (d.apply(empty) as SudokuState).cells[cell])
     }
 
+    // ---- notes ------------------------------------------------------------------------------------
+
+    @Test
+    fun `pencil marks never change what the teacher suggests or calls a mistake`() {
+        // Notes of every kind: the answer, wrong digits, digits a peer rules out, whole cells of them.
+        var x = 12345L
+        fun next(): Int { x = x * 6364136223846793005L + 1442695040888963407L; return ((x ushr 33) % 512).toInt() }
+        var compared = 0
+        for (difficulty in Difficulty.entries) {
+            for (seed in 1L..25L) {
+                val plain = Sudoku.generate(seed, difficulty) as SudokuState
+                // Both a clean board and one carrying a wrong digit, so mistakes are compared too.
+                val open = plain.cells.indices.first { plain.cells[it] == 0 }
+                val boards = listOf(plain, plain.withCell(open, plain.solution[open] % 9 + 1))
+                for (b in boards) {
+                    val noted = b.copy(notes = List(81) { i -> if (b.cells[i] == 0) next() else 0 })
+                    assertTrue(noted.notes.any { it != 0 })
+                    val a = Sudoku.teach(b)
+                    val n = Sudoku.teach(noted)
+                    assertEquals(a == null, n == null)
+                    if (a != null && n != null) {
+                        assertEquals(a.technique, n.technique)
+                        assertEquals(a.nudge, n.nudge)
+                        assertEquals(a.explanation, n.explanation)
+                        assertEquals(a.focus, n.focus)
+                        assertEquals(a.cited, n.cited)
+                        assertEquals(a.targets, n.targets)
+                        assertEquals(a.mistake, n.mistake)
+                        assertEquals(a.fallback, n.fallback)
+                        // Applying the step places its digit and leaves the notes elsewhere alone.
+                        val applied = n.apply(noted) as SudokuState
+                        val cell = n.targets.single()
+                        assertEquals(a.apply(b).let { (it as SudokuState).cells[cell] }, applied.cells[cell])
+                        assertEquals(0, applied.notes[cell])
+                        compared++
+                    }
+                }
+            }
+        }
+        assertTrue(compared > 100)
+    }
+
     // ---- walkthrough ------------------------------------------------------------------------------
 
     @Test
@@ -286,7 +328,7 @@ class SudokuTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Sudoku.tutorial
-        assertEquals(5, frames.size)
+        assertEquals(6, frames.size)
         fun at(i: Int) = frames[i].state as SudokuState
         assertNull(frames[0].accepts)
 
@@ -319,9 +361,11 @@ class SudokuTeachingTest {
         assertTrue(frames[3].highlight.soft.all { at(3).cells[it] == 9 })
         assertEquals(2, frames[3].highlight.soft.size)
 
-        // 5: free play, finishable by hints without the fallback or a mistake.
-        assertTrue(frames[4].freePlay)
-        var s = at(4)
+        // 5: pencilling a note is SudokuNotesTest's. 6: free play, finishable by hints without the
+        // fallback or a mistake, from a board that carries the note the last frame asked for.
+        assertTrue(frames[5].freePlay)
+        assertTrue(at(5).notes.any { it != 0 })
+        var s = at(5)
         while (!s.solved) {
             val d = Sudoku.teach(s)!!
             assertFalse(d.fallback)

@@ -14,10 +14,33 @@
   <meta name="theme-color" content="#F6F1E7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#11201C" media="(prefers-color-scheme: dark)">
   <title>Daybook</title>
-  <meta name="description" content="Daily logic puzzles. No ads, no account, works offline.">
-  <!-- All relative: the app is served from a subpath. -->
+  <meta name="description" content="A daily logic-puzzle app: new puzzles every day, no ads, no subscription. Works offline.">
+  <!-- The app is served from a subpath, so its own files are relative. A link preview is fetched by a
+       crawler that has no page to resolve against, so og:url and the image URLs are absolute. The
+       domain root's /favicon.ico belongs to another site, so every icon is declared here rather than
+       left to the browser's guess (relative to /daybook/, which is where the page always is). -->
+  <link rel="canonical" href="https://knowhowit.com.au/daybook/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Daybook">
+  <meta property="og:title" content="Daybook">
+  <meta property="og:description" content="A daily logic-puzzle app: new puzzles every day, no ads, no subscription.">
+  <meta property="og:url" content="https://knowhowit.com.au/daybook/">
+  <meta property="og:image" content="https://knowhowit.com.au/daybook/social-preview.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Daybook: a sun rising over an open book, with the words 'A daily logic-puzzle app. New puzzles every day.'">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Daybook">
+  <meta name="twitter:description" content="A daily logic-puzzle app: new puzzles every day, no ads, no subscription.">
+  <meta name="twitter:image" content="https://knowhowit.com.au/daybook/social-preview.png">
+  <meta name="twitter:image:alt" content="Daybook: a sun rising over an open book, with the words 'A daily logic-puzzle app. New puzzles every day.'">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <!-- Tab icons: the simplified mark (no rays) as SVG, with ICO/PNG for browsers that want them. -->
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
   <style>
     :root { --bg: #F6F1E7; --fg: #41504B; }

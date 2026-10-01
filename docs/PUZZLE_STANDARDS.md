@@ -217,7 +217,8 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
 - **Transient UI state is not `PuzzleState`.** Selected colour, palette choice, drag in progress, settle
   timers live in `remember`/`rememberSaveable`. (Sudoku's *selected cell* is in `SudokuState.select` and is
   therefore an undo entry; the pattern to follow is Mosaic's palette in `remember` or Tower's
-  `selectedColour`.) Animations run in a `rememberCoroutineScope`, not a `LaunchedEffect(state)` that every
+  `selectedColour`, and Sudoku's own notes mode, a `rememberSaveable` in `Board`: the notes themselves are
+  state, the mode that writes them is not.) Animations run in a `rememberCoroutineScope`, not a `LaunchedEffect(state)` that every
   tap cancels (Pipes' spin bug, CLAUDE.md).
 - **Undo, restart and save.** `PlayScreen` owns undo (history in the saved game, bounded to
   `SavedGame.UNDO_DEPTH` = 24), restart (back to `initial`, clears the hint session), the clock and the results
@@ -303,8 +304,8 @@ Rules, each tied to a precedent:
   stored answer, which is sound only because their verified boards have one.
 - **Mistakes outrank steps** (reasoning from a falsehood teaches nothing), and taking the mistake back
   clears the hint.
-- **Every step ends in a move the player can make with the board's gestures.** Sudoku has no pencil marks, so
-  every Sudoku step ends in a placement; Atoms steps are bonds; Shikaku steps are one rectangle.
+- **Every step ends in a move the player can make with the board's gestures.** Sudoku's pencil marks are the
+  player's own and the teacher never reads or writes them, so every Sudoku step ends in a placement; Atoms steps are bonds; Shikaku steps are one rectangle.
 - **Cell indices** in `focus`/`cited`/`targets` mean whatever the board means; document the mapping
   (`AtomsTeacher.pairCell`: atom `a` is cell `a`, line `p` is `atoms.size + p`). Sudoku's keys and Tower's pegs
   use named index constants (`SudokuTeacher.pad`, `TowerTeacher.peg`).
@@ -400,7 +401,9 @@ assert each claim a caption makes about the board, and walk the last frame with 
 - **Saved games are keyed `(puzzle, difficulty, seed)`** (`test/SavedGameTest`) and decoded with
   `ignoreUnknownKeys = true`, unreadable ones are dropped, not thrown (`data/ProgressStore.kt`). So: never
   rename a field or a class; add fields **with defaults** (Sets' `lastPick`, `lastRepeat`, pinned by
-  `test/SetsTeachingTest` `an old save without the rejected pick still loads`); do not change what a stored
+  `test/SetsTeachingTest` `an old save without the rejected pick still loads`; Sudoku's `notes`, whose
+  default means a game without any is written as it always was, pinned by `test/SudokuNotesTest` `a save written
+  before notes existed still loads, with none` against a JSON string captured from the build before); do not change what a stored
   field means; changing a generator changes what a saved seed's board is, so a saved game in progress on the old
   board then fails to match its seed's board (parity dump before and after).
 - Saved undo history is bounded (`SavedGame.UNDO_DEPTH` = 24); no state may be big enough to make 24 copies a
@@ -455,7 +458,8 @@ Other settled constraints on design (CLAUDE.md "Settled", "Rules"):
 - `applicationId` and the signing key are permanent; the puzzle `id` is too (for saves).
 - Notifications and offers are passive and once (memory: unobtrusive notification UX); a hint never steals focus
   or moves the board.
-- Sudoku pencil marks are an open item; do not add hidden state a hint cannot see.
+- Sudoku's pencil marks (`SudokuState.notes`) are visible state that the teacher deliberately ignores; do not
+  add hidden state a hint cannot see.
 
 ## 12. Conformance matrix
 
@@ -463,7 +467,7 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 
 | | Tiers | Proved gen | Rules `solved` | Indep. check | Teacher | Tutorial | Highlight | Parity pin | Preview | Text-fit |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Sudoku | Y clues 38/30/24 | Y dug to uniqueness (`countSolutions`), no fallback | P `cells == solution` | Y `SudokuTeachingTest` enumerator | Y | Y 5 | Y grid + anchor + keepClear | Y | Y | Y 200 |
+| Sudoku | Y clues 38/30/24 | Y dug to uniqueness (`countSolutions`), no fallback | P `cells == solution` | Y `SudokuTeachingTest` enumerator | Y | Y 6 | Y grid + anchor + keepClear | Y | Y | Y 200 |
 | Kings | Y 7/8/9 | Y `generateVerified`, `lastResort` | Y | Y `KingsRulesTest` | Y | Y 7 | Y grid | Y `WebParityTest` | Y | N |
 | Mambo | Y 6/8/10 | Y by construction (carve to propagation-solvable) | Y | Y `MamboRulesTest`, `MamboSolvedTest` | Y | Y 8 | Y grid | Y | Y | Y 200 |
 | Pipes | Y | n/a no uniqueness claimed | Y | Y `PipesTeachingTest` enumerator | Y | Y 7 | Y grid | Y | Y | P sentences, not length |
@@ -507,7 +511,7 @@ Details behind the P/N cells:
    one and a year-long `FallbackTest` entry; Sets and Mambo a year-long test of their "cannot fail" path.
 3. `SudokuState.solved` and `ShikakuState.solved` should check the rules (section 4).
 4. Kings (and Pipes, Atoms captions) have no text-fit test.
-5. Accessibility (section 11). Sudoku pencil marks. Both already in CLAUDE.md "Open".
+5. Accessibility (section 11), already in CLAUDE.md "Open".
 6. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.
 7. README "Adding a puzzle" and the `PuzzleType` KDoc say two steps and that purity is "the only hard rule".
    In practice a new puzzle also needs the compile-forced `ParityFingerprint.body` branch,

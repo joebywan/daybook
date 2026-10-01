@@ -1,7 +1,7 @@
 # Daybook — working notes for Claude
 
-A daily logic-puzzle Android app. Eleven puzzles, generated on device, no ads, no
-subscription, no network. Read this before changing anything; it exists so you don't
+A daily logic-puzzle Android app. Daily puzzles, generated on device, no ads, no
+subscription, works offline. Read this before changing anything; it exists so you don't
 rediscover what has already been learned here the hard way.
 
 ## Build
@@ -93,7 +93,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 
 | puzzle | teaches | fallback |
 |---|---|---|
-| Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement (no pencil marks) | 0.5 / 6 / 34% (1% of Expert steps: Expert is dug for uniqueness, not rated) |
+| Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | 0.5 / 6 / 34% (1% of Expert steps: Expert is dug for uniqueness, not rated) |
 | Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
 | Mambo | pair, sandwich, link, quota, almost, what-if | 0 (boards are carved so the first four finish them) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
@@ -174,7 +174,9 @@ If a gesture detector must outlive state changes, read the board through `rememb
 never the captured value.
 
 **Derive, don't store, anything computed from board state.** Kings' eliminations and LITS's
-impossible squares are recomputed per render. Storing them means owning which to retract when a
+impossible squares are recomputed per render. Sudoku's pencil marks (`SudokuState.notes`, a 9-bit mask
+per cell, defaulted so old saves load) are stored, but a note a placed peer digit rules out is only
+hidden (`visibleNotes`); the notes mode is `rememberSaveable` in the board, not state. Storing them means owning which to retract when a
 piece is lifted, which is where the feature rots.
 
 **Verify by rendering, not reasoning.** Icons, motifs, crescents, pipe joints and crosses have
@@ -227,6 +229,20 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   cache-first for the content-hashed `.wasm`; the page posts its resource list to the worker, since
   the first visit loads before the worker controls it. `manifest.webmanifest` and the icons make it
   installable to the home screen.
+- **Favicon and link preview.** `favicon.svg` (the launcher mark simplified for a tab: no rays,
+  bigger sun lifted clear of a wider book — a sun touching the book reads as a head), `favicon.ico`
+  (16/32/48) and `icons/icon-16|32.png` are rendered from that SVG by hand (Chromium screenshot at
+  each size, ICO via Pillow); the 192 PNG the page used to link mushed the rays at 16px. They are
+  `rel="icon"` links in `index.html`, *relative* (the page is always at `/daybook/`); the domain
+  root's `/favicon.ico` belongs to another site. The link preview (`og:*`, `twitter:*`) uses
+  *absolute* `https://knowhowit.com.au/daybook/...` URLs, since a crawler has no base. The card is
+  `web/src/wasmJsMain/resources/social-preview.png` (1200x630), emitted with the repo's 1280x640
+  card by `python3 docs/social-preview/make.py`; both PNGs are committed. It lives under `web/`
+  because `docs/**` does not trigger the pages workflow, so a copy under docs/ would never deploy.
+  No puzzle count in any public text (it ages). The favicons are in `sw.js`'s precache, the card is
+  not (crawlers do not run the worker); changing the SHELL list means bumping `CACHE`, whose old
+  names `activate` deletes. Link unfurls are cached by the platforms: after a change, re-scrape in
+  Facebook's Sharing Debugger; Discord and Slack refresh on their own schedule.
 - **Generation on one thread.** Android generates off the main thread (`generateBoard` in the seam
   is the `withContext(Dispatchers.Default)` it always was). Wasm has one thread, so the web's
   `generateBoard` first waits until "Setting out …" has been *painted* (`requestAnimationFrame` →
@@ -402,7 +418,7 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 
 ## Open
 
-Sudoku pencil marks; accessibility — eight boards use raw pointer input and expose no click
+Accessibility — eight boards use raw pointer input and expose no click
 actions, so a screen reader cannot operate them.
 
 **The full list of outstanding work is `docs/TODO.md`.** Keep it current as you work: add what you
