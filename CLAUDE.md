@@ -382,7 +382,13 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 
 ## Git and releases
 
-- Never commit to `main`. Branch, PR, merge — I do the merging, not the owner.
+- Never commit to `main`. Branch, PR, merge — I do the merging, not the owner. This is now enforced: a
+  repository ruleset ("Protect main", set up 2026-10-02) requires a pull request, requires the CI
+  check named `build` to pass, and blocks force-pushes and deletion. The repo owner's account can
+  bypass on pull requests only, which is how a **docs-only** PR (markdown, no code, build or workflow
+  changes) merges without waiting ~10 minutes for CI: `gh pr merge <n> --merge --admin`. Anything
+  else waits for green CI. Nothing in the workflows pushes commits to `main` (releases are created
+  with `gh release create`), so the rule does not get in their way.
 - Commits use `4845431+joebywan@users.noreply.github.com`. The personal address must never reach
   a commit or a remote. No `Co-Authored-By: Claude` trailer.
 - Push to `main` builds a signed APK and publishes a GitHub Release automatically.
