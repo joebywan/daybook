@@ -29,7 +29,7 @@ jobs:
           -f state=pending -f context=build -f description="Dispatched CI is running"
           -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-      - run: echo 'throwaway: stands in for the gradle build; no pull_request trigger on purpose'
+      - run: echo 'throwaway, stands in for the gradle build; no pull_request trigger on purpose'
 
       - name: Report result (dispatched run)
         if: always() && github.event_name == 'workflow_dispatch'
