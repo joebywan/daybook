@@ -239,6 +239,9 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   `web/src/wasmJsMain/resources/social-preview.png` (1200x630), emitted with the repo's 1280x640
   card by `python3 docs/social-preview/make.py`; both PNGs are committed. It lives under `web/`
   because `docs/**` does not trigger the pages workflow, so a copy under docs/ would never deploy.
+  The same mark sits beside the "Daybook" title on Home (`ui/home/DaybookMark.kt`, shared with
+  Android, drawn bare from the favicon's paths with no tile, so it holds on light and dark pages —
+  keep the two in step) and above the `#loading` note in `index.html` (`<img src="favicon.svg">`).
   No puzzle count in any public text (it ages). The favicons are in `sw.js`'s precache, the card is
   not (crawlers do not run the worker); changing the SHELL list means bumping `CACHE`, whose old
   names `activate` deletes. Link unfurls are cached by the platforms: after a change, re-scrape in

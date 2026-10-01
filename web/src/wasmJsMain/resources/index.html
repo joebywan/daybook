@@ -65,13 +65,14 @@
     }
     #app canvas { touch-action: none; outline: none; }
     #loading {
-      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      position: fixed; inset: 0; display: flex; flex-direction: column; gap: 14px;
+      align-items: center; justify-content: center;
       font: 15px -apple-system, system-ui, sans-serif;
     }
   </style>
 </head>
 <body>
-  <div id="loading">Opening Daybook…</div>
+  <div id="loading"><img src="favicon.svg" width="44" height="44" alt=""><span>Opening Daybook…</span></div>
   <div id="app"></div>
   <script src="daybook.js"></script>
   <script>

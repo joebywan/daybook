@@ -153,6 +153,8 @@ private fun Header(
 ) {
     val scheme = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.CenterVertically) {
+        DaybookMark(Modifier.size(36.dp))
+        Spacer(Modifier.width(10.dp))
         Text(
             "Daybook",
             style = MaterialTheme.typography.displaySmall,
