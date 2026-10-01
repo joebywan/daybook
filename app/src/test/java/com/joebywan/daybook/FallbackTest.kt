@@ -52,6 +52,27 @@ class FallbackTest {
         assertTrue("atoms fell back to the three-atom chain on ${gaveUp.size} boards: $gaveUp", gaveUp.isEmpty())
     }
 
+    /**
+     * LITS proves uniqueness under the win check's rules, so a fallback is a board a player may
+     * solve two ways. A full year of daily seeds per tier, like Atoms: the rate is a few in ten
+     * thousand, which twenty seeds would never see.
+     */
+    @Test
+    fun `lits proves every daily board in a year`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Lits.id, difficulty)
+                val proved = Lits.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("lits $date/${difficulty.name}", proved, Lits.generate(seed, difficulty) as LitsState)
+            }
+        }
+        assertTrue("lits shipped an unproved board on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
     @Test
     fun `lits never falls back to a single region`() {
         for (difficulty in Difficulty.entries) {

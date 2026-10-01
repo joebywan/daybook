@@ -83,7 +83,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
 | Atoms | one neighbour, all forced, at least one, crossing, isolation, only way out, what-if | 0 / 0 / 0.5% |
 | Snap | walkthrough only: corners, dead ends, cutting back, rubbing out | no hints |
-| LITS | whole region, overlap, avoid 2x2 / letter clash, neighbour, what-if | 42 / 23 / 30% — nearly all on boards with several answers under the win check, where reasoning must stop (the test holds unique boards under 2%) |
+| LITS | whole region, overlap, avoid 2x2 / letter clash, neighbour, what-if | 0 / 0 / 0% (300 boards per tier). It was 42 / 23 / 30% while 43 / 22 / 29% of boards had several answers under the win check; the generator now proves one (the test holds one-answer boards under 2%) |
 | Tower | one change, only colour left, accounted for, what-if; else a guess that fits every score | every board, 28-35% of turns: Mastermind is mostly choosing a guess |
 
 Adopting it, or changing a teacher — the lessons of eleven of them:
@@ -254,6 +254,9 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   Expert 0.3 s, Snap 0.4 s, Sudoku Expert 0.1 s, the rest under 0.1 s. LITS was 1.9 / 3.2 / 4.5 s
   (WebKit up to 11 s) until its generator moved to bitmasks; over 2026-2027 its worst board is now
   46 / 75 / 93 ms in Chromium and 52 / 80 / 99 ms in WebKit, alone (see below).
+  The no-connectivity re-proof (and the retries it causes for the ~30% of boards that needed one)
+  raised the JVM mean per board from 5 / 9 / 13 ms to 9 / 11 / 17 ms and the worst of 2026-2027 from
+  41 / 62 / 85 ms to 57 / 69 / 118 ms; those browser figures predate it and were not re-measured.
 - Dark theme follows `prefers-color-scheme`; Playwright's `color_scheme="dark"` context option is
   enough to screenshot it.
 
@@ -362,8 +365,11 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   "I should have to make choices and think. It's boring otherwise." Do not add clues back to soften
   a tier, and do not relax uniqueness to open the board up further.
 - LITS regions are capped at seven squares, and its win check does **not** require the shading to
-  be connected. The generator still proves uniqueness among connected shadings; that only decides
-  which boards ship.
+  be connected (PR #15: a player's valid disconnected answer was refused). So a board must have one
+  answer *without* that rule: the carve steps search connected shadings (fast, monotone), and the
+  finished candidate is proved again with no connectivity rule before it ships. Do not restore the
+  connectivity rule to the win check to make uniqueness easier. `LitsUniquenessTest` asserts it
+  with the independent `LitsOracle`; `FallbackTest` walks a year per tier through `generateVerified`.
 - Accessibility is knowingly absent and deliberately deferred while this is sideloaded.
 
 ## Open

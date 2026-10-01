@@ -20,10 +20,11 @@ import java.time.LocalDate
  *
  * Soundness is judged the way KingsTeachingTest judges it: a step must hold for *every* answer the
  * visible shading still allows, not just agree with the stored one. That matters more here than for
- * Kings. The generator proves uniqueness only among connected shadings while the win check no longer
- * asks for connectivity, so a good share of real boards have several legal answers — a technique that
- * quietly assumed "the shading joins up", or anything that leaked the stored answer, would shade a
- * square some legal answer leaves empty, and this is what would catch it.
+ * Kings. Shipped boards now have one answer under the win check (LitsUniquenessTest), but the
+ * generator once proved uniqueness only among connected shadings while the win check asks for no
+ * connectivity, and a board built by hand can have several answers — a technique that quietly
+ * assumed "the shading joins up", or anything that leaked the stored answer, would shade a square
+ * some legal answer leaves empty, so the soundness tests run on loose boards as well.
  */
 class LitsTeachingTest {
 
@@ -319,13 +320,22 @@ class LitsTeachingTest {
 
     @Test
     fun `a square from a different legal answer is not called a mistake`() {
+        // Shipped boards have one answer, so the several-answer boards are loose ones.
+        val rng = java.util.Random(23)
         var checked = 0
-        for (difficulty in Difficulty.entries) {
-            for (seed in seeds(40, difficulty, "lits-other-answer")) {
-                val fresh = Lits.generate(seed, difficulty) as LitsState
-                val answers = LitsOracle.answers(fresh.width, fresh.height, fresh.region, cap = 50)
-                val stored = shadedOf(fresh.copy(shaded = fresh.solution))
-                val other = answers.firstOrNull { it != stored } ?: continue
+        var attempts = 0
+        while (checked < 60) {
+            assertTrue("could not make enough loose boards: $checked", attempts++ < 20_000)
+            val w = 5 + rng.nextInt(2)
+            val region = looseBoard(rng, w, w) ?: continue
+            val answers = LitsOracle.answers(w, w, region, cap = 50)
+            if (answers.size < 2) continue
+            val difficulty = "loose"
+            val seed = attempts
+            run {
+                val fresh = LitsState(w, w, region, List(w * w) { false }, List(w * w) { it in answers[0] })
+                val stored = answers[0]
+                val other = answers[1]
                 val cell = (other - stored).min()
                 val s = fresh.toggle(cell)
                 val d = Lits.teach(s)!!
@@ -342,7 +352,6 @@ class LitsTeachingTest {
                 checked++
             }
         }
-        assertTrue("too few boards with a second answer to test this: $checked", checked >= 10)
     }
 
     // ---- the walkthrough ------------------------------------------------------------------------

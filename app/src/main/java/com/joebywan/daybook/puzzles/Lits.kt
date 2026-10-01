@@ -104,9 +104,10 @@ data class LitsState(
  * does not have to form one connected area.
  *
  * Generation partitions the grid, enumerates each region's legal tetrominoes, and keeps the
- * partition only when the solver *proves* the board has exactly one solution whose shading is also
- * connected. That extra condition only shapes which boards ship; the win check does not ask for it,
- * so a disconnected answer that keeps every other rule is accepted.
+ * partition only when the solver *proves* the board has exactly one solution under the win check's
+ * rules, connected or not. The carving steps search connected shadings only (fast, and monotone as
+ * squares are handed out); the finished candidate is then proved again without that restriction,
+ * because a disconnected answer that keeps every other rule is accepted by [isSolved].
  */
 object Lits : PuzzleType {
 
@@ -369,7 +370,22 @@ object Lits : PuzzleType {
      */
     private const val LAYOUTS = 24
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = build(seed, difficulty).let { (proved, floor) ->
+        // Nothing was *proved* unique inside the budget. The floor still obeys every rule and can
+        // be finished, and a second legal answer is a blemish rather than a wrong-answer bug (the
+        // win check is the rules, not a stored answer), so it beats shipping nothing. FallbackTest
+        // pins how rarely this is reached.
+        proved ?: floor ?: lastResort(seed, shape(difficulty).first, shape(difficulty).second)
+    }
+
+    /**
+     * The board [generate] makes, or null when nothing was proved to have exactly one answer under
+     * the win check's rules: what a test asserts, because [generate] would then ship a floor.
+     */
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): LitsState? = build(seed, difficulty).first
+
+    /** The proved board if any, and the first legal-but-unproved candidate built along the way. */
+    private fun build(seed: Long, difficulty: Difficulty): kotlin.Pair<LitsState?, LitsState?> {
         val (w, h) = shape(difficulty)
         val n = w * h
         val g = geometry(w, h)
@@ -415,17 +431,21 @@ object Lits : PuzzleType {
                     // Only an exactly-one verdict may ship. Truncated is explicitly not one.
                     val verdict = search(g, options)
                     if (verdict is Verdict.ExactlyOne) {
-                        return LitsState(w, h, region, List(n) { false }, verdict.shading)
+                        // Connected shadings were all the search above looked at, but the win
+                        // check accepts disconnected ones too, so a board is only a puzzle when
+                        // it has one answer under *those* rules. Checked last, so a board that
+                        // already satisfied both keeps its layout; one that did not goes on to
+                        // the next candidate.
+                        searches++
+                        if (search(g, options, connected = false) is Verdict.ExactlyOne) {
+                            return LitsState(w, h, region, List(n) { false }, verdict.shading) to floor
+                        }
                     }
                 }
             }
         }
 
-        // Nothing was *proved* unique inside the budget. The floor still obeys every rule and can
-        // be finished; now that the win condition is the rules rather than a stored answer, a
-        // second legal answer is a blemish rather than a wrong-answer bug, so it beats shipping
-        // nothing. FallbackTest pins how rarely this is reached.
-        return floor ?: lastResort(seed, w, h)
+        return null to floor
     }
 
     /**
@@ -941,8 +961,8 @@ object Lits : PuzzleType {
      * only tested at the leaf, so the search walked whole subtrees whose shading had already been
      * cut in two by regions it had finished with.
      */
-    private fun search(g: Geometry, options: Array<IntArray>): Verdict {
-        val s = Search(g, options)
+    private fun search(g: Geometry, options: Array<IntArray>, connected: Boolean = true): Verdict {
+        val s = Search(g, options, connected)
         s.place(0)
 
         // Order matters: two answers in hand is proof of ambiguity whether or not the budget also
@@ -960,7 +980,7 @@ object Lits : PuzzleType {
      * did, in the same order — the same prunes, only cheaper — so [NODE_BUDGET] truncates exactly
      * the searches it always did.
      */
-    private class Search(private val g: Geometry, options: Array<IntArray>) {
+    private class Search(private val g: Geometry, options: Array<IntArray>, private val connected: Boolean) {
         // Fewest choices first. Region order does not change the answer, only how fast it is found.
         private val order = options.indices.sortedBy { options[it].size }
         private val choices = Array(options.size) { options[order[it]] }
@@ -986,7 +1006,8 @@ object Lits : PuzzleType {
 
         /** Can every shaded square still reach every other, allowing for squares not yet decided? */
         private fun stillJoinable(open: Long): Boolean {
-            if (shaded == 0L) return true
+            // Without the connectivity rule (the win check's own) nothing is ever cut off.
+            if (!connected || shaded == 0L) return true
             val through = shaded or open
             var reached = shaded and -shaded
             while (true) {
