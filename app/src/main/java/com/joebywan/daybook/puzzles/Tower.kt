@@ -49,6 +49,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
@@ -506,6 +507,7 @@ object Tower : PuzzleType {
                             Modifier
                                 .padding(horizontal = 4.dp, vertical = 3.dp)
                                 .size(34.dp)
+                                .highlightAnchor(TowerTeacher.CURRENT + slot)
                                 .ring(look, glow, pulse, round = true)
                                 .dimmed(look)
                                 .clip(CircleShape)
@@ -524,6 +526,7 @@ object Tower : PuzzleType {
                         style = MaterialTheme.typography.labelLarge,
                         color = if (s.ready) scheme.primary else scheme.outline,
                         modifier = Modifier
+                            .highlightAnchor(TowerTeacher.SUBMIT_BUTTON)
                             .ring(highlight.look(TowerTeacher.SUBMIT_BUTTON, dims = false), glow, pulse, round = false)
                             .clip(RoundedCornerShape(10.dp))
                             .clickable(enabled = interactive && s.ready) { onState(s.submit()) }
@@ -542,6 +545,7 @@ object Tower : PuzzleType {
                             Modifier
                                 .weight(1f)
                                 .height(40.dp)
+                                .highlightAnchor(TowerTeacher.SWATCH + colour)
                                 .ring(highlight.look(TowerTeacher.SWATCH + colour, dims = false), glow, pulse, round = false)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(Color(palette[colour]))
@@ -612,6 +616,7 @@ object Tower : PuzzleType {
             guess.forEachIndexed { slot, colour ->
                 Box(
                     Modifier.padding(horizontal = 4.dp, vertical = 2.dp).size(26.dp)
+                        .highlightAnchor(TowerTeacher.peg(slots, index, slot))
                         .ring(pegs[slot], glow, pulse, round = true)
                         .dimmed(pegs[slot])
                         .clip(CircleShape)
@@ -621,6 +626,7 @@ object Tower : PuzzleType {
             Spacer(Modifier.weight(1f))
             Row(
                 Modifier
+                    .highlightAnchor(TowerTeacher.PIPS + index)
                     .ring(pips, glow, pulse, round = false)
                     .dimmed(pips)
                     .width(66.dp),

@@ -1,12 +1,17 @@
 package com.joebywan.daybook.ui.play
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import com.joebywan.daybook.core.HighlightBounds
+import com.joebywan.daybook.core.LocalHighlightBounds
+import com.joebywan.daybook.ui.teach.HintPopover
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,8 +72,6 @@ import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.generateBoard
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.teach.HintPanel
-import com.joebywan.daybook.ui.teach.HintSlotHeight
-import com.joebywan.daybook.ui.teach.OfferLineHeight
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
@@ -294,17 +297,28 @@ private fun PlayBoard(
         return
     }
 
-    // A phone browser with both toolbars showing leaves ~540dp, where the full 156dp slot and 22dp
-    // button padding shrank the board to a third of the width. The slot (its text already scrolls)
-    // and the padding give way below 700dp and 640dp; taller screens are laid out as before.
+    // Below 640dp (a phone browser with its toolbars showing) the toolbar's padding gives way, to
+    // leave the board the room. The hint is a popover over the content, never a slot in this
+    // column, so nothing in it changes size when a hint opens, the offer shows, or the puzzle is
+    // solved.
     val screenHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
-    val slotHeight = (screenHeight * 0.23f).coerceIn(112.dp, HintSlotHeight)
     val buttonPad = if (screenHeight < 640.dp) 10.dp else 22.dp
-    Column(
+    val highlightBounds = remember { HighlightBounds() }
+    var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
+    var contentTop by remember { mutableStateOf(0f) }
+    var boardTop by remember { mutableStateOf(0f) }
+    var toolbarTop by remember { mutableStateOf(0f) }
+    Box(
         Modifier
             .fillMaxSize()
             .background(scheme.background)
+            .onGloballyPositioned { overlayOrigin = it.positionInWindow() },
+    ) {
+    Column(
+        Modifier
+            .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
+            .onGloballyPositioned { contentTop = it.positionInWindow().y }
     ) {
         // Title at the start, the one remaining action at the end. Centring what is left over
         // after removing the arrow would have hung the title 44dp off true, and padding the gap
@@ -336,16 +350,44 @@ private fun PlayBoard(
             }
         }
 
-        Text(
-            text = formatClock(seconds),
-            style = MaterialTheme.typography.titleMedium,
-            color = scheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
+        // The clock, and on a first visit the walkthrough offer drawn over it until the first move.
+        // Over the clock rather than under the board: it takes no height from the board, and covers
+        // nothing the player plays on. The row keeps the clock's own height either way.
+        Box(
+            Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = formatClock(seconds),
+                style = MaterialTheme.typography.titleMedium,
+                color = scheme.onSurfaceVariant,
+            )
+            if (teaches && offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
+                Box(Modifier.matchParentSize().background(scheme.background), contentAlignment = Alignment.Center) {
+                    Text(
+                        "New to ${puzzle.displayName}? One-minute walkthrough →",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(puzzle.accent),
+                        maxLines = 1,
+                        modifier = Modifier
+                            .requiredHeight(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showTutorial = true }
+                            .padding(horizontal = 12.dp)
+                            .wrapContentHeight(Alignment.CenterVertically),
+                    )
+                }
+            }
+        }
 
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            CompositionLocalProvider(LocalBoardHighlight provides hintSession.highlight) {
+        Box(
+            Modifier.weight(1f).onGloballyPositioned { boardTop = it.positionInWindow().y },
+            contentAlignment = Alignment.Center,
+        ) {
+            CompositionLocalProvider(
+                LocalBoardHighlight provides hintSession.highlight,
+                LocalHighlightBounds provides highlightBounds,
+            ) {
                 puzzle.Board(
                     state = state,
                     onState = { next -> push(next) },
@@ -354,41 +396,9 @@ private fun PlayBoard(
             }
         }
 
-        // The space under the board is reserved only while there is something in it: the hint
-        // panel, or the one-line walkthrough offer on a first visit. It eases open and shut, so a
-        // hint the player asked for shrinks the board smoothly and a closing one gives it back,
-        // rather than every teaching puzzle carrying a blank band all game. Solving changes
-        // nothing: the solved card takes the toolbar's own space (below), and a hint is cleared
-        // before the board is measured again.
-        val slotTarget = when {
-            !teaches -> 0.dp
-            hintSession.active && !state.solved -> slotHeight
-            offering -> OfferLineHeight
-            else -> 0.dp
-        }
-        val slot by animateDpAsState(slotTarget, tween(200), label = "hintSlot")
-        if (slot > 0.dp) {
-            Box(Modifier.fillMaxWidth().height(slot).padding(horizontal = 18.dp).clipToBounds()) {
-                when {
-                    hintSession.active && !state.solved ->
-                        HintPanel(hintSession, Color(puzzle.accent), onAction = ::onHint)
-                    offering && !state.solved -> Text(
-                        "New to ${puzzle.displayName}? One-minute walkthrough →",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color(puzzle.accent),
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { showTutorial = true }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                    )
-                }
-            }
-        }
-
         // The toolbar is always laid out; once solved it is hidden and the solved card is drawn
         // over exactly the same box, so the board above never changes size on completion.
-        Box {
+        Box(Modifier.onGloballyPositioned { toolbarTop = it.positionInWindow().y }) {
             val solved = state.solved
             Row(
                 Modifier
@@ -429,6 +439,24 @@ private fun PlayBoard(
             }
         }
     }
+
+    if (hintSession.active && !state.solved) {
+        HintPopover(
+            session = hintSession,
+            accent = Color(puzzle.accent),
+            highlight = highlightBounds.rect,
+            origin = overlayOrigin,
+            // Where the popover may sit: from just under the clock (or, to clear a highlight, the
+            // status bar) down to just above the toolbar, which it never covers.
+            safeTop = contentTop,
+            boardTop = boardTop,
+            toolbarTop = toolbarTop,
+            windowHeight = with(LocalDensity.current) { screenHeight.toPx() },
+            onAction = ::onHint,
+        )
+    }
+    }
+
 
     if (showRules) {
         AlertDialog(
