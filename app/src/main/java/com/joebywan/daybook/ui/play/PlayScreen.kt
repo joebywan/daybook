@@ -47,6 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
@@ -285,6 +287,12 @@ private fun PlayBoard(
         return
     }
 
+    // A phone browser with both toolbars showing leaves ~540dp, where the full 156dp slot and 22dp
+    // button padding shrank the board to a third of the width. The slot (its text already scrolls)
+    // and the padding give way below 700dp and 640dp; taller screens are laid out as before.
+    val screenHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
+    val slotHeight = (screenHeight * 0.23f).coerceIn(112.dp, HintSlotHeight)
+    val buttonPad = if (screenHeight < 640.dp) 10.dp else 22.dp
     Column(
         Modifier
             .fillMaxSize()
@@ -340,7 +348,7 @@ private fun PlayBoard(
         }
 
         if (teaches && !state.solved) {
-            Box(Modifier.fillMaxWidth().height(HintSlotHeight).padding(horizontal = 18.dp)) {
+            Box(Modifier.fillMaxWidth().height(slotHeight).padding(horizontal = 18.dp)) {
                 when {
                     hintSession.active -> HintPanel(hintSession, Color(puzzle.accent), onAction = ::onHint)
                     offering -> Text(
@@ -367,7 +375,7 @@ private fun PlayBoard(
             )
         } else {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 22.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = buttonPad),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 ToolButton(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.weight(1f)) {
