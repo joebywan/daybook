@@ -101,6 +101,94 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 
+## Future puzzle candidates
+
+Ideas for puzzles 12 onwards, none started. Any new puzzle follows `docs/PUZZLE_STANDARDS.md` (three
+tiers, proved or deliberately-unproved boards, a teacher, a walkthrough, parity pins, tests).
+
+**What makes a candidate fit Daybook:** it generates on the device from `hash(date, puzzle, tier)` with
+no network; the board has one answer we can prove (or, like Tower and Sets, an answer we do not need
+to prove); it demands thought rather than luck (the owner's stance, recorded under Snap in `CLAUDE.md`'s
+"Settled" list: "I should have to make choices and think"; sparse beats friendly); a teacher can explain a step from what the player can see; and it
+plays with a thumb on a phone in portrait. **Names:** the puzzles are classic genres rebuilt from their
+published rules. Do not use a newspaper's or a game show's trademarked name for one (several of the ideas
+below have a famous branded version; use the descriptive name).
+
+### Asked for by the owner
+
+- [ ] **Word deduction (Mastermind for English words).** The player guesses a hidden word of N letters
+  in a limited number of tries; after each guess every letter is marked *right letter, right place*,
+  *right letter, wrong place* or *not in the word*, with the usual rule for repeated letters. The
+  on-screen keyboard keys take the colour of what is known about them. Closest existing puzzle is
+  **Tower** (guess history, scored feedback, no unique answer to prove): copy its structure.
+  - *Tiers:* word length 4 / 5 / 6, with the guess count scaled; consider a "hard mode" rule (any
+    revealed hint must be reused) as the Expert tier rather than a toggle.
+  - *Answer:* picked by seed from a curated list of common words, **stored in a fixed sorted order**
+    and indexed by the seed's value, so Android and the browser always agree (never a hash set; see
+    the web-parity rules). Guesses are checked against a larger list of valid words.
+  - *Word lists are the real work.* Needs a list with a licence we can ship (check public-domain and
+    permissively licensed lists; do not use a newspaper's list), screened for obscure words in the
+    answer list and for offensive ones. Decide **Australian vs US spelling** (colour/color): answers
+    should avoid words with variants, and both spellings should be accepted as guesses. Budget for the
+    size: tens of thousands of words, a few hundred KB, which is fine on Android and ~100–200 KB
+    gzipped on the web, loaded as a resource.
+  - *Teaching:* a hint that counts the words still possible, nudges toward a letter whose position
+    the clues have already pinned down, then explains the deduction. A teacher here works on the
+    remaining candidate list and must not see the answer.
+  - *Input:* an on-screen keyboard drawn in Compose, so the web needs no phone keyboard.
+  - *Size: L* (mostly the word lists and their tests).
+- [ ] **Domino placement on a region board.** A board of cells grouped into coloured regions; each
+  region carries a rule (all cells equal, all different, total equals N, total less than or more than
+  N, or no rule). A tray holds a set of dominoes (two pip counts, 0–6 each); place every domino over
+  two adjacent cells so that every region's rule holds.
+  - *Generation:* tile an irregular shape with dominoes, assign pips at random, read the region rules
+    off the solution, then prove uniqueness with an independent solver and tighten or loosen the rules
+    until there is exactly one answer (the same shape as Kings' proof). Tiers differ by board size,
+    region count and which rule types appear; keep slack at zero like Mosaic.
+  - *Teaching:* the deductions are crisp ("a two-cell region that must total 12 needs a double six, and
+    the tray has one"), which suits the teacher pattern well.
+  - *Input:* drag a domino from the tray with snap-to-cell, tap a placed domino to rotate or lift it.
+    The tray competes with the toolbar for height; Tower's controls are the nearest precedent.
+  - *Size: L.*
+
+### Suggested
+
+Roughly in order of how well they fit, best first.
+- [ ] **Nonogram (picture logic).** Row and column run-length clues; fill squares to reveal a picture.
+  One answer is provable; hints are line-solving ("this row's 8 clue on 10 squares forces the middle
+  six"), the classic teachable technique. Generate from a random pattern and keep it only if a
+  line-logic solver finishes it, which also guarantees no guessing. Tap to fill, drag to paint, a
+  cross mode (like Kings' crosses). *M–L.* Sizes 5x5 / 10x10 / 15x15 fit a phone.
+- [ ] **Cage-sum Sudoku.** Sudoku plus cages whose digits must total a given sum without repeats. Reuses
+  Sudoku's grid, digit pad, notes and conflict display, so most of the UI exists. Needs a uniqueness
+  solver that handles cages; a teacher using cage combinations ("a 2-cage totalling 3 is {1,2}"). *M.*
+  Wait for Sudoku notes to land first.
+- [ ] **Inequality Latin square.** A small grid (4x4 to 6x6) with each digit once per row and column and
+  `<` / `>` signs between some neighbours. Tiny to generate, a clean uniqueness proof, a nice quick
+  puzzle between the heavy ones. *S–M.*
+- [ ] **Island-and-sea puzzle.** Numbered cells grow islands of that size, islands never touch, the sea is
+  one connected body with no 2x2 pool. Same family as Kings/LITS (region logic, a connectivity
+  proof in the solver); the teacher can name each rule it uses. *M–L.*
+- [ ] **Number-target arithmetic.** Six numbers and a target; combine them with + − × ÷ to reach the
+  target. Generated so a solution always exists; tiers vary the target distance and how many numbers
+  must be used. No unique answer, like Tower. Tiny UI, fast to play, very different feel from the
+  grid puzzles. *S–M.*
+- [ ] **Word ladder.** Change one letter at a time from a start word to an end word through valid words.
+  Needs the same word lists as the word-deduction puzzle (build that first and share them); choose pairs
+  with a unique shortest ladder to keep it provable. *M after the lists exist.*
+- [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
+  exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
+  prototype the input before committing. *L.*
+- [ ] **Tents and trees.** Place a tent next to every tree, no two tents touching, with row and column
+  counts. Close cousin of Kings (non-touching placement plus counts), so much of the board code and
+  teaching carries over. *M.*
+- [ ] **Region-digit puzzle (no touching repeats).** Each region of size n holds 1..n, and equal digits
+  may not touch, even diagonally. Small, regions-based, reuses Kings' region drawing. *S–M.*
+
+**Not recommended** (noted so nobody re-investigates): a crossword needs a licensed clue database, which
+we cannot generate or ship offline; plain word-search and sliding-tile puzzles are generator-easy but do
+not demand thought, against the owner's stated taste.
+
 ## Owner's call
 
 - **Web address.** The web version is served at `knowhowit.com.au/daybook/`, a path on the owner's
