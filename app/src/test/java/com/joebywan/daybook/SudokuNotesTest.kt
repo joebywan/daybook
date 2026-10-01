@@ -38,83 +38,147 @@ class SudokuNotesTest {
 
     private fun SudokuState.noted(i: Int): Set<Int> = (1..9).filter { hasNote(i, it) }.toSet()
 
-    /** An empty cell, and a digit none of its peers holds. */
-    private fun SudokuState.roomyCell(skip: Set<Int> = emptySet()): Pair<Int, Int> {
+    /** An empty cell with a peer digit to contradict: (cell, a digit one of its peers holds). */
+    private fun SudokuState.contradicted(skip: Set<Int> = emptySet()): Pair<Int, Int> {
         for (i in cells.indices) {
             if (cells[i] != 0 || i in skip) continue
-            val d = (1..9).firstOrNull { d -> cells.indices.none { sees(i, it) && cells[it] == d } }
-            if (d != null) return i to d
+            val held = cells.indices.firstOrNull { sees(i, it) && cells[it] != 0 }
+            if (held != null) return i to cells[held]
         }
-        error("no open cell with a free digit")
+        error("no open cell next to a digit")
+    }
+
+    /** An open cell and a different open cell that sees it. */
+    private fun SudokuState.openPair(): Pair<Int, Int> {
+        for (i in cells.indices) {
+            if (cells[i] != 0) continue
+            val j = cells.indices.firstOrNull { cells[it] == 0 && sees(i, it) }
+            if (j != null) return i to j
+        }
+        error("no two open cells that see each other")
     }
 
     // ---- toggling --------------------------------------------------------------------------------
 
     @Test
-    fun `a digit key in notes mode toggles that candidate, one state each`() {
+    fun `a digit key in notes mode always toggles that candidate, one state each`() {
         val s = board()
-        val (cell, d) = s.roomyCell()
-        val other = (1..9).first { it != d && s.canNote(cell, it) }
-
-        val one = s.toggleNote(cell, d)
-        assertEquals(setOf(d), one.noted(cell))
-        assertEquals("one state, one move", s.moves + 1, one.moves)
-        assertEquals("placing nothing", s.cells, one.cells)
-
-        val two = one.toggleNote(cell, other)
-        assertEquals(setOf(d, other), two.noted(cell))
-
-        val back = two.toggleNote(cell, d)
-        assertEquals(setOf(other), back.noted(cell))
-        assertEquals("a note is the cell's own", emptySet<Int>(), back.noted(cell + 1))
+        val cell = s.cells.indices.first { s.cells[it] == 0 }
+        for (d in 1..9) {
+            val on = s.toggleNote(cell, d)
+            assertEquals("digit $d is drawn", setOf(d), on.noted(cell))
+            assertEquals("one state, one move", s.moves + 1, on.moves)
+            assertEquals("placing nothing", s.cells, on.cells)
+            assertEquals("and off again", emptySet<Int>(), on.toggleNote(cell, d).noted(cell))
+        }
+        val two = s.toggleNote(cell, 2).toggleNote(cell, 7)
+        assertEquals(setOf(2, 7), two.noted(cell))
+        assertEquals("a note is the cell's own", emptySet<Int>(), two.noted(cell + 1))
     }
 
     @Test
-    fun `a tap that cannot change anything is refused rather than made an undo step`() {
+    fun `a note for a digit a peer already holds is made and drawn, not refused`() {
+        for (seed in 1L..20L) {
+            val s = board(seed)
+            val (cell, held) = s.contradicted()
+            assertTrue(s.canNote(cell))
+            val noted = s.toggleNote(cell, held)
+            assertNotEquals("not a silent no-op", s, noted)
+            assertEquals(setOf(held), noted.noted(cell))
+            assertEquals(1 shl (held - 1), noted.visibleNotes(cell))
+            // Still drawn after unrelated moves elsewhere.
+            val other = s.cells.indices.first { s.cells[it] == 0 && !sees(cell, it) && it != cell }
+            assertEquals(setOf(held), noted.withCell(other, 1).noted(cell))
+        }
+    }
+
+    @Test
+    fun `notes cannot go on a given or a filled cell, and the board says so rather than ignore a tap`() {
         val s = board()
         val given = s.givens.indexOfFirst { it }
+        assertFalse(s.canNote(given))
         assertSame("a given", s, s.toggleNote(given, 5))
-
-        val (cell, d) = s.roomyCell()
-        val placed = s.withCell(cell, d)
+        val cell = s.cells.indices.first { s.cells[it] == 0 }
+        val placed = s.withCell(cell, 4)
+        assertFalse(placed.canNote(cell))
         assertSame("a filled cell carries no notes", placed, placed.toggleNote(cell, 3))
-        assertFalse(placed.canNote(cell, 3))
-
-        // A digit a peer already holds would be hidden the moment it was made.
-        val open = s.cells.indices.first { s.cells[it] == 0 }
-        val held = s.cells.indices.first { sees(open, it) && s.cells[it] != 0 }
-        assertFalse(s.canNote(open, s.cells[held]))
-        assertSame(s, s.toggleNote(open, s.cells[held]))
     }
 
     // ---- placing and erasing -----------------------------------------------------------------------
 
     @Test
-    fun `placing a digit clears that cell's notes and only that cell's`() {
+    fun `placing a digit clears that cell's notes`() {
         val s0 = board()
-        val (a, da) = s0.roomyCell()
-        val (b, db) = s0.roomyCell(skip = setOf(a))
-        val s = s0.toggleNote(a, da).toggleNote(b, db)
-        val placed = s.withCell(a, da)
-        assertEquals(da, placed.cells[a])
+        val a = s0.cells.indices.first { s0.cells[it] == 0 }
+        val s = s0.toggleNote(a, 3).toggleNote(a, 8)
+        val placed = s.withCell(a, 3)
+        assertEquals(3, placed.cells[a])
         assertEquals(0, placed.notes[a])
-        assertEquals("the other cell keeps its note", s.notes[b], placed.notes[b])
         assertEquals(s.moves + 1, placed.moves)
+    }
+
+    @Test
+    fun `placing a digit strikes it from the notes of every peer, and only peers, in the same state`() {
+        val s0 = board()
+        val a = s0.cells.indices.first { s0.cells[it] == 0 }
+        // Notes 3 and 8 on every other open cell, so peers and strangers can be told apart.
+        var s = s0
+        val open = s0.cells.indices.filter { s0.cells[it] == 0 && it != a }
+        for (i in open) s = s.toggleNote(i, 3).toggleNote(i, 8)
+        val placed = s.withCell(a, 3)
+        for (i in open) {
+            val expected = if (sees(a, i)) setOf(8) else setOf(3, 8)
+            assertEquals("cell $i", expected, placed.noted(i))
+        }
+        assertEquals("one state: one move", s.moves + 1, placed.moves)
+        assertEquals(setOf(8), placed.noted(open.first { sees(a, it) }))
+    }
+
+    @Test
+    fun `undo restores the digit and the peers' notes together, in one step`() {
+        val initial = board()
+        val (a, b) = initial.openPair()
+        var game = SavedGame(initial)
+        fun move(next: SudokuState) {
+            game = game.copy(state = next, history = game.history + game.state)
+        }
+        move((game.state as SudokuState).toggleNote(b, 6))
+        move((game.state as SudokuState).select(a))
+        val before = game.history.size
+        move((game.state as SudokuState).withCell(a, 6))
+        assertEquals("one gesture, one undo entry", before + 1, game.history.size)
+        assertEquals(emptySet<Int>(), (game.state as SudokuState).noted(b))
+        game = game.copy(state = game.history.last(), history = game.history.dropLast(1))
+        val back = game.state as SudokuState
+        assertEquals(0, back.cells[a])
+        assertEquals("the peer note is back with the digit gone", setOf(6), back.noted(b))
+    }
+
+    @Test
+    fun `notes made after a peer digit exists are kept, and erasing a digit does not resurrect cleared ones`() {
+        val s0 = board()
+        val (a, b) = s0.openPair()
+        val withNote = s0.toggleNote(b, 5)
+        val placed = withNote.withCell(a, 5)
+        assertEquals(emptySet<Int>(), placed.noted(b))
+        // Added after the peer digit: shown, and survives unrelated moves.
+        val again = placed.toggleNote(b, 5)
+        assertEquals(setOf(5), again.noted(b))
+        // Erasing the digit leaves what the player has now, and does not bring back what was cleared.
+        assertEquals(emptySet<Int>(), placed.withCell(a, 0).noted(b))
+        assertEquals(setOf(5), again.withCell(a, 0).noted(b))
     }
 
     @Test
     fun `erasing an empty cell clears its notes, and erasing a digit leaves none behind`() {
         val s0 = board()
-        val (a, d) = s0.roomyCell()
-        val s = s0.toggleNote(a, d).toggleNote(a, (1..9).first { it != d && s0.canNote(a, it) })
+        val a = s0.cells.indices.first { s0.cells[it] == 0 }
+        val s = s0.toggleNote(a, 2).toggleNote(a, 9)
         assertEquals(2, s.noted(a).size)
         val erased = s.withCell(a, 0)
         assertEquals(0, erased.notes[a])
         assertEquals(0, erased.cells[a])
-
-        // The key's own toggle: tap a placed digit again to clear it; the cell is then clean.
-        val round = s0.withCell(a, d).withCell(a, 0)
-        assertEquals(emptySet<Int>(), round.noted(a))
+        assertEquals(emptySet<Int>(), s0.withCell(a, 4).withCell(a, 0).noted(a))
     }
 
     @Test
@@ -125,56 +189,14 @@ class SudokuNotesTest {
         assertEquals(0, s.visibleNotes(given))
     }
 
-    // ---- derived hiding ----------------------------------------------------------------------------
-
-    @Test
-    fun `a note a peer's digit rules out is hidden, not deleted, and returns with the digit gone`() {
-        val s0 = board()
-        val (a, d) = s0.roomyCell()
-        val noted = s0.toggleNote(a, d)
-        // Put d in some other open cell that shares a row, column or box with a.
-        val peer = s0.cells.indices.first { s0.cells[it] == 0 && sees(a, it) && s0.canNote(it, d) }
-        val shadowed = noted.copy(cells = noted.cells.toMutableList().also { it[peer] = d })
-
-        assertEquals("hidden", emptySet<Int>(), shadowed.noted(a))
-        assertEquals("not deleted", noted.notes, shadowed.notes)
-
-        val lifted = shadowed.copy(cells = shadowed.cells.toMutableList().also { it[peer] = 0 })
-        assertEquals("back again", setOf(d), lifted.noted(a))
-        assertEquals(noted, lifted)
-    }
-
-    @Test
-    fun `only a peer rules a note out, and only the digit it holds`() {
-        val s0 = board()
-        val (a, d) = s0.roomyCell()
-        val other = (1..9).first { it != d && s0.canNote(a, it) }
-        val s = s0.toggleNote(a, d).toggleNote(a, other)
-        val stranger = s.cells.indices.first { s.cells[it] == 0 && !sees(a, it) && it != a }
-        val far = s.copy(cells = s.cells.toMutableList().also { it[stranger] = d })
-        assertEquals("a non-peer holding d changes nothing", setOf(d, other), far.noted(a))
-        val near = s.cells.indices.first { s.cells[it] == 0 && sees(a, it) }
-        val shadow = s.copy(cells = s.cells.toMutableList().also { it[near] = other })
-        assertEquals("a peer holding $other hides only $other", setOf(d), shadow.noted(a))
-    }
-
-    @Test
-    fun `a hidden note cannot be toggled, since nothing shows to toggle`() {
-        val s0 = board()
-        val (a, d) = s0.roomyCell()
-        val peer = s0.cells.indices.first { s0.cells[it] == 0 && sees(a, it) && s0.canNote(it, d) }
-        val s = s0.toggleNote(a, d).copy(cells = s0.cells.toMutableList().also { it[peer] = d })
-        assertFalse(s.canNote(a, d))
-        assertSame(s, s.toggleNote(a, d))
-    }
-
     // ---- undo, restart, saves ----------------------------------------------------------------------
 
     @Test
     fun `notes ride the state, so undo and restart take them back with the move`() {
         // PlayScreen: a move pushes the old state; undo pops it; restart returns to `initial`.
         val initial = board()
-        val (a, d) = initial.roomyCell()
+        val a = initial.cells.indices.first { initial.cells[it] == 0 }
+        val d = 3
         var game = SavedGame(initial)
         fun move(next: SudokuState) {
             game = game.copy(state = next, history = game.history + game.state)
@@ -217,7 +239,8 @@ class SudokuNotesTest {
     @Test
     fun `notes are written when there are some, and read back`() {
         val s0 = oldBoard()
-        val (a, d) = s0.roomyCell()
+        val a = s0.cells.indices.first { s0.cells[it] == 0 }
+        val d = 3
         val s = s0.toggleNote(a, d)
         val saved = SavedGame(s, history = listOf(s0))
         val raw = saved.encode()
@@ -230,8 +253,8 @@ class SudokuNotesTest {
     fun `notes stay out of the web parity fingerprint`() {
         val day = LocalDate.of(2026, 3, 3)
         val s = Sudoku.generate(DailySeed.seedFor(day, "sudoku", Difficulty.STANDARD), Difficulty.STANDARD) as SudokuState
-        val (a, d) = s.roomyCell()
-        val noted = s.toggleNote(a, d)
+        val a = s.cells.indices.first { s.cells[it] == 0 }
+        val noted = s.toggleNote(a, 3)
         assertNotEquals(s, noted)
         assertEquals(ParityFingerprint.body(s), ParityFingerprint.body(noted))
     }
@@ -256,8 +279,8 @@ class SudokuNotesTest {
         assertFalse("placing is not noting", accepts(s.withCell(cell, key)))
         // The cell has only one candidate left, so a near miss is the right digit on the wrong cell,
         // or a second mark somewhere else on top of the right one.
-        val elsewhere = Sudoku.TUTORIAL_OPEN.filter { s.cells[it] == 0 && it != cell }.first { c -> (1..9).any { s.canNote(c, it) } }
-        val digit = (1..9).first { s.canNote(elsewhere, it) }
+        val elsewhere = Sudoku.TUTORIAL_OPEN.first { s.cells[it] == 0 && it != cell }
+        val digit = 3
         assertFalse("another cell", accepts(s.toggleNote(elsewhere, digit)))
         assertFalse("two notes", accepts(s.toggleNote(cell, key).toggleNote(elsewhere, digit)))
         assertFalse("a bare selection", accepts(s.select(cell)))

@@ -99,8 +99,7 @@ class StateSerializationTest {
             val cell = state.givens.indexOfFirst { !it }
             // A placed digit and a pencilled cell, so the notes field is part of what must survive.
             val noted = (cell + 1 until 81).first { !state.givens[it] }
-            val digit = (1..9).first { state.canNote(noted, it) }
-            state.select(cell).withCell(cell, 5).toggleNote(noted, digit)
+            state.select(cell).withCell(cell, 5).toggleNote(noted, 3)
         }
         is TowerState -> (0 until state.slots)
             .fold(state) { acc, slot -> acc.withPeg(slot, slot % state.colours) }

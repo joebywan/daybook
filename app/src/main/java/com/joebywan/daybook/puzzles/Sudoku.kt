@@ -76,9 +76,12 @@ data class SudokuState(
     /**
      * The player's pencil marks: one 9-bit mask per cell, bit `d - 1` set when digit `d` is noted
      * there. Defaulted and, being equal to its default on a game without notes, never written, so a
-     * save made before notes existed still decodes, with none. A cell holding a digit carries no
-     * notes (see [withCell]). What is *shown* is [visibleNotes]: a note a placed digit rules out is
-     * hidden, not deleted, so taking that digit back brings it back and nothing has to be retracted.
+     * save made before notes existed still decodes, with none. Every mark is drawn: a mark the
+     * player makes is never refused or hidden, even for a digit a peer already holds (a wrong
+     * judgement is theirs to make, and the conflict display catches it once a digit goes in). A cell
+     * holding a digit carries no notes. Marks are tidied only when a digit is *placed*, in the same
+     * state ([withCell]); taking that digit back does not bring the cleared marks back, except by
+     * undo, which restores the whole earlier state.
      */
     val notes: List<Int> = NO_NOTES,
 ) : PuzzleState {
@@ -102,44 +105,37 @@ data class SudokuState(
     }
 
     /**
-     * Sets a digit, or clears the cell with 0. Either way the cell's notes go: a placed digit makes
-     * them moot, and clearing an empty cell is how its notes are rubbed out.
+     * Sets a digit, or clears the cell with 0. The cell's own notes go either way: a placed digit
+     * makes them moot, and clearing an empty cell is how its notes are rubbed out. Placing a digit
+     * also strikes it from the notes of every peer, in this same state, so one undo restores the
+     * digit and those notes together. Erasing a digit does not put them back. (Not derived at
+     * render time: a note hidden by a peer is indistinguishable from a tap that was refused.)
      */
-    fun withCell(index: Int, value: Int): SudokuState =
-        if (givens[index]) this
-        else copy(
+    fun withCell(index: Int, value: Int): SudokuState {
+        if (givens[index]) return this
+        val bit = if (value == 0) 0 else 1 shl (value - 1)
+        val next = notes.toMutableList()
+        next[index] = 0
+        if (bit != 0) for (p in Sudoku.peers(index)) next[p] = next[p] and bit.inv()
+        return copy(
             cells = cells.toMutableList().also { it[index] = value },
-            notes = if (notes[index] == 0) notes else notes.toMutableList().also { it[index] = 0 },
+            notes = if (next == notes) notes else next,
             moves = moves + 1,
         )
-
-    /** The notes on [index] that are drawn: none on a filled cell, and none a peer's digit rules out. */
-    fun visibleNotes(index: Int): Int {
-        val mask = notes[index]
-        if (mask == 0 || cells[index] != 0) return 0
-        var ruledOut = 0
-        for (p in Sudoku.peers(index)) {
-            val v = cells[p]
-            if (v != 0) ruledOut = ruledOut or (1 shl (v - 1))
-        }
-        return mask and ruledOut.inv()
     }
 
-    /** Whether a note for [digit] is shown on [index]. */
+    /** The notes drawn on [index]: none on a filled cell. */
+    fun visibleNotes(index: Int): Int = if (cells[index] != 0) 0 else notes[index]
+
+    /** Whether a note for [digit] is drawn on [index]. */
     fun hasNote(index: Int, digit: Int): Boolean = visibleNotes(index) and (1 shl (digit - 1)) != 0
 
-    /**
-     * Whether tapping [digit] in notes mode can do anything on [index]: the cell must be an empty
-     * one, and the digit must not already be placed in a peer (such a note would be hidden the
-     * moment it was made, so there would be nothing to see and nothing to take back).
-     */
-    fun canNote(index: Int, digit: Int): Boolean =
-        !givens[index] && cells[index] == 0 &&
-            (hasNote(index, digit) || Sudoku.peers(index).none { cells[it] == digit })
+    /** Whether notes can be made on [index] at all: an empty square that is not a given. */
+    fun canNote(index: Int): Boolean = !givens[index] && cells[index] == 0
 
-    /** Adds the note for [digit] on [index], or takes it off when shown. One state, one undo step. */
+    /** Adds the note for [digit] on [index], or takes it off. Always, for any digit, on an open square. */
     fun toggleNote(index: Int, digit: Int): SudokuState =
-        if (!canNote(index, digit)) this
+        if (!canNote(index)) this
         else copy(
             notes = notes.toMutableList().also { it[index] = it[index] xor (1 shl (digit - 1)) },
             moves = moves + 1,
@@ -171,7 +167,7 @@ object Sudoku : PuzzleType {
         "No digit may repeat within a row, a column or a 3x3 box.",
         "Tap a cell, then tap a digit. Tap the digit again to clear it.",
         "Tap the pencil to take notes: while it is lit, a digit is pencilled small in the cell " +
-            "instead of placed, and a note a placed digit rules out is hidden until that digit goes.",
+            "instead of placed. Placing a digit clears it from the notes of the cells it sees.",
         "Clashing digits are shown in red as you go.",
     )
 
@@ -660,9 +656,12 @@ object Sudoku : PuzzleType {
                         val at = s.selected
                         // In notes mode a key that is already pencilled on the selected cell is tinted.
                         val pencilled = notesMode && at != null && s.hasNote(at, digit)
+                        // Notes cannot go on a filled or given cell: the keys show it rather than do nothing.
+                        val inert = notesMode && at != null && !s.canNote(at)
                         Box(
                             Modifier
                                 .weight(1f)
+                                .alpha(if (inert) 0.35f else 1f)
                                 .height(PAD_HEIGHT)
                                 .highlightAnchor(SudokuTeacher.pad(digit))
                                 .ring(highlight.look(SudokuTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
@@ -674,12 +673,12 @@ object Sudoku : PuzzleType {
                                         else -> scheme.surface
                                     }
                                 )
-                                .clickable(enabled = interactive && at != null) {
+                                .clickable(enabled = interactive && at != null && !inert) {
                                     val cell = at ?: return@clickable
                                     if (notesMode) {
-                                        // A tap that cannot change anything (a filled cell, a digit a
-                                        // peer holds) emits nothing, so it is not an undo step.
-                                        if (s.canNote(cell, digit)) onState(s.toggleNote(cell, digit))
+                                        // Keys are dimmed and inert on a filled or given cell (below),
+                                        // so this is never a silent refusal.
+                                        if (s.canNote(cell)) onState(s.toggleNote(cell, digit))
                                     } else {
                                         onState(s.withCell(cell, if (s.cells[cell] == digit) 0 else digit))
                                     }

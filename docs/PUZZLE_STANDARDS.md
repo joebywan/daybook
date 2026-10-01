@@ -236,7 +236,11 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   intermediate state is not shouted at.
 - **Derive, don't store.** Anything computable from the board is recomputed per render: Kings'
   `eliminated()`, LITS' `impossible()`, Pipes' wet tiles. Store only the player's marks. A mistake that cannot be
-  read off the board needs a history in state (`MosaicState.trail`).
+  read off the board needs a history in state (`MosaicState.trail`). The exception is the player's own marks:
+  Sudoku's notes are stored and always drawn, and placing a digit strikes it from its peers' notes *in the same
+  state* (one undo restores both). They are not derived (hidden when a peer holds the digit) because a hidden
+  note is indistinguishable from a refused tap, and a player may make a wrong judgement; conflicts show once
+  a digit is placed.
 - **Colour, contrast, legibility.** Draw with `MaterialTheme.colorScheme` so light and dark both work
   (`ui/theme/Palette.kt`: `LightScheme`, `DarkScheme`; the web follows `prefers-color-scheme`). Colour is never
   the only signal: Kings' region colours are picked by CIEDE2000 distance including colour-blind vision
