@@ -133,9 +133,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Infrastructure
 
-- [ ] **CI on Renovate's PRs.** PRs opened with the default `GITHUB_TOKEN` do not trigger CI, yet GitHub
-  Actions bumps automerge. Add a `RENOVATE_TOKEN` PAT (README, "Dependency updates") so automerge is
-  gated by a real build. *S, needs the owner to create the token.*
+- [ ] **CI on Renovate's PRs.** PRs opened with the default `GITHUB_TOKEN` do not trigger CI. Since `main`
+  now requires the `build` check, Renovate's automerge PRs will sit waiting for a check that never runs
+  until this is fixed (before, they merged unchecked). Add a `RENOVATE_TOKEN` PAT (README, "Dependency
+  updates") so they are built and can merge. *S, needs the owner to create the token. Until then,
+  merge Renovate's PRs by hand once you have looked at them.*
 - [ ] **Pages HTTPS.** The Pages API reports `https_enforced=false` with no CNAME on the project site
   (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
