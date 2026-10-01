@@ -87,7 +87,11 @@ data class MamboState(
     val solution: List<Sym>,
     override val moves: Int = 0,
 ) : PuzzleState {
-    override val solved: Boolean get() = cells == solution
+    /**
+     * Success is the rules, not a match with [solution]: a board with several legal answers must
+     * accept any of them. The one place the rules live is [Mambo.violationsOf].
+     */
+    override val solved: Boolean get() = Mambo.isSolved(size, cells, links)
 
     /**
      * Every rule the board breaks on its own terms — [solution] is deliberately not consulted.
@@ -97,46 +101,7 @@ data class MamboState(
      * illegal one: the player is entitled to follow a mistaken line until it collides with a rule
      * they can check by eye, which is the only thing reported here.
      */
-    fun violations(): List<Violation> {
-        val out = mutableListOf<Violation>()
-        val half = size / 2
-
-        // Three in a line, scanning each run of three once along both axes.
-        for (r in 0 until size) for (c in 0 until size) {
-            val i = r * size + c
-            val sym = cells[i]
-            if (sym == Sym.NONE) continue
-            if (c + 2 < size && cells[i + 1] == sym && cells[i + 2] == sym) {
-                out += Violation(Broken.TRIPLE, listOf(i, i + 1, i + 2))
-            }
-            if (r + 2 < size && cells[i + size] == sym && cells[i + 2 * size] == sym) {
-                out += Violation(Broken.TRIPLE, listOf(i, i + size, i + 2 * size))
-            }
-        }
-
-        // A line already holding more than half of one symbol can never balance.
-        for (line in 0 until size) {
-            for (idx in listOf(rowOf(line), columnOf(line))) {
-                if (listOf(Sym.SUN, Sym.MOON).any { sym -> idx.count { cells[it] == sym } > half }) {
-                    out += Violation(Broken.BALANCE, idx)
-                }
-            }
-        }
-
-        // A printed link both of whose ends are filled in must hold.
-        for (link in links) {
-            val a = cells[link.a]
-            val b = cells[link.b]
-            if (a == Sym.NONE || b == Sym.NONE) continue
-            if ((a == b) != link.same) out += Violation(Broken.LINK, listOf(link.a, link.b))
-        }
-
-        return out
-    }
-
-    private fun rowOf(r: Int): List<Int> = (0 until size).map { r * size + it }
-
-    private fun columnOf(c: Int): List<Int> = (0 until size).map { it * size + c }
+    fun violations(): List<Violation> = Mambo.violationsOf(size, cells, links)
 
     fun withCell(index: Int, value: Sym): MamboState =
         copy(cells = cells.toMutableList().also { it[index] = value }, moves = moves + 1)
@@ -188,6 +153,104 @@ object Mambo : PuzzleType {
         val cells = solution.indices.map { if (givens[it]) solution[it] else Sym.NONE }
         return MamboState(n, givens, cells, links, solution)
     }
+
+    // ---- the rules, in one place ----------------------------------------------------------------
+
+    /**
+     * Every rule a (possibly part-filled) grid visibly breaks. [MamboState.violations] (live
+     * feedback), [isSolved] (the win check) and the generator's last check all read this, so the
+     * three cannot drift apart. Blank cells break nothing.
+     */
+    fun violationsOf(size: Int, cells: List<Sym>, links: List<Link>): List<Violation> {
+        val out = mutableListOf<Violation>()
+        val half = size / 2
+
+        // Three in a line, scanning each run of three once along both axes.
+        for (r in 0 until size) for (c in 0 until size) {
+            val i = r * size + c
+            val sym = cells[i]
+            if (sym == Sym.NONE) continue
+            if (c + 2 < size && cells[i + 1] == sym && cells[i + 2] == sym) {
+                out += Violation(Broken.TRIPLE, listOf(i, i + 1, i + 2))
+            }
+            if (r + 2 < size && cells[i + size] == sym && cells[i + 2 * size] == sym) {
+                out += Violation(Broken.TRIPLE, listOf(i, i + size, i + 2 * size))
+            }
+        }
+
+        // A line already holding more than half of one symbol can never balance.
+        for (line in 0 until size) {
+            val row = (0 until size).map { line * size + it }
+            val column = (0 until size).map { it * size + line }
+            for (idx in listOf(row, column)) {
+                if (listOf(Sym.SUN, Sym.MOON).any { sym -> idx.count { cells[it] == sym } > half }) {
+                    out += Violation(Broken.BALANCE, idx)
+                }
+            }
+        }
+
+        // A printed link both of whose ends are filled in must hold.
+        for (link in links) {
+            val a = cells[link.a]
+            val b = cells[link.b]
+            if (a == Sym.NONE || b == Sym.NONE) continue
+            if ((a == b) != link.same) out += Violation(Broken.LINK, listOf(link.a, link.b))
+        }
+
+        return out
+    }
+
+    /**
+     * Every cell filled and no rule broken. With nothing blank, no line over half in either symbol
+     * is exactly a balanced line, so [violationsOf] is the whole rule set.
+     */
+    fun isSolved(size: Int, cells: List<Sym>, links: List<Link>): Boolean =
+        cells.none { it == Sym.NONE } && violationsOf(size, cells, links).isEmpty()
+
+    /**
+     * A legal full grid that keeps every filled cell of [clues] and every link, or null. Used to
+     * ask "does any answer keep this?" so a mistake means no legal answer, not a difference from
+     * the stored one. Propagation first, then a guess on the first blank; boards the generator
+     * made need no guess at all.
+     */
+    internal fun completion(n: Int, clues: List<Sym>, links: List<Link>): List<Sym>? {
+        val grid = clues.toTypedArray()
+        return completeFrom(n, grid, links)
+    }
+
+    private fun completeFrom(n: Int, grid: Array<Sym>, links: List<Link>): List<Sym>? {
+        if (!propagate(n, grid, links)) return null
+        val blank = grid.indexOfFirst { it == Sym.NONE }
+        if (blank < 0) return if (isSolved(n, grid.toList(), links)) grid.toList() else null
+        for (sym in listOf(Sym.SUN, Sym.MOON)) {
+            val next = grid.copyOf()
+            next[blank] = sym
+            completeFrom(n, next, links)?.let { return it }
+        }
+        return null
+    }
+
+    /** True when some legal answer, given only the printed clues, has [sym] at [cell]. */
+    internal fun someAnswerKeeps(s: MamboState, cell: Int, sym: Sym): Boolean {
+        if (s.solution[cell] == sym) return true
+        val clues = List(s.cells.size) { if (s.givens[it]) s.cells[it] else Sym.NONE }.toMutableList()
+        if (clues[cell] != Sym.NONE && clues[cell] != sym) return false
+        clues[cell] = sym
+        return completion(s.size, clues, s.links) != null
+    }
+
+    /**
+     * The answer to point at: the stored one while the player's cells agree with it, otherwise a
+     * legal answer that keeps everything the player has filled in, otherwise the stored one.
+     */
+    internal fun answerFor(s: MamboState): List<Sym> {
+        if (s.cells.indices.all { s.cells[it] == Sym.NONE || s.cells[it] == s.solution[it] }) return s.solution
+        return completion(s.size, s.cells, s.links) ?: s.solution
+    }
+
+    /** Filled cells no legal answer keeps, in reading order. */
+    internal fun mistakes(s: MamboState): List<Int> =
+        s.cells.indices.filter { s.cells[it] != Sym.NONE && !someAnswerKeeps(s, it, s.cells[it]) }
 
     // ---- generation ---------------------------------------------------------------------------
 
@@ -290,7 +353,8 @@ object Mambo : PuzzleType {
         solution: List<Sym>,
     ): Boolean {
         val grid = Array(n * n) { if (givens[it]) solution[it] else Sym.NONE }
-        return propagate(n, grid, links) && grid.none { it == Sym.NONE }
+        return propagate(n, grid, links) && grid.none { it == Sym.NONE } &&
+            isSolved(n, grid.toList(), links)
     }
 
     /**
@@ -300,7 +364,7 @@ object Mambo : PuzzleType {
      * over-filled-line checks, since both surface as an attempt to write two symbols into one
      * cell.
      */
-    private fun propagate(n: Int, grid: Array<Sym>, links: List<Link>): Boolean {
+    internal fun propagate(n: Int, grid: Array<Sym>, links: List<Link>): Boolean {
         val half = n / 2
         var ok = true
         var changed = true
@@ -381,12 +445,11 @@ object Mambo : PuzzleType {
     override fun hint(state: PuzzleState): PuzzleState? {
         val s = state as MamboState
         // A hint is asked for, so it may read the answer the live feedback must not.
-        val wrong = s.cells.indices.firstOrNull {
-            s.cells[it] != Sym.NONE && s.cells[it] != s.solution[it]
-        }
-        if (wrong != null) return s.withCell(wrong, s.solution[wrong])
+        val answer = answerFor(s)
+        val wrong = mistakes(s).firstOrNull()
+        if (wrong != null) return s.withCell(wrong, answer[wrong])
         val blank = s.cells.indices.firstOrNull { s.cells[it] == Sym.NONE } ?: return null
-        return s.withCell(blank, s.solution[blank])
+        return s.withCell(blank, answer[blank])
     }
 
     // ---- teaching -----------------------------------------------------------------------------
