@@ -22,6 +22,7 @@ sounded. Do not turn it off.
 
 - `core/PuzzleType.kt` — the contract. Adding a puzzle is one file in `puzzles/` plus one line
   in `core/PuzzleRegistry.kt`; home grid, archive, streaks, stats, hints and saves pick it up.
+  What every puzzle must have beyond that (tiers, proof, hints, walkthrough, tests): `docs/PUZZLE_STANDARDS.md`.
 - `generate(seed, difficulty)` **must be pure**. Daily boards come from
   `hash(date, puzzleId, difficulty)`, so purity is what makes the whole archive free and offline.
 - `PuzzleState` is a sealed `@Serializable` interface living in `puzzles/` — Kotlin requires
