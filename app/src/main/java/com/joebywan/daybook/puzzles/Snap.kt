@@ -458,7 +458,7 @@ object Snap : PuzzleType {
             TutorialFrame(
                 state = tutorialBoard(answerTo(4) + listOf(9, 10)),
                 caption = "Say you dashed for 2. Now the bottom corner has one way in: a dead end, " +
-                    "but the line must end on 4. Put your finger on the glowing square to cut back to it.",
+                    "but the line must end on 4. Start a drag on the glowing square to cut back to it.",
                 highlight = BoardHighlight(strong = setOf(8), soft = setOf(12)),
                 accepts = line(answerTo(4)),
                 retry = "Start a drag on the glowing square of the line.",

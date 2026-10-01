@@ -149,7 +149,7 @@ class SnapTutorialTest {
         assertFalse(early.any { marks[it] == 2 })
         // "Drag from 3 back one square": the wanted line is the same line one square shorter.
         assertTrue(frames[7].accepts!!(board(early.dropLast(1))))
-        // "Put your finger on the glowing square to cut back to it": the glowing square is the end
+        // "Start a drag on the glowing square to cut back to it": the glowing square is the end
         // of the line the frame wants.
         assertEquals(setOf(8), frames[5].highlight.strong)
         assertTrue(frames[5].accepts!!(board(dashed.take(dashed.indexOf(8) + 1))))

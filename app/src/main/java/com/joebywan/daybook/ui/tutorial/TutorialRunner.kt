@@ -182,8 +182,8 @@ fun TutorialRunner(
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (status == Status.RETRY) scheme.onSurfaceVariant else accent,
-                        maxLines = 1,
-                        minLines = 1,
+                        maxLines = 2,
+                        minLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
