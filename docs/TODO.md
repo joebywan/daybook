@@ -103,11 +103,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Owner's call
 
-- **`gradle/actions` v6.** Newer than the v5 we use, but upgrading means accepting Gradle's Terms of Use
-  for a proprietary caching component. Held at v5 in `renovate.json` until decided.
-- **Play Store.** Listing not created (README, "Publishing to Google Play"). Creating a developer account
-  publishes a developer name and contact details, which is the real privacy decision. The package name
-  and signing key are settled. (`CLAUDE.md`, "Settled")
-- **Portrait lock.** The app is locked to portrait because landscape broke most boards. Revisit if wanted.
-- **Where the web version lives.** It is served from a path on the owner's existing custom domain via
-  Pages. A dedicated domain or `github.io` address is possible if that stops being convenient.
+- **Web address.** The web version is served at `knowhowit.com.au/daybook/`, a path on the owner's
+  existing domain. That works, and nothing needs doing unless it matters. The one thing to know: a
+  browser keys saved progress and a home-screen install to the address, so moving the site later
+  strands existing installs (the export/import backup on the stats screen is the way across). Decide
+  the final address before many people install it, if it is going to change at all. Other sites on
+  that domain share its browser storage, so keep key names distinct.
+- **Play Store listing** is not created (README, "Publishing to Google Play"). The owner is fine with the
+  developer name being public, so it is only a matter of doing it when wanted.
