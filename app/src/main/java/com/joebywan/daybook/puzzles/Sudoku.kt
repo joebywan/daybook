@@ -157,7 +157,7 @@ private val PAD_HEIGHT = 48.dp
 private val PAD_GAP = 18.dp
 
 /** A note's size as a share of its cell's side, and how strongly it is inked. Tuned by rendering. */
-private const val NOTE_SIZE = 0.30f
+private const val NOTE_SIZE = 0.34f
 private const val NOTE_ALPHA = 0.85f
 
 object Sudoku : PuzzleType {

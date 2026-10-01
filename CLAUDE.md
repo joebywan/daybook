@@ -174,7 +174,9 @@ If a gesture detector must outlive state changes, read the board through `rememb
 never the captured value.
 
 **Derive, don't store, anything computed from board state.** Kings' eliminations and LITS's
-impossible squares are recomputed per render. Storing them means owning which to retract when a
+impossible squares are recomputed per render. Sudoku's pencil marks (`SudokuState.notes`, a 9-bit mask
+per cell, defaulted so old saves load) are stored, but a note a placed peer digit rules out is only
+hidden (`visibleNotes`); the notes mode is `rememberSaveable` in the board, not state. Storing them means owning which to retract when a
 piece is lifted, which is where the feature rots.
 
 **Verify by rendering, not reasoning.** Icons, motifs, crescents, pipe joints and crosses have
