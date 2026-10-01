@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -83,6 +84,10 @@ data class SudokuState(
 }
 
 /** Sudoku — the classic 9x9. */
+/** The digit pad under the grid, which the grid's size has to leave room for. */
+private val PAD_HEIGHT = 48.dp
+private val PAD_GAP = 18.dp
+
 object Sudoku : PuzzleType {
 
     override val id = "sudoku"
@@ -454,10 +459,18 @@ object Sudoku : PuzzleType {
             )
         }
 
-        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val cell = maxWidth / 9
-                Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
+        // Sized from both axes (CLAUDE.md): from width alone, a 693dp-tall screen ran the grid up
+        // over the header and down under the hint slot. The pad keeps the full width.
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+            val side = if (constraints.hasBoundedHeight) {
+                minOf(maxWidth, (maxHeight - PAD_GAP - PAD_HEIGHT).coerceAtLeast(0.dp))
+            } else {
+                maxWidth
+            }
+            val cell = side / 9
+            val padWidth = maxWidth
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(side)) {
                     for (r in 0 until 9) {
                         for (c in 0 until 9) {
                             val i = r * 9 + c
@@ -506,34 +519,34 @@ object Sudoku : PuzzleType {
                         }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(PAD_GAP))
 
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                (1..9).forEach { digit ->
-                    val remaining = 9 - s.cells.count { it == digit }
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .ring(highlight.look(SudokuTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (remaining == 0) scheme.surfaceVariant else scheme.surface)
-                            .clickable(enabled = interactive && s.selected != null) {
-                                val at = s.selected ?: return@clickable
-                                onState(s.withCell(at, if (s.cells[at] == digit) 0 else digit))
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            digit.toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = if (remaining == 0) scheme.outline else scheme.onSurface,
-                        )
+                Row(
+                    Modifier.width(padWidth),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    (1..9).forEach { digit ->
+                        val remaining = 9 - s.cells.count { it == digit }
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(PAD_HEIGHT)
+                                .ring(highlight.look(SudokuTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (remaining == 0) scheme.surfaceVariant else scheme.surface)
+                                .clickable(enabled = interactive && s.selected != null) {
+                                    val at = s.selected ?: return@clickable
+                                    onState(s.withCell(at, if (s.cells[at] == digit) 0 else digit))
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                digit.toString(),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (remaining == 0) scheme.outline else scheme.onSurface,
+                            )
+                        }
                     }
                 }
             }

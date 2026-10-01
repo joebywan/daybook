@@ -542,8 +542,10 @@ object Shikaku : PuzzleType {
         var dragFrom by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
         var dragTo by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
 
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp)) {
-            val cell = maxWidth / s.width
+        // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
+        // the hint slot.
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp), contentAlignment = Alignment.Center) {
+            val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
             val cellPx = with(LocalDensity.current) { cell.toPx() }
 
             fun cellAt(offset: Offset): Pair<Int, Int> =

@@ -126,7 +126,8 @@ class HintSession internal constructor(restoring: HintStage? = null) {
      * can fall back to the old [PuzzleType.hint].
      *
      * Suspends while the teacher reasons, on [Dispatchers.Default]: Mosaic's hardest hint is a
-     * search that took ~250 ms on a desktop JVM and longer on a phone, too long to hold a frame.
+     * search that took ~250 ms on a desktop JVM and 1.2 s on the emulator (2026-03-05 Expert), far
+     * too long to hold a frame.
      * (On the web Default is the one thread, so there it is no worse than before.)
      */
     suspend fun tap(
@@ -252,6 +253,9 @@ fun WatchHint(session: HintSession, puzzle: PuzzleType, state: PuzzleState) {
 
 /** The label a Hint button should carry for what its next tap does. */
 fun HintSession.buttonLabel(): String = when {
+    // Mosaic's hardest hint took ~1.2 s on the emulator; a button that said nothing for that long
+    // would read as a missed tap.
+    thinking -> "Thinking..."
     !active || stage == HintStage.CONFIRMED -> "Hint"
     stage == HintStage.NUDGE -> "Why?"
     else -> "Show me"
