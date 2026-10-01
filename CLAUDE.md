@@ -1,7 +1,7 @@
 # Daybook — working notes for Claude
 
 A daily logic-puzzle Android app. Daily puzzles, generated on device, no ads, no
-subscription, no network. Read this before changing anything; it exists so you don't
+subscription, works offline. Read this before changing anything; it exists so you don't
 rediscover what has already been learned here the hard way.
 
 ## Build

@@ -51,7 +51,7 @@ def card(W, H):
     d.rectangle((x + 4, 346 + dy, x + 124, 352 + dy), fill=ACCENT)
     d.text((x, 392 + dy), "A daily logic-puzzle app.", font=tag, fill=CREAM)
     d.text((x, 446 + dy), "New puzzles every day.", font=tag, fill=MUTED)
-    d.text((x, 520 + dy), "No ads  \u00b7  No subscription  \u00b7  No network", font=small, fill=MUTED)
+    d.text((x, 520 + dy), "No ads  \u00b7  No subscription  \u00b7  Works offline", font=small, fill=MUTED)
     return img
 
 
