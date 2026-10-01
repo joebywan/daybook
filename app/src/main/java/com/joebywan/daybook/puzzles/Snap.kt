@@ -57,7 +57,7 @@ data class SnapState(
     val cellCount: Int get() = width * height
 
     override val solved: Boolean
-        get() = path.size == cellCount && Snap.respectsOrder(this, path)
+        get() = Snap.obeysRules(this, path)
 
     fun reset(): SnapState = copy(path = emptyList(), moves = moves + 1)
 }
@@ -230,12 +230,29 @@ object Snap : PuzzleType {
         return if (extend(rng.nextInt(n))) path.toList() else null
     }
 
-    fun respectsOrder(s: SnapState, path: List<Int>): Boolean {
-        val seen = path.mapNotNull { cell ->
-            s.waypoints[cell].takeIf { it > 0 }
+    /**
+     * The rules, once: [path] is one unbroken line from 1 that passes through every square exactly
+     * once, meets the numbers in ascending order, and ends on the highest.
+     *
+     * The generator's solver ([classify]) walks the same line but does not insist on the last
+     * condition, so a board it proves to have one answer has one answer under this rule too: the
+     * answers under this rule are a subset of the ones it counted, and the stored one is in it.
+     */
+    fun obeysRules(s: SnapState, path: List<Int>): Boolean {
+        val n = s.cellCount
+        if (path.size != n || s.waypoints.size != n) return false
+        val seen = BooleanArray(n)
+        for (cell in path) {
+            if (cell !in 0 until n || seen[cell]) return false
+            seen[cell] = true
         }
-        return seen == seen.sorted() && seen == (1..seen.size).toList() &&
-            seen.size == s.waypoints.count { it > 0 }
+        for (i in 1 until n) {
+            if (path[i] !in neighbours(path[i - 1], s.width, s.height)) return false
+        }
+        val order = path.mapNotNull { s.waypoints[it].takeIf { mark -> mark > 0 } }
+        val top = order.size
+        return top > 0 && order == (1..top).toList() && top == s.waypoints.count { it > 0 } &&
+            s.waypoints[path.first()] == 1 && s.waypoints[path.last()] == top
     }
 
     /**
@@ -345,6 +362,104 @@ object Snap : PuzzleType {
             found == 1 -> Verdict.UNIQUE
             else -> Verdict.NONE
         }
+    }
+
+    // ---- drawing ------------------------------------------------------------------------------
+
+    private fun cellOf(s: SnapState, x: Float, y: Float): Int {
+        val c = x.toInt().coerceIn(0, s.width - 1)
+        val r = y.toInt().coerceIn(0, s.height - 1)
+        return r * s.width + c
+    }
+
+    /** Appends or rubs out one square, following the drag. Anything illegal leaves [current] as it was. */
+    internal fun extend(current: SnapState, cell: Int): SnapState {
+        val path = current.path
+        if (path.isEmpty()) {
+            // A line may only begin at 1.
+            return if (current.waypoints[cell] == 1) current.copy(path = listOf(cell), moves = current.moves + 1)
+            else current
+        }
+        if (cell == path.last()) return current
+        if (path.size >= 2 && cell == path[path.size - 2]) {
+            return current.copy(path = path.dropLast(1), moves = current.moves + 1)
+        }
+        if (cell in path) return current
+        if (cell !in neighbours(path.last(), current.width, current.height)) return current
+        return current.copy(path = path + cell, moves = current.moves + 1)
+    }
+
+    /** A drag begins at ([x], [y]), in cell units: on the line it trims back to that square, else it extends. */
+    internal fun dragStart(current: SnapState, x: Float, y: Float): SnapState {
+        val cell = cellOf(current, x, y)
+        return if (cell in current.path) {
+            current.copy(path = current.path.take(current.path.indexOf(cell) + 1))
+        } else {
+            extend(current, cell)
+        }
+    }
+
+    /**
+     * The pointer moves from ([fromX], [fromY]) to ([toX], [toY]), in cell units. Every square the
+     * straight stretch between them crosses is taken in order, each with the decision a slow drag
+     * would make there (extend, back up, or refuse and carry on), so a fast swipe draws the line a
+     * slow one would. The result is one combined state, as one pointer event is one state.
+     */
+    internal fun dragMove(current: SnapState, fromX: Float, fromY: Float, toX: Float, toY: Float): SnapState {
+        var next = current
+        for (cell in cellsCrossed(current.width, current.height, fromX, fromY, toX, toY)) {
+            next = extend(next, cell)
+        }
+        return next
+    }
+
+    /**
+     * The squares a straight stretch from (ax, ay) to (bx, by) passes through, in order, not
+     * counting the one it starts in. Positions are in cell units and clamped onto the board, as a
+     * drag past the edge is. An exact grid walk, so no square the stretch clips is skipped.
+     */
+    internal fun cellsCrossed(w: Int, h: Int, ax: Float, ay: Float, bx: Float, by: Float): List<Int> {
+        val maxX = w - 1e-3f
+        val maxY = h - 1e-3f
+        val x0 = ax.coerceIn(0f, maxX)
+        val y0 = ay.coerceIn(0f, maxY)
+        val x1 = bx.coerceIn(0f, maxX)
+        val y1 = by.coerceIn(0f, maxY)
+        var cx = x0.toInt()
+        var cy = y0.toInt()
+        val ex = x1.toInt()
+        val ey = y1.toInt()
+        val dx = x1 - x0
+        val dy = y1 - y0
+        val stepX = if (dx > 0f) 1 else -1
+        val stepY = if (dy > 0f) 1 else -1
+        val never = Float.MAX_VALUE
+        var tX = when {
+            dx > 0f -> (cx + 1 - x0) / dx
+            dx < 0f -> (cx - x0) / dx
+            else -> never
+        }
+        var tY = when {
+            dy > 0f -> (cy + 1 - y0) / dy
+            dy < 0f -> (cy - y0) / dy
+            else -> never
+        }
+        val deltaX = if (dx != 0f) 1f / kotlin.math.abs(dx) else never
+        val deltaY = if (dy != 0f) 1f / kotlin.math.abs(dy) else never
+        val out = ArrayList<Int>()
+        while (cx != ex || cy != ey) {
+            // Whichever grid line comes first, unless that axis has nowhere left to go.
+            val moveX = if (cx == ex) false else if (cy == ey) true else tX < tY
+            if (moveX) {
+                cx += stepX
+                tX += deltaX
+            } else {
+                cy += stepY
+                tY += deltaY
+            }
+            out += cy * w + cx
+        }
+        return out
     }
 
     // ---- play ---------------------------------------------------------------------------------
@@ -586,29 +701,6 @@ object Snap : PuzzleType {
             val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
             val stepPx = with(LocalDensity.current) { step.toPx() }
 
-            fun cellAt(offset: Offset): Int {
-                val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
-                val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
-                return r * s.width + c
-            }
-
-            /** Appends or rubs out one square, following the drag. */
-            fun extend(current: SnapState, cell: Int): SnapState {
-                val path = current.path
-                if (path.isEmpty()) {
-                    // A line may only begin at 1.
-                    return if (current.waypoints[cell] == 1) current.copy(path = listOf(cell), moves = current.moves + 1)
-                    else current
-                }
-                if (cell == path.last()) return current
-                if (path.size >= 2 && cell == path[path.size - 2]) {
-                    return current.copy(path = path.dropLast(1), moves = current.moves + 1)
-                }
-                if (cell in path) return current
-                if (cell !in neighbours(path.last(), current.width, current.height)) return current
-                return current.copy(path = path + cell, moves = current.moves + 1)
-            }
-
             Canvas(
                 Modifier
                     .width(step * s.width)
@@ -616,20 +708,23 @@ object Snap : PuzzleType {
                     .pointerInput(s.waypoints, interactive) {
                         if (!interactive) return@pointerInput
                         var working = latest
+                        // Where the pointer last was, in cell units, so a jump between two events
+                        // can be walked square by square.
+                        var lastX = 0f
+                        var lastY = 0f
                         detectDragGestures(
                             onDragStart = { offset ->
-                                working = latest
-                                val cell = cellAt(offset)
-                                // Starting on the line trims it back to that point.
-                                working = if (cell in working.path) {
-                                    working.copy(path = working.path.take(working.path.indexOf(cell) + 1))
-                                } else {
-                                    extend(working, cell)
-                                }
+                                lastX = offset.x / stepPx
+                                lastY = offset.y / stepPx
+                                working = dragStart(latest, lastX, lastY)
                                 onState(working)
                             },
                             onDrag = { change, _ ->
-                                val next = extend(working, cellAt(change.position))
+                                val x = change.position.x / stepPx
+                                val y = change.position.y / stepPx
+                                val next = dragMove(working, lastX, lastY, x, y)
+                                lastX = x
+                                lastY = y
                                 if (next !== working) {
                                     working = next
                                     onState(working)
