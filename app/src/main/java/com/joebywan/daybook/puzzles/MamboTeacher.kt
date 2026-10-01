@@ -87,11 +87,11 @@ internal object MamboTeacher {
     }
 
     /**
-     * A symbol the answer does not have. One that visibly breaks a rule is named first, since the
+     * A symbol no legal answer keeps. One that visibly breaks a rule is named first, since the
      * board is already pointing at it; otherwise the first in reading order.
      */
     private fun mistake(s: MamboState): Step? {
-        val wrong = s.cells.indices.filter { s.cells[it] != Sym.NONE && s.cells[it] != s.solution[it] }
+        val wrong = Mambo.mistakes(s)
         if (wrong.isEmpty()) return null
         val broken = s.violations()
         val cell = wrong.firstOrNull { w -> broken.any { w in it.cells } } ?: wrong[0]
@@ -134,7 +134,7 @@ internal object MamboTeacher {
             .filter { l -> l.cells.any { s.cells[it] == Sym.NONE } }
             .minByOrNull { l -> l.cells.count { s.cells[it] == Sym.NONE } } ?: return null
         val cell = line.cells.first { s.cells[it] == Sym.NONE }
-        val sym = s.solution[cell]
+        val sym = Mambo.answerFor(s)[cell]
         return Step(
             technique = FALLBACK,
             places = mapOf(cell to sym),
