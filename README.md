@@ -1,3 +1,5 @@
+<p align="center"><img src="android/play-icon-512.png" alt="The Daybook icon: a sun rising over an open book" width="128"></p>
+
 # Daybook
 
 A daily logic-puzzle app for Android. Eleven puzzle types, a new set every day, the entire back

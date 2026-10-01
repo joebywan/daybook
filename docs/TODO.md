@@ -92,6 +92,10 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Pages HTTPS.** The Pages API reports `https_enforced=false` with no CNAME on the project site
   (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
+- [ ] **Upload the social preview.** GitHub has no API for it: upload `docs/social-preview/social-preview.png`
+  under the repo's Settings > General > Social preview (regenerate with `docs/social-preview/make.py`).
+  Until then a link shows the owner's profile picture. The repo description also still says "ten"
+  puzzle types (it is eleven) and "for Android" (there is a web version too).
 - [ ] **Runner label change.** `ubuntu-latest` moves to Ubuntu 26 on **2026-10-19**. Watch the first run
   after that date; Android SDK setup or the wasm toolchain could break.
 - [ ] **Dependency majors** are well behind: Kotlin 2.2.10 (2.4.x available), Compose Multiplatform 1.9.3,
