@@ -234,13 +234,25 @@ inside for a signature block rather than trusting the filename.
 
 ## Dependency updates
 
-Renovate runs weekly from `.github/workflows/renovate.yml`, self-hosted so it needs no GitHub App
-installed. Patch bumps and GitHub Actions automerge; minor and major open a PR to look at.
+Renovate runs daily from `.github/workflows/renovate.yml`, self-hosted so it needs no GitHub App
+installed. It only *opens* PRs inside `renovate.json`'s `schedule` (before 9am on Monday, Sydney),
+so the other six runs a week just merge what is ready. GitHub Actions bumps and patch bumps
+automerge; minor and major open a PR to look at.
 
-One caveat worth knowing: pull requests opened with the default `GITHUB_TOKEN` do **not** trigger
-other workflows, so CI does not run on Renovate's PRs as shipped. Either install the
-[Renovate App](https://github.com/apps/renovate) or add a PAT as `RENOVATE_TOKEN`, and CI will
-run on them — at which point automerge can safely be widened to minor updates.
+`main` requires a PR and a passing `build` check, but pull requests made with the default
+`GITHUB_TOKEN` do not trigger other workflows, so CI would never start on Renovate's. The workflow
+gets round it without a token or app: after Renovate runs, `tools/dispatch-ci-for-renovate.sh`
+finds each open `renovate/*` PR whose head commit has no `build` yet and dispatches `ci.yml` on
+its branch (`workflow_dispatch` is exempt from that rule). A dispatched run's own check run is not
+counted by the PR, so `ci.yml` also posts a commit status named `build` on the commit when it was
+dispatched, which is what satisfies the ruleset. A rebased branch has a new commit, so it is
+built again; a PR already built is left alone; a failed build is not re-run.
+
+Renovate merges a PR on a later run once `build` is green (daily), or at once if the repository's
+"Allow auto-merge" setting is on, since `platformAutomerge` then hands the merge to GitHub. Minor
+and major PRs get the same build but are merged by hand. A `RENOVATE_TOKEN` PAT (or the Renovate
+App) remains an optional alternative: PRs then trigger CI themselves and the script finds nothing
+to do.
 
 ## Not done yet
 

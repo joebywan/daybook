@@ -46,7 +46,7 @@
       "groupName": "Android Gradle plugin and Kotlin"
     },
     {
-      "description": "Patch bumps automerge. Minor and major wait for a look, since CI only runs on these PRs when RENOVATE_TOKEN is set.",
+      "description": "Patch bumps automerge. Minor and major wait for a look, though they are built by CI too.",
       "matchUpdateTypes": ["patch"],
       "automerge": true,
       "platformAutomerge": true
