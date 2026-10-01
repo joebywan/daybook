@@ -2,7 +2,10 @@ name: Renovate
 
 on:
   schedule:
-    - cron: '0 17 * * 0'   # Monday morning, Australian time
+    # Daily, 17:00 UTC = 03:00/04:00 in Sydney. Cheap, and it is what merges a PR once its build
+    # is green. New PRs are still only created inside renovate.json's `schedule` (before 9am on
+    # Monday, Sydney), which this daily 03:00/04:00 slot falls inside on Mondays.
+    - cron: '0 17 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -12,6 +15,9 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  actions: write         # to dispatch ci.yml on Renovate's branches
+  checks: read           # to see whether a branch's head commit already has a `build` check
+  statuses: read         # ... or a `build` commit status
   issues: write          # the Dependency Dashboard is an issue
 
 jobs:
@@ -20,9 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Self-hosted so this works without installing the Renovate GitHub App. If RENOVATE_TOKEN
-      # (a PAT) is set, Renovate's pull requests also trigger CI, which is what makes automerge
-      # safe; with the default GITHUB_TOKEN they do not.
+      # Self-hosted so this works without installing the Renovate GitHub App. With the default
+      # GITHUB_TOKEN, Renovate's pull requests do not trigger CI; the step below gives them a
+      # `build` check by dispatching ci.yml. If RENOVATE_TOKEN (a PAT) is set they trigger CI
+      # themselves and that step finds nothing to do.
       # This action publishes only full version tags; a bare major like `@v41` does not resolve,
       # and every run failed at "Set up job" until it was pinned exactly. Renovate bumps it.
       - uses: renovatebot/github-action@v46.3.6
@@ -32,3 +39,13 @@ jobs:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_PLATFORM: github
           LOG_LEVEL: info
+
+      # workflow_dispatch is exempt from the "GITHUB_TOKEN events trigger nothing" rule, and a
+      # check run attaches to a commit SHA, so a dispatched ci.yml run on a Renovate branch
+      # satisfies the `build` check that main's ruleset requires. Runs every time so a branch
+      # Renovate has just rebased (new head SHA) is built again.
+      - name: Build Renovate's pull requests
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/dispatch-ci-for-renovate.sh

@@ -1,7 +1,7 @@
 # Daybook — working notes for Claude
 
-A daily logic-puzzle Android app. Eleven puzzles, generated on device, no ads, no
-subscription, no network. Read this before changing anything; it exists so you don't
+A daily logic-puzzle Android app. Daily puzzles, generated on device, no ads, no
+subscription, works offline. Read this before changing anything; it exists so you don't
 rediscover what has already been learned here the hard way.
 
 ## Build
@@ -22,6 +22,7 @@ sounded. Do not turn it off.
 
 - `core/PuzzleType.kt` — the contract. Adding a puzzle is one file in `puzzles/` plus one line
   in `core/PuzzleRegistry.kt`; home grid, archive, streaks, stats, hints and saves pick it up.
+  What every puzzle must have beyond that (tiers, proof, hints, walkthrough, tests): `docs/PUZZLE_STANDARDS.md`.
 - `generate(seed, difficulty)` **must be pure**. Daily boards come from
   `hash(date, puzzleId, difficulty)`, so purity is what makes the whole archive free and offline.
 - `PuzzleState` is a sealed `@Serializable` interface living in `puzzles/` — Kotlin requires
@@ -49,9 +50,27 @@ each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthro
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the
   panel confirms and clears when `isReached` sees it. Only an explicit "Show me" applies it. **One
   hint is counted per deduction opened**; explaining and Show me are free.
-- The panel sits in a fixed `HintSlotHeight` (156dp: five lines at 390dp, ~210 characters) reserved
-  under the board for every teaching puzzle, so it never moves the board. Longer text scrolls inside
-  the slot behind a fade rather than clipping. Boards size from both axes to leave it room.
+- The panel is a **popover over the play screen** (`HintPopover`), not a slot in its column, so the
+  board's box is the whole of the space between header and toolbar and never changes size: not when
+  a hint opens, not for the first-visit offer, not on solve. (A reserved slot did the opposite: a
+  blank ~156dp band all game on every teaching puzzle, and a visible jump larger on completion.)
+  It sits on the opposite half from the highlight: highlight low, popover above (under the clock);
+  highlight high, popover below (hugging the toolbar, which it never covers). Both clear, then
+  the half rule decides, ties below. Overlap with the highlight weighs 4x overlap with a control the
+  player needs (`keepClear`: Sudoku's digit pad, Mosaic's palette, Tower's peg and swatch rows). A
+  side that still overlaps slides as far as it can (above may rise over the header) and then shrinks
+  to 104dp, its text scrolling behind a fade. Taps outside the card reach the board, so the move can
+  be made with the explanation up. Changes of side or highlight glide (220ms).
+- **Boards report where the highlight is**, in window coordinates, through `core/HighlightBounds.kt`
+  (`LocalHighlightBounds`): `highlightGrid(cols, rows)` on an even grid's node, `highlightAnchor(i)`
+  on one element that is itself a highlight index (Tower, Sudoku's keys), `reportHighlight { }` for
+  custom geometry (Atoms: an atom's cell, a line's two atoms). A new board must report or the
+  popover assumes "below". Outside the play screen (the walkthrough) the local is null and these
+  do nothing.
+- The walkthrough's `TutorialRunner` keeps its own fixed `HintSlotHeight` (156dp) slot: its board
+  never changes size either way.
+- The solved card is drawn over the toolbar's own box (the toolbar stays laid out, hidden), one row
+  tall, so completing a puzzle cannot resize the board either.
 - `teach` runs on `Dispatchers.Default` (the Hint button reads "Thinking..." meanwhile): Mosaic's
   hardest hint took 1.2 s on the emulator, which on the main thread was a frozen frame.
 - An open hint re-checks itself when the board changes some other way. If the teacher's next step on
@@ -59,7 +78,7 @@ each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthro
   **closes quietly** — no swapped text, no new charge; the next Hint reasons afresh.
 - Across recreation (rotation is locked off, but theme, font size and process death remain) the
   route, the game and the hint's stage are saved; the deduction is re-derived from the board.
-- The walkthrough is offered once, as one passive line in the slot on a player's first visit;
+- The walkthrough is offered once, as one passive line over the clock on a player's first visit, until their first move;
   `ProgressStore.tutorialsOffered` records it the moment it is shown. "How to play" opens it; the
   rules list is its "Rules" summary.
 
@@ -74,7 +93,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 
 | puzzle | teaches | fallback |
 |---|---|---|
-| Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement (no pencil marks) | 0.5 / 6 / 34% (1% of Expert steps: Expert is dug for uniqueness, not rated) |
+| Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | 0.5 / 6 / 34% (1% of Expert steps: Expert is dug for uniqueness, not rated) |
 | Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
 | Mambo | pair, sandwich, link, quota, almost, what-if | 0 (boards are carved so the first four finish them) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
@@ -122,10 +141,12 @@ correct solutions this way. Keep the stored solution for hints; let a validator 
 their box because height fell out of width via `aspectRatio` and nothing consulted the height
 available. `Mosaic.Board` has the right shape: `minOf(maxWidth / w, maxHeight / h)`. Seven more boards
 sized from width alone until the taller hint slot ran Pipes' 5x7 board a row under the panel at
-390dp, and Sudoku over the header on a 693dp-tall screen; all eleven now consult the height.
-Check the *short* end too: a phone browser with both toolbars showing is ~540dp tall, where the full
-156dp hint slot left Pipes a board a third of the width (`PlayScreen` now scales the slot down below
-700dp). Test layouts at 375x537 as well as a tall screen.
+390dp, and Sudoku over the header on a 693dp-tall screen; all eleven now consult the height
+(audited at 390x844, 390x664 and 360x640: every grid is within a cell of the box on its binding axis,
+and the same size before and after solving).
+Check the *short* end too: a phone browser with both toolbars showing is ~540dp tall, where the old
+reserved 156dp hint slot left Pipes a board a third of the width (the hint is now a popover, so the
+board keeps the whole box). Test layouts at 375x537 as well as a tall screen.
 
 **`PlayScreen` pushes an undo entry for every state it is handed.** Transient UI state —
 selected colour, palette choice, drag in progress, a settle timer — must live in
@@ -133,7 +154,8 @@ selected colour, palette choice, drag in progress, a settle timer — must live 
 double-tap must emit exactly one combined state.
 
 **Feedback must not move the board.** Mambo's caption shifted it ~45dp when an error appeared,
-which causes mistaps. Reserve the space (`minLines == maxLines` works well). Violations also
+which causes mistaps. Reserve the space (`minLines == maxLines` works well), or float it over the content as the hint
+popover does. Violations also
 wait ~1s debounced, because a player passing through an illegal intermediate state should not be
 shouted at.
 
@@ -155,7 +177,12 @@ If a gesture detector must outlive state changes, read the board through `rememb
 never the captured value.
 
 **Derive, don't store, anything computed from board state.** Kings' eliminations and LITS's
-impossible squares are recomputed per render. Storing them means owning which to retract when a
+impossible squares are recomputed per render. The exception is the player's own marks: Sudoku's pencil
+marks (`SudokuState.notes`, a 9-bit mask per cell, defaulted so old saves load) are stored and always
+drawn, never refused or hidden for contradicting a peer digit (a hidden note looks like a refused tap;
+the owner wants bad judgements allowed, and conflict display catches them). Placing a digit strikes it
+from its peers' notes in the same state, so one undo restores both; erasing does not resurrect them.
+The notes mode is `rememberSaveable` in the board, not state. Storing them means owning which to retract when a
 piece is lifted, which is where the feature rots.
 
 **Verify by rendering, not reasoning.** Icons, motifs, crescents, pipe joints and crosses have
@@ -208,6 +235,23 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   cache-first for the content-hashed `.wasm`; the page posts its resource list to the worker, since
   the first visit loads before the worker controls it. `manifest.webmanifest` and the icons make it
   installable to the home screen.
+- **Favicon and link preview.** `favicon.svg` (the launcher mark simplified for a tab: no rays,
+  bigger sun lifted clear of a wider book — a sun touching the book reads as a head), `favicon.ico`
+  (16/32/48) and `icons/icon-16|32.png` are rendered from that SVG by hand (Chromium screenshot at
+  each size, ICO via Pillow); the 192 PNG the page used to link mushed the rays at 16px. They are
+  `rel="icon"` links in `index.html`, *relative* (the page is always at `/daybook/`); the domain
+  root's `/favicon.ico` belongs to another site. The link preview (`og:*`, `twitter:*`) uses
+  *absolute* `https://knowhowit.com.au/daybook/...` URLs, since a crawler has no base. The card is
+  `web/src/wasmJsMain/resources/social-preview.png` (1200x630), emitted with the repo's 1280x640
+  card by `python3 docs/social-preview/make.py`; both PNGs are committed. It lives under `web/`
+  because `docs/**` does not trigger the pages workflow, so a copy under docs/ would never deploy.
+  The same mark sits beside the "Daybook" title on Home (`ui/home/DaybookMark.kt`, shared with
+  Android, drawn bare from the favicon's paths with no tile, so it holds on light and dark pages —
+  keep the two in step) and above the `#loading` note in `index.html` (`<img src="favicon.svg">`).
+  No puzzle count in any public text (it ages). The favicons are in `sw.js`'s precache, the card is
+  not (crawlers do not run the worker); changing the SHELL list means bumping `CACHE`, whose old
+  names `activate` deletes. Link unfurls are cached by the platforms: after a change, re-scrape in
+  Facebook's Sharing Debugger; Discord and Slack refresh on their own schedule.
 - **Generation on one thread.** Android generates off the main thread (`generateBoard` in the seam
   is the `withContext(Dispatchers.Default)` it always was). Wasm has one thread, so the web's
   `generateBoard` first waits until "Setting out …" has been *painted* (`requestAnimationFrame` →
@@ -362,7 +406,16 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 
 ## Git and releases
 
-- Never commit to `main`. Branch, PR, merge — I do the merging, not the owner.
+- Never commit to `main`. Branch, PR, merge — I do the merging, not the owner. This is now enforced: a
+  repository ruleset ("Protect main", set up 2026-10-02) requires a pull request, requires the CI
+  check named `build` to pass, and blocks force-pushes and deletion. The repo owner's account can
+  bypass on pull requests only, which is how a **docs-only** PR (markdown, no code, build or workflow
+  changes) merges without waiting ~10 minutes for CI: `gh pr merge <n> --merge --admin`. Anything
+  else waits for green CI. Nothing in the workflows pushes commits to `main` (releases are created
+  with `gh release create`), so the rule does not get in their way.
+- Renovate's PRs get their `build` from `tools/dispatch-ci-for-renovate.sh`, which dispatches
+  `ci.yml` on their branch; a dispatched run posts a `build` commit status because its check run
+  alone does not satisfy the ruleset. Keep those steps in `ci.yml` and the job named `build`.
 - Commits use `4845431+joebywan@users.noreply.github.com`. The personal address must never reach
   a commit or a remote. No `Co-Authored-By: Claude` trailer.
 - Push to `main` builds a signed APK and publishes a GitHub Release automatically.
@@ -389,8 +442,17 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   connectivity rule to the win check to make uniqueness easier. `LitsUniquenessTest` asserts it
   with the independent `LitsOracle`; `FallbackTest` walks a year per tier through `generateVerified`.
 - Accessibility is knowingly absent and deliberately deferred while this is sideloaded.
+- The app is locked to portrait. Landscape broke most boards and the owner does not want it;
+  do not design for it.
+- If this reaches the Play Store, the developer name and contact details the listing publishes are
+  acceptable to the owner ("I don't care about my name being on the playstore"). Not a blocker.
+- `gradle/actions` stays on v5. v6 requires accepting Gradle's Terms of Use for a proprietary
+  caching component, and the owner has declined for now; `renovate.json` holds it back.
 
 ## Open
 
-Sudoku pencil marks; accessibility — eight boards use raw pointer input and expose no click
+Accessibility — eight boards use raw pointer input and expose no click
 actions, so a screen reader cannot operate them.
+
+**The full list of outstanding work is `docs/TODO.md`.** Keep it current as you work: add what you
+find but are not fixing, delete what you finish, in the same PR.

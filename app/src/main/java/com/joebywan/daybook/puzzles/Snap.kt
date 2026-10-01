@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
@@ -705,6 +706,7 @@ object Snap : PuzzleType {
                 Modifier
                     .width(step * s.width)
                     .height(step * s.height)
+                    .highlightGrid(s.width, s.height)
                     .pointerInput(s.waypoints, interactive) {
                         if (!interactive) return@pointerInput
                         var working = latest

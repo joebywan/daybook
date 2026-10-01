@@ -18,6 +18,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -42,10 +57,8 @@ import com.joebywan.daybook.puzzles.PuzzleState
 import kotlinx.coroutines.delay
 
 /**
- * Height reserved under the board for the hint panel, the walkthrough offer and the "that's it"
- * line. Fixed, and reserved whether or not anything is showing, because feedback must never move
- * the board (CLAUDE.md) — a panel that grew into place would shift every square under a finger
- * that was already on its way to one.
+ * Height of the walkthrough's fixed slot under its board (the play screen has no slot: its hint is
+ * a popover, [HintPopover]). Sized for the longest hint text:
  *
  * Five lines of body text plus a row of buttons: at 390dp that holds about 210 characters, which
  * covers every explanation the teachers produce bar Pipes' and Atoms' longest (measured, up to
@@ -262,9 +275,11 @@ fun HintSession.buttonLabel(): String = when {
 }
 
 /**
- * The hint itself, drawn into the reserved slot: the nudge, then the reasoning, then a brief "that's
- * it". Fills whatever height it is given and never asks for more, so the caller's fixed slot is the
- * whole of its layout contract.
+ * The hint itself: the nudge, then the reasoning, then a brief "that's it". With [fill] it takes
+ * whatever height it is given and never asks for more (the walkthrough's fixed slot); without, it
+ * wraps its text up to the height it is offered, and scrolls behind a fade beyond that (the play
+ * screen's popover, see [HintPopover]). [raised] draws it as a card that floats over a board: a
+ * solid ground, an outline and a shadow, where the slot's wash would let the board show through.
  */
 @Composable
 fun HintPanel(
@@ -272,17 +287,20 @@ fun HintPanel(
     accent: Color,
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
+    fill: Boolean = true,
+    raised: Boolean = false,
 ) {
     val d = session.deduction ?: return
     val scheme = MaterialTheme.colorScheme
     val ink = if (d.mistake) scheme.error else accent
     // The panel's own colour, solid, for the fade over text that scrolls on.
-    val fade = ink.copy(alpha = 0.12f).compositeOver(scheme.background)
+    val fade = ink.copy(alpha = 0.12f).compositeOver(if (raised) scheme.surface else scheme.background)
+    val shape = RoundedCornerShape(16.dp)
     Column(
         modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(16.dp))
-            .background(ink.copy(alpha = 0.12f))
+            .then(if (raised) Modifier.shadow(10.dp, shape).border(1.dp, ink.copy(alpha = 0.45f), shape) else Modifier)
+            .clip(shape)
+            .background(if (raised) fade else ink.copy(alpha = 0.12f))
             .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 0.dp),
     ) {
         val text = when (session.stage) {
@@ -293,12 +311,12 @@ fun HintPanel(
         // Scrolls rather than clipping, for the rare explanation past five lines; the slot never
         // grows. A new text starts at the top again.
         val scroll = remember(text) { ScrollState(0) }
-        Box(Modifier.weight(1f).fillMaxWidth().padding(end = 8.dp)) {
+        Box(Modifier.weight(1f, fill = fill).fillMaxWidth().padding(end = 8.dp)) {
             Text(
                 text,
                 style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurface,
-                modifier = Modifier.fillMaxSize().verticalScroll(scroll),
+                modifier = (if (fill) Modifier.fillMaxSize() else Modifier).verticalScroll(scroll),
             )
             if (scroll.canScrollForward) {
                 Box(
@@ -326,3 +344,109 @@ fun HintPanel(
         }
     }
 }
+
+/**
+ * The hint as a popover over the play screen, so that a hint never takes height from the board —
+ * the board is the same size before, during and after (CLAUDE.md: feedback must not move it).
+ *
+ * It sits on the opposite side of the board from what the hint points at: highlight in the lower
+ * half, popover above (hugging the top of the board area, just under the clock); highlight in the
+ * upper half, popover below (hugging the top of the toolbar, which stays uncovered). Where the
+ * highlight spans both halves the side with less overlap wins, ties going below. If the chosen
+ * side still overlaps, the popover first slides as far as it can (an upper popover may rise over
+ * the header, to the status bar) and then shrinks to [COMPACT] height, its text scrolling. All of
+ * this is pixels in window coordinates: [highlight] comes from the boards ([HighlightBounds]), and
+ * unknown (a board that reports nothing) means below.
+ *
+ * It does not block the board: taps outside the card reach the cells, so the player makes the
+ * move with the explanation still up. A change of side or of highlight glides rather than jumps.
+ */
+@Composable
+fun HintPopover(
+    session: HintSession,
+    accent: Color,
+    highlight: Rect?,
+    keepClear: Collection<Rect>,
+    origin: Offset,
+    safeTop: Float,
+    boardTop: Float,
+    toolbarTop: Float,
+    windowHeight: Float,
+    onAction: () -> Unit,
+) {
+    val density = LocalDensity.current
+    val gap = with(density) { 8.dp.toPx() }
+    val pad = with(density) { 6.dp.toPx() }
+    val compactPx = with(density) { COMPACT.toPx() }
+    val fullMax = windowHeight * 0.4f
+
+    // The height the text wants at full size, re-measured for each stage's new text. Measured only
+    // while the popover is at full size, so shrinking it cannot feed back into the choice.
+    var natural by remember(session.deduction, session.stage) { mutableFloatStateOf(0f) }
+    val h = natural
+    val hl = highlight?.let { Rect(it.left - pad, it.top - pad, it.right + pad, it.bottom + pad) }
+    // Everything below is in window coordinates; the overlay's own origin is taken off at the end.
+    val minTop = safeTop + gap
+    val maxBottom = toolbarTop - gap
+
+    // How much of the highlight (heavily) and of the controls the player needs (lightly) a popover
+    // of height [h] at [y] would cover, in pixels of height.
+    fun cost(y: Float, h: Float): Float {
+        fun overlap(r: Rect) = maxOf(0f, minOf(y + h, r.bottom) - maxOf(y, r.top))
+        return (if (hl == null) 0f else overlap(hl) * 4f) + keepClear.sumOf { overlap(it).toDouble() }.toFloat()
+    }
+    fun above(h: Float): Pair<Float, Float> {
+        var y = boardTop + gap
+        if (hl != null) y = minOf(y, hl.top - h - gap)
+        y = maxOf(y, minTop)
+        return y to cost(y, h)
+    }
+    fun below(h: Float): Pair<Float, Float> {
+        val y = maxBottom - h
+        return y to cost(y, h)
+    }
+    fun choose(h: Float): Triple<Boolean, Float, Float> {
+        val a = above(h)
+        val b = below(h)
+        val up = when {
+            hl == null -> false
+            a.second != b.second -> a.second < b.second
+            else -> (hl.top + hl.bottom) / 2f > windowHeight / 2f && a.second == 0f
+        }
+        val pick = if (up) a else b
+        return Triple(up, pick.first, pick.second)
+    }
+
+    val full = choose(h)
+    val limited = full.third > 0f && h > compactPx
+    val shownH = if (limited) compactPx else h
+    val target = if (limited) choose(shownH).second else full.second
+
+    val y = remember { Animatable(0f) }
+    var placed by remember { mutableStateOf(false) }
+    LaunchedEffect(target, natural > 0f) {
+        if (natural <= 0f) return@LaunchedEffect
+        if (!placed) {
+            y.snapTo(target)
+            placed = true
+        } else {
+            y.animateTo(target, tween(220))
+        }
+    }
+
+    HintPanel(
+        session, accent, onAction,
+        modifier = Modifier
+            .offset { IntOffset(0, (y.value - origin.y).roundToInt()) }
+            .padding(horizontal = 12.dp)
+            .fillMaxWidth()
+            .heightIn(max = with(density) { (if (limited) compactPx else fullMax).toDp() })
+            .alpha(if (placed) 1f else 0f)
+            .onSizeChanged { if (!limited) natural = it.height.toFloat() },
+        fill = false,
+        raised = true,
+    )
+}
+
+/** The popover's height when it has to squeeze past the highlight; the text scrolls inside it. */
+private val COMPACT = 104.dp

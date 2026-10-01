@@ -41,6 +41,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
@@ -1366,6 +1367,7 @@ object Lits : PuzzleType {
                 Modifier
                     .width(step * s.width)
                     .height(step * s.height)
+                    .highlightGrid(s.width, s.height)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
                         detectTapGestures { offset: Offset -> onState(s.toggle(cellAt(offset))) }

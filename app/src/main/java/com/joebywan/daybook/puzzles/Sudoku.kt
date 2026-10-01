@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,18 +15,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -36,7 +45,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +58,9 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.core.highlightGrid
+import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
@@ -56,6 +73,17 @@ data class SudokuState(
     val solution: List<Int>,
     val selected: Int? = null,
     override val moves: Int = 0,
+    /**
+     * The player's pencil marks: one 9-bit mask per cell, bit `d - 1` set when digit `d` is noted
+     * there. Defaulted and, being equal to its default on a game without notes, never written, so a
+     * save made before notes existed still decodes, with none. Every mark is drawn: a mark the
+     * player makes is never refused or hidden, even for a digit a peer already holds (a wrong
+     * judgement is theirs to make, and the conflict display catches it once a digit goes in). A cell
+     * holding a digit carries no notes. Marks are tidied only when a digit is *placed*, in the same
+     * state ([withCell]); taking that digit back does not bring the cleared marks back, except by
+     * undo, which restores the whole earlier state.
+     */
+    val notes: List<Int> = NO_NOTES,
 ) : PuzzleState {
 
     override val solved: Boolean get() = cells == solution
@@ -76,17 +104,57 @@ data class SudokuState(
         return bad
     }
 
-    fun withCell(index: Int, value: Int): SudokuState =
-        if (givens[index]) this
-        else copy(cells = cells.toMutableList().also { it[index] = value }, moves = moves + 1)
+    /**
+     * Sets a digit, or clears the cell with 0. The cell's own notes go either way: a placed digit
+     * makes them moot, and clearing an empty cell is how its notes are rubbed out. Placing a digit
+     * also strikes it from the notes of every peer, in this same state, so one undo restores the
+     * digit and those notes together. Erasing a digit does not put them back. (Not derived at
+     * render time: a note hidden by a peer is indistinguishable from a tap that was refused.)
+     */
+    fun withCell(index: Int, value: Int): SudokuState {
+        if (givens[index]) return this
+        val bit = if (value == 0) 0 else 1 shl (value - 1)
+        val next = notes.toMutableList()
+        next[index] = 0
+        if (bit != 0) for (p in Sudoku.peers(index)) next[p] = next[p] and bit.inv()
+        return copy(
+            cells = cells.toMutableList().also { it[index] = value },
+            notes = if (next == notes) notes else next,
+            moves = moves + 1,
+        )
+    }
+
+    /** The notes drawn on [index]: none on a filled cell. */
+    fun visibleNotes(index: Int): Int = if (cells[index] != 0) 0 else notes[index]
+
+    /** Whether a note for [digit] is drawn on [index]. */
+    fun hasNote(index: Int, digit: Int): Boolean = visibleNotes(index) and (1 shl (digit - 1)) != 0
+
+    /** Whether notes can be made on [index] at all: an empty square that is not a given. */
+    fun canNote(index: Int): Boolean = !givens[index] && cells[index] == 0
+
+    /** Adds the note for [digit] on [index], or takes it off. Always, for any digit, on an open square. */
+    fun toggleNote(index: Int, digit: Int): SudokuState =
+        if (!canNote(index)) this
+        else copy(
+            notes = notes.toMutableList().also { it[index] = it[index] xor (1 shl (digit - 1)) },
+            moves = moves + 1,
+        )
 
     fun select(index: Int): SudokuState = copy(selected = index)
 }
+
+/** Every cell without notes: the default, and so what a save from before notes existed decodes to. */
+private val NO_NOTES: List<Int> = List(81) { 0 }
 
 /** Sudoku — the classic 9x9. */
 /** The digit pad under the grid, which the grid's size has to leave room for. */
 private val PAD_HEIGHT = 48.dp
 private val PAD_GAP = 18.dp
+
+/** A note's size as a share of its cell's side, and how strongly it is inked. Tuned by rendering. */
+private const val NOTE_SIZE = 0.34f
+private const val NOTE_ALPHA = 0.85f
 
 object Sudoku : PuzzleType {
 
@@ -98,6 +166,8 @@ object Sudoku : PuzzleType {
         "Fill every cell with a digit from 1 to 9.",
         "No digit may repeat within a row, a column or a 3x3 box.",
         "Tap a cell, then tap a digit. Tap the digit again to clear it.",
+        "Tap the pencil to take notes: while it is lit, a digit is pencilled small in the cell " +
+            "instead of placed. Placing a digit clears it from the notes of the cells it sees.",
         "Clashing digits are shown in red as you go.",
     )
 
@@ -270,15 +340,23 @@ object Sudoku : PuzzleType {
     /** Where the walkthrough's wrong digit goes: a 9 where the answer is 5. */
     private const val TUTORIAL_WRONG = 38
 
-    private fun tutorialBoard(entered: Map<Int, Int> = emptyMap(), selected: Int? = null): SudokuState {
+    private fun tutorialBoard(
+        entered: Map<Int, Int> = emptyMap(),
+        selected: Int? = null,
+        noted: Map<Int, Int> = emptyMap(),
+    ): SudokuState {
         val cells = TUTORIAL_SOLUTION.mapIndexed { i, v -> if (i in TUTORIAL_OPEN) entered[i] ?: 0 else v }
         return SudokuState(
             givens = TUTORIAL_SOLUTION.indices.map { it !in TUTORIAL_OPEN },
             cells = cells,
             solution = TUTORIAL_SOLUTION,
             selected = selected,
+            notes = List(81) { i -> noted[i]?.let { 1 shl (it - 1) } ?: 0 },
         )
     }
+
+    /** The walkthrough's pencil mark: a 5 in the cell the wrong 9 was in, which is its answer. */
+    private const val TUTORIAL_NOTED = 5
 
     override val tutorial: List<TutorialFrame> by lazy {
         val row1 = (0 until 9).toSet()
@@ -325,8 +403,23 @@ object Sudoku : PuzzleType {
                 done = "Cleared.",
             ),
             TutorialFrame(
-                state = tutorialBoard(placed),
-                caption = "Your turn: finish the board. Stuck? Hint shows you why.",
+                state = tutorialBoard(placed, selected = TUTORIAL_WRONG),
+                caption = "Not sure of a digit? Tap the pencil, then a digit, to jot it small in the cell " +
+                    "instead of placing it. Pencil a 5 here.",
+                highlight = BoardHighlight(
+                    strong = setOf(TUTORIAL_WRONG, SudokuTeacher.NOTES_KEY, SudokuTeacher.pad(TUTORIAL_NOTED)),
+                ),
+                accepts = { next ->
+                    next is SudokuState && next.cells == tutorialBoard(placed).cells &&
+                        next.notes == tutorialBoard(placed, noted = mapOf(TUTORIAL_WRONG to TUTORIAL_NOTED)).notes
+                },
+                retry = "Tap the pencil first so it lights up, then the 5.",
+                done = "Penciled. Tap the pencil again to go back to placing digits.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(placed, selected = TUTORIAL_WRONG, noted = mapOf(TUTORIAL_WRONG to TUTORIAL_NOTED)),
+                caption = "Your turn: finish the board. Stuck? Hint shows you why. Placing a digit " +
+                    "clears the cell's notes.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
             ),
@@ -447,6 +540,10 @@ object Sudoku : PuzzleType {
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        // Which way the digit keys act. Transient UI state, so it lives here and not in the state:
+        // PlayScreen would otherwise make every flip of it an undo step.
+        var notesMode by rememberSaveable { mutableStateOf(false) }
+        val measurer = rememberTextMeasurer()
         // Breathes only while something glows, as on Kings.
         val pulse: State<Float> = if (highlight.strong.isEmpty()) {
             remember { mutableFloatStateOf(1f) }
@@ -470,7 +567,7 @@ object Sudoku : PuzzleType {
             val cell = side / 9
             val padWidth = maxWidth
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(side)) {
+                Box(Modifier.size(side).highlightGrid(9, 9)) {
                     for (r in 0 until 9) {
                         for (c in 0 until 9) {
                             val i = r * 9 + c
@@ -502,6 +599,34 @@ object Sudoku : PuzzleType {
                                     .clickable(enabled = interactive) { onState(s.select(i)) },
                                 contentAlignment = Alignment.Center,
                             ) {
+                                val noted = s.visibleNotes(i)
+                                if (noted != 0) {
+                                    val ink = scheme.onSurface.copy(alpha = NOTE_ALPHA)
+                                    val style = TextStyle(
+                                        fontSize = (cell.value * NOTE_SIZE).sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = ink,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                    // Drawn, not composed: nine Text nodes in each of up to eighty-one
+                                    // cells would be a lot of layout for a board that redraws on every tap.
+                                    Canvas(Modifier.fillMaxSize()) {
+                                        val sub = size.width / 3f
+                                        for (d in 1..9) {
+                                            if (noted and (1 shl (d - 1)) == 0) continue
+                                            val laid = measurer.measure(d.toString(), style, maxLines = 1)
+                                            val r = (d - 1) / 3
+                                            val c = (d - 1) % 3
+                                            drawText(
+                                                laid,
+                                                topLeft = Offset(
+                                                    c * sub + (sub - laid.size.width) / 2f,
+                                                    r * (size.height / 3f) + (size.height / 3f - laid.size.height) / 2f,
+                                                ),
+                                            )
+                                        }
+                                    }
+                                }
                                 if (s.cells[i] != 0) {
                                     Text(
                                         text = s.cells[i].toString(),
@@ -523,21 +648,40 @@ object Sudoku : PuzzleType {
                 Spacer(Modifier.height(PAD_GAP))
 
                 Row(
-                    Modifier.width(padWidth),
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    Modifier.width(padWidth).keepClear(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     (1..9).forEach { digit ->
                         val remaining = 9 - s.cells.count { it == digit }
+                        val at = s.selected
+                        // In notes mode a key that is already pencilled on the selected cell is tinted.
+                        val pencilled = notesMode && at != null && s.hasNote(at, digit)
+                        // Notes cannot go on a filled or given cell: the keys show it rather than do nothing.
+                        val inert = notesMode && at != null && !s.canNote(at)
                         Box(
                             Modifier
                                 .weight(1f)
+                                .alpha(if (inert) 0.35f else 1f)
                                 .height(PAD_HEIGHT)
+                                .highlightAnchor(SudokuTeacher.pad(digit))
                                 .ring(highlight.look(SudokuTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (remaining == 0) scheme.surfaceVariant else scheme.surface)
-                                .clickable(enabled = interactive && s.selected != null) {
-                                    val at = s.selected ?: return@clickable
-                                    onState(s.withCell(at, if (s.cells[at] == digit) 0 else digit))
+                                .background(
+                                    when {
+                                        pencilled -> Color(accent).copy(alpha = 0.40f)
+                                        remaining == 0 -> scheme.surfaceVariant
+                                        else -> scheme.surface
+                                    }
+                                )
+                                .clickable(enabled = interactive && at != null && !inert) {
+                                    val cell = at ?: return@clickable
+                                    if (notesMode) {
+                                        // Keys are dimmed and inert on a filled or given cell (below),
+                                        // so this is never a silent refusal.
+                                        if (s.canNote(cell)) onState(s.toggleNote(cell, digit))
+                                    } else {
+                                        onState(s.withCell(cell, if (s.cells[cell] == digit) 0 else digit))
+                                    }
                                 },
                             contentAlignment = Alignment.Center,
                         ) {
@@ -547,6 +691,26 @@ object Sudoku : PuzzleType {
                                 color = if (remaining == 0) scheme.outline else scheme.onSurface,
                             )
                         }
+                    }
+                    // The mode switch lives with the keys it changes. Not a state: see notesMode.
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(PAD_HEIGHT)
+                            .highlightAnchor(SudokuTeacher.NOTES_KEY)
+                            .ring(highlight.look(SudokuTeacher.NOTES_KEY, dims = false), glow, pulse, corner = 10f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (notesMode) Color(accent) else scheme.surface)
+                            .clickable(enabled = interactive) { notesMode = !notesMode }
+                            .semantics { contentDescription = if (notesMode) "Notes on" else "Notes off" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = if (notesMode) Color.White else scheme.onSurface,
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                 }
             }

@@ -46,7 +46,7 @@ enum class LaunchMode(val label: String) {
  * not progress. Losing it costs one tap, so it must never be able to interfere with the file that
  * holds solved days and half-finished boards.
  *
- * Only difficulty is stored. [LaunchMode] deliberately is not: a player who ends a session in
+ * Difficulty is the only grid selection stored (the timer switch is a setting, not a selection). [LaunchMode] deliberately is not: a player who ends a session in
  * Random would otherwise open the app the next morning to a grid that quietly hides the day's
  * puzzles, and the daily is the whole point of the app.
  */
@@ -59,8 +59,19 @@ class LaunchPreferences(private val store: KeyValueStore) {
         store.putString(KEY_DIFFICULTY, difficulty.name)
     }
 
+    /**
+     * Whether the running clock is drawn on the play screen. On unless the player turned it off.
+     * Only the clock: the time is still counted, shown on the solved card and kept for Stats.
+     */
+    val showTimer: Flow<Boolean> = store.string(KEY_SHOW_TIMER).map { it != "off" }
+
+    suspend fun setShowTimer(show: Boolean) {
+        store.putString(KEY_SHOW_TIMER, if (show) "on" else "off")
+    }
+
     private companion object {
         const val KEY_DIFFICULTY = "difficulty"
+        const val KEY_SHOW_TIMER = "show_timer"
     }
 }
 

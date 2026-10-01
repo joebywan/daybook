@@ -97,7 +97,9 @@ class StateSerializationTest {
         is SnapState -> state.copy(path = listOf(state.waypoints.indexOf(1)), moves = 1)
         is SudokuState -> {
             val cell = state.givens.indexOfFirst { !it }
-            state.select(cell).withCell(cell, 5)
+            // A placed digit and a pencilled cell, so the notes field is part of what must survive.
+            val noted = (cell + 1 until 81).first { !state.givens[it] }
+            state.select(cell).withCell(cell, 5).toggleNote(noted, 3)
         }
         is TowerState -> (0 until state.slots)
             .fold(state) { acc, slot -> acc.withPeg(slot, slot % state.colours) }

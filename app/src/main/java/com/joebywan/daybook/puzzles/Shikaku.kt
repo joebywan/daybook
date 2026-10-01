@@ -45,6 +45,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
@@ -565,6 +566,7 @@ object Shikaku : PuzzleType {
                 Modifier
                     .width(cell * s.width)
                     .height(cell * s.height)
+                    .highlightGrid(s.width, s.height)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
                         detectTapGestures { offset ->

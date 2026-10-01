@@ -38,6 +38,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
@@ -680,6 +681,32 @@ object Atoms : PuzzleType {
                 Modifier
                     .width(step * s.size)
                     .height(step * s.size)
+                    .reportHighlight { size, named ->
+                        // Atoms by their circles, lines by the two atoms they join.
+                        val px = size.width / s.size.toFloat()
+                        var box: androidx.compose.ui.geometry.Rect? = null
+                        fun include(atom: Atom) {
+                            val r = androidx.compose.ui.geometry.Rect(
+                                androidx.compose.ui.geometry.Offset(atom.col * px, atom.row * px),
+                                androidx.compose.ui.geometry.Offset((atom.col + 1) * px, (atom.row + 1) * px),
+                            )
+                            box = box?.let { b ->
+                                androidx.compose.ui.geometry.Rect(minOf(b.left, r.left), minOf(b.top, r.top), maxOf(b.right, r.right), maxOf(b.bottom, r.bottom))
+                            } ?: r
+                        }
+                        for (index in named.strong + named.soft) {
+                            if (index in s.atoms.indices) {
+                                include(s.atoms[index])
+                            } else {
+                                val p = s.pairs.indices.firstOrNull { AtomsTeacher.pairCell(s.atoms.size, it) == index }
+                                if (p != null) {
+                                    include(s.atoms[s.pairs[p].a])
+                                    include(s.atoms[s.pairs[p].b])
+                                }
+                            }
+                        }
+                        box
+                    }
                     // Drag first, so that once it claims the pointer the tap detector sees the
                     // consumed moves and cancels itself. A clean tap consumes nothing and still
                     // reaches the detector below.

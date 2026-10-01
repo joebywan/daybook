@@ -1,13 +1,15 @@
+<p align="center"><img src="android/play-icon-512.png" alt="The Daybook icon: a sun rising over an open book" width="128"></p>
+
 # Daybook
 
-A daily logic-puzzle app for Android. Eleven puzzle types, a new set every day, the entire back
+A daily logic-puzzle app for Android and the web. A new set of puzzles every day, the entire back
 catalogue open from day one.
 
 No ads. No subscription. No accounts. No network permission in the manifest at all.
 
 | Every puzzle, every day | Sudoku | Mosaic | Snap |
 |---|---|---|---|
-| ![The home screen, showing all eleven puzzles for today](docs/screenshots/home.png) | ![A Sudoku board](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
+| ![The home screen, showing every puzzle for today](docs/screenshots/home.png) | ![A Sudoku board](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
 
 ## Install it
 
@@ -106,15 +108,21 @@ are generated off the main thread behind a dealing animation.
 
 ## Adding a puzzle
 
-Two steps.
+**Start with [`docs/PUZZLE_STANDARDS.md`](docs/PUZZLE_STANDARDS.md)**: what every puzzle must have (three
+tiers, proved boards, hints that guide, an interactive walkthrough, the tests), which existing puzzle
+to copy for each part, and a [step-by-step recipe](docs/PUZZLE_STANDARDS.md#13-adding-a-new-puzzle-the-recipe).
+
+The wiring itself is two lines of code:
 
 1. Add a file under `puzzles/` with a state class implementing `PuzzleState` and an object
    implementing `PuzzleType`.
 2. Add that object to `PuzzleRegistry.all`.
 
-Home screen, daily rotation, archive, streaks, statistics, hints, undo, restart and the results
-card all pick it up automatically. `generate(seed, difficulty)` must be pure — that is the only
-hard rule, and it is what keeps the archive free.
+Home screen, daily rotation, archive, streaks, statistics, undo, restart and the results card then
+pick it up automatically. That is only the wiring, though: a finished puzzle also needs its web-parity
+entries and tests, and, to match the others, hints and a walkthrough. `generate(seed, difficulty)` must
+be pure, which is what keeps the archive free, and must give the same board on Android and in the
+browser (see the standards doc, sections 4 and 5).
 
 ## Building
 
@@ -226,17 +234,30 @@ inside for a signature block rather than trusting the filename.
 
 ## Dependency updates
 
-Renovate runs weekly from `.github/workflows/renovate.yml`, self-hosted so it needs no GitHub App
-installed. Patch bumps and GitHub Actions automerge; minor and major open a PR to look at.
+Renovate runs daily from `.github/workflows/renovate.yml`, self-hosted so it needs no GitHub App
+installed. It only *opens* PRs inside `renovate.json`'s `schedule` (before 9am on Monday, Sydney),
+so the other six runs a week just merge what is ready. GitHub Actions bumps and patch bumps
+automerge; minor and major open a PR to look at.
 
-One caveat worth knowing: pull requests opened with the default `GITHUB_TOKEN` do **not** trigger
-other workflows, so CI does not run on Renovate's PRs as shipped. Either install the
-[Renovate App](https://github.com/apps/renovate) or add a PAT as `RENOVATE_TOKEN`, and CI will
-run on them — at which point automerge can safely be widened to minor updates.
+`main` requires a PR and a passing `build` check, but pull requests made with the default
+`GITHUB_TOKEN` do not trigger other workflows, so CI would never start on Renovate's. The workflow
+gets round it without a token or app: after Renovate runs, `tools/dispatch-ci-for-renovate.sh`
+finds each open `renovate/*` PR whose head commit has no `build` yet and dispatches `ci.yml` on
+its branch (`workflow_dispatch` is exempt from that rule). A dispatched run's own check run is not
+counted by the PR, so `ci.yml` also posts a commit status named `build` on the commit when it was
+dispatched, which is what satisfies the ruleset. A rebased branch has a new commit, so it is
+built again; a PR already built is left alone; a failed build is not re-run.
+
+Renovate merges a PR on a later run once `build` is green (daily), or at once if the repository's
+"Allow auto-merge" setting is on, since `platformAutomerge` then hands the merge to GitHub. Minor
+and major PRs get the same build but are merged by hand. A `RENOVATE_TOKEN` PAT (or the Renovate
+App) remains an optional alternative: PRs then trigger CI themselves and the script finds nothing
+to do.
 
 ## Not done yet
 
-- Pencil marks / candidate notes in Sudoku
+The maintained list is [`docs/TODO.md`](docs/TODO.md); the headlines:
+
 - No accessibility work: the eight boards drawn with raw pointer input expose no click actions, so
   a screen reader cannot operate them
 - Play Store listing not yet created — see "Publishing to Google Play" above

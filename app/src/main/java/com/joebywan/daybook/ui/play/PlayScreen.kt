@@ -1,6 +1,17 @@
 package com.joebywan.daybook.ui.play
 
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import com.joebywan.daybook.core.HighlightBounds
+import com.joebywan.daybook.core.LocalHighlightBounds
+import com.joebywan.daybook.ui.teach.HintPopover
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,7 +72,6 @@ import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.generateBoard
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.teach.HintPanel
-import com.joebywan.daybook.ui.teach.HintSlotHeight
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
@@ -101,6 +111,7 @@ fun PlayScreen(
     onBack: () -> Unit,
     tutorialOffered: Boolean? = null,
     onTutorialOffered: () -> Unit = {},
+    showTimer: Boolean = true,
 ) {
     // The harder boards take hundreds of milliseconds to generate, which would freeze the frame if
     // it happened during composition. Android runs it off the main thread; the web has only one
@@ -115,7 +126,7 @@ fun PlayScreen(
     } else {
         PlayBoard(
             puzzle, difficulty, day, ready, restore, persist, onSolved, onAgain, onBack,
-            tutorialOffered, onTutorialOffered,
+            tutorialOffered, onTutorialOffered, showTimer,
         )
     }
 }
@@ -156,6 +167,7 @@ private fun PlayBoard(
     onBack: () -> Unit,
     tutorialOffered: Boolean?,
     onTutorialOffered: () -> Unit,
+    showTimer: Boolean,
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -287,17 +299,28 @@ private fun PlayBoard(
         return
     }
 
-    // A phone browser with both toolbars showing leaves ~540dp, where the full 156dp slot and 22dp
-    // button padding shrank the board to a third of the width. The slot (its text already scrolls)
-    // and the padding give way below 700dp and 640dp; taller screens are laid out as before.
+    // Below 640dp (a phone browser with its toolbars showing) the toolbar's padding gives way, to
+    // leave the board the room. The hint is a popover over the content, never a slot in this
+    // column, so nothing in it changes size when a hint opens, the offer shows, or the puzzle is
+    // solved.
     val screenHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
-    val slotHeight = (screenHeight * 0.23f).coerceIn(112.dp, HintSlotHeight)
     val buttonPad = if (screenHeight < 640.dp) 10.dp else 22.dp
-    Column(
+    val highlightBounds = remember { HighlightBounds() }
+    var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
+    var contentTop by remember { mutableStateOf(0f) }
+    var boardTop by remember { mutableStateOf(0f) }
+    var toolbarTop by remember { mutableStateOf(0f) }
+    Box(
         Modifier
             .fillMaxSize()
             .background(scheme.background)
+            .onGloballyPositioned { overlayOrigin = it.positionInWindow() },
+    ) {
+    Column(
+        Modifier
+            .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
+            .onGloballyPositioned { contentTop = it.positionInWindow().y }
     ) {
         // Title at the start, the one remaining action at the end. Centring what is left over
         // after removing the arrow would have hung the title 44dp off true, and padding the gap
@@ -329,16 +352,48 @@ private fun PlayBoard(
             }
         }
 
-        Text(
-            text = formatClock(seconds),
-            style = MaterialTheme.typography.titleMedium,
-            color = scheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
+        // The clock, and on a first visit the walkthrough offer drawn over it until the first move.
+        // Over the clock rather than under the board: it takes no height from the board, and covers
+        // nothing the player plays on. The row keeps the clock's own height either way.
+        Box(
+            Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            // Hidden by the player's setting: still laid out, so the row, the board and the hint
+            // popover (placed from this row's bottom) are exactly where they would be with it.
+            // The time keeps counting and is shown on the solved card.
+            Text(
+                text = formatClock(seconds),
+                style = MaterialTheme.typography.titleMedium,
+                color = scheme.onSurfaceVariant,
+                modifier = if (showTimer) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
+            )
+            if (teaches && offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
+                Box(Modifier.matchParentSize().background(scheme.background), contentAlignment = Alignment.Center) {
+                    Text(
+                        "New to ${puzzle.displayName}? One-minute walkthrough",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(puzzle.accent),
+                        maxLines = 1,
+                        modifier = Modifier
+                            .requiredHeight(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showTutorial = true }
+                            .padding(horizontal = 12.dp)
+                            .wrapContentHeight(Alignment.CenterVertically),
+                    )
+                }
+            }
+        }
 
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            CompositionLocalProvider(LocalBoardHighlight provides hintSession.highlight) {
+        Box(
+            Modifier.weight(1f).onGloballyPositioned { boardTop = it.positionInWindow().y },
+            contentAlignment = Alignment.Center,
+        ) {
+            CompositionLocalProvider(
+                LocalBoardHighlight provides hintSession.highlight,
+                LocalHighlightBounds provides highlightBounds,
+            ) {
                 puzzle.Board(
                     state = state,
                     onState = { next -> push(next) },
@@ -347,38 +402,19 @@ private fun PlayBoard(
             }
         }
 
-        if (teaches && !state.solved) {
-            Box(Modifier.fillMaxWidth().height(slotHeight).padding(horizontal = 18.dp)) {
-                when {
-                    hintSession.active -> HintPanel(hintSession, Color(puzzle.accent), onAction = ::onHint)
-                    offering -> Text(
-                        "New to ${puzzle.displayName}? One-minute walkthrough →",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color(puzzle.accent),
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { showTutorial = true }
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                    )
-                }
-            }
-        }
-
-        if (state.solved) {
-            SolvedBar(
-                seconds = seconds,
-                hints = game.hints,
-                accent = Color(puzzle.accent),
-                onAgain = onAgain,
-                onBack = onBack,
-            )
-        } else {
+        // The toolbar is always laid out; once solved it is hidden and the solved card is drawn
+        // over exactly the same box, so the board above never changes size on completion.
+        Box(Modifier.onGloballyPositioned { toolbarTop = it.positionInWindow().y }) {
+            val solved = state.solved
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = buttonPad),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = buttonPad)
+                    .then(if (solved) Modifier.alpha(0f).clearAndSetSemantics { } else Modifier),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 ToolButton(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.weight(1f)) {
+                    if (solved) return@ToolButton
                     // A hint reasoned from a board that has just been taken back may lean on a king
                     // that is no longer there.
                     hintSession.clear()
@@ -387,15 +423,47 @@ private fun PlayBoard(
                     }
                 }
                 ToolButton(Icons.Default.Refresh, "Restart", Modifier.weight(1f)) {
+                    if (solved) return@ToolButton
                     hintSession.clear()
                     game = game.copy(state = initial, history = emptyList())
                 }
                 if (puzzle.offersHints) {
-                    ToolButton(Icons.Default.AutoAwesome, hintSession.buttonLabel(), Modifier.weight(1f), ::onHint)
+                    ToolButton(Icons.Default.AutoAwesome, hintSession.buttonLabel(), Modifier.weight(1f)) {
+                        if (!solved) onHint()
+                    }
                 }
+            }
+            if (solved) {
+                SolvedBar(
+                    seconds = seconds,
+                    hints = game.hints,
+                    accent = Color(puzzle.accent),
+                    onAgain = onAgain,
+                    onBack = onBack,
+                    modifier = Modifier.matchParentSize().padding(horizontal = 18.dp, vertical = buttonPad / 2),
+                )
             }
         }
     }
+
+    if (hintSession.active && !state.solved) {
+        HintPopover(
+            session = hintSession,
+            accent = Color(puzzle.accent),
+            highlight = highlightBounds.rect,
+            keepClear = highlightBounds.keepClear,
+            origin = overlayOrigin,
+            // Where the popover may sit: from just under the clock (or, to clear a highlight, the
+            // status bar) down to just above the toolbar, which it never covers.
+            safeTop = contentTop,
+            boardTop = boardTop,
+            toolbarTop = toolbarTop,
+            windowHeight = with(LocalDensity.current) { screenHeight.toPx() },
+            onAction = ::onHint,
+        )
+    }
+    }
+
 
     if (showRules) {
         AlertDialog(
@@ -423,31 +491,31 @@ private fun SolvedBar(
     accent: Color,
     onAgain: () -> Unit,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(18.dp)
+    // One row, sized by the toolbar it covers, so it never costs the board any height.
+    Row(
+        modifier
             .clip(RoundedCornerShape(20.dp))
             .background(accent.copy(alpha = 0.18f))
-            .padding(18.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .pointerInput(Unit) {}
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Solved", style = MaterialTheme.typography.titleLarge, color = accent)
-        Text(
-            buildString {
-                append(formatClock(seconds))
-                if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurface,
-        )
-        Spacer(Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TextButton(onClick = onAgain) { Text("Another") }
-            TextButton(onClick = onBack) { Text("Done") }
+        Column(Modifier.weight(1f)) {
+            Text("Solved", style = MaterialTheme.typography.titleLarge, color = accent)
+            Text(
+                buildString {
+                    append(formatClock(seconds))
+                    if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurface,
+            )
         }
+        TextButton(onClick = onAgain) { Text("Another") }
+        TextButton(onClick = onBack) { Text("Done") }
     }
 }
 

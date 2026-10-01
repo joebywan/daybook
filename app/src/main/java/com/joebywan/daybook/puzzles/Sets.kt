@@ -51,6 +51,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
@@ -533,7 +534,10 @@ object Sets : PuzzleType {
             ) {
                 val width = cardWidth(maxWidth, maxHeight, s.cards.size)
                 val columns = boardColumns(s.cards.size)
-                Column(verticalArrangement = Arrangement.spacedBy(CARD_GAP)) {
+                Column(
+                    Modifier.highlightGrid(columns, (s.cards.size + columns - 1) / columns),
+                    verticalArrangement = Arrangement.spacedBy(CARD_GAP),
+                ) {
                     s.cards.chunked(columns).forEachIndexed { rowIndex, row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(CARD_GAP)) {
                             row.forEachIndexed { colIndex, card ->
