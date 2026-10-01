@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.joebywan.daybook.core.DailySeed
@@ -43,6 +44,32 @@ sealed interface Route {
     ) : Route
 }
 
+/** A route as one string, for rotation and process death. */
+private val RouteSaver = Saver<Route, String>(
+    save = { r ->
+        when (r) {
+            Route.Home -> "home"
+            Route.Stats -> "stats"
+            is Route.Archive -> "archive|${r.puzzleId}"
+            is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}"
+        }
+    },
+    restore = { text ->
+        val f = text.split('|')
+        when (f[0]) {
+            "stats" -> Route.Stats
+            "archive" -> Route.Archive(f[1])
+            "play" -> Route.Play(
+                puzzleId = f[1],
+                difficulty = Difficulty.valueOf(f[2]),
+                day = f[3].takeIf { it.isNotEmpty() }?.let(LocalDate::parse),
+                nonce = f[4].toLong(),
+            )
+            else -> Route.Home
+        }
+    },
+)
+
 /**
  * The whole app. [startAt] is where it opens — Home unless something asked for a particular
  * screen, which on the web is a `?puzzle=` link.
@@ -57,7 +84,10 @@ fun DaybookApp(startAt: Route = Route.Home) {
     // flash up for the instant before their "already offered" loads.
     val tutorialsOffered by store.tutorialsOffered.collectAsState(initial = null)
 
-    var route by remember { mutableStateOf(startAt) }
+    // Saveable, so turning the phone keeps the player on their board. Under plain `remember` a
+    // rotation dropped them back on Home, which also made every rememberSaveable below Play
+    // (the game, the open hint, the walkthrough) unreachable.
+    var route by rememberSaveable(stateSaver = RouteSaver) { mutableStateOf(startAt) }
     var today by remember { mutableStateOf(currentDate()) }
 
     // The home grid's two selectors live here, not on the home screen: navigating into a puzzle
