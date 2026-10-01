@@ -2,14 +2,14 @@
 
 # Daybook
 
-A daily logic-puzzle app for Android. Eleven puzzle types, a new set every day, the entire back
+A daily logic-puzzle app for Android and the web. A new set of puzzles every day, the entire back
 catalogue open from day one.
 
 No ads. No subscription. No accounts. No network permission in the manifest at all.
 
 | Every puzzle, every day | Sudoku | Mosaic | Snap |
 |---|---|---|---|
-| ![The home screen, showing all eleven puzzles for today](docs/screenshots/home.png) | ![A Sudoku board](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
+| ![The home screen, showing every puzzle for today](docs/screenshots/home.png) | ![A Sudoku board](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
 
 ## Install it
 

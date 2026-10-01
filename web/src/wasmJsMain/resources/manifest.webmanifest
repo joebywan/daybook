@@ -1,7 +1,7 @@
 {
   "name": "Daybook",
   "short_name": "Daybook",
-  "description": "Eleven daily logic puzzles. No ads, no account, works offline.",
+  "description": "Daily logic puzzles. No ads, no account, works offline.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
