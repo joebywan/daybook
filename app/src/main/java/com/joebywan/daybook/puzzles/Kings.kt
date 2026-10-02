@@ -49,6 +49,9 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.gridCursor
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
@@ -949,7 +952,25 @@ object Kings : PuzzleType {
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp), contentAlignment = Alignment.Center) {
+        // The keyboard cursor (see KingsKeys): transient, so not in the state.
+        var cursor by remember(s.solution) { mutableStateOf<Int?>(null) }
+        BoxWithConstraints(
+            Modifier.fillMaxWidth().boardKeys(interactive) { key, _, repeat ->
+                movedCursor(cursor, key, s.size, s.size)?.let { cursor = it; return@boardKeys true }
+                val at = cursor ?: return@boardKeys false
+                val action = kingsKeyAction(key) ?: return@boardKeys false
+                if (!repeat) {
+                    // A mouse tap may still be inside its double-tap window: settle it first, so
+                    // the key lands on the board the player sees.
+                    val live = pending?.takeIf { it.base === s }
+                    pending = null
+                    lastCell = -1
+                    (live?.after ?: s).applyKey(at, action)?.let(onState) ?: live?.let { onState(it.after) }
+                }
+                true
+            }.padding(14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
             val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.size, maxHeight / s.size) else maxWidth / s.size
             val cellPx = with(LocalDensity.current) { cell.toPx() }
 
@@ -999,9 +1020,13 @@ object Kings : PuzzleType {
                 Modifier
                     .size(cell * s.size)
                     .highlightGrid(s.size, s.size)
+                    .gridCursor(cursor.takeIf { interactive }, s.size, s.size, scheme.primary)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
-                        detectTapGestures { offset -> tap(offset) }
+                        detectTapGestures { offset ->
+                            cursor = cellAt(offset)
+                            tap(offset)
+                        }
                     }
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
