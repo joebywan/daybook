@@ -23,10 +23,6 @@ from a measurement or review, so you can check it is still true.
   Consider shrinking the pad or nudging the popover. *S.*
 - [ ] **Undo leaves a selection highlight behind in Sudoku and Sets** on the web (the move itself is undone).
   Cosmetic; check whether Android does the same. *S.*
-- [ ] **Loading state polish.** "Setting out X..." is a plain text line. (a) Android: add a spinner, since
-  generation is off the main thread and it would animate. (b) Both: show the message only if generation
-  takes longer than ~150 ms, so quick boards do not flash it. The web cannot animate while generating
-  (one thread). Since the LITS speed-up the slowest board is under 0.1 s, so this is low urgency. *S.*
 - [ ] **Keyboard entry for Sudoku on desktop.** On the web, digits 1-9 should fill the selected cell,
   Backspace/Delete/0 clear it, and arrow keys move the selection (the board is mouse/touch only today).
   Boards are in `puzzles/Sudoku.kt`; emit one state per key like a tap does, and keep it free of
