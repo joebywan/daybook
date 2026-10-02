@@ -70,7 +70,8 @@ data class ShikakuState(
     override val moves: Int = 0,
 ) : PuzzleState {
 
-    override val solved: Boolean get() = blocks.toSet() == solution.toSet()
+    /** The rules, not a comparison with [solution]; see [Shikaku.isSolved]. */
+    override val solved: Boolean get() = Shikaku.isSolved(width, height, clues, blocks)
 
     /** Adds a block, evicting anything it overlaps. Rejects blocks that hold other than one clue. */
     fun place(block: Block): ShikakuState {
@@ -104,6 +105,29 @@ object Shikaku : PuzzleType {
         "That number is the rectangle's area in squares.",
         "Drag from one corner to another to draw a rectangle. Tap a rectangle to remove it.",
     )
+
+    /**
+     * Whether [blocks] is a finished board: every block inside the grid, no two overlapping, every
+     * square covered, and each block holding exactly one number, equal to its area. Reads only the
+     * clues and the blocks, never a stored answer.
+     */
+    fun isSolved(width: Int, height: Int, clues: List<Int?>, blocks: List<Block>): Boolean {
+        if (clues.size != width * height) return false
+        val owner = BooleanArray(width * height)
+        for (b in blocks) {
+            if (b.r0 < 0 || b.c0 < 0 || b.r1 >= height || b.c1 >= width || b.r1 < b.r0 || b.c1 < b.c0) return false
+            var numbered = 0
+            var number = 0
+            for (r in b.r0..b.r1) for (c in b.c0..b.c1) {
+                val i = r * width + c
+                if (owner[i]) return false
+                owner[i] = true
+                clues[i]?.let { numbered++; number = it }
+            }
+            if (numbered != 1 || number != b.area) return false
+        }
+        return owner.all { it }
+    }
 
     private fun shape(difficulty: Difficulty) = when (difficulty) {
         Difficulty.STANDARD -> Triple(6, 7, 6)

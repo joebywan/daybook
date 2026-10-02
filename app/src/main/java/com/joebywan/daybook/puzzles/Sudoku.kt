@@ -86,7 +86,12 @@ data class SudokuState(
     val notes: List<Int> = NO_NOTES,
 ) : PuzzleState {
 
-    override val solved: Boolean get() = cells == solution
+    /**
+     * The rules, not a comparison with [solution]: every cell filled and no digit repeated in any
+     * row, column or box. The stored answer is for hints only. A given can't be changed (see
+     * [withCell]), so it needs no check of its own.
+     */
+    override val solved: Boolean get() = Sudoku.isSolved(cells)
 
     /** Filled digits that clash with another digit in the same row, column or box. */
     fun conflicts(): Set<Int> {
@@ -191,6 +196,30 @@ object Sudoku : PuzzleType {
     }
 
     fun peers(index: Int): IntArray = peerTable[index]
+
+    /**
+     * Whether [cells] is a finished grid: 81 digits of 1..9, each row, column and box holding every
+     * digit exactly once. Reads only the grid, never a stored answer, so a legal fill that is not
+     * the generator's still wins.
+     */
+    fun isSolved(cells: List<Int>): Boolean {
+        if (cells.size != 81 || cells.any { it !in 1..9 }) return false
+        for (k in 0 until 9) {
+            var row = 0
+            var col = 0
+            var box = 0
+            for (j in 0 until 9) {
+                row = row or (1 shl cells[k * 9 + j])
+                col = col or (1 shl cells[j * 9 + k])
+                box = box or (1 shl cells[(k / 3 * 3 + j / 3) * 9 + k % 3 * 3 + j % 3])
+            }
+            if (row != ALL_DIGITS || col != ALL_DIGITS || box != ALL_DIGITS) return false
+        }
+        return true
+    }
+
+    /** Bits 1..9 set. */
+    private const val ALL_DIGITS = 0b11_1111_1110
 
     private fun clueTarget(difficulty: Difficulty) = when (difficulty) {
         Difficulty.STANDARD -> 38
