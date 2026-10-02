@@ -127,7 +127,7 @@ without editing it.
   returns `null` when the budget runs out, and `test/MosaicOptimumTest` `a search that runs out of budget reports
   nothing at all` pins that.
 - *Expose the split.* `generateVerified(seed, difficulty): State?` (null when nothing was proved) is what tests
-  assert on. It exists on `Kings` and `Atoms` (public) and `Lits` (internal). `generate` is
+  assert on. It exists on `Kings` and `Atoms` (public) and `Lits` and `Mambo` (internal). `generate` is
   `generateVerified(...) ?: lastResort(...)`.
 - *Fallbacks.* Keep it named, tiny and honest (`Atoms.lastResort` is a three-atom chain; Snap's is a numbered
   boustrophedon). Before adding one, ask what fraction of seeds reach it and measure it; size the test sample
@@ -474,7 +474,7 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 |---|---|---|---|---|---|---|---|---|---|---|
 | Sudoku | Y clues 38/30/24 | Y dug to uniqueness (`countSolutions`), no fallback | Y `Sudoku.isSolved` | Y `SudokuTeachingTest` enumerator | Y | Y 6 | Y grid + anchor + keepClear | Y | Y | Y 200 |
 | Kings | Y 7/8/9 | Y `generateVerified`, `lastResort` | Y | Y `KingsRulesTest` | Y | Y 7 | Y grid | Y `WebParityTest` | Y | N |
-| Mambo | Y 6/8/10 | Y by construction (carve to propagation-solvable) | Y | Y `MamboRulesTest`, `MamboSolvedTest` | Y | Y 8 | Y grid | Y | Y | Y 200 |
+| Mambo | Y 6/8/10 | Y `generateVerified` (internal; carve to propagation-solvable, re-proved), checkerboard `lastResort`, year test | Y | Y `MamboRulesTest`, `MamboSolvedTest` | Y | Y 8 | Y grid | Y | Y | Y 200 |
 | Pipes | Y | n/a no uniqueness claimed | Y | Y `PipesTeachingTest` enumerator | Y | Y 7 | Y grid | Y | Y | P sentences, not length |
 | Shikaku | Y | P `countTilings` loop + `fallbackBoard`, no `generateVerified` | Y `Shikaku.isSolved` | Y `ShikakuClueTest` | Y | Y 7 | Y grid | Y | Y | Y |
 | Mosaic | Y slack 0 | Y `solve` or null; last pass stripes | Y (all one colour) | Y `MosaicOptimumTest` BFS | Y | Y 6 | Y grid + keepClear | Y | Y | Y 180 |
@@ -499,8 +499,11 @@ Details behind the P/N cells:
 - **Kings proved gen sample:** `KingsRulesTest` asserts the proved path over 30 seeds per tier, not a year; the
   analytic margin (40 attempts at a one-third to two-thirds success each) makes that adequate, but it is the
   weaker form of the Atoms/LITS test.
-- **Mambo proved gen:** no explicit fallback; `fullGrid(rng, n) ?: fullGrid(Rng(seed + 1), n)!!` can throw on a
-  double failure. Six seeds per tier in `MamboRulesTest`.
+- **Mambo proved gen:** `generate` is `generateVerified ?: lastResort`. The full-grid search is an exhaustive
+  depth-first one, so it cannot come up empty on an even side (0 of 1,461 daily seeds per tier and 1.8 million
+  random ones); the old `!!` on its second try was dead code, now replaced by a null that falls to a checkerboard
+  `lastResort` with every link printed. `MamboRulesTest` walks a year per tier on `generateVerified` and runs
+  `lastResort` at every size against an independent propagation solver and an exhaustive counter.
 - **Sets:** `generate` is `generateVerified ?: lastResort`; the sampler fails on about 1 seed in 10^40 (no seed in
   four years of daily boards or 500,000 random seeds per tier came near), and `SetsRulesTest` walks a year per tier
   on `generateVerified` and runs `lastResort` directly.
@@ -515,8 +518,8 @@ Details behind the P/N cells:
 1. `TutorialFrame.passes` (`core/Teaching.kt`, honoured in `ui/tutorial/TutorialRunner.kt`) is not set by any
    puzzle. CLAUDE.md says Sets, Mambo and Snap use it; they instead write one frame per emitted state. The
    mechanism is untested dead API until something needs it.
-2. `generateVerified` is not a universal convention (Kings, Atoms, LITS and Sets only). Shikaku and Snap should get
-   one and a year-long `FallbackTest` entry; Mambo a year-long test of its "cannot fail" path.
+2. `generateVerified` is not a universal convention (Kings, Atoms, LITS, Sets and Mambo only). Shikaku and Snap
+   should get one and a year-long `FallbackTest` entry.
 3. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
    while their boards are unique, which the generators prove.
 4. Kings (and Pipes, Atoms captions) have no text-fit test.

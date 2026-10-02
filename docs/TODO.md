@@ -15,8 +15,6 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **Mambo's generator has a `!!` on a second attempt** that could throw. Measure how often the second
-  attempt is reached and make it safe. *S.*
 - [ ] **Atoms Standard sometimes comes out lighter than the tier intends:** one 2026 board with 6 atoms and
   two with 9, where the tier asks for 10. Still valid puzzles. Decide whether to fix (changes those
   boards) or accept; if fixing, regenerate the pinned parity lines for the dates that move. *S.*
