@@ -124,9 +124,6 @@ below have a famous branded version; use the descriptive name).
   390x844, 390x664, 360x640 and 375x537, light and dark, Chromium and WebKit; the keyboard at 375x537 (eight
   rows on Expert is the tight case); the hint popover with a highlighted tile and a highlighted key; a physical
   keyboard in the browser; then the emulator. Recapture `docs/screenshots/home.png` (twelve tiles now) and its alt text.
-- [ ] **Lexicon: SCOWL's notice in the app.** The licence asks that its notice appear in documentation shipped with
-  the lists. It is in the repo (`docs/word-lists/`); the app has no About or credits screen to carry it, nor does
-  the Play listing. Decide where (a line under Settings is the cheap one).
 - [ ] **Lexicon: a no-repeat cycle for daily words.** The word is a pure function of the seed, so it can recur
   (about even odds of a repeat within two months of Standard days). A cycle needs the day count, which the
   `generate(seed, difficulty)` contract does not carry. Only if repeats bother anyone.
