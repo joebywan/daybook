@@ -81,8 +81,8 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Keyboard input (potential, not started)
 
-Sudoku and Lexicon already take a hardware keyboard (`SudokuKeys.kt`, `LexiconKeys.kt`); the other eleven boards
-take none. Survey and per-puzzle key proposals: the owner asked for these to be recorded, not built. Do them
+Sudoku and Lexicon already take a hardware keyboard (`SudokuKeys.kt`, `LexiconKeys.kt`); every other board
+takes none. Survey and per-puzzle key proposals: the owner asked for these to be recorded, not built. Do them
 in this order. Keep every key map a pure, unit-tested function; cursor state is `remember`, never `PuzzleState`;
 chords stay ignored; check in Chromium and WebKit with `keyboard.press`.
 - [ ] **Optional per-puzzle "Keyboard" line in Rules.** A `keyboardHelp` list on `PuzzleType`, empty by default,
