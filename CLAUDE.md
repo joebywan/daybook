@@ -406,6 +406,10 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 
 ## Git and releases
 
+- **Standing instruction: finish the job.** When the work is done and the local tests are green, push
+  the branch, open the PR and merge it once CI's `build` is green, without asking first. The owner
+  has authorised this for good and is tired of repeating it. Only stop and ask if CI fails in a way
+  you cannot fix, or the change touches something under "Settled — do not reopen".
 - Never commit to `main`. Branch, PR, merge — I do the merging, not the owner. This is now enforced: a
   repository ruleset ("Protect main", set up 2026-10-02) requires a pull request, requires the CI
   check named `build` to pass, and blocks force-pushes and deletion. The repo owner's account can
