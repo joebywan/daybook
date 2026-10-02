@@ -72,8 +72,15 @@ each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthro
   do nothing.
 - The walkthrough's `TutorialRunner` keeps its own fixed `HintSlotHeight` (156dp) slot: its board
   never changes size either way.
-- The solved card is drawn over the toolbar's own box (the toolbar stays laid out, hidden), one row
-  tall, so completing a puzzle cannot resize the board either.
+- The finish is a compact "Congratulations!" frame (`FinishedFrame`) centred over the play screen, an
+  overlay with the time, hints and next-step tiles; the toolbar stays laid out (hidden), so
+  completing a puzzle cannot resize the board. Below 700dp tall it drops to the bottom over the hidden
+  toolbar, since a centred frame hid most of the board at 375x537. The tiles come from the pure `nextOptions(daily, tier,
+  doneTiers)` in `ui/play/NextSteps.kt` (`NextStepsTest`): a random board offers Another/Easier/Harder/
+  Done; a daily offers Easier Daily/Random/Harder Daily/Done, skipping tiers already done *that date*
+  (`tiersDoneOn(completions, puzzle, day)`; random games never count) and counting the tier just played
+  as done, because `onSolved` records it asynchronously. A Daily tile keeps the route's `day`, so on an
+  archive day it is that past date's board.
 - `teach` runs on `Dispatchers.Default` (the Hint button reads "Thinking..." meanwhile): Mosaic's
   hardest hint took 1.2 s on the emulator, which on the main thread was a frozen frame.
 - An open hint re-checks itself when the board changes some other way. If the teacher's next step on

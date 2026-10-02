@@ -26,7 +26,9 @@ import com.joebywan.daybook.ui.archive.ArchiveScreen
 import com.joebywan.daybook.ui.home.HomeScreen
 import com.joebywan.daybook.ui.home.LaunchMode
 import com.joebywan.daybook.ui.home.LaunchPreferences
+import com.joebywan.daybook.ui.play.NextKind
 import com.joebywan.daybook.ui.play.PlayScreen
+import com.joebywan.daybook.ui.play.tiersDoneOn
 import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import kotlinx.coroutines.launch
@@ -228,8 +230,19 @@ fun DaybookApp(startAt: Route = Route.Home) {
                             )
                         }
                     },
-                    onAgain = {
-                        route = Route.Play(puzzle.id, current.difficulty, null, freshNonce())
+                    // Only what the store already holds; the board being solved is counted by the
+                    // options themselves, since it reaches the store a moment after the win.
+                    otherTiersDone = tiersDoneOn(completions, puzzle.id, current.day),
+                    onNext = { option ->
+                        val tier = option.difficulty
+                        route = when {
+                            tier == null -> Route.Home
+                            // The same date, so on an archive day it is that past date's board.
+                            option.kind == NextKind.DAILY -> Route.Play(puzzle.id, tier, current.day)
+                            // A fresh nonce every time: it is what makes a second random game a new
+                            // board rather than the one just finished.
+                            else -> Route.Play(puzzle.id, tier, null, freshNonce())
+                        }
                     },
                     tutorialOffered = tutorialsOffered?.let { puzzle.id in it },
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
