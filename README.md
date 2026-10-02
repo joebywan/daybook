@@ -206,7 +206,7 @@ Google's copy comes from, and the choice is effectively permanent:
 
 ### The steps only a human can do
 
-1. **Play Console → Create app.** Name, default language, "App", free.
+1. **Play Console → Create app.** Done 2026-10-02: "Daybook: Daily Logic Puzzles", `com.joebywan.daybook`, en-AU, Game (Puzzle), free. The listing, content rating, target audience (13+), data safety and every other App content declaration are filled in too; what is left is steps 2 and 4-7.
 2. **Set up app signing** and upload `~/Documents/github/Claude/daybook-android-signing/daybook-release.jks`
    as the app signing key, per the choice above. Alias `daybook`; the store and key passwords are
    the same string, in `keystore-password.txt` (no trailing newline).

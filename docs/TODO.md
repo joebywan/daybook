@@ -223,8 +223,13 @@ not demand thought, against the owner's stated taste.
   strands existing installs (the export/import backup on the stats screen is the way across). Decide
   the final address before many people install it, if it is going to change at all. Other sites on
   that domain share its browser storage, so keep key names distinct.
-- **Play Store listing.** The owner has a paid personal developer account; the listing text, graphics and
-  declarations are ready in `docs/play/LISTING.md`. What remains is the Console work in README,
-  "Publishing to Google Play" (only the owner can do it), then the closed test: 12 testers opted in
-  for 14 continuous days before production access can be requested. Finding the 12 testers is the
-  owner's call. The owner is fine with the developer name being public.
+- **Play Store listing.** The app exists in the owner's personal Play account (draft) with the store
+  listing, content rating (all ages), target audience (13+), data safety (nothing collected) and every
+  other declaration done. What remains is the owner's: choose the app signing key (upload
+  `daybook-release.jks` as the app signing key, as the README says, *before* the first bundle is
+  uploaded, because Play defaults to its own key and the choice is permanent), upload the first
+  bundle to internal testing, make the service account, then run the closed test (12 testers opted in
+  for 14 continuous days) before requesting production. Also check the Console home page's Android
+  developer verification notice: sideloaded APKs may need their own registration (package name plus
+  signing key). Recapture the screenshots at 1080x1920 if the 9:16 promotion eligibility matters.
+  The owner is fine with the developer name being public.
