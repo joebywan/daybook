@@ -141,6 +141,10 @@ object Pipes : PuzzleType {
         "All the pipework must form one single connected network.",
     )
 
+    override val keyboardHelp = listOf(
+        "Arrows move, Space or R turns the tile.",
+    )
+
     fun rotateCw(mask: Int): Int {
         var out = 0
         if (mask and UP != 0) out = out or RIGHT

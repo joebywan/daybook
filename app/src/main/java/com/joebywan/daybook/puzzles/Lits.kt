@@ -129,6 +129,10 @@ object Lits : PuzzleType {
         "Squares that can no longer be shaded are crossed off for you.",
     )
 
+    override val keyboardHelp = listOf(
+        "Arrows move, Space shades; Shift+arrow carries the shading along.",
+    )
+
     /**
      * The four legal letters. A 2x2 block is deliberately not one of them.
      *

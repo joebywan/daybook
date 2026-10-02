@@ -178,6 +178,10 @@ object Mosaic : PuzzleType {
         "Tapping an area in its own colour does nothing and costs nothing.",
     )
 
+    override val keyboardHelp = listOf(
+        "Number keys pick a colour, arrows move, Space or Enter pours it.",
+    )
+
     /** Board colours. Three of them read as the screenshot's green/red/blue; Expert adds the amber. */
     val palette = listOf(0xFF54B07A, 0xFFD9584C, 0xFF4C86D9, 0xFFE0B23C, 0xFF9B6FD0)
 

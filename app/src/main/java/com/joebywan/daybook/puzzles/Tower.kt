@@ -111,6 +111,10 @@ object Tower : PuzzleType {
         "Colours may repeat in the secret.",
     )
 
+    override val keyboardHelp = listOf(
+        "Number keys fill the next peg with that colour, Backspace removes the last, Enter submits.",
+    )
+
     val palette = listOf(
         0xFFD9584C, 0xFF4C86D9, 0xFF54B07A, 0xFFE0B23C,
         0xFF9B6FD0, 0xFF48B9C4, 0xFFD97FB0, 0xFF9A8264,

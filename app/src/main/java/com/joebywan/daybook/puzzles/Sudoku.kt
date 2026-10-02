@@ -177,6 +177,10 @@ object Sudoku : PuzzleType {
         "Clashing digits are shown in red as you go.",
     )
 
+    override val keyboardHelp = listOf(
+        "Arrows move, 1-9 place a digit (or a note in pencil mode), Backspace clears.",
+    )
+
     /** The 20 cells that share a row, column or box with [index]. Precomputed once. */
     private val peerTable: Array<IntArray> = Array(81) { i ->
         val r = i / 9

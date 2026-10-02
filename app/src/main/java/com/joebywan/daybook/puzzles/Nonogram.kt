@@ -89,6 +89,10 @@ object Nonogram : PuzzleType {
         "Solved when every row and column shows its numbers. Every board can be worked out one line at a time, with no guessing.",
     )
 
+    override val keyboardHelp = listOf(
+        "Arrows move, F fills, X crosses, Space cycles, Backspace clears; Shift+arrow carries a mark along.",
+    )
+
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
         NonogramLogic.generateVerified(seed, difficulty) ?: NonogramLogic.lastResort(difficulty)
 

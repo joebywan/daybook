@@ -215,6 +215,10 @@ object Kings : PuzzleType {
         "Squares a king already rules out are crossed off for you.",
     )
 
+    override val keyboardHelp = listOf(
+        "Arrows move, Space pencils a square out, K or Enter crowns it, Backspace empties it.",
+    )
+
     /**
      * One colour per region of the largest board (9x9, nine regions), drawn opaque.
      *
