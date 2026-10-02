@@ -69,7 +69,18 @@ class LaunchPreferences(private val store: KeyValueStore) {
         store.putString(KEY_SHOW_TIMER, if (show) "on" else "off")
     }
 
+    /**
+     * Whether a solved puzzle plays its short chime. On unless the player turned it off. The device
+     * being on silent is a separate, platform check; this is the player's own switch.
+     */
+    val playSound: Flow<Boolean> = store.string(KEY_SOUND).map { it != "off" }
+
+    suspend fun setPlaySound(play: Boolean) {
+        store.putString(KEY_SOUND, if (play) "on" else "off")
+    }
+
     private companion object {
+        const val KEY_SOUND = "play_sound"
         const val KEY_DIFFICULTY = "difficulty"
         const val KEY_SHOW_TIMER = "show_timer"
     }

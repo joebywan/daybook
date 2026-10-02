@@ -1,6 +1,11 @@
 package com.joebywan.daybook.platform
 
 import android.app.Activity
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioTrack
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
@@ -11,11 +16,16 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.SolveTone
 import com.joebywan.daybook.data.DataStoreKeyValueStore
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.preferencesFile
 import com.joebywan.daybook.puzzles.PuzzleState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
@@ -99,6 +109,10 @@ fun readyBoard(puzzle: PuzzleType, seed: Long, difficulty: Difficulty): PuzzleSt
 /** Generation is off the main thread, so a spinner on the loading screen keeps turning. */
 const val GENERATION_ANIMATES: Boolean = true
 
+/** Settings text under the Sound switch: what else keeps the chime quiet on this platform. */
+const val SOLVE_SOUND_NOTE: String =
+    "It follows your media volume and stays quiet when your phone is on silent or vibrate."
+
 /** How long a board may take before "Setting out..." appears, so a quick one does not flash it. */
 const val LOADING_MESSAGE_DELAY_MS: Long = 150L
 
@@ -112,3 +126,61 @@ suspend fun prepareBoards(day: LocalDate, difficulty: Difficulty) = Unit
 /** The app's typography as it is: Android's system fonts cover every style and glyph. */
 @Composable
 fun platformTypography(base: Typography): Typography = base
+
+private val soundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+private val solveTonePcm by lazy { SolveTone.pcm16() }
+
+/**
+ * Plays the solve sound when called, if [enabled]. The tone is synthesised ([SolveTone]) and played
+ * through a static `AudioTrack` tagged as game audio, so it follows the media volume. It is skipped
+ * when the ringer is on silent or vibrate, built and released off the main thread, and any audio
+ * failure (no output, a busy device) is swallowed: a missing chime must never cost a solved puzzle.
+ */
+@Composable
+fun rememberSolveSoundPlayer(enabled: Boolean): () -> Unit {
+    val context = LocalContext.current.applicationContext
+    return remember(enabled, context) {
+        if (!enabled) ({}) else ({ playSolveSound(context) })
+    }
+}
+
+private fun playSolveSound(context: Context) {
+    val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+    if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) return
+    soundScope.launch {
+        var track: AudioTrack? = null
+        try {
+            val pcm = solveTonePcm
+            track = AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_GAME)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(SolveTone.SAMPLE_RATE)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build()
+                )
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .setBufferSizeInBytes(pcm.size * 2)
+                .build()
+            track.write(pcm, 0, pcm.size)
+            track.play()
+            // A static track has no completion callback worth a Looper; the tone's length is known.
+            delay(SolveTone.LENGTH * 1000L / SolveTone.SAMPLE_RATE + 150L)
+        } catch (_: Exception) {
+            // No audio output, or the device refused the track: silence is the right fallback.
+        } finally {
+            try {
+                track?.stop()
+            } catch (_: Exception) {
+            }
+            track?.release()
+        }
+    }
+}
