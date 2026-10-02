@@ -413,9 +413,15 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 - Never commit to `main`. Branch, PR, merge — I do the merging, not the owner. This is now enforced: a
   repository ruleset ("Protect main", set up 2026-10-02) requires a pull request, requires the CI
   check named `build` to pass, and blocks force-pushes and deletion. The repo owner's account can
-  bypass on pull requests only, which is how a **docs-only** PR (markdown, no code, build or workflow
-  changes) merges without waiting ~10 minutes for CI: `gh pr merge <n> --merge --admin`. Anything
-  else waits for green CI. Nothing in the workflows pushes commits to `main` (releases are created
+  bypass on pull requests only.
+- **Docs-only changes do not need CI, and the owner has said so outright** ("it doesn't impact tests,
+  and it doesn't impact the app, why burn the compute time?"). A PR that touches only documentation
+  (`*.md`, everything under `docs/`, including the images and the `docs/` helper scripts that nothing
+  in the build runs) is opened and merged straight away with `gh pr merge <n> --merge --admin`,
+  without waiting for `build`. That is the owner's standing authorisation to use the bypass for this
+  case and this case only. The `build` check is still required by the ruleset, so it cannot be skipped
+  by path-filtering the workflow (a skipped required check blocks the merge). A change that touches code,
+  Gradle files, `web/`, `tools/` or a workflow, even alongside docs, waits for green CI. Nothing in the workflows pushes commits to `main` (releases are created
   with `gh release create`), so the rule does not get in their way.
 - Renovate's PRs get their `build` from `tools/dispatch-ci-for-renovate.sh`, which dispatches
   `ci.yml` on their branch; a dispatched run posts a `build` commit status because its check run
