@@ -15,9 +15,6 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **Atoms Standard sometimes comes out lighter than the tier intends:** one 2026 board with 6 atoms and
-  two with 9, where the tier asks for 10. Still valid puzzles. Decide whether to fix (changes those
-  boards) or accept; if fixing, regenerate the pinned parity lines for the dates that move. *S.*
 - [ ] **Endgame popup: congratulations frame, a ding, and the right next steps.** Today `SolvedBar` (`ui/play/PlayScreen.kt`) has only
   "Another" (a random board, same tier) and "Done". Replace with options that depend on daily vs random
   and on what is already done. The aim is to offer choices without repeating what the player has done.
