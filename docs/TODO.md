@@ -85,10 +85,6 @@ Sudoku and Lexicon already take a hardware keyboard (`SudokuKeys.kt`, `LexiconKe
 take none. Survey and per-puzzle key proposals: the owner asked for these to be recorded, not built. Do them
 in this order. Keep every key map a pure, unit-tested function; cursor state is `remember`, never `PuzzleState`;
 chords stay ignored; check in Chromium and WebKit with `keyboard.press`.
-- [ ] **Shared key helper and play-screen shortcuts.** Pull the focus / chord filter / held-key block that
-  `Sudoku.kt` and `Lexicon.kt` duplicate into one modifier; add a pure clamped, non-wrapping cursor helper plus a
-  drawn cursor outline; handle Ctrl/Cmd+Z (undo), H (hint) and Esc (close popover) once in `PlayScreen`; keys
-  stop once solved. Benefits all thirteen boards. *M.*
 - [ ] **Optional per-puzzle "Keyboard" line in Rules.** A `keyboardHelp` list on `PuzzleType`, empty by default,
   shown on the web build only ("Arrows move, Space cycles"). Do it with the helper if wanted. *S.*
 - [ ] **Nonogram keys.** Arrows move a cursor; F fills, X crosses, Space cycles the square (and clears on the third press);

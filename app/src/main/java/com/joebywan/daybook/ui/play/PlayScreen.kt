@@ -63,6 +63,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -329,6 +338,15 @@ private fun PlayBoard(
         }
     }
 
+    fun undo() {
+        // A hint reasoned from a board that has just been taken back may lean on a king
+        // that is no longer there.
+        hintSession.clear()
+        undone(puzzle, game.state, game.history)?.let {
+            game = game.copy(state = it.state, history = it.history)
+        }
+    }
+
     if (showTutorial) {
         PlatformBackHandler(enabled = true) { showTutorial = false }
         TutorialRunner(
@@ -356,6 +374,19 @@ private fun PlayBoard(
         Modifier
             .fillMaxSize()
             .background(scheme.background)
+            // Keyboard shortcuts, for keys a board left unused (the focused board sees them first, so
+            // Lexicon keeps its H): Ctrl/Cmd+Z undoes, H asks for a hint, Esc closes one. None once solved.
+            .onKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown || state.solved || event.isAltPressed) return@onKeyEvent false
+                when {
+                    event.key == Key.Z && (event.isCtrlPressed || event.isMetaPressed) && !event.isShiftPressed -> undo()
+                    event.isCtrlPressed || event.isMetaPressed || event.isShiftPressed -> return@onKeyEvent false
+                    event.key == Key.H && puzzle.offersHints -> onHint()
+                    event.key == Key.Escape && hintSession.active -> hintSession.clear()
+                    else -> return@onKeyEvent false
+                }
+                true
+            }
             .onGloballyPositioned { overlayOrigin = it.positionInWindow() },
     ) {
     Column(
@@ -456,13 +487,7 @@ private fun PlayBoard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 ToolButton(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.weight(1f)) {
-                    if (solved) return@ToolButton
-                    // A hint reasoned from a board that has just been taken back may lean on a king
-                    // that is no longer there.
-                    hintSession.clear()
-                    undone(puzzle, game.state, game.history)?.let {
-                        game = game.copy(state = it.state, history = it.history)
-                    }
+                    if (!solved) undo()
                 }
                 ToolButton(Icons.Default.Refresh, "Restart", Modifier.weight(1f)) {
                     if (solved) return@ToolButton
