@@ -5,7 +5,9 @@
   web/src/wasmJsMain/resources/social-preview.png         1200x630 (1.91:1), the og:image/twitter:image
       of the web app (index.html); it ships in the site, so it lives under web/ (a change under docs/
       does not trigger the pages workflow).
-Both are committed; rerun this after changing the wording or the icon.
+  docs/play/feature-graphic.png                           1024x500, Google Play's feature graphic (the same card scaled
+      by 0.8 and cropped 6px top and bottom; Play rejects an alpha channel, so it is saved as RGB).
+All three are committed; rerun this after changing the wording or the icon.
 
 Needs Pillow. Title uses the serif already bundled for the web build; the tagline uses DejaVu Sans
 (any sans will do if that is missing).
@@ -58,3 +60,9 @@ def card(W, H):
 for out, w, h in OUTS:
     card(w, h).save(out, optimize=True)
     print(f"wrote {out.relative_to(ROOT)} {w}x{h} ({out.stat().st_size // 1024} KB)")
+
+FEATURE = ROOT / "docs/play/feature-graphic.png"
+FEATURE.parent.mkdir(parents=True, exist_ok=True)
+scaled = card(1280, 640).resize((1024, 512), Image.LANCZOS).crop((0, 6, 1024, 506))
+scaled.save(FEATURE, optimize=True)
+print(f"wrote {FEATURE.relative_to(ROOT)} 1024x500 ({FEATURE.stat().st_size // 1024} KB)")

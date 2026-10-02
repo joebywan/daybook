@@ -229,5 +229,8 @@ not demand thought, against the owner's stated taste.
   strands existing installs (the export/import backup on the stats screen is the way across). Decide
   the final address before many people install it, if it is going to change at all. Other sites on
   that domain share its browser storage, so keep key names distinct.
-- **Play Store listing** is not created (README, "Publishing to Google Play"). The owner is fine with the
-  developer name being public, so it is only a matter of doing it when wanted.
+- **Play Store listing.** The owner has a paid personal developer account; the listing text, graphics and
+  declarations are ready in `docs/play/LISTING.md`. What remains is the Console work in README,
+  "Publishing to Google Play" (only the owner can do it), then the closed test: 12 testers opted in
+  for 14 continuous days before production access can be requested. Finding the 12 testers is the
+  owner's call. The owner is fine with the developer name being public.
