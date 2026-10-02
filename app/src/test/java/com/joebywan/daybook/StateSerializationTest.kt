@@ -6,6 +6,7 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.KingsState
+import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.MamboState
 import com.joebywan.daybook.puzzles.MosaicState
@@ -18,6 +19,7 @@ import com.joebywan.daybook.puzzles.SnapState
 import com.joebywan.daybook.puzzles.SudokuState
 import com.joebywan.daybook.puzzles.Sym
 import com.joebywan.daybook.puzzles.TowerState
+import com.joebywan.daybook.puzzles.WordList
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -104,5 +106,10 @@ class StateSerializationTest {
         is TowerState -> (0 until state.slots)
             .fold(state) { acc, slot -> acc.withPeg(slot, slot % state.colours) }
             .submit()
+        // A word typed and guessed, then a half-typed row: the guesses and the pending letters must survive.
+        is LexiconState -> {
+            val guess = WordList.answers(state.length).first { it != state.answer }
+            guess.fold(state) { acc, c -> acc.withLetter(c) }.submit().withLetter('a')
+        }
     }
 }
