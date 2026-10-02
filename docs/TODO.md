@@ -33,6 +33,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   Expert board creation on the phone.
 - [ ] **Kings dark mode glare.** The new opaque palette is bright tiles on a near-black page. Ask whether it
   is too much; the alternative (dimmer dark-mode tiles) costs crown/cross contrast.
+- [ ] **Does the solve sound play?** The web build wakes its `AudioContext` on the first tap (`rememberSolveSoundPlayer`
+  in `web/.../WebPlatform.kt`) and plays the marimba pluck on a solve. Headless Chromium has no audio output, so
+  nobody has heard it on the web. Check on the iPhone that it is audible after a solve, that the Settings
+  "Sound" switch silences it, and that the ringer switch behaviour is acceptable. Also: the Settings text
+  mentions "silent or vibrate", which the web has no equivalent of; reword if it reads wrong there.
 - [ ] **Saves survive?** Safari can clear site data after ~7 days unused, but home-screen web apps are
   exempt. Confirm progress persists from the home-screen icon; the export/import backup on the stats
   screen is the safety net.
