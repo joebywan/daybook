@@ -294,6 +294,10 @@ fun readyBoard(puzzle: PuzzleType, seed: Long, difficulty: Difficulty): PuzzleSt
 /** The thread that would turn a spinner is the one generating, so a spinner would sit frozen. */
 const val GENERATION_ANIMATES: Boolean = false
 
+/** Settings text under the Sound switch: what else keeps the chime quiet on this platform. */
+const val SOLVE_SOUND_NOTE: String =
+    "A browser cannot see your phone's silent switch, so turn this off if you want it quiet."
+
 /**
  * Zero, deliberately. A delayed message would never be seen: generation holds the only thread, so
  * the message has to be painted before it starts (see [awaitPaint]). Boards that are cheap are

@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.platform.BackButton
+import com.joebywan.daybook.platform.SOLVE_SOUND_NOTE
 
 /**
  * The player's switches. Reached from the gear on Home; the system back button (or, on the web,
@@ -72,8 +73,7 @@ fun SettingsScreen(
             item {
                 SettingSwitch(
                     title = "Sound",
-                    detail = "A short, soft chime when you solve a puzzle. It follows your media " +
-                        "volume and stays quiet when your phone is on silent or vibrate.",
+                    detail = "A short, soft chime when you solve a puzzle. $SOLVE_SOUND_NOTE",
                     checked = playSound,
                     onChecked = onPlaySound,
                 )
