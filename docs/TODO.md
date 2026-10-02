@@ -15,18 +15,6 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **Solve sound: a quiet, pleasant ding when a puzzle is solved.** (The congratulations frame and the
-  next-step buttons are done: `FinishedFrame`, `nextOptions`.) Add it to the platform seam
-  (`platform/AndroidPlatform.kt` and `web/.../WebPlatform.kt`, same name in both). Synthesise the
-  tone (`AudioTrack` on Android, Web Audio on the web) instead of shipping an audio file, which keeps
-  the APK and the offline cache small and avoids licensing. Keep it short and low in volume. Browsers
-  only allow audio after a tap, which a solved puzzle always follows. It should be silent when the
-  device is on silent or vibrate, and it needs an on/off switch, which belongs with the timer toggle
-  on the Settings screen (`ui/settings/SettingsScreen.kt`, one more `item`; the key goes in
-  `LaunchPreferences`). It defaults to on. **Waiting on the owner:** candidate sounds were rendered to WAV
-  for the owner (rising chime, bell, marimba pluck, glass ding, arpeggio); ship the one they pick and
-  port its envelope and partials to the synthesis code. Do not ship one unapproved. Call it from the
-  `LaunchedEffect(state.solved)` in `PlayScreen`, once (guarded by `recorded`). *M.*
 - [ ] **Accessibility.** Eight boards use raw pointer input and expose no click actions, so a screen reader
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
