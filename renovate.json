@@ -22,7 +22,7 @@
       "allowedVersions": "<6"
     },
     {
-      "description": "CI's JDK stays on 17: Gradle 8.14 refuses to run on newer. Move it with the Gradle 9 upgrade, deliberately.",
+      "description": "CI's JDK stays on 17 until it is moved deliberately. Gradle 9 would run on newer, but the build, CLAUDE.md and README all say 17, so a bump is its own change (docs/TODO.md).",
       "matchDepNames": ["java-jdk"],
       "allowedVersions": "17"
     },
@@ -37,10 +37,9 @@
       "groupName": "Jetpack Compose"
     },
     {
-      "description": "AGP and Kotlin move together with the Compose compiler plugin.",
+      "description": "AGP and Kotlin move together with the Compose compiler plugin. AGP 9 compiles Kotlin itself, so the app applies no kotlin-android plugin; the compose plugin carries the Kotlin version.",
       "matchPackageNames": [
         "com.android.application",
-        "org.jetbrains.kotlin.android",
         "org.jetbrains.kotlin.plugin.compose"
       ],
       "groupName": "Android Gradle plugin and Kotlin"

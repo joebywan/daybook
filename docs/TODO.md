@@ -64,12 +64,18 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
 - [ ] **Repo description is stale.** GitHub's "About" text still says "ten" puzzle types (it is twelve) and "for
   Android" (there is a web version too). Settings > About on the repo page; no API needed, but it is the owner's call.
-- [ ] **Runner label change.** `ubuntu-latest` moves to Ubuntu 26 on **2026-10-19**. Watch the first run
-  after that date; Android SDK setup or the wasm toolchain could break.
-- [ ] **Dependency majors** are well behind: Kotlin 2.2.10 (2.4.x available), Compose Multiplatform 1.9.3,
-  AGP 8.x (9 available), Gradle 8.14 (9 available), kotlinx-datetime 0.7.1 (0.8.0). Renovate opens PRs;
-  the majors move together and need Android and web checked as a pair. CI's JDK is held at 17 until
-  Gradle 9 (`renovate.json`).
+- [ ] **Move the runners to Ubuntu 26.04.** Every workflow pins `ubuntu-24.04`, so GitHub's move of
+  `ubuntu-latest` to 26.04 on 2026-10-19 does not touch this repo. CI's `build` and `web-parity` both
+  passed on `ubuntu-26.04` on 2026-10-02 (PR #91's trial commit); `pages`, `release`, `publish-play` and
+  `renovate` were not tried there. Move them all in one PR when convenient (Renovate may open it, since
+  it tracks runner labels); 24.04 should stay available until the next Ubuntu LTS. *S.*
+- [ ] **Dependencies still behind after the toolchain majors.** The `androidx` libraries (Compose BOM
+  2025.09 -> 2026.09, lifecycle, activity, navigation, datastore, core-ktx) and kotlinx-serialization 1.11
+  are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
+  17 too); Gradle 9 would run on newer, so moving the JDK is its own change (`renovate.json` holds it at 17).
+- [ ] **`web/build.gradle.kts` uses APIs Compose 1.12 and Gradle 9.6 deprecate.** `compose.runtime` and the
+  other accessors want direct coordinates, `getting` wants `getByName`, and `materialIconsExtended` is pinned
+  at 1.7.3 (move to Material Symbols vector resources eventually). Warnings only; the build is green. *S.*
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 
