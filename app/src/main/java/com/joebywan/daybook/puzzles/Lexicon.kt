@@ -106,8 +106,8 @@ object Lexicon : PuzzleType {
     private val onMark = Color.White
 
     private fun markColour(mark: Int, absent: Color): Color = when (mark) {
-        Mark.CORRECT -> correctColour
-        Mark.PRESENT -> presentColour
+        LexiconMark.CORRECT -> correctColour
+        LexiconMark.PRESENT -> presentColour
         else -> absent
     }
 
@@ -115,9 +115,9 @@ object Lexicon : PuzzleType {
 
     /** Three scored rows, letters left out: the colours are the whole of what reads at 80dp. */
     private val previewRows = listOf(
-        listOf(Mark.ABSENT, Mark.PRESENT, Mark.ABSENT, Mark.ABSENT, Mark.PRESENT),
-        listOf(Mark.CORRECT, Mark.ABSENT, Mark.PRESENT, Mark.CORRECT, Mark.ABSENT),
-        listOf(Mark.CORRECT, Mark.CORRECT, Mark.CORRECT, Mark.CORRECT, Mark.CORRECT),
+        listOf(LexiconMark.ABSENT, LexiconMark.PRESENT, LexiconMark.ABSENT, LexiconMark.ABSENT, LexiconMark.PRESENT),
+        listOf(LexiconMark.CORRECT, LexiconMark.ABSENT, LexiconMark.PRESENT, LexiconMark.CORRECT, LexiconMark.ABSENT),
+        listOf(LexiconMark.CORRECT, LexiconMark.CORRECT, LexiconMark.CORRECT, LexiconMark.CORRECT, LexiconMark.CORRECT),
     )
 
     @Composable
@@ -323,7 +323,7 @@ object Lexicon : PuzzleType {
 
     private fun Modifier.dimmed(look: Look): Modifier = if (look.dim) alpha(0.3f) else this
 
-    /** The best clue the board holds for each letter, a..z: a [Mark], or -1 for a letter not yet tried. */
+    /** The best clue the board holds for each letter, a..z: a [LexiconMark], or -1 for a letter not yet tried. */
     private fun keyMarks(s: LexiconState): IntArray {
         val best = IntArray(26) { -1 }
         s.guesses.forEach { guess ->
@@ -473,10 +473,10 @@ object Lexicon : PuzzleType {
                             val mark = known[c - 'a']
                             val fill = when (mark) {
                                 -1 -> scheme.surfaceVariant
-                                Mark.ABSENT -> scheme.outline.copy(alpha = 0.3f)
+                                LexiconMark.ABSENT -> scheme.outline.copy(alpha = 0.3f)
                                 else -> markColour(mark, absent)
                             }
-                            val text = if (mark > Mark.ABSENT) onMark else scheme.onSurfaceVariant
+                            val text = if (mark > LexiconMark.ABSENT) onMark else scheme.onSurfaceVariant
                             KeyButton(c.uppercase(), Modifier.weight(1f), playable, LexiconTeacher.key(c), highlight, glow, pulse,
                                 fill, text, small = false) {
                                 press(LexiconKeyAction.Letter(c))
@@ -531,7 +531,7 @@ object Lexicon : PuzzleType {
                     letter.uppercase(),
                     fontSize = (cell.value * 0.46f).sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (mark != null && mark > Mark.ABSENT) onMark else scheme.onSurface,
+                    color = if (mark != null && mark > LexiconMark.ABSENT) onMark else scheme.onSurface,
                 )
             }
         }

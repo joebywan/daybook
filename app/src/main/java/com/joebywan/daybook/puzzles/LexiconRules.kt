@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
  * One guess's letters, marked. [CORRECT] is the right letter in the right place, [PRESENT] the
  * right letter in the wrong place, [ABSENT] a letter the word has no (more) of.
  */
-object Mark {
+object LexiconMark {
     const val ABSENT = 0
     const val PRESENT = 1
     const val CORRECT = 2
@@ -101,14 +101,14 @@ object LexiconRules {
         val out = IntArray(n)
         val left = IntArray(26)
         for (i in 0 until n) {
-            if (guess[i] == answer[i]) out[i] = Mark.CORRECT else left[answer[i] - 'a']++
+            if (guess[i] == answer[i]) out[i] = LexiconMark.CORRECT else left[answer[i] - 'a']++
         }
         for (i in 0 until n) {
-            if (out[i] == Mark.CORRECT) continue
+            if (out[i] == LexiconMark.CORRECT) continue
             val k = guess[i] - 'a'
             if (left[k] > 0) {
                 left[k]--
-                out[i] = Mark.PRESENT
+                out[i] = LexiconMark.PRESENT
             }
         }
         return out.toList()
@@ -120,17 +120,17 @@ object LexiconRules {
         val left = IntArray(26)
         val out = IntArray(n)
         for (i in 0 until n) {
-            if (guess[i] == answer[i]) out[i] = Mark.CORRECT else left[answer[i] - 'a']++
+            if (guess[i] == answer[i]) out[i] = LexiconMark.CORRECT else left[answer[i] - 'a']++
         }
         var code = 0
         var weight = 1
         for (i in 0 until n) {
             var m = out[i]
-            if (m != Mark.CORRECT) {
+            if (m != LexiconMark.CORRECT) {
                 val k = guess[i] - 'a'
                 if (left[k] > 0) {
                     left[k]--
-                    m = Mark.PRESENT
+                    m = LexiconMark.PRESENT
                 }
             }
             code += m * weight
@@ -151,7 +151,7 @@ object LexiconRules {
     fun hardProblem(candidate: String, guesses: List<String>, marks: List<List<Int>>): String? {
         for (g in guesses.indices) {
             for (i in candidate.indices) {
-                if (marks[g][i] == Mark.CORRECT && candidate[i] != guesses[g][i]) {
+                if (marks[g][i] == LexiconMark.CORRECT && candidate[i] != guesses[g][i]) {
                     return "Slot ${i + 1} must be ${guesses[g][i].uppercaseChar()}"
                 }
             }
@@ -159,7 +159,7 @@ object LexiconRules {
         val need = IntArray(26)
         for (g in guesses.indices) {
             val seen = IntArray(26)
-            for (i in guesses[g].indices) if (marks[g][i] != Mark.ABSENT) seen[guesses[g][i] - 'a']++
+            for (i in guesses[g].indices) if (marks[g][i] != LexiconMark.ABSENT) seen[guesses[g][i] - 'a']++
             for (k in 0 until 26) if (seen[k] > need[k]) need[k] = seen[k]
         }
         for (k in 0 until 26) {

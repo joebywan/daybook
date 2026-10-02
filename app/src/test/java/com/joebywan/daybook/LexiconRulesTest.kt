@@ -3,7 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.LexiconRules
 import com.joebywan.daybook.puzzles.LexiconState
-import com.joebywan.daybook.puzzles.Mark
+import com.joebywan.daybook.puzzles.LexiconMark
 import com.joebywan.daybook.puzzles.WordList
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals

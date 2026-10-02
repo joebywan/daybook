@@ -123,7 +123,7 @@ internal object LexiconTeacher {
                 for (i in 0 until length) {
                     val k = guesses[g][i] - 'a'
                     when (marks[g][i]) {
-                        Mark.CORRECT -> {
+                        LexiconMark.CORRECT -> {
                             seen[k]++
                             if (green[i] == null) {
                                 green[i] = guesses[g][i]
@@ -131,7 +131,7 @@ internal object LexiconTeacher {
                             }
                             if (shownAt[k] < 0) shownAt[k] = tile(length, g, i)
                         }
-                        Mark.PRESENT -> {
+                        LexiconMark.PRESENT -> {
                             seen[k]++
                             if (ruledBy[i][k] < 0) ruledBy[i][k] = g
                             if (shownAt[k] < 0) shownAt[k] = tile(length, g, i)
@@ -246,7 +246,7 @@ internal object LexiconTeacher {
                 taken.forEach { add(tile(c.length, c.greenGuess[it], it)) }
             }
             val shownTiles = (0 until c.guesses.size).flatMap { g ->
-                (0 until c.length).filter { c.guesses[g][it] == letter && c.marks[g][it] != Mark.ABSENT }
+                (0 until c.length).filter { c.guesses[g][it] == letter && c.marks[g][it] != LexiconMark.ABSENT }
                     .map { tile(c.length, g, it) }
             }.toSet()
             val shout = letter.uppercaseChar()
