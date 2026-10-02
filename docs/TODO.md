@@ -120,16 +120,11 @@ below have a famous branded version; use the descriptive name).
 
 ### Asked for by the owner
 
-- [ ] **Lexicon: check it on the emulator.** Rendered in the web build (all three tiers, 390x844, 375x537 and
-  1280x800, light and dark, Chromium and WebKit, with played rows): the keyboard stopped at 520dp on wide
-  screens and a letter already ruled out is now faded, which in light was the same beige as an untried key. Still
-  to do: the hint popover over a highlighted tile and key, the walkthrough, a physical keyboard, the Android
-  emulator, and recapture `docs/screenshots/home.png` (thirteen tiles now) and its alt text.
-- [ ] **Nonogram: still unchecked.** Rendered in the web build (2026-10-02, Chromium and WebKit, all three tiers at
-  390x844, 375x537 and 1280x800, light and dark, plus the home grid): the board, clue layout, Fill/Cross pen, taps,
-  hints, the walkthrough's first frame and a hints-driven solve all draw correctly; 15x15 clue digits are small
-  (~9dp at 390dp wide) but legible. Not done: a sweep by touch drag, 360x640 and 390x664, the emulator, and
-  recapturing `docs/screenshots/home.png` (thirteen tiles, the last row has one tile and the grid scrolls) and its alt text.
+- [ ] **Nonogram and Lexicon: short phone screens on the emulator.** Both were driven on the Android emulator
+  (1080x2160 and 1080x2400, 2026-10-03): the Lexicon hint popover over a highlighted row and keys, its nine-frame
+  walkthrough, hardware keys, and a Nonogram 5x5 swept by touch drag to the finish frame all work, and a save made on
+  the build before the toolchain upgrade (a Sudoku with two digits placed and a running timer) loaded on this one.
+  Not done: 360x640 and 390x664, and the 10x10 and 15x15 Nonogram tiers by touch on the emulator.
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
   size-by-size retune; measure the pass rate before trying again. Hardware-keyboard entry is in the keyboard item above.
