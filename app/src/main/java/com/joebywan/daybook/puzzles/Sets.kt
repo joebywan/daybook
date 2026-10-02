@@ -103,8 +103,8 @@ object Sets : PuzzleType {
     override val tagline = "All alike or all different, four ways"
     override val accent = 0xFF54B07A
     override val rules = listOf(
-        "Each card has a count, a shape, a shading and a colour.",
-        "Three cards form a set when, for every one of those four traits, they are either all the same or all different.",
+        "Find sets of three cards where each trait is all the same or all different.",
+        "The four traits are count, shape, shading and colour. Two alike and one odd, on any trait, is not a set.",
         "Tap three cards to claim a set. Find them all to finish.",
         "Cards are never used up — a tinted card is one you have already used, and it is still in play.",
         "Sets you have claimed sit above the board; tap one to light up its three cards again.",
@@ -454,8 +454,9 @@ object Sets : PuzzleType {
         listOf(
             TutorialFrame(
                 state = fresh,
-                caption = "Each card has a count, a shading, a colour and a shape. These three are a set: " +
-                    "one, two, three; solid, striped, outlined; three colours; all ovals.",
+                caption = "In a set, each trait is all the same or all different. A card has four: count, " +
+                    "shading, colour and shape. These three are a set: one, two, three; solid, striped, outlined; " +
+                    "three colours; all ovals.",
                 highlight = BoardHighlight(strong = TUTORIAL_SET.toSet()),
             ),
             TutorialFrame(
