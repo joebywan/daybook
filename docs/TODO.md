@@ -19,6 +19,12 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
+- [ ] **Sets: say "all same or all different" on the first page of the rules.** The owner wants the first
+  page to lead with something like "each trait needs to be all the same or all different". Today the
+  rules list opens with the four traits, and the all-alike-or-all-different test is only the second
+  line. Reword or reorder `rules` in `puzzles/Sets.kt` (~line 105), and check the walkthrough's first
+  frame says the same. *S.*
+
 ## Needs a real iPhone
 
 Nothing below can be verified from a desktop browser. The tester has the device.
