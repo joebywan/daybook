@@ -19,6 +19,12 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
+- [ ] **Sets: say "all same or all different" on the first page of the rules.** The owner wants the first
+  page to lead with something like "each trait needs to be all the same or all different". Today the
+  rules list opens with the four traits, and the all-alike-or-all-different test is only the second
+  line. Reword or reorder `rules` in `puzzles/Sets.kt` (~line 105), and check the walkthrough's first
+  frame says the same. *S.*
+
 ## Needs a real iPhone
 
 Nothing below can be verified from a desktop browser. The tester has the device.
@@ -51,8 +57,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   board from a fallback (`generateVerified`-style). Shikaku and Snap prove uniqueness but nothing
   asserts their fallback is never reached over a year; Kings' proved-path test samples 30 seeds per
   tier, not a year. Add year-long fallback tests for each. *M.*
-- [ ] **No text-fit test for Kings,** and only partial ones for Pipes and Atoms (hint text can overflow the
-  popover). *S–M.*
 - [ ] **The finished frame hides about half the board on tall screens.** At 390x844 the centred frame
   (rows 321-523dp) covers 58% of Snap's Standard/Hard board (235-583dp) and 50% of Expert's; below 700dp
   the bottom-docked frame covers 12-32%. The board never moves and every tile works, so this is
