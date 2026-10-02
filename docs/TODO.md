@@ -62,10 +62,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Pages HTTPS.** The Pages API reports `https_enforced=false` with no CNAME on the project site
   (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
-- [ ] **Repo description is stale.** GitHub's "About" text still says "ten" puzzle types (it is eleven) and "for
-  Android" (there is a web version too). Settings > About on the repo page; no API needed, but it is the owner's call.
-- [ ] **Runner label change.** `ubuntu-latest` moves to Ubuntu 26 on **2026-10-19**. Watch the first run
-  after that date; Android SDK setup or the wasm toolchain could break.
+- [ ] **Move the runners to Ubuntu 26.04.** Every workflow pins `ubuntu-24.04`, so GitHub's move of
+  `ubuntu-latest` to 26.04 on 2026-10-19 does not touch this repo. CI's `build` and `web-parity` both
+  passed on `ubuntu-26.04` on 2026-10-02 (PR #91's trial commit); `pages`, `release`, `publish-play` and
+  `renovate` were not tried there. Move them all in one PR when convenient (Renovate may open it, since
+  it tracks runner labels); 24.04 should stay available until the next Ubuntu LTS. *S.*
 - [ ] **Dependency majors** are well behind: Kotlin 2.2.10 (2.4.x available), Compose Multiplatform 1.9.3,
   AGP 8.x (9 available), Gradle 8.14 (9 available), kotlinx-datetime 0.7.1 (0.8.0). Renovate opens PRs;
   the majors move together and need Android and web checked as a pair. CI's JDK is held at 17 until
