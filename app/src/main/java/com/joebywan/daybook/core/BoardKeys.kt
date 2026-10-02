@@ -8,7 +8,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -74,6 +79,24 @@ fun arrowStep(key: Key): Pair<Int, Int>? = when (key) {
     Key.DirectionRight -> 0 to 1
     else -> null
 }
+
+/**
+ * Outlines square [cursor] of an even [cols] x [rows] grid filling this node, or nothing for null.
+ * The keyboard cursor: transient (`remember`, never `PuzzleState`), drawn over the board, no layout.
+ */
+fun Modifier.gridCursor(cursor: Int?, cols: Int, rows: Int, color: Color): Modifier =
+    if (cursor == null) this else drawWithContent {
+        drawContent()
+        val w = size.width / cols
+        val h = size.height / rows
+        val stroke = maxOf(2f, minOf(w, h) * 0.1f)
+        drawRect(
+            color,
+            Offset((cursor % cols) * w + stroke / 2, (cursor / cols) * h + stroke / 2),
+            Size(w - stroke, h - stroke),
+            style = Stroke(stroke),
+        )
+    }
 
 /** True for the four arrows: the keys worth acting on while held. */
 fun isArrow(key: Key): Boolean = arrowStep(key) != null

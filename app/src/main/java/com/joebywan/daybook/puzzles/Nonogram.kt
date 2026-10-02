@@ -57,6 +57,8 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.boardKeys
+import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.highlightGrid
@@ -435,6 +437,8 @@ object Nonogram : PuzzleType {
         // "switch to Cross" a step to walk back.
         var pen by rememberSaveable(s.solution) { mutableStateOf(NonogramLogic.FILLED) }
         var sweep by remember(s.solution) { mutableStateOf<Sweep?>(null) }
+        // The keyboard cursor (see NonogramKeys): transient, so it is not in the state either.
+        var cursor by remember(s.solution) { mutableStateOf<Int?>(null) }
 
         val rows = remember(s.solution) { NonogramLogic.rowClues(s) }
         val cols = remember(s.solution) { NonogramLogic.colClues(s) }
@@ -457,7 +461,18 @@ object Nonogram : PuzzleType {
         }
 
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 14.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp)
+                .boardKeys(interactive, shift = true) { key, shift, repeat ->
+                    val action = nonogramKeyAction(key, shift) ?: return@boardKeys false
+                    if (!repeat || action is NonogramKeyAction.Move) {
+                        val result = s.applyKey(cursor, action)
+                        cursor = result.cursor
+                        if (result.board !== s) onState(result.board)
+                    }
+                    true
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             BoxWithConstraints(
@@ -497,9 +512,13 @@ object Nonogram : PuzzleType {
                             .offset(g.gridX.asDp(density), g.gridY.asDp(density))
                             .size((s.width * unitPx).asDp(density), (s.height * unitPx).asDp(density))
                             .highlightGrid(s.width, s.height)
+                            .gridCursor(cursor.takeIf { interactive }, s.width, s.height, scheme.primary)
                             .pointerInput(s, interactive, pen) {
                                 if (!interactive) return@pointerInput
-                                detectTapGestures { offset -> onState(s.tap(cellAt(offset), pen)) }
+                                detectTapGestures { offset ->
+                                    cursor = cellAt(offset)
+                                    onState(s.tap(cellAt(offset), pen))
+                                }
                             }
                             .pointerInput(s, interactive, pen) {
                                 if (!interactive) return@pointerInput
