@@ -265,6 +265,14 @@ class SetsTeachingTest {
         }
     }
 
+    /** The owner's ask: the first thing either page says is the one test a set must pass. */
+    @Test
+    fun `rules and walkthrough both open with the set test`() {
+        val test = "all the same or all different"
+        assertTrue(Sets.rules.first(), Sets.rules.first().contains(test))
+        assertTrue(Sets.tutorial.first().caption, Sets.tutorial.first().caption.contains(test))
+    }
+
     // ---- mistakes -------------------------------------------------------------------------------
 
     private val tutorialBoard = SetsState(Sets.TUTORIAL_CARDS, 2, emptyList(), emptyList())
