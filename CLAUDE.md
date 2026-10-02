@@ -56,8 +56,11 @@ each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthro
   blank ~156dp band all game on every teaching puzzle, and a visible jump larger on completion.)
   It sits on the opposite half from the highlight: highlight low, popover above (under the clock);
   highlight high, popover below (hugging the toolbar, which it never covers). Both clear, then
-  the half rule decides, ties below. Overlap with the highlight weighs 4x overlap with a control the
-  player needs (`keepClear`: Sudoku's digit pad, Mosaic's palette, Tower's peg and swatch rows). A
+  the half rule decides, ties below. A control the player needs (`keepClear`: Sudoku's digit pad,
+  Mosaic's palette, Tower's peg and swatch rows) is kept clear above all (overlap weighs 1000 against
+  the highlight's 4): when "below" would land on one, a third place just above it is tried, so on a
+  short screen the popover covers the board's own rows rather than the pad. The rule is the pure
+  `placePopover` (`ui/teach/PopoverPlacement.kt`, pinned by `PopoverPlacementTest`). A
   side that still overlaps slides as far as it can (above may rise over the header) and then shrinks
   to 104dp, its text scrolling behind a fade. Taps outside the card reach the board, so the move can
   be made with the explanation up. Changes of side or highlight glide (220ms).
@@ -258,7 +261,11 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   `setTimeout`), and `prepareBoards` — called by `DaybookApp` while Home is showing, a no-op on
   Android — makes today's eleven boards at the grid's tier in advance, one per turn of the event
   loop, into a small cache. A tap usually finds its board ready. A board already underway cannot be
-  interrupted, so a tap during a slow pre-generation still waits for it.
+  interrupted, so a tap during a slow pre-generation still waits for it. A cached board skips the
+  loading screen (`readyBoard`). The loading screen waits `LOADING_MESSAGE_DELAY_MS` (150 ms) before
+  showing its message on Android, where it also turns a spinner (`GENERATION_ANIMATES`); on the web
+  both are off: the delay is zero because nothing can be painted once a board is underway, and a
+  spinner would sit frozen.
 - **Fonts.** A browser lends wasm none of its fonts; without help, text falls back to the one font
   Compose ships, which has no `→` and no serif. `platformTypography` in the seam swaps the bundled
   Noto Serif Bold (Android's serif) into the serif styles and preloads a few arrows from Noto Sans
