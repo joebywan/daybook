@@ -561,6 +561,9 @@ object Sudoku : PuzzleType {
         }
     }
 
+    override fun withoutSelection(state: PuzzleState): PuzzleState =
+        (state as SudokuState).let { if (it.selected == null) it else it.copy(selected = null) }
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as SudokuState
