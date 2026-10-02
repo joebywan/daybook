@@ -187,6 +187,7 @@ the owner wants bad judgements allowed, and conflict display catches them). Plac
 from its peers' notes in the same state, so one undo restores both; erasing does not resurrect them.
 The notes mode is `rememberSaveable` in the board, not state. Storing them means owning which to retract when a
 piece is lifted, which is where the feature rots.
+Keyboard (web, or a hardware one): `puzzles/SudokuKeys.kt` maps a key to a `SudokuKeyAction` (digits, clear, arrows; pure, tested) and applies it through the pad's own `enter`/`withCell`/`toggleNote`, so notes, undo and peer-striking cannot differ; chords are ignored and a held digit is not repeated. The board's box takes focus (clicking a cell, or a hint opening, hands it back; the page needs a click first, since the canvas is not DOM-focused on load).
 
 **Verify by rendering, not reasoning.** Icons, motifs, crescents, pipe joints and crosses have
 all failed at true size in ways nobody predicted — a crown read as a comb, pages as a boat hull,
