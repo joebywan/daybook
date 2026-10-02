@@ -109,6 +109,10 @@ fun readyBoard(puzzle: PuzzleType, seed: Long, difficulty: Difficulty): PuzzleSt
 /** Generation is off the main thread, so a spinner on the loading screen keeps turning. */
 const val GENERATION_ANIMATES: Boolean = true
 
+/** Settings text under the Sound switch: what else keeps the chime quiet on this platform. */
+const val SOLVE_SOUND_NOTE: String =
+    "It follows your media volume and stays quiet when your phone is on silent or vibrate."
+
 /** How long a board may take before "Setting out..." appears, so a quick one does not flash it. */
 const val LOADING_MESSAGE_DELAY_MS: Long = 150L
 
