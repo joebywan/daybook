@@ -56,11 +56,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **No checked-in rendering harness.** "Verify by rendering" is convention only; a Java2D harness drove
   past icon/motif checks and is not in the repo. Check one in (or a Playwright screenshot script for the
   web build) so it stops being rebuilt per session. *M.*
-- [ ] **Docs that disagree with the code** (found while writing `docs/PUZZLE_STANDARDS.md`):
-  `CLAUDE.md` says only Kings and Atoms have `generateVerified` (LITS has it too, `internal`) and that
-  all eleven boards consult `maxHeight` (Tower fits its box with a bounded `LazyColumn`); the `PuzzleType`
-  KDoc still says purity is the only hard rule, but a new puzzle also needs a `ParityFingerprint.body`
-  branch, a `StateSerializationTest.mutate` branch and a parity pin (the README now says so). *S.*
 - [ ] **The finished frame hides about half the board on tall screens.** At 390x844 the centred frame
   (rows 321-523dp) covers 58% of Snap's Standard/Hard board (235-583dp) and 50% of Expert's; below 700dp
   the bottom-docked frame covers 12-32%. The board never moves and every tile works, so this is

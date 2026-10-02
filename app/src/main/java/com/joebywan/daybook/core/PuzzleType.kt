@@ -17,13 +17,19 @@ import com.joebywan.daybook.puzzles.PuzzleState
  *    only allows implementations of a sealed type in its own package.
  * 2. Add that object to [PuzzleRegistry.all].
  *
- * That is the whole contract — the home screen, daily rotation, archive, streaks, stats, hints and
- * results card all pick the new puzzle up automatically. Nothing else in the app needs to know it
- * exists.
+ * That is the wiring — the home screen, daily rotation, archive, streaks, stats, hints and
+ * results card all pick the new puzzle up automatically. The build and the tests then ask for
+ * more, and a finished puzzle needs a few things beyond that:
+ * - a branch in `ParityFingerprint.body` for its state class (the `when` is over the sealed
+ *   [PuzzleState], so the build fails until it is there);
+ * - a branch in `StateSerializationTest.mutate` (likewise exhaustive);
+ * - a parity pin test, so the board is proved identical on Android and in the browser;
+ * - to match the others: a teacher, a walkthrough and a proof that its boards have the answer
+ *   they claim. `docs/PUZZLE_STANDARDS.md` has the full list and a step-by-step recipe.
  *
  * [generate] **must** be a pure function of `(seed, difficulty)`. Daily puzzles are produced on the
  * device from the date, never fetched, so purity is what lets the entire back-catalogue be playable
- * offline and for free.
+ * offline and for free. It is the one rule the compiler cannot check.
  */
 interface PuzzleType {
 
