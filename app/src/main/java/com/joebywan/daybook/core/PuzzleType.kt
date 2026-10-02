@@ -98,6 +98,20 @@ interface PuzzleType {
      */
     val tutorial: List<TutorialFrame> get() = emptyList()
 
+    /**
+     * [state] with whatever the player has only *pointed at* dropped: a selected cell, a half-made
+     * pick. Everything done stays, move count included. Undo restores states through this, so it
+     * never lands on a highlight left over from the move it took back. Default: nothing to drop.
+     */
+    fun withoutSelection(state: PuzzleState): PuzzleState = state
+
+    /**
+     * Whether [a] and [b] are the same board as far as Undo is concerned: they differ, if at all,
+     * only in selection. Undo skips history entries that are the same board as the one on screen,
+     * since stepping onto them would change nothing the player can see but a highlight.
+     */
+    fun sameBoard(a: PuzzleState, b: PuzzleState): Boolean = withoutSelection(a) == withoutSelection(b)
+
     /** Whether this puzzle can offer a deducible next step. Drives whether the Hint button appears. */
     val offersHints: Boolean get() = true
 }

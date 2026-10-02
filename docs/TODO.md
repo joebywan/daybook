@@ -21,8 +21,6 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Hint popover can cover Sudoku's digit pad** on a very short screen (360x640) when the hint is in
   the top-left box: the other side would cover the highlight. Close and Show me stay reachable.
   Consider shrinking the pad or nudging the popover. *S.*
-- [ ] **Undo leaves a selection highlight behind in Sudoku and Sets** on the web (the move itself is undone).
-  Cosmetic; check whether Android does the same. *S.*
 - [ ] **Loading state polish.** "Setting out X..." is a plain text line. (a) Android: add a spinner, since
   generation is off the main thread and it would animate. (b) Both: show the message only if generation
   takes longer than ~150 ms, so quick boards do not flash it. The web cannot animate while generating

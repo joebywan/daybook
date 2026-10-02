@@ -547,6 +547,14 @@ object Sets : PuzzleType {
         }
     }
 
+    /** Picks and the one-tap flash (a rejected or repeated trio) are only pointing; claims stay. */
+    override fun withoutSelection(state: PuzzleState): PuzzleState =
+        (state as SetsState).copy(selected = emptyList(), lastWrong = false, lastRepeat = false, lastPick = emptyList())
+
+    /** A pick costs a move, so two boards differing only in picks differ in `moves` as well. */
+    override fun sameBoard(a: PuzzleState, b: PuzzleState): Boolean =
+        (withoutSelection(a) as SetsState).copy(moves = 0) == (withoutSelection(b) as SetsState).copy(moves = 0)
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as SetsState

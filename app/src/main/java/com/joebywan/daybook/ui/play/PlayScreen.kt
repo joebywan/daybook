@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.undone
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.PlatformBackHandler
@@ -418,8 +419,8 @@ private fun PlayBoard(
                     // A hint reasoned from a board that has just been taken back may lean on a king
                     // that is no longer there.
                     hintSession.clear()
-                    game.history.lastOrNull()?.let {
-                        game = game.copy(state = it, history = game.history.dropLast(1))
+                    undone(puzzle, game.state, game.history)?.let {
+                        game = game.copy(state = it.state, history = it.history)
                     }
                 }
                 ToolButton(Icons.Default.Refresh, "Restart", Modifier.weight(1f)) {

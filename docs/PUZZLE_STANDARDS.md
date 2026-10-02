@@ -223,7 +223,11 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   tap cancels (Pipes' spin bug, CLAUDE.md).
 - **Undo, restart and save.** `PlayScreen` owns undo (history in the saved game, bounded to
   `SavedGame.UNDO_DEPTH` = 24), restart (back to `initial`, clears the hint session), the clock and the results
-  card. A board never implements these. Undo and Restart also clear any open hint.
+  card. A board never implements these. Undo and Restart also clear any open hint. A board that keeps a
+  selection or half-made pick in its state (Sudoku, Sets) overrides `PuzzleType.withoutSelection` (and
+  `sameBoard`, if a pick also costs a move): `core/Undo.kt` then skips history entries that differ from the
+  board on screen only by selection and restores the one it lands on with its selection dropped, so Undo
+  takes back moves, not highlights (`test/UndoSelectionTest`).
 - **Size from both axes.** Use `BoxWithConstraints` and `minOf(maxWidth / w, maxHeight / h)`. Reference:
   `Mosaic.Board`. Sets' `Sets.cardWidth(available, availableHeight, cards)` is tested in
   `test/SetsStripTest`. Tower is a different shape (a bottom-anchored `LazyColumn` with
