@@ -24,16 +24,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.platform.BackButton
+import com.joebywan.daybook.platform.SOLVE_SOUND_NOTE
 
 /**
  * The player's switches. Reached from the gear on Home; the system back button (or, on the web,
- * the arrow) is the way out, as on Stats. Each setting is a row in [LazyColumn] so the next ones
- * (the solve sound, see docs/TODO.md) are one more `item`.
+ * the arrow) is the way out, as on Stats. Each setting is a row in [LazyColumn], so the next one
+ * is one more `item`.
  */
 @Composable
 fun SettingsScreen(
     showTimer: Boolean,
     onShowTimer: (Boolean) -> Unit,
+    playSound: Boolean,
+    onPlaySound: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -65,6 +68,14 @@ fun SettingsScreen(
                         "shown when you solve, and kept for your statistics.",
                     checked = showTimer,
                     onChecked = onShowTimer,
+                )
+            }
+            item {
+                SettingSwitch(
+                    title = "Sound",
+                    detail = "A short, soft chime when you solve a puzzle. $SOLVE_SOUND_NOTE",
+                    checked = playSound,
+                    onChecked = onPlaySound,
                 )
             }
         }

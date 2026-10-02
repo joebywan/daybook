@@ -22,6 +22,7 @@ import com.joebywan.daybook.platform.currentDate
 import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.platform.prepareBoards
 import com.joebywan.daybook.platform.rememberKeyValueStore
+import com.joebywan.daybook.platform.rememberSolveSoundPlayer
 import com.joebywan.daybook.ui.archive.ArchiveScreen
 import com.joebywan.daybook.ui.home.HomeScreen
 import com.joebywan.daybook.ui.home.LaunchMode
@@ -111,6 +112,11 @@ fun DaybookApp(startAt: Route = Route.Home) {
     val storedShowTimer by launchPrefs.showTimer.collectAsState(initial = true)
     var pickedShowTimer by remember { mutableStateOf<Boolean?>(null) }
     val showTimer = pickedShowTimer ?: storedShowTimer
+    val storedPlaySound by launchPrefs.playSound.collectAsState(initial = true)
+    var pickedPlaySound by remember { mutableStateOf<Boolean?>(null) }
+    val playSound = pickedPlaySound ?: storedPlaySound
+    // Armed while the switch is on (the web wakes its audio on the first taps); a no-op when off.
+    val playSolveSound = rememberSolveSoundPlayer(playSound)
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
     // back to Daily, because that is what the app is for.
     var mode by rememberSaveable { mutableStateOf(LaunchMode.DAILY) }
@@ -180,6 +186,11 @@ fun DaybookApp(startAt: Route = Route.Home) {
                 pickedShowTimer = show
                 scope.launch { launchPrefs.setShowTimer(show) }
             },
+            playSound = playSound,
+            onPlaySound = { play ->
+                pickedPlaySound = play
+                scope.launch { launchPrefs.setPlaySound(play) }
+            },
             onBack = { route = Route.Home },
         )
 
@@ -218,6 +229,9 @@ fun DaybookApp(startAt: Route = Route.Home) {
                         else store.saveGame(gameKey, game)
                     },
                     onSolved = { seconds, hints ->
+                        // PlayScreen calls this once per solve (its `recorded` flag survives
+                        // recreation), so the chime cannot repeat on a rotation.
+                        playSolveSound()
                         scope.launch {
                             store.record(
                                 Completion(
