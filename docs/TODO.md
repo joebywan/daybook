@@ -56,8 +56,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **No checked-in rendering harness.** "Verify by rendering" is convention only; a Java2D harness drove
   past icon/motif checks and is not in the repo. Check one in (or a Playwright screenshot script for the
   web build) so it stops being rebuilt per session. *M.*
-- [ ] **`TutorialFrame.passes` is dead API.** `CLAUDE.md` says Sets, Mambo and Snap use it; no puzzle sets
-  it (they write one frame per emitted state). Delete the field or use it, and fix the docs. *S.*
 - [ ] **Docs that disagree with the code** (found while writing `docs/PUZZLE_STANDARDS.md`):
   `CLAUDE.md` says only Kings and Atoms have `generateVerified` (LITS has it too, `internal`) and that
   all eleven boards consult `maxHeight` (Tower fits its box with a bounded `LazyColumn`); the `PuzzleType`
