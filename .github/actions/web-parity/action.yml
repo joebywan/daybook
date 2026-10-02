@@ -1,0 +1,33 @@
+name: Web parity
+description: >
+  Compare every board the built wasm distribution generates, in Chromium and WebKit, with the JVM's.
+  The caller has already built web/build/dist/wasmJs/productionExecutable (./gradlew
+  :web:wasmJsBrowserDistribution) with JDK 17 and the Android SDK set up. A year of every puzzle and
+  tier (12,045 boards) takes about a minute in each browser; see tools/web-parity/check.py.
+
+runs:
+  using: composite
+  steps:
+    # The JVM's side: the same year, in the page's order. DAYBOOK_PARITY_DUMP is not an input Gradle
+    # knows about, so without --rerun a restored build cache would skip the test and write no file.
+    - name: JVM board dump
+      shell: bash
+      env:
+        DAYBOOK_PARITY_DUMP: ${{ runner.temp }}/jvm-parity.txt
+        DAYBOOK_PARITY_DAYS: '365'
+      run: |
+        ./gradlew :app:testDebugUnitTest --rerun --tests '*WebParityDumpTest*'
+        test -s "$DAYBOOK_PARITY_DUMP" || { echo "::error::WebParityDumpTest wrote no dump"; exit 1; }
+
+    - name: Install Playwright and its browsers
+      shell: bash
+      run: |
+        python3 -m venv "$RUNNER_TEMP/pwenv"
+        "$RUNNER_TEMP/pwenv/bin/pip" install --quiet -r tools/web-parity/requirements.txt
+        "$RUNNER_TEMP/pwenv/bin/python" -m playwright install --with-deps chromium webkit
+
+    - name: Compare the browser's boards with the JVM's
+      shell: bash
+      run: >
+        "$RUNNER_TEMP/pwenv/bin/python" tools/web-parity/check.py
+        --jvm "$RUNNER_TEMP/jvm-parity.txt"

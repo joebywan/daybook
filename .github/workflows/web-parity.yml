@@ -1,0 +1,52 @@
+name: Web parity
+
+# The web build compiles the same generators as Android, and a board that comes out differently in a
+# browser than on the JVM is a bug nothing else notices (the per-puzzle parity tests pin a few boards
+# each). This runs the whole year-long comparison on pull requests that could change a board or the
+# web build. It is deliberately not part of `build`, the required check: a failure here is visible on
+# the pull request but cannot hold up an unrelated one, and `build` need not wait for the wasm toolchain.
+# The same check gates the deploy in pages.yml, so a divergence that gets past review still cannot ship.
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/**'
+      - 'app/src/test/java/com/joebywan/daybook/WebParityDumpTest.kt'
+      - 'web/**'
+      - 'tools/web-parity/**'
+      - '.github/actions/web-parity/**'
+      - '.github/workflows/web-parity.yml'
+      - 'gradle/**'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+  workflow_dispatch:
+
+concurrency:
+  group: web-parity-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # web/ compiles files out of app/, and the build configures both projects.
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platforms;android-36 build-tools;36.0.0'
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Build web distribution
+        run: ./gradlew :web:wasmJsBrowserDistribution
+
+      - uses: ./.github/actions/web-parity

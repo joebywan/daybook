@@ -1,0 +1,3 @@
+# The browser driver for tools/web-parity/check.py. Pinned so a Playwright release cannot change the
+# result of a run; Renovate keeps it current. The browsers themselves are fetched by `playwright install`.
+playwright==1.63.0

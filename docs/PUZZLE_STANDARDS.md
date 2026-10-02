@@ -203,6 +203,8 @@ by default, so:
    puzzle). Run `DAYBOOK_PARITY_DUMP=<file> ./gradlew :app:testDebugUnitTest --tests '*WebParityDumpTest*'`
    and compare with the page's `?dump&range=365` output (strip the `RANGE ` prefix); the files must be
    identical. Take the same dump before and after any generator change to prove Android boards unchanged.
+   CI does this for you on every deploy and on pull requests that touch `app/src/main` or `web/`
+   (`tools/web-parity/check.py`, CLAUDE.md "Web build"); run it yourself to see a divergence before pushing.
 
 ## 6. The board UI
 
