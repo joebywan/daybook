@@ -8,6 +8,8 @@ import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.MamboState
 import com.joebywan.daybook.puzzles.Sym
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -49,6 +51,60 @@ class MamboRulesTest {
                     "mambo/${difficulty.name}/$seed starts with ${state.givens.count { it }} givens",
                     state.givens.count { it } >= 2,
                 )
+            }
+        }
+    }
+
+    @Test
+    fun `the proved path ships every daily board of a year on every tier`() {
+        // Asserts on generateVerified, not generate: the last resort also satisfies "valid board",
+        // so only the null check can fail if the search ever came up empty.
+        val start = LocalDate.of(2026, 1, 1)
+        for (difficulty in Difficulty.entries) {
+            val everyLink = Mambo.lastResort(sideOf(difficulty)).links.size
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Mambo.id, difficulty)
+                val label = "mambo/${difficulty.name}/$date"
+                val state = Mambo.generateVerified(seed, difficulty)
+                assertNotNull("$label was not proved", state)
+                state!!
+                assertEquals("$label: generate ships the proved board", state, Mambo.generate(seed, difficulty))
+                assertTrue("$label prints every link, as the last resort does", state.links.size < everyLink)
+                assertEquals("$label needs a guess", state.solution, solveByRules(state))
+                assertTrue("$label: stored answer breaks a rule", obeysRules(state.size, state.solution, state.links))
+                assertTrue("$label: a given differs from the answer", state.cells.indices.all {
+                    state.givens[it] == (state.cells[it] != Sym.NONE) &&
+                        (!state.givens[it] || state.cells[it] == state.solution[it])
+                })
+            }
+        }
+    }
+
+    @Test
+    fun `the last resort is a legal board with exactly one answer at every size`() {
+        for (difficulty in Difficulty.entries) {
+            val n = sideOf(difficulty)
+            val state = Mambo.lastResort(n)
+            assertEquals("last resort at $n needs a guess", state.solution, solveByRules(state))
+            assertTrue("last resort at $n breaks a rule", obeysRules(n, state.solution, state.links))
+            assertEquals("last resort at $n has several answers", 1, countAnswers(state, cap = 2))
+            assertEquals(emptyList<Any>(), state.violations())
+            assertTrue(state.copy(cells = state.solution).solved)
+            assertFalse(state.solved)
+        }
+    }
+
+    @Test
+    fun `generated boards have exactly one answer by exhaustive search`() {
+        // A search that shares nothing with the generator: depth first over every grid, no
+        // propagation. Slow on a big board, so the sample thins as the boards grow.
+        val start = LocalDate.of(2026, 1, 1)
+        for ((difficulty, days) in listOf(Difficulty.STANDARD to 60, Difficulty.HARD to 30, Difficulty.EXPERT to 10)) {
+            for (day in 0 until days.toLong()) {
+                val date = start.plusDays(day)
+                val state = Mambo.generate(DailySeed.seedFor(date, Mambo.id, difficulty), difficulty) as MamboState
+                assertEquals("mambo/${difficulty.name}/$date has several answers", 1, countAnswers(state, cap = 2))
             }
         }
     }
@@ -118,6 +174,72 @@ class MamboRulesTest {
     }
 
     // ---- helpers ----------------------------------------------------------------------------
+
+    private fun sideOf(difficulty: Difficulty) = when (difficulty) {
+        Difficulty.STANDARD -> 6
+        Difficulty.HARD -> 8
+        Difficulty.EXPERT -> 10
+    }
+
+    /** Whether a full grid balances every line, has no three alike in a row, and honours every link. */
+    private fun obeysRules(n: Int, grid: List<Sym>, links: List<Link>): Boolean {
+        if (grid.size != n * n || grid.any { it == Sym.NONE }) return false
+        for (line in 0 until n) {
+            val row = (0 until n).count { grid[line * n + it] == Sym.SUN }
+            val column = (0 until n).count { grid[it * n + line] == Sym.SUN }
+            if (row != n / 2 || column != n / 2) return false
+        }
+        for (r in 0 until n) for (c in 0 until n) {
+            val i = r * n + c
+            if (c + 2 < n && grid[i] == grid[i + 1] && grid[i] == grid[i + 2]) return false
+            if (r + 2 < n && grid[i] == grid[i + n] && grid[i] == grid[i + 2 * n]) return false
+        }
+        return links.all { (grid[it.a] == grid[it.b]) == it.same }
+    }
+
+    /**
+     * How many full grids keep the board's given cells and links, counting no further than [cap].
+     * Fills row-major, checking each cell against what lies behind it, with no propagation.
+     */
+    private fun countAnswers(state: MamboState, cap: Int): Int {
+        val n = state.size
+        val grid = MutableList(n * n) { if (state.givens[it]) state.solution[it] else Sym.NONE }
+        val linksAt = Array(n * n) { mutableListOf<Link>() }
+        state.links.forEach { linksAt[maxOf(it.a, it.b)] += it }
+        var found = 0
+
+        fun fits(i: Int): Boolean {
+            val r = i / n
+            val c = i % n
+            val sym = grid[i]
+            if (c >= 2 && grid[i - 1] == sym && grid[i - 2] == sym) return false
+            if (r >= 2 && grid[i - n] == sym && grid[i - 2 * n] == sym) return false
+            if ((0..c).count { grid[r * n + it] == sym } > n / 2) return false
+            if ((0..r).count { grid[it * n + c] == sym } > n / 2) return false
+            if (c == n - 1 && (0 until n).count { grid[r * n + it] == sym } != n / 2) return false
+            if (r == n - 1 && (0 until n).count { grid[it * n + c] == sym } != n / 2) return false
+            return linksAt[i].all { (grid[it.a] == grid[it.b]) == it.same }
+        }
+
+        fun fill(i: Int) {
+            if (found >= cap) return
+            if (i == n * n) {
+                // The last cell of each line was balance-checked as it landed; the other symbol's
+                // count follows because the line is full.
+                found++
+                return
+            }
+            val options = if (state.givens[i]) listOf(grid[i]) else listOf(Sym.SUN, Sym.MOON)
+            for (sym in options) {
+                grid[i] = sym
+                if (fits(i)) fill(i + 1)
+            }
+            if (!state.givens[i]) grid[i] = Sym.NONE
+        }
+
+        fill(0)
+        return found
+    }
 
     /** A legal 4x4 answer: rows and columns balanced, no three in a line. */
     private val answer = listOf(

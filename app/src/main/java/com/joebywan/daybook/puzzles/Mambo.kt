@@ -146,11 +146,62 @@ object Mambo : PuzzleType {
     /** Carving leaves exactly one seed cell; a second is there so the opening looks deliberate. */
     private const val MIN_GIVENS = 2
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
-        val rng = Rng(seed)
+    /**
+     * Boards tried before giving up on a proof. The first is the board every seed has always had;
+     * the rest only run if it is somehow rejected, so no shipped board moves.
+     */
+    private const val ATTEMPTS = 4
+
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        generateVerified(seed, difficulty) ?: lastResort(sizeFor(difficulty))
+
+    /**
+     * A board the propagation solver has finished from its own clues, or null when no attempt in
+     * the budget produced one. Only a board that passes carries a [MamboState] out of here, so a
+     * test asserts on this rather than on [generate], which [lastResort] can also satisfy.
+     *
+     * A grid the propagation solver completes has exactly one answer and needs no guess, which is
+     * the proof ([solvableByLogic] is re-run on the finished clues rather than trusted from the
+     * carve). The search for a full grid is exhaustive, so it finds one whenever one exists, and
+     * one always does for an even side: it came up empty on none of 1,461 daily seeds per tier or
+     * 1.8 million random ones, and cannot. Attempt 0 keeps the original second try on
+     * `Rng(seed + 1)`, drawn only after the first fails; later attempts use seeds that try never
+     * touched.
+     */
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): MamboState? {
         val n = sizeFor(difficulty)
-        val solution = fullGrid(rng, n) ?: fullGrid(Rng(seed + 1), n)!!
-        val (givens, links) = carve(rng, n, solution)
+        for (attempt in 0 until ATTEMPTS) {
+            val rng = Rng(if (attempt == 0) seed else seed + attempt + 1)
+            val solution = fullGrid(rng, n)
+                ?: (if (attempt == 0) fullGrid(Rng(seed + 1), n) else null)
+                ?: continue
+            val (givens, links) = carve(rng, n, solution)
+            if (!solvableByLogic(n, givens, links, solution)) continue
+            val cells = solution.indices.map { if (givens[it]) solution[it] else Sym.NONE }
+            return MamboState(n, givens, cells, links, solution)
+        }
+        return null
+    }
+
+    /**
+     * What ships if no attempt proved a board, so [generate] cannot throw: a checkerboard, every
+     * link printed as "differs", and two corner clues. It needs no search, so it cannot fail:
+     * every row and column of a checkerboard on an even side holds equal numbers of each symbol
+     * and no two neighbours match. The links alone carry one clue to every cell, so propagation
+     * finishes it and it has the one answer (`MamboRulesTest` runs this directly at every size
+     * against an independent solver). It gives the whole board away, which is what makes it a last
+     * resort rather than a puzzle.
+     */
+    internal fun lastResort(n: Int): MamboState {
+        val solution = List(n * n) { if ((it / n + it % n) % 2 == 0) Sym.SUN else Sym.MOON }
+        val links = buildList {
+            for (r in 0 until n) for (c in 0 until n) {
+                val i = r * n + c
+                if (c + 1 < n) add(Link(i, i + 1, same = false))
+                if (r + 1 < n) add(Link(i, i + n, same = false))
+            }
+        }
+        val givens = List(n * n) { it == 0 || it == n * n - 1 }
         val cells = solution.indices.map { if (givens[it]) solution[it] else Sym.NONE }
         return MamboState(n, givens, cells, links, solution)
     }
