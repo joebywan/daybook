@@ -478,17 +478,13 @@ private fun PlayBoard(
         }
     }
 
-    // The finish: a compact frame centred over the play screen. An overlay, so the board keeps
+    // The finish: a compact frame docked over the play screen. An overlay, so the board keeps
     // exactly the box it had; the toolbar above stays laid out (hidden) for the same reason.
     AnimatedVisibility(
         visible = state.solved,
-        // Centred, but on a short screen (a phone browser with its toolbars showing) a centred
-        // frame would hide most of the board, so it drops to the bottom, over the hidden toolbar.
-        modifier = if (screenHeight < 700.dp) {
-            Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 10.dp)
-        } else {
-            Modifier.align(Alignment.Center)
-        },
+        // Docked to the bottom over the hidden toolbar on every screen height: the board's box ends
+        // at the toolbar, and boards usually leave room under them, so this covers the least.
+        modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 10.dp),
         enter = fadeIn(tween(300)),
         exit = ExitTransition.None,
     ) {
