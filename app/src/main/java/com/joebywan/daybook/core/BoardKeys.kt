@@ -82,21 +82,30 @@ fun arrowStep(key: Key): Pair<Int, Int>? = when (key) {
 
 /**
  * Outlines square [cursor] of an even [cols] x [rows] grid filling this node, or nothing for null.
- * The keyboard cursor: transient (`remember`, never `PuzzleState`), drawn over the board, no layout.
+ * [gap] (px) is the space between squares, if any. The keyboard cursor: transient (`remember`, never `PuzzleState`), drawn over the board, no layout.
  */
-fun Modifier.gridCursor(cursor: Int?, cols: Int, rows: Int, color: Color): Modifier =
+fun Modifier.gridCursor(cursor: Int?, cols: Int, rows: Int, color: Color, gap: Float = 0f): Modifier =
     if (cursor == null) this else drawWithContent {
         drawContent()
-        val w = size.width / cols
-        val h = size.height / rows
+        val w = (size.width + gap) / cols
+        val h = (size.height + gap) / rows
         val stroke = maxOf(2f, minOf(w, h) * 0.1f)
         drawRect(
             color,
             Offset((cursor % cols) * w + stroke / 2, (cursor / cols) * h + stroke / 2),
-            Size(w - stroke, h - stroke),
+            Size(w - gap - stroke, h - gap - stroke),
             style = Stroke(stroke),
         )
     }
+
+/**
+ * The cursor after [key] if it is an arrow (the first arrow lands on square 0 when there is none yet),
+ * else null: the key is not a move.
+ */
+fun movedCursor(cursor: Int?, key: Key, rows: Int, cols: Int): Int? {
+    val (dr, dc) = arrowStep(key) ?: return null
+    return if (cursor == null) 0 else stepCursor(cursor, dr, dc, rows, cols)
+}
 
 /** True for the four arrows: the keys worth acting on while held. */
 fun isArrow(key: Key): Boolean = arrowStep(key) != null

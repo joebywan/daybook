@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,12 +46,16 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.gridCursor
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
@@ -615,7 +620,24 @@ object Sets : PuzzleType {
         // Read through the list rather than trusted: Undo can retract the set being peeked at.
         val peekedCards = s.found.getOrNull(peeked)?.toSet().orEmpty()
 
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        // The keyboard cursor over the cards (see SetsKeys): transient, so not in the state.
+        var cursor by remember(s.cards) { mutableStateOf<Int?>(null) }
+        val gapPx = with(LocalDensity.current) { CARD_GAP.toPx() }
+
+        Column(
+            Modifier.fillMaxWidth().boardKeys(interactive) { key, _, repeat ->
+                val cols = boardColumns(s.cards.size)
+                val rows = (s.cards.size + cols - 1) / cols
+                movedCursor(cursor, key, rows, cols)?.let { cursor = it.coerceAtMost(s.cards.lastIndex); return@boardKeys true }
+                val at = cursor ?: return@boardKeys false
+                if (!setsPickKey(key)) return@boardKeys false
+                if (!repeat) {
+                    peeked = -1
+                    onState(tap(s, at))
+                }
+                true
+            }.padding(horizontal = 16.dp),
+        ) {
             Text(
                 "${s.found.size} of ${s.target} sets found" + when {
                     s.lastWrong -> "   ·   not a set"
@@ -640,7 +662,9 @@ object Sets : PuzzleType {
                 val width = cardWidth(maxWidth, maxHeight, s.cards.size)
                 val columns = boardColumns(s.cards.size)
                 Column(
-                    Modifier.highlightGrid(columns, (s.cards.size + columns - 1) / columns),
+                    Modifier
+                        .highlightGrid(columns, (s.cards.size + columns - 1) / columns)
+                        .gridCursor(cursor.takeIf { interactive }, columns, (s.cards.size + columns - 1) / columns, scheme.primary, gapPx),
                     verticalArrangement = Arrangement.spacedBy(CARD_GAP),
                 ) {
                     s.cards.chunked(columns).forEachIndexed { rowIndex, row ->
@@ -666,6 +690,7 @@ object Sets : PuzzleType {
                                     // A tap is the player moving on; leaving the highlight up
                                     // would tint cards they are now picking between.
                                     peeked = -1
+                                    cursor = index
                                     onState(tap(s, index))
                                 }
                             }
