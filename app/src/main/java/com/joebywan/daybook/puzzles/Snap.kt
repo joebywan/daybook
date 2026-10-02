@@ -114,20 +114,34 @@ object Snap : PuzzleType {
      */
     private fun clueBudget(w: Int, h: Int): Int = maxOf(4, (w * h) / 3)
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        generateVerified(seed, difficulty) ?: lastResort(difficulty)
+
+    /**
+     * The real generator: a board [classify] has *proved* has exactly one answer, numbered within
+     * [clueBudget], or null when none of the 160 seeds reached that. Split out from [generate] so a
+     * test can assert the fallback is never what ships; only the proved case carries a board.
+     */
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): SnapState? {
         val (w, h) = shape(difficulty)
         val budget = clueBudget(w, h)
 
-        repeat(160) { attempt ->
+        for (attempt in 0 until 160) {
             val rng = Rng(seed + attempt)
-            val path = hamiltonian(rng, w, h) ?: return@repeat
-            val chosen = force(rng, w, h, path, budget) ?: return@repeat
+            val path = hamiltonian(rng, w, h) ?: continue
+            val chosen = force(rng, w, h, path, budget) ?: continue
             return SnapState(w, h, labels(w, h, path, chosen), emptyList())
         }
+        return null
+    }
 
-        // Fallback: number every square along a simple boustrophedon path. Trivially the one
-        // answer, and trivially no fun — `FallbackTest` asserts the clue budget precisely so that
-        // this showing up in a shipped board fails the build rather than reaching a player.
+    /**
+     * Number every square along a simple boustrophedon path. Trivially the one answer, and
+     * trivially no fun — `FallbackTest` walks a year of seeds through [generateVerified] so that
+     * this showing up in a shipped board fails the build rather than reaching a player.
+     */
+    private fun lastResort(difficulty: Difficulty): SnapState {
+        val (w, h) = shape(difficulty)
         val marks = MutableList(w * h) { 0 }
         val path = boustrophedon(w, h)
         path.forEachIndexed { rank, cell -> marks[cell] = rank + 1 }

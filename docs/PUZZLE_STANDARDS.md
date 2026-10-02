@@ -127,8 +127,8 @@ without editing it.
   returns `null` when the budget runs out, and `test/MosaicOptimumTest` `a search that runs out of budget reports
   nothing at all` pins that.
 - *Expose the split.* `generateVerified(seed, difficulty): State?` (null when nothing was proved) is what tests
-  assert on. It exists on `Kings` and `Atoms` (public) and `Lits` and `Mambo` (internal). `generate` is
-  `generateVerified(...) ?: lastResort(...)`.
+  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku` and `Snap` (internal). `generate` is
+  `generateVerified(...) ?: lastResort(...)` (Shikaku's is `fallbackBoard`).
 - *Fallbacks.* Keep it named, tiny and honest (`Atoms.lastResort` is a three-atom chain; Snap's is a numbered
   boustrophedon). Before adding one, ask what fraction of seeds reach it and measure it; size the test sample
   to the rate, not to a convenient number. Reference test: `test/FallbackTest`
@@ -261,8 +261,8 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   distinguishable in a thumbnail. References: `Kings.Preview`, `Tower.Preview`/`PreviewPips`.
 - **Verify by rendering, not reasoning.** Icons, motifs, joints and crosses have all failed at true size in
   ways nobody predicted. Render the real geometry at true size (a Java2D harness is the established
-  approach), then check the emulator, then the web page in a narrow viewport in both colour schemes. No
-  harness is checked in; expect to write one. Screenshots in `docs/screenshots/` (README) go stale silently:
+  approach, not checked in), then check the emulator, then the web page in a narrow viewport in both colour
+  schemes with `tools/render/render.py` (Playwright, Chromium and WebKit; `tools/render/README.md`). Screenshots in `docs/screenshots/` (README) go stale silently:
   recapture them on a clean install if the home grid or an existing board's look changed (and the home
   shot's alt text names the puzzle count; `README.md` also says "Eleven").
 - **Input is currently not accessible** (section 11).
@@ -436,7 +436,7 @@ Each puzzle `<N>`. "Template" is the file to copy.
 | Rules / validator | each rule on its own refuses a placement; the win check accepts a legal answer that is not the stored one | `KingsRulesTest`, `MamboRulesTest` + `MamboSolvedTest`, `LitsRulesTest` |
 | Independent checker | uniqueness of generated boards by a solver sharing nothing with the generator | `SnapCluesTest`, `ShikakuClueTest`, `LitsUniquenessTest` + `LitsOracle` |
 | Generator contract | unsolved start, deterministic, time budget | `GeneratorTest` (automatic via registry) |
-| Proof / fallback | the verified path never gives up over a rate-sized sample; each fallback pinned by a property only the real generator has | `FallbackTest` (year x tier), `KingsRulesTest` `the proved path never abdicates` |
+| Proof / fallback | the verified path never gives up over a rate-sized sample; each fallback pinned by a property only the real generator has | `FallbackTest` (year x tier: Kings, Atoms, LITS, Shikaku, Snap) |
 | Tier balance | harder tiers are not easier; no slack creeping in | `TowerBalanceTest`, `MosaicOptimumTest`, `SetsRulesTest` |
 | Reachability | tapping the real handler can reach the stated target | `SetsRulesTest` `claiming every set on the board finishes the puzzle` |
 | Serialization | part-played state round-trips; computed fields not written | `StateSerializationTest` (add a `mutate` branch) |
@@ -483,11 +483,11 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 | Kings | Y 7/8/9 | Y `generateVerified`, `lastResort` | Y | Y `KingsRulesTest` | Y | Y 7 | Y grid | Y `WebParityTest` | Y | Y 200 |
 | Mambo | Y 6/8/10 | Y `generateVerified` (internal; carve to propagation-solvable, re-proved), checkerboard `lastResort`, year test | Y | Y `MamboRulesTest`, `MamboSolvedTest` | Y | Y 8 | Y grid | Y | Y | Y 200 |
 | Pipes | Y | n/a no uniqueness claimed | Y | Y `PipesTeachingTest` enumerator | Y | Y 7 | Y grid | Y | Y | Y 200 |
-| Shikaku | Y | P `countTilings` loop + `fallbackBoard`, no `generateVerified` | Y `Shikaku.isSolved` | Y `ShikakuClueTest` | Y | Y 7 | Y grid | Y | Y | Y |
+| Shikaku | Y | Y `generateVerified` (internal; `countTilings` == 1), `fallbackBoard`, year test | Y `Shikaku.isSolved` | Y `ShikakuClueTest` | Y | Y 7 | Y grid | Y | Y | Y |
 | Mosaic | Y slack 0 | Y `solve` or null; last pass stripes | Y (all one colour) | Y `MosaicOptimumTest` BFS | Y | Y 6 | Y grid + keepClear | Y | Y | Y 180 |
 | Sets | Y | n/a target = sets present; `generateVerified` else exhaustive `lastResort` | Y | Y `SetsRulesTest` plays the handler | Y no fallback | Y 9 | Y grid | Y | Y | Y |
 | Atoms | Y | Y `generateVerified`, year test | Y | Y `AtomsTeachingTest` enumerator | Y | Y 7 | Y custom | Y | Y | Y 200 |
-| Snap | Y | P `Verdict` enum, no `generateVerified`; fallback pinned by clue budget | Y `obeysRules` | Y `SnapCluesTest` | N by design (`offersHints = false`) | Y 9 | Y grid | Y | Y | Y 200 |
+| Snap | Y | Y `generateVerified` (internal), private `Verdict` enum, year test; fallback also pinned by clue budget | Y `obeysRules` | Y `SnapCluesTest` | N by design (`offersHints = false`) | Y 9 | Y grid | Y | Y | Y 200 |
 | LITS | Y | Y `generateVerified` (internal), sealed `Verdict`, year test | Y | Y `LitsOracle`, `LitsAuditTest` | Y | Y 8 | Y grid | Y | Y | Y |
 | Tower | Y slots, colours, guesses | n/a random code | Y | Y `TowerBalanceTest` solver | Y | Y 7 | Y anchors + keepClear | Y | Y | Y 170 |
 
@@ -498,14 +498,10 @@ Details behind the P/N cells:
   `solution`). Right only while the board has one answer, which both generators prove (the Shikaku
   `fallbackBoard`, a clue in each rectangle's corner, is unique by construction). Not yet a "no legal
   answer keeps this" check.
-- **Shikaku, Snap proved generation:** the proof exists (exhaustive count; `Verdict.UNIQUE`) but `generate`
-  does not expose a `generateVerified` null-on-failure split, so no test asserts "the fallback is never
-  reached over a year". Their fallbacks are pinned by property (`ShikakuClueTest` `the fallback board carries
-  no clue of 1 either`; `FallbackTest` clue budget) on six or twenty seeds rather than a year. Shikaku's
-  `ATTEMPTS = 2000` comment records a 20,000-seed sweep with no fallback.
-- **Kings proved gen sample:** `KingsRulesTest` asserts the proved path over 30 seeds per tier, not a year; the
-  analytic margin (40 attempts at a one-third to two-thirds success each) makes that adequate, but it is the
-  weaker form of the Atoms/LITS test.
+- **Shikaku, Snap, Kings proved generation:** each exposes `generateVerified` and `FallbackTest` walks 365
+  daily seeds on every tier through it (0 fallbacks in all three). Snap's year asserts that `generate` returns
+  the same board only for the first fortnight per tier, because Expert boards cost seconds apiece. Shikaku's
+  `fallbackBoard` and Snap's clue budget are still pinned by property on a few seeds as well.
 - **Mambo proved gen:** `generate` is `generateVerified ?: lastResort`. The full-grid search is an exhaustive
   depth-first one, so it cannot come up empty on an even side (0 of 1,461 daily seeds per tier and 1.8 million
   random ones); the old `!!` on its second try was dead code, now replaced by a null that falls to a checkerboard
@@ -520,16 +516,13 @@ Details behind the P/N cells:
 
 ### Known gaps and open items
 
-1. `generateVerified` is not a universal convention (Kings, Atoms, LITS, Sets and Mambo only). Shikaku and Snap
-   should get one and a year-long `FallbackTest` entry.
-2. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
+1. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
    while their boards are unique, which the generators prove.
-3. Accessibility (section 11), already in CLAUDE.md "Open".
-4. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.
-5. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
+2. Accessibility (section 11), already in CLAUDE.md "Open".
+3. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
    `ParityFingerprint.body` branch, the `StateSerializationTest.mutate` branch, a parity pin, and (for a good
    one) a teacher and walkthrough. This file is the fuller list.
-6. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
+4. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
 
 ## 13. Adding a new puzzle: the recipe
 

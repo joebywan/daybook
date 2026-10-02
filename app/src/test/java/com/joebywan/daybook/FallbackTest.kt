@@ -4,6 +4,8 @@ import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Atoms
 import com.joebywan.daybook.puzzles.AtomsState
+import com.joebywan.daybook.puzzles.Kings
+import com.joebywan.daybook.puzzles.KingsState
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.Shikaku
@@ -95,6 +97,68 @@ class FallbackTest {
             }
         }
         assertTrue("lits shipped an unproved board on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
+     * Kings used to be pinned by thirty probe seeds a tier, which cannot see a fallback rate of a
+     * few in a hundred. A year of real daily seeds on every tier, through [Kings.generateVerified].
+     */
+    @Test
+    fun `kings proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Kings.id, difficulty)
+                val proved = Kings.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("kings $date/${difficulty.name}", proved, Kings.generate(seed, difficulty) as KingsState)
+            }
+        }
+        assertTrue("kings shipped an unproved board on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
+     * Shikaku proves its single tiling with `countTilings`; its fallback (a clue in each
+     * rectangle's corner) is trivially unique but is not what the generator is for. A year per tier.
+     */
+    @Test
+    fun `shikaku proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Shikaku.id, difficulty)
+                val proved = Shikaku.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("shikaku $date/${difficulty.name}", proved, Shikaku.generate(seed, difficulty) as ShikakuState)
+            }
+        }
+        assertTrue("shikaku shipped its corner-clue fallback on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
+     * [Snap.generateVerified] returns a board only when the search proved one answer inside
+     * the clue budget; the fallback numbers every square. A year per tier.
+     */
+    @Test
+    fun `snap proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Snap.id, difficulty)
+                val proved = Snap.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                // generate() would search the same board a second time, and Expert boards cost
+                // seconds apiece, so only a fortnight per tier is checked to be what ships.
+                if (day < 14) assertEquals("snap $date/${difficulty.name}", proved, Snap.generate(seed, difficulty) as SnapState)
+            }
+        }
+        assertTrue("snap shipped its number-every-square fallback on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     @Test

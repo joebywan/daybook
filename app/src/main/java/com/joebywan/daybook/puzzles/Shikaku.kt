@@ -135,10 +135,18 @@ object Shikaku : PuzzleType {
         Difficulty.EXPERT -> Triple(9, 11, 10)
     }
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        generateVerified(seed, difficulty) ?: fallbackBoard(seed, difficulty)
+
+    /**
+     * The real generator: a board whose single tiling has been *proved* by [countTilings], or null
+     * when no slicing in the [ATTEMPTS] budget came out unique. Split out from [generate] so a test
+     * can assert the fallback is never what ships.
+     */
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): ShikakuState? {
         val (w, h, maxArea) = shape(difficulty)
 
-        repeat(ATTEMPTS) { attempt ->
+        for (attempt in 0 until ATTEMPTS) {
             val rng = Rng(seed + attempt)
             val blocks = slice(rng, Block(0, 0, h - 1, w - 1), maxArea)
             val clues = MutableList<Int?>(w * h) { null }
@@ -151,7 +159,7 @@ object Shikaku : PuzzleType {
                 return ShikakuState(w, h, clues.toList(), emptyList(), blocks)
             }
         }
-        return fallbackBoard(seed, difficulty)
+        return null
     }
 
     /**

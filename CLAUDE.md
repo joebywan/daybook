@@ -149,7 +149,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Kings, Atoms, LITS, Sets and Mambo have `generateVerified` (null when nothing was proved), which is what tests assert; LITS's and Mambo's are `internal`. Shikaku and Snap have none.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku and Snap (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
@@ -210,8 +210,9 @@ Keyboard (web, or a hardware one): `puzzles/SudokuKeys.kt` maps a key to a `Sudo
 
 **Verify by rendering, not reasoning.** Icons, motifs, crescents, pipe joints and crosses have
 all failed at true size in ways nobody predicted — a crown read as a comb, pages as a boat hull,
-Atoms as a wireframe. A Java2D harness driving the real geometry is the established approach.
-Then check on the emulator; several bugs only appeared there.
+Atoms as a wireframe. A Java2D harness driving the real geometry is the established approach (not
+checked in). Then check on the emulator; several bugs only appeared there. For the web build there is a
+checked-in harness: `tools/render/render.py` (see "Rendering harness" under Web build).
 
 **README screenshots go stale silently.** `docs/screenshots/*.png` are emulator captures at half
 scale (540x1200), taken on a *clean install* so the home screen shows a 0-day streak and unplayed
@@ -350,6 +351,15 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   41 / 62 / 85 ms to 57 / 69 / 118 ms; those browser figures predate it and were not re-measured.
 - Dark theme follows `prefers-color-scheme`; Playwright's `color_scheme="dark"` context option is
   enough to screenshot it.
+- **Rendering harness: `tools/render/render.py`.** Serves the built dist on its own free port and
+  screenshots any puzzles x tiers x viewports (default 390x844, 390x664, 360x640, 375x537) x browsers
+  (Chromium, WebKit) x schemes into `$TMPDIR/daybook-render/<puzzle>-<tier>-<W>x<H>-<scheme>-<browser>.png`,
+  with the touch/scale/resize/first-frame handling below built in. `--measure` prints each board's
+  bounding box (pixel analysis; the canvas has no DOM), `--tap X,Y` shoots again after a tap, `--storage
+  file.json` seeds `localStorage`, `--home` shoots the home grid; it exits non-zero on page or console
+  errors or a blank frame. `tools/render/README.md` has the set-up and limits (no `--solved`: that
+  needs each puzzle's answer). Use it rather than rebuilding a script, and extend it when it lacks
+  something.
 - **Check any web layout change in Playwright WebKit as well as Chromium.** There is no iOS
   Simulator on Linux, and WebKit is the engine behind every iPhone browser, so it is the nearest
   stand-in. Emulate the phone with `has_touch=True`, `device_scale_factor=2` and a *short* viewport:
@@ -364,7 +374,8 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   cp root/usr/lib/x86_64-linux-gnu/lib{avif,yuv,gav1}.so* ~/.cache/ms-playwright/webkit-*/minibrowser-wpe/sys/lib/
   ```
   The copy into `sys/lib` is needed because the launcher overwrites `LD_LIBRARY_PATH`; `libavif16`
-  is the one library missing on Ubuntu 24.04. `p.webkit.launch()` then works headless.
+  is the one library missing on Ubuntu 24.04. `p.webkit.launch()` then works headless. (The harness
+  also needs `pillow numpy`; its README repeats this set-up.)
 
 ### Learned the hard way
 

@@ -134,17 +134,7 @@ class KingsRulesTest {
         return seen.size == cells.size
     }
 
-    @Test
-    fun `the proved path never abdicates to the last resort`() {
-        for (difficulty in Difficulty.entries) {
-            for (seed in seeds(30, difficulty)) {
-                assertNotNull(
-                    "kings/${difficulty.name}/$seed fell through to the unproved last resort",
-                    Kings.generateVerified(seed, difficulty),
-                )
-            }
-        }
-    }
+    // The proved path is walked over a year of daily seeds per tier in FallbackTest.
 
     // ---- the win condition ------------------------------------------------------------------
 
