@@ -51,6 +51,6 @@ object ParityFingerprint {
             "sets=${Sets.allSets(s.cards).joinToString(";") { it.joinToString(",") }}"
         is TowerState -> "slots=${s.slots} colours=${s.colours} max=${s.maxGuesses} " +
             "secret=${s.secret.joinToString("")}"
-        is LexiconState -> "length=${s.length} max=${s.maxGuesses} hard=${s.hard} answer=${s.answer}"
+        is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer}"
     }
 }

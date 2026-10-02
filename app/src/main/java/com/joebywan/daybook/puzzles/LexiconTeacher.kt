@@ -12,9 +12,8 @@ package com.joebywan.daybook.puzzles
  *
  * What it teaches, simplest first:
  *
- * - [MISTAKE] — the row cannot be submitted: it is not a word, or (hard tiers) it drops a green or
- *   leaves a yellow letter out. Standard allows any word, so probing with a word that cannot be the
- *   answer is never called wrong there.
+ * - [MISTAKE] — the row cannot be submitted because it is not a word. Any word is allowed, so
+ *   probing with one that cannot be the answer is never called wrong.
  * - [OPENER] — nothing is known yet, so a word that splits the answer list best.
  * - [PIN] — a letter known to be in the word has only as many slots left as it has copies, because
  *   every other slot is a green of another letter or was marked against it.
@@ -146,13 +145,12 @@ internal object LexiconTeacher {
 
     fun teach(
         length: Int,
-        hard: Boolean,
         guesses: List<String>,
         marks: List<List<Int>>,
         current: String,
     ): Step? {
         val clues = Clues(length, guesses, marks)
-        mistake(clues, hard, current)?.let { return it }
+        mistake(clues, current)?.let { return it }
         if (guesses.isEmpty()) return opening(length)
         pin(clues, current)?.let { return it }
         return choose(clues, current)
@@ -160,26 +158,8 @@ internal object LexiconTeacher {
 
     // ---- mistakes ---------------------------------------------------------------------------------
 
-    private fun mistake(c: Clues, hard: Boolean, current: String): Step? {
+    private fun mistake(c: Clues, current: String): Step? {
         val row = c.guesses.size
-        if (hard) {
-            // A green dropped, typed so far: found at the first slot, so the fix is to back up to it.
-            for (i in current.indices) {
-                val g = c.green[i] ?: continue
-                if (current[i] != g) {
-                    val letter = g.uppercaseChar()
-                    return Step(
-                        MISTAKE, Move.Retype(i),
-                        focus = setOf(tile(c.length, row, i)),
-                        cited = setOf(tile(c.length, c.greenGuess[i], i)),
-                        targets = setOf(tile(c.length, row, i), key(g)),
-                        nudge = "Look at slot ${i + 1}.",
-                        explanation = "Slot ${i + 1} was green in guess ${c.greenGuess[i] + 1}: it is $letter. " +
-                            "On this tier a green has to stay where it is.",
-                    )
-                }
-            }
-        }
         if (current.length != c.length) return null
         if (!WordList.isWord(current)) {
             return Step(
@@ -190,20 +170,6 @@ internal object LexiconTeacher {
                 nudge = "Look at the row you typed.",
                 explanation = "${current.uppercase()} isn't in the word list, so Enter won't take it. " +
                     "Change a letter or two.",
-            )
-        }
-        if (hard) {
-            val why = LexiconRules.hardProblem(current, c.guesses, c.marks) ?: return null
-            // The letter named by "Guess must contain X": its tiles are the clue the row left unused.
-            val letter = if ("contain " in why) why.substringAfter("contain ").first().lowercaseChar() else null
-            val shown = letter?.let { c.shownAt[it - 'a'] }?.takeIf { it >= 0 }
-            return Step(
-                MISTAKE, Move.Retype(c.length - 1),
-                focus = (0 until c.length).map { tile(c.length, row, it) }.toSet(),
-                cited = setOfNotNull(shown),
-                targets = setOf(DELETE),
-                nudge = "A clue has been left out of this row.",
-                explanation = "$why: an earlier guess showed it. On this tier every clue must be used.",
             )
         }
         return null

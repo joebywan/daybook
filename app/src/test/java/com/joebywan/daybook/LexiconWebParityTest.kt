@@ -24,7 +24,7 @@ class LexiconWebParityTest {
                 val epochDay = SeedHash.epochDay(date.year, date.monthValue, date.dayOfMonth)
                 assertEquals(seed, SeedHash.daily(epochDay, "words", tier))
                 val s = LexiconRules.newBoard(seed, tier)
-                "words $date ${tier.name} seed=$seed length=${s.length} max=${s.maxGuesses} hard=${s.hard} answer=${s.answer}"
+                "words $date ${tier.name} seed=$seed length=${s.length} max=${s.maxGuesses} answer=${s.answer}"
             }
         }
         lines.forEach(::println)
@@ -40,8 +40,8 @@ class LexiconWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            1672874346, 325675042, -130889723, -447076746, -1569671767, 1061396532,
-            -295534002, 1005776834, -1307085336,
+            -140410173, -1938919453, -1763740956, -838444861, -1288154454, -1817746797,
+            -257695951, -1426351997, -297379001,
         )
     }
 }

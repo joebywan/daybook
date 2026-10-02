@@ -45,8 +45,8 @@ internal object LexiconSupport {
 
     /**
      * A player who does exactly what the hints say, typing the word each asks for and submitting it,
-     * until the word is found or the guesses run out. Every guess is checked against the hard-mode
-     * rule on the way, so a hint that a hard tier would refuse fails here.
+     * until the word is found or the guesses run out. Every guess is checked to be a word on
+     * the way, so a hint Enter would refuse fails here.
      */
     fun walkByHints(s: LexiconState): Walk {
         val guesses = ArrayList<String>()
@@ -54,7 +54,7 @@ internal object LexiconSupport {
         val steps = ArrayList<LexiconTeacher.Step>()
         var solved = false
         while (guesses.size < s.maxGuesses && !solved) {
-            val step = LexiconTeacher.teach(s.length, s.hard, guesses, marks, "")
+            val step = LexiconTeacher.teach(s.length, guesses, marks, "")
                 ?: error("no hint for ${s.answer} after $guesses")
             steps += step
             val word = when (val m = step.move) {
@@ -64,9 +64,6 @@ internal object LexiconSupport {
                 else -> error("a hint on an empty row asked for $m")
             }
             check(WordList.isWord(word)) { "$word is not a word" }
-            check(s.hard.not() || LexiconRules.hardProblem(word, guesses, marks) == null) {
-                "$word breaks hard mode after $guesses"
-            }
             guesses += word
             marks += refMark(word, s.answer)
             solved = word == s.answer

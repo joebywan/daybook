@@ -17,9 +17,7 @@ object LexiconMark {
 /**
  * Lexicon's board: a hidden word, the guesses so far, and the row being typed.
  *
- * [hard] is the tier's rule that every clue already revealed must be used by the next guess, which
- * [LexiconRules.problem] enforces when a row is submitted. [current] is the row so far, lowercase,
- * left to right: a letter is typed at the end and taken back from the end, so it never has gaps.
+ * [current] is the row so far, lowercase, left to right: a letter is typed at the end and taken back from the end, so it never has gaps.
  *
  * Saved games hold the words themselves, so a state written today loads whatever the lists do later.
  */
@@ -27,7 +25,6 @@ object LexiconMark {
 data class LexiconState(
     val length: Int,
     val maxGuesses: Int,
-    val hard: Boolean,
     val answer: String,
     val guesses: List<String> = emptyList(),
     val current: String = "",
@@ -58,37 +55,36 @@ data class LexiconState(
 }
 
 /**
- * Lexicon's rules, with no board and no screen: marking, the hard-mode rule and the word lists.
+ * Lexicon's rules, with no board and no screen: marking, what a row may be submitted as, and the word lists.
  * Everything here is a pure function of its arguments, so the teacher, the generator and the tests
  * share one definition of a mark.
  */
 object LexiconRules {
 
-    /** A tier's board: word length, guesses allowed, and whether every clue must be reused. */
-    class Shape(val length: Int, val guesses: Int, val hard: Boolean)
+    /** A tier's board: word length and guesses allowed. */
+    class Shape(val length: Int, val guesses: Int)
 
     /**
-     * Standard: five letters, six guesses, any word. Hard: the same, but every clue must be used.
-     * Expert: four letters, the same rule, eight guesses.
+     * Standard: five letters, six guesses. Hard: five letters, five. Expert: four letters, seven.
      *
+     * Any word is a legal guess on every tier; there is no rule that forces a clue to be reused.
      * Four letters is the harder length, not the easier: a short word has far more look-alikes
-     * (-ALE, -ILL, -ATE), and hard mode forbids the one thing that breaks a family, a guess that
-     * cannot be the word. Measured (`LexiconBalanceTest`): a player who always guesses a word still
-     * possible wins every five-letter board in six, but loses 7% of four-letter hard boards in six,
-     * and 2% in eight. Eight is the fewest that leaves nearly every Expert board winnable by the
-     * hints alone, so it is a budget, not slack.
+     * (-ALE, -ILL, -ATE). Measured (`LexiconBalanceTest`), a player who always guesses a word still
+     * possible wins every five-letter board in six and 98% in five, but only 92% of four-letter
+     * boards in six and 96% in seven; one who also spends turns on words that cannot be the answer wins
+     * them all. So four letters get a guess more, and are still the tier that asks the most.
      */
     fun shape(difficulty: Difficulty): Shape = when (difficulty) {
-        Difficulty.STANDARD -> Shape(5, 6, false)
-        Difficulty.HARD -> Shape(5, 6, true)
-        Difficulty.EXPERT -> Shape(4, 8, true)
+        Difficulty.STANDARD -> Shape(5, 6)
+        Difficulty.HARD -> Shape(5, 5)
+        Difficulty.EXPERT -> Shape(4, 7)
     }
 
     /** The board for [seed]: the answer is one index into the sorted list for the tier's length. */
     fun newBoard(seed: Long, difficulty: Difficulty): LexiconState {
         val shape = shape(difficulty)
         val answers = WordList.answers(shape.length)
-        return LexiconState(shape.length, shape.guesses, shape.hard, answers[Rng(seed).nextInt(answers.size)])
+        return LexiconState(shape.length, shape.guesses, answers[Rng(seed).nextInt(answers.size)])
     }
 
     /**
@@ -144,41 +140,12 @@ object LexiconRules {
         guesses.indices.all { mark(guesses[it], word) == marks[it] }
 
     /**
-     * Why [candidate] may not be submitted as the next guess in hard mode, or null if it may. The
-     * rule: every green stays where it is, and every letter marked green or yellow is used at least
-     * as many times as the guess that showed the most of it.
-     */
-    fun hardProblem(candidate: String, guesses: List<String>, marks: List<List<Int>>): String? {
-        for (g in guesses.indices) {
-            for (i in candidate.indices) {
-                if (marks[g][i] == LexiconMark.CORRECT && candidate[i] != guesses[g][i]) {
-                    return "Slot ${i + 1} must be ${guesses[g][i].uppercaseChar()}"
-                }
-            }
-        }
-        val need = IntArray(26)
-        for (g in guesses.indices) {
-            val seen = IntArray(26)
-            for (i in guesses[g].indices) if (marks[g][i] != LexiconMark.ABSENT) seen[guesses[g][i] - 'a']++
-            for (k in 0 until 26) if (seen[k] > need[k]) need[k] = seen[k]
-        }
-        for (k in 0 until 26) {
-            if (need[k] > candidate.count { it - 'a' == k }) {
-                val letter = ('a' + k).uppercaseChar()
-                return if (need[k] == 1) "Guess must contain $letter" else "Guess must contain $letter ${need[k]} times"
-            }
-        }
-        return null
-    }
-
-    /**
-     * Why the row in [state] cannot be submitted, or null if it can: too short, not a word, or (in
-     * hard mode) a clue left unused. Shown briefly over the board; nothing is spent.
+     * Why the row in [state] cannot be submitted, or null if it can: too short, or not a word. Shown
+     * briefly over the board; nothing is spent.
      */
     fun problem(state: LexiconState): String? {
         if (state.current.length < state.length) return "Not enough letters"
         if (!WordList.isWord(state.current)) return "Not in the word list"
-        if (state.hard) return hardProblem(state.current, state.guesses, state.allMarks)
         return null
     }
 }
