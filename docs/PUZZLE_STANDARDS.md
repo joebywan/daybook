@@ -259,8 +259,8 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   distinguishable in a thumbnail. References: `Kings.Preview`, `Tower.Preview`/`PreviewPips`.
 - **Verify by rendering, not reasoning.** Icons, motifs, joints and crosses have all failed at true size in
   ways nobody predicted. Render the real geometry at true size (a Java2D harness is the established
-  approach), then check the emulator, then the web page in a narrow viewport in both colour schemes. No
-  harness is checked in; expect to write one. Screenshots in `docs/screenshots/` (README) go stale silently:
+  approach, not checked in), then check the emulator, then the web page in a narrow viewport in both colour
+  schemes with `tools/render/render.py` (Playwright, Chromium and WebKit; `tools/render/README.md`). Screenshots in `docs/screenshots/` (README) go stale silently:
   recapture them on a clean install if the home grid or an existing board's look changed (and the home
   shot's alt text names the puzzle count; `README.md` also says "Eleven").
 - **Input is currently not accessible** (section 11).
@@ -517,11 +517,10 @@ Details behind the P/N cells:
 1. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
    while their boards are unique, which the generators prove.
 2. Accessibility (section 11), already in CLAUDE.md "Open".
-3. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.
-4. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
+3. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
    `ParityFingerprint.body` branch, the `StateSerializationTest.mutate` branch, a parity pin, and (for a good
    one) a teacher and walkthrough. This file is the fuller list.
-5. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
+4. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
 
 ## 13. Adding a new puzzle: the recipe
 
