@@ -67,10 +67,10 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   passed on `ubuntu-26.04` on 2026-10-02 (PR #91's trial commit); `pages`, `release`, `publish-play` and
   `renovate` were not tried there. Move them all in one PR when convenient (Renovate may open it, since
   it tracks runner labels); 24.04 should stay available until the next Ubuntu LTS. *S.*
-- [ ] **Dependency majors** are well behind: Kotlin 2.2.10 (2.4.x available), Compose Multiplatform 1.9.3,
-  AGP 8.x (9 available), Gradle 8.14 (9 available), kotlinx-datetime 0.7.1 (0.8.0). Renovate opens PRs;
-  the majors move together and need Android and web checked as a pair. CI's JDK is held at 17 until
-  Gradle 9 (`renovate.json`).
+- [ ] **Dependencies still behind after the toolchain majors.** The `androidx` libraries (Compose BOM
+  2025.09 -> 2026.09, lifecycle, activity, navigation, datastore, core-ktx) and kotlinx-serialization 1.11
+  are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
+  17 too); Gradle 9 would run on newer, so moving the JDK is its own change (`renovate.json` holds it at 17).
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 
