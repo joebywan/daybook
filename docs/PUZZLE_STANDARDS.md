@@ -513,8 +513,8 @@ Details behind the P/N cells:
   four years of daily boards or 500,000 random seeds per tier came near), and `SetsRulesTest` walks a year per tier
   on `generateVerified` and runs `lastResort` directly.
 - **Pipes:** no generator uniqueness claim (accepted); its teacher and tests are written for several answers.
-- **Tower sizing** is by a bounded `LazyColumn`, not `maxHeight`; CLAUDE.md says all eleven "consult the
-  height". They fit the box, by a different mechanism.
+- **Tower sizing** is by a bounded `LazyColumn`, not `maxHeight`; CLAUDE.md says ten boards read `maxHeight`
+  and Tower fits the box by a different mechanism.
 
 ### Known gaps and open items
 
@@ -524,10 +524,9 @@ Details behind the P/N cells:
    while their boards are unique, which the generators prove.
 3. Accessibility (section 11), already in CLAUDE.md "Open".
 4. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.
-5. README "Adding a puzzle" and the `PuzzleType` KDoc say two steps and that purity is "the only hard rule".
-   In practice a new puzzle also needs the compile-forced `ParityFingerprint.body` branch,
-   `StateSerializationTest.mutate` branch, a parity pin, and (for a good one) a teacher and walkthrough.
-   This file is the fuller list.
+5. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
+   `ParityFingerprint.body` branch, the `StateSerializationTest.mutate` branch, a parity pin, and (for a good
+   one) a teacher and walkthrough. This file is the fuller list.
 6. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
 
 ## 13. Adding a new puzzle: the recipe

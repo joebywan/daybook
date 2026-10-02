@@ -149,7 +149,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Kings, Atoms, Sets and Mambo expose `generateVerified` (null when nothing was proved), which is what tests assert.
+Kings, Atoms, LITS, Sets and Mambo have `generateVerified` (null when nothing was proved), which is what tests assert; LITS's and Mambo's are `internal`. Shikaku and Snap have none.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
@@ -162,7 +162,8 @@ correct solutions this way. Keep the stored solution for hints; let a validator 
 their box because height fell out of width via `aspectRatio` and nothing consulted the height
 available. `Mosaic.Board` has the right shape: `minOf(maxWidth / w, maxHeight / h)`. Seven more boards
 sized from width alone until the taller hint slot ran Pipes' 5x7 board a row under the panel at
-390dp, and Sudoku over the header on a 693dp-tall screen; all eleven now consult the height
+390dp, and Sudoku over the header on a 693dp-tall screen; ten now read `maxHeight`, and Tower, whose
+guess list is a bottom-anchored `LazyColumn` with `weight(1f, fill = false)`, is bounded by its box instead
 (audited at 390x844, 390x664 and 360x640: every grid is within a cell of the box on its binding axis,
 and the same size before and after solving).
 Check the *short* end too: a phone browser with both toolbars showing is ~540dp tall, where the old
@@ -415,7 +416,7 @@ one `./gradlew --stop` stops every daemon on the machine and kills the others' b
 
 ## Tests
 
-About 200 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
+About 350 of them. New tests should be **independent of the code they check** — Mambo, LITS, Kings,
 Shikaku, Mosaic and Snap tests each carry their own solver or rule checker, deliberately written on
 a different principle so the two cannot share a blind spot. `LitsAuditTest` and `MosaicOptimumTest`
 are differential; `LitsMarkingTest` brute-forces every legal shading of a fixed board.
