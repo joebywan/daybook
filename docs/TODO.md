@@ -126,13 +126,11 @@ below have a famous branded version; use the descriptive name).
   390x844, 390x664, 360x640 and 375x537, light and dark, Chromium and WebKit; the keyboard at 375x537 (eight
   rows on Expert is the tight case); the hint popover with a highlighted tile and a highlighted key; a physical
   keyboard in the browser; then the emulator. Recapture `docs/screenshots/home.png` (twelve tiles when this was written, thirteen with Nonogram) and its alt text.
-- [ ] **Nonogram: check it by rendering.** Written in a session that could not reach Google's Maven, so the board, the
-  home motif and the walkthrough were never drawn (the logic, hints and tests were run). Before it counts as done:
-  `tools/render/render.py --puzzle nonogram` on all three tiers at 390x844, 390x664, 360x640 and 375x537, light and
-  dark, Chromium and WebKit (the 15x15 board's clue numbers and 124dp Fill/Cross buttons at 375x537 are the tight
-  case); a hint with a highlighted line and clue; a sweep by touch; the home grid now that it has a fifth row
-  (`HomeScreen`: does it scroll on a 360x640 phone, and is the one-tile row acceptable?); then the emulator.
-  Recapture `docs/screenshots/home.png` (thirteen tiles) and its alt text.
+- [ ] **Nonogram: still unchecked.** Rendered in the web build (2026-10-02, Chromium and WebKit, all three tiers at
+  390x844, 375x537 and 1280x800, light and dark, plus the home grid): the board, clue layout, Fill/Cross pen, taps,
+  hints, the walkthrough's first frame and a hints-driven solve all draw correctly; 15x15 clue digits are small
+  (~9dp at 390dp wide) but legible. Not done: a sweep by touch drag, 360x640 and 390x664, the emulator, and
+  recapturing `docs/screenshots/home.png` (thirteen tiles, the last row has one tile and the grid scrolls) and its alt text.
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
   size-by-size retune; measure the pass rate before trying again. Hardware-keyboard entry is in the keyboard item above.
