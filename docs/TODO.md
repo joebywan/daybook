@@ -87,8 +87,6 @@ in this order. Keep every key map a pure, unit-tested function; cursor state is 
 chords stay ignored; check in Chromium and WebKit with `keyboard.press`.
 - [ ] **Optional per-puzzle "Keyboard" line in Rules.** A `keyboardHelp` list on `PuzzleType`, empty by default,
   shown on the web build only ("Arrows move, Space cycles"). Do it with the helper if wanted. *S.*
-- [ ] **Tower keys.** 1..N picks a colour and fills the next empty peg, Backspace removes the last, Enter
-  submits. No cursor. *S.*
 - [ ] **Kings and LITS keys.** Cursor plus mark keys. Kings: Space pencils out, K/Enter crowns, calling
   `toggleMark`/`toggleKing` directly (not the double-tap timer). LITS: Space toggles, Shift+arrow could paint. *S-M.*
 - [ ] **Mosaic keys.** 1..N picks the palette colour; a cursor over cells; Space/Enter floods. *M.*

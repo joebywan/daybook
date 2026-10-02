@@ -49,6 +49,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
@@ -472,7 +473,17 @@ object Tower : PuzzleType {
             )
         }
 
-        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .boardKeys(interactive && !s.solved && !s.failed) { key, _, repeat ->
+                    val action = towerKeyAction(key, s.colours) ?: return@boardKeys false
+                    if (action is TowerKeyAction.Colour) selectedColour = action.index
+                    if (!repeat) s.applyKey(action)?.let(onState)
+                    true
+                }
+                .padding(horizontal = 18.dp),
+        ) {
 
             Text(
                 "${s.maxGuesses - s.guesses.size} guesses left",
