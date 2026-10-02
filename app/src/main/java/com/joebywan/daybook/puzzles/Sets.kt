@@ -435,6 +435,12 @@ object Sets : PuzzleType {
     internal val TUTORIAL_SET = listOf(1, 3, 5)
     internal val TUTORIAL_NEAR_MISS = listOf(1, 2, 3)
 
+    /** Three cards showing every value of one trait, for the frames that introduce the traits one at a time. */
+    internal val TUTORIAL_SHAPES = listOf(0, 1, 4)
+    internal val TUTORIAL_COLOURS = listOf(0, 3, 2)
+    internal val TUTORIAL_SHADINGS = listOf(1, 2, 4)
+    internal val TUTORIAL_NUMBERS = listOf(0, 1, 3)
+
     private fun tutorialBoard(selected: List<Int> = emptyList(), found: List<List<Int>> = emptyList()) =
         SetsState(TUTORIAL_CARDS, target = 2, found = found, selected = selected)
 
@@ -454,9 +460,34 @@ object Sets : PuzzleType {
         listOf(
             TutorialFrame(
                 state = fresh,
-                caption = "In a set, each trait is all the same or all different. A card has four: count, " +
-                    "shading, colour and shape. These three are a set: one, two, three; solid, striped, outlined; " +
-                    "three colours; all ovals.",
+                caption = "Every card has four traits. Shape: oval, diamond or rectangle. " +
+                    "The glowing cards show all three.",
+                highlight = BoardHighlight(strong = TUTORIAL_SHAPES.toSet()),
+            ),
+            TutorialFrame(
+                state = fresh,
+                caption = "Colour: red, blue or green.",
+                highlight = BoardHighlight(strong = TUTORIAL_COLOURS.toSet()),
+            ),
+            TutorialFrame(
+                state = fresh,
+                caption = "Shading: solid, striped or outlined.",
+                highlight = BoardHighlight(strong = TUTORIAL_SHADINGS.toSet()),
+            ),
+            TutorialFrame(
+                state = fresh,
+                caption = "Number: one, two or three symbols.",
+                highlight = BoardHighlight(strong = TUTORIAL_NUMBERS.toSet()),
+            ),
+            TutorialFrame(
+                state = fresh,
+                caption = "Here is the rule. Three cards are a set when, on every one of the four traits, " +
+                    "they are all the same or all different. Two alike and one odd is not a set.",
+            ),
+            TutorialFrame(
+                state = fresh,
+                caption = "These three are a set. Shape: all ovals, all the same. Colour: red, blue, green, " +
+                    "all different. Shading: solid, striped, outlined, all different. Number: one, two, three, all different.",
                 highlight = BoardHighlight(strong = TUTORIAL_SET.toSet()),
             ),
             TutorialFrame(
