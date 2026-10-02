@@ -55,6 +55,9 @@ internal object AtomsTeacher {
      */
     const val MAX_CHAIN = 2
 
+    /** What the hint panel shows at once, in characters; wording that can run long shortens itself to fit. */
+    private const val MAX_EXPLANATION = 200
+
     /** The highlight cell for line [pair] on a board of [atomCount] atoms. */
     fun pairCell(atomCount: Int, pair: Int) = atomCount + pair
 
@@ -364,7 +367,7 @@ internal object AtomsTeacher {
         val shut = when {
             shutOut.size + shutDouble.size > 1 -> "close a group off"
             pairOnly -> "finish both and cut them off"
-            else -> "finish that whole group and cut it off"
+            else -> "finish that group and cut it off"
         }
         val reasons = buildList {
             if (crossedTo.isNotEmpty()) add("a bond crosses the way to ${join(crossedTo)}")
@@ -401,14 +404,17 @@ internal object AtomsTeacher {
                     "This $x has only one neighbour it can still bond with, the ${s.atoms[b].bonds} " +
                         "${where(s.atoms[a], s.atoms[b])}$otherWhy, so $goes."
                 } else {
-                    "That leaves this $x one neighbour, the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}, so $goes."
+                    "That leaves one neighbour, the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}, so $goes."
                 }
             }
             ALL_FORCED -> {
                 val parts = f.raise.entries.sortedBy { it.key }.map { (p, to) ->
                     "${numberWord(to - s.lo[p])} ${way(s.atoms[a], s.atoms[s.other(p, a)])}"
                 }
-                "This $x $needWords and its neighbours can take exactly that, so every one is used: ${join(parts)}."
+                val lead = "This $x $needWords and its neighbours can take just that"
+                val full = "$lead, so all are used: ${join(parts)}."
+                // The reason above can already have used most of the panel; "so all are used" goes first.
+                if (prefix.length + full.length <= MAX_EXPLANATION) full else "$lead: ${join(parts)}."
             }
             else -> {
                 val spare = f.room - f.need
@@ -439,7 +445,10 @@ internal object AtomsTeacher {
                     "This $x $needWords, so the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])} gets at least " +
                         "${numberWord(to - s.lo[p])}."
                 } else {
-                    "This $x $needWords and its neighbours can take ${numberWord(f.room)}, so only ${numberWord(spare)} can go spare. $tail"
+                    // Likewise "so one is spare": the arithmetic still stands without it.
+                    val lead = "This $x $needWords and its neighbours can take ${numberWord(f.room)}"
+                    val withSpare = "$lead, so ${if (spare == 1) "one is" else "${numberWord(spare)} are"} spare. $tail"
+                    if (prefix.length + withSpare.length <= MAX_EXPLANATION) withSpare else "$lead. $tail"
                 }
             }
         }
@@ -502,12 +511,12 @@ internal object AtomsTeacher {
             return out
         }
 
-        /** "the 3 would have to bond below, and then the 2 couldn't reach its number". */
+        /** "the 3 must bond below, and then the 2 couldn't reach its number". */
         fun phrase(s: Sight, lead: Boolean): String {
             val steps = forced.map { f ->
                 val a = s.atoms[f.atom]
                 val where = f.raise.keys.sorted().map { way(a, s.atoms[s.other(it, f.atom)]) }
-                "the ${a.bonds} would have to bond ${join(where)}"
+                "the ${a.bonds} must bond ${join(where)}"
             }
             val end = when (dead) {
                 is Short -> "the ${s.atoms[dead.atom].bonds} couldn't reach its number"

@@ -440,7 +440,7 @@ Each puzzle `<N>`. "Template" is the file to copy.
 | Serialization | part-played state round-trips; computed fields not written | `StateSerializationTest` (add a `mutate` branch) |
 | Teaching soundness | steps hold for every answer still possible; sound from player-made boards; mistakes outrank steps and are real | `KingsTeachingTest` |
 | Teaching coverage | which techniques boards need per tier; fallback ceiling asserted | `KingsTeachingTest` `coverage - ...` |
-| Text fit | nudge/explanation/caption inside the panel | `LitsTeachingTest`, `SetsTeachingTest` `every explanation and nudge fits the panel` |
+| Text fit | nudge/explanation/caption inside the panel | `LitsTeachingTest`, `SetsTeachingTest`, and for Kings, Pipes and Atoms `every nudge and explanation fits the panel` (730 daily boards per tier, mistakes planted, 200 / 70 characters) |
 | Tutorial completion | one answer; each frame accepts its real-gesture move and rejects a near miss; free-play finishable by hints, no fallback | `KingsTeachingTest`, `SnapTutorialTest` |
 | Gesture geometry | drag/hit maths without Compose | `AtomsDragTest`, `KingsMarkingTest` |
 | Layout budgets | the reserved slot or card size fits at the smallest width | `MamboCaptionTest`, `SetsStripTest` |
@@ -478,13 +478,13 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 | | Tiers | Proved gen | Rules `solved` | Indep. check | Teacher | Tutorial | Highlight | Parity pin | Preview | Text-fit |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Sudoku | Y clues 38/30/24 | Y dug to uniqueness (`countSolutions`), no fallback | Y `Sudoku.isSolved` | Y `SudokuTeachingTest` enumerator | Y | Y 6 | Y grid + anchor + keepClear | Y | Y | Y 200 |
-| Kings | Y 7/8/9 | Y `generateVerified`, `lastResort` | Y | Y `KingsRulesTest` | Y | Y 7 | Y grid | Y `WebParityTest` | Y | N |
+| Kings | Y 7/8/9 | Y `generateVerified`, `lastResort` | Y | Y `KingsRulesTest` | Y | Y 7 | Y grid | Y `WebParityTest` | Y | Y 200 |
 | Mambo | Y 6/8/10 | Y `generateVerified` (internal; carve to propagation-solvable, re-proved), checkerboard `lastResort`, year test | Y | Y `MamboRulesTest`, `MamboSolvedTest` | Y | Y 8 | Y grid | Y | Y | Y 200 |
-| Pipes | Y | n/a no uniqueness claimed | Y | Y `PipesTeachingTest` enumerator | Y | Y 7 | Y grid | Y | Y | P sentences, not length |
+| Pipes | Y | n/a no uniqueness claimed | Y | Y `PipesTeachingTest` enumerator | Y | Y 7 | Y grid | Y | Y | Y 200 |
 | Shikaku | Y | P `countTilings` loop + `fallbackBoard`, no `generateVerified` | Y `Shikaku.isSolved` | Y `ShikakuClueTest` | Y | Y 7 | Y grid | Y | Y | Y |
 | Mosaic | Y slack 0 | Y `solve` or null; last pass stripes | Y (all one colour) | Y `MosaicOptimumTest` BFS | Y | Y 6 | Y grid + keepClear | Y | Y | Y 180 |
 | Sets | Y | n/a target = sets present; `generateVerified` else exhaustive `lastResort` | Y | Y `SetsRulesTest` plays the handler | Y no fallback | Y 9 | Y grid | Y | Y | Y |
-| Atoms | Y | Y `generateVerified`, year test | Y | Y `AtomsTeachingTest` enumerator | Y | Y 7 | Y custom | Y | Y | P 230 in coverage |
+| Atoms | Y | Y `generateVerified`, year test | Y | Y `AtomsTeachingTest` enumerator | Y | Y 7 | Y custom | Y | Y | Y 200 |
 | Snap | Y | P `Verdict` enum, no `generateVerified`; fallback pinned by clue budget | Y `obeysRules` | Y `SnapCluesTest` | N by design (`offersHints = false`) | Y 9 | Y grid | Y | Y | Y 200 |
 | LITS | Y | Y `generateVerified` (internal), sealed `Verdict`, year test | Y | Y `LitsOracle`, `LitsAuditTest` | Y | Y 8 | Y grid | Y | Y | Y |
 | Tower | Y slots, colours, guesses | n/a random code | Y | Y `TowerBalanceTest` solver | Y | Y 7 | Y anchors + keepClear | Y | Y | Y 170 |
@@ -513,8 +513,6 @@ Details behind the P/N cells:
   four years of daily boards or 500,000 random seeds per tier came near), and `SetsRulesTest` walks a year per tier
   on `generateVerified` and runs `lastResort` directly.
 - **Pipes:** no generator uniqueness claim (accepted); its teacher and tests are written for several answers.
-- **Text-fit tests:** missing for Kings, partial for Pipes and Atoms. Kings' captions and explanations are
-  untested for panel length.
 - **Tower sizing** is by a bounded `LazyColumn`, not `maxHeight`; CLAUDE.md says ten boards read `maxHeight`
   and Tower fits the box by a different mechanism.
 
@@ -524,13 +522,12 @@ Details behind the P/N cells:
    should get one and a year-long `FallbackTest` entry.
 2. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
    while their boards are unique, which the generators prove.
-3. Kings (and Pipes, Atoms captions) have no text-fit test.
-4. Accessibility (section 11), already in CLAUDE.md "Open".
-5. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.
-6. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
+3. Accessibility (section 11), already in CLAUDE.md "Open".
+4. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.
+5. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
    `ParityFingerprint.body` branch, the `StateSerializationTest.mutate` branch, a parity pin, and (for a good
    one) a teacher and walkthrough. This file is the fuller list.
-7. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
+6. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
 
 ## 13. Adding a new puzzle: the recipe
 

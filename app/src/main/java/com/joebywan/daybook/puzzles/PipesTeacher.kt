@@ -48,6 +48,9 @@ internal object PipesTeacher {
     /** Every technique, simplest first, for reports. */
     val TECHNIQUES = listOf(BORDER, SET_NEIGHBOUR, WHICHEVER_WAY, NO_LOOP, FALLBACK)
 
+    /** What the hint panel shows at once, in characters; an explanation that would run past it drops its closing line. */
+    private const val MAX_EXPLANATION = 200
+
     private const val UNKNOWN = 0
     private const val OPEN = 1
     private const val CLOSED = 2
@@ -90,7 +93,17 @@ internal object PipesTeacher {
     private class Forced(val cell: Int, val mask: Int, val status: IntArray, val why: List<Why?>)
 
     /** An explanation, the tiles it leans on, and the technique it amounts to. */
-    private class Reason(val text: String, val cited: Set<Int>, val technique: String, val setNeighbours: List<Int>)
+    private class Reason(
+        val text: String,
+        val cited: Set<Int>,
+        val technique: String,
+        val setNeighbours: List<Int>,
+        /** [text] without its closing "So it has only one way round.", for when the panel has no room for it. */
+        val brief: String = text,
+    ) {
+        /** [text] after a [lead], or [brief] after it when the two together would not fit the panel. */
+        fun after(lead: String = ""): String = if (lead.length + text.length <= MAX_EXPLANATION) lead + text else lead + brief
+    }
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ----------------------
 
@@ -134,7 +147,7 @@ internal object PipesTeacher {
                 focus = setOf(f.cell),
                 cited = why.cited,
                 nudge = "Check this tile.",
-                explanation = "Water reaching a tile doesn't make it right. ${why.text}",
+                explanation = why.after("Wet doesn't mean right. "),
                 wrong = s.cells[f.cell],
             )
         }
@@ -146,7 +159,7 @@ internal object PipesTeacher {
             focus = setOf(cell),
             cited = emptySet(),
             nudge = "Check this tile.",
-            explanation = "Water reaching a tile doesn't make it right: no finished network has this " +
+            explanation = "Wet doesn't mean right: no finished network has this " +
                 "one turned this way.",
             wrong = s.cells[cell],
         )
@@ -198,7 +211,7 @@ internal object PipesTeacher {
             focus = setOf(f.cell),
             cited = why.cited,
             nudge = "Look at the glowing tile.",
-            explanation = why.text,
+            explanation = why.after(),
         )
     }
 
@@ -225,8 +238,8 @@ internal object PipesTeacher {
             if (why.rule == NO_LOOP) {
                 loop = true
                 cited += why.cited
-                parts += "it is already joined to the tile ${towards[d]} the long way round, so a " +
-                    "pipe straight between them would close a loop"
+                parts += "it is already joined to the tile ${towards[d]} the long way round, so " +
+                    "joining them directly would close a loop"
                 continue
             }
             // A side this tile settled for itself is a consequence, not a reason.
@@ -237,7 +250,7 @@ internal object PipesTeacher {
             sides[(if (why.fromFixed) 0 else 2) + (if (open) 0 else 1)] += d
         }
         // Neighbours that say the same thing share one clause: "the tiles to the right and to the
-        // left can't point at it whichever way they turn", not the same clause twice, which ran
+        // left can never point at it", not the same clause twice, which ran
         // the longest explanations past what the panel shows at once.
         for (kind in 0 until 4) {
             val ds = sides[kind]
@@ -247,8 +260,8 @@ internal object PipesTeacher {
             parts += tiles + when (kind) {
                 0 -> if (one) " is set and points into it" else " are set and point into it"
                 1 -> if (one) " is set and doesn't point at it" else " are set and don't point at it"
-                2 -> if (one) " points into it whichever way it turns" else " point into it whichever way they turn"
-                else -> " can't point at it whichever way " + (if (one) "it turns" else "they turn")
+                2 -> if (one) " always points into it" else " always point into it"
+                else -> " can never point at it"
             }
         }
         val technique = when {
@@ -278,10 +291,8 @@ internal object PipesTeacher {
             if (border.isNotEmpty()) add("its ${join(border.map { sideName[it] })} is against the border")
             addAll(parts)
         }
-        return Reason(
-            "${clauses(all).cap()}. That leaves only one way round for it.",
-            citedSorted, technique, setNeighbours,
-        )
+        val reasons = "${clauses(all).cap()}."
+        return Reason("$reasons So it has only one way round.", citedSorted, technique, setNeighbours, brief = reasons)
     }
 
     // ---- the reasoning engine ---------------------------------------------------------------------

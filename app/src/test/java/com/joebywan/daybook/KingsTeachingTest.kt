@@ -306,6 +306,70 @@ class KingsTeachingTest {
         assertFalse(Kings.teach(s)!!.mistake)
     }
 
+    // ---- the panel's four lines -----------------------------------------------------------------
+
+    /**
+     * The hint panel shows about four lines of body text on a phone, which is roughly 200 characters,
+     * and a nudge is one short line. Every nudge and explanation the teacher can produce is checked:
+     * on two years of daily boards per tier (730) walked by hints alone, with a wrong king and a wrong cross planted
+     * on each board along the way (the mistake wording is the longest, since it names the king it
+     * clashes with), and on the walkthrough board. The limits are written out here on purpose, not
+     * read from the teacher.
+     */
+    @Test
+    fun `every nudge and explanation fits the panel`() {
+        val nudgeLimit = 70
+        val explanationLimit = 200
+        var checked = 0
+        var longest = ""
+        // Every overflow is collected, not just the first, so one run shows the whole job.
+        val over = sortedSetOf<String>()
+        fun check(label: String, d: com.joebywan.daybook.core.Deduction) {
+            checked++
+            if (d.explanation.length > longest.length) longest = d.explanation
+            if (d.nudge.length > nudgeLimit) over += "nudge ${d.nudge.length}: ${d.nudge}"
+            if (d.explanation.length > explanationLimit) over += "explanation ${d.explanation.length}: ${d.explanation}"
+        }
+        for (difficulty in Difficulty.entries) {
+            for (seed in seeds(730, difficulty, "kings-length")) {
+                var s = Kings.generate(seed, difficulty) as KingsState
+                var guard = 0
+                while (!s.solved) {
+                    assertTrue("$difficulty/$seed: walk did not finish", guard++ < 200)
+                    val d = Kings.teach(s)!!
+                    check("$difficulty/$seed ${d.technique}", d)
+                    // Mistakes planted on the board as it stands: a king off the answer, and a cross on it.
+                    // Which cells get tried rotates with the step, so a year covers different ones.
+                    val off = s.marks.indices.filter { it !in s.solution && s.marks[it] == Mark.EMPTY }
+                    for (j in 0 until minOf(2, off.size)) {
+                        val m = Kings.teach(s.toggleKing(off[(guard * 7 + j * 11) % off.size]))!!
+                        check("$difficulty/$seed wrong king", m)
+                    }
+                    val on = s.solution.filter { s.marks[it] == Mark.EMPTY }
+                    if (on.isNotEmpty()) {
+                        val m = Kings.teach(s.toggleMark(on[guard % on.size]))!!
+                        check("$difficulty/$seed wrong cross", m)
+                    }
+                    s = d.apply(s) as KingsState
+                }
+            }
+        }
+        // The walkthrough board, mistakes included: every king off the answer, every cross on it.
+        for (k in 0 until 25) {
+            if (k !in Kings.TUTORIAL_SOLUTION) {
+                check("walkthrough wrong king $k", Kings.teach(tutorialBoard(kings = setOf(k)))!!)
+            } else {
+                check("walkthrough wrong cross $k", Kings.teach(tutorialBoard(crosses = setOf(k)))!!)
+            }
+        }
+        for (frame in Kings.tutorial) {
+            assertTrue("walkthrough caption is ${frame.caption.length} characters", frame.caption.length <= 170)
+        }
+        assertTrue("${over.size} texts do not fit the panel:\n" + over.joinToString("\n"), over.isEmpty())
+        println("kings text fit: $checked hints checked, longest explanation ${longest.length}: $longest")
+        assertTrue("barely checked anything: $checked", checked > 10_000)
+    }
+
     // ---- the walkthrough ------------------------------------------------------------------------
 
     @Test

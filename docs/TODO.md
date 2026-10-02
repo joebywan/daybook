@@ -51,8 +51,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   board from a fallback (`generateVerified`-style). Shikaku and Snap prove uniqueness but nothing
   asserts their fallback is never reached over a year; Kings' proved-path test samples 30 seeds per
   tier, not a year. Add year-long fallback tests for each. *M.*
-- [ ] **No text-fit test for Kings,** and only partial ones for Pipes and Atoms (hint text can overflow the
-  popover). *S–M.*
 - [ ] **No checked-in rendering harness.** "Verify by rendering" is convention only; a Java2D harness drove
   past icon/motif checks and is not in the repo. Check one in (or a Playwright screenshot script for the
   web build) so it stops being rebuilt per session. *M.*
