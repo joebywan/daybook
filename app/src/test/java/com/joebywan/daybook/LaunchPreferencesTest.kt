@@ -33,6 +33,28 @@ class LaunchPreferencesTest {
     }
 
     @Test
+    fun soundIsOnByDefaultAndFollowsTheSwitch() = runBlocking {
+        val prefs = LaunchPreferences(MemoryStore())
+        assertEquals("a player who never opened Settings hears the chime", true, prefs.playSound.first())
+        prefs.setPlaySound(false)
+        assertEquals(false, prefs.playSound.first())
+        prefs.setPlaySound(true)
+        assertEquals(true, prefs.playSound.first())
+    }
+
+    @Test
+    fun soundAndTimerAreIndependentAndAnUnreadableSoundValueKeepsTheChime() = runBlocking {
+        val store = MemoryStore()
+        val prefs = LaunchPreferences(store)
+        prefs.setPlaySound(false)
+        assertEquals(true, prefs.showTimer.first())
+        prefs.setShowTimer(false)
+        assertEquals(false, prefs.playSound.first())
+        store.putString("play_sound", "garbage")
+        assertEquals(true, prefs.playSound.first())
+    }
+
+    @Test
     fun anUnreadableValueKeepsTheClock() = runBlocking {
         val store = MemoryStore()
         store.putString("show_timer", "garbage")
