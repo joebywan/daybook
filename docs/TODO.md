@@ -79,6 +79,30 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 
+## Keyboard input (potential, not started)
+
+Sudoku and Lexicon already take a hardware keyboard (`SudokuKeys.kt`, `LexiconKeys.kt`); the other ten boards
+take none. Survey and per-puzzle key proposals: the owner asked for these to be recorded, not built. Do them
+in this order. Keep every key map a pure, unit-tested function; cursor state is `remember`, never `PuzzleState`;
+chords stay ignored; check in Chromium and WebKit with `keyboard.press`.
+- [ ] **Shared key helper and play-screen shortcuts.** Pull the focus / chord filter / held-key block that
+  `Sudoku.kt` and `Lexicon.kt` duplicate into one modifier; add a pure clamped, non-wrapping cursor helper plus a
+  drawn cursor outline; handle Ctrl/Cmd+Z (undo), H (hint) and Esc (close popover) once in `PlayScreen`; keys
+  stop once solved. Benefits all twelve boards. *M.*
+- [ ] **Optional per-puzzle "Keyboard" line in Rules.** A `keyboardHelp` list on `PuzzleType`, empty by default,
+  shown on the web build only ("Arrows move, Space cycles"). Do it with the helper if wanted. *S.*
+- [ ] **Mambo, Pipes, Sets keys.** Arrows move a cursor; Space cycles (Mambo), rotates (Pipes) or picks (Sets);
+  Mambo's two symbols may also have direct keys. *S each.*
+- [ ] **Tower keys.** 1..N picks a colour and fills the next empty peg, Backspace removes the last, Enter
+  submits. No cursor. *S.*
+- [ ] **Kings and LITS keys.** Cursor plus mark keys. Kings: Space pencils out, K/Enter crowns, calling
+  `toggleMark`/`toggleKing` directly (not the double-tap timer). LITS: Space toggles, Shift+arrow could paint. *S-M.*
+- [ ] **Mosaic keys.** 1..N picks the palette colour; a cursor over cells; Space/Enter floods. *M.*
+- [ ] **Atoms, Shikaku, Snap keys, only if full coverage is wanted.** Each is a drag gesture needing its own
+  mode (Atoms: arrow to the neighbouring atom, Space cycles the bond; Shikaku: Space anchors a corner, arrows
+  grow, Enter commits, Esc cancels; Snap: arrows extend the path via `extend`, Backspace retracts). The mouse
+  suits all three better, so leaving them pointer-only is defensible. *M-L each.*
+
 ## Future puzzle candidates
 
 Ideas for puzzles 13 onwards, none started. Any new puzzle follows `docs/PUZZLE_STANDARDS.md` (three
