@@ -31,6 +31,23 @@ jobs:
           -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # the commit-message check below needs the pull request's whole range
+
+      # CLAUDE.md forbids a `Co-Authored-By: Claude` trailer, and a rule written there lost to the
+      # harness's own attribution reminder in session after session. `.claude/settings.json` now blocks
+      # the commit at the tool, and this is the server-side backstop: `build` is a required check, so a
+      # pull request carrying such a commit cannot merge, however it was made (`git commit -F` included).
+      - name: No Claude attribution trailer in the commits
+        if: github.event_name == 'pull_request'
+        run: |
+          RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          BAD="$(git log --format='%h %s' -i -E --grep='^co-authored-by:[[:space:]]*(claude|.*noreply@anthropic\.com)' "$RANGE")"
+          if [ -n "$BAD" ]; then
+            echo "::error::These commits carry a Co-Authored-By: Claude trailer, which CLAUDE.md forbids. Reword them (git rebase -i, then force-push your own branch) and push again."
+            echo "$BAD"
+            exit 1
+          fi
 
       - uses: actions/setup-java@v6
         with:
