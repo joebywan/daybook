@@ -48,10 +48,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   JVM-vs-browser board comparison, so a generator change that diverges on the web would deploy
   silently. Add a CI job: Playwright (WebKit + Chromium) loading `?dump&range=N` against the JVM
   `WebParityDumpTest` output. Was entirely manual to date. *L.*
-- [ ] **Generation fallbacks are not all structurally separated.** Only Kings, Atoms and LITS split a proved
-  board from a fallback (`generateVerified`-style). Shikaku and Snap prove uniqueness but nothing
-  asserts their fallback is never reached over a year; Kings' proved-path test samples 30 seeds per
-  tier, not a year. Add year-long fallback tests for each. *M.*
 - [ ] **The finished frame hides about half the board on tall screens.** At 390x844 the centred frame
   (rows 321-523dp) covers 58% of Snap's Standard/Hard board (235-583dp) and 50% of Expert's; below 700dp
   the bottom-docked frame covers 12-32%. The board never moves and every tile works, so this is
