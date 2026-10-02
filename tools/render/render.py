@@ -366,7 +366,7 @@ def main(argv=None) -> int:
                         # a first visit (the walkthrough offer line is on screen, as for a new player).
                         ctx = browser.new_context(
                             viewport={"width": w, "height": h}, device_scale_factor=DEVICE_SCALE,
-                            has_touch=True, color_scheme=scheme,
+                            has_touch=True, color_scheme=scheme, locale="en-US",
                             service_workers="block",  # a cached shell would hide a rebuilt dist
                         )
                         if seed:
