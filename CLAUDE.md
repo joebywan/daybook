@@ -44,8 +44,8 @@ each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthro
   compile untouched. Strong cells get the outline; everything else dims.
 - `tutorial: List<TutorialFrame>` — played by `TutorialRunner` on the puzzle's real `Board`. A frame's
   `accepts` gates the move; a refused state is dropped, so **a walkthrough move must be a single
-  emitted state** — unless the frame sets `passes`, which admits the intermediate states of a
-  several-step move (Sets' three taps, Mambo's second tap, Snap's drag) without ending the frame.
+  emitted state**. A gesture that emits several (Sets' three taps, Snap's drag a square at a time) is
+  written as one frame per emission, each frame's `state` the previous one's result.
   The "your turn" frame shows Hint only when the puzzle offers hints.
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the
   panel confirms and clears when `isReached` sees it. Only an explicit "Show me" applies it. **One
