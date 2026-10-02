@@ -214,7 +214,8 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   (`Kings.paint`, `toggleKing`; `test/KingsMarkingTest` pins "one gesture, one undo"). The one exception is
   a drag that must show progress per square: Snap emits per square and must read the board through
   `rememberUpdatedState` (`Snap.Board`: `val latest by rememberUpdatedState(s)`), never key `pointerInput` on
-  the state. The walkthrough runner drops intermediate states unless a frame sets `passes` (section 8).
+  the state. The walkthrough runner drops any state its frame's `accepts` refuses, so a walkthrough writes one frame per
+  emission (section 8).
 - **Transient UI state is not `PuzzleState`.** Selected colour, palette choice, drag in progress, settle
   timers live in `remember`/`rememberSaveable`. (Sudoku's *selected cell* is in `SudokuState.select` and is
   therefore an undo entry; the pattern to follow is Mosaic's palette in `remember` or Tower's
@@ -382,8 +383,8 @@ Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.
 4. Cover every distinct gesture the board has: Kings tap/double-tap/sweep; Snap start-drag, resume, cut-back,
    rub-out; Sets pick/unpick/third card; Tower copy/change/submit.
 5. **A refused state is dropped**, so a move must be a single emitted state. If a gesture legitimately emits
-   several (Sets' three taps, a Snap drag a square at a time), set `passes`, or write one frame per emission as
-   the existing walkthroughs do. (Note: no walkthrough currently sets `passes`; see section 12 gaps.)
+   several (Sets' three taps, a Snap drag a square at a time), write one frame per emission, as the existing
+   walkthroughs do.
 6. **Finish with a free-play frame** (`freePlay = true`): every move applies, hints are available (when the puzzle
    offers them) and the frame ends when the board is solved. The test must prove hints alone finish it with no
    fallback and no mistake.
@@ -519,20 +520,17 @@ Details behind the P/N cells:
 
 ### Known gaps and open items
 
-1. `TutorialFrame.passes` (`core/Teaching.kt`, honoured in `ui/tutorial/TutorialRunner.kt`) is not set by any
-   puzzle. CLAUDE.md says Sets, Mambo and Snap use it; they instead write one frame per emitted state. The
-   mechanism is untested dead API until something needs it.
-2. `generateVerified` is not a universal convention (Kings, Atoms, LITS, Sets and Mambo only). Shikaku and Snap
+1. `generateVerified` is not a universal convention (Kings, Atoms, LITS, Sets and Mambo only). Shikaku and Snap
    should get one and a year-long `FallbackTest` entry.
-3. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
+2. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
    while their boards are unique, which the generators prove.
-4. Kings (and Pipes, Atoms captions) have no text-fit test.
-5. Accessibility (section 11), already in CLAUDE.md "Open".
-6. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.
-7. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
+3. Kings (and Pipes, Atoms captions) have no text-fit test.
+4. Accessibility (section 11), already in CLAUDE.md "Open".
+5. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.
+6. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
    `ParityFingerprint.body` branch, the `StateSerializationTest.mutate` branch, a parity pin, and (for a good
    one) a teacher and walkthrough. This file is the fuller list.
-8. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
+7. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
 
 ## 13. Adding a new puzzle: the recipe
 

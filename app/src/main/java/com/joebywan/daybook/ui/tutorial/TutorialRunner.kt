@@ -145,10 +145,6 @@ fun TutorialRunner(
                                 board = next
                                 moved = Status.DONE
                             }
-                            frame.passes?.invoke(next) == true -> {
-                                board = next
-                                moved = Status.WAITING
-                            }
                             else -> moved = Status.RETRY
                         }
                     },

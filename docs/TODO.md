@@ -56,8 +56,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **No checked-in rendering harness.** "Verify by rendering" is convention only; a Java2D harness drove
   past icon/motif checks and is not in the repo. Check one in (or a Playwright screenshot script for the
   web build) so it stops being rebuilt per session. *M.*
-- [ ] **`TutorialFrame.passes` is dead API.** `CLAUDE.md` says Sets, Mambo and Snap use it; no puzzle sets
-  it (they write one frame per emitted state). Delete the field or use it, and fix the docs. *S.*
 - [ ] **Snap's solved layout was never screenshotted** (it has no hints, so the harness never reached it).
   It shares the code path, so low risk. *S.*
 
