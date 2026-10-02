@@ -63,8 +63,12 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   all eleven boards consult `maxHeight` (Tower fits its box with a bounded `LazyColumn`); the `PuzzleType`
   KDoc still says purity is the only hard rule, but a new puzzle also needs a `ParityFingerprint.body`
   branch, a `StateSerializationTest.mutate` branch and a parity pin (the README now says so). *S.*
-- [ ] **Snap's solved layout was never screenshotted** (it has no hints, so the harness never reached it).
-  It shares the code path, so low risk. *S.*
+- [ ] **The finished frame hides about half the board on tall screens.** At 390x844 the centred frame
+  (rows 321-523dp) covers 58% of Snap's Standard/Hard board (235-583dp) and 50% of Expert's; below 700dp
+  the bottom-docked frame covers 12-32%. The board never moves and every tile works, so this is
+  visibility, not breakage. Dock to the bottom whenever the space under the board can hold the frame
+  (at 844 it would clear all three Snap boards), rather than by the fixed 700dp. Owner's call: the
+  centred frame was deliberate. *S.*
 
 ## Infrastructure
 
