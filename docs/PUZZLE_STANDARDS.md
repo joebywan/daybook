@@ -1,6 +1,6 @@
 # Puzzle standards
 
-What every Daybook puzzle must have, derived from the twelve that exist. Written against `main` at
+What every Daybook puzzle must have, derived from the thirteen that exist. Written against `main` at
 `b09c763` (2026-10-01). Where this file and the code disagree, the code wins; fix this file.
 
 Paths are relative to `app/src/main/java/com/joebywan/daybook/` (shortened to `core/`, `puzzles/`,
@@ -45,7 +45,7 @@ A puzzle is done when all of these are true:
 | `rules: List<String>` | yes | Short summary. Shown as "Rules" inside the walkthrough, and directly by "How to play" if there is no walkthrough. |
 | `accent: Long` (ARGB) | yes | Card colour, board highlights, walkthrough buttons. |
 | `generate(seed, difficulty)` | yes | Pure. Section 4. |
-| `Preview(modifier)` | effectively yes | Default is a plain accent block. All twelve override it. Fixed motif; never calls `generate`. |
+| `Preview(modifier)` | effectively yes | Default is a plain accent block. All thirteen override it. Fixed motif; never calls `generate`. |
 | `Board(state, onState, interactive)` | yes | Section 6. |
 | `teach(state): Deduction?` | yes unless `offersHints = false` | Section 7. |
 | `hint(state)` | no | Legacy "move goes straight on the board", used only when `teach` returns null. Six boards still define it (`Lits`, `Mambo`, `Mosaic`, `Sets`, `Shikaku`, `Sudoku`) as a fallback; a new puzzle should not write one. |
@@ -57,8 +57,9 @@ A puzzle is done when all of these are true:
 state: `PlayScreen` never reads it).
 
 Registry line: `core/PuzzleRegistry.kt` `all` is the home-grid order. `featured(epochDay)` rotates over it.
-The home grid is three columns by four rows (`ui/home/HomeScreen.kt` `COLUMNS`, with a comment that eleven
-tiles is what one phone screenful holds); a twelfth fits, a thirteenth means checking that screen.
+The home grid is three columns (`ui/home/HomeScreen.kt` `COLUMNS`, with a comment that four rows of tiles is what one
+phone screenful holds); twelve tiles fit, and the thirteenth (Nonogram) starts a fifth row, so a fourteenth or a
+change to the tile size means checking that screen again.
 
 ## 3. Difficulty
 
@@ -83,6 +84,7 @@ What varies, as built:
 | LITS | grid | 6x6 / 7x7 / 8x8 |
 | Tower | slots, colours, guesses | 4/5/10, 5/6/12, 5/8/14 |
 | Lexicon | word length, guesses | 5/6, 5/5, 4/7 (four letters is the harder length; see `LexiconBalanceTest`) |
+| Nonogram | side (55% filled throughout) | 5x5 / 10x10 / 15x15 (`NonogramLogic.specFor`; `NonogramRulesTest` `the tiers get larger in the order they are offered`) |
 
 Rules for the tiers:
 
@@ -492,6 +494,7 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 | LITS | Y | Y `generateVerified` (internal), sealed `Verdict`, year test | Y | Y `LitsOracle`, `LitsAuditTest` | Y | Y 8 | Y grid | Y | Y | Y |
 | Tower | Y slots, colours, guesses | n/a random code | Y | Y `TowerBalanceTest` solver | Y | Y 7 | Y anchors + keepClear | Y | Y | Y 170 |
 | Lexicon | Y length, guesses | n/a one pick from a sorted list; lists screened, tested for order and content | Y last guess is the word | Y `LexiconSupport.refMark`, `LexiconTeachingTest`, `LexiconBalanceTest` | Y fallback on every board | Y 9 | Y grid + anchors + keepClear | Y `LexiconWebParityTest` | Y | Y 170 |
+| Nonogram | Y side | Y `generateVerified` (a picture ships only if `lineSolvable`, which makes it unique; `lastResort` is a fixed diagonal, also proved), year test | Y `NonogramLogic.isSolved` (clues, not the stored picture) | Y `NonogramOracle` (every arrangement of every row), `NonogramTeachingTest` brute force | Y no fallback exists | Y 6 | Y grid + clue indices | Y `NonogramWebParityTest` | Y | Y 200 / 70 |
 
 Details behind the P/N cells:
 

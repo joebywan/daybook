@@ -5,6 +5,7 @@ import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mosaic
+import com.joebywan.daybook.puzzles.Nonogram
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Sets
@@ -34,6 +35,7 @@ object PuzzleRegistry {
         Lits,
         Tower,
         Lexicon,
+        Nonogram,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }

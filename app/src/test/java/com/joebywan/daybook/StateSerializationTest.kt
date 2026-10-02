@@ -10,6 +10,8 @@ import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.MamboState
 import com.joebywan.daybook.puzzles.MosaicState
+import com.joebywan.daybook.puzzles.NonogramLogic
+import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.Sets
@@ -88,6 +90,7 @@ class StateSerializationTest {
         is LitsState -> state.toggle(0)
         is MamboState -> state.withCell(state.cells.indices.first { !state.givens[it] }, Sym.SUN)
         is MosaicState -> state.flood(0, (state.cells[0] + 1) % state.colours)
+        is NonogramState -> state.tap(0, NonogramLogic.FILLED).tap(1, NonogramLogic.CROSSED)
         is PipesState -> state.rotate(0)
         is SetsState -> state.copy(
             found = listOf(Sets.allSets(state.cards).first()),

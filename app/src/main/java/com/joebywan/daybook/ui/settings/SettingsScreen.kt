@@ -78,7 +78,34 @@ fun SettingsScreen(
                     onChecked = onPlaySound,
                 )
             }
+            item { Credits() }
         }
+    }
+}
+
+/**
+ * The word lists' credit, which SCOWL's licence asks to travel with them. The full notice is
+ * `docs/word-lists/LICENSE-SCOWL.txt`; this is the copyright line and the permission it rests on.
+ */
+@Composable
+private fun Credits() {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.surface)
+            .padding(14.dp),
+    ) {
+        Text("Word lists", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+        Text(
+            "Lexicon's words come from SCOWL (Spell Checker Oriented Word Lists), Copyright 2000-2016 " +
+                "by Kevin Atkinson, used under its permissive licence. The lists are provided \"as is\" " +
+                "without warranty, and Kevin Atkinson makes no representations about their suitability " +
+                "for any purpose.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurfaceVariant,
+        )
     }
 }
 
