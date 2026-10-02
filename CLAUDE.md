@@ -261,7 +261,11 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   `setTimeout`), and `prepareBoards` — called by `DaybookApp` while Home is showing, a no-op on
   Android — makes today's eleven boards at the grid's tier in advance, one per turn of the event
   loop, into a small cache. A tap usually finds its board ready. A board already underway cannot be
-  interrupted, so a tap during a slow pre-generation still waits for it.
+  interrupted, so a tap during a slow pre-generation still waits for it. A cached board skips the
+  loading screen (`readyBoard`). The loading screen waits `LOADING_MESSAGE_DELAY_MS` (150 ms) before
+  showing its message on Android, where it also turns a spinner (`GENERATION_ANIMATES`); on the web
+  both are off: the delay is zero because nothing can be painted once a board is underway, and a
+  spinner would sit frozen.
 - **Fonts.** A browser lends wasm none of its fonts; without help, text falls back to the one font
   Compose ships, which has no `→` and no serif. `platformTypography` in the seam swaps the bundled
   Noto Serif Bold (Android's serif) into the serif styles and preloads a few arrows from Noto Sans
