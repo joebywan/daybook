@@ -41,6 +41,11 @@ jobs:
       - name: Build web distribution
         run: ./gradlew :web:wasmJsBrowserDistribution
 
+      # Nothing ships that the browser generates differently from the JVM (and so from Android): a
+      # failure here stops the deploy. The distribution built above is the one that is compared
+      # and the one that is uploaded. About two minutes.
+      - uses: ./.github/actions/web-parity
+
       # The source map is a megabyte and a half nobody on a phone needs.
       - name: Drop the source map
         run: rm -f web/build/dist/wasmJs/productionExecutable/*.map

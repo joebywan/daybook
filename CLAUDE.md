@@ -324,6 +324,23 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   `WebParityMamboPipesSetsTowerTest` pin a few boards per puzzle outright. For LITS alone,
   `DAYBOOK_LITS_DUMP=<file>` (`DAYBOOK_LITS_DAYS`, default 730) runs `LitsYearDumpTest`: the same
   lines over two years plus per-board JVM times in `<file>.times`.
+
+  **CI runs the year.** `tools/web-parity/check.py --jvm <file>` does the comparison by hand above for
+  you: it serves the built dist, loads `?dump&range=N&puzzle=<id>` for all eleven puzzles at once in
+  Chromium then WebKit (Playwright, pinned in `tools/web-parity/requirements.txt`), strips `RANGE `,
+  and diffs each puzzle against the JVM file (N is read from it), printing the first differences by
+  puzzle, date and tier. Exit 1 on any difference, missing line, page error or timeout. A full year
+  (12,045 boards) takes 30 s in Chromium and 40 s in WebKit on a 32-core machine, 36 s and 49 s pinned
+  to 4 cores, so there is no short-range variant. `WebParityDumpTest` takes `DAYBOOK_PARITY_DAYS`
+  (default 365) for a quicker local look. CI wires it as the composite action
+  `.github/actions/web-parity`, used twice: by `web-parity.yml` (a pull-request job, *not* `build`,
+  so it is visible but never holds up the required check; path-filtered to app/src/main, web/, Gradle
+  files and itself) and by `pages.yml`, between building the dist and uploading it, so a divergence
+  that got past review stops the deploy. Renovate's pull requests get no `web-parity` run (their
+  token triggers nothing), so for them `pages.yml` is the gate. The dump test must be run with
+  `--rerun` (the env var is not a Gradle input; a cached test would write no file). Playwright's own
+  console errors are not failures (headless WebKit complains about WebGL); a `pageerror`, a crash or
+  no `DUMP DONE` is.
 - **Timings** (a year's worst board per tier, Chromium, eleven pages sharing the CPU): Mosaic
   Expert 0.3 s, Snap 0.4 s, Sudoku Expert 0.1 s, the rest under 0.1 s. LITS was 1.9 / 3.2 / 4.5 s
   (WebKit up to 11 s) until its generator moved to bitmasks; over 2026-2027 its worst board is now
