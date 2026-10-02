@@ -120,20 +120,15 @@ below have a famous branded version; use the descriptive name).
 
 ### Asked for by the owner
 
-- [ ] **Lexicon: check it by rendering.** The board, keyboard, home motif and walkthrough were written in a
-  session that could not download the Compose or Android libraries, so the first compile was CI's and nothing
-  has been looked at. Before it counts as done: `tools/render/render.py --puzzle words` on all three tiers at
-  390x844, 390x664, 360x640 and 375x537, light and dark, Chromium and WebKit; the keyboard at 375x537 (eight
-  rows on Expert is the tight case); the hint popover with a highlighted tile and a highlighted key; a physical
-  keyboard in the browser; then the emulator.
-- [ ] **Recapture `docs/screenshots/home.png`.** It predates Lexicon and Nonogram (thirteen tiles now; the last row has one
-  tile and the grid scrolls) and its alt text in the README. Needs an emulator on a clean install, which the cloud
-  environment lacks (no Android SDK, no JDK 17). *S.*
-- [ ] **Nonogram: emulator, WebKit and the larger tiers' touch sweep.** Checked in Chromium on 2026-10-02 (touch
-  events through CDP, 5x5 Standard at 390x844, 390x664, 360x640 and 375x537): a drag along a row or column is one undo
-  step, Fill never overwrites a cross, and the solved board's box is identical before and after. The finish frame
-  covers the last row or two of a 5x5 board at 375x537 (it sits at the bottom there by design). Not done: WebKit
-  (not installed in the cloud environment), 10x10 and 15x15 sweeps, and the emulator.
+- [ ] **Nonogram and Lexicon: short phone screens on the emulator.** Both were driven on the Android emulator
+  (1080x2160 and 1080x2400, 2026-10-03): the Lexicon hint popover over a highlighted row and keys, its nine-frame
+  walkthrough, hardware keys, and a Nonogram 5x5 swept by touch drag to the finish frame all work, and a save made on
+  the build before the toolchain upgrade (a Sudoku with two digits placed and a running timer) loaded on this one.
+  Not done: 360x640 and 390x664, and the 10x10 and 15x15 Nonogram tiers by touch on the emulator.
+- [ ] **Nonogram: WebKit and the larger tiers' touch sweep.** Chromium touch checks (2026-10-02, 5x5 at 390x844,
+  390x664, 360x640 and 375x537): a drag along a row or column is one undo step, Fill never overwrites a cross, and the
+  solved board's box is identical before and after. The finish frame covers the last row or two of a 5x5 board at 375x537
+  (it sits at the bottom there by design). Not done: WebKit rendering and the 10x10 and 15x15 sweeps in the browser.
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
   size-by-size retune; measure the pass rate before trying again. Hardware-keyboard entry is in the keyboard item above.
