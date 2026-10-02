@@ -352,11 +352,13 @@ fun HintPanel(
  * It sits on the opposite side of the board from what the hint points at: highlight in the lower
  * half, popover above (hugging the top of the board area, just under the clock); highlight in the
  * upper half, popover below (hugging the top of the toolbar, which stays uncovered). Where the
- * highlight spans both halves the side with less overlap wins, ties going below. If the chosen
- * side still overlaps, the popover first slides as far as it can (an upper popover may rise over
- * the header, to the status bar) and then shrinks to [COMPACT] height, its text scrolling. All of
- * this is pixels in window coordinates: [highlight] comes from the boards ([HighlightBounds]), and
- * unknown (a board that reports nothing) means below.
+ * highlight spans both halves the side with less overlap wins, ties going below. A control the
+ * player needs ([keepClear]: a digit pad, a palette) is kept clear above all: when "below" would
+ * land on one, a third place, just above it, is tried (see [placePopover]). If the chosen side still
+ * overlaps, the popover first slides as far as it can (an upper popover may rise over the header,
+ * to the status bar) and then shrinks to [COMPACT] height, its text scrolling. All of this is
+ * pixels in window coordinates: [highlight] comes from the boards ([HighlightBounds]), and unknown
+ * (a board that reports nothing) means below.
  *
  * It does not block the board: taps outside the card reach the cells, so the player makes the
  * move with the explanation still up. A change of side or of highlight glides rather than jumps.
@@ -389,38 +391,19 @@ fun HintPopover(
     val minTop = safeTop + gap
     val maxBottom = toolbarTop - gap
 
-    // How much of the highlight (heavily) and of the controls the player needs (lightly) a popover
-    // of height [h] at [y] would cover, in pixels of height.
-    fun cost(y: Float, h: Float): Float {
-        fun overlap(r: Rect) = maxOf(0f, minOf(y + h, r.bottom) - maxOf(y, r.top))
-        return (if (hl == null) 0f else overlap(hl) * 4f) + keepClear.sumOf { overlap(it).toDouble() }.toFloat()
-    }
-    fun above(h: Float): Pair<Float, Float> {
-        var y = boardTop + gap
-        if (hl != null) y = minOf(y, hl.top - h - gap)
-        y = maxOf(y, minTop)
-        return y to cost(y, h)
-    }
-    fun below(h: Float): Pair<Float, Float> {
-        val y = maxBottom - h
-        return y to cost(y, h)
-    }
-    fun choose(h: Float): Triple<Boolean, Float, Float> {
-        val a = above(h)
-        val b = below(h)
-        val up = when {
-            hl == null -> false
-            a.second != b.second -> a.second < b.second
-            else -> (hl.top + hl.bottom) / 2f > windowHeight / 2f && a.second == 0f
-        }
-        val pick = if (up) a else b
-        return Triple(up, pick.first, pick.second)
-    }
-
-    val full = choose(h)
-    val limited = full.third > 0f && h > compactPx
-    val shownH = if (limited) compactPx else h
-    val target = if (limited) choose(shownH).second else full.second
+    val spot = placePopover(
+        natural = h,
+        compact = compactPx,
+        highlight = hl,
+        keepClear = keepClear,
+        minTop = minTop,
+        maxBottom = maxBottom,
+        boardTop = boardTop,
+        gap = gap,
+        windowHeight = windowHeight,
+    )
+    val limited = spot.limited
+    val target = spot.y
 
     val y = remember { Animatable(0f) }
     var placed by remember { mutableStateOf(false) }

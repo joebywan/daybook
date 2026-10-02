@@ -56,8 +56,11 @@ each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthro
   blank ~156dp band all game on every teaching puzzle, and a visible jump larger on completion.)
   It sits on the opposite half from the highlight: highlight low, popover above (under the clock);
   highlight high, popover below (hugging the toolbar, which it never covers). Both clear, then
-  the half rule decides, ties below. Overlap with the highlight weighs 4x overlap with a control the
-  player needs (`keepClear`: Sudoku's digit pad, Mosaic's palette, Tower's peg and swatch rows). A
+  the half rule decides, ties below. A control the player needs (`keepClear`: Sudoku's digit pad,
+  Mosaic's palette, Tower's peg and swatch rows) is kept clear above all (overlap weighs 1000 against
+  the highlight's 4): when "below" would land on one, a third place just above it is tried, so on a
+  short screen the popover covers the board's own rows rather than the pad. The rule is the pure
+  `placePopover` (`ui/teach/PopoverPlacement.kt`, pinned by `PopoverPlacementTest`). A
   side that still overlaps slides as far as it can (above may rise over the header) and then shrinks
   to 104dp, its text scrolling behind a fade. Taps outside the card reach the board, so the move can
   be made with the explanation up. Changes of side or highlight glide (220ms).
