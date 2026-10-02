@@ -47,10 +47,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   JVM-vs-browser board comparison, so a generator change that diverges on the web would deploy
   silently. Add a CI job: Playwright (WebKit + Chromium) loading `?dump&range=N` against the JVM
   `WebParityDumpTest` output. Was entirely manual to date. *L.*
-- [ ] **Generation fallbacks are not all structurally separated.** Only Kings, Atoms and LITS split a proved
-  board from a fallback (`generateVerified`-style). Shikaku and Snap prove uniqueness but nothing
-  asserts their fallback is never reached over a year; Kings' proved-path test samples 30 seeds per
-  tier, not a year. Add year-long fallback tests for each. *M.*
 - [ ] **No text-fit test for Kings,** and only partial ones for Pipes and Atoms (hint text can overflow the
   popover). *S–M.*
 - [ ] **No checked-in rendering harness.** "Verify by rendering" is convention only; a Java2D harness drove
