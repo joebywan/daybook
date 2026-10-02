@@ -47,8 +47,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   JVM-vs-browser board comparison, so a generator change that diverges on the web would deploy
   silently. Add a CI job: Playwright (WebKit + Chromium) loading `?dump&range=N` against the JVM
   `WebParityDumpTest` output. Was entirely manual to date. *L.*
-- [ ] **No text-fit test for Kings,** and only partial ones for Pipes and Atoms (hint text can overflow the
-  popover). *S–M.*
 - [ ] **No checked-in rendering harness.** "Verify by rendering" is convention only; a Java2D harness drove
   past icon/motif checks and is not in the repo. Check one in (or a Playwright screenshot script for the
   web build) so it stops being rebuilt per session. *M.*

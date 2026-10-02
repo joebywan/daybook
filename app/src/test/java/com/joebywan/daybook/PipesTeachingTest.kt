@@ -364,6 +364,67 @@ class PipesTeachingTest {
         }
     }
 
+    /**
+     * The hint panel shows about four lines of body text on a phone, roughly 200 characters, and a
+     * nudge is one short line. Every nudge and explanation the teacher produces is checked, on two years
+     * of daily boards per tier (730) walked by hints alone, with a wet tile turned the wrong way planted on each
+     * board as it stands (the mistake wording), and on the walkthrough. The limits are written out
+     * here, not read from the teacher.
+     */
+    @Test
+    fun `every nudge and explanation fits the panel`() {
+        val nudgeLimit = 70
+        val explanationLimit = 200
+        var checked = 0
+        var mistakes = 0
+        var longest = ""
+        // Every overflow is collected, not just the first, so one run shows the whole job.
+        val over = sortedSetOf<String>()
+        fun check(label: String, d: com.joebywan.daybook.core.Deduction) {
+            checked++
+            if (d.explanation.length > longest.length) longest = d.explanation
+            if (d.nudge.length > nudgeLimit) over += "nudge ${d.nudge.length}: ${d.nudge}"
+            if (d.explanation.length > explanationLimit) over += "explanation ${d.explanation.length}: ${d.explanation}"
+        }
+        for (difficulty in Difficulty.entries) {
+            for (seed in seeds(730, difficulty, "pipes-length")) {
+                var s = Pipes.generate(seed, difficulty) as PipesState
+                // Walk once to learn the answer the hints lead to, keeping the boards on the way.
+                val path = mutableListOf<PipesState>()
+                var guard = 0
+                while (!s.solved) {
+                    assertTrue("$difficulty/$seed: walk did not finish", guard++ < 500)
+                    path += s
+                    val d = Pipes.teach(s)!!
+                    check("$difficulty/$seed ${d.technique}", d)
+                    s = d.apply(s) as PipesState
+                }
+                val answer = s.cells
+                // A few boards along the way, each with a wet tile turned off the answer.
+                for (k in path.indices step maxOf(1, path.size / 4)) {
+                    val board = path[k]
+                    val wet = Pipes.filled(board)
+                    val tiles = board.cells.indices.filter { it in wet && board.cells[it] == answer[it] }
+                    for (cell in tiles.filterIndexed { j, _ -> j % maxOf(1, tiles.size / 3) == 0 }) {
+                        val wrong = generateSequence(Pipes.rotateCw(answer[cell])) { Pipes.rotateCw(it) }.take(3)
+                            .firstOrNull { it != answer[cell] && cell in Pipes.filled(turned(board, cell, it)) } ?: continue
+                        val m = Pipes.teach(turned(board, cell, wrong))!!
+                        if (!m.mistake) continue
+                        mistakes++
+                        check("$difficulty/$seed wrong tile", m)
+                    }
+                }
+            }
+        }
+        for (frame in Pipes.tutorial) {
+            assertTrue("walkthrough caption is ${frame.caption.length} characters", frame.caption.length <= 170)
+        }
+        assertTrue("${over.size} texts do not fit the panel:\n" + over.joinToString("\n"), over.isEmpty())
+        println("pipes text fit: $checked hints checked ($mistakes mistakes), longest explanation ${longest.length}: $longest")
+        assertTrue("barely checked anything: $checked", checked > 10_000)
+        assertTrue("too few mistakes planted: $mistakes", mistakes > 1000)
+    }
+
     @Test
     fun `explanations read as sentences and cite only real neighbours`() {
         for (difficulty in Difficulty.entries) {

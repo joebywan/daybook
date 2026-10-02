@@ -292,7 +292,7 @@ class AtomsTeachingTest {
             }
             report.appendLine("  longest explanation, ${longest.length} characters: $longest")
             // The panel shows four lines and ellipsizes the rest; about 200 characters fit.
-            assertTrue("$difficulty: an explanation too long for the panel: $longest", longest.length <= 230)
+            assertTrue("$difficulty: an explanation too long for the panel: $longest", longest.length <= 200)
             val fallbackBoards = boardCounts.getValue(AtomsTeacher.FALLBACK)
             assertTrue(
                 "$difficulty: the fallback is reached on $fallbackBoards/$perTier boards",
@@ -364,6 +364,67 @@ class AtomsTeachingTest {
             }
         }
         assertTrue("too few boards had a free line to test: $checked", checked > 30)
+    }
+
+    /**
+     * The hint panel shows about four lines of body text on a phone, roughly 200 characters, and a
+     * nudge is one short line. Every nudge and explanation the teacher produces is checked, on two years of daily
+     * boards per tier (730) walked by hints alone, with a wrong bond (one the answer leaves empty) and a
+     * wrong double (one the answer holds single) planted on each board as it stands, and on the
+     * walkthrough. The limits are written out here, not read from the teacher.
+     */
+    @Test
+    fun `every nudge and explanation fits the panel`() {
+        val nudgeLimit = 70
+        val explanationLimit = 200
+        var checked = 0
+        var mistakes = 0
+        var longest = ""
+        // Every overflow is collected, not just the first, so one run shows the whole job.
+        val over = sortedSetOf<String>()
+        fun check(label: String, d: com.joebywan.daybook.core.Deduction) {
+            checked++
+            if (d.explanation.length > longest.length) longest = d.explanation
+            if (d.nudge.length > nudgeLimit) over += "nudge ${d.nudge.length}: ${d.nudge}"
+            if (d.explanation.length > explanationLimit) over += "explanation ${d.explanation.length}: ${d.explanation}"
+        }
+        for (difficulty in Difficulty.entries) {
+            for (seed in seeds(730, difficulty, "atoms-length")) {
+                var s = Atoms.generate(seed, difficulty) as AtomsState
+                var guard = 0
+                while (!s.solved) {
+                    assertTrue("$difficulty/$seed: walk did not finish", guard++ < 300)
+                    val d = Atoms.teach(s)!!
+                    check("$difficulty/$seed ${d.technique}", d)
+                    // Mistakes on the board as it stands; which lines get tried rotates with the step.
+                    val extra = s.pairs.indices.filter { s.solution[it] < s.counts[it] + 1 && s.counts[it] < 2 }
+                    for (j in 0 until minOf(3, extra.size)) {
+                        val p = extra[(guard * 5 + j * 3) % extra.size]
+                        val planted = (if (s.counts[p] == 0) s.link(p) else s.cycle(p)) ?: continue
+                        val m = Atoms.teach(planted)!!
+                        if (!m.mistake) continue
+                        mistakes++
+                        check("$difficulty/$seed wrong bond", m)
+                    }
+                    s = d.apply(s) as AtomsState
+                }
+            }
+        }
+        // The walkthrough board: every line taken to every count, whatever that makes of it.
+        val lines = Atoms.TUTORIAL_PAIRS.size
+        for (p in 0 until lines) for (c in 1..2) {
+            val counts = IntArray(lines).also { it[p] = c }
+            val d = Atoms.teach(tutorialBoard(*counts))!!
+            if (d.mistake) mistakes++
+            check("walkthrough line $p x$c", d)
+        }
+        for (frame in Atoms.tutorial) {
+            assertTrue("walkthrough caption is ${frame.caption.length} characters", frame.caption.length <= 170)
+        }
+        assertTrue("${over.size} texts do not fit the panel:\n" + over.joinToString("\n"), over.isEmpty())
+        println("atoms text fit: $checked hints checked ($mistakes mistakes), longest explanation ${longest.length}: $longest")
+        assertTrue("barely checked anything: $checked", checked > 10_000)
+        assertTrue("too few mistakes planted: $mistakes", mistakes > 1000)
     }
 
     @Test
