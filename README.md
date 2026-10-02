@@ -181,7 +181,7 @@ readable copy. Losing it means every installed copy must be uninstalled to updat
 ## Publishing to Google Play
 
 Every release already builds and attaches a signed `.aab` alongside the `.apk`. Once Play is set
-up, `.github/workflows/publish-play.yml` uploads that bundle to the **internal testing** track.
+up, `.github/workflows/publish-play.yml` uploads that bundle to the **closed testing** track (`alpha`; the owner does not use internal testing).
 Until the `PLAY_SERVICE_ACCOUNT_JSON` secret exists the workflow logs a notice and does nothing, so
 it is safe sitting here unconfigured.
 
@@ -214,7 +214,7 @@ Google's copy comes from, and the choice is effectively permanent:
    ads (none). [`PRIVACY.md`](PRIVACY.md) is written for this — its rendered GitHub URL works as
    the policy link, and the data safety answers are all "no data collected", which is true: the app
    declares no `INTERNET` permission.
-4. **Upload one bundle by hand** to internal testing. Play will not accept API uploads for an app
+4. **Upload one bundle by hand** to the closed testing track (done 2026-10-02). Play will not accept API uploads for an app
    that has never had a release created in the console.
 5. **Make a service account:** Google Cloud Console → IAM → Service Accounts → create → create a
    JSON key. Then Play Console → Users and permissions → invite that service account's email →

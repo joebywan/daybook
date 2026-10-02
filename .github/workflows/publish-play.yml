@@ -7,6 +7,12 @@ name: Publish to Google Play
 # event, because a release created with GITHUB_TOKEN does not trigger other workflows — so that
 # event alone would never fire for our own automated releases. The event is still listed so that a
 # release published by hand in the GitHub UI also reaches Play.
+#
+# The default track is `alpha`, which the Play Console calls "Closed testing - Alpha". The owner
+# does not use internal testing (the GitHub APK and the web build cover quick checks), and a new
+# personal developer account needs a closed test of 12 testers for 14 days before production access.
+# Every release the pipeline builds is uploaded and rolled out to that track; once production access
+# exists the default moves to `production`, with a staged rollout.
 on:
   workflow_call:
     inputs:
@@ -18,7 +24,7 @@ on:
         description: 'Play track'
         required: false
         type: string
-        default: internal
+        default: alpha
   release:
     types: [published]
   workflow_dispatch:
@@ -29,9 +35,9 @@ on:
       track:
         description: 'Play track'
         required: false
-        default: internal
+        default: alpha
         type: choice
-        options: [internal, alpha, beta, production]
+        options: [alpha, internal, beta, production]
 
 concurrency:
   group: publish-play
@@ -67,7 +73,8 @@ jobs:
           TAG: ${{ inputs.tag || github.event.release.tag_name }}
         run: |
           mkdir -p play
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir play --pattern '*.aab'
+          # A manual run with no tag means the latest release: `gh` takes the latest when no tag is given.
+          gh release download ${TAG:+"$TAG"} --repo "$GITHUB_REPOSITORY" --dir play --pattern '*.aab'
           ls -la play
           test -n "$(ls -1 play/*.aab 2>/dev/null)" || { echo "::error::no .aab on release $TAG"; exit 1; }
 
@@ -78,5 +85,5 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.joebywan.daybook
           releaseFiles: play/*.aab
-          track: ${{ inputs.track || 'internal' }}
+          track: ${{ inputs.track || 'alpha' }}
           status: completed
