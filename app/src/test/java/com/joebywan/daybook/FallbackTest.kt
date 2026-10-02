@@ -53,6 +53,30 @@ class FallbackTest {
     }
 
     /**
+     * The tier names how many atoms a board has (10 / 16 / 24), and the growth loop used to give up
+     * early on a cramped seed and ship what it had: 2026-11-11 came out with 6 atoms and 2027-07-23
+     * and 2027-11-19 with 9, all Standard, and still valid, still unique, so nothing else noticed.
+     * Two years, since 2026 holds only one of them. The counts are written out here rather than read
+     * from the generator, so a generator that quietly lowers its own target cannot pass.
+     */
+    @Test
+    fun `atoms boards always have the atom count their tier asks for`() {
+        val target = mapOf(Difficulty.STANDARD to 10, Difficulty.HARD to 16, Difficulty.EXPERT to 24)
+        val start = LocalDate.of(2026, 1, 1)
+        val light = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 730L) {
+                val date = start.plusDays(day)
+                val board = Atoms.generate(DailySeed.seedFor(date, Atoms.id, difficulty), difficulty) as AtomsState
+                if (board.atoms.size != target.getValue(difficulty)) {
+                    light += "$date/${difficulty.name}=${board.atoms.size}"
+                }
+            }
+        }
+        assertTrue("atoms boards short of their tier's atom count: $light", light.isEmpty())
+    }
+
+    /**
      * LITS proves uniqueness under the win check's rules, so a fallback is a board a player may
      * solve two ways. A full year of daily seeds per tier, like Atoms: the rate is a few in ten
      * thousand, which twenty seeds would never see.

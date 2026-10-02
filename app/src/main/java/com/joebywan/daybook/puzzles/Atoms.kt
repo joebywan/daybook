@@ -203,7 +203,12 @@ object Atoms : PuzzleType {
             val rng = Rng(seed + attempt)
             val built = grow(rng, n, wanted, strict = attempt >= LEGACY_ATTEMPTS) ?: return@repeat
             val (atoms, bonds) = built
-            if (atoms.size < 4) return@repeat
+            // The growth loop gives up after a fixed number of tries, so a cramped seed can end with
+            // fewer atoms than the tier asks for (over 2026-2027, three Standard days: one board of
+            // 6 atoms, two of 9, where the tier asks for 10). Such a board is a valid puzzle, but an
+            // easier one than the tier promises, so it is rejected like any other bad attempt: a
+            // board that already had its full count keeps its attempt, and only these three move.
+            if (atoms.size < wanted) return@repeat
             val pairs = pairsFor(atoms, n)
             val solution = pairs.map { p ->
                 bonds[p.a to p.b] ?: bonds[p.b to p.a] ?: 0
