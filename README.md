@@ -59,6 +59,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Snap | Hamiltonian path | One line through every square, numbers in ascending order |
 | LITS | LITS (Nikoli) | One L/I/T/S tetromino per region, no 2×2, no same letter touching |
 | Tower | Mastermind | Break the hidden colour code from scored guesses |
+| Lexicon | Mastermind for words | Find the hidden word; each guess marks every letter green, yellow or grey |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -88,6 +89,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   shipped Expert boards with 39 of 42 squares numbered.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
+- **Tower and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
+  guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
+  (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by
+  `tools/words/build.py`.
 
 Two things make that harder than it sounds, and both have gone wrong here:
 

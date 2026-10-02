@@ -2,6 +2,7 @@ package com.joebywan.daybook.core
 
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.KingsState
+import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.MamboState
 import com.joebywan.daybook.puzzles.MosaicState
@@ -50,5 +51,6 @@ object ParityFingerprint {
             "sets=${Sets.allSets(s.cards).joinToString(";") { it.joinToString(",") }}"
         is TowerState -> "slots=${s.slots} colours=${s.colours} max=${s.maxGuesses} " +
             "secret=${s.secret.joinToString("")}"
+        is LexiconState -> "length=${s.length} max=${s.maxGuesses} hard=${s.hard} answer=${s.answer}"
     }
 }

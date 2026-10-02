@@ -2,6 +2,7 @@ package com.joebywan.daybook.core
 
 import com.joebywan.daybook.puzzles.Atoms
 import com.joebywan.daybook.puzzles.Kings
+import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.Mambo
@@ -32,6 +33,7 @@ object PuzzleRegistry {
         Snap,
         Lits,
         Tower,
+        Lexicon,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }

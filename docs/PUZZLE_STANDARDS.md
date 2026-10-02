@@ -1,6 +1,6 @@
 # Puzzle standards
 
-What every Daybook puzzle must have, derived from the eleven that exist. Written against `main` at
+What every Daybook puzzle must have, derived from the twelve that exist. Written against `main` at
 `b09c763` (2026-10-01). Where this file and the code disagree, the code wins; fix this file.
 
 Paths are relative to `app/src/main/java/com/joebywan/daybook/` (shortened to `core/`, `puzzles/`,
@@ -45,7 +45,7 @@ A puzzle is done when all of these are true:
 | `rules: List<String>` | yes | Short summary. Shown as "Rules" inside the walkthrough, and directly by "How to play" if there is no walkthrough. |
 | `accent: Long` (ARGB) | yes | Card colour, board highlights, walkthrough buttons. |
 | `generate(seed, difficulty)` | yes | Pure. Section 4. |
-| `Preview(modifier)` | effectively yes | Default is a plain accent block. All eleven override it. Fixed motif; never calls `generate`. |
+| `Preview(modifier)` | effectively yes | Default is a plain accent block. All twelve override it. Fixed motif; never calls `generate`. |
 | `Board(state, onState, interactive)` | yes | Section 6. |
 | `teach(state): Deduction?` | yes unless `offersHints = false` | Section 7. |
 | `hint(state)` | no | Legacy "move goes straight on the board", used only when `teach` returns null. Six boards still define it (`Lits`, `Mambo`, `Mosaic`, `Sets`, `Shikaku`, `Sudoku`) as a fallback; a new puzzle should not write one. |
@@ -82,6 +82,7 @@ What varies, as built:
 | Snap | grid (clue density is a budget, not a tier knob) | 5x5 / 6x6 / 6x7 |
 | LITS | grid | 6x6 / 7x7 / 8x8 |
 | Tower | slots, colours, guesses | 4/5/10, 5/6/12, 5/8/14 |
+| Lexicon | word length, guesses, hard mode | 5/6/free, 5/6/hard, 4/8/hard (four letters is the harder length; see `LexiconBalanceTest`) |
 
 Rules for the tiers:
 
@@ -142,7 +143,7 @@ without editing it.
   candidate is re-proved with no connectivity rule (CLAUDE.md "Settled", `test/LitsUniquenessTest` via
   `test/LitsOracle`). Where several answers are possible, the teacher and `solved` must be written for
   that (below).
-- *No unique answer to prove:* Tower (a random code), Sets (target = the number of sets on the table;
+- *No unique answer to prove:* Tower (a random code), Lexicon (a random word from a sorted list), Sets (target = the number of sets on the table;
   `Sets.generateVerified` redraws up to `DRAWS` and returns null if none lands, then `Sets.lastResort`, an
   exhaustive search for a board of the tier's own shape, ships instead of throwing; a year per tier
   reaches neither, pinned by `test/SetsRulesTest`).
@@ -490,6 +491,7 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 | Snap | Y | Y `generateVerified` (internal), private `Verdict` enum, year test; fallback also pinned by clue budget | Y `obeysRules` | Y `SnapCluesTest` | N by design (`offersHints = false`) | Y 9 | Y grid | Y | Y | Y 200 |
 | LITS | Y | Y `generateVerified` (internal), sealed `Verdict`, year test | Y | Y `LitsOracle`, `LitsAuditTest` | Y | Y 8 | Y grid | Y | Y | Y |
 | Tower | Y slots, colours, guesses | n/a random code | Y | Y `TowerBalanceTest` solver | Y | Y 7 | Y anchors + keepClear | Y | Y | Y 170 |
+| Lexicon | Y length, guesses, hard mode | n/a one pick from a sorted list; lists screened, tested for order and content | Y last guess is the word | Y `LexiconSupport.refMark`, `LexiconTeachingTest`, `LexiconBalanceTest` | Y fallback on every board | Y 9 | Y grid + anchors + keepClear | Y `LexiconWebParityTest` | Y | Y 170 |
 
 Details behind the P/N cells:
 

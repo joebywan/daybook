@@ -62,6 +62,8 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Pages HTTPS.** The Pages API reports `https_enforced=false` with no CNAME on the project site
   (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
+- [ ] **Repo description is stale.** GitHub's "About" text still says "ten" puzzle types (it is twelve) and "for
+  Android" (there is a web version too). Settings > About on the repo page; no API needed, but it is the owner's call.
 - [ ] **Move the runners to Ubuntu 26.04.** Every workflow pins `ubuntu-24.04`, so GitHub's move of
   `ubuntu-latest` to 26.04 on 2026-10-19 does not touch this repo. CI's `build` and `web-parity` both
   passed on `ubuntu-26.04` on 2026-10-02 (PR #91's trial commit); `pages`, `release`, `publish-play` and
@@ -79,7 +81,7 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Future puzzle candidates
 
-Ideas for puzzles 12 onwards, none started. Any new puzzle follows `docs/PUZZLE_STANDARDS.md` (three
+Ideas for puzzles 13 onwards, none started. Any new puzzle follows `docs/PUZZLE_STANDARDS.md` (three
 tiers, proved or deliberately-unproved boards, a teacher, a walkthrough, parity pins, tests).
 
 **What makes a candidate fit Daybook:** it generates on the device from `hash(date, puzzle, tier)` with
@@ -92,27 +94,19 @@ below have a famous branded version; use the descriptive name).
 
 ### Asked for by the owner
 
-- [ ] **Word deduction (Mastermind for English words).** The player guesses a hidden word of N letters
-  in a limited number of tries; after each guess every letter is marked *right letter, right place*,
-  *right letter, wrong place* or *not in the word*, with the usual rule for repeated letters. The
-  on-screen keyboard keys take the colour of what is known about them. Closest existing puzzle is
-  **Tower** (guess history, scored feedback, no unique answer to prove): copy its structure.
-  - *Tiers:* word length 4 / 5 / 6, with the guess count scaled; consider a "hard mode" rule (any
-    revealed hint must be reused) as the Expert tier rather than a toggle.
-  - *Answer:* picked by seed from a curated list of common words, **stored in a fixed sorted order**
-    and indexed by the seed's value, so Android and the browser always agree (never a hash set; see
-    the web-parity rules). Guesses are checked against a larger list of valid words.
-  - *Word lists are the real work.* Needs a list with a licence we can ship (check public-domain and
-    permissively licensed lists; do not use a newspaper's list), screened for obscure words in the
-    answer list and for offensive ones. Decide **Australian vs US spelling** (colour/color): answers
-    should avoid words with variants, and both spellings should be accepted as guesses. Budget for the
-    size: tens of thousands of words, a few hundred KB, which is fine on Android and ~100–200 KB
-    gzipped on the web, loaded as a resource.
-  - *Teaching:* a hint that counts the words still possible, nudges toward a letter whose position
-    the clues have already pinned down, then explains the deduction. A teacher here works on the
-    remaining candidate list and must not see the answer.
-  - *Input:* an on-screen keyboard drawn in Compose, so the web needs no phone keyboard.
-  - *Size: L* (mostly the word lists and their tests).
+- [ ] **Lexicon: check it by rendering.** The board, keyboard, home motif and walkthrough were written in a
+  session that could not download the Compose or Android libraries, so the first compile was CI's and nothing
+  has been looked at. Before it counts as done: `tools/render/render.py --puzzle words` on all three tiers at
+  390x844, 390x664, 360x640 and 375x537, light and dark, Chromium and WebKit; the keyboard at 375x537 (eight
+  rows on Expert is the tight case); the hint popover with a highlighted tile and a highlighted key; a physical
+  keyboard in the browser; then the emulator. Recapture `docs/screenshots/home.png` (twelve tiles now) and its alt text.
+- [ ] **Lexicon: SCOWL's notice in the app.** The licence asks that its notice appear in documentation shipped with
+  the lists. It is in the repo (`docs/word-lists/`); the app has no About or credits screen to carry it, nor does
+  the Play listing. Decide where (a line under Settings is the cheap one).
+- [ ] **Lexicon: a no-repeat cycle for daily words.** The word is a pure function of the seed, so it can recur
+  (about even odds of a repeat within two months of Standard days). A cycle needs the day count, which the
+  `generate(seed, difficulty)` contract does not carry. Only if repeats bother anyone.
+
 - [ ] **Domino placement on a region board.** A board of cells grouped into coloured regions; each
   region carries a rule (all cells equal, all different, total equals N, total less than or more than
   N, or no rule). A tray holds a set of dominoes (two pip counts, 0–6 each); place every domino over
@@ -149,7 +143,7 @@ Roughly in order of how well they fit, best first.
   must be used. No unique answer, like Tower. Tiny UI, fast to play, very different feel from the
   grid puzzles. *S–M.*
 - [ ] **Word ladder.** Change one letter at a time from a start word to an end word through valid words.
-  Needs the same word lists as the word-deduction puzzle (build that first and share them); choose pairs
+  Needs the same word lists as the word-deduction puzzle (the lists now exist: `LexiconWords`, `WordList`, rebuilt by `tools/words/build.py`); choose pairs
   with a unique shortest ladder to keep it provable. *M after the lists exist.*
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
