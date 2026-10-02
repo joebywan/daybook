@@ -120,12 +120,11 @@ below have a famous branded version; use the descriptive name).
 
 ### Asked for by the owner
 
-- [ ] **Lexicon: check it by rendering.** The board, keyboard, home motif and walkthrough were written in a
-  session that could not download the Compose or Android libraries, so the first compile was CI's and nothing
-  has been looked at. Before it counts as done: `tools/render/render.py --puzzle words` on all three tiers at
-  390x844, 390x664, 360x640 and 375x537, light and dark, Chromium and WebKit; the keyboard at 375x537 (eight
-  rows on Expert is the tight case); the hint popover with a highlighted tile and a highlighted key; a physical
-  keyboard in the browser; then the emulator. Recapture `docs/screenshots/home.png` (twelve tiles when this was written, thirteen with Nonogram) and its alt text.
+- [ ] **Lexicon: check it on the emulator.** Rendered in the web build (all three tiers, 390x844, 375x537 and
+  1280x800, light and dark, Chromium and WebKit, with played rows): the keyboard stopped at 520dp on wide
+  screens and a letter already ruled out is now faded, which in light was the same beige as an untried key. Still
+  to do: the hint popover over a highlighted tile and key, the walkthrough, a physical keyboard, the Android
+  emulator, and recapture `docs/screenshots/home.png` (thirteen tiles now) and its alt text.
 - [ ] **Nonogram: still unchecked.** Rendered in the web build (2026-10-02, Chromium and WebKit, all three tiers at
   390x844, 375x537 and 1280x800, light and dark, plus the home grid): the board, clue layout, Fill/Cross pen, taps,
   hints, the walkthrough's first frame and a hints-driven solve all draw correctly; 15x15 clue digits are small

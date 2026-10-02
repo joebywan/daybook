@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -455,7 +456,7 @@ object Lexicon : PuzzleType {
 
             val known = keyMarks(s)
             Column(
-                Modifier.fillMaxWidth().keepClear().padding(bottom = 6.dp),
+                Modifier.widthIn(max = MAX_KEYBOARD).fillMaxWidth().keepClear().padding(bottom = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(KEY_GAP),
             ) {
                 keyRows.forEachIndexed { r, letters ->
@@ -472,10 +473,15 @@ object Lexicon : PuzzleType {
                             val mark = known[c - 'a']
                             val fill = when (mark) {
                                 -1 -> scheme.surfaceVariant
-                                LexiconMark.ABSENT -> scheme.outline.copy(alpha = 0.3f)
+                                // Faded, not recoloured: outline at 30% was the same beige as an untried key in light.
+                                LexiconMark.ABSENT -> scheme.surfaceVariant.copy(alpha = 0.3f)
                                 else -> markColour(mark, absent)
                             }
-                            val text = if (mark > LexiconMark.ABSENT) onMark else scheme.onSurfaceVariant
+                            val text = when {
+                                mark > LexiconMark.ABSENT -> onMark
+                                mark == LexiconMark.ABSENT -> scheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                else -> scheme.onSurfaceVariant
+                            }
                             KeyButton(c.uppercase(), Modifier.weight(1f), playable, LexiconTeacher.key(c), highlight, glow, pulse,
                                 fill, text, small = false) {
                                 press(LexiconKeyAction.Letter(c))
@@ -495,6 +501,7 @@ object Lexicon : PuzzleType {
     }
 
     private val MAX_CELL = 64.dp
+    private val MAX_KEYBOARD = 520.dp
     private val KEY_GAP = 5.dp
     private val KEY_HEIGHT = 42.dp
 
