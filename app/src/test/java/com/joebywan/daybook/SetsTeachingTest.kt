@@ -265,12 +265,37 @@ class SetsTeachingTest {
         }
     }
 
-    /** The owner's ask: the first thing either page says is the one test a set must pass. */
+    /** The owner's ask: the rules page leads with the one test a set must pass. */
     @Test
-    fun `rules and walkthrough both open with the set test`() {
-        val test = "all the same or all different"
-        assertTrue(Sets.rules.first(), Sets.rules.first().contains(test))
-        assertTrue(Sets.tutorial.first().caption, Sets.tutorial.first().caption.contains(test))
+    fun `rules open with the set test`() {
+        assertTrue(Sets.rules.first(), Sets.rules.first().contains("all the same or all different"))
+    }
+
+    /**
+     * The owner's ask for the walkthrough: the four traits one at a time (each on three cards that
+     * show all three of its values), then the rule stated outright, then an example, then the
+     * near miss, and only then the guided taps.
+     */
+    @Test
+    fun `the walkthrough introduces each trait, then states the rule, before any tap`() {
+        val frames = Sets.tutorial
+        val cards = Sets.TUTORIAL_CARDS
+        val intros = listOf(
+            Sets.TUTORIAL_SHAPES to { c: Card -> c.shape },
+            Sets.TUTORIAL_COLOURS to { c: Card -> c.colour },
+            Sets.TUTORIAL_SHADINGS to { c: Card -> c.shading },
+            Sets.TUTORIAL_NUMBERS to { c: Card -> c.count },
+        )
+        intros.forEachIndexed { i, (shown, trait) ->
+            assertEquals("frame ${i + 1} glows its three cards", shown.toSet(), frames[i].highlight.strong)
+            assertEquals("frame ${i + 1} shows all three values", setOf(0, 1, 2), shown.map { trait(cards[it]) }.toSet())
+            assertNull(frames[i].accepts)
+        }
+        assertTrue(frames[4].caption, frames[4].caption.contains("all the same or all different"))
+        assertTrue(frames[4].highlight.isEmpty)
+        assertEquals(Sets.TUTORIAL_SET.toSet(), frames[5].highlight.strong)
+        assertTrue(frames[6].highlight.warning)
+        assertTrue("no tap before frame 8", frames.take(7).all { it.accepts == null })
     }
 
     // ---- mistakes -------------------------------------------------------------------------------
@@ -352,15 +377,13 @@ class SetsTeachingTest {
     @Test
     fun `each walkthrough frame accepts its tap and rejects a wrong one`() {
         val frames = Sets.tutorial
-        assertEquals(9, frames.size)
+        assertEquals(14, frames.size)
         fun board(i: Int) = frames[i].state as SetsState
-        listOf(0, 1, 7).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].accepts) }
-        assertEquals(Sets.TUTORIAL_SET.toSet(), frames[0].highlight.strong)
-        assertTrue(frames[1].highlight.warning)
+        listOf(0, 1, 2, 3, 4, 5, 6, 12).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].accepts) }
 
         // Each gesture frame: the intended tap is accepted and lands on the next frame's board;
         // a tap on another card is not.
-        val gestures = listOf(2 to 2, 3 to 2, 4 to 1, 5 to 3, 6 to 5)
+        val gestures = listOf(7 to 2, 8 to 2, 9 to 1, 10 to 3, 11 to 5)
         for ((f, card) in gestures) {
             val accepts = frames[f].accepts!!
             val next = Sets.tap(board(f), card)
@@ -373,12 +396,12 @@ class SetsTeachingTest {
             }
         }
         // The pick frames name the card they glow; the last one walks to the card without glowing it.
-        assertTrue(frames[6].highlight.strong.isEmpty())
-        assertTrue(frames[6].caption.startsWith(SetsTeacher.walkToThird(board(6).cards[1], board(6).cards[3])))
+        assertTrue(frames[11].highlight.strong.isEmpty())
+        assertTrue(frames[11].caption.startsWith(SetsTeacher.walkToThird(board(11).cards[1], board(11).cards[3])))
 
-        // 9: free play, finished by hints alone, through the used card.
-        assertTrue(frames[8].freePlay)
-        var s = board(8)
+        // 14: free play, finished by hints alone, through the used card.
+        assertTrue(frames[13].freePlay)
+        var s = board(13)
         val first = SetsTeacher.teach(s)!!
         assertEquals(SetsTeacher.REUSE, first.technique)
         while (!s.solved) s = Sets.teach(s)!!.apply(s) as SetsState
