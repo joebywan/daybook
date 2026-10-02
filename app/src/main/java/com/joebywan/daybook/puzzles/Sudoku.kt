@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -43,8 +45,19 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -576,6 +589,18 @@ object Sudoku : PuzzleType {
         // PlayScreen would otherwise make every flip of it an undo step.
         var notesMode by rememberSaveable { mutableStateOf(false) }
         val measurer = rememberTextMeasurer()
+        // The keyboard (web, or a hardware keyboard on Android): digits, clear and arrows, mapped by
+        // sudokuKeyAction and applied through the same state functions the pad and a tap use.
+        // Focus lives on the board's own box, which draws nothing, so no ring and no layout change;
+        // a cell or pad key that takes focus on a click still bubbles its keys up to it.
+        val focus = remember { FocusRequester() }
+        // A held key repeats KeyDown: for a digit that would place and clear it again and again.
+        var heldKey by remember { mutableStateOf<Key?>(null) }
+        // Claimed on arrival, and again whenever a hint lights something up: the Hint button took the
+        // focus when it was clicked, and the move it asks for should be makeable from the keyboard.
+        LaunchedEffect(interactive, highlight.strong) {
+            if (interactive) focus.requestFocus()
+        }
         // Breathes only while something glows, as on Kings.
         val pulse: State<Float> = if (highlight.strong.isEmpty()) {
             remember { mutableFloatStateOf(1f) }
@@ -590,7 +615,32 @@ object Sudoku : PuzzleType {
 
         // Sized from both axes (CLAUDE.md): from width alone, a 693dp-tall screen ran the grid up
         // over the header and down under the hint slot. The pad keeps the full width.
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .focusRequester(focus)
+                .onKeyEvent { event ->
+                    if (!interactive) return@onKeyEvent false
+                    // Chords belong to the browser (Ctrl+R, Cmd+L...) and to the system.
+                    if (event.isCtrlPressed || event.isMetaPressed || event.isAltPressed || event.isShiftPressed) {
+                        return@onKeyEvent false
+                    }
+                    val action = sudokuKeyAction(event.key) ?: return@onKeyEvent false
+                    if (event.type == KeyEventType.KeyUp) {
+                        if (heldKey == event.key) heldKey = null
+                        return@onKeyEvent true
+                    }
+                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                    val repeat = heldKey == event.key
+                    heldKey = event.key
+                    if (repeat && action !is SudokuKeyAction.Move) return@onKeyEvent true
+                    s.applyKey(action, notesMode)?.let(onState)
+                    true
+                }
+                .focusable(interactive),
+            contentAlignment = Alignment.Center,
+        ) {
             val side = if (constraints.hasBoundedHeight) {
                 minOf(maxWidth, (maxHeight - PAD_GAP - PAD_HEIGHT).coerceAtLeast(0.dp))
             } else {
@@ -707,13 +757,10 @@ object Sudoku : PuzzleType {
                                 )
                                 .clickable(enabled = interactive && at != null && !inert) {
                                     val cell = at ?: return@clickable
-                                    if (notesMode) {
-                                        // Keys are dimmed and inert on a filled or given cell (below),
-                                        // so this is never a silent refusal.
-                                        if (s.canNote(cell)) onState(s.toggleNote(cell, digit))
-                                    } else {
-                                        onState(s.withCell(cell, if (s.cells[cell] == digit) 0 else digit))
-                                    }
+                                    // In notes mode the keys are dimmed and inert on a filled or given cell
+                                    // (above), so a refusal here is never silent.
+                                    val next = s.enter(cell, digit, notesMode)
+                                    if (next !== s) onState(next)
                                 },
                             contentAlignment = Alignment.Center,
                         ) {

@@ -18,10 +18,6 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Atoms Standard sometimes comes out lighter than the tier intends:** one 2026 board with 6 atoms and
   two with 9, where the tier asks for 10. Still valid puzzles. Decide whether to fix (changes those
   boards) or accept; if fixing, regenerate the pinned parity lines for the dates that move. *S.*
-- [ ] **Keyboard entry for Sudoku on desktop.** On the web, digits 1-9 should fill the selected cell,
-  Backspace/Delete/0 clear it, and arrow keys move the selection (the board is mouse/touch only today).
-  Boards are in `puzzles/Sudoku.kt`; emit one state per key like a tap does, and keep it free of
-  `android.*`/`java.*` since the web compiles it. *S–M.*
 - [ ] **Endgame popup: congratulations frame, a ding, and the right next steps.** Today `SolvedBar` (`ui/play/PlayScreen.kt`) has only
   "Another" (a random board, same tier) and "Done". Replace with options that depend on daily vs random
   and on what is already done. The aim is to offer choices without repeating what the player has done.
