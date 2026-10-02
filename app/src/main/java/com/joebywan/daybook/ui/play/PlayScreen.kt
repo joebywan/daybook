@@ -1,5 +1,12 @@
 package com.joebywan.daybook.ui.play
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -112,7 +119,8 @@ fun PlayScreen(
     restore: suspend () -> SavedGame?,
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
-    onAgain: () -> Unit,
+    otherTiersDone: Set<Difficulty>,
+    onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
     tutorialOffered: Boolean? = null,
     onTutorialOffered: () -> Unit = {},
@@ -132,7 +140,7 @@ fun PlayScreen(
         DealingBoard(puzzle)
     } else {
         PlayBoard(
-            puzzle, difficulty, day, ready, restore, persist, onSolved, onAgain, onBack,
+            puzzle, difficulty, day, ready, restore, persist, onSolved, otherTiersDone, onNext, onBack,
             tutorialOffered, onTutorialOffered, showTimer,
         )
     }
@@ -196,7 +204,8 @@ private fun PlayBoard(
     restore: suspend () -> SavedGame?,
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
-    onAgain: () -> Unit,
+    otherTiersDone: Set<Difficulty>,
+    onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
     tutorialOffered: Boolean?,
     onTutorialOffered: () -> Unit,
@@ -466,17 +475,32 @@ private fun PlayBoard(
                     }
                 }
             }
-            if (solved) {
-                SolvedBar(
-                    seconds = seconds,
-                    hints = game.hints,
-                    accent = Color(puzzle.accent),
-                    onAgain = onAgain,
-                    onBack = onBack,
-                    modifier = Modifier.matchParentSize().padding(horizontal = 18.dp, vertical = buttonPad / 2),
-                )
-            }
         }
+    }
+
+    // The finish: a compact frame centred over the play screen. An overlay, so the board keeps
+    // exactly the box it had; the toolbar above stays laid out (hidden) for the same reason.
+    AnimatedVisibility(
+        visible = state.solved,
+        // Centred, but on a short screen (a phone browser with its toolbars showing) a centred
+        // frame would hide most of the board, so it drops to the bottom, over the hidden toolbar.
+        modifier = if (screenHeight < 700.dp) {
+            Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 10.dp)
+        } else {
+            Modifier.align(Alignment.Center)
+        },
+        enter = fadeIn(tween(300)),
+        exit = ExitTransition.None,
+    ) {
+        FinishedFrame(
+            seconds = seconds,
+            hints = game.hints,
+            accent = Color(puzzle.accent),
+            options = remember(day, difficulty, otherTiersDone) {
+                nextOptions(daily = day != null, tier = difficulty, doneTiers = otherTiersDone)
+            },
+            onOption = onNext,
+        )
     }
 
     if (hintSession.active && !state.solved) {
@@ -517,38 +541,72 @@ private fun PlayBoard(
     }
 }
 
+/**
+ * "Congratulations!", the time and hints used, and the next steps tiled in two columns below
+ * (an odd last tile takes the full row). Compact on purpose: the finished board stays in view
+ * around it.
+ */
 @Composable
-private fun SolvedBar(
+private fun FinishedFrame(
     seconds: Int,
     hints: Int,
     accent: Color,
-    onAgain: () -> Unit,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier,
+    options: List<NextOption>,
+    onOption: (NextOption) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    // One row, sized by the toolbar it covers, so it never costs the board any height.
-    Row(
-        modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(accent.copy(alpha = 0.18f))
+    Column(
+        Modifier
+            .padding(horizontal = 28.dp)
+            .widthIn(max = 360.dp)
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(24.dp))
+            .background(scheme.surface)
+            .background(accent.copy(alpha = 0.14f))
             .pointerInput(Unit) {}
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(Modifier.weight(1f)) {
-            Text("Solved", style = MaterialTheme.typography.titleLarge, color = accent)
-            Text(
-                buildString {
-                    append(formatClock(seconds))
-                    if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurface,
-            )
+        Text("Congratulations!", style = MaterialTheme.typography.headlineSmall, color = accent)
+        Text(
+            buildString {
+                append(formatClock(seconds))
+                if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurface,
+        )
+        Spacer(Modifier.height(12.dp))
+        options.chunked(2).forEachIndexed { row, pair ->
+            if (row > 0) Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                pair.forEach { option ->
+                    NextTile(option, accent, Modifier.weight(1f)) { onOption(option) }
+                }
+            }
         }
-        TextButton(onClick = onAgain) { Text("Another") }
-        TextButton(onClick = onBack) { Text("Done") }
+    }
+}
+
+@Composable
+private fun NextTile(option: NextOption, accent: Color, modifier: Modifier, onClick: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val done = option.kind == NextKind.DONE
+    Column(
+        modifier
+            .heightIn(min = 52.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (done) scheme.surfaceVariant else accent.copy(alpha = 0.22f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(option.label, style = MaterialTheme.typography.titleSmall, color = scheme.onSurface, maxLines = 1)
+        option.difficulty?.let {
+            Text(it.label, style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, maxLines = 1)
+        }
     }
 }
 
