@@ -62,10 +62,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Pages HTTPS.** The Pages API reports `https_enforced=false` with no CNAME on the project site
   (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
-- [ ] **Repo description is stale.** GitHub's "About" text still says "ten" puzzle types (it is eleven) and "for
-  Android" (there is a web version too). Settings > About on the repo page; no API needed, but it is the owner's call.
-- [ ] **Runner label change.** `ubuntu-latest` moves to Ubuntu 26 on **2026-10-19**. Watch the first run
-  after that date; Android SDK setup or the wasm toolchain could break.
+- [ ] **Move the runners to Ubuntu 26.04.** Every workflow pins `ubuntu-24.04`, so GitHub's move of
+  `ubuntu-latest` to 26.04 on 2026-10-19 does not touch this repo. CI's `build` and `web-parity` both
+  passed on `ubuntu-26.04` on 2026-10-02 (PR #91's trial commit); `pages`, `release`, `publish-play` and
+  `renovate` were not tried there. Move them all in one PR when convenient (Renovate may open it, since
+  it tracks runner labels); 24.04 should stay available until the next Ubuntu LTS. *S.*
 - [ ] **Dependency majors** are well behind: Kotlin 2.2.10 (2.4.x available), Compose Multiplatform 1.9.3,
   AGP 8.x (9 available), Gradle 8.14 (9 available), kotlinx-datetime 0.7.1 (0.8.0). Renovate opens PRs;
   the majors move together and need Android and web checked as a pair. CI's JDK is held at 17 until
@@ -134,7 +135,6 @@ Roughly in order of how well they fit, best first.
 - [ ] **Cage-sum Sudoku.** Sudoku plus cages whose digits must total a given sum without repeats. Reuses
   Sudoku's grid, digit pad, notes and conflict display, so most of the UI exists. Needs a uniqueness
   solver that handles cages; a teacher using cage combinations ("a 2-cage totalling 3 is {1,2}"). *M.*
-  Wait for Sudoku notes to land first.
 - [ ] **Inequality Latin square.** A small grid (4x4 to 6x6) with each digit once per row and column and
   `<` / `>` signs between some neighbours. Tiny to generate, a clean uniqueness proof, a nice quick
   puzzle between the heavy ones. *S–M.*
@@ -169,13 +169,12 @@ not demand thought, against the owner's stated taste.
   strands existing installs (the export/import backup on the stats screen is the way across). Decide
   the final address before many people install it, if it is going to change at all. Other sites on
   that domain share its browser storage, so keep key names distinct.
-- **Play Store listing.** The app exists in the owner's personal Play account (draft) with the store
-  listing, content rating (all ages), target audience (13+), data safety (nothing collected) and every
-  other declaration done. What remains is the owner's: choose the app signing key (upload
-  `daybook-release.jks` as the app signing key, as the README says, *before* the first bundle is
-  uploaded, because Play defaults to its own key and the choice is permanent), upload the first
-  bundle to internal testing, make the service account, then run the closed test (12 testers opted in
-  for 14 continuous days) before requesting production. Also check the Console home page's Android
-  developer verification notice: sideloaded APKs may need their own registration (package name plus
-  signing key). Recapture the screenshots at 1080x1920 if the 9:16 promotion eligibility matters.
+- **Play Store listing.** Set up and publishing: the signing key is chosen, the service account exists,
+  and every merge to `main` uploads a bundle to the closed testing track (`alpha`) through
+  `publish-play.yml`. What remains is the owner's: run the closed test (12 testers opted in for 14
+  continuous days), then request production access; when Google grants it, move `publish-play.yml`'s
+  default track to `production`, roll out in stages, and give the service account the production
+  permission. Also check the Console home page's Android developer verification notice: sideloaded
+  APKs may need their own registration (package name plus signing key). Recapture the screenshots at
+  1080x1920 if the 9:16 promotion eligibility matters.
   The owner is fine with the developer name being public.
