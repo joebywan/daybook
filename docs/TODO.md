@@ -18,9 +18,6 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Atoms Standard sometimes comes out lighter than the tier intends:** one 2026 board with 6 atoms and
   two with 9, where the tier asks for 10. Still valid puzzles. Decide whether to fix (changes those
   boards) or accept; if fixing, regenerate the pinned parity lines for the dates that move. *S.*
-- [ ] **Hint popover can cover Sudoku's digit pad** on a very short screen (360x640) when the hint is in
-  the top-left box: the other side would cover the highlight. Close and Show me stay reachable.
-  Consider shrinking the pad or nudging the popover. *S.*
 - [ ] **Undo leaves a selection highlight behind in Sudoku and Sets** on the web (the move itself is undone).
   Cosmetic; check whether Android does the same. *S.*
 - [ ] **Loading state polish.** "Setting out X..." is a plain text line. (a) Android: add a spinner, since
