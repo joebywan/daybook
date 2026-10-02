@@ -81,16 +81,18 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Keyboard input (potential, not started)
 
-Sudoku and Lexicon already take a hardware keyboard (`SudokuKeys.kt`, `LexiconKeys.kt`); the other ten boards
+Sudoku and Lexicon already take a hardware keyboard (`SudokuKeys.kt`, `LexiconKeys.kt`); the other eleven boards
 take none. Survey and per-puzzle key proposals: the owner asked for these to be recorded, not built. Do them
 in this order. Keep every key map a pure, unit-tested function; cursor state is `remember`, never `PuzzleState`;
 chords stay ignored; check in Chromium and WebKit with `keyboard.press`.
 - [ ] **Shared key helper and play-screen shortcuts.** Pull the focus / chord filter / held-key block that
   `Sudoku.kt` and `Lexicon.kt` duplicate into one modifier; add a pure clamped, non-wrapping cursor helper plus a
   drawn cursor outline; handle Ctrl/Cmd+Z (undo), H (hint) and Esc (close popover) once in `PlayScreen`; keys
-  stop once solved. Benefits all twelve boards. *M.*
+  stop once solved. Benefits all thirteen boards. *M.*
 - [ ] **Optional per-puzzle "Keyboard" line in Rules.** A `keyboardHelp` list on `PuzzleType`, empty by default,
   shown on the web build only ("Arrows move, Space cycles"). Do it with the helper if wanted. *S.*
+- [ ] **Nonogram keys.** Arrows move a cursor; F fills, X crosses, Space cycles the square (and clears on the third press);
+  Shift+arrow sweeps along the line. *S.*
 - [ ] **Mambo, Pipes, Sets keys.** Arrows move a cursor; Space cycles (Mambo), rotates (Pipes) or picks (Sets);
   Mambo's two symbols may also have direct keys. *S each.*
 - [ ] **Tower keys.** 1..N picks a colour and fills the next empty peg, Backspace removes the last, Enter
@@ -123,7 +125,17 @@ below have a famous branded version; use the descriptive name).
   has been looked at. Before it counts as done: `tools/render/render.py --puzzle words` on all three tiers at
   390x844, 390x664, 360x640 and 375x537, light and dark, Chromium and WebKit; the keyboard at 375x537 (eight
   rows on Expert is the tight case); the hint popover with a highlighted tile and a highlighted key; a physical
-  keyboard in the browser; then the emulator. Recapture `docs/screenshots/home.png` (twelve tiles now) and its alt text.
+  keyboard in the browser; then the emulator. Recapture `docs/screenshots/home.png` (twelve tiles when this was written, thirteen with Nonogram) and its alt text.
+- [ ] **Nonogram: check it by rendering.** Written in a session that could not reach Google's Maven, so the board, the
+  home motif and the walkthrough were never drawn (the logic, hints and tests were run). Before it counts as done:
+  `tools/render/render.py --puzzle nonogram` on all three tiers at 390x844, 390x664, 360x640 and 375x537, light and
+  dark, Chromium and WebKit (the 15x15 board's clue numbers and 124dp Fill/Cross buttons at 375x537 are the tight
+  case); a hint with a highlighted line and clue; a sweep by touch; the home grid now that it has a fifth row
+  (`HomeScreen`: does it scroll on a 360x640 phone, and is the one-tile row acceptable?); then the emulator.
+  Recapture `docs/screenshots/home.png` (thirteen tiles) and its alt text.
+- [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
+  pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
+  size-by-size retune; measure the pass rate before trying again. Hardware-keyboard entry is in the keyboard item above.
 - [ ] **Lexicon: a no-repeat cycle for daily words.** The word is a pure function of the seed, so it can recur
   (about even odds of a repeat within two months of Standard days). A cycle needs the day count, which the
   `generate(seed, difficulty)` contract does not carry. Only if repeats bother anyone.
@@ -145,11 +157,6 @@ below have a famous branded version; use the descriptive name).
 ### Suggested
 
 Roughly in order of how well they fit, best first.
-- [ ] **Nonogram (picture logic).** Row and column run-length clues; fill squares to reveal a picture.
-  One answer is provable; hints are line-solving ("this row's 8 clue on 10 squares forces the middle
-  six"), the classic teachable technique. Generate from a random pattern and keep it only if a
-  line-logic solver finishes it, which also guarantees no guessing. Tap to fill, drag to paint, a
-  cross mode (like Kings' crosses). *M–L.* Sizes 5x5 / 10x10 / 15x15 fit a phone.
 - [ ] **Cage-sum Sudoku.** Sudoku plus cages whose digits must total a given sum without repeats. Reuses
   Sudoku's grid, digit pad, notes and conflict display, so most of the UI exists. Needs a uniqueness
   solver that handles cages; a teacher using cage combinations ("a 2-cage totalling 3 is {1,2}"). *M.*

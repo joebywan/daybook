@@ -60,6 +60,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | LITS | LITS (Nikoli) | One L/I/T/S tetromino per region, no 2×2, no same letter touching |
 | Tower | Mastermind | Break the hidden colour code from scored guesses |
 | Lexicon | Mastermind for words | Find the hidden word; each guess marks every letter green, yellow or grey |
+| Nonogram | Nonogram | Fill squares to match the run lengths beside each row and column and a picture appears |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -89,6 +90,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   shipped Expert boards with 39 of 42 squares numbered.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
+- **Nonogram** — a random picture is kept only if a line solver finishes it: for each row or column, work out
+  what every legal layout of its numbers has in common, repeat until nothing changes. A picture that needs a
+  guess is thrown away, which makes the answer unique and means the hints can always point at a single line.
+  An independent solver that tries every arrangement of every row confirms the one answer in the tests.
 - **Tower and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by

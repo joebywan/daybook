@@ -29,11 +29,11 @@ sounded. Do not turn it off.
 - `PuzzleState` is a sealed `@Serializable` interface living in `puzzles/` — Kotlin requires
   sealed implementations to share the sealed type's *package*, not merely its module.
 - `Preview(modifier)` draws a fixed motif for the home grid. **Never call `generate()` in it** —
-  twelve of them draw on every composition.
+  thirteen of them draw on every composition.
 
 ## Teaching: hints that explain, and walkthroughs
 
-All twelve puzzles teach. The shared pieces are `core/Teaching.kt` (the contract), `ui/teach/Hints.kt`
+All thirteen puzzles teach. The shared pieces are `core/Teaching.kt` (the contract), `ui/teach/Hints.kt`
 (the session, the panel, `WatchHint`), `ui/tutorial/TutorialRunner.kt` and `ui/play/PlayScreen.kt`;
 each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthrough
 (`offersHints = false`). Everything in the contract has a default, so a board adopts it alone:
@@ -127,8 +127,9 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | LITS | whole region, overlap, avoid 2x2 / letter clash, neighbour, what-if | 0 / 0 / 0% (300 boards per tier). It was 42 / 23 / 30% while 43 / 22 / 29% of boards had several answers under the win check; the generator now proves one (the test holds one-answer boards under 2%) |
 | Tower | one change, only colour left, accounted for, what-if; else a guess that fits every score | every board, 28-35% of turns: Mastermind is mostly choosing a guess |
 | Lexicon | a typed row that cannot be submitted, a letter pinned to its slot by the marks, one word left, else the word that leaves the fewest | every board; 93% of turns after the opener (pins are the other 7%): choosing a word is most of the game. A pin holds for every accepted word that fits, not only the answer list |
+| Nonogram | one line at a time: clues fill the line, clue already complete, overlap of the clue's slides, what the marks already in the line leave possible | none exists: every board is line-solvable, so some line always has a square to settle (200 boards per tier, hints alone finish all) |
 
-Adopting it, or changing a teacher — the lessons of twelve of them:
+Adopting it, or changing a teacher — the lessons of thirteen of them:
 
 - **Measure the fallback rate; don't assume it.** Test soundness against an independent solver.
 - **A mistake means "no legal answer keeps this", not "differs from the stored answer".** LITS and
@@ -171,6 +172,27 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
   fallback.
 - The typed row and the "Not in the word list" note are `remember` state, never `PuzzleState`; the note sits in
   the header line whose room is always reserved, so a refusal cannot move the board.
+
+## Nonogram
+
+Run-length clues beside a grid; fill the squares that give every row and column its numbers. `puzzles/NonogramRules.kt`
+(state, rules, line solver, generator), `NonogramTeacher.kt`, `Nonogram.kt` (board, walkthrough, motif). `id = "nonogram"` is hashed
+into every seed: never rename it.
+
+- **Tiers are size alone: 5x5 / 10x10 / 15x15**, all at 55% filled. The same line logic and a longer way to carry it.
+- **A board ships only if lines alone finish it** (`NonogramLogic.lineSolvable`: per line, the squares every legal layout of
+  the clue agrees on, to a fixpoint). That also makes the answer unique, and `NonogramRulesTest` checks it with an
+  independent oracle that tries every arrangement of every row. About 50-80% of random pictures pass, so 400 draws per seed
+  never fall back (a year per tier is tested); `lastResort` is a fixed diagonal, itself proved line-solvable.
+- **`solved` checks the clues, not the stored picture.** Crosses are notes and never count.
+- **Hints cannot fall back**, so there is no fallback to measure: if the player's marks are right, some line always has a
+  square to settle (settled squares only ever help). The mistake is a mark the stored picture disagrees with, sound because the
+  picture is the board's one answer. Highlight indices past the squares are the clues (`rowClueIndex`, `colClueIndex`).
+- **The pen (Fill/Cross) is `rememberSaveable` in the board, not state.** A sweep is one state: it locks to the row or column
+  of the larger move, a pen only writes over untouched squares, and an eraser only takes out the mark it started on.
+  `onDragStart` uses the overload that receives the *down*, since the web's touch slop is wider than a 15x15 square.
+- The pictures are random noise, not drawings. Smoothing them into blobs made 5x5 boards fail the filter too often
+  (4% passed the shape rules); see `docs/TODO.md`.
 
 ## Rules that keep being relearned
 
@@ -256,7 +278,7 @@ particular names the puzzle count in its alt text.
 
 ## Web build (`web/`)
 
-The whole app — all twelve puzzles, home, play, archive, stats, walkthroughs, saves — in a
+The whole app — all thirteen puzzles, home, play, archive, stats, walkthroughs, saves — in a
 browser, via Compose Multiplatform 1.12.1 on Kotlin/Wasm (`wasmJs`) with the repo's Kotlin 2.4.20.
 Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for WasmGC.
 
@@ -311,7 +333,7 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   is the `withContext(Dispatchers.Default)` it always was). Wasm has one thread, so the web's
   `generateBoard` first waits until "Setting out …" has been *painted* (`requestAnimationFrame` →
   `setTimeout`), and `prepareBoards` — called by `DaybookApp` while Home is showing, a no-op on
-  Android — makes today's twelve boards at the grid's tier in advance, one per turn of the event
+  Android — makes today's thirteen boards at the grid's tier in advance, one per turn of the event
   loop, into a small cache. A tap usually finds its board ready. A board already underway cannot be
   interrupted, so a tap during a slow pre-generation still waits for it. A cached board skips the
   loading screen (`readyBoard`). The loading screen waits `LOADING_MESSAGE_DELAY_MS` (150 ms) before
@@ -346,7 +368,7 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   console — `PARITY` for the dates the per-puzzle parity tests pin, `TODAY` for `?date`/`?tier` —
   and `&range=N` adds `RANGE` lines for every tier of N days from 2026-01-01 plus `TIMING` per
   puzzle and tier, ending with `DUMP DONE`. `&puzzle=<id>` narrows the dump to one puzzle, which
-  lets a harness run the twelve in parallel pages; `&times` adds a `TIME <id> <date> <tier> <ms>`
+  lets a harness run the thirteen in parallel pages; `&times` adds a `TIME <id> <date> <tier> <ms>`
   line per board, for medians and percentiles.
 - **Parity:** `DAYBOOK_PARITY_DUMP=<file> ./gradlew :app:testDebugUnitTest --tests
   '*WebParityDumpTest*'` writes the JVM's year in the same order; strip `RANGE ` from the page's
@@ -358,7 +380,7 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   lines over two years plus per-board JVM times in `<file>.times`.
 
   **CI runs the year.** `tools/web-parity/check.py --jvm <file>` does the comparison by hand above for
-  you: it serves the built dist, loads `?dump&range=N&puzzle=<id>` for all twelve puzzles at once in
+  you: it serves the built dist, loads `?dump&range=N&puzzle=<id>` for all thirteen puzzles at once in
   Chromium then WebKit (Playwright, pinned in `tools/web-parity/requirements.txt`), strips `RANGE `,
   and diffs each puzzle against the JVM file (N is read from it), printing the first differences by
   puzzle, date and tier. Exit 1 on any difference, missing line, page error or timeout. A full year
