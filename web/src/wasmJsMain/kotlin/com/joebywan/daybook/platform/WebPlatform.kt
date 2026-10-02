@@ -286,6 +286,20 @@ suspend fun generateBoard(puzzle: PuzzleType, seed: Long, difficulty: Difficulty
     return puzzle.generate(seed, difficulty).also { keep(key, it) }
 }
 
+/** A board made in advance, if there is one: the loading screen is then skipped altogether. */
+fun readyBoard(puzzle: PuzzleType, seed: Long, difficulty: Difficulty): PuzzleState? =
+    boards[BoardKey(puzzle.id, seed, difficulty)]
+
+/** The thread that would turn a spinner is the one generating, so a spinner would sit frozen. */
+const val GENERATION_ANIMATES: Boolean = false
+
+/**
+ * Zero, deliberately. A delayed message would never be seen: generation holds the only thread, so
+ * the message has to be painted before it starts (see [awaitPaint]). Boards that are cheap are
+ * mostly in the cache and skip the loading screen entirely.
+ */
+const val LOADING_MESSAGE_DELAY_MS: Long = 0L
+
 /** How long the home grid is up before the first board is made, so an early tap is not kept waiting. */
 private const val PREPARE_AFTER_MS = 400L
 

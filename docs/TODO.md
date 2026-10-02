@@ -18,12 +18,6 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Atoms Standard sometimes comes out lighter than the tier intends:** one 2026 board with 6 atoms and
   two with 9, where the tier asks for 10. Still valid puzzles. Decide whether to fix (changes those
   boards) or accept; if fixing, regenerate the pinned parity lines for the dates that move. *S.*
-- [ ] **Undo leaves a selection highlight behind in Sudoku and Sets** on the web (the move itself is undone).
-  Cosmetic; check whether Android does the same. *S.*
-- [ ] **Loading state polish.** "Setting out X..." is a plain text line. (a) Android: add a spinner, since
-  generation is off the main thread and it would animate. (b) Both: show the message only if generation
-  takes longer than ~150 ms, so quick boards do not flash it. The web cannot animate while generating
-  (one thread). Since the LITS speed-up the slowest board is under 0.1 s, so this is low urgency. *S.*
 - [ ] **Endgame popup: congratulations frame, a ding, and the right next steps.** Today `SolvedBar` (`ui/play/PlayScreen.kt`) has only
   "Another" (a random board, same tier) and "Done". Replace with options that depend on daily vs random
   and on what is already done. The aim is to offer choices without repeating what the player has done.

@@ -92,6 +92,16 @@ fun BackupControls() = Unit
 suspend fun generateBoard(puzzle: PuzzleType, seed: Long, difficulty: Difficulty): PuzzleState =
     withContext(Dispatchers.Default) { puzzle.generate(seed, difficulty) }
 
+/** A board already generated and waiting, if the platform keeps any. Android makes each on open. */
+@Suppress("UNUSED_PARAMETER")
+fun readyBoard(puzzle: PuzzleType, seed: Long, difficulty: Difficulty): PuzzleState? = null
+
+/** Generation is off the main thread, so a spinner on the loading screen keeps turning. */
+const val GENERATION_ANIMATES: Boolean = true
+
+/** How long a board may take before "Setting out..." appears, so a quick one does not flash it. */
+const val LOADING_MESSAGE_DELAY_MS: Long = 150L
+
 /**
  * Called while the home grid is showing. Android generates each board off the main thread when it
  * is opened, which is quick enough, so there is nothing to get ready in advance.
