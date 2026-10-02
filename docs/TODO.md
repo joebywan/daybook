@@ -58,11 +58,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   web build) so it stops being rebuilt per session. *M.*
 - [ ] **`TutorialFrame.passes` is dead API.** `CLAUDE.md` says Sets, Mambo and Snap use it; no puzzle sets
   it (they write one frame per emitted state). Delete the field or use it, and fix the docs. *S.*
-- [ ] **Docs that disagree with the code** (found while writing `docs/PUZZLE_STANDARDS.md`):
-  `CLAUDE.md` says only Kings and Atoms have `generateVerified` (LITS has it too, `internal`) and that
-  all eleven boards consult `maxHeight` (Tower fits its box with a bounded `LazyColumn`); the `PuzzleType`
-  KDoc still says purity is the only hard rule, but a new puzzle also needs a `ParityFingerprint.body`
-  branch, a `StateSerializationTest.mutate` branch and a parity pin (the README now says so). *S.*
 - [ ] **Snap's solved layout was never screenshotted** (it has no hints, so the harness never reached it).
   It shares the code path, so low risk. *S.*
 

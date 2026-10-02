@@ -514,8 +514,8 @@ Details behind the P/N cells:
 - **Pipes:** no generator uniqueness claim (accepted); its teacher and tests are written for several answers.
 - **Text-fit tests:** missing for Kings, partial for Pipes and Atoms. Kings' captions and explanations are
   untested for panel length.
-- **Tower sizing** is by a bounded `LazyColumn`, not `maxHeight`; CLAUDE.md says all eleven "consult the
-  height". They fit the box, by a different mechanism.
+- **Tower sizing** is by a bounded `LazyColumn`, not `maxHeight`; CLAUDE.md says ten boards read `maxHeight`
+  and Tower fits the box by a different mechanism.
 
 ### Known gaps and open items
 
@@ -529,10 +529,9 @@ Details behind the P/N cells:
 4. Kings (and Pipes, Atoms captions) have no text-fit test.
 5. Accessibility (section 11), already in CLAUDE.md "Open".
 6. No Java2D/emulator render harness is checked in; "verify by rendering" is by convention only.
-7. README "Adding a puzzle" and the `PuzzleType` KDoc say two steps and that purity is "the only hard rule".
-   In practice a new puzzle also needs the compile-forced `ParityFingerprint.body` branch,
-   `StateSerializationTest.mutate` branch, a parity pin, and (for a good one) a teacher and walkthrough.
-   This file is the fuller list.
+7. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
+   `ParityFingerprint.body` branch, the `StateSerializationTest.mutate` branch, a parity pin, and (for a good
+   one) a teacher and walkthrough. This file is the fuller list.
 8. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
 
 ## 13. Adding a new puzzle: the recipe
