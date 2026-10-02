@@ -34,6 +34,9 @@ kotlin {
 
     compilerOptions {
         extraWarnings.set(true)
+        // Kotlin 2.4 marks the whole JS interop surface (js(), JsAny, external) experimental; the
+        // web's platform code is built on it, so opt in once here rather than per file.
+        optIn.add("kotlin.js.ExperimentalWasmJsInterop")
     }
 
     sourceSets {
