@@ -25,7 +25,7 @@ No ads. No subscription. No accounts. No network permission in the manifest at a
   build is signed with the same key. See [Releases, CI and signing](#releases-ci-and-signing) for
   why that is checked so carefully.
 
-Not on Google Play yet — see [Publishing to Google Play](#publishing-to-google-play).
+Not on Google Play yet (in preparation) — see [Publishing to Google Play](#publishing-to-google-play).
 
 ## Why it works offline and for free
 
@@ -220,6 +220,16 @@ Google's copy comes from, and the choice is effectively permanent:
    JSON key. Then Play Console → Users and permissions → invite that service account's email →
    grant *View app information* and *Release to testing tracks*.
 6. **Add the JSON** as the `PLAY_SERVICE_ACCOUNT_JSON` repository secret.
+
+7. **Production needs a closed test first** (personal developer accounts created after 13 Nov 2023
+   only): create a closed-testing track, get at least 12 testers opted in, keep them opted in for 14
+   continuous days (dropping below 12 restarts the clock), then apply for production access in the
+   Console's Dashboard. Testers join by a link or a Google Group, and need a Google account. Upload a
+   release to the closed track by `workflow_dispatch` on the publish workflow with `track: alpha`
+   (the Console's "closed testing" track is `alpha` to the API unless a custom track is made).
+
+Listing text, graphics and every declaration's answer are prepared in
+[`docs/play/LISTING.md`](docs/play/LISTING.md).
 
 From then on it is automatic. `workflow_dispatch` on that workflow also lets you push an existing
 release to `alpha`, `beta` or `production` by hand.
