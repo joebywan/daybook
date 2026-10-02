@@ -15,9 +15,6 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **Sets can fail outright.** `Sets.generate` throws via `error()` after 4000 redraws, and its tests
-  walk only 12 seeds. Measure the failure rate over a few years of daily seeds, then make failure
-  impossible or structural. *M.*
 - [ ] **Mambo's generator has a `!!` on a second attempt** that could throw. Measure how often the second
   attempt is reached and make it safe. *S.*
 - [ ] **Atoms Standard sometimes comes out lighter than the tier intends:** one 2026 board with 6 atoms and

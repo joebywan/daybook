@@ -143,7 +143,9 @@ without editing it.
   `test/LitsOracle`). Where several answers are possible, the teacher and `solved` must be written for
   that (below).
 - *No unique answer to prove:* Tower (a random code), Sets (target = the number of sets on the table;
-  `Sets.generate` redraws up to `DRAWS` and then `error(...)`s rather than ship an unwinnable board).
+  `Sets.generateVerified` redraws up to `DRAWS` and returns null if none lands, then `Sets.lastResort`, an
+  exhaustive search for a board of the tier's own shape, ships instead of throwing; a year per tier
+  reaches neither, pinned by `test/SetsRulesTest`).
 
 **`solved` checks the rules, not a stored answer.** Kings and LITS both rejected correct solutions by comparing
 to the stored one. Keep the stored solution for the teacher; let a validator decide. References:
@@ -476,7 +478,7 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 | Pipes | Y | n/a no uniqueness claimed | Y | Y `PipesTeachingTest` enumerator | Y | Y 7 | Y grid | Y | Y | P sentences, not length |
 | Shikaku | Y | P `countTilings` loop + `fallbackBoard`, no `generateVerified` | Y `Shikaku.isSolved` | Y `ShikakuClueTest` | Y | Y 7 | Y grid | Y | Y | Y |
 | Mosaic | Y slack 0 | Y `solve` or null; last pass stripes | Y (all one colour) | Y `MosaicOptimumTest` BFS | Y | Y 6 | Y grid + keepClear | Y | Y | Y 180 |
-| Sets | Y | n/a target = sets present; `error()` after 4000 draws | Y | Y `SetsRulesTest` plays the handler | Y no fallback | Y 9 | Y grid | Y | Y | Y |
+| Sets | Y | n/a target = sets present; `generateVerified` else exhaustive `lastResort` | Y | Y `SetsRulesTest` plays the handler | Y no fallback | Y 9 | Y grid | Y | Y | Y |
 | Atoms | Y | Y `generateVerified`, year test | Y | Y `AtomsTeachingTest` enumerator | Y | Y 7 | Y custom | Y | Y | P 230 in coverage |
 | Snap | Y | P `Verdict` enum, no `generateVerified`; fallback pinned by clue budget | Y `obeysRules` | Y `SnapCluesTest` | N by design (`offersHints = false`) | Y 9 | Y grid | Y | Y | Y 200 |
 | LITS | Y | Y `generateVerified` (internal), sealed `Verdict`, year test | Y | Y `LitsOracle`, `LitsAuditTest` | Y | Y 8 | Y grid | Y | Y | Y |
@@ -499,8 +501,9 @@ Details behind the P/N cells:
   weaker form of the Atoms/LITS test.
 - **Mambo proved gen:** no explicit fallback; `fullGrid(rng, n) ?: fullGrid(Rng(seed + 1), n)!!` can throw on a
   double failure. Six seeds per tier in `MamboRulesTest`.
-- **Sets:** `generate` throws rather than ship an unwinnable board after `DRAWS = 4000` redraws. The tests walk 12
-  seeds, not a year, so reachability of the throw is not pinned.
+- **Sets:** `generate` is `generateVerified ?: lastResort`; the sampler fails on about 1 seed in 10^40 (no seed in
+  four years of daily boards or 500,000 random seeds per tier came near), and `SetsRulesTest` walks a year per tier
+  on `generateVerified` and runs `lastResort` directly.
 - **Pipes:** no generator uniqueness claim (accepted); its teacher and tests are written for several answers.
 - **Text-fit tests:** missing for Kings, partial for Pipes and Atoms. Kings' captions and explanations are
   untested for panel length.
@@ -512,8 +515,8 @@ Details behind the P/N cells:
 1. `TutorialFrame.passes` (`core/Teaching.kt`, honoured in `ui/tutorial/TutorialRunner.kt`) is not set by any
    puzzle. CLAUDE.md says Sets, Mambo and Snap use it; they instead write one frame per emitted state. The
    mechanism is untested dead API until something needs it.
-2. `generateVerified` is not a universal convention (Kings, Atoms, LITS only). Shikaku and Snap should get
-   one and a year-long `FallbackTest` entry; Sets and Mambo a year-long test of their "cannot fail" path.
+2. `generateVerified` is not a universal convention (Kings, Atoms, LITS and Sets only). Shikaku and Snap should get
+   one and a year-long `FallbackTest` entry; Mambo a year-long test of its "cannot fail" path.
 3. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
    while their boards are unique, which the generators prove.
 4. Kings (and Pipes, Atoms captions) have no text-fit test.

@@ -2,11 +2,13 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Card
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -136,6 +138,72 @@ class SetsRulesTest {
                 "$difficulty asks for ${board.target} of at most ${Sets.maxSets(board.cards.size)}",
                 board.target <= Sets.maxSets(board.cards.size),
             )
+        }
+    }
+
+    /**
+     * Independent of [Sets.isSet] and [Sets.allSets]: three cards form a set exactly when, in every
+     * trait, the values sum to a multiple of three (0+0+0, 1+1+1, 2+2+2 and 0+1+2 all do, and
+     * nothing else with three values from 0..2 does). Counted over every triple by index.
+     */
+    private fun setsBySum(cards: List<Card>): Int {
+        var n = 0
+        for (i in cards.indices) for (j in i + 1 until cards.size) for (k in j + 1 until cards.size) {
+            if (cards[i].traits.indices.all { t -> (cards[i].traits[t] + cards[j].traits[t] + cards[k].traits[t]) % 3 == 0 }) n++
+        }
+        return n
+    }
+
+    private fun assertValid(label: String, board: SetsState, cards: Int, target: Int) {
+        assertEquals("$label card count", cards, board.cards.size)
+        assertEquals("$label has repeated cards", board.cards.size, board.cards.toSet().size)
+        assertTrue("$label has a trait outside 0..2", board.cards.all { c -> c.traits.all { it in 0..2 } })
+        assertEquals("$label target", target, board.target)
+        assertEquals("$label holds a different number of sets than it promises", target, setsBySum(board.cards))
+        assertTrue("$label starts finished", !board.solved)
+    }
+
+    /**
+     * `generate` used to `error()` after 4000 redraws. A draw lands on 2-18% of tries, so that is
+     * a 1-in-10^40 event and no seed has ever reached it (the worst of 500,000 random seeds per
+     * tier needed 612 draws), but a year of real boards is the standing proof that the sampler,
+     * not the fallback, is what ships. Asserts on `generateVerified`, which a fallback cannot satisfy.
+     */
+    @Test
+    fun `sets proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        for (difficulty in Difficulty.entries) {
+            val (cards, target) = when (difficulty) {
+                Difficulty.STANDARD -> 9 to 3
+                Difficulty.HARD -> 12 to 4
+                Difficulty.EXPERT -> 12 to 6
+            }
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, "sets", difficulty)
+                val proved = Sets.generateVerified(seed, difficulty)
+                assertNotNull("sets $date/${difficulty.name} needed the last resort", proved)
+                assertValid("sets $date/${difficulty.name}", proved!!, cards, target)
+                assertEquals("sets $date/${difficulty.name}", proved, Sets.generate(seed, difficulty))
+            }
+        }
+    }
+
+    /**
+     * The last resort is a real board, not a stub: the tier's size, the tier's number of sets,
+     * deterministic, and found at every seed tried (the search is exhaustive, so this also pins
+     * that such a board exists on every tier).
+     */
+    @Test
+    fun `the last resort is a valid board of the tier's own shape`() {
+        for (difficulty in Difficulty.entries) {
+            val reference = Sets.generateVerified(seeds.first(), difficulty)!!
+            for (n in 0 until 300) {
+                val seed = Rng(n.toLong() * 104729 + 7).nextLong()
+                val board = Sets.lastResort(seed, difficulty)
+                assertValid("last resort ${difficulty.name}/$seed", board, reference.cards.size, reference.target)
+                assertEquals(board, Sets.lastResort(seed, difficulty))
+            }
         }
     }
 
