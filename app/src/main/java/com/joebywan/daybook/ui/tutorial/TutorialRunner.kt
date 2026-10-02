@@ -166,11 +166,12 @@ fun TutorialRunner(
                         frame.caption,
                         style = MaterialTheme.typography.bodyLarge,
                         color = scheme.onBackground,
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
+                        // Never cut a word: a caption longer than the slot scrolls instead.
+                        modifier = Modifier.weight(1f).verticalScroll(androidx.compose.runtime.key(index) { rememberScrollState() }),
                     )
-                    Text(
+                    // Only a frame that asks for a move has feedback to show; the others give the
+                    // caption the whole slot.
+                    if (frame.accepts != null) Text(
                         when (status) {
                             Status.WAITING -> ""
                             Status.RETRY -> frame.retry
