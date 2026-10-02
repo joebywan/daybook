@@ -57,9 +57,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   board from a fallback (`generateVerified`-style). Shikaku and Snap prove uniqueness but nothing
   asserts their fallback is never reached over a year; Kings' proved-path test samples 30 seeds per
   tier, not a year. Add year-long fallback tests for each. *M.*
-- [ ] **No checked-in rendering harness.** "Verify by rendering" is convention only; a Java2D harness drove
-  past icon/motif checks and is not in the repo. Check one in (or a Playwright screenshot script for the
-  web build) so it stops being rebuilt per session. *M.*
 - [ ] **The finished frame hides about half the board on tall screens.** At 390x844 the centred frame
   (rows 321-523dp) covers 58% of Snap's Standard/Hard board (235-583dp) and 50% of Expert's; below 700dp
   the bottom-docked frame covers 12-32%. The board never moves and every tile works, so this is
