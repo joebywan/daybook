@@ -1,7 +1,6 @@
 # Puzzle standards
 
-What every Daybook puzzle must have, derived from the thirteen that exist. Written against `main` at
-`b09c763` (2026-10-01). Where this file and the code disagree, the code wins; fix this file.
+What every Daybook puzzle must have, derived from the puzzles that exist. Where this file and the code disagree, the code wins; fix this file.
 
 Paths are relative to `app/src/main/java/com/joebywan/daybook/` (shortened to `core/`, `puzzles/`,
 `ui/`) unless they start with `app/src/test/` (shortened to `test/`, the package directory
@@ -45,7 +44,7 @@ A puzzle is done when all of these are true:
 | `rules: List<String>` | yes | Short summary. Shown as "Rules" inside the walkthrough, and directly by "How to play" if there is no walkthrough. |
 | `accent: Long` (ARGB) | yes | Card colour, board highlights, walkthrough buttons. |
 | `generate(seed, difficulty)` | yes | Pure. Section 4. |
-| `Preview(modifier)` | effectively yes | Default is a plain accent block. All thirteen override it. Fixed motif; never calls `generate`. |
+| `Preview(modifier)` | effectively yes | Default is a plain accent block. All of them override it. Fixed motif; never calls `generate`. |
 | `Board(state, onState, interactive)` | yes | Section 6. |
 | `teach(state): Deduction?` | yes unless `offersHints = false` | Section 7. |
 | `hint(state)` | no | Legacy "move goes straight on the board", used only when `teach` returns null. Six boards still define it (`Lits`, `Mambo`, `Mosaic`, `Sets`, `Shikaku`, `Sudoku`) as a fallback; a new puzzle should not write one. |
@@ -58,8 +57,7 @@ state: `PlayScreen` never reads it).
 
 Registry line: `core/PuzzleRegistry.kt` `all` is the home-grid order. `featured(epochDay)` rotates over it.
 The home grid is three columns (`ui/home/HomeScreen.kt` `COLUMNS`, with a comment that four rows of tiles is what one
-phone screenful holds); twelve tiles fit, and the thirteenth (Nonogram) starts a fifth row, so a fourteenth or a
-change to the tile size means checking that screen again.
+phone screenful holds); adding a puzzle that starts a new row, or changing the tile size, means checking that screen again.
 
 ## 3. Difficulty
 
@@ -105,7 +103,7 @@ Rules for the tiers:
   `Difficulty` or its entries changes every board of every puzzle.
 - **Cost budget.** `test/GeneratorTest` `generation stays inside a sane time budget` fails a tier whose
   generation averages over 2.5 s on the JVM. The web build generates on one thread behind a "Setting out"
-  screen and pre-generates today's boards (CLAUDE.md "Generation on one thread"), so a slow Expert is felt.
+  screen and pre-generates today's boards (`docs/WEB_BUILD.md` "Generation on one thread"), so a slow Expert is felt.
 
 ## 4. Generation
 
@@ -171,7 +169,7 @@ alone (`test/MamboRulesTest` `every generated board is solvable by propagation a
 
 ## 5. Web parity
 
-The web build compiles `app/src/main/java` itself (CLAUDE.md "One copy of the code"). A new file is on the web
+The web build compiles `app/src/main/java` itself (`docs/WEB_BUILD.md` "One copy of the code"). A new file is on the web
 by default, so:
 
 - **No `android.*`, no `java.*`, no `System.*`, no `String.format`, no `java.time`.** Use `kotlinx.datetime`,
@@ -190,7 +188,7 @@ by default, so:
   moving a board; the proof is the year dump before and after (below).
 - **Touch on the web** differs (TouchEvent not PointerEvent; slop wider than 12px). Gesture code that must
   start *on* something small uses the `onDragStart` overload that receives the `down` change (Atoms). See
-  CLAUDE.md "Learned the hard way".
+  `docs/WEB_BUILD.md` "Learned the hard way".
 
 **What a new puzzle must add**
 
@@ -207,7 +205,7 @@ by default, so:
    and compare with the page's `?dump&range=365` output (strip the `RANGE ` prefix); the files must be
    identical. Take the same dump before and after any generator change to prove Android boards unchanged.
    CI does this for you on every deploy and on pull requests that touch `app/src/main` or `web/`
-   (`tools/web-parity/check.py`, CLAUDE.md "Web build"); run it yourself to see a divergence before pushing.
+   (`tools/web-parity/check.py`, `docs/WEB_BUILD.md`); run it yourself to see a divergence before pushing.
 
 ## 6. The board UI
 
@@ -258,7 +256,7 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   (`test/KingsPaletteTest`; comment on `Kings.Preview`). Error is `scheme.error`, hint glow `scheme.onBackground`.
 - **Highlight.** Read `LocalBoardHighlight.current`: strong cells glow, soft are marked, everything else dims
   while anything is highlighted; `warning` draws in the error colour. Section 7 covers reporting bounds.
-- **`Preview(modifier)`:** a hand-picked static motif, drawn at 72-96 dp, cheap (eleven draw on every
+- **`Preview(modifier)`:** a hand-picked static motif, drawn at 72-96 dp, cheap (all of them draw on every
   composition) and never calling `generate()`. Draw the *real* glyphs (Kings draws the real crown and
   crosses) and make the motif a legal crop of a board (`Kings.motifMarks` comment). Check the colours are
   distinguishable in a thumbnail. References: `Kings.Preview`, `Tower.Preview`/`PreviewPips`.
@@ -266,8 +264,8 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   ways nobody predicted. Render the real geometry at true size (a Java2D harness is the established
   approach, not checked in), then check the emulator, then the web page in a narrow viewport in both colour
   schemes with `tools/render/render.py` (Playwright, Chromium and WebKit; `tools/render/README.md`). Screenshots in `docs/screenshots/` (README) go stale silently:
-  recapture them on a clean install if the home grid or an existing board's look changed (and the home
-  shot's alt text names the puzzle count; `README.md` also says "Eleven").
+  recapture them on a clean install if the home grid or an existing board's look changed (keep puzzle counts out of the alt
+  text and the README).
 - **Input is currently not accessible** (section 11).
 
 ## 7. Hints
@@ -276,7 +274,7 @@ Shared machinery: `core/Teaching.kt` (`Deduction`, `BoardHighlight`, `LocalBoard
 `ui/teach/Hints.kt` (`HintSession`, `WatchHint`, `HintPopover`, `HintPanel`), `ui/play/PlayScreen.kt`,
 `core/HighlightBounds.kt`. You write one file, `puzzles/<Name>Teacher.kt`, and a ~25-line `teach` override.
 
-**Behaviour (settled by the owner, CLAUDE.md "Teaching").** Tap 1 nudges (where to look), tap 2 explains
+**Behaviour (settled by the owner, `docs/TEACHING.md`).** Tap 1 nudges (where to look), tap 2 explains
 (why, with cited cells), the player makes the move, and the panel confirms and clears when `isReached` sees it.
 Only an explicit "Show me" (the third tap) applies it. One hint is counted per deduction opened; explaining
 and Show me are free. Hints guide, they do not give.
@@ -349,7 +347,7 @@ highlight weighs 4x overlap with `keepClear`. No per-puzzle code is needed for i
 difficulty` test that walks boards from empty by hints alone, prints per-technique counts, writes
 `build/reports/<puzzle>-teaching-coverage.txt` and asserts a ceiling (Kings: under a tenth; Pipes:
 under 1%, `hints alone solve every board, and the fallback is rare`). The numbers are the point; the table
-in CLAUDE.md "Teaching" records them. Update it when a teacher changes.
+in `docs/TEACHING.md` records them. Update it when a teacher changes.
 
 **Hint tests** (copy `test/KingsTeachingTest`, the cleanest; section 10 lists them): every step agrees with
 the answer and changes something; steps stay sound from boards a player made (not only the solver's path); on
@@ -478,7 +476,7 @@ Other settled constraints on design (CLAUDE.md "Settled", "Rules"):
 
 ## 12. Conformance matrix
 
-Verified against the code and tests on 2026-10-01 (grep and reading, not memory). Y = yes, P = partial, N = no.
+Y = yes, P = partial, N = no.
 
 | | Tiers | Proved gen | Rules `solved` | Indep. check | Teacher | Tutorial | Highlight | Parity pin | Preview | Text-fit |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -496,29 +494,6 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 | Lexicon | Y length, guesses | n/a one pick from a sorted list; lists screened, tested for order and content | Y last guess is the word | Y `LexiconSupport.refMark`, `LexiconTeachingTest`, `LexiconBalanceTest` | Y fallback on every board | Y 9 | Y grid + anchors + keepClear | Y `LexiconWebParityTest` | Y | Y 170 |
 | Nonogram | Y side | Y `generateVerified` (a picture ships only if `lineSolvable`, which makes it unique; `lastResort` is a fixed diagonal, also proved), year test | Y `NonogramLogic.isSolved` (clues, not the stored picture) | Y `NonogramOracle` (every arrangement of every row), `NonogramTeachingTest` brute force | Y no fallback exists | Y 6 | Y grid + clue indices | Y `NonogramWebParityTest` | Y | Y 200 / 70 |
 
-Details behind the P/N cells:
-
-- **Sudoku, Shikaku teachers' `mistake`:** `solved` is now the rules, but both teachers still judge a
-  mistake by difference from the stored answer (Sudoku: a digit != `solution`; Shikaku: a block not in
-  `solution`). Right only while the board has one answer, which both generators prove (the Shikaku
-  `fallbackBoard`, a clue in each rectangle's corner, is unique by construction). Not yet a "no legal
-  answer keeps this" check.
-- **Shikaku, Snap, Kings proved generation:** each exposes `generateVerified` and `FallbackTest` walks 365
-  daily seeds on every tier through it (0 fallbacks in all three). Snap's year asserts that `generate` returns
-  the same board only for the first fortnight per tier, because Expert boards cost seconds apiece. Shikaku's
-  `fallbackBoard` and Snap's clue budget are still pinned by property on a few seeds as well.
-- **Mambo proved gen:** `generate` is `generateVerified ?: lastResort`. The full-grid search is an exhaustive
-  depth-first one, so it cannot come up empty on an even side (0 of 1,461 daily seeds per tier and 1.8 million
-  random ones); the old `!!` on its second try was dead code, now replaced by a null that falls to a checkerboard
-  `lastResort` with every link printed. `MamboRulesTest` walks a year per tier on `generateVerified` and runs
-  `lastResort` at every size against an independent propagation solver and an exhaustive counter.
-- **Sets:** `generate` is `generateVerified ?: lastResort`; the sampler fails on about 1 seed in 10^40 (no seed in
-  four years of daily boards or 500,000 random seeds per tier came near), and `SetsRulesTest` walks a year per tier
-  on `generateVerified` and runs `lastResort` directly.
-- **Pipes:** no generator uniqueness claim (accepted); its teacher and tests are written for several answers.
-- **Tower sizing** is by a bounded `LazyColumn`, not `maxHeight`; CLAUDE.md says ten boards read `maxHeight`
-  and Tower fits the box by a different mechanism.
-
 ### Known gaps and open items
 
 1. Sudoku's and Shikaku's teachers judge a mistake against the stored answer (see section 12); sound
@@ -527,7 +502,7 @@ Details behind the P/N cells:
 3. README "Adding a puzzle" and the `PuzzleType` KDoc say the wiring is two steps, then list the compile-forced
    `ParityFingerprint.body` branch, the `StateSerializationTest.mutate` branch, a parity pin, and (for a good
    one) a teacher and walkthrough. This file is the fuller list.
-4. Coverage table in CLAUDE.md "Teaching" is measured data that goes stale when a teacher or generator changes.
+4. Coverage table in `docs/TEACHING.md` is measured data that goes stale when a teacher or generator changes.
 
 ## 13. Adding a new puzzle: the recipe
 
@@ -551,14 +526,13 @@ In order. `X` is the new puzzle's name. Do this on a branch, never `main`.
    Run `GeneratorTest` and a year-long proof of the verified path.
 9. **`puzzles/XTeacher.kt`:** technique ladder, mistake, `deduce` over visible state only, fallback if the
    puzzle has a hidden answer; the `X.teach` wrapper and `applyStep`. Copy `KingsTeacher`. Write
-   `test/XTeachingTest` from `KingsTeachingTest`. Measure the fallback rate per tier; add a row to the CLAUDE.md
-   "Teaching" table. If you decide hints cannot work, `offersHints = false` with the measurements in the doc
+   `test/XTeachingTest` from `KingsTeachingTest`. Measure the fallback rate per tier; add a row to the `docs/TEACHING.md`
+   table. If you decide hints cannot work, `offersHints = false` with the measurements in the doc
    comment (Snap precedent) and say so in the final report.
 10. **Walkthrough:** `tutorialBoard`, constants, `tutorial` frames; tests per section 8.
 11. **Web:** run the section 5 dump comparison; check the page at a phone width in both colour schemes
     (`?puzzle=x&tier=expert`); check generation time on the web for Expert (`?dump&range=N&times`).
-12. **Housekeeping:** README puzzle list and "Eleven" count; recapture `docs/screenshots/home.png` (and its alt
-    text); `HomeScreen` comment on the row count if the grid changes shape; CLAUDE.md puzzle count and
-    teaching table; this file's matrix.
+12. **Housekeeping:** README puzzle list; recapture `docs/screenshots/home.png` (and its alt
+    text); `HomeScreen` comment on the row count if the grid changes shape; the teaching table in `docs/TEACHING.md`; this file's matrix.
 13. **Commit and PR:** branch, PR, review and merge per CLAUDE.md "Git and releases". Push to `main` builds a
     signed release automatically.
