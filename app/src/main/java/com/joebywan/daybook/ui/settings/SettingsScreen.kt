@@ -78,6 +78,7 @@ fun SettingsScreen(
                     onChecked = onPlaySound,
                 )
             }
+            item { WordListNotice() }
         }
     }
 }
@@ -107,5 +108,37 @@ private fun SettingSwitch(
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
         }
         Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+/**
+ * SCOWL's licence asks that its copyright and permission notice travel with the word lists
+ * (full text: `docs/word-lists/LICENSE-SCOWL.txt`). Lexicon's lists are built from it.
+ */
+@Composable
+private fun WordListNotice() {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.surface)
+            .padding(14.dp),
+    ) {
+        Text("Word lists", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+        Text(
+            "Lexicon's words come from SCOWL (Spell Checker Oriented Word Lists). " +
+                "Copyright 2000-2016 by Kevin Atkinson. Permission to use, copy, modify, distribute " +
+                "and sell these word lists, the associated scripts, the output created from the " +
+                "scripts, and its documentation for any purpose is hereby granted without fee, " +
+                "provided that the above copyright notice appears in all copies and that both that " +
+                "copyright notice and this permission notice appear in supporting documentation. " +
+                "Kevin Atkinson makes no representations about the suitability of this array for " +
+                "any purpose. It is provided \"as is\" without express or implied warranty. " +
+                "The full notice, with the other contributors' credits, is in the project's " +
+                "docs/word-lists/LICENSE-SCOWL.txt.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurfaceVariant,
+        )
     }
 }
