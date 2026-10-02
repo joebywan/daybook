@@ -52,7 +52,7 @@ class LexiconDeductionTest {
     @Test
     fun `a pin counts as done once the letter is in its slot, however the word was typed`() {
         // Answer mole after lime and loom: L belongs in slot 3.
-        val s = LexiconState(4, 8, true, "mole", listOf("lime", "loom"))
+        val s = LexiconState(4, 8, "mole", listOf("lime", "loom"))
         val d = Lexicon.teach(s)!!
         assertEquals("pinned-letter", d.technique)
         assertFalse(d.isReached(s))
@@ -63,18 +63,18 @@ class LexiconDeductionTest {
 
     @Test
     fun `a mistake is drawn as one and goes away when the row is taken back`() {
-        val s = LexiconState(4, 8, true, "coat", listOf("tape", "boat"), current = "ca")
+        val s = LexiconState(4, 8, "coat", listOf("tape", "boat"), current = "xoat")
         val d = Lexicon.teach(s)!!
         assertTrue(d.mistake)
         assertFalse(d.isReached(s))
-        assertTrue(d.isReached(s.copy(current = "c")))
-        assertEquals("c", (d.apply(s) as LexiconState).current)
+        assertTrue(d.isReached(s.copy(current = "xoa")))
+        assertEquals("xoa", (d.apply(s) as LexiconState).current)
     }
 
     @Test
     fun `a board that is over takes no hint`() {
-        assertNull(Lexicon.teach(LexiconState(4, 2, false, "coat", listOf("boat", "goat"))))
-        assertNull(Lexicon.teach(LexiconState(4, 2, false, "coat", listOf("coat"))))
+        assertNull(Lexicon.teach(LexiconState(4, 2, "coat", listOf("boat", "goat"))))
+        assertNull(Lexicon.teach(LexiconState(4, 2, "coat", listOf("coat"))))
     }
 
     @Test

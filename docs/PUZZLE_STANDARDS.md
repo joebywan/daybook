@@ -82,7 +82,7 @@ What varies, as built:
 | Snap | grid (clue density is a budget, not a tier knob) | 5x5 / 6x6 / 6x7 |
 | LITS | grid | 6x6 / 7x7 / 8x8 |
 | Tower | slots, colours, guesses | 4/5/10, 5/6/12, 5/8/14 |
-| Lexicon | word length, guesses, hard mode | 5/6/free, 5/6/hard, 4/8/hard (four letters is the harder length; see `LexiconBalanceTest`) |
+| Lexicon | word length, guesses | 5/6, 5/5, 4/7 (four letters is the harder length; see `LexiconBalanceTest`) |
 
 Rules for the tiers:
 
@@ -491,7 +491,7 @@ Verified against the code and tests on 2026-10-01 (grep and reading, not memory)
 | Snap | Y | Y `generateVerified` (internal), private `Verdict` enum, year test; fallback also pinned by clue budget | Y `obeysRules` | Y `SnapCluesTest` | N by design (`offersHints = false`) | Y 9 | Y grid | Y | Y | Y 200 |
 | LITS | Y | Y `generateVerified` (internal), sealed `Verdict`, year test | Y | Y `LitsOracle`, `LitsAuditTest` | Y | Y 8 | Y grid | Y | Y | Y |
 | Tower | Y slots, colours, guesses | n/a random code | Y | Y `TowerBalanceTest` solver | Y | Y 7 | Y anchors + keepClear | Y | Y | Y 170 |
-| Lexicon | Y length, guesses, hard mode | n/a one pick from a sorted list; lists screened, tested for order and content | Y last guess is the word | Y `LexiconSupport.refMark`, `LexiconTeachingTest`, `LexiconBalanceTest` | Y fallback on every board | Y 9 | Y grid + anchors + keepClear | Y `LexiconWebParityTest` | Y | Y 170 |
+| Lexicon | Y length, guesses | n/a one pick from a sorted list; lists screened, tested for order and content | Y last guess is the word | Y `LexiconSupport.refMark`, `LexiconTeachingTest`, `LexiconBalanceTest` | Y fallback on every board | Y 9 | Y grid + anchors + keepClear | Y `LexiconWebParityTest` | Y | Y 170 |
 
 Details behind the P/N cells:
 

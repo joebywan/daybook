@@ -93,8 +93,8 @@ object Lexicon : PuzzleType {
         "A letter is marked only as many times as the word holds it, so a second E can be grey while the first is yellow.",
         "The keys keep the best clue for each letter.",
         "Standard: five letters, six guesses.",
-        "Hard: the same, but every clue you have must be used in your next guess.",
-        "Expert: four letters, eight guesses, and the same rule. Short words have more look-alikes.",
+        "Hard: five letters, five guesses.",
+        "Expert: four letters, seven guesses. Short words have more look-alikes.",
     )
 
     override fun generate(seed: Long, difficulty: Difficulty) = LexiconRules.newBoard(seed, difficulty)
@@ -163,7 +163,6 @@ object Lexicon : PuzzleType {
     private fun tutorialBoard(guesses: Int, current: String = "") = LexiconState(
         length = 4,
         maxGuesses = 6,
-        hard = false,
         answer = TUTORIAL_ANSWER,
         guesses = TUTORIAL_GUESSES.take(guesses),
         current = current,
@@ -238,7 +237,7 @@ object Lexicon : PuzzleType {
         val s = state as LexiconState
         if (!s.open) return null
         val marks = s.allMarks
-        val step = LexiconTeacher.teach(s.length, s.hard, s.guesses, marks, s.current) ?: return null
+        val step = LexiconTeacher.teach(s.length, s.guesses, marks, s.current) ?: return null
         val base = s
         fun fits(word: String) = LexiconRules.consistent(word, base.guesses, marks)
         fun newGuesses(now: LexiconState) = now.guesses.drop(base.guesses.size)

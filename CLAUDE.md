@@ -146,7 +146,7 @@ Adopting it, or changing a teacher — the lessons of twelve of them:
 ## Lexicon (the word game)
 
 Mastermind for words: `puzzles/Lexicon.kt` (board, keyboard, walkthrough), `LexiconRules.kt` (state, marking,
-hard mode, the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware keys), `LexiconWords.kt`
+the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware keys), `LexiconWords.kt`
 (generated). `id = "words"` is hashed into every seed: never rename it.
 
 - **The word is an index into a sorted list**, so the lists' order is part of the contract. `LexiconWords.kt` is
@@ -156,14 +156,16 @@ hard mode, the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (
   `tools/words/exclude.txt`: offensive, informal, obscure, plurals the stem rule cannot see. Answers are
   dialect-neutral SCOWL levels 10/20/35 minus inflections; guesses are every plain a-z word to level 70 in
   every dialect, so colour/color style pairs are both accepted and neither pair is ever an answer.
-- **Tiers: 5 letters / 6 guesses, the same with hard mode, 4 letters / 8 guesses with hard mode.** Four letters is
-  the *harder* length: a player who always guesses a word still possible wins every five-letter board in six
-  and loses 7% of four-letter hard boards in six (families like -ATE, and hard mode forbids the probe that breaks
-  one). Eight guesses wins 98%. `LexiconBalanceTest` measures all of it; the constants alone prove nothing.
-- **Hard mode costs only a player who probes.** A consistent guesser is legal in hard mode by construction, so
-  the balance test compares a prober on the same answers both ways.
-- **Standard never calls a probe a mistake.** The teacher's mistake is a row that cannot be submitted: not a
-  word, or (hard tiers) a green dropped or a yellow left out. Calling a legal probe wrong is the PR #15 bug.
+- **Tiers: 5 letters / 6 guesses, 5 letters / 5 guesses, 4 letters / 7 guesses.** Any real word is a legal guess on
+  every tier: there is **no hard mode** (the owner: don't force players to use their clues, "if they don't, that's on
+  them"; an earlier build had one, and it is gone). Four letters is the *harder* length: a player who always guesses
+  a word still possible wins every five-letter board in six and 98% in five, but only 92% of four-letter boards in
+  six and 96% in seven (families like -ATE); one who also spends turns on words that cannot be the answer wins them
+  all. So Expert gets a guess more than Hard and is still the tier that asks the most. `LexiconBalanceTest` measures
+  both players; the constants alone prove nothing. A saved game from the hard-mode build still loads (the old
+  `hard` key is ignored) and plays under the new rules.
+- **A probe is never a mistake.** The teacher's only mistake is a row that is not a word. Calling a legal probe
+  wrong is the PR #15 bug.
 - **A pin is a fact about the marks alone**, so `LexiconTeachingTest` checks it against every accepted word that
   fits, not only the answer list. `ONLY_WORD` and `CHOOSE` do read the answer list, say so, and count as the
   fallback.

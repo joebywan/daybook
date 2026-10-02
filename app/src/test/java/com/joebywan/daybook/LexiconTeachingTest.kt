@@ -28,7 +28,7 @@ class LexiconTeachingTest {
         val marks = marksOf("mole", guesses)
         assertEquals(listOf("mole"), LexiconSupport.refCandidates(4, guesses, marks))
 
-        val step = LexiconTeacher.teach(4, false, guesses, marks, "")!!
+        val step = LexiconTeacher.teach(4, guesses, marks, "")!!
         assertEquals(LexiconTeacher.PIN, step.technique)
         val move = step.move as Move.Pin
         assertEquals(2, move.slot)
@@ -43,7 +43,7 @@ class LexiconTeachingTest {
         assertTrue(LexiconTeacher.key('l') in step.targets)
 
         // Typed there already, the pin is done and the next thing is the one word left.
-        val next = LexiconTeacher.teach(4, false, guesses, marks, "mol")!!
+        val next = LexiconTeacher.teach(4, guesses, marks, "mol")!!
         assertEquals(LexiconTeacher.ONLY_WORD, next.technique)
         assertEquals(Move.Fill("mole"), next.move)
         assertEquals("Only one word on the answer list fits every mark: MOLE. Type it.", next.explanation)
@@ -52,7 +52,7 @@ class LexiconTeachingTest {
     @Test
     fun `an empty board opens with the opener, which is the best first word of its list`() {
         for (length in listOf(4, 5)) {
-            val step = LexiconTeacher.teach(length, false, emptyList(), emptyList(), "")!!
+            val step = LexiconTeacher.teach(length, emptyList(), emptyList(), "")!!
             assertEquals(LexiconTeacher.OPENER, step.technique)
             val word = LexiconTeacher.opener(length)
             assertEquals(Move.Open(word), step.move)
@@ -69,35 +69,21 @@ class LexiconTeachingTest {
     }
 
     @Test
-    fun `a row that cannot be submitted is a mistake, and a legal probe on Standard is not`() {
+    fun `a row that is not a word is a mistake, and a legal probe is not`() {
         val guesses = listOf("tape", "boat")
         val marks = marksOf("coat", guesses)
 
-        // Hard: the green O in slot 2 dropped, found as soon as it is typed.
-        val dropped = LexiconTeacher.teach(4, true, guesses, marks, "ca")!!
-        assertEquals(LexiconTeacher.MISTAKE, dropped.technique)
-        assertEquals(Move.Retype(1), dropped.move)
-        assertTrue(dropped.explanation.startsWith("Slot 2 was green in guess 2: it is O."))
+        // Not a word, so Enter would refuse it.
+        val junk = LexiconTeacher.teach(4, guesses, marks, "xoat")!!
+        assertEquals(LexiconTeacher.MISTAKE, junk.technique)
+        assertTrue(junk.explanation.contains("isn't in the word list"))
 
-        // Hard: a whole word that leaves a yellow letter out.
-        val early = listOf("tape")
-        val left = LexiconTeacher.teach(4, true, early, marksOf("coat", early), "cool")!!
-        assertEquals(LexiconTeacher.MISTAKE, left.technique)
-        assertTrue(left.explanation.startsWith("Guess must contain A"))
-
-        // Any tier: not a word, so Enter would refuse it.
-        for (hard in listOf(false, true)) {
-            val junk = LexiconTeacher.teach(4, hard, guesses, marks, "xoat")!!
-            assertEquals(LexiconTeacher.MISTAKE, junk.technique)
-            assertTrue(junk.explanation.contains("isn't in the word list"))
-        }
-
-        // Standard: ignoring a green is a probe, not a mistake.
-        val probe = LexiconTeacher.teach(4, false, guesses, marks, "cart")!!
+        // Ignoring a green is a probe, not a mistake.
+        val probe = LexiconTeacher.teach(4, guesses, marks, "cart")!!
         assertNotEquals(LexiconTeacher.MISTAKE, probe.technique)
 
         // A row that fits every mark is told to go in.
-        val fits = LexiconTeacher.teach(4, false, guesses, marks, "goat")!!
+        val fits = LexiconTeacher.teach(4, guesses, marks, "goat")!!
         assertEquals(LexiconTeacher.SUBMIT, fits.technique)
         assertEquals(Move.Submit, fits.move)
     }
@@ -188,10 +174,10 @@ class LexiconTeachingTest {
                     for (current in listOf("", answer.take(1), answer.take(2), answer)) {
                         assertTrue(
                             "no hint for $answer after $guesses typing '$current'",
-                            LexiconTeacher.teach(shape.length, shape.hard, guesses, marks, current) != null,
+                            LexiconTeacher.teach(shape.length, guesses, marks, current) != null,
                         )
                     }
-                    val step = LexiconTeacher.teach(shape.length, shape.hard, guesses, marks, "")!!
+                    val step = LexiconTeacher.teach(shape.length, guesses, marks, "")!!
                     val word = when (val m = step.move) {
                         is Move.Open -> m.word
                         is Move.Fill -> m.word

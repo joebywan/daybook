@@ -66,60 +66,33 @@ class LexiconRulesTest {
     }
 
     @Test
-    fun `hard mode wants every green kept and every yellow reused`() {
-        // answer coat; tape drew YYAA, boat drew AGGG.
-        val guesses = listOf("tape", "boat")
-        val marks = guesses.map { LexiconSupport.refMark(it, "coat") }
-        assertNull(LexiconRules.hardProblem("coat", guesses, marks))
-        assertNull(LexiconRules.hardProblem("goat", guesses, marks))
-        assertEquals("Slot 2 must be O", LexiconRules.hardProblem("cart", guesses, marks))
-        assertEquals("Slot 3 must be A", LexiconRules.hardProblem("good", guesses, marks))
-        assertEquals("Slot 4 must be T", LexiconRules.hardProblem("goad", guesses, marks))
-        // Letters shown yellow must come back even when the greens are all kept.
-        val early = listOf("tape")
-        val earlyMarks = early.map { LexiconSupport.refMark(it, "coat") }
-        assertEquals("Guess must contain A", LexiconRules.hardProblem("cool", early, earlyMarks))
-        assertEquals("Guess must contain T", LexiconRules.hardProblem("cabs", early, earlyMarks))
-        assertNull(LexiconRules.hardProblem("pant", early, earlyMarks))
-    }
-
-    @Test
-    fun `hard mode counts repeated letters`() {
-        // eerie against these draws yellow, grey, grey, grey, green: two e's are known.
-        val guesses = listOf("eerie")
-        val marks = guesses.map { LexiconSupport.refMark(it, "these") }
-        assertEquals("Guess must contain E 2 times", LexiconRules.hardProblem("shore", guesses, marks))
-        assertNull(LexiconRules.hardProblem("these", guesses, marks))
-    }
-
-    @Test
-    fun `a row is refused for length, for not being a word, and in hard mode for ignoring a clue`() {
-        val hard = LexiconState(4, 6, true, "coat", listOf("tape", "boat"))
-        assertEquals("Not enough letters", LexiconRules.problem(hard.copy(current = "co")))
-        assertEquals("Not in the word list", LexiconRules.problem(hard.copy(current = "cxat")))
-        assertEquals("Slot 2 must be O", LexiconRules.problem(hard.copy(current = "cart")))
-        assertNull(LexiconRules.problem(hard.copy(current = "goat")))
-        // Standard lets any real word through, clues or not.
-        assertNull(LexiconRules.problem(hard.copy(hard = false, current = "cart")))
+    fun `a row is refused for length and for not being a word, and for nothing else`() {
+        val s = LexiconState(4, 6, "coat", listOf("tape", "boat"))
+        assertEquals("Not enough letters", LexiconRules.problem(s.copy(current = "co")))
+        assertEquals("Not in the word list", LexiconRules.problem(s.copy(current = "cxat")))
+        assertNull(LexiconRules.problem(s.copy(current = "goat")))
+        // Any real word goes through, clues used or not: a probe is the player's call.
+        assertNull(LexiconRules.problem(s.copy(current = "cart")))
+        assertNull(LexiconRules.problem(s.copy(current = "good")))
     }
 
     @Test
     fun `typing, backspace and submit change one thing each, and stop at the edges`() {
-        var s = LexiconState(4, 6, false, "coat")
+        var s = LexiconState(4, 6, "coat")
         s = s.withLetter('b').withLetter('o').withLetter('a').withLetter('t').withLetter('x')
         assertEquals("boat", s.current)
         val sent = s.submit()
         assertEquals(listOf("boat"), sent.guesses)
         assertEquals("", sent.current)
         assertEquals("boat", s.withoutLetter().withLetter('t').current)
-        assertEquals("", LexiconState(4, 6, false, "coat").withoutLetter().current)
+        assertEquals("", LexiconState(4, 6, "coat").withoutLetter().current)
         assertEquals(sent, sent.withoutLetter())
-        assertEquals(LexiconState(4, 6, false, "coat"), LexiconState(4, 6, false, "coat").submit())
+        assertEquals(LexiconState(4, 6, "coat"), LexiconState(4, 6, "coat").submit())
     }
 
     @Test
     fun `solving is the last guess being the word, and failing is running out of guesses`() {
-        val start = LexiconState(4, 2, false, "coat")
+        val start = LexiconState(4, 2, "coat")
         assertFalse(start.solved)
         assertFalse(start.failed)
         val one = start.copy(guesses = listOf("boat"))
@@ -138,12 +111,12 @@ class LexiconRulesTest {
     @Test
     fun `each tier is the shape the design says`() {
         for ((tier, shape) in listOf(
-            Difficulty.STANDARD to Triple(5, 6, false),
-            Difficulty.HARD to Triple(5, 6, true),
-            Difficulty.EXPERT to Triple(4, 8, true),
+            Difficulty.STANDARD to Pair(5, 6),
+            Difficulty.HARD to Pair(5, 5),
+            Difficulty.EXPERT to Pair(4, 7),
         )) {
             val s = LexiconSupport.board(0, tier)
-            assertEquals(shape, Triple(s.length, s.maxGuesses, s.hard))
+            assertEquals(shape, Pair(s.length, s.maxGuesses))
             assertEquals(s.length, s.answer.length)
             assertTrue(s.answer in WordList.answers(s.length))
             assertTrue(s.guesses.isEmpty() && s.current.isEmpty())
@@ -167,7 +140,7 @@ class LexiconRulesTest {
     @Test
     fun `a saved board comes back exactly, whatever the lists do later`() {
         val json = Json
-        val s = LexiconState(5, 6, true, "crane", listOf("slate", "irate"), "cr", moves = 9)
+        val s = LexiconState(5, 6, "crane", listOf("slate", "irate"), "cr", moves = 9)
         val back = json.decodeFromString(LexiconState.serializer(), json.encodeToString(LexiconState.serializer(), s))
         assertEquals(s, back)
         assertNotNull(back.allMarks)
