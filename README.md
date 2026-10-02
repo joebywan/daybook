@@ -126,7 +126,7 @@ browser (see the standards doc, sections 4 and 5).
 
 ## Building
 
-Gradle needs **Java 17**; the system default here is Java 25, which Gradle 8.14 rejects.
+Build with **Java 17**, the JDK CI uses. Gradle 9 will run on newer ones, but nothing else is checked.
 
 ```bash
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew assembleDebug

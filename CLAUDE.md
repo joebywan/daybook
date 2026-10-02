@@ -6,7 +6,8 @@ rediscover what has already been learned here the hard way.
 
 ## Build
 
-Gradle **requires Java 17**. The system default is Java 25 and Gradle refuses to run on it.
+Build with **Java 17**: it is what CI uses. Gradle 9 runs on newer JDKs (Gradle 8.14 refused the system
+default, Java 25), but only 17 is checked; moving CI's JDK is its own change (`docs/TODO.md`).
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -226,7 +227,7 @@ particular names the puzzle count in its alt text.
 ## Web build (`web/`)
 
 The whole app — all eleven puzzles, home, play, archive, stats, walkthroughs, saves — in a
-browser, via Compose Multiplatform 1.9.3 on Kotlin/Wasm (`wasmJs`) with the repo's Kotlin 2.2.10.
+browser, via Compose Multiplatform 1.12.1 on Kotlin/Wasm (`wasmJs`) with the repo's Kotlin 2.4.20.
 Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for WasmGC.
 
 ### How it is put together

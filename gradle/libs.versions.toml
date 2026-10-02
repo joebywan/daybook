@@ -1,6 +1,6 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.2.10"
+agp = "9.4.1"
+kotlin = "2.4.20"
 coreKtx = "1.17.0"
 lifecycle = "2.9.4"
 activityCompose = "1.11.0"
@@ -8,10 +8,10 @@ composeBom = "2025.09.00"
 navigation = "2.9.5"
 datastore = "1.1.7"
 serialization = "1.9.0"
-# Compose Multiplatform 1.9.3 already resolves this version for the web build; Android matches it.
-datetime = "0.7.1"
+# One version for both builds: Android and the web read dates through the same code.
+datetime = "0.8.0"
 junit = "4.13.2"
-composeMultiplatform = "1.9.3"
+composeMultiplatform = "1.12.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -34,7 +34,6 @@ kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime",
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
