@@ -60,6 +60,9 @@ and gives the two hues fixed jobs, so every board reads the same way:
 
 - **Hue A: the board's structure and identity**, what is given or selected: signs, lines, the selected thing. `ink` for
   strokes, `mark` for a solid selection, `fill` at about 0.45 alpha for row/column bands.
+- **Alphas** (over the surface; dark needs more because a dark fill is already close to it): alternating region tint,
+  `fill` at 0.30 light / 0.55 dark; selected cell, `mark` at 0.40 light / 0.55 dark; row/column band, `fill` at 0.45;
+  same-value twins, `fill` at 0.8.
 - **Hue B: what the player placed and its echoes.** `ink` for the player's digits, `fill` for same-value twins.
 - Givens and clues stay `scheme.onSurface`; errors and conflicts stay `scheme.error`.
 - **Seed:** `BoardHues.pair(solution.hashCode())` (or a hash of the picture), recomputed per render, never stored, so each
