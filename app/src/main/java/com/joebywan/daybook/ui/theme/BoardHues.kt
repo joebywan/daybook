@@ -25,6 +25,20 @@ object BoardHues {
         return SPREAD.take(n)
     }
 
+    /**
+     * Text colour for a digit on [fill]: the theme's dark ink, else white, else black, the first with WCAG contrast of at
+     * least 4.5:1 (else the best of the three). Computed per fill, never one colour for all (a mid-tone can fail both
+     * ink and white). Draw it at full alpha: transparency lowers the ratio this guarantees.
+     */
+    fun onFill(fill: Color): Color = TEXT.firstOrNull { contrast(it, fill) >= 4.5f } ?: TEXT.maxBy { contrast(it, fill) }
+
+    /** WCAG contrast ratio of two opaque colours. */
+    fun contrast(a: Color, b: Color): Float {
+        val hi = maxOf(a.luminance(), b.luminance())
+        val lo = minOf(a.luminance(), b.luminance())
+        return (hi + .05f) / (lo + .05f)
+    }
+
     /** Whether [scheme] is the dark one; the `dark` argument of [fill] and [ink]. */
     fun isDark(scheme: ColorScheme) = scheme.background.luminance() < 0.5f
 
@@ -37,6 +51,8 @@ object BoardHues {
 
     /** The pair for a board: [seed] is a hash of its solution or picture, never stored. */
     fun pair(seed: Int): Pair<Float, Float> = HUE_PAIRS[(seed and Int.MAX_VALUE) % HUE_PAIRS.size]
+
+    private val TEXT = listOf(Color(0xFF1B2F29), Color.White, Color.Black)
 
     private val SPREAD = listOf(0, 3, 6, 1, 4, 7, 5, 2).map { all[it] }
 }
