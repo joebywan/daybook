@@ -1,7 +1,7 @@
 # Colour: the board palette
 
 Why this exists: the app theme (`ui/theme/Palette.kt`) is deliberately quiet, ink and parchment with moss. A board that
-draws only with `colorScheme` plus its one `accent` comes out beige and one-note (Inequality shipped that way: surface
+draws only with `colorScheme` plus its one `accent` comes out beige and one-note (one board shipped that way: surface
 grey, one teal). The boards that read well (Shikaku's hue-per-region, Nonogram's blended pairs, Kings' regions) all
 bring several hues. This is the shared set to bring them from, derived from the colours already shipped.
 
@@ -47,12 +47,27 @@ from the table's `h`; do not paste the hexes in (they are for reading and for th
 - **Colour is never the only signal** (see PUZZLE_STANDARDS section on legibility): pair every hue with a shape,
   digit or position. Where groups must be told apart by colour alone (Kings' regions) pick by CIEDE2000 as
   `KingsPaletteTest` does, not by eye.
-- **Derive, never store.** A board's colours come from its picture, seed or state (Nonogram hashes the solution to
-  pick a pair). Nothing about colour goes into `PuzzleState`.
+- **Derive, never store.** A board's colours come from its picture, seed or state (`BoardHues.pair` takes a hash of the solution). Nothing about colour goes into `PuzzleState`.
 - **Alpha on surface, not grey.** Selection and "same digit" tints are `Color(accent).copy(alpha = 0.2..0.4f)`; a
   highlight state is never a surface grey alone.
 - **Previews use the same hues**, drawn static; the home grid is where a bland board is most visible, since the cards sit
   side by side.
+
+## Roles
+
+A board that is not a set of equal groups (Sudoku-likes, grids with signs or lines) takes one pair from `BoardHues.pair(seed)`
+and gives the two hues fixed jobs, so every board reads the same way:
+
+- **Hue A: the board's structure and identity**, what is given or selected: signs, lines, the selected thing. `ink` for
+  strokes, `mark` for a solid selection, `fill` at about 0.45 alpha for row/column bands.
+- **Hue B: what the player placed and its echoes.** `ink` for the player's digits, `fill` for same-value twins.
+- Givens and clues stay `scheme.onSurface`; errors and conflicts stay `scheme.error`.
+- **Seed:** `BoardHues.pair(solution.hashCode())` (or a hash of the picture), recomputed per render, never stored, so each
+  board has its own colours and saves are untouched. `HUE_PAIRS` excludes Coral and Green and its order is part of the
+  contract: reordering recolours every board.
+- **Dark mode:** get `dark` from `BoardHues.isDark(scheme)`. Check each dark fill against the surface; if a band reads
+  muddy, lower its alpha or use the `mark` step.
+- **Previews** use one fixed pair (`HUE_PAIRS[0]`), static.
 
 ## Checking
 
@@ -62,5 +77,5 @@ dark fills above sit at lightness 0.30 against the surface's 0.14: keep that gap
 
 ## Status
 
-The table is implemented in `ui/theme/BoardHues.kt` (`fill`/`ink`/`mark`, `contentHues(n)`), pinned to the hex table above by
-`BoardHuesTest`. Adopted: Inequality (signs, selection and row/column band in one hue, digits and twins in another). Adopting the rest board by board is in `docs/TODO.md`.
+The table and roles are implemented in `ui/theme/BoardHues.kt` (`fill`/`ink`/`mark`, `contentHues(n)`, `isDark`, `HUE_PAIRS`,
+`pair`), pinned by `BoardHuesTest`. Adopted: Inequality. Adopting the rest board by board is in `docs/TODO.md`.
