@@ -532,9 +532,9 @@ private fun PlayBoard(
         }
         AnimatedVisibility(
             visible = !resultsHidden,
-            // A roomy panel in the middle of the screen; it may cover the solved board (the owner does not mind),
-            // and a tap outside it hides it.
-            modifier = Modifier.align(Alignment.Center).windowInsetsPadding(WindowInsets.safeDrawing).padding(vertical = 10.dp),
+            // Full-screen overlay: banner on top, buttons at the bottom, the centre open (the earned badge, if
+            // any, sits there). Empty space passes taps to the scrim beneath, which hides the frame.
+            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(vertical = 10.dp),
             enter = fadeIn(tween(300)),
             exit = ExitTransition.None,
         ) {
@@ -601,9 +601,10 @@ private fun PlayBoard(
 }
 
 /**
- * The finished panel, centred: a header box ("Congratulations!" or the streak title, a party popper either side, the
- * time and one line), the optional middle block, clear space, then a box of next-step buttons (two columns; an odd
- * last tile takes the full row). On a short screen the badge shrinks; the buttons never do.
+ * The finished overlay: a banner on top ("Congratulations!" or the streak title between two party poppers, the time,
+ * one line, and the to-go line when nothing was earned), next-step buttons at the bottom (two columns; an odd last
+ * tile takes the full row), and the centre left open so the solved board shows. Only when the solve earned
+ * achievements does the centre hold a badge card. On a short screen the badge shrinks; the buttons never do.
  */
 @Composable
 private fun FinishedFrame(
@@ -616,57 +617,60 @@ private fun FinishedFrame(
     onHide: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    BoxWithConstraints(Modifier.padding(horizontal = 24.dp).widthIn(max = 380.dp).fillMaxWidth()) {
-        val badge = if (maxHeight < 640.dp) 44.dp else 84.dp
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val badge = if (maxHeight < 640.dp) 44.dp else 72.dp
+        val hide = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onHide)
         Column(
-            Modifier
-                .fillMaxWidth()
-                .shadow(8.dp, RoundedCornerShape(24.dp))
-                .clip(RoundedCornerShape(24.dp))
-                .background(scheme.surface)
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onHide),
+            Modifier.align(Alignment.TopCenter).padding(horizontal = 16.dp).widthIn(max = 380.dp).fillMaxWidth()
+                .shadow(6.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
+                .background(scheme.surface).background(accent.copy(alpha = 0.22f)).then(hide)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(
-                Modifier.fillMaxWidth().background(accent.copy(alpha = 0.22f)).padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PartyPopper(Modifier.size(36.dp))
-                    Text(
-                        praise.title ?: "Congratulations!",
-                        style = if (praise.big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall,
-                        color = accent,
-                        fontWeight = if (praise.big) FontWeight.Bold else null,
-                        maxLines = 1,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    PartyPopper(Modifier.size(36.dp).graphicsLayer(scaleX = -1f))
-                }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PartyPopper(Modifier.size(36.dp))
                 Text(
-                    buildString {
-                        append(formatClock(seconds))
-                        if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurface,
+                    praise.title ?: "Congratulations!",
+                    style = if (praise.big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall,
+                    color = accent,
+                    fontWeight = if (praise.big) FontWeight.Bold else null,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
-                praise.lines.forEach {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                }
+                PartyPopper(Modifier.size(36.dp).graphicsLayer(scaleX = -1f))
             }
-            if (praise.achievements.isNotEmpty() || praise.toGo != null) {
-                Spacer(Modifier.height(12.dp))
-                Box(Modifier.padding(horizontal = 16.dp)) { ResultsBlock(praise, accent, badge) }
+            Text(
+                buildString {
+                    append(formatClock(seconds))
+                    if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurface,
+            )
+            praise.lines.forEach {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
-            Spacer(Modifier.height(16.dp))
-            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 14.dp)) {
-                options.chunked(2).forEachIndexed { row, pair ->
-                    if (row > 0) Spacer(Modifier.height(6.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        pair.forEach { option ->
-                            NextTile(option, accent, Modifier.weight(1f)) { onOption(option) }
-                        }
+            if (praise.achievements.isEmpty()) praise.toGo?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurface, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
+            }
+        }
+        if (praise.achievements.isNotEmpty()) {
+            Box(
+                Modifier.align(Alignment.Center).padding(horizontal = 32.dp).widthIn(max = 340.dp).fillMaxWidth()
+                    .shadow(6.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
+                    .background(scheme.surface).padding(horizontal = 12.dp, vertical = 10.dp),
+            ) { ResultsBlock(praise, accent, badge) }
+        }
+        Column(
+            Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp).widthIn(max = 380.dp).fillMaxWidth()
+                .shadow(6.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
+                .background(scheme.surface).then(hide).padding(10.dp),
+        ) {
+            options.chunked(2).forEachIndexed { row, pair ->
+                if (row > 0) Spacer(Modifier.height(6.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    pair.forEach { option ->
+                        NextTile(option, accent, Modifier.weight(1f)) { onOption(option) }
                     }
                 }
             }

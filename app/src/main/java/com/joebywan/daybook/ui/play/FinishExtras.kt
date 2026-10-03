@@ -107,25 +107,22 @@ fun PartyPopper(modifier: Modifier = Modifier) {
         streamer(Color(0xFF43A047), 36f, 20f, 45f, 14f)
         streamer(Color(0xFF8E24AA), 24f, 10f, 20f, 3f)
         drawCircle(Color(0xFF1E88E5), 2.2f * u, o(34f, 9f))
-        drawCircle(Color(0xFFFB8C00), 2f * u, o(42f, 24f))
         drawCircle(Color(0xFFE53935), 1.8f * u, o(30f, 2.5f))
         drawRect(Color(0xFF43A047), o(40f, 6f), Size(3.5f * u, 3.5f * u))
-        drawRect(Color(0xFF8E24AA), o(44f, 30f), Size(3f * u, 3f * u))
     }
 }
 
 /**
- * The optional middle of the finished frame; always has a badge when shown. The achievements this solve earned
- * show one at a time (a tap on the block shows the next, wrapping round after the last), each with its earned
- * badge, name and description; with only a near goal it shows that goal's silhouette badge. The "only X to go"
- * line is last. Nothing when there is neither. [badge] is the badge size (smaller on a short screen).
+ * The optional centre of the finished frame, only when this solve earned achievements: one at a time (a tap on
+ * the block shows the next, wrapping round after the last), each with its badge, name and description, then the
+ * "only X to go" line. Nothing otherwise (the to-go line then sits in the banner). [badge] is the badge size (smaller on a short screen).
  */
 @Composable
 fun ResultsBlock(praise: Praise, accent: Color, badge: Dp = 84.dp) {
     val scheme = MaterialTheme.colorScheme
     val items = praise.achievements
     var index by rememberSaveable { mutableIntStateOf(0) }
-    if (items.isEmpty() && praise.toGo == null) return
+    if (items.isEmpty()) return
     Column(
         Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -137,8 +134,9 @@ fun ResultsBlock(praise: Praise, accent: Color, badge: Dp = 84.dp) {
                     .then(if (items.size > 1) Modifier.clickable { index = (index + 1) % items.size } else Modifier),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                Spacer(Modifier.height(6.dp))
                 AchievementBadge(a.id, true, Modifier.size(badge))
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(a.title, style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(a.description, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 2, textAlign = TextAlign.Center)
                 if (items.size > 1) {
@@ -153,11 +151,9 @@ fun ResultsBlock(praise: Praise, accent: Color, badge: Dp = 84.dp) {
                     Text("Tap to see next achievement", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 }
             }
-        } else if (praise.toGoId != null) {
-            AchievementBadge(praise.toGoId, false, Modifier.size(badge))
         }
         praise.toGo?.let {
-            if (items.isNotEmpty() || praise.toGoId != null) Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(6.dp))
             Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurface, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
         }
     }
