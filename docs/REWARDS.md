@@ -58,10 +58,8 @@ history already satisfies one sees it earned in the list and is never told, so t
 - One of each puzzle; all three difficulties of one puzzle's daily on the same day; every puzzle's daily on one day.
   The last two and "one of each" read the ids from `PuzzleRegistry`, so they scale; adding a puzzle makes them unearned
   until it is played (nothing is stored to keep them). Tests pass a fake id list.
-- Finished frame: `Praise.achievements` (titles). When there is any, the single praise line is replaced by one bold line,
-  "Achievement: A" or "Achievement: A +2", so the frame does not grow; the list screen (Statistics > Achievements, "N of M",
-  unearned dimmed with the description) has the rest. A solve earning several shows the first in list order.
-  Streak title still shows. Same chime, muted by the same setting.
+- Finished frame: see "The finished frame" below. `Praise.achievements` is the list this solve earned (id, title,
+  description), in list order; the old single "Achievement: A +2" line is gone.
 - Badges (`ui/stats/AchievementBadge.kt`): drawn in Canvas, no assets. One medal-on-ribbons shape per
   `AchievementCategory` (streak green, per-puzzle streak amber, coverage clay, milestone/top tier blue), centre glyph per
   id from `BADGE_GLYPHS` (the number, a star or a crown; a test fails on an id without one). Unearned = a flat
@@ -71,6 +69,28 @@ history already satisfies one sees it earned in the list and is never told, so t
   title 24sp so four fit at 360dp.
 - `streakOf` is only monotone when the new play is the newest day; an archive play can in rare cases split a run, so
   a streak achievement could in theory read unearned again. The diff never announces an already-earned one.
+
+## The finished frame (`ui/play/PlayScreen.kt`, `ui/play/FinishExtras.kt`)
+
+Owner's design: header ("Congratulations!" or the streak title), time, one personal line, an OPTIONAL middle block,
+the next-step buttons at the bottom.
+- **Confetti** (`Confetti`): 70 pieces on a Canvas over the whole screen, ~2 s, once per finish (`confettiPlayed` is
+  `rememberSaveable`, so a rotation does not replay it), takes no input. There is no reduced-motion setting in the app,
+  so none is honoured; the Sound switch governs the chime only. No emoji: the web build has no emoji font.
+- **Middle block** (`ResultsBlock`), only when the solve earned achievements or there is a near goal. One achievement
+  at a time: badge (`AchievementBadge`), title, description. With several: "1 of 3", dots and "Tap to see next
+  achievement"; one tap on the block shows the next and it **wraps** after the last. The buttons are never behind it.
+- **"Only X to go"** (`core/Achievements.kt`: `remaining(id, history, today, ...)`, `nearestToGo`): one line for the
+  nearest achievement 1 or 2 steps away after this solve (fewest steps, then list order), e.g. "Only Hard on Kings
+  left for all done today!" or "2 more days to your 30-day streak." Covers streaks (current run, only while it is alive,
+  so never a lapsed one), per-puzzle streaks, 100 solves, 30 days, one of each, full set and clean sweep (today's
+  dailies). Null for earned ones, first solve and top tier. Positive wording only; never a loss. It can show with
+  nothing earned.
+- **Tap to hide.** Tapping anywhere that is not a button (a full-screen scrim under the frame, and the frame's own
+  background) hides the frame; a floating row at the same spot takes its place: "Show results", the first non-Done
+  next step, and Done. The hidden state (`resultsHidden`) is `rememberSaveable`, never `PuzzleState`; the board is not
+  resized or moved either way, and the confetti is not interactive.
+- Render it: `render.py --finish N [--togo]` (docs/WEB_BUILD.md).
 
 ## Calendar (`ui/stats/StreakCalendar.kt`)
 

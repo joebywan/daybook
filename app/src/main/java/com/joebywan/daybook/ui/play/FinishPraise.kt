@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.play
 
+import com.joebywan.daybook.core.nearestToGo
 import com.joebywan.daybook.core.newlyEarned
 import com.joebywan.daybook.core.puzzleNote
 import com.joebywan.daybook.data.Completion
@@ -9,23 +10,20 @@ import kotlinx.datetime.LocalDate
 /**
  * What the finished frame says besides "Congratulations!" (`docs/REWARDS.md`). [title] replaces the
  * congratulation when there is a streak to announce; [big] makes it louder (7, 30, 100 days);
- * [lines] is at most one, so the frame stays calm and no taller than before.
+ * [lines] is at most one, so the frame stays calm.
  */
 data class Praise(
     val title: String? = null,
     val big: Boolean = false,
     val lines: List<String> = emptyList(),
-    /** Titles of achievements this solve earned. When any, [lines] is empty: the achievement takes the one line. */
-    val achievements: List<String> = emptyList(),
-) {
-    /** One line however many: "Achievement: A", or "Achievement: A +2" (the list screen has the rest). */
-    val achievementLine: String?
-        get() = when (achievements.size) {
-            0 -> null
-            1 -> "Achievement: ${achievements[0]}"
-            else -> "Achievement: ${achievements[0]} +${achievements.size - 1}"
-        }
-}
+    /** Achievements this solve earned, in list order; the frame rotates through them. */
+    val achievements: List<EarnedAchievement> = emptyList(),
+    /** "Only X to go": at most one line of progress toward a near achievement. */
+    val toGo: String? = null,
+)
+
+/** What the frame shows for one achievement. */
+data class EarnedAchievement(val id: String, val title: String, val description: String)
 
 /** Streak lengths that get the loud treatment. */
 val STREAK_MILESTONES = setOf(7, 30, 100)
@@ -87,7 +85,6 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
     // Lowest priority: a no-hint solve with no record gets a technique note in place of the bare "No hints needed."
 
     // One line beneath the title (or beneath "Congratulations!"): praise is loud, not long.
-    // An achievement takes that one line (loud beats a personal best), so the frame never grows.
-    val earned = newlyEarned(history, solve, today).map { it.title }
-    return Praise(title, big, if (earned.isEmpty()) (lines + personal).take(1) else emptyList(), earned)
+    val earned = newlyEarned(history, solve, today).map { EarnedAchievement(it.id, it.title, it.description) }
+    return Praise(title, big, (lines + personal).take(1), earned, nearestToGo(history, solve, today)?.text)
 }
