@@ -78,9 +78,6 @@ in this order. Keep every key map a pure, unit-tested function; cursor state is 
 chords stay ignored; check in Chromium and WebKit with `keyboard.press`.
 - [ ] **Optional per-puzzle "Keyboard" line in Rules.** A `keyboardHelp` list on `PuzzleType`, empty by default,
   shown on the web build only ("Arrows move, Space cycles"). Do it with the helper if wanted. *S.*
-- [ ] **Kings and LITS keys.** Cursor plus mark keys. Kings: Space pencils out, K/Enter crowns, calling
-  `toggleMark`/`toggleKing` directly (not the double-tap timer). LITS: Space toggles, Shift+arrow could paint. *S-M.*
-- [ ] **Mosaic keys.** 1..N picks the palette colour; a cursor over cells; Space/Enter floods. *M.*
 - [ ] **Atoms, Shikaku, Snap keys, only if full coverage is wanted.** Each is a drag gesture needing its own
   mode (Atoms: arrow to the neighbouring atom, Space cycles the bond; Shikaku: Space anchors a corner, arrows
   grow, Enter commits, Esc cancels; Snap: arrows extend the path via `extend`, Backspace retracts). The mouse

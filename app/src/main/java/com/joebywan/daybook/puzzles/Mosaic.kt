@@ -29,6 +29,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -47,6 +48,9 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.gridCursor
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
@@ -1057,8 +1061,24 @@ object Mosaic : PuzzleType {
             )
         }
 
+        // The keyboard cursor (see MosaicKeys): transient, so not in the state.
+        var cursor by remember(s.colours, s.width, s.height) { mutableStateOf<Int?>(null) }
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            Modifier
+                .fillMaxSize()
+                .boardKeys(live) { key, _, repeat ->
+                    movedCursor(cursor, key, s.height, s.width)?.let { cursor = it; return@boardKeys true }
+                    val action = mosaicKeyAction(key, s.colours) ?: return@boardKeys false
+                    when (action) {
+                        is MosaicKeyAction.Pick -> selected = action.colour
+                        MosaicKeyAction.Fill -> {
+                            val at = cursor ?: return@boardKeys false
+                            if (!repeat) s.fillKey(at, selected)?.let(onState)
+                        }
+                    }
+                    true
+                }
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -1081,12 +1101,14 @@ object Mosaic : PuzzleType {
                         .width(step * s.width)
                         .height(step * s.height)
                         .highlightGrid(s.width, s.height)
+                        .gridCursor(cursor.takeIf { live }, s.width, s.height, scheme.primary)
                         .pointerInput(s, live, selected) {
                             if (!live) return@pointerInput
                             detectTapGestures { offset: Offset ->
                                 val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
                                 val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
                                 val cell = r * s.width + c
+                                cursor = cell
                                 // Silence rather than a wasted fill when the area is already this
                                 // colour: no state out means no move spent and no undo entry.
                                 if (s.cells[cell] != selected) onState(s.flood(cell, selected))

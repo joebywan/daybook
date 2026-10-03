@@ -41,6 +41,9 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.gridCursor
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.PuzzleType
@@ -1353,7 +1356,25 @@ object Lits : PuzzleType {
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(18.dp), contentAlignment = Alignment.Center) {
+        // The keyboard cursor (see LitsKeys): transient, so not in the state.
+        var cursor by remember(s.region) { mutableStateOf<Int?>(null) }
+        BoxWithConstraints(
+            Modifier.fillMaxWidth().boardKeys(interactive, shift = true) { key, shift, repeat ->
+                val to = movedCursor(cursor, key, s.height, s.width)
+                if (to != null) {
+                    // Shift+arrow lays the square just left onto the one landed on, as a drag does.
+                    val from = cursor
+                    cursor = to
+                    if (shift && from != null) s.lay(from, to)?.let(onState)
+                    return@boardKeys true
+                }
+                val at = cursor ?: return@boardKeys false
+                if (shift || !litsToggleKey(key)) return@boardKeys false
+                if (!repeat) onState(s.toggle(at))
+                true
+            }.padding(18.dp),
+            contentAlignment = Alignment.Center,
+        ) {
             val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
             val stepPx = with(LocalDensity.current) { step.toPx() }
 
@@ -1368,9 +1389,13 @@ object Lits : PuzzleType {
                     .width(step * s.width)
                     .height(step * s.height)
                     .highlightGrid(s.width, s.height)
+                    .gridCursor(cursor.takeIf { interactive }, s.width, s.height, scheme.primary)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
-                        detectTapGestures { offset: Offset -> onState(s.toggle(cellAt(offset))) }
+                        detectTapGestures { offset: Offset ->
+                            cursor = cellAt(offset)
+                            onState(s.toggle(cellAt(offset)))
+                        }
                     }
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
