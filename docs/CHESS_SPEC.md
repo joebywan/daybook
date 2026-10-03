@@ -89,6 +89,9 @@ keep the *result* identical; the independent checker in tests proves it.
 bounds, a cheap "may give check" filter so only candidate checks are made). `ChessSearchBenchTest` keeps the first
 implementation as an oracle and compares keys and N on shipped positions; `DAYBOOK_BENCH=1` runs the timing (Expert, desktop
 JVM, median / p95 / max ms: warm 8.4 / 123 / 420 before, 2.6 / 28 / 68 after; first 50 cold 11 / 73 / 158 before, 4.4 / 24 / 48 after).
+Teacher first-hint on the x86 Android emulator after the change (Expert, 400 positions, median / p95 / max ms): warm 11 / 94 / 234
+(old search 47 / 585 / 1353), cold first 50 16 / 109 / 263; Hard warm 2.1 / 6.3 / 18. Web wasm, headless Chromium: Expert warm 7 / 74 / 181.
+Budget (emulator p95 <= 300 ms, max <= 1.5 s) is met, so Expert stays mate in 4.
 
 ## Data (`tools/chess/build.py`, `puzzles/ChessPositions.kt`)
 

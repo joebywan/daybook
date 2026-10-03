@@ -19,11 +19,8 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
-- [ ] **Mate: Expert hint cost on a phone.** Emulator screenshots were taken (home, both sides, selection, reply, mistake,
-  hints, walkthrough, light and dark; no layout fault). The promotion picker still was not exercised in a running app. Expert's
-  first hint on the Android emulator is p95 585 ms, max 1.35 s (desktop JVM p95 105 ms), over the 300 ms target, and it runs on
-  the main thread's critical path for the tap: decide between a faster search with identical results and the spec's fallback
-  (Expert = harder mate in 3, `docs/CHESS_SPEC.md`). Web (wasm) timing is unmeasured. Also add the Play/F-Droid listing text. *S-M.*
+- [ ] **Mate: promotion picker and listing.** The promotion picker still was not exercised in a running app. Add the
+  Play/F-Droid listing text. (Expert hint cost is settled: the faster search meets the budget, `docs/TEACHING.md` Mate row.) *S.*
 
 ## Rewards
 
