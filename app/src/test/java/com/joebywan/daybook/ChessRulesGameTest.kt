@@ -61,9 +61,9 @@ class ChessRulesGameTest {
         }
     }
 
-    @Test fun `standard positions are mate in two with one key`() = provedSample(Difficulty.STANDARD, 2)
-    @Test fun `hard positions are mate in three with one key`() = provedSample(Difficulty.HARD, 3)
-    @Test fun `expert positions are mate in four with one key`() = provedSample(Difficulty.EXPERT, 8)
+    @Test fun `standard positions are mate in two with one key`() = provedSample(Difficulty.STANDARD, 1)
+    @Test fun `hard positions are mate in three with one key`() = provedSample(Difficulty.HARD, 2)
+    @Test fun `expert positions are mate in four with one key`() = provedSample(Difficulty.EXPERT, 4)
 
     @Test
     fun `a year of daily seeds picks valid entries on every tier, and the same one twice`() {

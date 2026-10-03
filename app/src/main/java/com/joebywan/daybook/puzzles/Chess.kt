@@ -41,6 +41,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
@@ -227,11 +228,17 @@ object Chess : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
-        val light = scheme.surfaceVariant
-        val dark = lerp(scheme.surfaceVariant, scheme.onSurfaceVariant, 0.30f)
+        val (light, dark) = squareColours(scheme)
         Canvas(modifier) {
             drawChessMotif(size, light, dark, WHITE_FILL, WHITE_LINE, BLACK_FILL, BLACK_LINE)
         }
+    }
+
+    /** The light and the dark square, whichever way the theme tints them, so a1 is dark in both themes. */
+    private fun squareColours(scheme: androidx.compose.material3.ColorScheme): Pair<Color, Color> {
+        val a = scheme.surfaceVariant
+        val b = lerp(a, scheme.onSurfaceVariant, 0.30f)
+        return if (b.luminance() > a.luminance()) b to a else a to b
     }
 
     /** Display column and row (row 0 on top) of a square, the player's side at the bottom. */
@@ -322,8 +329,7 @@ object Chess : PuzzleType {
             selected = if (sq != at && moves.any { src(it) == sq }) sq else -1
         }
 
-        val light = scheme.surfaceVariant
-        val dark = lerp(scheme.surfaceVariant, scheme.onSurfaceVariant, 0.30f)
+        val (light, dark) = squareColours(scheme)
         val note = Color(accent)
 
         BoxWithConstraints(
