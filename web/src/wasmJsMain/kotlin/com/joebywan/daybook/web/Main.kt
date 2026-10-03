@@ -7,6 +7,9 @@ import com.joebywan.daybook.core.ParityFingerprint
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.SeedHash
+import com.joebywan.daybook.ui.play.EarnedAchievement
+import com.joebywan.daybook.ui.play.Praise
+import com.joebywan.daybook.ui.play.finishPreview
 import kotlin.time.TimeSource
 
 /**
@@ -125,6 +128,18 @@ fun main() {
     val tier = params["tier"]?.let { Difficulty.fromKey(it.uppercase()) } ?: Difficulty.STANDARD
     println("daybook: date=$day epochDay=${day.epochDay}")
     if ("dump" in params) dump(params, day, tier)
+    // Render harness: `?finish=N` (0-3 achievements) shows the finished frame over the board; `&togo` adds the to-go line.
+    params["finish"]?.toIntOrNull()?.let { n ->
+        val all = listOf(
+            EarnedAchievement("streak7", "A full week", "Play on 7 days in one streak."),
+            EarnedAchievement("firstTop", "First Expert", "Solve a puzzle on Expert."),
+            EarnedAchievement("solves100", "Hundred solves", "Solve 100 puzzles."),
+        )
+        finishPreview = Praise(
+            title = if (n > 0) "7 day streak" else null, big = n > 0, lines = listOf("No hints needed."),
+            achievements = all.take(n), toGo = if ("togo" in params) "Only Hard on Kings left for all done today!" else null,
+        )
+    }
 
     ComposeViewport(viewportContainerId = "app") {
         DaybookWebApp(params["date"], params["tier"], params["puzzle"])

@@ -134,7 +134,9 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   (Chromium, WebKit) x schemes into `$TMPDIR/daybook-render/<puzzle>-<tier>-<W>x<H>-<scheme>-<browser>.png`,
   with the touch/scale/resize/first-frame handling below built in. `--measure` prints each board's
   bounding box (pixel analysis; the canvas has no DOM), `--tap X,Y` shoots again after a tap, `--storage
-  file.json` seeds `localStorage`, `--home` shoots the home grid; it exits non-zero on page or console
+  file.json` seeds `localStorage`, `--home` shoots the home grid, `--finish N [--togo]` shows the finished
+  frame over the board with N (0-3) fake achievements and the to-go line (`?finish=` in `web/.../Main.kt`, which sets
+  `finishPreview` in `ui/play/FinishExtras.kt`; it previews the frame on an unsolved board, nothing else); it exits non-zero on page or console
   errors or a blank frame. `tools/render/README.md` has the set-up and limits (no `--solved`: that
   needs each puzzle's answer). Use it rather than rebuilding a script, and extend it when it lacks
   something.
