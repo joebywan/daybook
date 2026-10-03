@@ -91,13 +91,21 @@ class FinishPraiseTest {
         assertEquals(1, run(h, c(null, 100)).lines.size)
     }
 
-    @Test fun achievementTakesTheOneLineAndKeepsTheStreakTitle() {
+    @Test fun achievementsAreAListAndTheStreakTitleAndLineStay() {
         val p = run(days(1, 2, 3, 4, 5, 6), c(today))
         assertEquals("7 day streak", p.title)
-        assertTrue(p.lines.isEmpty())
-        assertEquals("Achievement: A full week +1", p.achievementLine)
-        val two = run(emptyList(), c(today, tier = Difficulty.EXPERT))
-        assertEquals("Achievement: First solve +2", two.achievementLine)
-        assertTrue(run(earlier, c(null)).achievementLine == null)
+        assertEquals(1, p.lines.size)
+        assertTrue(p.achievements.map { it.title }.containsAll(listOf("A full week", "Devoted")))
+        assertTrue(p.achievements.all { it.description.isNotBlank() })
+        val first = run(emptyList(), c(today, tier = Difficulty.EXPERT))
+        assertEquals(listOf("solves1", "firstTop", "cleanTop"), first.achievements.map { it.id })
+        assertTrue(run(listOf(c(null)), c(null)).achievements.isEmpty())
+    }
+
+    @Test fun toGoIsOptionalAndAtMostOneLine() {
+        // 5 days played, today makes 6 of a 7-day streak: one more day.
+        val p = run(days(1, 2, 3, 4, 5), c(today))
+        assertEquals("1 more day to your 7-day streak.", p.toGo)
+        assertNull(run(listOf(c(null)), c(null)).toGo)
     }
 }
