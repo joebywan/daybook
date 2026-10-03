@@ -33,6 +33,19 @@ seven days, never reaching back before the run's first day: alive while at most 
 miss ends the run and the next play starts a fresh one. `current` counts days played. Home shows "Welcome back"
 in place of the badge when lapsed; best streak is on the stats screen (the home header has no room for it).
 
+## Finished-frame praise (`ui/play/FinishPraise.kt`)
+
+`finishPraise(history, solve, today, puzzleName): Praise(title, big, lines)` is pure and tested (`FinishPraiseTest`);
+`PlayScreen` asks for it once, before `onSolved` records the solve, so `history` never contains it. Never stored.
+- **Title** replaces "Congratulations!" only for the first daily solve of *today's* date (archive days and practice
+  get none): "N day streak" (bigger and bold at 7/30/100), "Day one", or "Welcome back" after a lapse. When yesterday
+  was missed and the run goes on, the line is "You're back, and your streak is still going."
+- **One line** beneath, in priority order: fastest at this tier (strictly faster than a non-empty tier history; a tie is
+  not a record), perseverance (>= 10 min, or >= 2x the tier's median with 5+ solves and >= 4 min), "Faster than N%
+  of your own solves" (5+ solves, N rounded down, shown from 75), hints (praise, never a count: the technique ids in
+  `Deduction` are test identifiers, not prose, so the wording is generic), "No hints needed."
+- No new sound: the existing solve chime plays, muted by the existing setting. A milestone fanfare is not done.
+
 ## Calendar (`ui/stats/StreakCalendar.kt`)
 
 A month grid card on the stats screen, under the tiles: filled circle = day played, ring = a missed day the
