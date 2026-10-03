@@ -87,6 +87,10 @@ fun StatsScreen(
                     )
                     Tile("Best", streak.best.toString(), Modifier.weight(1f))
                 }
+            }
+
+            item {
+                StreakCalendar(completions.mapNotNullTo(HashSet()) { it.day }, today, Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
             }
 
