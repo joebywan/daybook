@@ -431,5 +431,5 @@ fun HintPopover(
     )
 }
 
-/** The popover's height when it has to squeeze past the highlight; the text scrolls inside it. */
-private val COMPACT = 104.dp
+/** The popover's height when it has to squeeze past the highlight: four lines of text between the padding and the buttons (10 + 4*20 + 38); more scrolls. Three lines at 104dp left the third half hidden. */
+internal val COMPACT = 128.dp

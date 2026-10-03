@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import androidx.compose.ui.geometry.Rect
+import com.joebywan.daybook.ui.teach.COMPACT
 import com.joebywan.daybook.ui.teach.PopoverSpot
 import com.joebywan.daybook.ui.teach.placePopover
 import org.junit.Assert.assertEquals
@@ -36,11 +37,26 @@ class PopoverPlacementTest {
     )
 
     private fun place(s: Screen, highlight: Rect?, natural: Float) = placePopover(
-        natural = natural, compact = 104f, highlight = highlight, keepClear = listOf(s.pad),
+        natural = natural, compact = COMPACT.value, highlight = highlight, keepClear = listOf(s.pad),
         minTop = 9f, maxBottom = s.toolbarTop - 8f, boardTop = s.boardTop, gap = 8f, windowHeight = s.h,
     )
 
     private fun covers(spot: PopoverSpot, r: Rect) = spot.y < r.bottom && spot.y + spot.height > r.top
+
+    @Test
+    fun threeLineExplanationIsNeverCut() {
+        // Measured on the emulator (1080x1920 at 2.625px/dp, Sudoku Standard, 3 Oct 2026), in pixels:
+        // the top-left box's 1 hint highlights the box and the other 1s it sees, down to y=1153, so
+        // "below" overlaps and the popover shrinks. Its three-line text is 285px (108.5dp); at the old
+        // 104dp compact height that clipped the third line.
+        val d = 2.625f
+        val pad = Rect(32f, 1410f, 1048f, 1535f)
+        val spot = placePopover(
+            natural = 285f, compact = COMPACT.value * d, highlight = Rect(16.3f, 331.3f, 1063.8f, 1153f),
+            keepClear = listOf(pad), minTop = 123f, maxBottom = 1543f, boardTop = 318f, gap = 21f, windowHeight = 1920f,
+        )
+        assertEquals("text cut: $spot", 285f, spot.height, 0f)
+    }
 
     @Test
     fun topLeftBoxDoesNotPutThePopoverOnThePad() {
@@ -78,7 +94,7 @@ class PopoverPlacementTest {
     fun withNothingToKeepClearBelowIsUnchanged() {
         val s = screens[0]
         val spot = placePopover(
-            natural = 118f, compact = 104f, highlight = s.cells(0, 1, 2), keepClear = emptyList(),
+            natural = 118f, compact = COMPACT.value, highlight = s.cells(0, 1, 2), keepClear = emptyList(),
             minTop = 9f, maxBottom = s.toolbarTop - 8f, boardTop = s.boardTop, gap = 8f, windowHeight = s.h,
         )
         assertEquals(PopoverSpot(s.toolbarTop - 8f - 118f, 118f, false), spot)
