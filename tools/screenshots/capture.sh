@@ -44,9 +44,17 @@ shot() { adb exec-out screencap -p > "$OUT/$1.png"; }
 # A cold start lands on the home grid whatever the board or hint popover was doing.
 back() { adb shell am start -S -n $PKG/.MainActivity >/dev/null; sleep 4; }
 
-adb shell am start -n $PKG/.MainActivity >/dev/null; sleep 4
-tap "Saturday 3 October" >/dev/null 2>&1 || true   # fails the run below if the date pin did not take
-adb exec-out uiautomator dump /dev/tty | grep -q "Saturday 3 October" || { echo "date pin failed" >&2; exit 1; }
+adb shell am start -n $PKG/.MainActivity >/dev/null
+# A cold CI emulator can take a while to draw; the date text doubles as the check that the pin took.
+for _ in $(seq 20); do
+  adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Saturday 3 October" && break
+  sleep 2
+done
+adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Saturday 3 October" || {
+  echo "date pin failed; device date: $(adb shell date)" >&2
+  adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -o 'text="[^"]\+"' | head -20 >&2
+  exit 1
+}
 shot 1-home
 
 tap Sudoku; sleep 2; tap Hint; tap "Why?"; shot 2-sudoku-hint; back
