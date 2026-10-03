@@ -43,6 +43,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.semantics.contentDescription
@@ -161,6 +162,7 @@ private val PAD_GAP = 18.dp
 /** A note's size as a share of its cell's side, and how strongly it is inked. Tuned by rendering. */
 private const val NOTE_SIZE = 0.34f
 private const val NOTE_ALPHA = 0.85f
+private const val BOX_TINT = 0.10f
 
 object Sudoku : PuzzleType {
 
@@ -641,7 +643,9 @@ object Sudoku : PuzzleType {
                                         when {
                                             isSelected -> Color(accent).copy(alpha = 0.40f)
                                             sameValue -> Color(accent).copy(alpha = 0.20f)
-                                            (r / 3 + c / 3) % 2 == 0 -> scheme.surfaceVariant
+                                            // onSurface over surface, not surfaceVariant: it moves toward the text colour, so the
+                                            // checker stays visible on any background, light or dark.
+                                            (r / 3 + c / 3) % 2 == 0 -> scheme.onSurface.copy(alpha = BOX_TINT).compositeOver(scheme.surface)
                                             else -> scheme.surface
                                         }
                                     )
