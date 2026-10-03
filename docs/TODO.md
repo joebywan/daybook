@@ -193,6 +193,5 @@ not demand thought, against the owner's stated taste.
   continuous days), then request production access; when Google grants it, move `publish-play.yml`'s
   default track to `production`, roll out in stages, and give the service account the production
   permission. Also check the Console home page's Android developer verification notice: sideloaded
-  APKs may need their own registration (package name plus signing key). Recapture the screenshots at
-  1080x1920 if the 9:16 promotion eligibility matters.
+  APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
