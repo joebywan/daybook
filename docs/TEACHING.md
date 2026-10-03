@@ -33,7 +33,7 @@ each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthro
   short screen the popover covers the board's own rows rather than the pad. The rule is the pure
   `placePopover` (`ui/teach/PopoverPlacement.kt`, pinned by `PopoverPlacementTest`). A
   side that still overlaps slides as far as it can (above may rise over the header) and then shrinks
-  to 104dp, its text scrolling behind a fade. Taps outside the card reach the board, so the move can
+  to 128dp (four lines of text), its text scrolling behind a fade. Taps outside the card reach the board, so the move can
   be made with the explanation up. Changes of side or highlight glide (220ms).
 - **Boards report where the highlight is**, in window coordinates, through `core/HighlightBounds.kt`
   (`LocalHighlightBounds`): `highlightGrid(cols, rows)` on an even grid's node, `highlightAnchor(i)`
