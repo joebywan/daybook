@@ -71,9 +71,9 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   2025.09 -> 2026.09, lifecycle, activity, navigation, datastore, core-ktx) and kotlinx-serialization 1.11
   are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
   17 too); Gradle 9 would run on newer, so moving the JDK is its own change (`renovate.json` holds it at 17).
-- [ ] **`web/build.gradle.kts` uses APIs Compose 1.12 and Gradle 9.6 deprecate.** `compose.runtime` and the
-  other accessors want direct coordinates, `getting` wants `getByName`, and `materialIconsExtended` is pinned
-  at 1.7.3 (move to Material Symbols vector resources eventually). Warnings only; the build is green. *S.*
+- [ ] **Web icons are pinned at `material-icons-extended` 1.7.3** (`gradle/libs.versions.toml`, the last
+  published; move to Material Symbols vector resources eventually). The deprecated `compose.*` accessors and
+  `getting` in `web/build.gradle.kts` are gone. *S.*
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 
