@@ -399,15 +399,48 @@ internal object ChessRules {
 
     private class Search(var budget: Int) {
         var truncated = false
+        // Results of mates(p, d) by exact position. Looked up only, never iterated, so no hash order reaches a pick.
+        val memo = HashMap<String, Boolean>()
         fun tick(): Boolean {
             if (--budget < 0) truncated = true
             return truncated
         }
     }
 
+    private const val MEMO_CAP = 150_000
+
+    private fun memoKey(p: ChessPosition, d: Int): String {
+        val c = CharArray(68)
+        for (i in 0..63) c[i] = ('a' + p.sq[i] + 6)
+        c[64] = if (p.whiteToMove) 'w' else 'b'
+        c[65] = 'a' + p.castling
+        c[66] = 'a' + (p.ep + 1)
+        c[67] = '0' + d
+        return c.concatToString()
+    }
+
+    /** Can the side to move mate right now? Only a check can, so only moves that give one are looked at. */
+    private fun mateInOne(p: ChessPosition): Boolean {
+        val buf = IntArray(256)
+        val b = p.sq
+        val white = p.whiteToMove
+        val sg = if (white) 1 else -1
+        for (s in 0..63) if (b[s] * sg > 0) {
+            val n = genPiece(p, s, buf, 0)
+            for (i in 0 until n) {
+                val c = apply(p, buf[i])
+                if (checked(c.sq, !white) && !checked(c.sq, white) && !hasLegal(c)) return true
+            }
+        }
+        return false
+    }
+
     /** Attacker to move: can they mate within [d] of their own moves? Early exit; result ignored once truncated. */
     private fun mates(p: ChessPosition, d: Int, s: Search): Boolean {
         if (s.tick()) return false
+        if (d == 1) return mateInOne(p)
+        val key = memoKey(p, d)
+        s.memo[key]?.let { return it }
         val moves = legalArray(p)
         val n = moves.size
         val kids = arrayOfNulls<ChessPosition>(n)
@@ -417,21 +450,23 @@ internal object ChessRules {
             kids[i] = c
             rank[i] = if (inCheck(c)) 0 else if (p.sq[to(moves[i])] != 0) 1 else 2
         }
-        for (i in 0 until n) if (rank[i] == 0 && !hasLegal(kids[i]!!)) return true
-        if (d == 1) return false
-        for (pass in 0..2) for (i in 0 until n) {
+        var res = false
+        for (i in 0 until n) if (rank[i] == 0 && !hasLegal(kids[i]!!)) { res = true; break }
+        if (!res) loop@ for (pass in 0..2) for (i in 0 until n) {
             if (rank[i] != pass) continue
-            if (allReplies(kids[i]!!, d - 1, s)) return true
+            if (allReplies(kids[i]!!, d - 1, s)) { res = true; break@loop }
             if (s.truncated) return false
         }
-        return false
+        if (s.memo.size < MEMO_CAP) s.memo[key] = res
+        return res
     }
 
     /** Defender to move: every legal reply (there must be one) leaves the attacker a mate within [d]. */
     private fun allReplies(p: ChessPosition, d: Int, s: Search): Boolean {
         val replies = legalArray(p)
-        if (replies.isEmpty()) return false // stalemate (mate is handled by the caller)
-        // most forcing replies first: they are the likeliest to refute
+        val n = replies.size
+        if (n == 0) return false // stalemate (mate is handled by the caller)
+        // checks first, then captures, then the rest: the likeliest refutations of an attempted mate
         for (pass in 0..2) for (r in replies) {
             val rk = if (inCheck(apply(p, r))) 0 else if (p.sq[to(r)] != 0) 1 else 2
             if (rk != pass) continue
