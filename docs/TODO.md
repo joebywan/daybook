@@ -182,3 +182,6 @@ not demand thought, against the owner's stated taste.
   permission. Also check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
+- **Colour audit.** `docs/COLOUR.md` proposes a shared hue family. Audit every board against it (Inequality is
+  known to be scheme-grey plus one accent), add the one shared helper (`Color.hsl` recipe, web-safe) with the first
+  board that adopts it, and recapture the README screenshots in the same pass.
