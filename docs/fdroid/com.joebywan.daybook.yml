@@ -13,16 +13,13 @@ AutoName: Daybook
 
 RepoType: git
 Repo: https://github.com/joebywan/daybook.git
+Binaries: 
+  https://github.com/joebywan/daybook/releases/download/v%v/daybook-%v.apk
 
-# One build per release, and the fdroid bot writes the next one itself (see UpdateCheckMode).
-# versionCode is the Actions run number and versionName is 0.1.<run number>, both only known to
-# release.yml, so build.gradle.kts takes them from the environment and defaults to 1. prebuild bakes
-# the values F-Droid substitutes into that default; web/ is the wasm build and needs a toolchain
-# F-Droid does not have, so it goes (settings.gradle.kts is edited to match).
 Builds:
-  - versionName: 0.1.103
-    versionCode: 103
-    commit: 01e387f7e77bb5b652c42fef77c1d79516bded40
+  - versionName: 0.1.104
+    versionCode: 104
+    commit: 9abf5a53677d698c3fe595a0f8ecf5b44164f261
     subdir: app
     gradle:
       - yes
@@ -30,17 +27,16 @@ Builds:
       - web
     prebuild:
       - sed -i -e '/include(":web")/d' ../settings.gradle.kts
-      - |-
-        sed -i -e 's/"DAYBOOK_VERSION_CODE") ?: "1"/"DAYBOOK_VERSION_CODE") ?: "$$VERCODE$$"/' -e 's/"DAYBOOK_VERSION_NAME") ?: "0.1.0"/"DAYBOOK_VERSION_NAME") ?: "$$VERSION$$"/' build.gradle.kts
+      - "sed -i -e 's/\"DAYBOOK_VERSION_CODE\") ?: \"1\"/\"DAYBOOK_VERSION_CODE\"\
+        ) ?: \"$$VERCODE$$\"/' -e 's/\"DAYBOOK_VERSION_NAME\") ?: \"0.1.0\"/\"DAYBOOK_VERSION_NAME\"\
+        ) ?: \"$$VERSION$$\"/' build.gradle.kts"
 
-# Reproducible: F-Droid builds the tag, checks the result matches the APK on our release byte for byte
-# (signature aside), and then publishes OUR signed APK, so it updates in place over Play and GitHub.
-Binaries: https://github.com/joebywan/daybook/releases/download/v%v/daybook-%v.apk
-AllowedAPKSigningKeys: 70248a01bfc43a99422ce6be6c470146531ead24e96acd288d5df81ac18176f4
+AllowedAPKSigningKeys: 
+  70248a01bfc43a99422ce6be6c470146531ead24e96acd288d5df81ac18176f4
 
 AutoUpdateMode: Version v%v
 UpdateCheckMode: HTTP
-# The newest release's tag, v0.1.<n>, gives both numbers: the GitHub API's JSON is the one place they are public.
-UpdateCheckData: https://api.github.com/repos/joebywan/daybook/releases/latest|"tag_name":\s*"v0\.1\.(\d+)"|https://api.github.com/repos/joebywan/daybook/releases/latest|"tag_name":\s*"v(0\.1\.\d+)"
-CurrentVersion: 0.1.103
-CurrentVersionCode: 103
+UpdateCheckData: 
+  https://api.github.com/repos/joebywan/daybook/releases/latest|"tag_name":\s*"v0\.1\.(\d+)"|https://api.github.com/repos/joebywan/daybook/releases/latest|"tag_name":\s*"v(0\.1\.\d+)"
+CurrentVersion: 0.1.104
+CurrentVersionCode: 104
