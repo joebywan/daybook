@@ -674,7 +674,9 @@ private fun ResultsPill(accent: Color, next: NextOption?, done: NextOption, onSh
                 .background(scheme.surface).background(accent.copy(alpha = 0.22f)).clickable(onClick = onShow),
             contentAlignment = Alignment.Center,
         ) { Text("Show results", style = MaterialTheme.typography.titleSmall, color = scheme.onSurface) }
-        listOfNotNull(next, done).forEach { NextTile(it, accent, Modifier.weight(1f)) { onOption(it) } }
+        listOfNotNull(next, done).forEach {
+            NextTile(it, accent, Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(scheme.surface)) { onOption(it) }
+        }
     }
 }
 
