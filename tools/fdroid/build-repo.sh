@@ -17,7 +17,7 @@ ls repo/*.apk | sort -V | head -n "-$KEEP" | xargs -r rm -v
 mkdir -p "metadata/$PKG"
 cp "$HERE/tools/fdroid/$PKG.yml" metadata/
 # The same listing text and images the official F-Droid build reads straight from the repo.
-cp -r "$HERE/fastlane/metadata/android/en-AU" "metadata/$PKG/"
+cp -r "$HERE/fastlane/metadata/android/en-US" "metadata/$PKG/"
 
 install -m 600 /dev/null config.yml
 cat > config.yml <<CFG
