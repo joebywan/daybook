@@ -53,6 +53,9 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.gridCursor
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
@@ -1007,8 +1010,18 @@ object Mambo : PuzzleType {
             )
         }
         fun named(i: Int) = highlight.isEmpty || i in highlight.strong || i in highlight.soft
+        // The keyboard cursor (see MamboKeys): transient, so not in the state.
+        var cursor by remember(s.givens, s.links) { mutableStateOf<Int?>(null) }
 
-        Column(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth().boardKeys(interactive) { key, _, repeat ->
+                movedCursor(cursor, key, s.size, s.size)?.let { cursor = it; return@boardKeys true }
+                val at = cursor ?: return@boardKeys false
+                val action = mamboKeyAction(key) ?: return@boardKeys false
+                if (!repeat) s.applyKey(at, action)?.let(onState)
+                true
+            },
+        ) {
             // Sized from both axes (CLAUDE.md). The caption below is measured first, because it
             // carries no weight, and the grid gets what height is left: under the hint slot a
             // teaching puzzle reserves, a short phone has less height than width to give, and a
@@ -1024,12 +1037,14 @@ object Mambo : PuzzleType {
                     Modifier
                         .size(board)
                         .highlightGrid(s.size, s.size)
+                        .gridCursor(cursor.takeIf { interactive }, s.size, s.size, scheme.primary)
                         .pointerInput(s, interactive, cellPx) {
                             if (!interactive) return@pointerInput
                             detectTapGestures { offset: Offset ->
                                 val c = (offset.x / cellPx).toInt().coerceIn(0, s.size - 1)
                                 val r = (offset.y / cellPx).toInt().coerceIn(0, s.size - 1)
                                 val i = r * s.size + c
+                                cursor = i
                                 if (!s.givens[i]) {
                                     val next = when (s.cells[i]) {
                                         Sym.NONE -> Sym.MOON

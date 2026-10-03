@@ -78,8 +78,6 @@ in this order. Keep every key map a pure, unit-tested function; cursor state is 
 chords stay ignored; check in Chromium and WebKit with `keyboard.press`.
 - [ ] **Optional per-puzzle "Keyboard" line in Rules.** A `keyboardHelp` list on `PuzzleType`, empty by default,
   shown on the web build only ("Arrows move, Space cycles"). Do it with the helper if wanted. *S.*
-- [ ] **Mambo, Pipes, Sets keys.** Arrows move a cursor; Space cycles (Mambo), rotates (Pipes) or picks (Sets);
-  Mambo's two symbols may also have direct keys. *S each.*
 - [ ] **Tower keys.** 1..N picks a colour and fills the next empty peg, Backspace removes the last, Enter
   submits. No cursor. *S.*
 - [ ] **Kings and LITS keys.** Cursor plus mark keys. Kings: Space pencils out, K/Enter crowns, calling

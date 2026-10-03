@@ -19,7 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +41,9 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.gridCursor
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
@@ -583,7 +589,18 @@ object Pipes : PuzzleType {
 
         // Sized from both axes (CLAUDE.md): sized from width alone, a 5x7 board ran a row under
         // the hint panel at 390dp, and an 8x11 one further.
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+        // The keyboard cursor (see PipesKeys): transient, so not in the state.
+        var cursor by remember(s.width, s.height) { mutableStateOf<Int?>(null) }
+        BoxWithConstraints(
+            Modifier.fillMaxWidth().boardKeys(interactive) { key, _, repeat ->
+                movedCursor(cursor, key, s.height, s.width)?.let { cursor = it; return@boardKeys true }
+                val at = cursor ?: return@boardKeys false
+                if (!pipesRotateKey(key)) return@boardKeys false
+                if (!repeat) onState(s.rotate(at))
+                true
+            }.padding(16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
             val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
             val cellPx = with(LocalDensity.current) { cell.toPx() }
             Canvas(
@@ -591,11 +608,13 @@ object Pipes : PuzzleType {
                     .width(cell * s.width)
                     .height(cell * s.height)
                     .highlightGrid(s.width, s.height)
+                    .gridCursor(cursor.takeIf { interactive }, s.width, s.height, scheme.primary)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
                         detectTapGestures { offset: Offset ->
                             val c = (offset.x / cellPx).toInt().coerceIn(0, s.width - 1)
                             val r = (offset.y / cellPx).toInt().coerceIn(0, s.height - 1)
+                            cursor = r * s.width + c
                             onState(s.rotate(r * s.width + c))
                         }
                     }
