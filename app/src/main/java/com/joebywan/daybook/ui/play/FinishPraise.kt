@@ -1,6 +1,7 @@
 package com.joebywan.daybook.ui.play
 
 import com.joebywan.daybook.core.newlyEarned
+import com.joebywan.daybook.core.puzzleNote
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
 import kotlinx.datetime.LocalDate
@@ -82,7 +83,8 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
         val pct = 100 * sorted.count { it > s } / sorted.size
         if (pct >= PERCENT_FLOOR) personal += "Faster than $pct% of your own ${solve.difficulty.label} solves."
     }
-    personal += if (solve.hints > 0) "Hints are how a move sticks. Look for that one next time." else "No hints needed."
+    personal += if (solve.hints > 0) "Hints are how a move sticks. Look for that one next time." else puzzleNote(solve.puzzleId, today.toEpochDays()) ?: "No hints needed."
+    // Lowest priority: a no-hint solve with no record gets a technique note in place of the bare "No hints needed."
 
     // One line beneath the title (or beneath "Congratulations!"): praise is loud, not long.
     // An achievement takes that one line (loud beats a personal best), so the frame never grows.

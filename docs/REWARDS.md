@@ -73,6 +73,17 @@ future. Monday-first; previous/next stop at the first month with a play and the 
 that ended a run is not ringed, but earlier misses of a run that later died stay ringed, because they were
 forgiven when they happened. `StreakCalendar(played, today)` takes the played-day set, so other screens can reuse it.
 
+## Daily variety (`core/PuzzleNotes.kt`, `PuzzleRegistry.featured`)
+
+- **Note.** A short hand-checked technique tip per puzzle id, picked by `puzzleNote(id, epochDay)` (pure: the day plus the id
+  walks the list). It sits last in `finishPraise`, in place of the bare "No hints needed.", so it only shows on a no-hint
+  solve that earned no achievement, record or percentile line; a solve with hints keeps its hint line. At most 64 characters.
+  Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
+- **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added. Its
+  home tile gets a thin accent ring and a small star (drawn on a canvas; the core icon set has no star), with the content
+  description "Today's pick". No text label: a label would change the tile's height. The grid does not reorder.
+  Nothing is stored.
+
 ## Claim to keep honest
 
 Puzzles making you better at other things is weakly supported. Claim the habit and the satisfaction, not "makes you smarter".

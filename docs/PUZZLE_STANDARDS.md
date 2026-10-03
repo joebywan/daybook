@@ -448,6 +448,7 @@ Each puzzle `<N>`. "Template" is the file to copy.
 | Gesture geometry | drag/hit maths without Compose | `AtomsDragTest`, `KingsMarkingTest` |
 | Layout budgets | the reserved slot or card size fits at the smallest width | `MamboCaptionTest`, `SetsStripTest` |
 | Parity pins | boards identical on JVM and wasm | `WebParityShikakuSnapSudokuTest` + the dump (section 5) |
+| Notes | a short true tip per puzzle for the finished frame; a new puzzle needs entries in `core/PuzzleNotes.kt` (the test enforces it) | `PuzzleNotesTest` |
 | Seeding | untouched; pinned by `WebParityTest` `epochDay agrees with LocalDate...` and `CompletionFormatTest` | n/a |
 
 A test that cannot fail is not a test: assert the property the *bug* violates, not a looser one the bug also
