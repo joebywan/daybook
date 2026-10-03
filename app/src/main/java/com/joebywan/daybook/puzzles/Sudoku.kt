@@ -8,14 +8,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,14 +27,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -45,19 +42,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -71,6 +58,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.highlightAnchor
@@ -590,17 +578,7 @@ object Sudoku : PuzzleType {
         var notesMode by rememberSaveable { mutableStateOf(false) }
         val measurer = rememberTextMeasurer()
         // The keyboard (web, or a hardware keyboard on Android): digits, clear and arrows, mapped by
-        // sudokuKeyAction and applied through the same state functions the pad and a tap use.
-        // Focus lives on the board's own box, which draws nothing, so no ring and no layout change;
-        // a cell or pad key that takes focus on a click still bubbles its keys up to it.
-        val focus = remember { FocusRequester() }
-        // A held key repeats KeyDown: for a digit that would place and clear it again and again.
-        var heldKey by remember { mutableStateOf<Key?>(null) }
-        // Claimed on arrival, and again whenever a hint lights something up: the Hint button took the
-        // focus when it was clicked, and the move it asks for should be makeable from the keyboard.
-        LaunchedEffect(interactive, highlight.strong) {
-            if (interactive) focus.requestFocus()
-        }
+        // sudokuKeyAction and applied through the same state functions the pad and a tap use. See boardKeys.
         // Breathes only while something glows, as on Kings.
         val pulse: State<Float> = if (highlight.strong.isEmpty()) {
             remember { mutableFloatStateOf(1f) }
@@ -619,26 +597,11 @@ object Sudoku : PuzzleType {
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
-                .focusRequester(focus)
-                .onKeyEvent { event ->
-                    if (!interactive) return@onKeyEvent false
-                    // Chords belong to the browser (Ctrl+R, Cmd+L...) and to the system.
-                    if (event.isCtrlPressed || event.isMetaPressed || event.isAltPressed || event.isShiftPressed) {
-                        return@onKeyEvent false
-                    }
-                    val action = sudokuKeyAction(event.key) ?: return@onKeyEvent false
-                    if (event.type == KeyEventType.KeyUp) {
-                        if (heldKey == event.key) heldKey = null
-                        return@onKeyEvent true
-                    }
-                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                    val repeat = heldKey == event.key
-                    heldKey = event.key
-                    if (repeat && action !is SudokuKeyAction.Move) return@onKeyEvent true
-                    s.applyKey(action, notesMode)?.let(onState)
+                .boardKeys(interactive) { key, _, repeat ->
+                    val action = sudokuKeyAction(key) ?: return@boardKeys false
+                    if (!repeat || action is SudokuKeyAction.Move) s.applyKey(action, notesMode)?.let(onState)
                     true
-                }
-                .focusable(interactive),
+                },
             contentAlignment = Alignment.Center,
         ) {
             val side = if (constraints.hasBoundedHeight) {

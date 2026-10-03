@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -37,22 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -62,6 +51,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.highlightAnchor
@@ -357,15 +347,6 @@ object Lexicon : PuzzleType {
         }
         LaunchedEffect(s.current, s.guesses.size) { notice = null }
 
-        val focus = remember { FocusRequester() }
-        // A held key repeats KeyDown: a held Backspace would eat the whole row, a held letter fill it.
-        var heldKey by remember { mutableStateOf<Key?>(null) }
-        // Claimed on arrival, and again whenever a hint lights something up: the Hint button took the
-        // focus when it was clicked, and the move it asks for should be makeable from the keyboard.
-        LaunchedEffect(interactive, highlight.strong) {
-            if (interactive) focus.requestFocus()
-        }
-
         // Breathes only while something glows, as on Kings.
         val pulse: State<Float> = if (highlight.strong.isEmpty()) {
             remember { mutableFloatStateOf(1f) }
@@ -394,25 +375,12 @@ object Lexicon : PuzzleType {
             Modifier
                 .fillMaxSize()
                 .padding(horizontal = 12.dp)
-                .focusRequester(focus)
-                .onKeyEvent { event ->
-                    if (!playable) return@onKeyEvent false
-                    // Chords belong to the browser (Ctrl+R, Cmd+L...) and to the system.
-                    if (event.isCtrlPressed || event.isMetaPressed || event.isAltPressed || event.isShiftPressed) {
-                        return@onKeyEvent false
-                    }
-                    val action = lexiconKeyAction(event.key) ?: return@onKeyEvent false
-                    if (event.type == KeyEventType.KeyUp) {
-                        if (heldKey == event.key) heldKey = null
-                        return@onKeyEvent true
-                    }
-                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                    val repeat = heldKey == event.key
-                    heldKey = event.key
+                .boardKeys(playable) { key, _, repeat ->
+                    // A held Backspace would eat the whole row, a held letter fill it.
+                    val action = lexiconKeyAction(key) ?: return@boardKeys false
                     if (!repeat) press(action)
                     true
-                }
-                .focusable(interactive),
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // One line, always laid out: the guesses left, or why Enter refused, or the word.
