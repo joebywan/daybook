@@ -40,24 +40,24 @@ kotlin {
     }
 
     sourceSets {
-        val wasmJsMain by getting {
+        getByName("wasmJsMain") {
             // The patterns apply to web/'s own source directory as well as app/'s, so a web file
             // must never share a path with one of androidOnly.
             kotlin.srcDir(appSources)
             kotlin.exclude(androidOnly)
             dependencies {
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material3)
-                implementation(compose.ui)
+                implementation(libs.jb.compose.runtime)
+                implementation(libs.jb.compose.foundation)
+                implementation(libs.jb.compose.material3)
+                implementation(libs.jb.compose.ui)
                 implementation(libs.kotlinx.serialization.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
                 // The shell's icons are the same Material ones Android uses. Kotlin/Wasm drops
                 // every icon nothing references, so the whole set costs only the few in use.
-                implementation(compose.materialIconsExtended)
+                implementation(libs.jb.compose.material.icons.extended)
                 // The bundled fonts; see platformTypography in platform/WebPlatform.kt.
-                implementation(compose.components.resources)
+                implementation(libs.jb.compose.resources)
             }
         }
     }
