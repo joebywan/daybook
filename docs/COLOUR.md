@@ -41,6 +41,12 @@ from the table's `h`; do not paste the hexes in (they are for reading and for th
 - **Two content hues minimum, five at most per board.** One hue is a monochrome board; six or more cannot be told apart.
   When a board needs N distinct groups, take N hues spread across the table (every other row first: Coral, Green,
   Violet, Amber, Teal, Rose), not neighbours.
+- **More than five groups: steps, not new hues.** Excluding Coral and Green leaves six hues, and Amber and Gold sit 12
+  degrees apart. A board that needs up to eight equal tokens (Tower's pegs) takes them from the six hues at three steps,
+  the same in both schemes: pale = `fill(h, false)`, mid = `mark(h)`, deep = `ink(h, false)`. Choose and order them by
+  CIEDE2000 including deuteranopia and protanopia so every prefix is as far apart as it can be (Tower: 21 / 17 / 11 for the
+  first 5 / 6 / 8, pinned by `TowerPaletteTest`), and put a digit or shape on every token: the colour-blind distance of an
+  eight-token set is too small to carry it alone.
 - **Semantic colours are fixed and are not content hues.** Correct = Green mark, present/partial = Gold (Lexicon's
   `4E9F6C` / `D1A32F` are these two), error = `scheme.error` (Clay `C0563F`), warning is the error colour too. Do not
   spend Coral or Green on an unrelated group *in a board that also shows right/wrong*; use the other six.
@@ -81,4 +87,4 @@ dark fills above sit at lightness 0.30 against the surface's 0.14: keep that gap
 ## Status
 
 The table and roles are implemented in `ui/theme/BoardHues.kt` (`fill`/`ink`/`mark`, `contentHues(n)`, `isDark`, `HUE_PAIRS`,
-`pair`), pinned by `BoardHuesTest`. Adopted: Inequality, Sudoku. Adopting the rest board by board is in `docs/TODO.md`.
+`pair`), pinned by `BoardHuesTest`. Adopted: Inequality, Sudoku, Tower (pegs; its feedback pips stay `onSurface`, filled vs. hollow). Adopting the rest board by board is in `docs/TODO.md`.

@@ -77,7 +77,7 @@ internal object TowerTeacher {
     fun peg(slots: Int, guess: Int, slot: Int) = guess * slots + slot
 
     /** Names for [Tower.palette], index for index. */
-    val colourNames = listOf("red", "blue", "green", "yellow", "purple", "teal", "pink", "brown")
+    val colourNames = listOf("blue", "gold", "brown", "teal", "mint", "lilac", "wine", "cream")
 
     /** What a step asks the player to do. */
     sealed interface Move {

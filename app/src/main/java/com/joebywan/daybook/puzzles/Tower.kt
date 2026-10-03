@@ -42,6 +42,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -115,10 +119,24 @@ object Tower : PuzzleType {
         "Number keys fill the next peg with that colour, Backspace removes the last, Enter submits.",
     )
 
-    val palette = listOf(
-        0xFFD9584C, 0xFF4C86D9, 0xFF54B07A, 0xFFE0B23C,
-        0xFF9B6FD0, 0xFF48B9C4, 0xFFD97FB0, 0xFF9A8264,
+    /**
+     * Peg colours, index for index with [TowerTeacher.colourNames]; a saved game stores the index. Coral and Green
+     * are left to right/wrong, so these come from the other six hues of docs/COLOUR.md (`BoardHues`), and six hues
+     * cannot make eight pegs apart, so three lightness steps of them are used (pale = the light fill, mid = the mark,
+     * deep = the light ink; the same in both schemes). The order is the best prefix for 5, 6 and 8 colours by
+     * CIEDE2000 with colour-blind vision (`TowerPaletteTest`), and every peg also carries its key's digit.
+     */
+    val palette: List<Color> = listOf(
+        BoardHues.ink(215f, false), BoardHues.mark(46f), BoardHues.ink(34f, false), BoardHues.ink(175f, false),
+        BoardHues.fill(175f, false), BoardHues.fill(268f, false), BoardHues.ink(330f, false), BoardHues.fill(46f, false),
     )
+
+    /** The digit on a peg: the key that picks it, so colour is never the only signal. */
+    @Composable
+    private fun PegDigit(colour: Int, size: Int) {
+        val ink = if (palette[colour].luminance() > 0.35f) Color(0xFF1B2F29) else Color.White
+        Text("${colour + 1}", color = ink, fontSize = size.sp, fontWeight = FontWeight.Bold)
+    }
 
     /**
      * The home tile: two scored guess rows, newest on top, as the board stacks them.
@@ -220,7 +238,7 @@ object Tower : PuzzleType {
                                 .aspectRatio(1f)
                                 .padding(2.dp)
                                 .clip(CircleShape)
-                                .background(Color(palette[colour]))
+                                .background(palette[colour])
                         )
                     }
                     PreviewPips(Modifier.weight(1f), feedback)
@@ -263,20 +281,20 @@ object Tower : PuzzleType {
     // ---- the walkthrough ---------------------------------------------------------------------
 
     /**
-     * The walkthrough's code: three slots, four colours (red, blue, green, yellow), and the code
-     * green red blue. Small so every peg is easy to aim at, and so the whole argument fits on one
+     * The walkthrough's code: three slots, four colours (blue, gold, brown, teal), and the code
+     * brown blue gold. Small so every peg is easy to aim at, and so the whole argument fits on one
      * screen:
      *
      * ```
-     * guess 1  yellow yellow yellow   nothing        -> yellow is nowhere
-     * guess 2  red    red    blue     two filled
-     * guess 3  blue   red    blue     two filled     -> made in the walkthrough; only slot 1
+     * guess 1  teal  teal  teal   nothing        -> teal is nowhere
+     * guess 2  blue  blue  gold   two filled
+     * guess 3  gold  blue  gold   two filled     -> made in the walkthrough; only slot 1
      *                                                   changed and the score didn't, so slot 1
-     *                                                   is neither red nor blue: green
+     *                                                   is neither blue nor gold: brown
      * ```
      *
-     * After guess 3, guess 2's two filled pips can't include slot 1, so they are its red and blue:
-     * the code is green red blue, and TowerTeachingTest proves it is the only one that fits.
+     * After guess 3, guess 2's two filled pips can't include slot 1, so they are its blue and gold:
+     * the code is brown blue gold, and TowerTeachingTest proves it is the only one that fits.
      */
     internal val TUTORIAL_CODE = listOf(2, 0, 1)
     internal val TUTORIAL_GUESSES = listOf(listOf(3, 3, 3), listOf(0, 0, 1), listOf(1, 0, 1))
@@ -304,7 +322,7 @@ object Tower : PuzzleType {
         fun row(g: Int) = (0 until TUTORIAL_SLOTS).map { TowerTeacher.peg(TUTORIAL_SLOTS, g, it) }.toSet()
         val copied = listOf(0, 0, 1)
         val changed = listOf(1, 0, 1)
-        val green = listOf(2, -1, -1)
+        val brown = listOf(2, -1, -1)
         listOf(
             TutorialFrame(
                 state = tutorialBoard(2),
@@ -314,17 +332,17 @@ object Tower : PuzzleType {
             ),
             TutorialFrame(
                 state = tutorialBoard(2),
-                caption = "Guess 1 was all yellow and scored nothing, so yellow isn't in the code. " +
+                caption = "Guess 1 was all teal and scored nothing, so teal isn't in the code. " +
                     "Guess 2 has two filled pips, but pips never say which pegs earned them.",
                 highlight = BoardHighlight(strong = row(0) + (p + 0), soft = setOf(p + 1)),
             ),
             TutorialFrame(
                 state = tutorialBoard(2, copied),
                 caption = "Your row copies guess 2. Change only slot 1, and the new score tells you about " +
-                    "that slot alone. Tap blue, then the glowing slot.",
+                    "that slot alone. Tap gold, then the glowing slot.",
                 highlight = BoardHighlight(strong = setOf(sw + 1, c + 0), soft = row(1)),
                 accepts = only(2, changed),
-                retry = "Tap blue below first, then the glowing slot.",
+                retry = "Tap gold below first, then the glowing slot.",
                 done = "Now your row differs from guess 2 in slot 1 only.",
             ),
             TutorialFrame(
@@ -338,7 +356,7 @@ object Tower : PuzzleType {
             TutorialFrame(
                 state = tutorialBoard(3),
                 caption = "Guesses 2 and 3 differ only in slot 1 and scored the same, so slot 1 is neither " +
-                    "red nor blue. Yellow is out, so slot 1 is green.",
+                    "blue nor gold. Teal is out, so slot 1 is brown.",
                 highlight = BoardHighlight(
                     strong = setOf(TowerTeacher.peg(TUTORIAL_SLOTS, 1, 0), TowerTeacher.peg(TUTORIAL_SLOTS, 2, 0)),
                     soft = setOf(p + 1, p + 2),
@@ -346,14 +364,14 @@ object Tower : PuzzleType {
             ),
             TutorialFrame(
                 state = tutorialBoard(3),
-                caption = "Build your next guess on what you know. Tap green, then slot 1.",
+                caption = "Build your next guess on what you know. Tap brown, then slot 1.",
                 highlight = BoardHighlight(strong = setOf(sw + 2, c + 0)),
-                accepts = only(3, green),
-                retry = "Tap green below first, then the glowing slot.",
-                done = "Slot 1 is green.",
+                accepts = only(3, brown),
+                retry = "Tap brown below first, then the glowing slot.",
+                done = "Slot 1 is brown.",
             ),
             TutorialFrame(
-                state = tutorialBoard(3, green),
+                state = tutorialBoard(3, brown),
                 caption = "Your turn: finish the code and submit it. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Cracked. That's all there is to it.",
@@ -529,13 +547,14 @@ object Tower : PuzzleType {
                                 .dimmed(look)
                                 .clip(CircleShape)
                                 .background(
-                                    if (colour >= 0) Color(palette[colour]) else scheme.surfaceVariant
+                                    if (colour >= 0) palette[colour] else scheme.surfaceVariant
                                 )
                                 .border(1.dp, scheme.outline, CircleShape)
                                 .clickable(enabled = interactive) {
                                     onState(s.withPeg(slot, selectedColour))
-                                }
-                        )
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) { if (colour >= 0) PegDigit(colour, 15) }
                     }
                     Spacer(Modifier.weight(1f))
                     Text(
@@ -565,14 +584,15 @@ object Tower : PuzzleType {
                                 .highlightAnchor(TowerTeacher.SWATCH + colour)
                                 .ring(highlight.look(TowerTeacher.SWATCH + colour, dims = false), glow, pulse, round = false)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(palette[colour]))
+                                .background(palette[colour])
                                 .border(
                                     if (selectedColour == colour) 3.dp else 0.dp,
                                     scheme.onBackground,
                                     RoundedCornerShape(10.dp),
                                 )
-                                .clickable(enabled = interactive) { selectedColour = colour }
-                        )
+                                .clickable(enabled = interactive) { selectedColour = colour },
+                            contentAlignment = Alignment.Center,
+                        ) { PegDigit(colour, 16) }
                     }
                 }
             }
@@ -588,8 +608,9 @@ object Tower : PuzzleType {
                     s.secret.forEach { colour ->
                         Box(
                             Modifier.padding(3.dp).size(30.dp).clip(CircleShape)
-                                .background(Color(palette[colour]))
-                        )
+                                .background(palette[colour]),
+                            contentAlignment = Alignment.Center,
+                        ) { PegDigit(colour, 14) }
                     }
                 }
             }
@@ -637,8 +658,9 @@ object Tower : PuzzleType {
                         .ring(pegs[slot], glow, pulse, round = true)
                         .dimmed(pegs[slot])
                         .clip(CircleShape)
-                        .background(Color(palette[colour]))
-                )
+                        .background(palette[colour]),
+                    contentAlignment = Alignment.Center,
+                ) { PegDigit(colour, 13) }
             }
             Spacer(Modifier.weight(1f))
             Row(
