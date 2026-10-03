@@ -19,6 +19,11 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
+- [ ] **Mate: finish checks on a real device.** The promotion picker was never exercised in a running browser (no shipped
+  position reaches one quickly), there are no Android emulator screenshots, and Expert's hint search (mate in 4: p95 105 ms, max
+  ~490 ms on a desktop JVM) needs timing on a phone and on the web's single thread. If Expert is too slow, make it a harder mate in 3
+  (`docs/CHESS_SPEC.md`). Also: recapture `docs/screenshots/home.png` (15 puzzles) and add the Play/F-Droid listing text. *S-M.*
+
 ## Rewards
 
 Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) 5 (calendar) and 6 (daily variety) are done; the rest are separate PRs.

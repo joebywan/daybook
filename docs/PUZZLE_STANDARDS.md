@@ -83,6 +83,7 @@ What varies, as built:
 | Tower | slots, colours, guesses | 4/5/10, 5/6/12, 5/8/14 |
 | Lexicon | word length, guesses | 5/6, 5/5, 4/7 (four letters is the harder length; see `LexiconBalanceTest`) |
 | Nonogram | side (55% filled throughout) | 5x5 / 10x10 / 15x15 (`NonogramLogic.specFor`; `NonogramRulesTest` `the tiers get larger in the order they are offered`) |
+| Mate | moves to mate | 2 / 3 / 4 (the tier picks the list in `ChessPositions`; a bundled list, not a generator, see `docs/CHESS_SPEC.md`) |
 | Inequality | side (clues are minimal at every size) | 4x4 / 5x5 / 6x6 (`InequalityLogic.sizeFor`; `InequalityRulesTest` `the tiers get larger in the order they are offered`) |
 
 Rules for the tiers:
@@ -496,6 +497,7 @@ Y = yes, P = partial, N = no.
 | Lexicon | Y length, guesses | n/a one pick from a sorted list; lists screened, tested for order and content | Y last guess is the word | Y `LexiconSupport.refMark`, `LexiconTeachingTest`, `LexiconBalanceTest` | Y fallback on every board | Y 9 | Y grid + anchors + keepClear | Y `LexiconWebParityTest` | Y | Y 170 |
 | Inequality | Y side | Y `generateVerified` (a board ships only if the teacher's ladder finishes it, then re-proved by `countSolutions`; `lastResort` is a cyclic square, also proved), year test | Y `InequalityLogic.isSolved` (rules, not the stored square) | Y `InequalityOracle` (naive reading-order search, counts every answer), `InequalityTeachingTest` | Y no fallback on generated boards | Y 6 | Y grid + sign indices + anchors + keepClear | Y `InequalityWebParityTest` | Y | Y 200 / 70 |
 | Nonogram | Y side | Y `generateVerified` (a picture ships only if `lineSolvable`, which makes it unique; `lastResort` is a fixed diagonal, also proved), year test | Y `NonogramLogic.isSolved` (clues, not the stored picture) | Y `NonogramOracle` (every arrangement of every row), `NonogramTeachingTest` brute force | Y no fallback exists | Y 6 | Y grid + clue indices | Y `NonogramWebParityTest` | Y | Y 200 / 70 |
+| Mate (chess) | Y mate in 2 / 3 / 4 | n/a no generator: a bundled list (`ChessPositions`), each entry proved offline by python-chess (shortest mate exactly N, one key) and re-proved in tests by `ChessRules.forcedMate`; no fallback exists | Y `ChessState.solved` (checkmate within N moves, not the stored line) | Y `ChessMateCheckerTest` naive minimax, perft with published counts | Y no fallback exists | Y 9 | Y square indices via `reportHighlight` + anchors + keepClear | Y `ChessWebParityTest` | Y | Y 200 / 70 |
 
 ### Known gaps and open items
 

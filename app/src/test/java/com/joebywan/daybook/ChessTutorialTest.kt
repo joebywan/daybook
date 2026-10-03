@@ -3,6 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.puzzles.ChessPosition
 import com.joebywan.daybook.puzzles.ChessRules
 import com.joebywan.daybook.puzzles.ChessState
+import com.joebywan.daybook.puzzles.ChessTeacher
 import com.joebywan.daybook.puzzles.ChessTutorial
 import com.joebywan.daybook.puzzles.ChessTutorial.sq
 import org.junit.Assert.assertEquals
@@ -204,23 +205,19 @@ class ChessTutorialTest {
         frames.forEach { f -> (f.highlight.strong + f.highlight.soft).forEach { assertTrue(it in 0..63 || it == 105) } }
     }
 
-    @Test fun `the last frame is free play and playing the proved keys finishes it without a mistake`() {
+    @Test fun `the last frame is free play and hints alone finish it, with no fallback and no mistake`() {
         assertTrue(frames.last().freePlay)
         var s = st(8)
-        // Stand-in for the hints until the teaching API exists: the independent checker's key, every turn.
-        var p = pos(s.start)
-        while (!ChessRules.isCheckmate(p)) {
-            val remaining = s.mateIn - s.played.size
-            assertTrue("a mate remains on the way", remaining >= 1)
-            val key = keys(p, attack(p, remaining)!!).first()
-            s = s.play(key)
-            p = ChessRules.play(p, ChessRules.parseUci(p, key)!!)
-            if (!ChessRules.isCheckmate(p) && s.mateIn - s.played.size > 0) {
-                p = ChessRules.play(p, ChessRules.defence(p, s.mateIn - s.played.size)!!)
-            }
+        var steps = 0
+        while (!s.solved) {
+            val d = ChessTeacher.teach(s)!!
+            assertTrue("no fallback", !d.fallback)
+            assertTrue("no mistake", !d.mistake)
+            s = d.apply(s) as ChessState
+            assertTrue(d.isReached(s))
+            assertTrue("stays within the moves", ++steps <= s.mateIn)
         }
         assertEquals(2, s.played.size)
-        assertTrue(ChessRules.isCheckmate(p))
     }
 
     @Test fun `the opponent's reply in the walkthrough is the derived one`() {
