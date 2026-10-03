@@ -11,16 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.ACHIEVEMENTS
 import com.joebywan.daybook.core.earnedAchievements
@@ -28,7 +27,7 @@ import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.platform.BackButton
 import kotlinx.datetime.LocalDate
 
-/** Every achievement: earned ones in full, the rest dimmed with their description so there is something to aim for. */
+/** Every achievement: earned ones as colour badges, the rest as silhouettes with their description so there is something to aim for. */
 @Composable
 fun AchievementsScreen(today: LocalDate, completions: List<Completion>, onBack: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
@@ -45,19 +44,29 @@ fun AchievementsScreen(today: LocalDate, completions: List<Completion>, onBack: 
                 )
             }
         }
-        LazyColumn(contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Definition order, so a badge keeps its place as more are earned.
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            contentPadding = PaddingValues(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             items(ACHIEVEMENTS, key = { it.id }) { a ->
                 val got = a.id in earned
-                Column(
-                    Modifier.fillMaxWidth().alpha(if (got) 1f else 0.5f)
-                        .clip(RoundedCornerShape(16.dp)).background(scheme.surface).padding(14.dp),
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    AchievementBadge(a.id, got, Modifier.fillMaxWidth())
                     Text(
                         a.title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.labelLarge,
                         color = if (got) scheme.primary else scheme.onSurface,
+                        textAlign = TextAlign.Center,
                     )
-                    Text(a.description, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+                    Text(
+                        a.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }

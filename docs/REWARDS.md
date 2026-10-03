@@ -60,6 +60,13 @@ history already satisfies one sees it earned in the list and is never told, so t
   until it is played (nothing is stored to keep them). Tests pass a fake id list.
 - Finished frame: see "The finished frame" below. `Praise.achievements` is the list this solve earned (id, title,
   description), in list order; the old single "Achievement: A +2" line is gone.
+- Badges (`ui/stats/AchievementBadge.kt`): drawn in Canvas, no assets. One medal-on-ribbons shape per
+  `AchievementCategory` (streak green, per-puzzle streak amber, coverage clay, milestone/top tier blue), centre glyph per
+  id from `BADGE_GLYPHS` (the number, a star or a crown; a test fails on an id without one). Unearned = a flat
+  low-contrast silhouette of the same outline, no glyph. The Achievements screen is a 3-column grid in definition order
+  (so badges keep their place), title and description under each. Home header has a rosette button (`MedalIcon`) that opens
+  it; back returns to wherever it was opened from (`Route.Achievements.fromHome`). The header buttons are 36dp and the
+  title 24sp so four fit at 360dp.
 - `streakOf` is only monotone when the new play is the newest day; an archive play can in rare cases split a run, so
   a streak achievement could in theory read unearned again. The diff never announces an already-earned one.
 

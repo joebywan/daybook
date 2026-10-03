@@ -29,6 +29,11 @@ class AchievementsTest {
         assertEquals(ACHIEVEMENTS.size, ACHIEVEMENTS.map { it.id }.toSet().size)
     }
 
+    @Test fun everyAchievementHasABadgeGlyph() {
+        for (a in ACHIEVEMENTS) assertTrue("no badge glyph for ${a.id}", a.id in com.joebywan.daybook.ui.stats.BADGE_GLYPHS)
+        assertEquals(ACHIEVEMENTS.size, com.joebywan.daybook.ui.stats.BADGE_GLYPHS.size)
+    }
+
     @Test fun firstSolveAndTopTier() {
         assertEquals(setOf("solves1"), new(emptyList(), c(null)))
         assertEquals(setOf("firstTop", "cleanTop"), new(listOf(c(null)), c(null, tier = Difficulty.EXPERT)))
