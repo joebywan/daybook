@@ -21,14 +21,19 @@ with Play's, so the **Update screenshots** workflow updates every store at once.
 
 ## 2. f-droid.org (entry ready, not submitted)
 
-F-Droid's main repo hosts only free software and builds from source, signing with **its own key**. Two consequences:
+F-Droid's main repo hosts only free software and builds from source.
 
 - **Licence:** the code is AGPL-3.0-or-later (`LICENSE`), which F-Droid accepts, and the entry says so.
   `docs/word-lists/LICENSE-SCOWL.txt` has to travel with the word lists.
-- **An f-droid.org install does not update over a Play or GitHub one** (different signature): Android refuses the
-  update, and the person has to uninstall first, losing their progress. Matching signatures would need reproducible
-  builds (`Binaries:` plus `AllowedAPKSigningKeys:` in the entry); not attempted, and it cannot be tried without
-  F-Droid's build server.
+- **Reproducible, so it updates in place.** The entry has `Binaries:` (the APK on our GitHub Release) and
+  `AllowedAPKSigningKeys:` (the release certificate). F-Droid builds the tag, compares its APK with ours byte for byte
+  apart from the signature, and if they match publishes *our* signed APK. Without that F-Droid signs with its own key
+  and Android refuses to update a Play or GitHub install with it. Checked 2026-10-03: `assembleRelease` of a release's
+  commit on a different machine and JDK than CI gave an APK identical to the release's in all 67 non-signature files.
+  **The tag must be the commit that was built.** `release.yml` once tagged the branch head instead (a later merge
+  landed while the run was queued), so v0.1.100 to v0.1.10x do not match their APKs and cannot verify; the entry
+  must name a release made after `--target "$GITHUB_SHA"` was added. Debug a mismatch by diffing the two APKs'
+  contents file by file (zip entries outside `META-INF/`), then `dexdump` for the dex.
 
 `com.joebywan.daybook.yml` is the entry to submit as a merge request to
 [gitlab.com/fdroid/fdroiddata](https://gitlab.com/fdroid/fdroiddata) (file `metadata/com.joebywan.daybook.yml`).

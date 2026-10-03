@@ -96,6 +96,9 @@ jobs:
           echo "apk=$NAME.apk" >> "$GITHUB_OUTPUT"
           echo "aab=$NAME.aab" >> "$GITHUB_OUTPUT"
 
+      # --target: without it the tag lands on the branch head when the release is created, which is a
+      # later commit whenever another merge arrived while this run was queued. The APK would then not
+      # match its tag's source, and F-Droid's reproducible-build check (docs/fdroid/README.md) fails.
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -104,6 +107,7 @@ jobs:
             "${{ steps.artifact.outputs.apk }}" \
             "${{ steps.artifact.outputs.aab }}" \
             --title "Daybook ${{ steps.version.outputs.name }}" \
+            --target "$GITHUB_SHA" \
             --generate-notes
 
       - name: Clean up the key
