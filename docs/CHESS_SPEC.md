@@ -85,6 +85,11 @@ at N = 2, 3, 4 over the shipped positions (median, p95, max) and write the numbe
 Search order matters (checks, captures, then quiet; at depth 1 only check moves can mate), but any speed-up must
 keep the *result* identical; the independent checker in tests proves it.
 
+`forcedMate` runs on a private mutable board (make/unmake, incremental Zobrist hash, a transposition table of mate / no-mate
+bounds, a cheap "may give check" filter so only candidate checks are made). `ChessSearchBenchTest` keeps the first
+implementation as an oracle and compares keys and N on shipped positions; `DAYBOOK_BENCH=1` runs the timing (Expert, desktop
+JVM, median / p95 / max ms: warm 8.4 / 123 / 420 before, 2.6 / 28 / 68 after; first 50 cold 11 / 73 / 158 before, 4.4 / 24 / 48 after).
+
 ## Data (`tools/chess/build.py`, `puzzles/ChessPositions.kt`)
 
 - Input: the Lichess puzzle CSV (`lichess_db_puzzle.csv.zst`, CC0, https://database.lichess.org/#puzzles), themes

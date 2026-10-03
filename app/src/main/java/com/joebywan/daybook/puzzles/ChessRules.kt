@@ -92,6 +92,8 @@ internal object ChessRules {
     private val KING = intArrayOf(1, 0, 1, 1, 0, 1, -1, 1, -1, 0, -1, -1, 0, -1, 1, -1)
     private val DIAG = intArrayOf(1, 1, -1, 1, -1, -1, 1, -1)
     private val ORTHO = intArrayOf(1, 0, 0, 1, -1, 0, 0, -1)
+    private val BOTH = arrayOf(DIAG, ORTHO)
+    private val PAWN_DF = intArrayOf(-1, 1)
 
     private fun from(m: Int) = m and 63
     private fun to(m: Int) = (m shr 6) and 63
@@ -195,9 +197,7 @@ internal object ChessRules {
     }
 
     /** Pseudo-legal moves of the piece on [s] appended to [out] from index [n]; returns the new count, sorted. */
-    private fun genPiece(p: ChessPosition, s: Int, out: IntArray, n0: Int): Int {
-        val b = p.sq
-        val white = p.whiteToMove
+    private fun genPiece(b: IntArray, white: Boolean, castling: Int, ep: Int, s: Int, out: IntArray, n0: Int, sorted: Boolean = true): Int {
         val sg = if (white) 1 else -1
         val v = b[s] * sg
         val f = s % 8
@@ -214,11 +214,11 @@ internal object ChessRules {
                         if (r == (if (white) 1 else 6) && b[(nr + sg) * 8 + f] == 0) out[n++] = mv(s, (nr + sg) * 8 + f)
                     }
                 }
-                for (d in -1..1 step 2) {
+                for (d in PAWN_DF) {
                     val nf = f + d
                     if (nf !in 0..7) continue
                     val t = nr * 8 + nf
-                    if (b[t] * sg < 0 || t == p.ep) {
+                    if (b[t] * sg < 0 || t == ep) {
                         if (last) for (pr in 5 downTo 2) out[n++] = mv(s, t, pr) else out[n++] = mv(s, t)
                     }
                 }
@@ -231,10 +231,10 @@ internal object ChessRules {
                     if (nf in 0..7 && nr in 0..7 && b[nr * 8 + nf] * sg <= 0) out[n++] = mv(s, nr * 8 + nf)
                     i += 2
                 }
-                if (v == 6) n = castles(p, s, out, n)
+                if (v == 6) n = castles(b, white, castling, s, out, n)
             }
             else -> {
-                for (dirs in arrayOf(DIAG, ORTHO)) {
+                for (dirs in BOTH) {
                     if (v == 3 && dirs === ORTHO || v == 4 && dirs === DIAG) continue
                     var i = 0
                     while (i < 8) {
@@ -251,7 +251,7 @@ internal object ChessRules {
             }
         }
         // insertion sort of this piece's moves by (to, promo order)
-        for (i in n0 + 1 until n) {
+        if (sorted) for (i in n0 + 1 until n) {
             val m = out[i]; val k = sortKey(m)
             var j = i - 1
             while (j >= n0 && sortKey(out[j]) > k) { out[j + 1] = out[j]; j-- }
@@ -260,21 +260,19 @@ internal object ChessRules {
         return n
     }
 
-    private fun castles(p: ChessPosition, s: Int, out: IntArray, n0: Int): Int {
-        val white = p.whiteToMove
+    private fun castles(b: IntArray, white: Boolean, castling: Int, s: Int, out: IntArray, n0: Int): Int {
         val base = if (white) 0 else 56
         if (s != base + 4) return n0
-        val b = p.sq
         val sg = if (white) 1 else -1
         var n = n0
         val kr = if (white) 1 else 4
         val qr = if (white) 2 else 8
         val rook = 4 * sg
-        if (p.castling and (kr or qr) == 0 || isAttacked(b, s, !white)) return n
-        if (p.castling and kr != 0 && b[base + 7] == rook && b[base + 5] == 0 && b[base + 6] == 0 &&
+        if (castling and (kr or qr) == 0 || isAttacked(b, s, !white)) return n
+        if (castling and kr != 0 && b[base + 7] == rook && b[base + 5] == 0 && b[base + 6] == 0 &&
             !isAttacked(b, base + 5, !white) && !isAttacked(b, base + 6, !white)
         ) out[n++] = mv(s, base + 6)
-        if (p.castling and qr != 0 && b[base] == rook && b[base + 1] == 0 && b[base + 2] == 0 && b[base + 3] == 0 &&
+        if (castling and qr != 0 && b[base] == rook && b[base + 1] == 0 && b[base + 2] == 0 && b[base + 3] == 0 &&
             !isAttacked(b, base + 3, !white) && !isAttacked(b, base + 2, !white)
         ) out[n++] = mv(s, base + 2)
         return n
@@ -285,7 +283,7 @@ internal object ChessRules {
         val b = p.sq
         val sg = if (p.whiteToMove) 1 else -1
         var n = 0
-        for (s in 0..63) if (b[s] * sg > 0) n = genPiece(p, s, buf, n)
+        for (s in 0..63) if (b[s] * sg > 0) n = genPiece(b, p.whiteToMove, p.castling, p.ep, s, buf, n)
         var k = 0
         for (i in 0 until n) {
             val child = apply(p, buf[i])
@@ -301,7 +299,7 @@ internal object ChessRules {
         val b = p.sq
         val sg = if (p.whiteToMove) 1 else -1
         for (s in 0..63) if (b[s] * sg > 0) {
-            val n = genPiece(p, s, buf, 0)
+            val n = genPiece(b, p.whiteToMove, p.castling, p.ep, s, buf, 0)
             for (i in 0 until n) if (!checked(apply(p, buf[i]).sq, p.whiteToMove)) return true
         }
         return false
@@ -310,7 +308,7 @@ internal object ChessRules {
     /** Applies a pseudo-legal move (no legality check). */
     private fun apply(p: ChessPosition, m: Int): ChessPosition {
         val b = p.sq.copyOf()
-        val f = from(m); val t = to(m); val pr = promo(m)
+        val f = from(m); val t = ChessRules.to(m); val pr = promo(m)
         val pc = b[f]
         val white = pc > 0
         val kind = if (pc < 0) -pc else pc
@@ -356,7 +354,7 @@ internal object ChessRules {
     fun parseUci(p: ChessPosition, s: String): Int? = legalMoves(p).firstOrNull { uci(it) == s }
 
     fun san(p: ChessPosition, m: Int): String {
-        val f = from(m); val t = to(m); val pc = p.sq[f]
+        val f = from(m); val t = ChessRules.to(m); val pc = p.sq[f]
         val kind = if (pc < 0) -pc else pc
         val sb = StringBuilder()
         val capture = p.sq[t] != 0 || (kind == 1 && f % 8 != t % 8)
@@ -397,93 +395,338 @@ internal object ChessRules {
 
     private const val DEFAULT_BUDGET = 3_000_000
 
-    private class Search(var budget: Int) {
+    // Zobrist keys from a fixed splitmix64 stream: piece (+6) * 64 + square, side, castling (16), ep file (8).
+    private const val Z_SIDE = 832
+    private const val Z_CASTLE = 833
+    private const val Z_EP = 849
+    private val Z = LongArray(857).also {
+        var x = 0x9E3779B97F4A7C15uL.toLong()
+        for (i in it.indices) {
+            x += -0x61c8864680b583ebL
+            var z = x
+            z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L
+            z = (z xor (z ushr 27)) * -0x6b2fb644ecceee15L
+            it[i] = z xor (z ushr 31)
+        }
+    }
+
+    /**
+     * The mate search's own mutable board: make/unmake instead of a new position per node, an incremental
+     * Zobrist hash, and a transposition table (bounds on "attacker mates within d", looked up only, never iterated).
+     * Squares and moves are walked in index order, so nothing here depends on a hash container's order.
+     */
+    private class Ctx(p: ChessPosition, n: Int, var budget: Int) {
+        val b = p.sq.copyOf()
+        var white = p.whiteToMove
+        var cast = p.castling
+        var ep = p.ep
+        var hash = 0L
+        val ks = intArrayOf(-1, -1) // king squares: white, black
+        var sp = 0
         var truncated = false
-        // Results of mates(p, d) by exact position. Looked up only, never iterated, so no hash order reaches a pick.
-        val memo = HashMap<String, Boolean>()
-        fun tick(): Boolean {
+        private val depth = 2 * n + 8
+        private val ttBits = (10 + 2 * n).coerceIn(12, 18)
+        private val uCast = IntArray(depth)
+        private val uEp = IntArray(depth)
+        private val uHash = LongArray(depth)
+        private val uMoved = IntArray(depth)
+        private val uCap = IntArray(depth)
+        private val killer = IntArray(depth)
+        private val bufs = arrayOfNulls<IntArray>(depth)
+        private val scratch = IntArray(256)
+        private val ttKey = LongArray(1 shl ttBits)
+        private val ttWin = ByteArray(1 shl ttBits) // smallest d proved to mate (127 none)
+        private val ttLose = ByteArray(1 shl ttBits) // largest d proved not to mate
+
+        init {
+            for (s in 0..63) {
+                val v = b[s]
+                if (v == 0) continue
+                hash = hash xor Z[(v + 6) * 64 + s]
+                if (v == 6) ks[0] = s else if (v == -6) ks[1] = s
+            }
+            if (white) hash = hash xor Z[Z_SIDE]
+            hash = hash xor Z[Z_CASTLE + cast]
+            if (ep >= 0) hash = hash xor Z[Z_EP + ep % 8]
+        }
+
+        private fun buf(): IntArray = bufs[sp] ?: IntArray(256).also { bufs[sp] = it }
+
+        private fun genAll(out: IntArray): Int {
+            val sg = if (white) 1 else -1
+            var n = 0
+            for (s in 0..63) if (b[s] * sg > 0) n = genPiece(b, white, cast, ep, s, out, n, false)
+            return n
+        }
+
+        fun make(m: Int) {
+            val f = from(m); val t = ChessRules.to(m); val pr = promo(m)
+            val pc = b[f]
+            val kind = if (pc < 0) -pc else pc
+            val cap = b[t]
+            val w = white
+            uCast[sp] = cast; uEp[sp] = ep; uHash[sp] = hash; uMoved[sp] = pc; uCap[sp] = cap
+            var h = hash xor Z[(pc + 6) * 64 + f] xor Z[Z_CASTLE + cast]
+            if (cap != 0) h = h xor Z[(cap + 6) * 64 + t]
+            if (ep >= 0) h = h xor Z[Z_EP + ep % 8]
+            var nep = -1
+            if (kind == 1) {
+                if (t == ep && cap == 0 && f % 8 != t % 8) {
+                    val cs = if (w) t - 8 else t + 8
+                    h = h xor Z[(b[cs] + 6) * 64 + cs]
+                    b[cs] = 0
+                }
+                if (t - f == 16 || f - t == 16) nep = (f + t) / 2
+            }
+            val np = if (pr != 0) (if (w) pr else -pr) else pc
+            b[t] = np; b[f] = 0
+            h = h xor Z[(np + 6) * 64 + t]
+            if (kind == 6) {
+                ks[if (w) 0 else 1] = t
+                if (t - f == 2 || f - t == 2) {
+                    val rf = if (t > f) t + 1 else t - 2
+                    val rt = if (t > f) t - 1 else t + 1
+                    val rk = b[rf]
+                    b[rt] = rk; b[rf] = 0
+                    h = h xor Z[(rk + 6) * 64 + rf] xor Z[(rk + 6) * 64 + rt]
+                }
+            }
+            var c = cast
+            for (s in 0..1) c = c and when (if (s == 0) f else t) {
+                0 -> 2.inv(); 7 -> 1.inv(); 4 -> 3.inv(); 56 -> 8.inv(); 63 -> 4.inv(); 60 -> 12.inv(); else -> -1
+            }
+            if (nep >= 0) {
+                val er = nep / 8; val ef = nep % 8
+                val opp = if (w) -1 else 1
+                val pr2 = if (w) er + 1 else er - 1
+                val ok = (ef > 0 && b[pr2 * 8 + ef - 1] == opp) || (ef < 7 && b[pr2 * 8 + ef + 1] == opp)
+                if (!ok) nep = -1
+            }
+            cast = c; ep = nep
+            h = h xor Z[Z_CASTLE + c] xor Z[Z_SIDE]
+            if (nep >= 0) h = h xor Z[Z_EP + nep % 8]
+            hash = h
+            white = !w
+            sp++
+        }
+
+        fun unmake(m: Int) {
+            sp--
+            white = !white
+            val f = from(m); val t = ChessRules.to(m)
+            val pc = uMoved[sp]
+            val cap = uCap[sp]
+            val kind = if (pc < 0) -pc else pc
+            b[f] = pc; b[t] = cap
+            if (kind == 1 && t == uEp[sp] && cap == 0 && f % 8 != t % 8) b[if (white) t - 8 else t + 8] = if (white) -1 else 1
+            if (kind == 6) {
+                ks[if (white) 0 else 1] = f
+                if (t - f == 2 || f - t == 2) {
+                    val rf = if (t > f) t + 1 else t - 2
+                    val rt = if (t > f) t - 1 else t + 1
+                    b[rf] = b[rt]; b[rt] = 0
+                }
+            }
+            cast = uCast[sp]; ep = uEp[sp]; hash = uHash[sp]
+        }
+
+        /** The side that just moved has left its own king attacked. */
+        fun exposed(): Boolean {
+            val k = ks[if (white) 1 else 0]
+            return k >= 0 && isAttacked(b, k, white)
+        }
+
+        /** The side to move is in check. */
+        fun inCheckNow(): Boolean {
+            val k = ks[if (white) 0 else 1]
+            return k >= 0 && isAttacked(b, k, !white)
+        }
+
+        fun hasLegal(): Boolean {
+            val n = genAll(scratch)
+            for (i in 0 until n) {
+                val m = scratch[i]
+                make(m)
+                val ok = !exposed()
+                unmake(m)
+                if (ok) return true
+            }
+            return false
+        }
+
+        private fun tick(): Boolean {
             if (--budget < 0) truncated = true
             return truncated
         }
-    }
 
-    private const val MEMO_CAP = 150_000
-
-    private fun memoKey(p: ChessPosition, d: Int): String {
-        val c = CharArray(68)
-        for (i in 0..63) c[i] = ('a' + p.sq[i] + 6)
-        c[64] = if (p.whiteToMove) 'w' else 'b'
-        c[65] = 'a' + p.castling
-        c[66] = 'a' + (p.ep + 1)
-        c[67] = '0' + d
-        return c.concatToString()
-    }
-
-    /** Can the side to move mate right now? Only a check can, so only moves that give one are looked at. */
-    private fun mateInOne(p: ChessPosition): Boolean {
-        val buf = IntArray(256)
-        val b = p.sq
-        val white = p.whiteToMove
-        val sg = if (white) 1 else -1
-        for (s in 0..63) if (b[s] * sg > 0) {
-            val n = genPiece(p, s, buf, 0)
-            for (i in 0 until n) {
-                val c = apply(p, buf[i])
-                if (checked(c.sq, !white) && !checked(c.sq, white) && !hasLegal(c)) return true
+        /**
+         * Could [m] give check? A cheap superset ([make] settles it): the piece lands where its kind attacks the enemy
+         * king (a slider needs a clear line, the square it leaves counted as clear), or leaving its square uncovers one of
+         * our sliders on the king, or the move is a castle, a promotion or an en passant capture. A move this says no to
+         * never gives check.
+         */
+        private fun mayCheck(m: Int): Boolean {
+            val ek = ks[if (white) 1 else 0]
+            if (ek < 0 || promo(m) != 0) return true
+            val f = from(m); val t = ChessRules.to(m)
+            val pc = b[f]
+            val kind = if (pc < 0) -pc else pc
+            if (kind == 6) return t - f == 2 || f - t == 2 || discovers(f, ek)
+            if (kind == 1 && t == ep) return true
+            if (discovers(f, ek)) return true
+            val df = abs(t % 8 - ek % 8)
+            val dr = abs(t / 8 - ek / 8)
+            return when (kind) {
+                1 -> df == 1 && ek / 8 - t / 8 == (if (white) 1 else -1)
+                2 -> df * dr == 2
+                3 -> df == dr && clear(t, ek, f)
+                4 -> (df == 0 || dr == 0) && clear(t, ek, f)
+                else -> (df == dr || df == 0 || dr == 0) && clear(t, ek, f)
             }
         }
-        return false
-    }
 
-    /** Attacker to move: can they mate within [d] of their own moves? Early exit; result ignored once truncated. */
-    private fun mates(p: ChessPosition, d: Int, s: Search): Boolean {
-        if (s.tick()) return false
-        if (d == 1) return mateInOne(p)
-        val key = memoKey(p, d)
-        s.memo[key]?.let { return it }
-        val moves = legalArray(p)
-        val n = moves.size
-        val kids = arrayOfNulls<ChessPosition>(n)
-        val rank = IntArray(n) // 0 check, 1 capture, 2 quiet
-        for (i in 0 until n) {
-            val c = apply(p, moves[i])
-            kids[i] = c
-            rank[i] = if (inCheck(c)) 0 else if (p.sq[to(moves[i])] != 0) 1 else 2
+        /** Squares strictly between [a] and [c] (lined up, a != c) are empty, [skip] counting as empty. */
+        private fun clear(a: Int, c: Int, skip: Int): Boolean {
+            val step = dirStep(a, c)
+            var s = a + step
+            while (s != c) { if (s != skip && b[s] != 0) return false; s += step }
+            return true
         }
-        var res = false
-        for (i in 0 until n) if (rank[i] == 0 && !hasLegal(kids[i]!!)) { res = true; break }
-        if (!res) loop@ for (pass in 0..2) for (i in 0 until n) {
-            if (rank[i] != pass) continue
-            if (allReplies(kids[i]!!, d - 1, s)) { res = true; break@loop }
-            if (s.truncated) return false
-        }
-        if (s.memo.size < MEMO_CAP) s.memo[key] = res
-        return res
-    }
 
-    /** Defender to move: every legal reply (there must be one) leaves the attacker a mate within [d]. */
-    private fun allReplies(p: ChessPosition, d: Int, s: Search): Boolean {
-        val replies = legalArray(p)
-        val n = replies.size
-        if (n == 0) return false // stalemate (mate is handled by the caller)
-        // checks first, then captures, then the rest: the likeliest refutations of an attempted mate
-        for (pass in 0..2) for (r in replies) {
-            val rk = if (inCheck(apply(p, r))) 0 else if (p.sq[to(r)] != 0) 1 else 2
-            if (rk != pass) continue
-            if (!mates(apply(p, r), d, s)) return false
+        private fun dirStep(a: Int, c: Int): Int {
+            val sf = if (c % 8 > a % 8) 1 else if (c % 8 < a % 8) -1 else 0
+            val sr = if (c / 8 > a / 8) 1 else if (c / 8 < a / 8) -1 else 0
+            return sr * 8 + sf
         }
-        return true
+
+        /** [f] is the only thing between the enemy king [ek] and one of our sliders that attacks along that line. */
+        private fun discovers(f: Int, ek: Int): Boolean {
+            val df = f % 8 - ek % 8
+            val dr = f / 8 - ek / 8
+            val diag = abs(df) == abs(dr)
+            if (!diag && df != 0 && dr != 0) return false
+            if (!clear(ek, f, -1)) return false
+            val sf = if (df > 0) 1 else if (df < 0) -1 else 0
+            val sr = if (dr > 0) 1 else if (dr < 0) -1 else 0
+            var nf = f % 8 + sf; var nr = f / 8 + sr
+            val sg = if (white) 1 else -1
+            while (nf in 0..7 && nr in 0..7) {
+                val v = b[nr * 8 + nf] * sg
+                if (v != 0) return v == 5 || (v == 3 && diag) || (v == 4 && !diag)
+                nf += sf; nr += sr
+            }
+            return false
+        }
+
+        /** Can the side to move mate right now? Only a check can, so only moves that may give one are looked at. */
+        private fun mateInOne(): Boolean {
+            val buf = buf()
+            val n = genAll(buf)
+            for (i in 0 until n) {
+                val m = buf[i]
+                if (!mayCheck(m)) continue
+                make(m)
+                val mate = !exposed() && inCheckNow() && !hasLegal()
+                unmake(m)
+                if (mate) return true
+            }
+            return false
+        }
+
+        /** Attacker to move: can they mate within [d] of their own moves? Result ignored once truncated. */
+        fun mates(d: Int): Boolean {
+            if (tick()) return false
+            val idx = (hash ushr (64 - ttBits)).toInt()
+            if (ttKey[idx] == hash) {
+                if (ttWin[idx] <= d) return true
+                if (ttLose[idx] >= d) return false
+            }
+            if (d == 1) {
+                val r1 = mateInOne()
+                store(idx, 1, r1)
+                return r1
+            }
+            val buf = buf()
+            val n = genAll(buf)
+            var k = 0
+            var res = false
+            for (i in 0 until n) { // ranked 0 check, 1 capture, 2 quiet; a mating check ends it. Legality is settled on make.
+                val m = buf[i]
+                var rank = if (b[ChessRules.to(m)] != 0) 1 else 2
+                if (mayCheck(m)) {
+                    make(m)
+                    if (exposed()) { unmake(m); continue }
+                    val chk = inCheckNow()
+                    val mated = chk && !hasLegal()
+                    unmake(m)
+                    if (mated) { res = true; break }
+                    if (chk) rank = 0
+                }
+                buf[k++] = m or (rank shl 16)
+            }
+            if (!res) loop@ for (pass in 0..2) for (i in 0 until k) {
+                if (buf[i] shr 16 != pass) continue
+                val m = buf[i] and 0xFFFF
+                make(m)
+                if (exposed()) { unmake(m); continue }
+                val ok = allReplies(d - 1)
+                unmake(m)
+                if (ok) { res = true; break@loop }
+                if (truncated) return false
+            }
+            if (!truncated) store(idx, d, res)
+            return res
+        }
+
+        private fun store(idx: Int, d: Int, res: Boolean) {
+            if (ttKey[idx] != hash) { ttKey[idx] = hash; ttWin[idx] = 127; ttLose[idx] = 0 }
+            if (res) { if (d < ttWin[idx]) ttWin[idx] = d.toByte() } else if (d > ttLose[idx]) ttLose[idx] = d.toByte()
+        }
+
+        /** Defender to move: every legal reply (there must be one) leaves the attacker a mate within [d]. */
+        fun allReplies(d: Int): Boolean {
+            val buf = buf()
+            val n = genAll(buf)
+            val kl = killer[sp] // the reply that refuted the last attempt at this depth: tried first among its kind
+            var k = 0
+            for (i in 0 until n) { // ranked: check, capture, quiet; each with the last refuter ahead of the rest
+                val m = buf[i]
+                var base = if (b[ChessRules.to(m)] != 0) 2 else 4
+                if (mayCheck(m)) { // exact only here; the rest are never checks, and are tested for legality on make
+                    make(m)
+                    val legal = !exposed()
+                    val chk = legal && inCheckNow()
+                    unmake(m)
+                    if (!legal) continue
+                    if (chk) base = 0
+                }
+                buf[k++] = m or ((base + (if (m == kl) 0 else 1)) shl 16)
+            }
+            var any = false
+            for (pass in 0..5) for (i in 0 until k) {
+                if (buf[i] shr 16 != pass) continue
+                val m = buf[i] and 0xFFFF
+                make(m)
+                if (exposed()) { unmake(m); continue }
+                any = true
+                val ok = mates(d)
+                unmake(m)
+                if (!ok) { killer[sp] = m; return false }
+            }
+            return any // no legal reply at all: stalemate (mate is the caller's case)
+        }
     }
 
     fun forcedMate(p: ChessPosition, n: Int, nodeBudget: Int = DEFAULT_BUDGET): Mate {
-        val s = Search(nodeBudget)
+        val cx = Ctx(p, n, nodeBudget)
         val moves = legalArray(p)
         for (d in 1..n) {
             val keys = ArrayList<Int>()
             for (m in moves) {
-                val c = apply(p, m)
-                val ok = if (inCheck(c) && !hasLegal(c)) true else d > 1 && allReplies(c, d - 1, s)
-                if (s.truncated) return Mate.Truncated
+                cx.make(m)
+                val ok = if (cx.inCheckNow() && !cx.hasLegal()) true else d > 1 && cx.allReplies(d - 1)
+                cx.unmake(m)
+                if (cx.truncated) return Mate.Truncated
                 if (ok) keys.add(m)
             }
             if (keys.isNotEmpty()) return Mate.Forced(keys, d)
