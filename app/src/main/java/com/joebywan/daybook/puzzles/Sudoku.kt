@@ -66,6 +66,7 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -162,7 +163,6 @@ private val PAD_GAP = 18.dp
 /** A note's size as a share of its cell's side, and how strongly it is inked. Tuned by rendering. */
 private const val NOTE_SIZE = 0.34f
 private const val NOTE_ALPHA = 0.85f
-private const val BOX_TINT = 0.10f
 
 object Sudoku : PuzzleType {
 
@@ -533,6 +533,8 @@ object Sudoku : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
+        val dark = BoardHues.isDark(scheme)
+        val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
         BoxWithConstraints(modifier) {
             // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
             // shorter box than it is wide should shrink rather than draw its bottom row outside.
@@ -548,7 +550,7 @@ object Sudoku : PuzzleType {
                             .padding(1.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(
-                                if (i == PREVIEW_SELECTED) Color(accent).copy(alpha = 0.40f)
+                                if (i == PREVIEW_SELECTED) BoardHues.mark(hueA).copy(alpha = 0.55f)
                                 else scheme.surfaceVariant
                             ),
                         contentAlignment = Alignment.Center,
@@ -558,7 +560,7 @@ object Sudoku : PuzzleType {
                                 text = PREVIEW_DIGITS[i].toString(),
                                 fontSize = (cell.value * 0.52f).sp,
                                 fontWeight = if (given) FontWeight.Bold else FontWeight.Normal,
-                                color = if (given) scheme.onSurface else Color(accent),
+                                color = if (given) scheme.onSurface else BoardHues.ink(hueB, dark),
                                 textAlign = TextAlign.Center,
                             )
                         }
@@ -575,6 +577,11 @@ object Sudoku : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as SudokuState
         val scheme = MaterialTheme.colorScheme
+        // Colour is derived per render from the solution, never stored (docs/COLOUR.md "Roles"): A is the
+        // structure (box tint, selection, pencil), B is the player's digits and their twins.
+        val dark = BoardHues.isDark(scheme)
+        val (hueA, hueB) = BoardHues.pair(s.solution.hashCode())
+        val boxTint = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.55f else 0.30f).compositeOver(scheme.surface)
         val conflicts = s.conflicts()
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
         val highlight = LocalBoardHighlight.current
@@ -641,11 +648,9 @@ object Sudoku : PuzzleType {
                                     // holding the same digit react.
                                     .background(
                                         when {
-                                            isSelected -> Color(accent).copy(alpha = 0.40f)
-                                            sameValue -> Color(accent).copy(alpha = 0.20f)
-                                            // onSurface over surface, not surfaceVariant: it moves toward the text colour, so the
-                                            // checker stays visible on any background, light or dark.
-                                            (r / 3 + c / 3) % 2 == 0 -> scheme.onSurface.copy(alpha = BOX_TINT).compositeOver(scheme.surface)
+                                            isSelected -> BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.40f).compositeOver(scheme.surface)
+                                            sameValue -> BoardHues.fill(hueB, dark).copy(alpha = 0.8f).compositeOver(scheme.surface)
+                                            (r / 3 + c / 3) % 2 == 0 -> boxTint
                                             else -> scheme.surface
                                         }
                                     )
@@ -688,7 +693,7 @@ object Sudoku : PuzzleType {
                                         color = when {
                                             i in conflicts -> scheme.error
                                             s.givens[i] -> scheme.onSurface
-                                            else -> Color(accent)
+                                            else -> BoardHues.ink(hueB, dark)
                                         },
                                         textAlign = TextAlign.Center,
                                     )
@@ -721,7 +726,7 @@ object Sudoku : PuzzleType {
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
                                     when {
-                                        pencilled -> Color(accent).copy(alpha = 0.40f)
+                                        pencilled -> BoardHues.mark(hueA).copy(alpha = 0.40f)
                                         remaining == 0 -> scheme.surfaceVariant
                                         else -> scheme.surface
                                     }
@@ -750,7 +755,7 @@ object Sudoku : PuzzleType {
                             .highlightAnchor(SudokuTeacher.NOTES_KEY)
                             .ring(highlight.look(SudokuTeacher.NOTES_KEY, dims = false), glow, pulse, corner = 10f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (notesMode) Color(accent) else scheme.surface)
+                            .background(if (notesMode) BoardHues.mark(hueA) else scheme.surface)
                             .clickable(enabled = interactive) { notesMode = !notesMode }
                             .semantics { contentDescription = if (notesMode) "Notes on" else "Notes off" },
                         contentAlignment = Alignment.Center,
