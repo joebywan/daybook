@@ -119,6 +119,11 @@ motif). `id = "inequality"` is hashed into every seed: never rename it.
 - **No pencil marks** (a 6x6 is small; Sudoku's notes would be the template if asked). The selected square is in the state (as Sudoku's),
   so `withoutSelection` is overridden. Highlight indices: squares `0 until n*n`, the k-th sign `n*n + k`, digit keys `1000 + d`.
 
+## Colour
+
+Boards were coming out beige and one-note. The shared hue family, the three layers (scheme / accent / content hues)
+and the rules are in `docs/COLOUR.md`; read it before choosing colours for a new board.
+
 ## Rules that keep being relearned
 
 **Never ship a board the generator has not proved.** Kings, LITS, Mosaic and Shikaku each had a
