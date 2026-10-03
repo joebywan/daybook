@@ -641,13 +641,13 @@ private fun NextTile(option: NextOption, accent: Color, modifier: Modifier, onCl
         modifier
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (done) scheme.surfaceVariant else accent.copy(alpha = 0.22f))
+            .background(if (done) scheme.primary else accent.copy(alpha = 0.22f))
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(option.label, style = MaterialTheme.typography.titleSmall, color = scheme.onSurface, maxLines = 1)
+        Text(option.label, style = MaterialTheme.typography.titleSmall, color = if (done) scheme.onPrimary else scheme.onSurface, maxLines = 1)
         option.difficulty?.let {
             Text(it.label, style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, maxLines = 1)
         }
