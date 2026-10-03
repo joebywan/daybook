@@ -297,12 +297,12 @@ class TowerTeachingTest {
 
     @Test
     fun `a colour a nothing-scoring guess ruled out is flagged, with that guess named`() {
-        // Guess 1 (purple x4) scores nothing against green red blue yellow.
+        // Guess 1 (mint x4) scores nothing against brown blue gold teal.
         val s = board(listOf(listOf(4, 4, 4, 4)), listOf(-1, 4, -1, -1))
         val d = Tower.teach(s)!!
         assertTrue(d.mistake)
         assertEquals(setOf(TowerTeacher.CURRENT + 1), d.targets)
-        assertTrue(d.explanation, d.explanation.startsWith("Guess 1 scored nothing, so purple isn't in the code."))
+        assertTrue(d.explanation, d.explanation.startsWith("Guess 1 scored nothing, so mint isn't in the code."))
         assertFalse(d.isReached(s))
         assertTrue("overwriting the peg fixes it", d.isReached(s.withPeg(1, 0)))
         assertEquals(-1, (d.apply(s) as TowerState).current[1])
@@ -310,12 +310,12 @@ class TowerTeachingTest {
 
     @Test
     fun `a peg against a no-filled-pip guess is flagged in that slot`() {
-        // red blue green yellow against green red blue yellow is 1 filled, so use a 0-filled one.
+        // no peg in place against brown blue gold teal, all four colours present
         val g = listOf(0, 2, 3, 1) // vs 2 0 1 3: no exact, all four colours present
         val s = board(listOf(g), listOf(0, -1, -1, -1))
         val d = Tower.teach(s)!!
         assertTrue(d.mistake)
-        assertTrue(d.explanation, d.explanation.startsWith("Guess 1 had red in slot 1 and no filled pips"))
+        assertTrue(d.explanation, d.explanation.startsWith("Guess 1 had blue in slot 1 and no filled pips"))
     }
 
     @Test
@@ -368,11 +368,11 @@ class TowerTeachingTest {
         assertEquals(7, frames.size)
         listOf(0, 1, 4).forEach { assertEquals("frame ${it + 1} should be Next-only", null, frames[it].accepts) }
 
-        // 3: blue swatch, then slot 1 — the board emits one withPeg.
+        // 3: gold swatch, then slot 1 — the board emits one withPeg.
         val change = frames[2].accepts!!
         assertTrue(change(frameBoard(2).withPeg(0, 1)))
-        assertFalse("red is selected by default; tapping without choosing blue", change(frameBoard(2).withPeg(0, 0)))
-        assertFalse("blue in the wrong slot", change(frameBoard(2).withPeg(1, 1)))
+        assertFalse("blue is selected by default; tapping without choosing gold", change(frameBoard(2).withPeg(0, 0)))
+        assertFalse("gold in the wrong slot", change(frameBoard(2).withPeg(1, 1)))
         assertEquals(frameBoard(3).current, frameBoard(2).withPeg(0, 1).current)
 
         // 4: Submit.
@@ -382,14 +382,14 @@ class TowerTeachingTest {
         assertEquals(frameBoard(4).guesses, frameBoard(3).submit().guesses)
         assertEquals(Feedback(2, 0), frameBoard(4).score(frameBoard(4).guesses[2]))
 
-        // 6: green swatch, then slot 1.
+        // 6: brown swatch, then slot 1.
         val green = frames[5].accepts!!
         assertTrue(green(frameBoard(5).withPeg(0, 2)))
         assertFalse(green(frameBoard(5).withPeg(0, 1)))
         assertFalse(green(frameBoard(5).withPeg(1, 2)))
         assertEquals(frameBoard(6).current, frameBoard(5).withPeg(0, 2).current)
 
-        // Frame 5's claim, checked: every code the scores allow has green in slot 1.
+        // Frame 5's claim, checked: every code the scores allow has brown in slot 1.
         assertTrue(alive(frameBoard(4)).all { it[0] == 2 })
 
         // 7: free play, finishable by hints without the fallback, and the hints are the named facts.
