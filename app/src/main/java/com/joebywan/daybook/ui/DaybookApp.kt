@@ -1,6 +1,7 @@
 package com.joebywan.daybook.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -23,6 +24,7 @@ import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.platform.prepareBoards
 import com.joebywan.daybook.platform.rememberKeyValueStore
 import com.joebywan.daybook.platform.rememberSolveSoundPlayer
+import com.joebywan.daybook.ui.tutorial.LocalChime
 import com.joebywan.daybook.ui.archive.ArchiveScreen
 import com.joebywan.daybook.ui.home.HomeScreen
 import com.joebywan.daybook.ui.home.LaunchMode
@@ -218,6 +220,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
                     DailySeed.randomSeed(puzzle.id, current.difficulty, current.nonce)
                 }
                 val gameKey = savedGameKey(puzzle.id, current.difficulty, seed)
+                CompositionLocalProvider(LocalChime provides playSolveSound) {
                 PlayScreen(
                     puzzle = puzzle,
                     difficulty = current.difficulty,
@@ -263,6 +266,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
                     showTimer = showTimer,
                     onBack = { route = Route.Home },
                 )
+                }
             }
         }
     }
