@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.joebywan.daybook.core.Streak
@@ -178,19 +179,21 @@ private fun Header(
         Spacer(Modifier.width(10.dp))
         Text(
             "Daybook",
-            style = MaterialTheme.typography.displaySmall,
+            // 24sp, one line: with four buttons a 360dp-wide phone wrapped the 30sp name.
+            style = MaterialTheme.typography.displaySmall.copy(fontSize = 24.sp),
+            maxLines = 1,
             color = scheme.onBackground,
             modifier = Modifier.weight(1f),
         )
         HeaderButton(Icons.Default.History, "Archive", onArchive)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
         HeaderButton(Icons.Default.InsertChart, "Statistics", onStats)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
         Box(
-            Modifier.size(40.dp).clip(CircleShape).background(scheme.surface).clickable(onClick = onAchievements),
+            Modifier.size(HeaderButtonSize).clip(CircleShape).background(scheme.surface).clickable(onClick = onAchievements),
             contentAlignment = Alignment.Center,
-        ) { MedalIcon(Modifier.size(24.dp), scheme.onSurfaceVariant, "Achievements") }
-        Spacer(Modifier.width(8.dp))
+        ) { MedalIcon(Modifier.size(22.dp), scheme.onSurfaceVariant, "Achievements") }
+        Spacer(Modifier.width(6.dp))
         HeaderButton(Icons.Default.Settings, "Settings", onSettings)
     }
     Row(
@@ -207,18 +210,21 @@ private fun Header(
     }
 }
 
+/** Four of them share the header with the title, so each is a little under the 40dp the three used to be. */
+private val HeaderButtonSize = 36.dp
+
 @Composable
 private fun HeaderButton(icon: ImageVector, label: String, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Box(
         Modifier
-            .size(40.dp)
+            .size(HeaderButtonSize)
             .clip(CircleShape)
             .background(scheme.surface)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, label, tint = scheme.onSurfaceVariant)
+        Icon(icon, label, tint = scheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
     }
 }
 

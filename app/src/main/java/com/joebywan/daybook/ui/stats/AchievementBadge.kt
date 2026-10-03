@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -58,7 +59,8 @@ fun AchievementBadge(id: String, earned: Boolean, modifier: Modifier = Modifier)
     val fill = colourOf(a.category, dark)
     val glyph = BADGE_GLYPHS.getValue(id)
     val ink = if (fill.luminance() > 0.35f) Color(0xFF11201C) else Color.White
-    val sil = scheme.onSurface.copy(alpha = 0.14f)
+    // Opaque, so the ribbon and the disc read as one flat shape where they overlap.
+    val sil = scheme.onSurface.copy(alpha = 0.14f).compositeOver(scheme.background)
     BoxWithConstraints(
         modifier.aspectRatio(0.8f).semantics { contentDescription = if (earned) a.title else "Locked achievement" },
         contentAlignment = Alignment.TopCenter,
