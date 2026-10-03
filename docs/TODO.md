@@ -110,6 +110,8 @@ below have a famous branded version; use the descriptive name).
   toolbar do not move. Static renders of all three tiers matched pixel for pixel across both browsers and both schemes.
   Not done: headless WebKit ignores hand-built TouchEvents, so its touch slop on a 15x15 sweep is unchecked (only a real
   iPhone or the emulator can), and the 5x5 finish frame's cover of the last rows at 375x537 is by design.
+- [ ] **Recapture the README home screenshot.** The Nonogram tile (and its board) now use the per-board palette instead of flat
+  blue, so `docs/screenshots/home.png` is stale until it is retaken on a clean emulator install.
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
   size-by-size retune; measure the pass rate before trying again.

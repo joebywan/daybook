@@ -248,4 +248,24 @@ class NonogramRulesTest {
         assertEquals(NonogramLogic.FILLED, s.sweepMark(1, NonogramLogic.FILLED))
         assertEquals(NonogramLogic.CROSSED, s.sweepMark(0, NonogramLogic.CROSSED))
     }
+
+    // ---- impossible lines ---------------------------------------------------------------------
+
+    @Test
+    fun `a line is impossible exactly when no arrangement of its clue covers the filled squares`() {
+        val n = 7
+        fun bits(m: Int) = BooleanArray(n) { m shr it and 1 == 1 }
+        // Every clue that fits in seven squares is the clue of some arrangement; each arrangement is a layout of it.
+        val layouts = (0 until (1 shl n)).groupBy({ NonogramLogic.runs(bits(it)) }, { bits(it) })
+        val indices = List(n) { it }
+        for ((clue, arrangements) in layouts) {
+            for (m in 0 until (1 shl n)) {
+                val filled = bits(m)
+                // Crosses on the empty squares must change nothing.
+                val cells = filled.joinToString("") { if (it) "#" else if (m % 2 == 0) "x" else "." }
+                val covered = arrangements.any { a -> filled.indices.all { !filled[it] || a[it] } }
+                assertEquals("$clue vs $cells", !covered, NonogramLogic.lineImpossible(clue, cells, indices))
+            }
+        }
+    }
 }
