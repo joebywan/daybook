@@ -78,4 +78,4 @@ dark fills above sit at lightness 0.30 against the surface's 0.14: keep that gap
 ## Status
 
 The table and roles are implemented in `ui/theme/BoardHues.kt` (`fill`/`ink`/`mark`, `contentHues(n)`, `isDark`, `HUE_PAIRS`,
-`pair`), pinned by `BoardHuesTest`. Adopted: Inequality. Adopting the rest board by board is in `docs/TODO.md`.
+`pair`), pinned by `BoardHuesTest`. Adopted: Inequality, Sudoku. Adopting the rest board by board is in `docs/TODO.md`.
