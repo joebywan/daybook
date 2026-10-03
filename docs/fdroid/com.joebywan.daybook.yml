@@ -13,8 +13,7 @@ AutoName: Daybook
 
 RepoType: git
 Repo: https://github.com/joebywan/daybook.git
-Binaries: 
-  https://github.com/joebywan/daybook/releases/download/v%v/daybook-%v.apk
+Binaries: https://github.com/joebywan/daybook/releases/download/v%v/daybook-%v.apk
 
 Builds:
   - versionName: 0.1.104
@@ -27,12 +26,10 @@ Builds:
       - web
     prebuild:
       - sed -i -e '/include(":web")/d' ../settings.gradle.kts
-      - "sed -i -e 's/\"DAYBOOK_VERSION_CODE\") ?: \"1\"/\"DAYBOOK_VERSION_CODE\"\
-        ) ?: \"$$VERCODE$$\"/' -e 's/\"DAYBOOK_VERSION_NAME\") ?: \"0.1.0\"/\"DAYBOOK_VERSION_NAME\"\
-        ) ?: \"$$VERSION$$\"/' build.gradle.kts"
+      - sed -i 's/\(VERSION_CODE.\{6\}\).1./\1\x22$$VERCODE$$\x22/' build.gradle.kts
+      - sed -i 's/\(VERSION_NAME.\{6\}\).0.1.0./\1\x22$$VERSION$$\x22/' build.gradle.kts
 
-AllowedAPKSigningKeys: 
-  70248a01bfc43a99422ce6be6c470146531ead24e96acd288d5df81ac18176f4
+AllowedAPKSigningKeys: 70248a01bfc43a99422ce6be6c470146531ead24e96acd288d5df81ac18176f4
 
 AutoUpdateMode: Version v%v
 UpdateCheckMode: HTTP
