@@ -615,6 +615,9 @@ private fun FinishedFrame(
             style = MaterialTheme.typography.bodyMedium,
             color = scheme.onSurface,
         )
+        praise.achievementLine?.let {
+            Text(it, style = MaterialTheme.typography.titleSmall, color = accent, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+        }
         praise.lines.forEach {
             Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }

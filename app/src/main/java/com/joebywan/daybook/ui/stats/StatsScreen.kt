@@ -1,6 +1,7 @@
 package com.joebywan.daybook.ui.stats
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
@@ -25,7 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.ACHIEVEMENTS
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.earnedAchievements
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
@@ -43,6 +46,7 @@ import kotlinx.datetime.LocalDate
 fun StatsScreen(
     today: LocalDate,
     completions: List<Completion>,
+    onAchievements: () -> Unit,
     onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -86,6 +90,18 @@ fun StatsScreen(
                         Modifier.weight(1f),
                     )
                     Tile("Best", streak.best.toString(), Modifier.weight(1f))
+                }
+            }
+
+            item {
+                val got = earnedAchievements(completions, today).size
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(scheme.surface)
+                        .clickable(onClick = onAchievements).padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Achievements", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface, modifier = Modifier.weight(1f))
+                    Text("$got of ${ACHIEVEMENTS.size}", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
                 }
             }
 
