@@ -74,7 +74,7 @@ import kotlinx.datetime.LocalDate
 private const val HEADER_DATE = "EEEE d MMMM"
 
 /**
- * Twelve puzzles at three columns is four rows, and four rows of tiles plus a header and the
+ * Twelve puzzles at three columns is four rows (fifteen is five full ones), and four rows of tiles plus a header and the
  * launch options is what fits a phone in one screenful. That is the entire reason this screen is
  * a grid: choosing a puzzle should never involve scrolling to find it. The thirteenth puzzle opens
  * a fifth, one-tile row, which scrolls into view on a short screen.
