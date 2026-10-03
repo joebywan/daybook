@@ -45,6 +45,8 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
 
+      - run: sudo apt-get install -y --no-install-recommends imagemagick   # the README copies are resized with it
+
       # google_apis, not google_apis_playstore: only the former lets capture.sh `adb root` to set the date.
       - name: Capture
         uses: reactivecircus/android-emulator-runner@v2
