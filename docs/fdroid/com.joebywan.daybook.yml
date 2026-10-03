@@ -2,7 +2,7 @@
 # Not read by anything here; see docs/fdroid/README.md for how it is submitted and why it looks like this.
 Categories:
   - Games
-License: FIXME-the-owner-has-not-chosen-one
+License: AGPL-3.0-or-later
 AuthorName: Joseph Howe
 WebSite: https://knowhowit.com.au/daybook/
 SourceCode: https://github.com/joebywan/daybook

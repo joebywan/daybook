@@ -19,13 +19,12 @@ with Play's, so the **Update screenshots** workflow updates every store at once.
 - No new secrets. The workflow uses the existing `ANDROID_KEYSTORE_*` ones.
 - The repo's own page (`.../fdroid/repo/index.html`) shows a QR code and the fingerprint to hand out.
 
-## 2. f-droid.org (not submitted; blocked on a licence)
+## 2. f-droid.org (entry ready, not submitted)
 
 F-Droid's main repo hosts only free software and builds from source, signing with **its own key**. Two consequences:
 
-- **It needs a licence.** The repo has none, so it is all rights reserved and F-Droid will refuse it. Choosing one is
-  the owner's call (it covers the code, and `docs/word-lists/LICENSE-SCOWL.txt` has to travel with the word lists).
-  Put it in `LICENSE`, fill `License:` in `com.joebywan.daybook.yml` here, and the metadata is ready.
+- **Licence:** the code is AGPL-3.0-or-later (`LICENSE`), which F-Droid accepts, and the entry says so.
+  `docs/word-lists/LICENSE-SCOWL.txt` has to travel with the word lists.
 - **An f-droid.org install does not update over a Play or GitHub one** (different signature): Android refuses the
   update, and the person has to uninstall first, losing their progress. Matching signatures would need reproducible
   builds (`Binaries:` plus `AllowedAPKSigningKeys:` in the entry); not attempted, and it cannot be tried without

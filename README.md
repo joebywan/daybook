@@ -281,6 +281,10 @@ and major PRs get the same build but are merged by hand. A `RENOVATE_TOKEN` PAT 
 App) remains an optional alternative: PRs then trigger CI themselves and the script finds nothing
 to do.
 
+## Licence
+
+AGPL-3.0-or-later; see [`LICENSE`](LICENSE). The word lists carry their own notice, [`docs/word-lists/LICENSE-SCOWL.txt`](docs/word-lists/LICENSE-SCOWL.txt).
+
 ## Not done yet
 
 The maintained list is [`docs/TODO.md`](docs/TODO.md); the headlines:
