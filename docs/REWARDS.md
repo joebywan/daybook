@@ -46,6 +46,14 @@ in place of the badge when lapsed; best streak is on the stats screen (the home 
   `Deduction` are test identifiers, not prose, so the wording is generic), "No hints needed."
 - No new sound: the existing solve chime plays, muted by the existing setting. A milestone fanfare is not done.
 
+## Calendar (`ui/stats/StreakCalendar.kt`)
+
+A month grid card on the stats screen, under the tiles: filled circle = day played, ring = a missed day the
+streak absorbed (`forgivenDays` in `core/Streak.kt`, from the same walk as `streakOf`), outline = today, dim =
+future. Monday-first; previous/next stop at the first month with a play and the current one. Decision: the miss
+that ended a run is not ringed, but earlier misses of a run that later died stay ringed, because they were
+forgiven when they happened. `StreakCalendar(played, today)` takes the played-day set, so other screens can reuse it.
+
 ## Claim to keep honest
 
 Puzzles making you better at other things is weakly supported. Claim the habit and the satisfaction, not "makes you smarter".

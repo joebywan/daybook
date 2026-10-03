@@ -28,12 +28,11 @@ from a measurement or review, so you can check it is still true.
 
 ## Rewards
 
-Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`) are done; the rest are separate PRs.
+Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`) and 5 (calendar) are done; the rest are separate PRs.
 
 - [ ] **4. Achievements.** Streak lengths (overall and per puzzle), all difficulties of one puzzle's daily, every puzzle
   in one day (computed from `PuzzleRegistry`, so it scales), milestones (first Expert, 30 days played, one of each
   type). Own fanfare, queued one per solve. Needs 1. *L.*
-- [ ] **5. Calendar view.** Month grid of days played, with a quiet marker on days that kept a streak alive. Needs 1. *M.*
 - [ ] **6. Small daily variety.** A featured puzzle or a one-line note after solving (technique name or puzzle fact). *S.*
 
 ## Needs a real iPhone
@@ -122,6 +121,8 @@ below have a famous branded version; use the descriptive name).
   toolbar do not move. Static renders of all three tiers matched pixel for pixel across both browsers and both schemes.
   Not done: headless WebKit ignores hand-built TouchEvents, so its touch slop on a 15x15 sweep is unchecked (only a real
   iPhone or the emulator can), and the 5x5 finish frame's cover of the last rows at 375x537 is by design.
+- [ ] **Recapture the README home screenshot.** The Nonogram tile (and its board) now use the per-board palette instead of flat
+  blue, so `docs/screenshots/home.png` is stale until it is retaken on a clean emulator install.
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
   size-by-size retune; measure the pass rate before trying again.

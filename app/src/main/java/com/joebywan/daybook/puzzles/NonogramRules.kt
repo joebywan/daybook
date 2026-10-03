@@ -229,6 +229,14 @@ internal object NonogramLogic {
         return out
     }
 
+    /**
+     * True when no legal layout of [clue] holds the squares filled at [indices]: too many, a run
+     * longer than any clue, or two runs with no gap. Crosses are notes and are ignored, and the
+     * stored picture is never consulted, so a line that is merely unfinished is never impossible.
+     */
+    fun lineImpossible(clue: List<Int>, cells: String, indices: List<Int>): Boolean =
+        forced(clue, IntArray(indices.size) { if (cells[indices[it]] == FILLED) FILL else UNKNOWN }) == null
+
     /** What every layout of [clue] agrees on in a blank line of [n] squares: the overlap of its slides. */
     fun forcedOnBlank(clue: List<Int>, n: Int): IntArray = forced(clue, IntArray(n))!!
 

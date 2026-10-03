@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Streak
+import com.joebywan.daybook.core.forgivenDays
 import com.joebywan.daybook.core.streakOf
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
@@ -107,6 +108,27 @@ class StreakTest {
             // at risk: alive, today still open, and an unplayed today would be the fatal miss
             val risky = !playedToday && cur > 0 && oracle(flags + false).first == 0
             assertEquals("$all", risky, s.atRisk)
+        }
+    }
+
+    @Test
+    fun `forgiven days agree with an independent model`() {
+        val rnd = Random(11)
+        repeat(3000) {
+            val flags = List(rnd.nextInt(1, 60)) { _ -> rnd.nextDouble() < 0.2 + 0.8 * rnd.nextDouble() }
+            // Today is the day after the last flag and unplayed, so every flag is a settled day. Model: a
+            // miss inside a run is forgiven if the run survives that day, and stays forgiven if it dies later.
+            var run = mutableListOf<Boolean>()
+            val missed = mutableSetOf<Int>()
+            flags.forEachIndexed { i, played ->
+                if (run.isEmpty() && !played) return@forEachIndexed
+                run.add(played)
+                if (run.takeLast(7).count { !it } > 2) {
+                    run = mutableListOf()
+                } else if (!played) missed.add(i)
+            }
+            val days = flags.indices.filter { flags[it] }.map { day(it) }.toSet()
+            assertEquals("$flags", missed.map { day(it) }.toSet(), forgivenDays(days, day(flags.size)))
         }
     }
 
