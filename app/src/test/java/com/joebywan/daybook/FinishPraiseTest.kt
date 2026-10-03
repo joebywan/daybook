@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.puzzleNote
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.ui.play.finishPraise
 import kotlinx.datetime.LocalDate
@@ -73,7 +74,7 @@ class FinishPraiseTest {
 
     @Test fun hintsNeverScoldAndNoHintsIsPraised() {
         assertTrue(run(earlier, c(null, 100, hints = 3)).lines.single().startsWith("Hints are how a move sticks"))
-        assertEquals(listOf("No hints needed."), run(earlier, c(null, 100, hints = 0)).lines)
+        assertEquals(listOf(puzzleNote("nonogram", today.toEpochDays())), run(earlier, c(null, 100, hints = 0)).lines)
     }
 
     @Test fun longSolvesGetPerseverance() {

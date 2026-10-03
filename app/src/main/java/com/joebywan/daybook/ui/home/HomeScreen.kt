@@ -14,6 +14,16 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -134,6 +144,7 @@ fun HomeScreen(
             // about the game a tile is about to start. The tiles keep their marks-shaped space
             // either way, so switching mode never shuffles the grid under a finger.
             doneToday = if (mode == LaunchMode.DAILY) doneToday else emptySet(),
+            pick = PuzzleRegistry.featured(today.toEpochDays()).id,
             onLaunch = onLaunch,
         )
     }
@@ -235,6 +246,7 @@ private fun StreakBadge(streak: Streak) {
 private fun PuzzleGrid(
     difficulty: Difficulty,
     doneToday: Set<Pair<String, Difficulty>>,
+    pick: String,
     onLaunch: (String) -> Unit,
 ) {
     BoxWithConstraints {
@@ -253,6 +265,7 @@ private fun PuzzleGrid(
                             puzzle = puzzle,
                             difficulty = difficulty,
                             doneToday = doneToday,
+                            isPick = puzzle.id == pick,
                             previewSize = previewSize,
                             onLaunch = onLaunch,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -271,6 +284,7 @@ private fun PuzzleTile(
     puzzle: PuzzleType,
     difficulty: Difficulty,
     doneToday: Set<Pair<String, Difficulty>>,
+    isPick: Boolean,
     previewSize: Dp,
     onLaunch: (String) -> Unit,
     modifier: Modifier,
@@ -283,6 +297,8 @@ private fun PuzzleTile(
         modifier
             .clip(RoundedCornerShape(18.dp))
             .background(if (solved) accent.copy(alpha = 0.20f) else scheme.surface)
+            // Today's pick: a thin ring and a star. A border draws inside the tile, so nothing moves.
+            .then(if (isPick) Modifier.border(1.5.dp, accent.copy(alpha = 0.7f), RoundedCornerShape(18.dp)) else Modifier)
             .clickable(onClick = { onLaunch(puzzle.id) })
             .padding(TilePadding),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -293,6 +309,22 @@ private fun PuzzleTile(
                     .size(previewSize)
                     .clip(RoundedCornerShape(10.dp))
             )
+            if (isPick) {
+                // Drawn, not an icon: the core icon set has no star.
+                Canvas(Modifier.align(Alignment.TopStart).padding(2.dp).size(14.dp).semantics { contentDescription = "Today's pick" }) {
+                    val c = center
+                    val path = Path()
+                    for (i in 0 until 10) {
+                        val r = if (i % 2 == 0) size.minDimension / 2 else size.minDimension / 5
+                        val a = -PI / 2 + i * PI / 5
+                        val pt = Offset(c.x + (r * cos(a)).toFloat(), c.y + (r * sin(a)).toFloat())
+                        if (i == 0) path.moveTo(pt.x, pt.y) else path.lineTo(pt.x, pt.y)
+                    }
+                    path.close()
+                    drawPath(path, scheme.onSurface, style = Stroke(5f))
+                    drawPath(path, scheme.surface)
+                }
+            }
             if (solved) {
                 Box(
                     Modifier.size(16.dp).clip(CircleShape).background(scheme.surface),
