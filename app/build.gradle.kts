@@ -92,6 +92,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // AGP otherwise appends an encrypted "dependency metadata" block to the APK's signing block, meant
+    // for Google Play. F-Droid's scanner rejects any APK with an extra signing block, and nothing here
+    // reads it; the same setting applies to the bundle so both artifacts stay alike.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
 }
 
 // AGP 9 compiles Kotlin itself (built-in Kotlin), so there is no kotlin-android plugin; this is the
