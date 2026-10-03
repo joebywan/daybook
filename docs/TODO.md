@@ -19,6 +19,11 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
+- [ ] **Mate: listing and small polish.** Add the Play/F-Droid listing text (`docs/play/LISTING.md`, `fastlane/metadata/`). The hint
+  popover can cover the rank under it (on a flipped Expert board it hid the player's king); the promotion button's glow ring is clipped
+  at the rounded corners; the home grid's fifth row (where Mate sits) needs a scroll. Not yet exercised: a promotion that is a later
+  move rather than the first. *S.*
+
 ## Rewards
 
 Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) 5 (calendar) and 6 (daily variety) are done; the rest are separate PRs.
@@ -108,8 +113,6 @@ below have a famous branded version; use the descriptive name).
   toolbar do not move. Static renders of all three tiers matched pixel for pixel across both browsers and both schemes.
   Not done: headless WebKit ignores hand-built TouchEvents, so its touch slop on a 15x15 sweep is unchecked (only a real
   iPhone or the emulator can), and the 5x5 finish frame's cover of the last rows at 375x537 is by design.
-- [ ] **Recapture the README home screenshot.** The Nonogram tile (and its board) now use the per-board palette instead of flat
-  blue, so `docs/screenshots/home.png` is stale until it is retaken on a clean emulator install.
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
   size-by-size retune; measure the pass rate before trying again.

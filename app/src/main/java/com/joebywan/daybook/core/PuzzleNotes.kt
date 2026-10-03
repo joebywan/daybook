@@ -84,6 +84,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "When a run is complete, cross the squares on each side.",
         "Crosses are only notes; they never count against you.",
     ),
+    "chess" to listOf(
+        "Count the king's flight squares before anything else.",
+        "A check is often the key; a quiet move can be too.",
+        "Ask what every reply allows, not only what you threaten.",
+        "A move that spoils the mate is allowed; Undo takes it back.",
+    ),
     "inequality" to listOf(
         "A sign's narrow end points at the smaller digit.",
         "A square below a neighbour can never hold the top digit.",

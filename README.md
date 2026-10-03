@@ -62,6 +62,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Lexicon | Mastermind for words | Find the hidden word; each guess marks every letter green, yellow or grey |
 | Nonogram | Nonogram | Fill squares to match the run lengths beside each row and column and a picture appears |
 | Inequality | Futoshiki | 1 to N once per row and column, `<` and `>` signs between some neighbours |
+| Mate | Chess mate-in-N | White to play and mate in 2, 3 or 4; the opponent defends as well as it can |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -99,6 +100,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   square, only digit, only place, and the same once the signs are counted) can finish it; then every digit
   and sign the rest implies is taken back. So a board is never guessed, and the shipped board is proved
   again by an exhaustive search; an independent naive solver confirms the one answer in the tests.
+- **Mate** — not generated: a position is an index into a fixed sorted list of real puzzles from the
+  [Lichess puzzle database](https://database.lichess.org/#puzzles) (CC0). `tools/chess/build.py` keeps only those with
+  exactly one key move and a shortest forced mate of exactly N, checked with python-chess; the tests re-prove the shipped
+  lists with the app's own engine and an independent naive minimax.
 - **Tower and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by
