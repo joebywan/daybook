@@ -34,6 +34,7 @@ import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.play.finishPraise
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import com.joebywan.daybook.ui.settings.SettingsScreen
+import com.joebywan.daybook.ui.stats.AchievementsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -43,6 +44,7 @@ sealed interface Route {
     data object Home : Route
     data object Stats : Route
     data object Settings : Route
+    data object Achievements : Route
     data class Archive(val puzzleId: String) : Route
     data class Play(
         val puzzleId: String,
@@ -59,6 +61,7 @@ private val RouteSaver = Saver<Route, String>(
             Route.Home -> "home"
             Route.Stats -> "stats"
             Route.Settings -> "settings"
+            Route.Achievements -> "achievements"
             is Route.Archive -> "archive|${r.puzzleId}"
             is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}"
         }
@@ -68,6 +71,7 @@ private val RouteSaver = Saver<Route, String>(
         when (f[0]) {
             "stats" -> Route.Stats
             "settings" -> Route.Settings
+            "achievements" -> Route.Achievements
             "archive" -> Route.Archive(f[1])
             "play" -> Route.Play(
                 puzzleId = f[1],
@@ -180,7 +184,14 @@ fun DaybookApp(startAt: Route = Route.Home) {
         Route.Stats -> StatsScreen(
             today = today,
             completions = completions,
+            onAchievements = { route = Route.Achievements },
             onBack = { route = Route.Home },
+        )
+
+        Route.Achievements -> AchievementsScreen(
+            today = today,
+            completions = completions,
+            onBack = { route = Route.Stats },
         )
 
         Route.Settings -> SettingsScreen(

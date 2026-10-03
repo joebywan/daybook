@@ -46,6 +46,25 @@ in place of the badge when lapsed; best streak is on the stats screen (the home 
   `Deduction` are test identifiers, not prose, so the wording is generic), "No hints needed."
 - No new sound: the existing solve chime plays, muted by the existing setting. A milestone fanfare is not done.
 
+## Achievements (`core/Achievements.kt`, `ui/stats/AchievementsScreen.kt`)
+
+17 of them, all derived from the completion history; nothing is stored. Each is a predicate over the history; a solve
+*earns* one when it is false over the history before and true with the solve added (`newlyEarned`). An old player whose
+history already satisfies one sees it earned in the list and is never told, so there is no flood on update.
+- Solves: first solve; 100 solves. Days: play on 30 different days.
+- Streak (best run ever, so it never goes away): 3, 7, 14, 30, 60, 100, 365 days. Per puzzle (that puzzle's own played
+  days through `streakOf`): 7 and 30 days.
+- Top tier (Expert): first solve; a solve with no hints.
+- One of each puzzle; all three difficulties of one puzzle's daily on the same day; every puzzle's daily on one day.
+  The last two and "one of each" read the ids from `PuzzleRegistry`, so they scale; adding a puzzle makes them unearned
+  until it is played (nothing is stored to keep them). Tests pass a fake id list.
+- Finished frame: `Praise.achievements` (titles). When there is any, the single praise line is replaced by one bold line,
+  "Achievement: A" or "Achievement: A +2", so the frame does not grow; the list screen (Statistics > Achievements, "N of M",
+  unearned dimmed with the description) has the rest. A solve earning several shows the first in list order.
+  Streak title still shows. Same chime, muted by the same setting.
+- `streakOf` is only monotone when the new play is the newest day; an archive play can in rare cases split a run, so
+  a streak achievement could in theory read unearned again. The diff never announces an already-earned one.
+
 ## Calendar (`ui/stats/StreakCalendar.kt`)
 
 A month grid card on the stats screen, under the tiles: filled circle = day played, ring = a missed day the

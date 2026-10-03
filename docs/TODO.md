@@ -28,11 +28,13 @@ from a measurement or review, so you can check it is still true.
 
 ## Rewards
 
-Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`) and 5 (calendar) are done; the rest are separate PRs.
+Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) and 5 (calendar) are done; the rest are separate PRs.
 
-- [ ] **4. Achievements.** Streak lengths (overall and per puzzle), all difficulties of one puzzle's daily, every puzzle
-  in one day (computed from `PuzzleRegistry`, so it scales), milestones (first Expert, 30 days played, one of each
-  type). Own fanfare, queued one per solve. Needs 1. *L.*
+- [ ] **Achievements follow-ups.** No fanfare yet (the solve chime plays; a distinct short tone would need a second
+  sample path in both platform players). The finished-frame achievement line was not rendered with
+  `tools/render/render.py` (it only opens boards, not a solved frame): check it on a 375x537 screen. The two
+  registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
+
 - [ ] **6. Small daily variety.** A featured puzzle or a one-line note after solving (technique name or puzzle fact). *S.*
 
 ## Needs a real iPhone

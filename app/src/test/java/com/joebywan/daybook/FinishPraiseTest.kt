@@ -69,13 +69,15 @@ class FinishPraiseTest {
         assertTrue(run(h.take(4), c(null, 55)).lines.none { it.startsWith("Faster than") })
     }
 
+    private val earlier = listOf(c(null, id = "x")) // so "First solve" is not what the solve earns
+
     @Test fun hintsNeverScoldAndNoHintsIsPraised() {
-        assertTrue(run(emptyList(), c(null, 100, hints = 3)).lines.single().startsWith("Hints are how a move sticks"))
-        assertEquals(listOf("No hints needed."), run(emptyList(), c(null, 100, hints = 0)).lines)
+        assertTrue(run(earlier, c(null, 100, hints = 3)).lines.single().startsWith("Hints are how a move sticks"))
+        assertEquals(listOf("No hints needed."), run(earlier, c(null, 100, hints = 0)).lines)
     }
 
     @Test fun longSolvesGetPerseverance() {
-        assertEquals("That one fought back, and you stuck with it.", run(emptyList(), c(null, 700)).lines.first())
+        assertEquals("That one fought back, and you stuck with it.", run(earlier, c(null, 700)).lines.first())
         val h = (1..5).map { c(null, 200) }
         assertTrue(run(h, c(null, 300)).lines.none { it.startsWith("That one") })
         assertTrue(run(h, c(null, 450)).lines.first().startsWith("That one"))
@@ -86,5 +88,15 @@ class FinishPraiseTest {
         val h = days(1, 2, 3) + (1..6).map { c(null, 900) }
         assertEquals(1, run(h, c(today, 100)).lines.size)
         assertEquals(1, run(h, c(null, 100)).lines.size)
+    }
+
+    @Test fun achievementTakesTheOneLineAndKeepsTheStreakTitle() {
+        val p = run(days(1, 2, 3, 4, 5, 6), c(today))
+        assertEquals("7 day streak", p.title)
+        assertTrue(p.lines.isEmpty())
+        assertEquals("Achievement: A full week +1", p.achievementLine)
+        val two = run(emptyList(), c(today, tier = Difficulty.EXPERT))
+        assertEquals("Achievement: First solve +2", two.achievementLine)
+        assertTrue(run(earlier, c(null)).achievementLine == null)
     }
 }
