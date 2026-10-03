@@ -1,7 +1,7 @@
 # The entry for F-Droid's own repository (gitlab.com/fdroid/fdroiddata, file metadata/com.joebywan.daybook.yml).
 # Not read by anything here; see docs/fdroid/README.md for how it is submitted and why it looks like this.
 Categories:
-  - Games
+  - Puzzle Game
 License: AGPL-3.0-or-later
 AuthorName: Joseph Howe
 WebSite: https://knowhowit.com.au/daybook/
@@ -20,9 +20,9 @@ Repo: https://github.com/joebywan/daybook.git
 # the values F-Droid substitutes into that default; web/ is the wasm build and needs a toolchain
 # F-Droid does not have, so it goes (settings.gradle.kts is edited to match).
 Builds:
-  - versionName: 0.1.100
-    versionCode: 100
-    commit: v0.1.100
+  - versionName: 0.1.103
+    versionCode: 103
+    commit: 01e387f7e77bb5b652c42fef77c1d79516bded40
     subdir: app
     gradle:
       - yes
@@ -42,5 +42,5 @@ AutoUpdateMode: Version v%v
 UpdateCheckMode: HTTP
 # The newest release's tag, v0.1.<n>, gives both numbers: the GitHub API's JSON is the one place they are public.
 UpdateCheckData: https://api.github.com/repos/joebywan/daybook/releases/latest|"tag_name":\s*"v0\.1\.(\d+)"|https://api.github.com/repos/joebywan/daybook/releases/latest|"tag_name":\s*"v(0\.1\.\d+)"
-CurrentVersion: 0.1.100
-CurrentVersionCode: 100
+CurrentVersion: 0.1.103
+CurrentVersionCode: 103

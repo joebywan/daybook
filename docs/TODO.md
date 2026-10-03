@@ -176,7 +176,7 @@ not demand thought, against the owner's stated taste.
   strands existing installs (the export/import backup on the stats screen is the way across). Decide
   the final address before many people install it, if it is going to change at all. Other sites on
   that domain share its browser storage, so keep key names distinct.
-- **F-Droid.** Our own repo is automatic (`publish-fdroid.yml`; `docs/fdroid/README.md`). f-droid.org needs a merge request to fdroiddata with `docs/fdroid/com.joebywan.daybook.yml`
+- **F-Droid.** Our own repo is automatic (`publish-fdroid.yml`; `docs/fdroid/README.md`). f-droid.org: merge request [fdroiddata!51019](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51019) is open (entry: `docs/fdroid/com.joebywan.daybook.yml`); answer the reviewers on GitLab, and when it merges check the app appears and that a later release is picked up
   (lints; never built by F-Droid). It is set up as a reproducible build, so its installs update over Play and GitHub ones if F-Droid's build matches our APK. Once the first run has
   pushed the `fdroid` branch, check the repo address in the F-Droid app and that a new release shows up in it.
 - **Play Store listing.** Set up and publishing: the signing key is chosen, the service account exists,
