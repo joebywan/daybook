@@ -84,6 +84,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "When a run is complete, cross the squares on each side.",
         "Crosses are only notes; they never count against you.",
     ),
+    "inequality" to listOf(
+        "A sign's narrow end points at the smaller digit.",
+        "A square below a neighbour can never hold the top digit.",
+        "In a chain a < b < c, a is at most two below the top digit.",
+        "A row or column with one gap left names its digit.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */

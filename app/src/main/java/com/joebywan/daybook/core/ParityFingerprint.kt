@@ -1,6 +1,7 @@
 package com.joebywan.daybook.core
 
 import com.joebywan.daybook.puzzles.AtomsState
+import com.joebywan.daybook.puzzles.InequalityState
 import com.joebywan.daybook.puzzles.KingsState
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.LitsState
@@ -53,6 +54,8 @@ object ParityFingerprint {
         is TowerState -> "slots=${s.slots} colours=${s.colours} max=${s.maxGuesses} " +
             "secret=${s.secret.joinToString("")}"
         is NonogramState -> "${s.width}x${s.height} solution=${s.solution}"
+        is InequalityState -> "n=${s.size} givens=${s.givens.joinToString("") { if (it) "1" else "0" }} " +
+            "signs=${s.signs.joinToString(",") { "${it.lo}<${it.hi}" }} solution=${s.solution.joinToString("")}"
         is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer}"
     }
 }

@@ -5,6 +5,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.puzzles.AtomsState
+import com.joebywan.daybook.puzzles.InequalityState
 import com.joebywan.daybook.puzzles.KingsState
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.LitsState
@@ -86,6 +87,7 @@ class StateSerializationTest {
      */
     private fun mutate(state: PuzzleState): PuzzleState = when (state) {
         is AtomsState -> state.pairs.indices.take(2).fold(state) { acc, i -> acc.cycle(i) }
+        is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is KingsState -> state.toggleMark(0).toggleKing(1)
         is LitsState -> state.toggle(0)
         is MamboState -> state.withCell(state.cells.indices.first { !state.givens[it] }, Sym.SUN)
