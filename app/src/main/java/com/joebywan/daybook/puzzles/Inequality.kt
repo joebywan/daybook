@@ -7,6 +7,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -322,6 +323,12 @@ object Inequality : PuzzleType {
 
     // ---- the board ---------------------------------------------------------------------------
 
+    /** Each board's own pair, as Nonogram's: the first marks the selection, the second the player's digits. */
+    private val PALETTES = listOf(
+        0xFF3E7CB1 to 0xFFD0507F, 0xFF2E9E8F to 0xFFE0703F, 0xFF8A55C8 to 0xFF2E9E8F,
+        0xFFE0703F to 0xFF3E7CB1, 0xFF3FA55A to 0xFF8A55C8, 0xFFCF4F7A to 0xFF2F9CC8,
+    )
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as InequalityState
@@ -329,6 +336,7 @@ object Inequality : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val conflicts = s.conflicts()
         val broken = InequalityLogic.brokenSigns(s.cells, s.signs)
+        val (mark, ink) = PALETTES[(s.solution.hashCode() and Int.MAX_VALUE) % PALETTES.size].let { Color(it.first) to Color(it.second) }
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
@@ -375,11 +383,13 @@ object Inequality : PuzzleType {
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
                                     when {
-                                        s.selected == i -> Color(accent).copy(alpha = 0.40f)
-                                        selectedValue != 0 && s.cells[i] == selectedValue -> Color(accent).copy(alpha = 0.20f)
+                                        s.selected == i && i !in conflicts -> mark
+                                        selectedValue != 0 && s.cells[i] == selectedValue -> mark.copy(alpha = 0.35f)
+                                        s.selected != null && (i / n == s.selected / n || i % n == s.selected % n) -> mark.copy(alpha = 0.14f)
                                         else -> scheme.surfaceVariant
                                     },
                                 )
+                                .then(if (s.selected == i) Modifier.border(3.dp, scheme.onBackground, RoundedCornerShape(8.dp)) else Modifier)
                                 .clickable(enabled = interactive) { onState(s.select(i)) },
                             contentAlignment = Alignment.Center,
                         ) {
@@ -390,8 +400,9 @@ object Inequality : PuzzleType {
                                     fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
                                     color = when {
                                         i in conflicts -> scheme.error
+                                        s.selected == i -> Color.White
                                         s.givens[i] -> scheme.onSurface
-                                        else -> Color(accent)
+                                        else -> ink
                                     },
                                     textAlign = TextAlign.Center,
                                 )
