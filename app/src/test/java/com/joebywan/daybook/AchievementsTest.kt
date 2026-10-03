@@ -3,7 +3,10 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.ACHIEVEMENTS
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.earnedAchievements
+import com.joebywan.daybook.core.nearestToGo
 import com.joebywan.daybook.core.newlyEarned
+import com.joebywan.daybook.core.remaining
+import com.joebywan.daybook.core.streakOf
 import com.joebywan.daybook.data.Completion
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
@@ -99,6 +102,75 @@ class AchievementsTest {
             assertEquals(ids.all { id -> all.any { it.puzzleId == id } }, "oneOfEach" in after)
             assertEquals(all.any { it.difficulty == Difficulty.EXPERT }, "firstTop" in after)
             assertEquals(all.mapNotNull { it.day }.toSet().size >= 30, "days30" in after)
+        }
+    }
+
+    private val name = { id: String -> id.uppercase() }
+    private fun left(id: String, h: List<Completion>) = remaining(id, h, today, ids, name)
+
+    @Test fun remainingIsNullWhenEarnedOrFar() {
+        assertEquals(null, left("streak7", (0..6).map { c(it) }))   // earned
+        assertEquals(null, left("streak7", (0..2).map { c(it) }))   // 4 away
+        assertEquals(null, left("firstTop", listOf(c(0))))          // not a counting kind
+        assertEquals(null, left("nope", listOf(c(0))))
+    }
+
+    @Test fun streakNeverCountedWhenLapsed() {
+        // Played 12..8 days ago, nothing since: lapsed, so no "2 more days" however close the old run was.
+        val h = (8..12).map { c(it) }
+        assertTrue(streakOf(h.mapNotNull { it.day }.toSet(), today).lapsed)
+        assertEquals(null, left("streak7", h))
+    }
+
+    @Test fun picksTheNearestAndNeverPhrasesALoss() {
+        val h = (1..5).map { c(it) } + c(0, tier = Difficulty.HARD)
+        val g = nearestToGo(h.dropLast(1), h.last(), today, ids, name)!!
+        assertEquals(1, g.left)
+        assertEquals("streak7", g.id)
+        assertTrue(listOf("lose", "lost", "miss", "break", "risk").none { g.text.lowercase().contains(it) })
+    }
+
+    @Test fun fullSetAndSweepWording() {
+        val h = listOf(c(0, "a", Difficulty.STANDARD), c(0, "a", Difficulty.EXPERT))
+        assertEquals("Only Hard on A left for all done today!", left("fullSet", h)!!.text)
+        assertEquals("Only B and C left for a clean sweep today!", left("allPuzzles", h)!!.text)
+        assertEquals("Only B and C left to try them all.", left("oneOfEach", h)!!.text)
+    }
+
+    @Test fun randomHistoriesMatchNaiveRemainingModel() {
+        val rnd = Random(11)
+        repeat(400) {
+            val h = List(rnd.nextInt(0, 30)) {
+                c(rnd.nextInt(-1, 12).takeIf { it >= 0 }, ids[rnd.nextInt(3)], Difficulty.entries[rnd.nextInt(3)])
+            }
+            val s = c(rnd.nextInt(0, 3), ids[rnd.nextInt(3)], Difficulty.entries[rnd.nextInt(3)])
+            val all = h + s
+            val earned = got(all)
+            val pick = nearestToGo(h, s, today, ids, name)
+            if (pick != null) {
+                assertTrue(pick.id !in earned)
+                assertTrue(pick.left in 1..2)
+            }
+            // Naive models by plain loops.
+            val missing = ids.filter { id -> all.none { it.puzzleId == id } }
+            assertEquals(if (missing.size in 1..2) missing.size else null, left("oneOfEach", all)?.left)
+            val distinctDays = all.mapNotNull { it.day }.toSet().size
+            assertEquals(if (distinctDays in 28..29) 30 - distinctDays else null, left("days30", all)?.left)
+            val todays = all.filter { it.day == today }
+            var best: Int? = null
+            for (id in ids) {
+                val m = Difficulty.entries.count { t -> todays.none { it.puzzleId == id && it.difficulty == t } }
+                if (todays.any { it.puzzleId == id } && m in 1..2) best = minOf(best ?: 9, m)
+            }
+            assertEquals(best, left("fullSet", all)?.left)
+            val sweepMissing = ids.count { id -> todays.none { it.puzzleId == id } }
+            val sweep = if (todays.isNotEmpty() && sweepMissing in 1..2) sweepMissing else null
+            assertEquals(sweep, left("allPuzzles", all)?.left)
+            // Streak: the walk of days played, from the independent definition of a live run.
+            val st = streakOf(all.mapNotNull { it.day }.toSet(), today)
+            val wantLeft = 3 - st.current
+            if (st.lapsed || !st.alive) assertEquals(null, left("streak3", all))
+            else if ("streak3" !in earned) assertEquals(if (wantLeft in 1..2) wantLeft else null, left("streak3", all)?.left)
         }
     }
 }
