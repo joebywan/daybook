@@ -31,6 +31,7 @@ import com.joebywan.daybook.ui.home.LaunchMode
 import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.play.NextKind
 import com.joebywan.daybook.ui.play.PlayScreen
+import com.joebywan.daybook.ui.play.finishPraise
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
@@ -246,6 +247,14 @@ fun DaybookApp(startAt: Route = Route.Home) {
                                 )
                             )
                         }
+                    },
+                    praiseFor = { seconds, hints ->
+                        finishPraise(
+                            completions,
+                            Completion(puzzle.id, current.difficulty, current.day, seconds, hints),
+                            today,
+                            puzzle.displayName,
+                        )
                     },
                     // Only what the store already holds; the board being solved is counted by the
                     // options themselves, since it reaches the store a moment after the win.

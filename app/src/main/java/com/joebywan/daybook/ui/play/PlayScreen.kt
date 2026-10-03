@@ -77,6 +77,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
@@ -128,6 +130,7 @@ fun PlayScreen(
     restore: suspend () -> SavedGame?,
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
+    praiseFor: (seconds: Int, hints: Int) -> Praise,
     otherTiersDone: Set<Difficulty>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
@@ -149,7 +152,7 @@ fun PlayScreen(
         DealingBoard(puzzle)
     } else {
         PlayBoard(
-            puzzle, difficulty, day, ready, restore, persist, onSolved, otherTiersDone, onNext, onBack,
+            puzzle, difficulty, day, ready, restore, persist, onSolved, praiseFor, otherTiersDone, onNext, onBack,
             tutorialOffered, onTutorialOffered, showTimer,
         )
     }
@@ -213,6 +216,7 @@ private fun PlayBoard(
     restore: suspend () -> SavedGame?,
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
+    praiseFor: (seconds: Int, hints: Int) -> Praise,
     otherTiersDone: Set<Difficulty>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
@@ -226,6 +230,8 @@ private fun PlayBoard(
     var game by rememberSaveable(initial, stateSaver = SavedGameSaver) { mutableStateOf(pristine) }
     // Saved alongside the game: without it, rotating a finished board would record the win twice.
     var recorded by rememberSaveable(initial) { mutableStateOf(false) }
+    // Transient: a reopened solved board shows the plain frame.
+    var praise by remember { mutableStateOf(Praise()) }
     // Set as soon as the store has been asked, and itself saved, so the answer that arrived before
     // the rotation is not thrown away by a second lookup afterwards.
     var consulted by rememberSaveable(initial) { mutableStateOf(false) }
@@ -300,6 +306,8 @@ private fun PlayBoard(
     LaunchedEffect(state.solved) {
         if (state.solved && !recorded) {
             recorded = true
+            // Asked before onSolved: the history must not yet contain this solve.
+            praise = praiseFor(seconds, game.hints)
             onSolved(seconds, game.hints)
         }
     }
@@ -516,6 +524,7 @@ private fun PlayBoard(
         FinishedFrame(
             seconds = seconds,
             hints = game.hints,
+            praise = praise,
             accent = Color(puzzle.accent),
             options = remember(day, difficulty, otherTiersDone) {
                 nextOptions(daily = day != null, tier = difficulty, doneTiers = otherTiersDone)
@@ -572,6 +581,7 @@ private fun PlayBoard(
 private fun FinishedFrame(
     seconds: Int,
     hints: Int,
+    praise: Praise,
     accent: Color,
     options: List<NextOption>,
     onOption: (NextOption) -> Unit,
@@ -587,10 +597,16 @@ private fun FinishedFrame(
             .background(scheme.surface)
             .background(accent.copy(alpha = 0.14f))
             .pointerInput(Unit) {}
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Congratulations!", style = MaterialTheme.typography.headlineSmall, color = accent)
+        Text(
+            praise.title ?: "Congratulations!",
+            style = if (praise.big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall,
+            color = accent,
+            fontWeight = if (praise.big) FontWeight.Bold else null,
+            maxLines = 1,
+        )
         Text(
             buildString {
                 append(formatClock(seconds))
@@ -599,9 +615,12 @@ private fun FinishedFrame(
             style = MaterialTheme.typography.bodyMedium,
             color = scheme.onSurface,
         )
-        Spacer(Modifier.height(12.dp))
+        praise.lines.forEach {
+            Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        }
+        Spacer(Modifier.height(8.dp))
         options.chunked(2).forEachIndexed { row, pair ->
-            if (row > 0) Spacer(Modifier.height(8.dp))
+            if (row > 0) Spacer(Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 pair.forEach { option ->
                     NextTile(option, accent, Modifier.weight(1f)) { onOption(option) }
@@ -617,7 +636,7 @@ private fun NextTile(option: NextOption, accent: Color, modifier: Modifier, onCl
     val done = option.kind == NextKind.DONE
     Column(
         modifier
-            .heightIn(min = 52.dp)
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(if (done) scheme.surfaceVariant else accent.copy(alpha = 0.22f))
             .clickable(onClick = onClick)
