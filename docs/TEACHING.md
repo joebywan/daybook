@@ -43,10 +43,11 @@ each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthro
   do nothing.
 - The walkthrough's `TutorialRunner` keeps its own fixed `HintSlotHeight` (156dp) slot: its board
   never changes size either way.
-- The finish is a compact "Congratulations!" frame (`FinishedFrame`) centred over the play screen, an
+- The finish is a compact "Congratulations!" frame (`FinishedFrame`) docked to the bottom of the play screen, an
   overlay with the time, hints and next-step tiles; the toolbar stays laid out (hidden), so
-  completing a puzzle cannot resize the board. Below 700dp tall it drops to the bottom over the hidden
-  toolbar, since a centred frame hid most of the board at 375x537. (Snap, the one board that never reached
+  completing a puzzle cannot resize the board. It is docked on every height: centred, it hid 50-58% of
+  Snap's board at 390x844, while docked it clears the board there (and on short screens covers only the last
+  row or two). (Snap, the one board that never reached
   it through hints, was driven to a solved state in Chromium and WebKit at 390x844, 390x664, 360x640
   and 375x537, light and dark: the board's box is identical before and after, and the tiles take taps
   over the board's raw-pointer canvas, which is switched off once solved.) The tiles come from the pure `nextOptions(daily, tier,
