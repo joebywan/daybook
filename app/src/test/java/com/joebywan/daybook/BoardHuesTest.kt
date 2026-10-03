@@ -54,4 +54,20 @@ class BoardHuesTest {
             }
         }
     }
+
+    @Test fun pairsAvoidRightWrongAndAreDistinct() {
+        val reserved = setOf(8f, 145f) // Coral, Green
+        for ((a, b) in BoardHues.HUE_PAIRS) {
+            assertTrue(a in BoardHues.all && b in BoardHues.all && a != b)
+            assertTrue("pair $a/$b uses a reserved hue", a !in reserved && b !in reserved)
+        }
+        assertEquals(BoardHues.HUE_PAIRS.size, BoardHues.HUE_PAIRS.toSet().size)
+    }
+
+    @Test fun pairPickerIsDeterministicAndCoversEveryPair() {
+        val seeds = -50..50
+        assertEquals(seeds.map { BoardHues.pair(it) }, seeds.map { BoardHues.pair(it) })
+        assertEquals(BoardHues.HUE_PAIRS.toSet(), seeds.map { BoardHues.pair(it) }.toSet())
+        BoardHues.pair(Int.MIN_VALUE) // negative seeds must not index out of range
+    }
 }
