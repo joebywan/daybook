@@ -19,8 +19,10 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
-- [ ] **Mate: promotion picker and listing.** The promotion picker still was not exercised in a running app. Add the
-  Play/F-Droid listing text. (Expert hint cost is settled: the faster search meets the budget, `docs/TEACHING.md` Mate row.) *S.*
+- [ ] **Mate: listing and small polish.** Add the Play/F-Droid listing text (`docs/play/LISTING.md`, `fastlane/metadata/`). The hint
+  popover can cover the rank under it (on a flipped Expert board it hid the player's king); the promotion button's glow ring is clipped
+  at the rounded corners; the home grid's fifth row (where Mate sits) needs a scroll. Not yet exercised: a promotion that is a later
+  move rather than the first. *S.*
 
 ## Rewards
 

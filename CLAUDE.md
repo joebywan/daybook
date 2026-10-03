@@ -135,7 +135,8 @@ White (or Black) to play and mate in 2 / 3 / 4 by tier. Spec and decisions: `doc
   teacher flags (`forcedMate` is `None`, never `Truncated`), and `lost` shows a reserved caption, never a refusal.
 - **A truncated search is not `None`.** `Mate.Truncated` is its own type.
 - Highlight indices are squares (a1 = 0), not `row*8+col`: the board flips for Black, so it uses `reportHighlight`, not `highlightGrid`.
-- Expert (mate in 4) hint search has a ~0.5 s tail on a desktop JVM; it runs off the main thread. Re-measure on a phone (`docs/TODO.md`).
+- Expert (mate in 4) hint search is measured on an emulator and the web (p95 94 ms, max 234 ms; `docs/TEACHING.md`); it runs off the main thread.
+  `ChessSearchBenchTest` keeps the old search as an oracle: any search change must still agree with it.
 
 ## Rules that keep being relearned
 
