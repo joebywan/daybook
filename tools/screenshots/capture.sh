@@ -15,6 +15,8 @@ adb shell settings put global auto_time 0
 adb shell settings put global auto_time_zone 0
 adb shell setprop persist.sys.timezone UTC
 adb shell date 100312002026.00 >/dev/null     # MMDDhhmmYYYY.ss: Sat 3 Oct 2026, noon
+adb shell settings put global hide_error_dialogs 1   # a slow CI emulator ANRs the launcher after the clock jump
+sleep 10
 adb shell wm size 1080x1920
 adb shell wm density 420
 adb shell settings put secure show_ime_with_hard_keyboard 0
