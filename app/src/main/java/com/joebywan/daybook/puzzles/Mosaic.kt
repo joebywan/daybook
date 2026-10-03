@@ -39,6 +39,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -182,8 +188,18 @@ object Mosaic : PuzzleType {
         "Number keys pick a colour, arrows move, Space or Enter pours it.",
     )
 
-    /** Board colours. Three of them read as the screenshot's green/red/blue; Expert adds the amber. */
-    val palette = listOf(0xFF54B07A, 0xFFD9584C, 0xFF4C86D9, 0xFFE0B23C, 0xFF9B6FD0)
+    /**
+     * Board colours: the `mark` step of five of the six non-Coral/Green hues of docs/COLOUR.md (Coral and Green stay
+     * free for the "out of fills" error and for right/wrong elsewhere), the same in both schemes. Order is Amber, Teal,
+     * Violet, Rose, Blue, chosen by CIEDE2000 including colour-blind vision so each tier's prefix (3 / 4 / 5) is as far
+     * apart as the hues allow; [MosaicPaletteTest] pins it. Saves store the index, so index i is always "colour i".
+     * The first five of them are told apart by a digit as well, since the closest pair at five is only ~6.6 apart
+     * to a colour-blind eye.
+     */
+    val palette: List<Color> = listOf(34f, 175f, 268f, 330f, 215f).map { BoardHues.mark(it) }
+
+    /** Digit ink for a fill: dark on light marks, white on dark ones. */
+    private fun glyphInk(fill: Color) = if (fill.luminance() > 0.35f) Color(0xFF1B2F29) else Color.White
 
     /**
      * Search nodes before the solver gives up. Generation rejects a board it cannot prove inside
@@ -844,17 +860,17 @@ object Mosaic : PuzzleType {
      * The walkthrough's board, 5x5, three colours, finished in exactly three fills:
      *
      * ```
-     * R R G R B
-     * R R G R B
-     * R R G B R
-     * R R B G G
-     * G G B B B
+     * T T A T V
+     * T T A T V
+     * T T A V T
+     * T T V A A
+     * A A V V V   (A amber, T teal, V violet)
      * ```
      *
      * Hand-picked, by exhaustive search, so that each fill the frames teach is the *only* fill that
      * keeps the board inside its limit at that point, and so that each is the teacher's own choice
-     * for the reason the caption gives: first the biggest swallow (the blue corner, poured green,
-     * takes three green areas), then counting (two fills for three colours, and green is the only
+     * for the reason the caption gives: first the biggest swallow (the violet corner, poured amber,
+     * takes three amber areas), then counting (two fills for three colours, and amber is the only
      * colour down to one patch), then the finish. MosaicTeachingTest proves all three.
      */
     internal val TUTORIAL_CELLS = listOf(
@@ -900,13 +916,13 @@ object Mosaic : PuzzleType {
         val (c3, k3) = TUTORIAL_FILLS[2]
         val second = start.flood(c1, k1)
         val third = second.flood(c2, k2)
-        val redArea = start.area(0).toSet()
+        val tealArea = start.area(0).toSet()
         listOf(
             TutorialFrame(
                 state = start,
                 caption = "Touching cells of one colour make an area, outlined in black. " +
                     "Turn the whole board one colour.",
-                highlight = BoardHighlight(strong = redArea),
+                highlight = BoardHighlight(strong = tealArea),
             ),
             TutorialFrame(
                 state = start,
@@ -915,29 +931,29 @@ object Mosaic : PuzzleType {
             ),
             TutorialFrame(
                 state = start,
-                caption = "Pick green below, then tap the glowing blue area. It joins every green " +
+                caption = "Pick amber below, then tap the glowing violet area. It joins every amber " +
                     "area it touches: three at once, more than any other fill can.",
-                highlight = BoardHighlight(strong = start.area(c1).toSet(), soft = greenNeighbours(start, c1)),
+                highlight = BoardHighlight(strong = start.area(c1).toSet(), soft = amberNeighbours(start, c1)),
                 accepts = pour(start, c1, k1),
-                retry = "Pick green from the swatches, then tap the glowing area.",
+                retry = "Pick amber from the swatches, then tap the glowing area.",
                 done = "Four areas became one. The bigger it grows, the more each fill takes.",
             ),
             TutorialFrame(
                 state = second,
                 caption = "2 fills left, 3 colours. A fill wipes out a colour only by covering its last " +
-                    "patch, so both fills must. Green is down to one patch: pour red into it.",
+                    "patch, so both fills must. Amber is down to one patch: pour teal into it.",
                 highlight = BoardHighlight(strong = second.area(c2).toSet()),
                 accepts = pour(second, c2, k2),
-                retry = "Pick red, then tap the big green area.",
-                done = "Green is gone. Two colours, one fill.",
+                retry = "Pick teal, then tap the big amber area.",
+                done = "Amber is gone. Two colours, one fill.",
             ),
             TutorialFrame(
                 state = third,
-                caption = "Every other area touches the red one, and they're all blue. " +
-                    "Pour blue into red to finish.",
+                caption = "Every other area touches the teal one, and they're all violet. " +
+                    "Pour violet into teal to finish.",
                 highlight = BoardHighlight(strong = third.area(c3).toSet()),
                 accepts = pour(third, c3, k3),
-                retry = "Pick blue, then tap the red area.",
+                retry = "Pick violet, then tap the teal area.",
                 done = "One colour, three fills: the least it could take.",
             ),
             TutorialFrame(
@@ -949,8 +965,8 @@ object Mosaic : PuzzleType {
         )
     }
 
-    /** Cells of the areas a fill of [cell]'s area with green would swallow, for the first lesson. */
-    private fun greenNeighbours(s: MosaicState, cell: Int): Set<Int> {
+    /** Cells of the areas a fill of [cell]'s area with amber would swallow, for the first lesson. */
+    private fun amberNeighbours(s: MosaicState, cell: Int): Set<Int> {
         val mine = s.area(cell).toSet()
         val out = mutableSetOf<Int>()
         for (x in mine) {
@@ -1001,7 +1017,7 @@ object Mosaic : PuzzleType {
             val stepPx = size.minDimension / PREVIEW_SIDE
             for (cell in PREVIEW_CELLS.indices) {
                 drawRect(
-                    color = Color(palette[PREVIEW_CELLS[cell]]),
+                    color = palette[PREVIEW_CELLS[cell]],
                     topLeft = Offset((cell % PREVIEW_SIDE) * stepPx, (cell / PREVIEW_SIDE) * stepPx),
                     size = Size(stepPx, stepPx),
                 )
@@ -1049,6 +1065,7 @@ object Mosaic : PuzzleType {
         // to walk back. Saveable rather than plain remembered so rotating the phone does not also
         // reset the swatch.
         var selected by rememberSaveable(s.colours) { mutableIntStateOf(0) }
+        val measurer = rememberTextMeasurer()
         val live = interactive && !s.failed
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
@@ -1123,9 +1140,29 @@ object Mosaic : PuzzleType {
                         val r = cell / s.width
                         val c = cell % s.width
                         drawRect(
-                            color = Color(palette[s.cells[cell]]),
+                            color = palette[s.cells[cell]],
                             topLeft = Offset(c * stepPx, r * stepPx),
                             size = Size(stepPx, stepPx),
+                        )
+                    }
+
+                    // Colour is never the only signal: one digit per area, in its first cell, the same
+                    // digit as the swatch and its number key.
+                    val seen = BooleanArray(s.cells.size)
+                    for (cell in s.cells.indices) {
+                        if (seen[cell]) continue
+                        for (x in s.area(cell)) seen[x] = true
+                        val fill = palette[s.cells[cell]]
+                        val layout = measurer.measure(
+                            (s.cells[cell] + 1).toString(),
+                            TextStyle(color = glyphInk(fill).copy(alpha = 0.8f), fontSize = (stepPx * 0.34f).toSp(), fontWeight = FontWeight.Bold),
+                        )
+                        drawText(
+                            layout,
+                            topLeft = Offset(
+                                (cell % s.width) * stepPx + stepPx * 0.12f,
+                                (cell / s.width) * stepPx + stepPx * 0.06f,
+                            ),
                         )
                     }
 
@@ -1230,9 +1267,17 @@ object Mosaic : PuzzleType {
                             )
                             .padding(6.dp)
                             .clip(RoundedCornerShape(11.dp))
-                            .background(Color(palette[colour]))
-                            .border(1.dp, scheme.outline, RoundedCornerShape(11.dp))
-                    )
+                            .background(palette[colour])
+                            .border(1.dp, scheme.outline, RoundedCornerShape(11.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            (colour + 1).toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = glyphInk(palette[colour]),
+                        )
+                    }
                 }
             }
 
