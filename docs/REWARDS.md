@@ -33,6 +33,14 @@ seven days, never reaching back before the run's first day: alive while at most 
 miss ends the run and the next play starts a fresh one. `current` counts days played. Home shows "Welcome back"
 in place of the badge when lapsed; best streak is on the stats screen (the home header has no room for it).
 
+## Calendar (`ui/stats/StreakCalendar.kt`)
+
+A month grid card on the stats screen, under the tiles: filled circle = day played, ring = a missed day the
+streak absorbed (`forgivenDays` in `core/Streak.kt`, from the same walk as `streakOf`), outline = today, dim =
+future. Monday-first; previous/next stop at the first month with a play and the current one. Decision: the miss
+that ended a run is not ringed, but earlier misses of a run that later died stay ringed, because they were
+forgiven when they happened. `StreakCalendar(played, today)` takes the played-day set, so other screens can reuse it.
+
 ## Claim to keep honest
 
 Puzzles making you better at other things is weakly supported. Claim the habit and the satisfaction, not "makes you smarter".

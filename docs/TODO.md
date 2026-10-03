@@ -26,7 +26,7 @@ from a measurement or review, so you can check it is still true.
 
 ## Rewards
 
-Design and decisions: `docs/REWARDS.md`. Item 1 (streak function, `core/Streak.kt`) is done; the rest are separate PRs.
+Design and decisions: `docs/REWARDS.md`. Items 1 (streak function, `core/Streak.kt`) and 5 (calendar) are done; the rest are separate PRs.
 
 - [ ] **2. First-solve-of-the-day celebration.** On the first solve each day, a loud streak line on the finished frame
   (bigger on 7/30/100; "welcome back, your streak is still going" when the window saved it). Mind the
@@ -37,7 +37,6 @@ Design and decisions: `docs/REWARDS.md`. Item 1 (streak function, `core/Streak.k
 - [ ] **4. Achievements.** Streak lengths (overall and per puzzle), all difficulties of one puzzle's daily, every puzzle
   in one day (computed from `PuzzleRegistry`, so it scales), milestones (first Expert, 30 days played, one of each
   type). Own fanfare, queued one per solve. Needs 1. *L.*
-- [ ] **5. Calendar view.** Month grid of days played, with a quiet marker on days that kept a streak alive. Needs 1. *M.*
 - [ ] **6. Small daily variety.** A featured puzzle or a one-line note after solving (technique name or puzzle fact). *S.*
 
 ## Needs a real iPhone

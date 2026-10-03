@@ -34,10 +34,20 @@ private const val MAX_MISSED = 2
  * Today is not a miss until the day is over: with no play today the history is judged as of yesterday, and
  * a play today counts.
  */
-fun streakOf(played: Set<LocalDate>, today: LocalDate): Streak {
+fun streakOf(played: Set<LocalDate>, today: LocalDate): Streak = walk(played, today).first
+
+/**
+ * The missed days a live run absorbed: not played, inside a run, and not the miss that ended it. These are
+ * what "5 of the last 7" forgave, for the calendar to mark quietly. Today is never one (it is not a miss
+ * yet), and the miss that ended a run is not forgiven, but the run's earlier ones stay so: they were.
+ */
+fun forgivenDays(played: Set<LocalDate>, today: LocalDate): Set<LocalDate> =
+    walk(played, today).second.map { LocalDate.fromEpochDays(it) }.toSet()
+
+private fun walk(played: Set<LocalDate>, today: LocalDate): Pair<Streak, Set<Long>> {
     val t = today.toEpochDays()
     val days = played.map { it.toEpochDays() }.filter { it <= t }.toSet()
-    if (days.isEmpty()) return Streak(0, 0, false)
+    if (days.isEmpty()) return Streak(0, 0, false) to emptySet()
 
     fun missed(from: Long, to: Long): Int = (from..to).count { it !in days }
 
@@ -45,6 +55,7 @@ fun streakOf(played: Set<LocalDate>, today: LocalDate): Streak {
     var runStart = -1L
     var count = 0
     var best = 0
+    val forgiven = mutableSetOf<Long>()
     for (d in days.min()..end) {
         if (d in days) {
             if (runStart < 0) runStart = d
@@ -54,9 +65,9 @@ fun streakOf(played: Set<LocalDate>, today: LocalDate): Streak {
             best = maxOf(best, count)
             runStart = -1
             count = 0
-        }
+        } else if (runStart >= 0 && d !in days) forgiven.add(d)
     }
     best = maxOf(best, count)
     val atRisk = count > 0 && t !in days && missed(maxOf(runStart, t - WINDOW + 1), t) > MAX_MISSED
-    return Streak(count, best, atRisk)
+    return Streak(count, best, atRisk) to forgiven
 }
