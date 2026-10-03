@@ -25,7 +25,7 @@ adb shell settings put secure show_ime_with_hard_keyboard 0
 adb shell settings put global sysui_demo_allowed 1
 demo() { adb shell am broadcast -a com.android.systemui.demo -e command "$@" >/dev/null; }
 demo enter; demo clock -e hhmm 0900; demo battery -e level 100 -e plugged false
-demo network -e wifi show -e level 4 -e fully true; demo network -e mobile hide; demo notifications -e visible false
+demo network -e wifi show -e level 4 -e fully true -e mobile hide -e nosim hide; demo notifications -e visible false
 
 adb uninstall $PKG >/dev/null 2>&1 || true
 adb install -r "$APK" >/dev/null
@@ -65,7 +65,7 @@ adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Saturday 3 October
 }
 shot 1-home
 
-tap Sudoku; sleep 2; tap Hint; tap "Why?"; shot 2-sudoku-hint; back
+tap Sudoku; sleep 2; tap Hint; tap "Why?"; sleep 3; shot 2-sudoku-hint; back
 tap Kings; sleep 2; shot 3-kings; back
 tap Mosaic; sleep 2; shot 4-mosaic; back
 tap Snap; sleep 2; shot 5-snap; back
