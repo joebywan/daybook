@@ -19,10 +19,11 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
-- [ ] **Mate: finish checks on a real device.** The promotion picker was never exercised in a running browser (no shipped
-  position reaches one quickly), there are no Android emulator screenshots, and Expert's hint search (mate in 4: p95 105 ms, max
-  ~490 ms on a desktop JVM) needs timing on a phone and on the web's single thread. If Expert is too slow, make it a harder mate in 3
-  (`docs/CHESS_SPEC.md`). Also: recapture `docs/screenshots/home.png` (15 puzzles) and add the Play/F-Droid listing text. *S-M.*
+- [ ] **Mate: Expert hint cost on a phone.** Emulator screenshots were taken (home, both sides, selection, reply, mistake,
+  hints, walkthrough, light and dark; no layout fault). The promotion picker still was not exercised in a running app. Expert's
+  first hint on the Android emulator is p95 585 ms, max 1.35 s (desktop JVM p95 105 ms), over the 300 ms target, and it runs on
+  the main thread's critical path for the tap: decide between a faster search with identical results and the spec's fallback
+  (Expert = harder mate in 3, `docs/CHESS_SPEC.md`). Web (wasm) timing is unmeasured. Also add the Play/F-Droid listing text. *S-M.*
 
 ## Rewards
 
@@ -113,8 +114,6 @@ below have a famous branded version; use the descriptive name).
   toolbar do not move. Static renders of all three tiers matched pixel for pixel across both browsers and both schemes.
   Not done: headless WebKit ignores hand-built TouchEvents, so its touch slop on a 15x15 sweep is unchecked (only a real
   iPhone or the emulator can), and the 5x5 finish frame's cover of the last rows at 375x537 is by design.
-- [ ] **Recapture the README home screenshot.** The Nonogram tile (and its board) now use the per-board palette instead of flat
-  blue, so `docs/screenshots/home.png` is stale until it is retaken on a clean emulator install.
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
   size-by-size retune; measure the pass rate before trying again.
