@@ -24,6 +24,25 @@ from a measurement or review, so you can check it is still true.
   (PR 108), which fixed tall screens, but at 375x537 it hides the bottom rows of a Nonogram 5x5. Options: a smaller
   frame there, or a one-line variant with the tiles beside the time. Must not resize the board.
 
+## Rewards
+
+Design and decisions: `docs/REWARDS.md`. Do 1-3 together (shared history data); the rest are separate PRs.
+
+- [ ] **1. Streak function (5 of the last 7 days).** One pure, tested function over the play history giving current
+  streak (days played), best streak, and "alive/at risk". Per-puzzle streaks reuse it. Replace the current streak
+  logic in `ProgressStore` and the stats/home uses. Derived, not stored; must load old saves. *M.*
+- [ ] **2. First-solve-of-the-day celebration.** On the first solve each day, a loud streak line on the finished frame
+  (bigger on 7/30/100; "welcome back, your streak is still going" when the window saved it). Mind the
+  short-screen finished-frame item above. *M.*
+- [ ] **3. Personal-best and perseverance lines.** On the finished frame, only when true: best time at this tier,
+  faster than N% of your own solves, no hints. Hint wording names the deduction shown; long hard solves get a
+  perseverance line. *M.*
+- [ ] **4. Achievements.** Streak lengths (overall and per puzzle), all difficulties of one puzzle's daily, every puzzle
+  in one day (computed from `PuzzleRegistry`, so it scales), milestones (first Expert, 30 days played, one of each
+  type). Own fanfare, queued one per solve. Needs 1. *L.*
+- [ ] **5. Calendar view.** Month grid of days played, with a quiet marker on days that kept a streak alive. Needs 1. *M.*
+- [ ] **6. Small daily variety.** A featured puzzle or a one-line note after solving (technique name or puzzle fact). *S.*
+
 ## Needs a real iPhone
 
 Nothing below can be verified from a desktop browser. The tester has the device.
