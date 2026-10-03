@@ -57,7 +57,7 @@ Hand-built puzzle generators, proven boards and a calm, uncluttered design. Come
 | Phone screenshots | `screenshots/1-home.png` ... `5-snap.png` | 1080x1920, 9:16 (the first set was 2:1, which Play also accepted). The emulator's own 1080x2400 is over 2:1 |
 | Tablet screenshots (7-inch and 10-inch) | the same five | Both slots are marked required in the Console, so the phone shots are reused. The app is portrait-only, so a tablet shows the phone layout |
 
-The screenshots are emulator captures made by `tools/screenshots/capture.sh` (`wm size 1080x1920`, a clean install, the date pinned to 3 Oct 2026, demo-mode
+The screenshots are emulator captures made by `tools/screenshots/capture.sh` (`wm size 1080x1920`, a clean install, the date pinned to 24 Sep 2026, demo-mode
 status bar: 9:00, no notifications). Run the **Update screenshots** workflow (Actions, manual): it captures, uploads to the listing with `tools/screenshots/upload-play.py` (the service account needs "Manage store presence"; Google reviews the change and the live listing keeps the old images meanwhile) and opens a PR for the `docs/` images, which makes them part of the same "recapture when
 the look changes" duty as `docs/screenshots/`. The 7-inch and 10-inch tablet slots were filled with the same five.
 
