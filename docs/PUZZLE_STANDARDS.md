@@ -251,7 +251,7 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   state* (one undo restores both). They are not derived (hidden when a peer holds the digit) because a hidden
   note is indistinguishable from a refused tap, and a player may make a wrong judgement; conflicts show once
   a digit is placed.
-- **Colour, contrast, legibility.** Draw with `MaterialTheme.colorScheme` so light and dark both work
+- **Colour, contrast, legibility.** Palette and hue rules for board content: `docs/COLOUR.md`. Draw with `MaterialTheme.colorScheme` so light and dark both work
   (`ui/theme/Palette.kt`: `LightScheme`, `DarkScheme`; the web follows `prefers-color-scheme`). Colour is never
   the only signal: Kings' region colours are picked by CIEDE2000 distance including colour-blind vision
   (`test/KingsPaletteTest`; comment on `Kings.Preview`). Error is `scheme.error`, hint glow `scheme.onBackground`.
