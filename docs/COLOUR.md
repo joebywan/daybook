@@ -63,4 +63,4 @@ dark fills above sit at lightness 0.30 against the surface's 0.14: keep that gap
 ## Status
 
 The table is implemented in `ui/theme/BoardHues.kt` (`fill`/`ink`/`mark`, `contentHues(n)`), pinned to the hex table above by
-`BoardHuesTest`, but no board uses it yet. Adopting it board by board is in `docs/TODO.md`.
+`BoardHuesTest`. Adopted: Inequality (signs, selection and row/column band in one hue, digits and twins in another). Adopting the rest board by board is in `docs/TODO.md`.

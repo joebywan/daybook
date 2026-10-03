@@ -37,6 +37,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -56,6 +57,7 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
 /**
@@ -295,14 +297,16 @@ object Inequality : PuzzleType {
         BoxWithConstraints(modifier) {
             val slot = minOf(maxWidth, maxHeight) / 3
             val cell = slot * CELL
-            val ink = scheme.onSurface.copy(alpha = 0.75f)
+            val dark = scheme.background.luminance() < 0.5f
+            val (hueA, hueB) = HUE_PAIRS[0]
+            val ink = BoardHues.ink(hueA, dark)
             for (i in 0 until 9) {
                 Box(
                     Modifier
                         .padding(start = slot * (i % 3) + (slot - cell) / 2, top = slot * (i / 3) + (slot - cell) / 2)
                         .size(cell)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(if (i == 8) Color(accent).copy(alpha = 0.40f) else scheme.surfaceVariant),
+                        .background(if (i == 8) BoardHues.fill(hueB, dark) else scheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (PREVIEW_DIGITS[i] != 0) {
@@ -310,7 +314,7 @@ object Inequality : PuzzleType {
                             PREVIEW_DIGITS[i].toString(),
                             fontSize = (cell.value * 0.6f).sp,
                             fontWeight = if (PREVIEW_GIVEN[i]) FontWeight.Bold else FontWeight.Normal,
-                            color = if (PREVIEW_GIVEN[i]) scheme.onSurface else Color(accent),
+                            color = if (PREVIEW_GIVEN[i]) scheme.onSurface else BoardHues.ink(hueB, dark),
                         )
                     }
                 }
@@ -323,11 +327,8 @@ object Inequality : PuzzleType {
 
     // ---- the board ---------------------------------------------------------------------------
 
-    /** Each board's own pair, as Nonogram's: the first marks the selection, the second the player's digits. */
-    private val PALETTES = listOf(
-        0xFF3E7CB1 to 0xFFD0507F, 0xFF2E9E8F to 0xFFE0703F, 0xFF8A55C8 to 0xFF2E9E8F,
-        0xFFE0703F to 0xFF3E7CB1, 0xFF3FA55A to 0xFF8A55C8, 0xFFCF4F7A to 0xFF2F9CC8,
-    )
+    /** Each board's own pair of content hues (docs/COLOUR.md; no Coral/Green, which mean wrong/right): signs and selection, then the player's digits and their twins. */
+    private val HUE_PAIRS = listOf(215f to 34f, 175f to 330f, 268f to 46f, 34f to 215f, 330f to 175f, 46f to 268f)
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
@@ -336,7 +337,13 @@ object Inequality : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val conflicts = s.conflicts()
         val broken = InequalityLogic.brokenSigns(s.cells, s.signs)
-        val (mark, ink) = PALETTES[(s.solution.hashCode() and Int.MAX_VALUE) % PALETTES.size].let { Color(it.first) to Color(it.second) }
+        val dark = scheme.background.luminance() < 0.5f
+        val (hueA, hueB) = HUE_PAIRS[(s.solution.hashCode() and Int.MAX_VALUE) % HUE_PAIRS.size]
+        val mark = BoardHues.mark(hueA)
+        val ink = BoardHues.ink(hueB, dark)
+        val signInk = BoardHues.ink(hueA, dark)
+        val twin = BoardHues.fill(hueB, dark)
+        val band = BoardHues.fill(hueA, dark).copy(alpha = 0.45f)
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
@@ -384,8 +391,8 @@ object Inequality : PuzzleType {
                                 .background(
                                     when {
                                         s.selected == i && i !in conflicts -> mark
-                                        selectedValue != 0 && s.cells[i] == selectedValue -> mark.copy(alpha = 0.35f)
-                                        s.selected != null && (i / n == s.selected / n || i % n == s.selected % n) -> mark.copy(alpha = 0.14f)
+                                        selectedValue != 0 && s.cells[i] == selectedValue -> twin
+                                        s.selected != null && (i / n == s.selected / n || i % n == s.selected % n) -> band
                                         else -> scheme.surfaceVariant
                                     },
                                 )
@@ -418,7 +425,7 @@ object Inequality : PuzzleType {
                                 look.strong -> glow.copy(alpha = pulse.value)
                                 look.soft -> glow.copy(alpha = 0.7f)
                                 look.dim -> scheme.onSurface.copy(alpha = 0.25f)
-                                else -> scheme.onSurface.copy(alpha = 0.8f)
+                                else -> signInk
                             }
                             drawSign(n, sign, px, colour, px * (if (look.strong) 0.07f else 0.05f))
                         }

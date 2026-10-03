@@ -186,7 +186,6 @@ not demand thought, against the owner's stated taste.
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),
   a check at 375x537, and no change to any seed, state or save.
-  2. Inequality (known bland): tint cells by row/column or by sign chain, ink the signs, mark the selected digit's twins.
   3. Sudoku: tint the 3x3 boxes alternately and digit-twin highlights in a content hue; keep givens `onSurface`.
   4. Tower, Mosaic, Sets, Lits: replace the hex lists with `contentHues`; each also shows right/wrong, so use the
      non-Coral/Green six (Tower: pegs vs. feedback; Mosaic: its flood colours and the move counter; Sets: three
