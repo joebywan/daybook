@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,6 +45,9 @@ import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
 import kotlinx.coroutines.launch
+
+/** The solve chime (a no-op when sound is off), so a finished step in a tutorial announces its new caption. */
+val LocalChime = staticCompositionLocalOf<() -> Unit> { {} }
 
 /** Why the caption area says what it says. */
 private enum class Status { WAITING, RETRY, DONE }
@@ -85,6 +89,7 @@ fun TutorialRunner(
     val hints = rememberHintSession(index)
     val last = index == frames.lastIndex
     val scope = rememberCoroutineScope()
+    val chime = LocalChime.current
     fun onHint() {
         val asked = board
         scope.launch { hints.tap(puzzle, asked, onOpened = {}, onApply = { board = it }) }
@@ -92,7 +97,12 @@ fun TutorialRunner(
 
     if (frame.freePlay) {
         WatchHint(hints, puzzle, board)
-        LaunchedEffect(board.solved) { if (board.solved) hints.clear() }
+        LaunchedEffect(board.solved) {
+            if (board.solved) {
+                hints.clear()
+                chime()
+            }
+        }
     }
 
     val highlight = when {
@@ -145,6 +155,8 @@ fun TutorialRunner(
                             frame.accepts.invoke(next) -> {
                                 board = next
                                 moved = Status.DONE
+                                // The caption changes at once; the chime says there is something new to read.
+                                chime()
                             }
                             else -> moved = Status.RETRY
                         }
