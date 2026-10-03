@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Captures the store/README screenshots from a running emulator (google_apis image, so `adb root`
-# works) with the debug or release APK passed as $1. Output: docs/play/screenshots/*.png (1080x1920)
+# works) with the debug or release APK passed as $1. Output: docs/play/screenshots/*.png (1080x1920, copied to fastlane/)
 # and half-scale README copies in docs/screenshots/. The date, size and status bar are pinned so a
 # rerun differs only when the app's look does.
 set -euo pipefail
@@ -75,3 +75,5 @@ demo exit
 for p in 1-home:home 2-sudoku-hint:sudoku 4-mosaic:mosaic 5-snap:snap; do
   convert "$OUT/${p%%:*}.png" -resize 50% "docs/screenshots/${p##*:}.png"
 done
+# F-Droid reads its listing images from the repo (fastlane layout), so they travel with the Play set.
+cp "$OUT"/*.png fastlane/metadata/android/en-AU/images/phoneScreenshots/
