@@ -13,8 +13,12 @@ import kotlinx.datetime.LocalDate
  *
  * Pure and platform-free (the web compiles it). `puzzleIds` is a parameter so tests can fake the registry.
  */
+/** Which badge shape an achievement wears (`ui/stats/AchievementBadge.kt`). */
+enum class AchievementCategory { STREAK, PUZZLE_STREAK, COVERAGE, MILESTONE }
+
 class Achievement(
     val id: String,
+    val category: AchievementCategory,
     val title: String,
     val description: String,
     val earned: (history: List<Completion>, today: LocalDate, puzzleIds: List<String>) -> Boolean,
@@ -23,11 +27,11 @@ class Achievement(
 private fun playedDays(h: List<Completion>) = h.mapNotNullTo(HashSet()) { it.day }
 
 private fun streak(n: Int, title: String) = Achievement(
-    "streak$n", title, "Play on $n days in one streak.",
+    "streak$n", AchievementCategory.STREAK, title, "Play on $n days in one streak.",
 ) { h, today, _ -> streakOf(playedDays(h), today).best >= n }
 
 private fun puzzleStreak(n: Int, title: String) = Achievement(
-    "puzzleStreak$n", title, "Reach a $n-day streak in a single puzzle.",
+    "puzzleStreak$n", AchievementCategory.PUZZLE_STREAK, title, "Reach a $n-day streak in a single puzzle.",
 ) { h, today, _ ->
     h.groupBy { it.puzzleId }.values.any { c -> streakOf(playedDays(c), today).best >= n }
 }
@@ -36,8 +40,8 @@ private fun puzzleStreak(n: Int, title: String) = Achievement(
 private val TOP = Difficulty.entries.last()
 
 val ACHIEVEMENTS: List<Achievement> = listOf(
-    Achievement("solves1", "First solve", "Solve your first puzzle.") { h, _, _ -> h.isNotEmpty() },
-    Achievement("solves100", "Hundred solves", "Solve 100 puzzles.") { h, _, _ -> h.size >= 100 },
+    Achievement("solves1", AchievementCategory.MILESTONE, "First solve", "Solve your first puzzle.") { h, _, _ -> h.isNotEmpty() },
+    Achievement("solves100", AchievementCategory.MILESTONE, "Hundred solves", "Solve 100 puzzles.") { h, _, _ -> h.size >= 100 },
     streak(3, "Three in a row"),
     streak(7, "A full week"),
     streak(14, "Fortnight"),
@@ -47,21 +51,21 @@ val ACHIEVEMENTS: List<Achievement> = listOf(
     streak(365, "A whole year"),
     puzzleStreak(7, "Devoted"),
     puzzleStreak(30, "Specialist"),
-    Achievement("days30", "Regular", "Play on 30 different days.") { h, _, _ -> playedDays(h).size >= 30 },
-    Achievement("firstTop", "First ${TOP.label}", "Solve a puzzle on ${TOP.label}.") { h, _, _ ->
+    Achievement("days30", AchievementCategory.MILESTONE, "Regular", "Play on 30 different days.") { h, _, _ -> playedDays(h).size >= 30 },
+    Achievement("firstTop", AchievementCategory.MILESTONE, "First ${TOP.label}", "Solve a puzzle on ${TOP.label}.") { h, _, _ ->
         h.any { it.difficulty == TOP }
     },
-    Achievement("cleanTop", "Unaided ${TOP.label}", "Solve a ${TOP.label} puzzle without hints.") { h, _, _ ->
+    Achievement("cleanTop", AchievementCategory.MILESTONE, "Unaided ${TOP.label}", "Solve a ${TOP.label} puzzle without hints.") { h, _, _ ->
         h.any { it.difficulty == TOP && it.hints == 0 }
     },
-    Achievement("oneOfEach", "One of each", "Solve every kind of puzzle at least once.") { h, _, ids ->
+    Achievement("oneOfEach", AchievementCategory.COVERAGE, "One of each", "Solve every kind of puzzle at least once.") { h, _, ids ->
         h.mapTo(HashSet()) { it.puzzleId }.containsAll(ids)
     },
-    Achievement("fullSet", "Full set", "Finish every difficulty of one puzzle's daily on the same day.") { h, _, _ ->
+    Achievement("fullSet", AchievementCategory.COVERAGE, "Full set", "Finish every difficulty of one puzzle's daily on the same day.") { h, _, _ ->
         h.filter { it.day != null }.groupBy { it.puzzleId to it.day }
             .any { (_, c) -> c.mapTo(HashSet()) { it.difficulty }.size == Difficulty.entries.size }
     },
-    Achievement("allPuzzles", "Clean sweep", "Finish every puzzle's daily on the same day.") { h, _, ids ->
+    Achievement("allPuzzles", AchievementCategory.COVERAGE, "Clean sweep", "Finish every puzzle's daily on the same day.") { h, _, ids ->
         ids.isNotEmpty() && h.filter { it.day != null }.groupBy { it.day }
             .any { (_, c) -> c.mapTo(HashSet()) { it.puzzleId }.containsAll(ids) }
     },

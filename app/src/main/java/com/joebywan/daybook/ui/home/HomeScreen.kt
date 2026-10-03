@@ -65,6 +65,7 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
+import com.joebywan.daybook.ui.stats.MedalIcon
 import com.joebywan.daybook.platform.formatDate
 import kotlinx.datetime.LocalDate
 
@@ -107,6 +108,7 @@ fun HomeScreen(
     onLaunch: (String) -> Unit,
     onArchive: (String) -> Unit,
     onStats: () -> Unit,
+    onAchievements: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -133,6 +135,7 @@ fun HomeScreen(
             streak = streak,
             onArchive = { pickingArchive = true },
             onStats = onStats,
+            onAchievements = onAchievements,
             onSettings = onSettings,
         )
         Spacer(Modifier.height(14.dp))
@@ -166,6 +169,7 @@ private fun Header(
     streak: Streak,
     onArchive: () -> Unit,
     onStats: () -> Unit,
+    onAchievements: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -181,6 +185,11 @@ private fun Header(
         HeaderButton(Icons.Default.History, "Archive", onArchive)
         Spacer(Modifier.width(8.dp))
         HeaderButton(Icons.Default.InsertChart, "Statistics", onStats)
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(scheme.surface).clickable(onClick = onAchievements),
+            contentAlignment = Alignment.Center,
+        ) { MedalIcon(Modifier.size(24.dp), scheme.onSurfaceVariant, "Achievements") }
         Spacer(Modifier.width(8.dp))
         HeaderButton(Icons.Default.Settings, "Settings", onSettings)
     }
