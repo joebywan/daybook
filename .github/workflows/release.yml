@@ -121,6 +121,10 @@ jobs:
 
   fdroid:
     needs: release
+    # A called workflow cannot hold more than its caller grants; this one starts pages.yml.
+    permissions:
+      contents: write
+      actions: write
     uses: ./.github/workflows/publish-fdroid.yml
     with:
       tag: ${{ needs.release.outputs.tag }}
