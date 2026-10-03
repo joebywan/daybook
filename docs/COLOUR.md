@@ -78,6 +78,33 @@ and gives the two hues fixed jobs, so every board reads the same way:
   muddy, lower its alpha or use the `mark` step.
 - **Previews** use one fixed pair (`HUE_PAIRS[0]`), static.
 
+## Design review: required before any colour change ships
+
+Numbers first, then eyes. A colour change is not done until the PR body shows each of these, measured, for light AND
+dark, on the real render (not the palette table). "Looks fine" is not evidence.
+
+1. **Contrast, by WCAG relative luminance.** Text and digits on their fill: 4.5:1 (the small digits on Mosaic's areas count
+   as small text). Graphics that carry meaning (pegs, region fills, strokes, selection) against what they sit on: 3:1.
+   Pick the digit colour per fill by computing it (near-black or white, whichever is higher); never one colour for all.
+2. **Lightness is a separate axis from hue.** Equal HSL lightness is not equal brightness: teal and gold read far lighter
+   than violet or blue at the same L. Hues that sit at nearly the same luminance (pairwise ratio under about 1.3) collapse
+   into one grey for colour-blind players and in greyscale. Spread the set across at least three clearly different
+   luminance levels where groups must be told apart; otherwise a second cue (digit, shape) must carry them and be big
+   enough to read.
+3. **Greyscale and colour-blind views of the actual screenshot** (desaturate; simulate deuteranopia, protanopia,
+   tritanopia). Can every group still be told apart, or at least by its second cue?
+4. **Dark mode is not the light palette on black.** Saturated colour on a dark surface vibrates and glares: lighten and
+   desaturate slightly, and check no fill is brighter than it needs to be. Check the fill against the surface, and
+   against the board border.
+5. **Consistent visual weight.** No one hue should dominate the board (the lightest, most saturated one pulls the eye).
+   Saturation and lightness should be evenly spread or deliberately graded.
+6. **States survive the colours.** Selected, hint, error, conflict and "done" must stay distinct against every content
+   hue (e.g. an error red must not be confusable with Rose or Coral content; a selection ring must contrast with all of them).
+7. **Real size, worst case.** View at 375x537 and a tall phone, light and dark, with the busiest tier (most colours,
+   adjacent groups touching). Squint test: step back, do the groups still separate?
+8. **Harmony.** The set should feel like one family with the scheme (the moss and parchment theme); no neon, no muddy
+   mid-tones, no two hues that vibrate when adjacent (saturated complements side by side).
+
 ## Checking
 
 Render at true size in both schemes (`tools/render/render.py`, or the emulator) and ask: can I count at least two hues
