@@ -72,22 +72,24 @@ history already satisfies one sees it earned in the list and is never told, so t
 
 ## The finished frame (`ui/play/PlayScreen.kt`, `ui/play/FinishExtras.kt`)
 
-Owner's design: header ("Congratulations!" or the streak title), time, one personal line, an OPTIONAL middle block,
-the next-step buttons at the bottom.
+Owner's design (Figma "Daybook-achieve-draft"): a full-screen overlay on the solved board. A BANNER at the top
+("Congratulations!" or the streak title between two drawn party poppers, `PartyPopper` in `FinishExtras.kt`, then the time
+and one personal line), the next-step BUTTONS in a box at the bottom, and the CENTRE left open so the board shows through.
 - **Confetti** (`Confetti`): 70 pieces on a Canvas over the whole screen, ~2 s, once per finish (`confettiPlayed` is
   `rememberSaveable`, so a rotation does not replay it), takes no input. There is no reduced-motion setting in the app,
   so none is honoured; the Sound switch governs the chime only. No emoji: the web build has no emoji font.
-- **Middle block** (`ResultsBlock`), only when the solve earned achievements or there is a near goal. One achievement
-  at a time: badge (`AchievementBadge`), title, description. With several: "1 of 3", dots and "Tap to see next
-  achievement"; one tap on the block shows the next and it **wraps** after the last. The buttons are never behind it.
+- **Centre** (`ResultsBlock`), only when the solve earned achievements; otherwise empty (no silhouette, no block). One
+  achievement at a time: badge (`AchievementBadge`, 72dp, 44dp under 640dp tall), title, description. With several: "1 of 3",
+  dots and "Tap to see next achievement"; one tap on the block shows the next and it **wraps** after the last.
 - **"Only X to go"** (`core/Achievements.kt`: `remaining(id, history, today, ...)`, `nearestToGo`): one line for the
-  nearest achievement 1 or 2 steps away after this solve (fewest steps, then list order), e.g. "Only Hard on Kings
-  left for all done today!" or "2 more days to your 30-day streak." Covers streaks (current run, only while it is alive,
-  so never a lapsed one), per-puzzle streaks, 100 solves, 30 days, one of each, full set and clean sweep (today's
-  dailies). Null for earned ones, first solve and top tier. Positive wording only; never a loss. It can show with
-  nothing earned.
-- **Tap to hide.** Tapping anywhere that is not a button (a full-screen scrim under the frame, and the frame's own
-  background) hides the frame; a floating row at the same spot takes its place: "Show results", the first non-Done
+  nearest achievement 1 or 2 steps away after this solve (fewest steps, then list order). It sits under the badge description
+  when something was earned, else in the banner under the praise line. Wording keeps lifetime and today apart: lifetime goals
+  say what the player "hasn't tried yet" ("Lexicon is the only puzzle you haven't tried yet.", "2 puzzles you haven't tried
+  yet: A and B."), today's say "today" ("Only Hard on Kings left for all done today!", "...left for a clean sweep today!").
+  Covers streaks (current run, only while it is alive, so never a lapsed one), per-puzzle streaks, 100 solves, 30 days, one
+  of each, full set and clean sweep. Null for earned ones, first solve and top tier. Positive wording only; never a loss.
+- **Tap to hide.** Tapping anywhere that is not a button (a full-screen scrim under the frame, so the open centre and the board, and the
+  banner) hides the frame; a floating row at the same spot takes its place: "Show results", the first non-Done
   next step, and Done. The hidden state (`resultsHidden`) is `rememberSaveable`, never `PuzzleState`; the board is not
   resized or moved either way, and the confetti is not interactive.
 - Render it: `render.py --finish N [--togo]` (docs/WEB_BUILD.md).

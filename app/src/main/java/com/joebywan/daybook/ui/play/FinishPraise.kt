@@ -86,5 +86,6 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
 
     // One line beneath the title (or beneath "Congratulations!"): praise is loud, not long.
     val earned = newlyEarned(history, solve, today).map { EarnedAchievement(it.id, it.title, it.description) }
-    return Praise(title, big, (lines + personal).take(1), earned, nearestToGo(history, solve, today)?.text)
+    val near = nearestToGo(history, solve, today)
+    return Praise(title, big, (lines + personal).take(1), earned, near?.text)
 }

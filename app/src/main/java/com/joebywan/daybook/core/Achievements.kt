@@ -102,6 +102,11 @@ private fun steps(n: Int, one: String, many: String) = if (n == 1) "1 more $one"
 private fun names(ids: List<String>, nameOf: (String) -> String): String =
     ids.map(nameOf).sorted().joinToString(" and ")
 
+/** The lifetime "one of each" line: says "haven't tried", never "left", so it cannot read as today's checklist. */
+private fun untried(missing: List<String>, nameOf: (String) -> String): String =
+    if (missing.size == 1) "${nameOf(missing[0])} is the only puzzle you haven't tried yet."
+    else "${missing.size} puzzles you haven't tried yet: ${names(missing, nameOf)}."
+
 private fun puzzleName(id: String) = PuzzleRegistry.byId(id)?.displayName ?: id
 
 /**
@@ -133,7 +138,7 @@ fun remaining(
         }
         id == "oneOfEach" -> {
             val missing = puzzleIds - history.mapTo(HashSet()) { it.puzzleId }.toSet()
-            go(missing.size, "Only ${names(missing, nameOf)} left to try them all.")
+            go(missing.size, untried(missing, nameOf))
         }
         id == "fullSet" -> dailies.groupBy { it.puzzleId }
             .map { (p, c) -> p to Difficulty.entries - c.mapTo(HashSet()) { it.difficulty }.toSet() }
