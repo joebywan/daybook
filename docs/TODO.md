@@ -78,8 +78,6 @@ in this order. Keep every key map a pure, unit-tested function; cursor state is 
 chords stay ignored; check in Chromium and WebKit with `keyboard.press`.
 - [ ] **Optional per-puzzle "Keyboard" line in Rules.** A `keyboardHelp` list on `PuzzleType`, empty by default,
   shown on the web build only ("Arrows move, Space cycles"). Do it with the helper if wanted. *S.*
-- [ ] **Nonogram keys.** Arrows move a cursor; F fills, X crosses, Space cycles the square (and clears on the third press);
-  Shift+arrow sweeps along the line. *S.*
 - [ ] **Mambo, Pipes, Sets keys.** Arrows move a cursor; Space cycles (Mambo), rotates (Pipes) or picks (Sets);
   Mambo's two symbols may also have direct keys. *S each.*
 - [ ] **Tower keys.** 1..N picks a colour and fills the next empty peg, Backspace removes the last, Enter
@@ -118,7 +116,7 @@ below have a famous branded version; use the descriptive name).
   (it sits at the bottom there by design). Not done: WebKit rendering and the 10x10 and 15x15 sweeps in the browser.
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
-  size-by-size retune; measure the pass rate before trying again. Hardware-keyboard entry is in the keyboard item above.
+  size-by-size retune; measure the pass rate before trying again.
 - [ ] **Lexicon: a no-repeat cycle for daily words.** The word is a pure function of the seed, so it can recur
   (about even odds of a repeat within two months of Standard days). A cycle needs the day count, which the
   `generate(seed, difficulty)` contract does not carry. Only if repeats bother anyone.
