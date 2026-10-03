@@ -162,10 +162,10 @@ class AchievementsTest {
                 val m = Difficulty.entries.count { t -> todays.none { it.puzzleId == id && it.difficulty == t } }
                 if (todays.any { it.puzzleId == id } && m in 1..2) best = minOf(best ?: 9, m)
             }
-            assertEquals(best, left("fullSet", all)?.left)
+            assertEquals(if ("fullSet" in earned) null else best, left("fullSet", all)?.left)
             val sweepMissing = ids.count { id -> todays.none { it.puzzleId == id } }
             val sweep = if (todays.isNotEmpty() && sweepMissing in 1..2) sweepMissing else null
-            assertEquals(sweep, left("allPuzzles", all)?.left)
+            assertEquals(if ("allPuzzles" in earned) null else sweep, left("allPuzzles", all)?.left)
             // Streak: the walk of days played, from the independent definition of a live run.
             val st = streakOf(all.mapNotNull { it.day }.toSet(), today)
             val wantLeft = 3 - st.current

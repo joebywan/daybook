@@ -11,6 +11,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.geometry.Offset
@@ -231,7 +232,10 @@ private fun PlayBoard(
     // Saved alongside the game: without it, rotating a finished board would record the win twice.
     var recorded by rememberSaveable(initial) { mutableStateOf(false) }
     // Transient: a reopened solved board shows the plain frame.
-    var praise by remember { mutableStateOf(Praise()) }
+    var praise by remember { mutableStateOf(finishPreview ?: Praise()) }
+    // Finished-frame state: hidden to inspect the board, and confetti played once. Never PuzzleState.
+    var resultsHidden by rememberSaveable(initial) { mutableStateOf(false) }
+    var confettiPlayed by rememberSaveable(initial) { mutableStateOf(false) }
     // Set as soon as the store has been asked, and itself saved, so the answer that arrived before
     // the rotation is not thrown away by a second lookup afterwards.
     var consulted by rememberSaveable(initial) { mutableStateOf(false) }
@@ -258,6 +262,7 @@ private fun PlayBoard(
 
     val state = game.state
     val seconds = game.seconds
+    val finished = state.solved || finishPreview != null
 
     // Reads `game` rather than the values unpacked above: this runs from effects that outlive the
     // composition that started them, where those locals would be frozen at their first value.
@@ -513,24 +518,45 @@ private fun PlayBoard(
 
     // The finish: a compact frame docked over the play screen. An overlay, so the board keeps
     // exactly the box it had; the toolbar above stays laid out (hidden) for the same reason.
-    AnimatedVisibility(
-        visible = state.solved,
-        // Docked to the bottom over the hidden toolbar on every screen height: the board's box ends
-        // at the toolbar, and boards usually leave room under them, so this covers the least.
-        modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 10.dp),
-        enter = fadeIn(tween(300)),
-        exit = ExitTransition.None,
-    ) {
-        FinishedFrame(
-            seconds = seconds,
-            hints = game.hints,
-            praise = praise,
-            accent = Color(puzzle.accent),
-            options = remember(day, difficulty, otherTiersDone) {
-                nextOptions(daily = day != null, tier = difficulty, doneTiers = otherTiersDone)
-            },
-            onOption = onNext,
-        )
+    if (finished) {
+        val options = remember(day, difficulty, otherTiersDone) {
+            nextOptions(daily = day != null, tier = difficulty, doneTiers = otherTiersDone)
+        }
+        val accent = Color(puzzle.accent)
+        // Tapping anywhere but a button hides the frame so the solved board can be looked at; the pill
+        // brings it back. The scrim only exists while the frame is up, and a hidden frame covers nothing.
+        if (!resultsHidden) {
+            Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { resultsHidden = true })
+        }
+        AnimatedVisibility(
+            visible = !resultsHidden,
+            // Docked to the bottom over the hidden toolbar on every screen height: the board's box ends
+            // at the toolbar, and boards usually leave room under them, so this covers the least.
+            modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 10.dp),
+            enter = fadeIn(tween(300)),
+            exit = ExitTransition.None,
+        ) {
+            FinishedFrame(
+                seconds = seconds,
+                hints = game.hints,
+                praise = praise,
+                accent = accent,
+                options = options,
+                onOption = onNext,
+                onHide = { resultsHidden = true },
+            )
+        }
+        if (resultsHidden) {
+            ResultsPill(
+                accent = accent,
+                next = options.firstOrNull { it.kind != NextKind.DONE },
+                done = options.last(),
+                onShow = { resultsHidden = false },
+                onOption = onNext,
+                modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 10.dp),
+            )
+        }
+        Confetti(played = confettiPlayed, onPlayed = { confettiPlayed = true })
     }
 
     if (hintSession.active && !state.solved) {
@@ -585,6 +611,7 @@ private fun FinishedFrame(
     accent: Color,
     options: List<NextOption>,
     onOption: (NextOption) -> Unit,
+    onHide: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     Column(
@@ -596,7 +623,7 @@ private fun FinishedFrame(
             .clip(RoundedCornerShape(24.dp))
             .background(scheme.surface)
             .background(accent.copy(alpha = 0.14f))
-            .pointerInput(Unit) {}
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onHide)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -615,11 +642,12 @@ private fun FinishedFrame(
             style = MaterialTheme.typography.bodyMedium,
             color = scheme.onSurface,
         )
-        praise.achievementLine?.let {
-            Text(it, style = MaterialTheme.typography.titleSmall, color = accent, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
-        }
         praise.lines.forEach {
             Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        }
+        if (praise.achievements.isNotEmpty() || praise.toGo != null) {
+            Spacer(Modifier.height(8.dp))
+            ResultsBlock(praise, accent)
         }
         Spacer(Modifier.height(8.dp))
         options.chunked(2).forEachIndexed { row, pair ->
@@ -630,6 +658,23 @@ private fun FinishedFrame(
                 }
             }
         }
+    }
+}
+
+/** What stays on screen while the frame is hidden: bring it back, or move on. */
+@Composable
+private fun ResultsPill(accent: Color, next: NextOption?, done: NextOption, onShow: () -> Unit, onOption: (NextOption) -> Unit, modifier: Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        modifier.padding(horizontal = 18.dp).widthIn(max = 360.dp).fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            Modifier.weight(1.4f).heightIn(min = 48.dp).shadow(4.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
+                .background(scheme.surface).background(accent.copy(alpha = 0.22f)).clickable(onClick = onShow),
+            contentAlignment = Alignment.Center,
+        ) { Text("Show results", style = MaterialTheme.typography.titleSmall, color = scheme.onSurface) }
+        listOfNotNull(next, done).forEach { NextTile(it, accent, Modifier.weight(1f)) { onOption(it) } }
     }
 }
 
