@@ -102,6 +102,23 @@ into every seed: never rename it.
 - The pictures are random noise, not drawings. Smoothing them into blobs made 5x5 boards fail the filter too often
   (4% passed the shape rules); see `docs/TODO.md`.
 
+## Inequality (Futoshiki)
+
+A Latin square (1..N once per row and column, N = 4/5/6 by tier) with `<`/`>` signs between some neighbours. `puzzles/InequalityRules.kt`
+(`Sign`, rules, generator, exhaustive proof), `InequalityTeacher.kt`, `InequalityKeys.kt`, `Inequality.kt` (state, board, walkthrough,
+motif). `id = "inequality"` is hashed into every seed: never rename it.
+
+- **Tiers are size alone.** Clues are minimal at every size (about 1/6 of squares given at most, a fifth of the signs shown), and
+  Standard being sparse is the intended trade, as Snap's.
+- **A board ships only if the teacher's ladder finishes it** (`InequalityTeacher.solvesByLogic`: last square, only digit, only place,
+  then the same two with candidates cut by the signs to a fixpoint). Digits and signs are then taken back in random order while that
+  still holds, and the result is proved by `InequalityLogic.countSolutions` (candidate masks, exhaustive, no budget). So hints never
+  fall back on a generated board; the fallback exists for boards not made here. `InequalityOracle` (naive reading-order DFS) is the
+  independent check. Changing the ladder changes every board (parity pins go red on purpose).
+- **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer.
+- **No pencil marks** (a 6x6 is small; Sudoku's notes would be the template if asked). The selected square is in the state (as Sudoku's),
+  so `withoutSelection` is overridden. Highlight indices: squares `0 until n*n`, the k-th sign `n*n + k`, digit keys `1000 + d`.
+
 ## Rules that keep being relearned
 
 **Never ship a board the generator has not proved.** Kings, LITS, Mosaic and Shikaku each had a
@@ -110,7 +127,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku and Snap (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap and Inequality (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

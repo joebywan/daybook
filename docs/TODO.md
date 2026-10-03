@@ -60,7 +60,7 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Pages HTTPS.** The Pages API reports `https_enforced=false` with no CNAME on the project site
   (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
-- [ ] **Repo description is stale.** GitHub's "About" text still says "ten" puzzle types (it is twelve) and "for
+- [ ] **Repo description is stale.** GitHub's "About" text still says "ten" puzzle types (it is fourteen) and "for
   Android" (there is a web version too). Settings > About on the repo page; no API needed, but it is the owner's call.
 - [ ] **Move the runners to Ubuntu 26.04.** Every workflow pins `ubuntu-24.04`, so GitHub's move of
   `ubuntu-latest` to 26.04 on 2026-10-19 does not touch this repo. CI's `build` and `web-parity` both
@@ -142,9 +142,6 @@ Roughly in order of how well they fit, best first.
 - [ ] **Cage-sum Sudoku.** Sudoku plus cages whose digits must total a given sum without repeats. Reuses
   Sudoku's grid, digit pad, notes and conflict display, so most of the UI exists. Needs a uniqueness
   solver that handles cages; a teacher using cage combinations ("a 2-cage totalling 3 is {1,2}"). *M.*
-- [ ] **Inequality Latin square.** A small grid (4x4 to 6x6) with each digit once per row and column and
-  `<` / `>` signs between some neighbours. Tiny to generate, a clean uniqueness proof, a nice quick
-  puzzle between the heavy ones. *S–M.*
 - [ ] **Island-and-sea puzzle.** Numbered cells grow islands of that size, islands never touch, the sea is
   one connected body with no 2x2 pool. Same family as Kings/LITS (region logic, a connectivity
   proof in the solver); the teacher can name each rule it uses. *M–L.*

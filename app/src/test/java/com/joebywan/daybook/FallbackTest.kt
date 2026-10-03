@@ -10,6 +10,7 @@ import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
+import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.SnapState
 import org.junit.Assert.assertEquals
@@ -159,6 +160,23 @@ class FallbackTest {
             }
         }
         assertTrue("snap shipped its number-every-square fallback on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /** [Inequality.generateVerified] returns a board only when logic finished it and a search proved one answer. */
+    @Test
+    fun `inequality proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Inequality.id, difficulty)
+                val proved = Inequality.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("inequality $date/${difficulty.name}", proved, Inequality.generate(seed, difficulty))
+            }
+        }
+        assertTrue("inequality shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     @Test

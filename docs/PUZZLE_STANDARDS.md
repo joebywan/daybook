@@ -83,6 +83,7 @@ What varies, as built:
 | Tower | slots, colours, guesses | 4/5/10, 5/6/12, 5/8/14 |
 | Lexicon | word length, guesses | 5/6, 5/5, 4/7 (four letters is the harder length; see `LexiconBalanceTest`) |
 | Nonogram | side (55% filled throughout) | 5x5 / 10x10 / 15x15 (`NonogramLogic.specFor`; `NonogramRulesTest` `the tiers get larger in the order they are offered`) |
+| Inequality | side (clues are minimal at every size) | 4x4 / 5x5 / 6x6 (`InequalityLogic.sizeFor`; `InequalityRulesTest` `the tiers get larger in the order they are offered`) |
 
 Rules for the tiers:
 
@@ -128,7 +129,7 @@ without editing it.
   returns `null` when the budget runs out, and `test/MosaicOptimumTest` `a search that runs out of budget reports
   nothing at all` pins that.
 - *Expose the split.* `generateVerified(seed, difficulty): State?` (null when nothing was proved) is what tests
-  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku` and `Snap` (internal). `generate` is
+  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap` and `Inequality` (internal). `generate` is
   `generateVerified(...) ?: lastResort(...)` (Shikaku's is `fallbackBoard`).
 - *Fallbacks.* Keep it named, tiny and honest (`Atoms.lastResort` is a three-atom chain; Snap's is a numbered
   boustrophedon). Before adding one, ask what fraction of seeds reach it and measure it; size the test sample
@@ -493,6 +494,7 @@ Y = yes, P = partial, N = no.
 | LITS | Y | Y `generateVerified` (internal), sealed `Verdict`, year test | Y | Y `LitsOracle`, `LitsAuditTest` | Y | Y 8 | Y grid | Y | Y | Y |
 | Tower | Y slots, colours, guesses | n/a random code | Y | Y `TowerBalanceTest` solver | Y | Y 7 | Y anchors + keepClear | Y | Y | Y 170 |
 | Lexicon | Y length, guesses | n/a one pick from a sorted list; lists screened, tested for order and content | Y last guess is the word | Y `LexiconSupport.refMark`, `LexiconTeachingTest`, `LexiconBalanceTest` | Y fallback on every board | Y 9 | Y grid + anchors + keepClear | Y `LexiconWebParityTest` | Y | Y 170 |
+| Inequality | Y side | Y `generateVerified` (a board ships only if the teacher's ladder finishes it, then re-proved by `countSolutions`; `lastResort` is a cyclic square, also proved), year test | Y `InequalityLogic.isSolved` (rules, not the stored square) | Y `InequalityOracle` (naive reading-order search, counts every answer), `InequalityTeachingTest` | Y no fallback on generated boards | Y 6 | Y grid + sign indices + anchors + keepClear | Y `InequalityWebParityTest` | Y | Y 200 / 70 |
 | Nonogram | Y side | Y `generateVerified` (a picture ships only if `lineSolvable`, which makes it unique; `lastResort` is a fixed diagonal, also proved), year test | Y `NonogramLogic.isSolved` (clues, not the stored picture) | Y `NonogramOracle` (every arrangement of every row), `NonogramTeachingTest` brute force | Y no fallback exists | Y 6 | Y grid + clue indices | Y `NonogramWebParityTest` | Y | Y 200 / 70 |
 
 ### Known gaps and open items
