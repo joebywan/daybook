@@ -19,20 +19,12 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
-
-- [ ] **The finished frame still covers the lower board on short screens.** It docks to the bottom at every height now
-  (PR 108), which fixed tall screens, but at 375x537 it hides the bottom rows of a Nonogram 5x5. Options: a smaller
-  frame there, or a one-line variant with the tiles beside the time. Must not resize the board. (PR for the praise lines tightened the frame
-  so that its added line makes it no taller than before; it still covers the lower rows of a 5x5 at 375x537, and no frame
-  with tiles can clear it, so this needs a different idea, e.g. a peek/dismiss.)
-
 ## Rewards
 
 Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) 5 (calendar) and 6 (daily variety) are done; the rest are separate PRs.
 
 - [ ] **Achievements follow-ups.** No fanfare yet (the solve chime plays; a distinct short tone would need a second
-  sample path in both platform players). The finished-frame achievement line was not rendered with
-  `tools/render/render.py` (it only opens boards, not a solved frame): check it on a 375x537 screen. The two
+  sample path in both platform players). The two
   registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
 
 ## Needs a real iPhone
