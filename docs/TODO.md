@@ -186,12 +186,13 @@ not demand thought, against the owner's stated taste.
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),
   a check at 375x537, and no change to any seed, state or save.
-  4. Mosaic, Sets, Lits (Tower is done): replace the hex lists with `contentHues`; each also shows right/wrong, so use the
-     non-Coral/Green six (Mosaic: its flood colours and the move counter; Sets: three card colours; Lits: the four piece
-     colours). Tower is the template for a board with more than five groups (COLOUR.md "More than five groups").
+  4. Sets, Lits (Tower and Mosaic are done): replace the hex lists with `contentHues`; each also shows right/wrong, so use the
+     non-Coral/Green six (Sets: three card colours; Lits: the four piece colours). Mosaic is the template for a board of
+     equal region colours with a digit on each (`MosaicPaletteTest`); Tower for more than five groups (COLOUR.md "More than
+     five groups").
   5. Atoms, Pipes, Mambo, Snap, Kings, Lexicon: scheme plus accent today. Give each two content hues (Atoms: element
      types; Pipes: flow/source colouring; Mambo: the two states; Snap: path stretches or numbers; Kings: crowns vs. marks;
-     Lexicon: keep Green/Gold, add a hue to the keyboard's used letters). Kings and Mosaic must keep their CIEDE2000 tests.
+     Lexicon: keep Green/Gold, add a hue to the keyboard's used letters). Kings must keep its CIEDE2000 test.
   6. Nonogram and Shikaku: move their `PALETTES` / `hsl` onto the helper; Nonogram's pairs become pairs of table hues (`BoardHues.HUE_PAIRS`/`pair`, which changes its current colours, so that step re-pins its tests).
   7. Home-grid `Preview` for each, in the same pass as its board; then recapture `docs/screenshots/*.png` (clean install,
      date pinned) and update the alt text.

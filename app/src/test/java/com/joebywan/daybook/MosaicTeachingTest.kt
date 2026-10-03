@@ -280,14 +280,14 @@ class MosaicTeachingTest {
 
     @Test
     fun `a wasted first fill is named, with undo back to the start`() {
-        // The walkthrough board: its one good first fill is blue-corner-to-green. Red into the
+        // The walkthrough board: its one good first fill is violet-corner-to-amber. Teal into the
         // corner instead wastes a fill that zero slack cannot spare.
         val start = MosaicState(5, 5, 3, 3, Mosaic.TUTORIAL_CELLS)
         val s = start.flood(17, 1)
         val step = MosaicTeacher.teach(s)!!
         assertEquals(MosaicTeacher.MISTAKE, step.technique)
         assertEquals(0, step.rewindTo)
-        assertTrue(step.explanation, "first fill" in step.explanation && "red" in step.explanation)
+        assertTrue(step.explanation, "first fill" in step.explanation && "teal" in step.explanation)
         assertEquals(start.cells, step.rewind!!.cells)
 
         // Out of fills entirely: still says where it slipped, not merely that it is over.

@@ -50,8 +50,8 @@ internal object MosaicTeacher {
      */
     const val BUDGET = 1_500_000
 
-    /** Names for [Mosaic.palette], index for index. The fourth swatch is amber; players say yellow. */
-    val colourNames = listOf("green", "red", "blue", "yellow", "purple")
+    /** Names for [Mosaic.palette], index for index. */
+    val colourNames = listOf("amber", "teal", "violet", "rose", "blue")
 
     /**
      * One step: a fill to make ([cell] and [colour]), or — for a [MISTAKE] — a board to go back to.
