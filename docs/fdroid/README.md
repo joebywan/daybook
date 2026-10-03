@@ -31,8 +31,8 @@ F-Droid's main repo hosts only free software and builds from source.
   and Android refuses to update a Play or GitHub install with it. Checked 2026-10-03: `assembleRelease` of a release's
   commit on a different machine and JDK than CI gave an APK identical to the release's in all 67 non-signature files.
   **The tag must be the commit that was built.** `release.yml` once tagged the branch head instead (a later merge
-  landed while the run was queued), so v0.1.100 to v0.1.10x do not match their APKs and cannot verify; the entry
-  must name a release made after `--target "$GITHUB_SHA"` was added. Debug a mismatch by diffing the two APKs'
+  landed while the run was queued), so v0.1.100 to v0.1.102 do not match their APKs and cannot verify; the entry
+  must name a release made after `--target "$GITHUB_SHA"` was added. F-Droid's scanner also rejects an APK with an extra signing block, which AGP adds unless `dependenciesInfo` is switched off in `app/build.gradle.kts` (it is; first in v0.1.104). Debug a mismatch by diffing the two APKs'
   contents file by file (zip entries outside `META-INF/`), then `dexdump` for the dex.
 
 `com.joebywan.daybook.yml` is the entry as submitted in that merge request to
