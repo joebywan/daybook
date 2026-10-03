@@ -60,6 +60,7 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
 /**
@@ -119,13 +120,20 @@ object Sets : PuzzleType {
         "Arrows move, Space or Enter picks a card.",
     )
 
-    private val colours = listOf(0xFFD9584C, 0xFF4C86D9, 0xFF54B07A)
+    /**
+     * The three card colours: the `ink` step of Amber, Teal and Violet (docs/COLOUR.md), the step meant for strokes on the
+     * card surface, so every colour is at least 3:1 against it in both schemes (`SetsPaletteTest`). Sets shows
+     * right/wrong, so Coral and Green are left alone. Amber, Teal, Violet is the triple of the six other hues that stays well apart:
+     * CIEDE2000 >= 20 under deuteranopia, protanopia and tritanopia in both schemes. Index i is "colour i" in every save, so
+     * only the look moved: 0 was red, 1 blue, 2 green. Colour is one of four traits, never the only one.
+     */
+    fun palette(dark: Boolean): List<Color> = listOf(34f, 175f, 268f).map { BoardHues.ink(it, dark) }
 
     /**
      * The two cards on the home tile.
      *
-     * Picked, not generated, and picked to disagree on all four traits at once: two solid red
-     * ovals against three hatched green diamonds. A tile is ~80dp, so only two cards fit at a
+     * Picked, not generated, and picked to disagree on all four traits at once: two solid amber
+     * ovals against three hatched violet diamonds. A tile is ~80dp, so only two cards fit at a
      * size where the count can still be counted and the hatching still reads as hatching — and
      * the traits *are* the game, so a pair that differs on every one of them says more about
      * Sets than three near-identical cards would.
@@ -424,8 +432,8 @@ object Sets : PuzzleType {
     /**
      * Six cards holding exactly two sets, which share card 5:
      * ```
-     * 0 three outlined red diamonds    1 one solid red oval          2 three striped green ovals
-     * 3 two striped blue ovals         4 three outlined blue rects   5 three outlined green ovals
+     * 0 three outlined amber diamonds  1 one solid amber oval        2 three striped violet ovals
+     * 3 two striped teal ovals         4 three outlined teal rects   5 three outlined violet ovals
      * ```
      * {1, 3, 5} is the set the frames build; {0, 4, 5} is left for "your turn" and runs through
      * card 5, so finishing the board needs the rule that used cards stay in play. {1, 2, 3} is the
@@ -475,7 +483,7 @@ object Sets : PuzzleType {
             ),
             TutorialFrame(
                 state = fresh,
-                caption = "Colour: red, blue or green.",
+                caption = "Colour: amber, teal or violet.",
                 highlight = BoardHighlight(strong = TUTORIAL_COLOURS.toSet()),
             ),
             TutorialFrame(
@@ -495,7 +503,7 @@ object Sets : PuzzleType {
             ),
             TutorialFrame(
                 state = fresh,
-                caption = "These three are a set. Shape: all ovals, all the same. Colour: red, blue, green, " +
+                caption = "These three are a set. Shape: all ovals, all the same. Colour: amber, teal, violet, " +
                     "all different. Shading: solid, striped, outlined, all different. Number: one, two, three, all different.",
                 highlight = BoardHighlight(strong = TUTORIAL_SET.toSet()),
             ),
@@ -507,7 +515,7 @@ object Sets : PuzzleType {
             ),
             TutorialFrame(
                 state = fresh,
-                caption = "Tap a card to pick it. Pick the glowing card, the three striped green ovals.",
+                caption = "Tap a card to pick it. Pick the glowing card, the three striped violet ovals.",
                 highlight = BoardHighlight(strong = setOf(2)),
                 accepts = only(listOf(2)),
                 retry = "Tap the glowing card.",
@@ -881,7 +889,7 @@ object Sets : PuzzleType {
      */
     @Composable
     private fun CardFace(card: Card, inset: Dp) {
-        val colour = Color(colours[card.colour])
+        val colour = palette(BoardHues.isDark(MaterialTheme.colorScheme))[card.colour]
         Canvas(Modifier.fillMaxSize().padding(inset)) {
             val slots = card.count + 1
             val slotHeight = size.height / 3f

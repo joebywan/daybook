@@ -56,11 +56,11 @@ internal object SetsTeacher {
 
     private val counts = listOf("one", "two", "three")
     private val shadings = listOf("solid", "outlined", "striped")
-    private val colourNames = listOf("red", "blue", "green")
+    private val colourNames = listOf("amber", "teal", "violet")
     private val shapes = listOf("oval", "diamond", "rectangle")
     private val shapesWithArticle = listOf("an oval", "a diamond", "a rectangle")
 
-    /** "three outlined green ovals": count, shading, colour, shape — the order the walk runs in. */
+    /** "three outlined violet ovals": count, shading, colour, shape — the order the walk runs in. */
     fun describe(c: Card): String =
         "${counts[c.count]} ${shadings[c.shading]} ${colourNames[c.colour]} ${shapes[c.shape]}" +
             if (c.count > 0) "s" else ""
