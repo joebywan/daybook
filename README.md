@@ -188,6 +188,13 @@ GitHub secrets are write-only. The keystore and its password live outside the re
 `~/Documents/github/Claude/daybook-android-signing/` (0700, files 0600) and that is the only
 readable copy. Losing it means every installed copy must be uninstalled to update.
 
+## F-Droid
+
+Add `https://knowhowit.com.au/daybook/fdroid/repo` as a repository in the F-Droid app (certificate fingerprint:
+`android/release-key.sha256`). Every release is added to it automatically, signed with the same key as the APK on
+the Releases page, so it updates in place. How it works, and why f-droid.org itself is not there yet:
+[`docs/fdroid/README.md`](docs/fdroid/README.md).
+
 ## Publishing to Google Play
 
 Every release already builds and attaches a signed `.aab` alongside the `.apk`. Once Play is set

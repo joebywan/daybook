@@ -118,3 +118,10 @@ jobs:
     with:
       tag: ${{ needs.release.outputs.tag }}
     secrets: inherit
+
+  fdroid:
+    needs: release
+    uses: ./.github/workflows/publish-fdroid.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+    secrets: inherit

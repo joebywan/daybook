@@ -1,0 +1,41 @@
+# F-Droid
+
+Two routes, both fed by the same listing files in `fastlane/metadata/android/en-AU/` (title, descriptions,
+icon, feature graphic, screenshots). `tools/screenshots/capture.sh` refreshes the screenshots there along
+with Play's, so the **Update screenshots** workflow updates every store at once. The text is copied from
+`docs/play/LISTING.md`; edit both when the wording changes.
+
+## 1. Our own repo (live with the next merge to `main`)
+
+`https://knowhowit.com.au/daybook/fdroid/repo`. In the F-Droid app: Settings > Repositories > add that address.
+
+- `release.yml` calls `publish-fdroid.yml` after each GitHub Release. It takes the release's APK, checks it with
+  `verify-apk.sh`, adds it to the repo, signs the index and pushes `repo/` to the `fdroid` branch (a single commit,
+  rewritten each time, newest five APKs). It then runs `pages.yml`, which copies that branch into the site.
+  `tools/fdroid/build-repo.sh` is the part that can be run locally (`pip install fdroidserver`).
+- **Same key as Play and GitHub**, so an F-Droid install updates in place over those. The index is signed with the
+  release key too, so the repo fingerprint is `android/release-key.sha256`. Reusing the key needed no new secret; a
+  dedicated index key would be cleaner if this ever matters.
+- No new secrets. The workflow uses the existing `ANDROID_KEYSTORE_*` ones.
+- The repo's own page (`.../fdroid/repo/index.html`) shows a QR code and the fingerprint to hand out.
+
+## 2. f-droid.org (not submitted; blocked on a licence)
+
+F-Droid's main repo hosts only free software and builds from source, signing with **its own key**. Two consequences:
+
+- **It needs a licence.** The repo has none, so it is all rights reserved and F-Droid will refuse it. Choosing one is
+  the owner's call (it covers the code, and `docs/word-lists/LICENSE-SCOWL.txt` has to travel with the word lists).
+  Put it in `LICENSE`, fill `License:` in `com.joebywan.daybook.yml` here, and the metadata is ready.
+- **An f-droid.org install does not update over a Play or GitHub one** (different signature): Android refuses the
+  update, and the person has to uninstall first, losing their progress. Matching signatures would need reproducible
+  builds (`Binaries:` plus `AllowedAPKSigningKeys:` in the entry); not attempted, and it cannot be tried without
+  F-Droid's build server.
+
+`com.joebywan.daybook.yml` is the entry to submit as a merge request to
+[gitlab.com/fdroid/fdroiddata](https://gitlab.com/fdroid/fdroiddata) (file `metadata/com.joebywan.daybook.yml`).
+`fdroid lint` passes except for the licence placeholder (and the category list, which only exists in fdroiddata's own
+checkout). It has **not** been through `fdroid build`, which needs F-Droid's build server, so expect the reviewers to ask
+for changes. After that it is automatic: `UpdateCheckMode: HTTP` reads the newest
+release tag, and F-Droid's bot adds the build entry and publishes a few days later.
+The version code and name are the Actions run number, which the build reads from the environment; the entry's `prebuild`
+bakes the substituted values into the defaults, and removes the `web/` module F-Droid cannot build.

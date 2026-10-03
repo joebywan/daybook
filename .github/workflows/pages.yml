@@ -50,6 +50,20 @@ jobs:
       - name: Drop the source map
         run: rm -f web/build/dist/wasmJs/productionExecutable/*.map
 
+      # Daybook's own F-Droid repo: publish-fdroid.yml keeps it on the `fdroid` branch, and republishes
+      # the site after each release so this copy is current. No branch yet (first run) is fine.
+      - uses: actions/checkout@v7
+        continue-on-error: true
+        with:
+          ref: fdroid
+          path: fdroid-branch
+      - name: Add the F-Droid repo to the site
+        run: |
+          if [ -d fdroid-branch/repo ]; then
+            mkdir -p web/build/dist/wasmJs/productionExecutable/fdroid
+            cp -r fdroid-branch/repo web/build/dist/wasmJs/productionExecutable/fdroid/repo
+          fi
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: web/build/dist/wasmJs/productionExecutable
