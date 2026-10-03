@@ -39,7 +39,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -189,17 +188,24 @@ object Mosaic : PuzzleType {
     )
 
     /**
-     * Board colours: the `mark` step of five of the six non-Coral/Green hues of docs/COLOUR.md (Coral and Green stay
-     * free for the "out of fills" error and for right/wrong elsewhere), the same in both schemes. Order is Amber, Teal,
-     * Violet, Rose, Blue, chosen by CIEDE2000 including colour-blind vision so each tier's prefix (3 / 4 / 5) is as far
-     * apart as the hues allow; [MosaicPaletteTest] pins it. Saves store the index, so index i is always "colour i".
-     * The first five of them are told apart by a digit as well, since the closest pair at five is only ~6.6 apart
-     * to a colour-blind eye.
+     * Board colours: five of the six non-Coral/Green hues of docs/COLOUR.md (Coral and Green stay free for the "out of
+     * fills" error and for right/wrong elsewhere), the same in both schemes. Each takes the step that spreads the set
+     * across brightness as well as hue, since equal-lightness hues collapse to one grey for a colour-blind player:
+     * Amber fill (pale), Teal ink, Violet mark, Rose ink (deep), Blue fill (pale). Order is part of the contract: saves
+     * store the index, so index i is always "colour i", and [MosaicTeacher.colourNames] follows it. The first 3 / 4 / 5
+     * (by tier) are at least 20 / 15 / 15 CIEDE2000 apart including colour-blind vision; [MosaicPaletteTest] pins it.
+     * Digits go on each fill in [BoardHues.onFill].
      */
-    val palette: List<Color> = listOf(34f, 175f, 268f, 330f, 215f).map { BoardHues.mark(it) }
+    val palette: List<Color> = listOf(
+        BoardHues.fill(34f, false),
+        BoardHues.ink(175f, false),
+        BoardHues.mark(268f),
+        BoardHues.ink(330f, false),
+        BoardHues.fill(215f, false),
+    )
 
-    /** Digit ink for a fill: dark on light marks, white on dark ones. */
-    private fun glyphInk(fill: Color) = if (fill.luminance() > 0.35f) Color(0xFF1B2F29) else Color.White
+    /** Digit ink for a fill: whichever of ink, white or black reads at 4.5:1. */
+    private fun glyphInk(fill: Color) = BoardHues.onFill(fill)
 
     /**
      * Search nodes before the solver gives up. Generation rejects a board it cannot prove inside
@@ -1155,7 +1161,7 @@ object Mosaic : PuzzleType {
                         val fill = palette[s.cells[cell]]
                         val layout = measurer.measure(
                             (s.cells[cell] + 1).toString(),
-                            TextStyle(color = glyphInk(fill).copy(alpha = 0.8f), fontSize = (stepPx * 0.34f).toSp(), fontWeight = FontWeight.Bold),
+                            TextStyle(color = glyphInk(fill), fontSize = (stepPx * 0.34f).toSp(), fontWeight = FontWeight.Bold),
                         )
                         drawText(
                             layout,

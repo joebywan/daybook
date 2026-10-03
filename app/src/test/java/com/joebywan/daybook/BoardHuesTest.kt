@@ -70,4 +70,13 @@ class BoardHuesTest {
         assertEquals(BoardHues.HUE_PAIRS.toSet(), seeds.map { BoardHues.pair(it) }.toSet())
         BoardHues.pair(Int.MIN_VALUE) // negative seeds must not index out of range
     }
+
+    @Test fun onFillPicksReadableText() {
+        assertEquals(Color(0xFF1B2F29), BoardHues.onFill(Color.White)) // light fill: the theme ink
+        assertEquals(Color.White, BoardHues.onFill(Color.Black))
+        // Teal's deep step fails ink (3.95) and white (3.58): only black reaches 4.5.
+        val teal = BoardHues.ink(175f, false)
+        assertEquals(Color.Black, BoardHues.onFill(teal))
+        assertTrue(BoardHues.contrast(BoardHues.onFill(teal), teal) >= 4.5f)
+    }
 }

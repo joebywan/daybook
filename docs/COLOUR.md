@@ -47,6 +47,9 @@ from the table's `h`; do not paste the hexes in (they are for reading and for th
   CIEDE2000 including deuteranopia and protanopia so every prefix is as far apart as it can be (Tower: 21 / 17 / 11 for the
   first 5 / 6 / 8, pinned by `TowerPaletteTest`), and put a digit or shape on every token: the colour-blind distance of an
   eight-token set is too small to carry it alone.
+- **Mix steps to spread brightness, not only hue.** Five hues all at `mark` sit within a 1.4:1 luminance band and collapse to one
+  grey. Giving each hue its own step (Mosaic: pale `fill`, deep `ink`, mid `mark`) gives four luminance levels and raised the
+  5-colour CIEDE2000 floor (colour-blind included) from 6.6 to 15.8. Search the 3 steps x hue order, scoring all four vision modes.
 - **Semantic colours are fixed and are not content hues.** Correct = Green mark, present/partial = Gold (Lexicon's
   `4E9F6C` / `D1A32F` are these two), error = `scheme.error` (Clay `C0563F`), warning is the error colour too. Do not
   spend Coral or Green on an unrelated group *in a board that also shows right/wrong*; use the other six.
@@ -85,7 +88,7 @@ dark, on the real render (not the palette table). "Looks fine" is not evidence.
 
 1. **Contrast, by WCAG relative luminance.** Text and digits on their fill: 4.5:1 (the small digits on Mosaic's areas count
    as small text). Graphics that carry meaning (pegs, region fills, strokes, selection) against what they sit on: 3:1.
-   Pick the digit colour per fill by computing it (near-black or white, whichever is higher); never one colour for all.
+   Pick the digit colour per fill by computing it (`BoardHues.onFill`: ink, white or black, the first that reaches 4.5), at full alpha; never one colour for all.
 2. **Lightness is a separate axis from hue.** Equal HSL lightness is not equal brightness: teal and gold read far lighter
    than violet or blue at the same L. Hues that sit at nearly the same luminance (pairwise ratio under about 1.3) collapse
    into one grey for colour-blind players and in greyscale. Spread the set across at least three clearly different
@@ -114,4 +117,4 @@ dark fills above sit at lightness 0.30 against the surface's 0.14: keep that gap
 ## Status
 
 The table and roles are implemented in `ui/theme/BoardHues.kt` (`fill`/`ink`/`mark`, `contentHues(n)`, `isDark`, `HUE_PAIRS`,
-`pair`), pinned by `BoardHuesTest`. Adopted: Inequality, Sudoku, Tower (pegs; its feedback pips stay `onSurface`, filled vs. hollow). Mosaic (flood colours: the `mark` step of Amber, Teal, Violet, Rose, Blue, in that order, the same in both schemes; a digit per area and on each swatch, because the 5-colour colour-blind distance is only ~6.6; pinned by `MosaicPaletteTest`). Adopting the rest board by board is in `docs/TODO.md`.
+`pair`), pinned by `BoardHuesTest`. Adopted: Inequality, Sudoku, Tower (pegs; its feedback pips stay `onSurface`, filled vs. hollow). Mosaic (flood colours: Amber fill, Teal ink, Violet mark, Rose ink, Blue fill, in that order, the same in both schemes, so brightness differs as well as hue; a digit per area and on each swatch, its colour from `BoardHues.onFill`; pinned by `MosaicPaletteTest`). Adopting the rest board by board is in `docs/TODO.md`.
