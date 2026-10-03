@@ -1,0 +1,90 @@
+name: Publish to F-Droid repo
+
+# Adds a release's signed APK to Daybook's own F-Droid repository, https://knowhowit.com.au/daybook/fdroid/repo,
+# and redeploys the site. The repo's files live on the `fdroid` branch (APKs and the signed index,
+# newest five releases) and pages.yml copies that branch into the site, so this workflow never
+# touches the web build and the web build never needs the signing key.
+#
+# The APK is the very file on the GitHub Release, signed with the release key, so an F-Droid install
+# updates in place over a Play or GitHub one. (f-droid.org's own build is signed by F-Droid instead;
+# docs/fdroid/README.md.) The index is signed with the same key, so the repo's fingerprint is the
+# app's certificate fingerprint, android/release-key.sha256.
+#
+# Called directly by release.yml: releases created with GITHUB_TOKEN do not trigger other workflows.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag to publish'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (defaults to the latest)'
+        required: false
+
+concurrency:
+  group: publish-fdroid
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # pushes the fdroid branch
+  actions: write    # starts pages.yml
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Restore the repo so far
+        run: |
+          mkdir -p fdroid/repo
+          if git ls-remote --exit-code --heads origin fdroid >/dev/null; then
+            git fetch --depth 1 origin fdroid
+            git --work-tree=fdroid checkout FETCH_HEAD -- repo
+            git reset -q   # the checkout above staged those files in this clone
+          fi
+
+      - name: Fetch the APK from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release download ${TAG:+"$TAG"} --repo "$GITHUB_REPOSITORY" --dir fdroid/repo --pattern '*.apk' --clobber
+
+      - name: Verify it is the release key
+        run: for f in fdroid/repo/*.apk; do ./tools/verify-apk.sh "$f"; done
+
+      - run: pip install --quiet fdroidserver
+
+      - name: Restore the release key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          test -s "$RUNNER_TEMP/release.jks" || { echo "::error::ANDROID_KEYSTORE_BASE64 is not set"; exit 1; }
+
+      - name: Build and sign the index
+        env:
+          FDROID_KEYSTORE: ${{ runner.temp }}/release.jks
+          FDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          FDROID_KEY_STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          FDROID_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./tools/fdroid/build-repo.sh fdroid
+
+      - name: Push the repo and redeploy the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --orphan fdroid-out
+          git --work-tree=fdroid add -f repo
+          git commit -q -m "F-Droid repo: ${{ inputs.tag || 'latest' }}"
+          git push --force origin fdroid-out:fdroid
+          gh workflow run pages.yml --ref main
+
+      - name: Clean up the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
