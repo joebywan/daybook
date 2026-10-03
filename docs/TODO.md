@@ -70,14 +70,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 
-## Keyboard input (potential, not started)
+## Keyboard input
 
-Sudoku and Lexicon already take a hardware keyboard (`SudokuKeys.kt`, `LexiconKeys.kt`); every other board
-takes none. Survey and per-puzzle key proposals: the owner asked for these to be recorded, not built. Do them
-in this order. Keep every key map a pure, unit-tested function; cursor state is `remember`, never `PuzzleState`;
-chords stay ignored; check in Chromium and WebKit with `keyboard.press`.
-- [ ] **Optional per-puzzle "Keyboard" line in Rules.** A `keyboardHelp` list on `PuzzleType`, empty by default,
-  shown on the web build only ("Arrows move, Space cycles"). Do it with the helper if wanted. *S.*
+Every board but Atoms, Shikaku and Snap takes a keyboard (`core/BoardKeys.kt` is the shared plumbing; each puzzle
+has a pure, tested `<Name>Keys.kt`; the rules dialogs show a "Keyboard" line from `PuzzleType.keyboardHelp`).
+Still open: WebKit pass with `keyboard.press` (only Chromium was driven).
 - [ ] **Atoms, Shikaku, Snap keys, only if full coverage is wanted.** Each is a drag gesture needing its own
   mode (Atoms: arrow to the neighbouring atom, Space cycles the bond; Shikaku: Space anchors a corner, arrows
   grow, Enter commits, Esc cancels; Snap: arrows extend the path via `extend`, Backspace retracts). The mouse

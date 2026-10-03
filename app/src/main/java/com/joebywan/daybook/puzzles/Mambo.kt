@@ -140,6 +140,10 @@ object Mambo : PuzzleType {
         "Every puzzle can be solved by deduction alone.",
     )
 
+    override val keyboardHelp = listOf(
+        "Arrows move, Space cycles, M puts a moon, S a sun, Backspace clears.",
+    )
+
     private fun sizeFor(difficulty: Difficulty) = when (difficulty) {
         Difficulty.STANDARD -> 6
         Difficulty.HARD -> 8

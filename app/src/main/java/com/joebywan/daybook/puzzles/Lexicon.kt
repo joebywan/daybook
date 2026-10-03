@@ -88,6 +88,10 @@ object Lexicon : PuzzleType {
         "Expert: four letters, seven guesses. Short words have more look-alikes.",
     )
 
+    override val keyboardHelp = listOf(
+        "Type letters, Backspace deletes, Enter submits.",
+    )
+
     override fun generate(seed: Long, difficulty: Difficulty) = LexiconRules.newBoard(seed, difficulty)
 
     // ---- colours ---------------------------------------------------------------------------------

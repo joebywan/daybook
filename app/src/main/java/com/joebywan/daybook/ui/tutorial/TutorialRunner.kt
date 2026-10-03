@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.ui.play.KeyboardHelpLine
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.HintSlotHeight
 import com.joebywan.daybook.ui.teach.WatchHint
@@ -223,6 +224,7 @@ fun TutorialRunner(
                         Text("•  $rule", style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(8.dp))
                     }
+                    KeyboardHelpLine(puzzle)
                 }
             },
         )

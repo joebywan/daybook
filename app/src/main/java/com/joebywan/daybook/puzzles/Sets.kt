@@ -115,6 +115,10 @@ object Sets : PuzzleType {
         "Sets you have claimed sit above the board; tap one to light up its three cards again.",
     )
 
+    override val keyboardHelp = listOf(
+        "Arrows move, Space or Enter picks a card.",
+    )
+
     private val colours = listOf(0xFFD9584C, 0xFF4C86D9, 0xFF54B07A)
 
     /**

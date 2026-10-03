@@ -556,6 +556,7 @@ private fun PlayBoard(
                         Text("•  $rule", style = MaterialTheme.typography.bodyMedium)
                         Spacer(Modifier.height(8.dp))
                     }
+                    KeyboardHelpLine(puzzle)
                 }
             },
         )
@@ -657,4 +658,15 @@ private fun ToolButton(icon: ImageVector, label: String, modifier: Modifier, onC
         Spacer(Modifier.height(4.dp))
         Text(label, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
     }
+}
+
+/** The "Keyboard" line of a rules dialog: the board's keys, then the play screen's. Nothing for a board with none. */
+@Composable
+internal fun KeyboardHelpLine(puzzle: PuzzleType) {
+    if (puzzle.keyboardHelp.isEmpty()) return
+    Text(
+        "Keyboard: " + puzzle.keyboardHelp.joinToString(" ") + " Ctrl+Z undoes" +
+            (if (puzzle.offersHints) ", H asks for a hint, Esc closes it." else "."),
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }

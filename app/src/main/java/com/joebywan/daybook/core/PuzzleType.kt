@@ -49,6 +49,12 @@ interface PuzzleType {
      */
     val rules: List<String>
 
+    /**
+     * Keys the board answers (web, or a hardware keyboard), as short sentences; empty for none. Shown
+     * as one "Keyboard" line under the rules, followed by the play screen's own shortcuts.
+     */
+    val keyboardHelp: List<String> get() = emptyList()
+
     /** ARGB accent used for this puzzle's card and board highlights. */
     val accent: Long
 
