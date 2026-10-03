@@ -95,6 +95,10 @@ into every seed: never rename it.
 - **The pen (Fill/Cross) is `rememberSaveable` in the board, not state.** A sweep is one state: it locks to the row or column
   of the larger move, a pen only writes over untouched squares, and an eraser only takes out the mark it started on.
   `onDragStart` uses the overload that receives the *down*, since the web's touch slop is wider than a 15x15 square.
+- **Colour is derived, never stored.** Filled squares blend diagonally between a pair from `PALETTES`, picked by hashing the
+  board's picture, so each daily and each random board has its own and nothing is saved. A line whose runs match its clue turns
+  green; a line no legal layout of its clue can hold (`lineImpossible`: too many, a run too long, no gap; crosses ignored, the
+  stored picture never read) turns red once it has stayed so for a second. `NonogramRulesTest` brute-forces that rule.
 - The pictures are random noise, not drawings. Smoothing them into blobs made 5x5 boards fail the filter too often
   (4% passed the shape rules); see `docs/TODO.md`.
 

@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,9 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.graphics.lerp
+import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
@@ -63,6 +67,16 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+
+/** Each board draws its filled squares as a diagonal blend of two colours; the pair is the board's own. */
+private val PALETTES = listOf(
+    0xFF2E9E8F to 0xFFE0A030, 0xFF3E7CB1 to 0xFFD0507F, 0xFFE0703F to 0xFF7A52C8,
+    0xFF3FA55A to 0xFF2F9CC8, 0xFFD6A026 to 0xFFC0453F, 0xFF8A55C8 to 0xFF30B0A0,
+    0xFFCF4F7A to 0xFF3E7CB1,
+)
+
+/** How long a line must stay impossible before it turns red, so a sweep passing through is not shouted at. */
+private const val SETTLE_MILLIS = 1000L
 
 /**
  * Nonogram: numbers beside a grid say how long the runs of filled squares are in each row and
@@ -285,7 +299,9 @@ object Nonogram : PuzzleType {
         rowDone: BooleanArray,
         colDone: BooleanArray,
         scheme: androidx.compose.material3.ColorScheme,
-        fill: Color,
+        palette: Pair<Color, Color>,
+        rowBad: BooleanArray = BooleanArray(s.height),
+        colBad: BooleanArray = BooleanArray(s.width),
         overlay: Overlay = Overlay(),
     ) {
         val u = g.u
@@ -303,7 +319,7 @@ object Nonogram : PuzzleType {
                 drawRect(scheme.surface, Offset(x, y), Size(u, u))
                 when (s.cells[r * s.width + c]) {
                     NonogramLogic.FILLED -> drawRoundRect(
-                        fill, Offset(x + u * 0.07f, y + u * 0.07f), Size(u * 0.86f, u * 0.86f), CornerRadius(u * 0.14f),
+                        lerp(palette.first, palette.second, (r + c).toFloat() / (s.width + s.height - 2).coerceAtLeast(1)), Offset(x + u * 0.07f, y + u * 0.07f), Size(u * 0.86f, u * 0.86f), CornerRadius(u * 0.14f),
                     )
                     NonogramLogic.CROSSED -> {
                         val a = u * 0.30f
@@ -344,12 +360,16 @@ object Nonogram : PuzzleType {
                     Offset(0f, g.gridY + r * u), Size(g.gridX, u), CornerRadius(u * 0.2f),
                 )
             }
+            val tint = if (rowBad[r]) scheme.error else if (rowDone[r]) scheme.primary else Color.Unspecified
+            if (tint.isSpecified) {
+                drawRoundRect(tint.copy(alpha = 0.16f), Offset(0f, g.gridY + r * u), Size(g.gridX, u), CornerRadius(u * 0.2f))
+            }
             val line = rowText[r]
             for ((k, layout) in line.withIndex()) {
                 val cx = g.gridX - CLUE_GAP * u - (line.size - 1 - k) * SLOT_W * u - SLOT_W * u / 2f
                 val cy = g.gridY + (r + 0.5f) * u
-                val alpha = if (lit && !lit1) 0.35f else if (rowDone[r]) 0.4f else 1f
-                drawText(layout, scheme.onSurface.copy(alpha = alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
+                val alpha = if (lit && !lit1) 0.35f else 1f
+                drawText(layout, if (tint.isSpecified) tint.copy(alpha = alpha) else scheme.onSurface.copy(alpha = alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
             }
         }
         for (c in 0 until s.width) {
@@ -360,12 +380,16 @@ object Nonogram : PuzzleType {
                     Offset(g.gridX + c * u, 0f), Size(u, g.gridY), CornerRadius(u * 0.2f),
                 )
             }
+            val tint = if (colBad[c]) scheme.error else if (colDone[c]) scheme.primary else Color.Unspecified
+            if (tint.isSpecified) {
+                drawRoundRect(tint.copy(alpha = 0.16f), Offset(g.gridX + c * u, 0f), Size(u, g.gridY), CornerRadius(u * 0.2f))
+            }
             val line = colText[c]
             for ((k, layout) in line.withIndex()) {
                 val cx = g.gridX + (c + 0.5f) * u
                 val cy = g.gridY - CLUE_GAP * u - (line.size - 1 - k) * SLOT_H * u - SLOT_H * u / 2f
-                val alpha = if (lit && !lit1) 0.35f else if (colDone[c]) 0.4f else 1f
-                drawText(layout, scheme.onSurface.copy(alpha = alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
+                val alpha = if (lit && !lit1) 0.35f else 1f
+                drawText(layout, if (tint.isSpecified) tint.copy(alpha = alpha) else scheme.onSurface.copy(alpha = alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
             }
         }
 
@@ -412,6 +436,14 @@ object Nonogram : PuzzleType {
         }
         return rowDone to colDone
     }
+
+    /** Which rows and columns of [s] no legal layout of their clue can hold. */
+    private fun linesImpossible(s: NonogramState, rows: List<List<Int>>, cols: List<List<Int>>): Pair<BooleanArray, BooleanArray> =
+        BooleanArray(s.height) { NonogramLogic.lineImpossible(rows[it], s.cells, NonogramLogic.rowCells(s.width, it)) } to
+            BooleanArray(s.width) { NonogramLogic.lineImpossible(cols[it], s.cells, NonogramLogic.colCells(s.width, s.height, it)) }
+
+    private fun paletteFor(s: NonogramState): Pair<Color, Color> =
+        PALETTES[(s.solution.hashCode() and Int.MAX_VALUE) % PALETTES.size].let { Color(it.first) to Color(it.second) }
 
     /** A sweep in progress: where it began, where the finger is now, and what it lays down. */
     private class Sweep(val start: Int, val at: Int, val mark: Char, val startedOn: Char)
@@ -494,7 +526,18 @@ object Nonogram : PuzzleType {
 
                 val shown = sweep?.let { w -> s.sweep(sweptCells(w, s.width), w.mark, w.startedOn) } ?: s
                 val (rowDone, colDone) = linesDone(shown, rows, cols)
-                val fill = Color(accent)
+                val palette = remember(s.solution) { paletteFor(s) }
+
+                // A line must stay impossible for a second, and be so now, before it turns red.
+                // The next change cancels the wait and starts it over.
+                val bad = linesImpossible(shown, rows, cols)
+                var settled by remember(s.solution) { mutableStateOf(bad) }
+                LaunchedEffect(shown.cells) {
+                    delay(SETTLE_MILLIS)
+                    settled = bad
+                }
+                val rowBad = BooleanArray(s.height) { bad.first[it] && settled.first[it] }
+                val colBad = BooleanArray(s.width) { bad.second[it] && settled.second[it] }
 
                 fun cellAt(offset: Offset): Int {
                     val c = (offset.x / unitPx).toInt().coerceIn(0, s.width - 1)
@@ -505,7 +548,7 @@ object Nonogram : PuzzleType {
                 Box(Modifier.size(g.totalW.asDp(density), g.totalH.asDp(density))) {
                     Canvas(Modifier.fillMaxSize()) {
                         drawBoard(
-                            shown, g, rowText, colText, rowDone, colDone, scheme, fill,
+                            shown, g, rowText, colText, rowDone, colDone, scheme, palette, rowBad, colBad,
                             Overlay(highlight, glow, pulse.value),
                         )
                     }
@@ -634,7 +677,7 @@ object Nonogram : PuzzleType {
             val colText = remember(unitPx) { measureClues(measurer, cols, unitPx * 0.52f, density) }
             val (rowDone, colDone) = remember { linesDone(motif, rows, cols) }
             Canvas(Modifier.size(g.totalW.asDp(density), g.totalH.asDp(density))) {
-                drawBoard(motif, g, rowText, colText, rowDone, colDone, scheme, Color(accent))
+                drawBoard(motif, g, rowText, colText, rowDone, colDone, scheme, paletteFor(motif))
             }
         }
     }
