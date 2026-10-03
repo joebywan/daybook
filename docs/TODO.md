@@ -62,11 +62,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
 - [ ] **Repo description is stale.** GitHub's "About" text still says "ten" puzzle types (it is twelve) and "for
   Android" (there is a web version too). Settings > About on the repo page; no API needed, but it is the owner's call.
-- [ ] **Move the runners to Ubuntu 26.04.** Every workflow pins `ubuntu-24.04`, so GitHub's move of
-  `ubuntu-latest` to 26.04 on 2026-10-19 does not touch this repo. CI's `build` and `web-parity` both
-  passed on `ubuntu-26.04` on 2026-10-02 (PR #91's trial commit); `pages`, `release`, `publish-play` and
-  `renovate` were not tried there. Move them all in one PR when convenient (Renovate may open it, since
-  it tracks runner labels); 24.04 should stay available until the next Ubuntu LTS. *S.*
 - [ ] **Dependencies still behind after the toolchain majors.** The `androidx` libraries (Compose BOM
   2025.09 -> 2026.09, lifecycle, activity, navigation, datastore, core-ktx) and kotlinx-serialization 1.11
   are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
