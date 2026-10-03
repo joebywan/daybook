@@ -62,6 +62,5 @@ dark fills above sit at lightness 0.30 against the surface's 0.14: keep that gap
 
 ## Status
 
-The table is a proposal derived from shipped colours, not yet used by any board. Auditing each board against it, and
-moving the recipe into one shared helper (`ui/theme/`, web-safe: no `java.*`) when the first board adopts it, is in
-`docs/TODO.md`.
+The table is implemented in `ui/theme/BoardHues.kt` (`fill`/`ink`/`mark`, `contentHues(n)`), pinned to the hex table above by
+`BoardHuesTest`, but no board uses it yet. Adopting it board by board is in `docs/TODO.md`.
