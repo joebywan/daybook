@@ -32,7 +32,7 @@ F-Droid's main repo hosts only free software and builds from source, signing wit
 
 `com.joebywan.daybook.yml` is the entry to submit as a merge request to
 [gitlab.com/fdroid/fdroiddata](https://gitlab.com/fdroid/fdroiddata) (file `metadata/com.joebywan.daybook.yml`).
-`fdroid lint` passes except for the licence placeholder (and the category list, which only exists in fdroiddata's own
+`fdroid lint` passes except for the category list (which only exists in fdroiddata's own
 checkout). It has **not** been through `fdroid build`, which needs F-Droid's build server, so expect the reviewers to ask
 for changes. After that it is automatic: `UpdateCheckMode: HTTP` reads the newest
 release tag, and F-Droid's bot adds the build entry and publishes a few days later.
