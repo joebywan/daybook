@@ -19,7 +19,7 @@ with Play's, so the **Update screenshots** workflow updates every store at once.
 - No new secrets. The workflow uses the existing `ANDROID_KEYSTORE_*` ones.
 - The repo's own page (`.../fdroid/repo/index.html`) shows a QR code and the fingerprint to hand out.
 
-## 2. f-droid.org (entry ready, not submitted)
+## 2. f-droid.org (submitted 2026-10-03: [fdroiddata!51019](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51019))
 
 F-Droid's main repo hosts only free software and builds from source.
 
@@ -35,7 +35,7 @@ F-Droid's main repo hosts only free software and builds from source.
   must name a release made after `--target "$GITHUB_SHA"` was added. Debug a mismatch by diffing the two APKs'
   contents file by file (zip entries outside `META-INF/`), then `dexdump` for the dex.
 
-`com.joebywan.daybook.yml` is the entry to submit as a merge request to
+`com.joebywan.daybook.yml` is the entry as submitted in that merge request to
 [gitlab.com/fdroid/fdroiddata](https://gitlab.com/fdroid/fdroiddata) (file `metadata/com.joebywan.daybook.yml`).
 `fdroid lint` passes except for the category list (which only exists in fdroiddata's own
 checkout). It has **not** been through `fdroid build`, which needs F-Droid's build server, so expect the reviewers to ask
