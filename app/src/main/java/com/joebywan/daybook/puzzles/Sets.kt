@@ -121,12 +121,13 @@ object Sets : PuzzleType {
     )
 
     /**
-     * The three card colours: the mark step of Amber, Teal and Violet (docs/COLOUR.md), the same in both schemes. Sets
-     * shows right/wrong, so Coral and Green are left alone. Of the 20 triples of the six other hues this is, with Gold
-     * for Amber, the widest by CIEDE2000 with colour-blind vision (24.8; `SetsPaletteTest`). Index i is "colour i" in
-     * every save, so only the look moved: 0 was red, 1 blue, 2 green. Colour is one of four traits, never the only one.
+     * The three card colours: the `ink` step of Amber, Teal and Violet (docs/COLOUR.md), the step meant for strokes on the
+     * card surface, so every colour is at least 3:1 against it in both schemes (`SetsPaletteTest`). Sets shows
+     * right/wrong, so Coral and Green are left alone. Amber, Teal, Violet is the triple of the six other hues that stays well apart:
+     * CIEDE2000 >= 20 under deuteranopia, protanopia and tritanopia in both schemes. Index i is "colour i" in every save, so
+     * only the look moved: 0 was red, 1 blue, 2 green. Colour is one of four traits, never the only one.
      */
-    val palette: List<Color> = listOf(34f, 175f, 268f).map { BoardHues.mark(it) }
+    fun palette(dark: Boolean): List<Color> = listOf(34f, 175f, 268f).map { BoardHues.ink(it, dark) }
 
     /**
      * The two cards on the home tile.
@@ -888,7 +889,7 @@ object Sets : PuzzleType {
      */
     @Composable
     private fun CardFace(card: Card, inset: Dp) {
-        val colour = palette[card.colour]
+        val colour = palette(BoardHues.isDark(MaterialTheme.colorScheme))[card.colour]
         Canvas(Modifier.fillMaxSize().padding(inset)) {
             val slots = card.count + 1
             val slotHeight = size.height / 3f

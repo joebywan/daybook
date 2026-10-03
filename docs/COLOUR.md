@@ -50,6 +50,8 @@ from the table's `h`; do not paste the hexes in (they are for reading and for th
 - **Semantic colours are fixed and are not content hues.** Correct = Green mark, present/partial = Gold (Lexicon's
   `4E9F6C` / `D1A32F` are these two), error = `scheme.error` (Clay `C0563F`), warning is the error colour too. Do not
   spend Coral or Green on an unrelated group *in a board that also shows right/wrong*; use the other six.
+- **Thin graphics on the surface take `ink`, not `mark`.** `mark` is one lightness for both schemes and falls under 3:1 against
+  the light card for the lighter hues; check WCAG 3:1 for strokes and shapes, 4.5:1 for text, in both schemes (Sets did).
 - **Colour is never the only signal** (see PUZZLE_STANDARDS section on legibility): pair every hue with a shape,
   digit or position. Where groups must be told apart by colour alone (Kings' regions) pick by CIEDE2000 as
   `KingsPaletteTest` does, not by eye.
@@ -87,4 +89,4 @@ dark fills above sit at lightness 0.30 against the surface's 0.14: keep that gap
 ## Status
 
 The table and roles are implemented in `ui/theme/BoardHues.kt` (`fill`/`ink`/`mark`, `contentHues(n)`, `isDark`, `HUE_PAIRS`,
-`pair`), pinned by `BoardHuesTest`. Adopted: Inequality, Sudoku, Tower (pegs; its feedback pips stay `onSurface`, filled vs. hollow). Mosaic (flood colours: the `mark` step of Amber, Teal, Violet, Rose, Blue, in that order, the same in both schemes; a digit per area and on each swatch, because the 5-colour colour-blind distance is only ~6.6; pinned by `MosaicPaletteTest`). Sets (three card colours: the `mark` step of Amber, Teal, Violet, the same in both schemes; the best of the 20 triples of the six non-Coral/Green hues, 24.8 apart by CIEDE2000 with colour-blind vision, and Sets shows right/wrong; index i keeps meaning colour i in saves; pinned by `SetsPaletteTest`). Adopting the rest board by board is in `docs/TODO.md`.
+`pair`), pinned by `BoardHuesTest`. Adopted: Inequality, Sudoku, Tower (pegs; its feedback pips stay `onSurface`, filled vs. hollow). Mosaic (flood colours: the `mark` step of Amber, Teal, Violet, Rose, Blue, in that order, the same in both schemes; a digit per area and on each swatch, because the 5-colour colour-blind distance is only ~6.6; pinned by `MosaicPaletteTest`). Sets (three card colours: the `ink` step of Amber, Teal, Violet, per scheme, because the shapes are thin strokes on the card surface and `mark` measured only 1.9-2.5:1 on light (teal, amber) and 2.8:1 on dark (violet), while `ink` is 3.5:1 or better in both; at least 20 apart by CIEDE2000 under deuteranopia, protanopia and tritanopia; Amber/Teal are the close pair in lightness, so hue and the card's other three traits carry them; Sets shows right/wrong; index i keeps meaning colour i in saves; pinned by `SetsPaletteTest`). Adopting the rest board by board is in `docs/TODO.md`.
