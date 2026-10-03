@@ -53,6 +53,8 @@ AFTER_TAP_SETTLE_S = 8
 # Console noise that is not the app's fault. Matched against the message text.
 IGNORED_CONSOLE = [
     re.compile(r"favicon", re.I),
+    # Kotlin/Wasm's own loader, on every page of the current toolchain.
+    re.compile(r"Accessing `memory` via `wasmExports` is deprecated"),
     # Headless WebKit on Linux (software GL) logs a stream of these from Skia's WebGL probing,
     # on every page, whether or not anything is wrong. Chromium logs none, so they are only
     # ignored when they start with the "WebGL:" prefix WebKit gives them.

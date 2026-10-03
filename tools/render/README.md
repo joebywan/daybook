@@ -92,7 +92,7 @@ solve one by hand in a browser, copy its `localStorage` entries into a JSON file
 
 - Headless WebKit on Linux is the nearest stand-in for iPhone Safari, not Safari. See CLAUDE.md
   "Headless WebKit is not Safari".
-- Touch drags are not scripted. Compose reads `TouchEvent`s, not `PointerEvent`s: use
+- `nonogram_touch.py` scripts Nonogram sweeps (CDP touch in Chromium; the mouse in WebKit, which ignores synthetic TouchEvents). Other boards' drags are not scripted. Compose reads `TouchEvent`s, not `PointerEvent`s: use
   `page.touchscreen.tap` (works in WebKit), CDP `Input.dispatchTouchEvent` in Chromium, or build
   `TouchEvent`s with `document.createTouch` in WebKit, and step 10px+ per move (CLAUDE.md, web section).
 - Pass a high enough `--timeout` if the machine is busy; Mosaic and LITS Expert are the slow boards.
