@@ -20,6 +20,10 @@ from a measurement or review, so you can check it is still true.
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
 
+- [ ] **The finished frame still covers the lower board on short screens.** It docks to the bottom at every height now
+  (PR 108), which fixed tall screens, but at 375x537 it hides the bottom rows of a Nonogram 5x5. Options: a smaller
+  frame there, or a one-line variant with the tiles beside the time. Must not resize the board.
+
 ## Needs a real iPhone
 
 Nothing below can be verified from a desktop browser. The tester has the device.
