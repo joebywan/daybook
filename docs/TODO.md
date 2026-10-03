@@ -100,10 +100,12 @@ below have a famous branded version; use the descriptive name).
   walkthrough, hardware keys, and a Nonogram 5x5 swept by touch drag to the finish frame all work, and a save made on
   the build before the toolchain upgrade (a Sudoku with two digits placed and a running timer) loaded on this one.
   Not done: 360x640 and 390x664, and the 10x10 and 15x15 Nonogram tiers by touch on the emulator.
-- [ ] **Nonogram: WebKit and the larger tiers' touch sweep.** Chromium touch checks (2026-10-02, 5x5 at 390x844,
-  390x664, 360x640 and 375x537): a drag along a row or column is one undo step, Fill never overwrites a cross, and the
-  solved board's box is identical before and after. The finish frame covers the last row or two of a 5x5 board at 375x537
-  (it sits at the bottom there by design). Not done: WebKit rendering and the 10x10 and 15x15 sweeps in the browser.
+- [ ] **Nonogram: a real WebKit touch drag.** Checked 2026-10-03 with `tools/render/nonogram_touch.py`: 10x10 and 15x15,
+  all four sizes, light and dark. Chromium by CDP touch (12px steps), WebKit by the mouse: a row sweep and a column sweep
+  paint exactly their squares, one Undo takes back each, Fill sweeps leave crosses alone, and the grid, pen row and
+  toolbar do not move. Static renders of all three tiers matched pixel for pixel across both browsers and both schemes.
+  Not done: headless WebKit ignores hand-built TouchEvents, so its touch slop on a 15x15 sweep is unchecked (only a real
+  iPhone or the emulator can), and the 5x5 finish frame's cover of the last rows at 375x537 is by design.
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
   size-by-size retune; measure the pass rate before trying again.
