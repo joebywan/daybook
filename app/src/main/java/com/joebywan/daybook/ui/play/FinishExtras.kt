@@ -34,7 +34,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import com.joebywan.daybook.ui.stats.AchievementBadge
 import kotlin.math.sin
 import kotlin.random.Random
@@ -84,12 +88,40 @@ fun Confetti(played: Boolean, onPlayed: () -> Unit) {
 }
 
 /**
- * The optional middle of the finished frame. Shows the achievements this solve earned, one at a time (a tap on
- * the block shows the next, wrapping round after the last), and the "only X to go" line. Nothing when there is
- * neither. The buttons are never behind it.
+ * A party popper drawn in Canvas (the web build has no emoji font): a striped cone, its mouth at the upper right,
+ * with streamers and confetti bursting out. Square; mirror it with `graphicsLayer(scaleX = -1f)`.
  */
 @Composable
-fun ResultsBlock(praise: Praise, accent: Color) {
+fun PartyPopper(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val u = size.minDimension / 48f
+        fun o(x: Float, y: Float) = Offset(x * u, y * u)
+        val cone = Path().apply { moveTo(5 * u, 43 * u); lineTo(18 * u, 14 * u); lineTo(34 * u, 30 * u); close() }
+        drawPath(cone, Color(0xFFFFB300))
+        drawLine(Color(0xFFE53935), o(11.5f, 28.5f), o(26.5f, 23f), 3f * u)
+        drawLine(Color(0xFF1E88E5), o(8.5f, 36f), o(30f, 28f), 3f * u)
+        drawLine(Color(0xFF8D5A00), o(18f, 14f), o(34f, 30f), 2.5f * u, StrokeCap.Round)
+        fun streamer(c: Color, x1: Float, y1: Float, x2: Float, y2: Float) =
+            drawPath(Path().apply { moveTo(26 * u, 22 * u); quadraticTo(x1 * u, y1 * u, x2 * u, y2 * u) }, c, style = Stroke(2f * u, cap = StrokeCap.Round))
+        streamer(Color(0xFFE53935), 28f, 6f, 38f, 3f)
+        streamer(Color(0xFF43A047), 36f, 20f, 45f, 14f)
+        streamer(Color(0xFF8E24AA), 24f, 10f, 20f, 3f)
+        drawCircle(Color(0xFF1E88E5), 2.2f * u, o(34f, 9f))
+        drawCircle(Color(0xFFFB8C00), 2f * u, o(42f, 24f))
+        drawCircle(Color(0xFFE53935), 1.8f * u, o(30f, 2.5f))
+        drawRect(Color(0xFF43A047), o(40f, 6f), Size(3.5f * u, 3.5f * u))
+        drawRect(Color(0xFF8E24AA), o(44f, 30f), Size(3f * u, 3f * u))
+    }
+}
+
+/**
+ * The optional middle of the finished frame; always has a badge when shown. The achievements this solve earned
+ * show one at a time (a tap on the block shows the next, wrapping round after the last), each with its earned
+ * badge, name and description; with only a near goal it shows that goal's silhouette badge. The "only X to go"
+ * line is last. Nothing when there is neither. [badge] is the badge size (smaller on a short screen).
+ */
+@Composable
+fun ResultsBlock(praise: Praise, accent: Color, badge: Dp = 84.dp) {
     val scheme = MaterialTheme.colorScheme
     val items = praise.achievements
     var index by rememberSaveable { mutableIntStateOf(0) }
@@ -105,13 +137,10 @@ fun ResultsBlock(praise: Praise, accent: Color) {
                     .then(if (items.size > 1) Modifier.clickable { index = (index + 1) % items.size } else Modifier),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AchievementBadge(a.id, true, Modifier.size(44.dp))
-                    Column(Modifier.weight(1f, fill = false)) {
-                        Text(a.title, style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
-                        Text(a.description, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 2)
-                    }
-                }
+                AchievementBadge(a.id, true, Modifier.size(badge))
+                Spacer(Modifier.height(4.dp))
+                Text(a.title, style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(a.description, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 2, textAlign = TextAlign.Center)
                 if (items.size > 1) {
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -124,9 +153,11 @@ fun ResultsBlock(praise: Praise, accent: Color) {
                     Text("Tap to see next achievement", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 }
             }
+        } else if (praise.toGoId != null) {
+            AchievementBadge(praise.toGoId, false, Modifier.size(badge))
         }
         praise.toGo?.let {
-            if (items.isNotEmpty()) Spacer(Modifier.height(6.dp))
+            if (items.isNotEmpty() || praise.toGoId != null) Spacer(Modifier.height(6.dp))
             Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurface, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
         }
     }

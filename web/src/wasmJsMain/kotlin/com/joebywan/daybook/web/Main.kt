@@ -138,6 +138,7 @@ fun main() {
         finishPreview = Praise(
             title = if (n > 0) "7 day streak" else null, big = n > 0, lines = listOf("No hints needed."),
             achievements = all.take(n), toGo = if ("togo" in params) "Only Hard on Kings left for all done today!" else null,
+            toGoId = if ("togo" in params) "fullSet" else null,
         )
     }
 

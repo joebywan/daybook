@@ -20,6 +20,8 @@ data class Praise(
     val achievements: List<EarnedAchievement> = emptyList(),
     /** "Only X to go": at most one line of progress toward a near achievement. */
     val toGo: String? = null,
+    /** The achievement [toGo] is about, so the frame can show its silhouette badge. */
+    val toGoId: String? = null,
 )
 
 /** What the frame shows for one achievement. */
@@ -86,5 +88,6 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
 
     // One line beneath the title (or beneath "Congratulations!"): praise is loud, not long.
     val earned = newlyEarned(history, solve, today).map { EarnedAchievement(it.id, it.title, it.description) }
-    return Praise(title, big, (lines + personal).take(1), earned, nearestToGo(history, solve, today)?.text)
+    val near = nearestToGo(history, solve, today)
+    return Praise(title, big, (lines + personal).take(1), earned, near?.text, near?.id)
 }

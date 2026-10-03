@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -23,6 +24,7 @@ import com.joebywan.daybook.ui.teach.HintPopover
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -530,9 +532,9 @@ private fun PlayBoard(
         }
         AnimatedVisibility(
             visible = !resultsHidden,
-            // Docked to the bottom over the hidden toolbar on every screen height: the board's box ends
-            // at the toolbar, and boards usually leave room under them, so this covers the least.
-            modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 10.dp),
+            // A roomy panel in the middle of the screen; it may cover the solved board (the owner does not mind),
+            // and a tap outside it hides it.
+            modifier = Modifier.align(Alignment.Center).windowInsetsPadding(WindowInsets.safeDrawing).padding(vertical = 10.dp),
             enter = fadeIn(tween(300)),
             exit = ExitTransition.None,
         ) {
@@ -599,9 +601,9 @@ private fun PlayBoard(
 }
 
 /**
- * "Congratulations!", the time and hints used, and the next steps tiled in two columns below
- * (an odd last tile takes the full row). Compact on purpose: the finished board stays in view
- * around it.
+ * The finished panel, centred: a header box ("Congratulations!" or the streak title, a party popper either side, the
+ * time and one line), the optional middle block, clear space, then a box of next-step buttons (two columns; an odd
+ * last tile takes the full row). On a short screen the badge shrinks; the buttons never do.
  */
 @Composable
 private fun FinishedFrame(
@@ -614,47 +616,58 @@ private fun FinishedFrame(
     onHide: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Column(
-        Modifier
-            .padding(horizontal = 28.dp)
-            .widthIn(max = 360.dp)
-            .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp))
-            .background(scheme.surface)
-            .background(accent.copy(alpha = 0.14f))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onHide)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            praise.title ?: "Congratulations!",
-            style = if (praise.big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall,
-            color = accent,
-            fontWeight = if (praise.big) FontWeight.Bold else null,
-            maxLines = 1,
-        )
-        Text(
-            buildString {
-                append(formatClock(seconds))
-                if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurface,
-        )
-        praise.lines.forEach {
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
-        }
-        if (praise.achievements.isNotEmpty() || praise.toGo != null) {
-            Spacer(Modifier.height(8.dp))
-            ResultsBlock(praise, accent)
-        }
-        Spacer(Modifier.height(8.dp))
-        options.chunked(2).forEachIndexed { row, pair ->
-            if (row > 0) Spacer(Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                pair.forEach { option ->
-                    NextTile(option, accent, Modifier.weight(1f)) { onOption(option) }
+    BoxWithConstraints(Modifier.padding(horizontal = 24.dp).widthIn(max = 380.dp).fillMaxWidth()) {
+        val badge = if (maxHeight < 640.dp) 44.dp else 84.dp
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .shadow(8.dp, RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp))
+                .background(scheme.surface)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onHide),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Column(
+                Modifier.fillMaxWidth().background(accent.copy(alpha = 0.22f)).padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PartyPopper(Modifier.size(36.dp))
+                    Text(
+                        praise.title ?: "Congratulations!",
+                        style = if (praise.big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall,
+                        color = accent,
+                        fontWeight = if (praise.big) FontWeight.Bold else null,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    PartyPopper(Modifier.size(36.dp).graphicsLayer(scaleX = -1f))
+                }
+                Text(
+                    buildString {
+                        append(formatClock(seconds))
+                        if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onSurface,
+                )
+                praise.lines.forEach {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                }
+            }
+            if (praise.achievements.isNotEmpty() || praise.toGo != null) {
+                Spacer(Modifier.height(12.dp))
+                Box(Modifier.padding(horizontal = 16.dp)) { ResultsBlock(praise, accent, badge) }
+            }
+            Spacer(Modifier.height(16.dp))
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 14.dp)) {
+                options.chunked(2).forEachIndexed { row, pair ->
+                    if (row > 0) Spacer(Modifier.height(6.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        pair.forEach { option ->
+                            NextTile(option, accent, Modifier.weight(1f)) { onOption(option) }
+                        }
+                    }
                 }
             }
         }

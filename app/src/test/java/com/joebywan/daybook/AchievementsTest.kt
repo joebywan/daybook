@@ -139,7 +139,8 @@ class AchievementsTest {
         val h = listOf(c(0, "a", Difficulty.STANDARD), c(0, "a", Difficulty.EXPERT))
         assertEquals("Only Hard on A left for all done today!", left("fullSet", h)!!.text)
         assertEquals("Only B and C left for a clean sweep today!", left("allPuzzles", h)!!.text)
-        assertEquals("Only B and C left to try them all.", left("oneOfEach", h)!!.text)
+        assertEquals("C is the only puzzle you haven't tried yet.", left("oneOfEach", h + c(1, "b"))!!.text)
+        assertEquals("2 puzzles you haven't tried yet: B and C.", left("oneOfEach", h)!!.text)
     }
 
     @Test fun randomHistoriesMatchNaiveRemainingModel() {

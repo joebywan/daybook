@@ -106,6 +106,7 @@ class FinishPraiseTest {
         // 5 days played, today makes 6 of a 7-day streak: one more day.
         val p = run(days(1, 2, 3, 4, 5), c(today))
         assertEquals("1 more day to your 7-day streak.", p.toGo)
+        assertEquals("streak7", p.toGoId)
         assertNull(run(listOf(c(null)), c(null)).toGo)
     }
 }
