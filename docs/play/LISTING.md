@@ -54,11 +54,11 @@ Hand-built puzzle generators, proven boards and a calm, uncluttered design. Come
 |---|---|---|
 | App icon | `../../android/play-icon-512.png` | 512x512 |
 | Feature graphic | `feature-graphic.png` | 1024x500, no alpha (`python3 docs/social-preview/make.py`) |
-| Phone screenshots | `screenshots/1-home.png` ... `5-snap.png` | 1080x2160, 2:1. The slot's help text says 16:9 or 9:16, but Play accepted 2:1 without complaint; its promotion hint wants at least 3 of 4+ screenshots at 9:16 and 1080px or more, so recapture at 1080x1920 if that matters. The emulator's own 1080x2400 is over 2:1 |
+| Phone screenshots | `screenshots/1-home.png` ... `5-snap.png` | 1080x1920, 9:16 (the first set was 2:1, which Play also accepted). The emulator's own 1080x2400 is over 2:1 |
 | Tablet screenshots (7-inch and 10-inch) | the same five | Both slots are marked required in the Console, so the phone shots are reused. The app is portrait-only, so a tablet shows the phone layout |
 
-The screenshots are emulator captures (`adb shell wm size 1080x2160`, a clean install, demo-mode
-status bar: 9:00, full Wi-Fi, no notifications), which makes them part of the same "recapture when
+The screenshots are emulator captures made by `tools/screenshots/capture.sh` (`wm size 1080x1920`, a clean install, the date pinned to 3 Oct 2026, demo-mode
+status bar: 9:00, no notifications). Run the **Update screenshots** workflow (Actions, manual): it captures, uploads to the listing with `tools/screenshots/upload-play.py` (the service account needs "Manage store presence"; Google reviews the change and the live listing keeps the old images meanwhile) and opens a PR for the `docs/` images, which makes them part of the same "recapture when
 the look changes" duty as `docs/screenshots/`. The 7-inch and 10-inch tablet slots were filled with the same five.
 
 ## Declarations
