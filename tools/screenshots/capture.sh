@@ -30,17 +30,23 @@ demo network -e wifi show -e level 4 -e fully true; demo network -e mobile hide;
 adb uninstall $PKG >/dev/null 2>&1 || true
 adb install -r "$APK" >/dev/null
 
-# Taps the centre of the first node whose text or description equals $1; fails if none.
+# Taps the centre of the first node whose text or description equals $1, retrying for ~30 s because a
+# slow emulator sometimes returns no dump or has not drawn the screen yet; fails if it never appears.
 tap() {
-  adb exec-out uiautomator dump /dev/tty 2>/dev/null | python3 -c '
+  local xy
+  for _ in $(seq 15); do
+    xy=$(adb exec-out uiautomator dump /dev/tty 2>/dev/null | python3 -c '
 import re, sys, xml.etree.ElementTree as ET
-raw = sys.stdin.read(); raw = raw[raw.index("<?xml"):raw.rindex("</hierarchy>") + 12]
-for n in ET.fromstring(raw).iter("node"):
+raw = sys.stdin.read()
+if "<hierarchy" not in raw: sys.exit(1)
+for n in ET.fromstring(raw[raw.index("<?xml"):raw.rindex("</hierarchy>") + 12]).iter("node"):
     if sys.argv[1] in (n.get("text"), n.get("content-desc")):
         x0, y0, x1, y1 = map(int, re.findall(r"\d+", n.get("bounds")))
         print((x0 + x1) // 2, (y0 + y1) // 2); sys.exit(0)
-sys.exit(1)' "$1" | { read -r x y || { echo "no '$1' on screen" >&2; exit 1; }; adb shell input tap "$x" "$y"; }
-  sleep 1
+sys.exit(1)' "$1") && { adb shell input tap $xy; sleep 1; return 0; }
+    sleep 2
+  done
+  echo "no '$1' on screen" >&2; return 1
 }
 shot() { adb exec-out screencap -p > "$OUT/$1.png"; }
 # A cold start lands on the home grid whatever the board or hint popover was doing.
