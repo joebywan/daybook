@@ -179,6 +179,23 @@ not demand thought, against the owner's stated taste.
   permission. Also check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
-- **Colour audit.** `docs/COLOUR.md` proposes a shared hue family. Audit every board against it (Inequality is
-  known to be scheme-grey plus one accent), add the one shared helper (`Color.hsl` recipe, web-safe) with the first
-  board that adopts it, and recapture the README screenshots in the same pass.
+- **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
+  Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
+  are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),
+  a check at 375x537, and no change to any seed, state or save.
+  1. Shared helper in `ui/theme/` (web-safe, no `java.*`): the eight hues, `fill/ink/mark(hue, dark)` from the recipe,
+     and `contentHues(n)` that spreads N hues across the table. A small test pins the table in `COLOUR.md` to the recipe.
+  2. Inequality (known bland): tint cells by row/column or by sign chain, ink the signs, mark the selected digit's twins.
+  3. Sudoku: tint the 3x3 boxes alternately and digit-twin highlights in a content hue; keep givens `onSurface`.
+  4. Tower, Mosaic, Sets, Lits: replace the hex lists with `contentHues`; each also shows right/wrong, so use the
+     non-Coral/Green six (Tower: pegs vs. feedback; Mosaic: its flood colours and the move counter; Sets: three
+     card colours; Lits: the four piece colours).
+  5. Atoms, Pipes, Mambo, Snap, Kings, Lexicon: scheme plus accent today. Give each two content hues (Atoms: element
+     types; Pipes: flow/source colouring; Mambo: the two states; Snap: path stretches or numbers; Kings: crowns vs. marks;
+     Lexicon: keep Green/Gold, add a hue to the keyboard's used letters). Kings and Mosaic must keep their CIEDE2000 tests.
+  6. Nonogram and Shikaku: move their `PALETTES` / `hsl` onto the helper; Nonogram's pairs become pairs of table hues.
+  7. Home-grid `Preview` for each, in the same pass as its board; then recapture `docs/screenshots/*.png` (clean install,
+     date pinned) and update the alt text.
+  8. Acceptance for the whole thing: every board shows at least two non-grey, non-accent hues in both schemes; dark
+     fills stay clear of the surface; no hex literal for content colour outside the helper; `PUZZLE_STANDARDS.md`
+     checklist gets a "content hues from the helper" row so new puzzles start compliant.
