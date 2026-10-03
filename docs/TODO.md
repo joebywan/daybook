@@ -177,7 +177,7 @@ not demand thought, against the owner's stated taste.
   the final address before many people install it, if it is going to change at all. Other sites on
   that domain share its browser storage, so keep key names distinct.
 - **F-Droid.** Our own repo is automatic (`publish-fdroid.yml`; `docs/fdroid/README.md`). f-droid.org needs a merge request to fdroiddata with `docs/fdroid/com.joebywan.daybook.yml`
-  (lints; never built by F-Droid), and its installs will not update over Play or GitHub ones. Once the first run has
+  (lints; never built by F-Droid). It is set up as a reproducible build, so its installs update over Play and GitHub ones if F-Droid's build matches our APK. Once the first run has
   pushed the `fdroid` branch, check the repo address in the F-Droid app and that a new release shows up in it.
 - **Play Store listing.** Set up and publishing: the signing key is chosen, the service account exists,
   and every merge to `main` uploads a bundle to the closed testing track (`alpha`) through

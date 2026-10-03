@@ -33,6 +33,11 @@ Builds:
       - |-
         sed -i -e 's/"DAYBOOK_VERSION_CODE") ?: "1"/"DAYBOOK_VERSION_CODE") ?: "$$VERCODE$$"/' -e 's/"DAYBOOK_VERSION_NAME") ?: "0.1.0"/"DAYBOOK_VERSION_NAME") ?: "$$VERSION$$"/' build.gradle.kts
 
+# Reproducible: F-Droid builds the tag, checks the result matches the APK on our release byte for byte
+# (signature aside), and then publishes OUR signed APK, so it updates in place over Play and GitHub.
+Binaries: https://github.com/joebywan/daybook/releases/download/v%v/daybook-%v.apk
+AllowedAPKSigningKeys: 70248a01bfc43a99422ce6be6c470146531ead24e96acd288d5df81ac18176f4
+
 AutoUpdateMode: Version v%v
 UpdateCheckMode: HTTP
 # The newest release's tag, v0.1.<n>, gives both numbers: the GitHub API's JSON is the one place they are public.
