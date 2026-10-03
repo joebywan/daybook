@@ -24,6 +24,15 @@ under "Rewards".
 - **Not doing:** points/XP/levels, loss-framed notifications ("your streak is about to end"), leaderboards,
   random or login rewards.
 
+## Streak implementation (`core/Streak.kt`)
+
+`streakOf(playedDays, today): Streak(current, best, atRisk)` (+ `alive`, `lapsed`), derived from the daily
+`Completion.day`s; nothing new is stored. A run starts on a played day and is judged each day over the last
+seven days, never reaching back before the run's first day: alive while at most 2 of those days were missed
+(which is 5 of 7 for an established run, and "at most 2 missed since the first play" for a new one). The third
+miss ends the run and the next play starts a fresh one. `current` counts days played. Home shows "Welcome back"
+in place of the badge when lapsed; best streak is on the stats screen (the home header has no room for it).
+
 ## Claim to keep honest
 
 Puzzles making you better at other things is weakly supported. Claim the habit and the satisfaction, not "makes you smarter".

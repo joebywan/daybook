@@ -26,11 +26,8 @@ from a measurement or review, so you can check it is still true.
 
 ## Rewards
 
-Design and decisions: `docs/REWARDS.md`. Do 1-3 together (shared history data); the rest are separate PRs.
+Design and decisions: `docs/REWARDS.md`. Item 1 (streak function, `core/Streak.kt`) is done; the rest are separate PRs.
 
-- [ ] **1. Streak function (5 of the last 7 days).** One pure, tested function over the play history giving current
-  streak (days played), best streak, and "alive/at risk". Per-puzzle streaks reuse it. Replace the current streak
-  logic in `ProgressStore` and the stats/home uses. Derived, not stored; must load old saves. *M.*
 - [ ] **2. First-solve-of-the-day celebration.** On the first solve each day, a loud streak line on the finished frame
   (bigger on 7/30/100; "welcome back, your streak is still going" when the window saved it). Mind the
   short-screen finished-frame item above. *M.*

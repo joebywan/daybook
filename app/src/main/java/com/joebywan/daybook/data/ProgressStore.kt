@@ -1,15 +1,14 @@
 package com.joebywan.daybook.data
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.Streak
+import com.joebywan.daybook.core.streakOf
 import com.joebywan.daybook.platform.currentTimeMillis
 import com.joebywan.daybook.puzzles.PuzzleState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.minus
-import kotlinx.datetime.plus
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -192,34 +191,9 @@ object Stats {
     fun solvedToday(all: List<Completion>, today: LocalDate): Int =
         all.count { it.day == today }
 
-    /**
-     * Consecutive days, ending today or yesterday, on which at least one daily puzzle was solved.
-     * Allowing the streak to end yesterday means it survives until the day is actually missed.
-     */
-    fun currentStreak(all: List<Completion>, today: LocalDate): Int {
-        val days = all.mapNotNull { it.day }.toSet()
-        if (days.isEmpty()) return 0
-        var cursor = if (today in days) today else today.minus(1, DateTimeUnit.DAY)
-        if (cursor !in days) return 0
-        var streak = 0
-        while (cursor in days) {
-            streak++
-            cursor = cursor.minus(1, DateTimeUnit.DAY)
-        }
-        return streak
-    }
-
-    fun bestStreak(all: List<Completion>): Int {
-        val days = all.mapNotNull { it.day }.distinct().sorted()
-        if (days.isEmpty()) return 0
-        var best = 1
-        var run = 1
-        for (i in 1..days.lastIndex) {
-            run = if (days[i - 1].plus(1, DateTimeUnit.DAY) == days[i]) run + 1 else 1
-            if (run > best) best = run
-        }
-        return best
-    }
+    /** Streak over the days a daily puzzle was solved (practice games have no day). See [streakOf]. */
+    fun streak(all: List<Completion>, today: LocalDate): Streak =
+        streakOf(all.mapNotNull { it.day }.toSet(), today)
 
     fun bestTime(all: List<Completion>, puzzleId: String, difficulty: Difficulty): Int? =
         all.filter { it.puzzleId == puzzleId && it.difficulty == difficulty }
