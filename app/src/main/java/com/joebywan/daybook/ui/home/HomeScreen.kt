@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.joebywan.daybook.core.Streak
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
@@ -104,7 +105,7 @@ fun HomeScreen(
             .map { it.puzzleId to it.difficulty }
             .toSet()
     }
-    val streak = remember(completions, today) { Stats.currentStreak(completions, today) }
+    val streak = remember(completions, today) { Stats.streak(completions, today) }
     var pickingArchive by rememberSaveable { mutableStateOf(false) }
 
     Column(
@@ -151,7 +152,7 @@ fun HomeScreen(
 @Composable
 private fun Header(
     today: LocalDate,
-    streak: Int,
+    streak: Streak,
     onArchive: () -> Unit,
     onStats: () -> Unit,
     onSettings: () -> Unit,
@@ -202,7 +203,7 @@ private fun HeaderButton(icon: ImageVector, label: String, onClick: () -> Unit) 
 }
 
 @Composable
-private fun StreakBadge(streak: Int) {
+private fun StreakBadge(streak: Streak) {
     val scheme = MaterialTheme.colorScheme
     Row(
         Modifier
@@ -211,13 +212,17 @@ private fun StreakBadge(streak: Int) {
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            "$streak",
-            style = MaterialTheme.typography.titleMedium,
-            color = if (streak > 0) scheme.secondary else scheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.width(6.dp))
-        Text("day streak", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+        if (streak.lapsed) {
+            Text("Welcome back", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+        } else {
+            Text(
+                "${streak.current}",
+                style = MaterialTheme.typography.titleMedium,
+                color = if (streak.alive) scheme.secondary else scheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("day streak", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+        }
     }
 }
 

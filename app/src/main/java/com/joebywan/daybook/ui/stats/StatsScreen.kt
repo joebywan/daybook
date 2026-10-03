@@ -77,14 +77,15 @@ fun StatsScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item {
+                val streak = Stats.streak(completions, today)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Tile("Solved", Stats.totalSolved(completions).toString(), Modifier.weight(1f))
                     Tile(
-                        "Streak",
-                        Stats.currentStreak(completions, today).toString(),
+                        if (streak.lapsed) "Welcome back" else "Streak",
+                        if (streak.lapsed) "-" else streak.current.toString(),
                         Modifier.weight(1f),
                     )
-                    Tile("Best", Stats.bestStreak(completions).toString(), Modifier.weight(1f))
+                    Tile("Best", streak.best.toString(), Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
             }
