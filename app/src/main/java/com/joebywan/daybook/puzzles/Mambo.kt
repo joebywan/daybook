@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -1041,7 +1042,6 @@ object Mambo : PuzzleType {
                     Modifier
                         .size(board)
                         .highlightGrid(s.size, s.size)
-                        .gridCursor(cursor.takeIf { interactive }, s.size, s.size, scheme.primary)
                         .pointerInput(s, interactive, cellPx) {
                             if (!interactive) return@pointerInput
                             detectTapGestures { offset: Offset ->
@@ -1091,6 +1091,8 @@ object Mambo : PuzzleType {
                             )
                         }
                     }
+                    // Over the cells but under the link badges, so an = or x is never covered.
+                    Box(Modifier.fillMaxSize().gridCursor(cursor.takeIf { interactive }, s.size, s.size, scheme.primary))
                     val badge = badgeFor(cell)
                     s.links.forEach { link ->
                         val horizontal = link.b == link.a + 1
