@@ -57,7 +57,7 @@ fun Modifier.sparkleFrame(corner: Dp = 18.dp): Modifier {
             size = Size(size.width - ring, size.height - ring),
             cornerRadius = CornerRadius(corner.toPx()), style = Stroke(ring),
         )
-        val inset = 7.dp.toPx()
+        val inset = 3.dp.toPx() // on the ring, clear of the tier dots
         val w = size.width - 2 * inset
         val h = size.height - 2 * inset
         val per = 2 * (w + h)
