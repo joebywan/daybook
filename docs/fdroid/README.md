@@ -24,7 +24,7 @@ with Play's, so the **Update screenshots** workflow updates every store at once.
 F-Droid's main repo hosts only free software and builds from source.
 
 - **Licence:** the code is AGPL-3.0-or-later (`LICENSE`), which F-Droid accepts, and the entry says so.
-  `docs/word-lists/LICENSE-SCOWL.txt` has to travel with the word lists.
+  `docs/word-lists/LICENSE-SCOWL.txt` has to travel with the word lists, and `docs/fonts/LICENSE-FREDOKA-OFL.txt` (SIL OFL 1.1) with the bundled Fredoka.
 - **Formatting is checked by their CI** (`fdroid rewritemeta`, a newer version and wider wrap than pip's): the `prebuild` lines are plain sed with no quoting for that reason. If the job fails, its log prints the diff it wants.
 - **Reproducible, so it updates in place.** The entry has `Binaries:` (the APK on our GitHub Release) and
   `AllowedAPKSigningKeys:` (the release certificate). F-Droid builds the tag, compares its APK with ours byte for byte

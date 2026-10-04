@@ -293,7 +293,7 @@ to do.
 
 ## Licence
 
-AGPL-3.0-or-later; see [`LICENSE`](LICENSE). The word lists carry their own notice, [`docs/word-lists/LICENSE-SCOWL.txt`](docs/word-lists/LICENSE-SCOWL.txt).
+AGPL-3.0-or-later; see [`LICENSE`](LICENSE). The word lists carry their own notice, [`docs/word-lists/LICENSE-SCOWL.txt`](docs/word-lists/LICENSE-SCOWL.txt), and the Fredoka typeface its own, [`docs/fonts/LICENSE-FREDOKA-OFL.txt`](docs/fonts/LICENSE-FREDOKA-OFL.txt).
 
 ## Not done yet
 

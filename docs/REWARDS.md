@@ -109,8 +109,9 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   solve that earned no achievement, record or percentile line; a solve with hints keeps its hint line. At most 64 characters.
   Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
 - **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added. Its
-  home tile gets a thin accent ring and a small star (drawn on a canvas; the core icon set has no star), with the content
-  description "Today's pick". No text label: a label would change the tile's height. The grid does not reorder.
+  home tile, while unsolved, gets a thin gold ring, a frame of twinkling gold sparkles (`ui/home/FeaturedMark.kt`; one infinite
+  transition read only in the draw phase) and "Try me!" tilted across the thumbnail with a halo, content description
+  "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved. The grid does not reorder.
   Nothing is stored.
 
 ## Claim to keep honest

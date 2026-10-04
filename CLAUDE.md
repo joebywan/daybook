@@ -138,6 +138,11 @@ White (or Black) to play and mate in 2 / 3 / 4 by tier. Spec and decisions: `doc
 - Expert (mate in 4) hint search is measured on an emulator and the web (p95 94 ms, max 234 ms; `docs/TEACHING.md`); it runs off the main thread.
   `ChessSearchBenchTest` keeps the old search as an oracle: any search change must still agree with it.
 
+## Typography
+
+Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
+`Palette.kt` names no family. Static instances only; how they were made and cut: `docs/WEB_BUILD.md` (Fonts).
+
 ## Colour
 
 Boards were coming out beige and one-note. The shared hue family, the three layers (scheme / accent / content hues)

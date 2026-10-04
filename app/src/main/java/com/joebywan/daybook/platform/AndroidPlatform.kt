@@ -13,7 +13,11 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.core.view.WindowCompat
+import com.joebywan.daybook.R
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.SolveTone
@@ -21,6 +25,7 @@ import com.joebywan.daybook.data.DataStoreKeyValueStore
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.preferencesFile
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.theme.withFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -123,9 +128,16 @@ const val LOADING_MESSAGE_DELAY_MS: Long = 150L
 @Suppress("UNUSED_PARAMETER", "RedundantSuspendModifier")
 suspend fun prepareBoards(day: LocalDate, difficulty: Difficulty) = Unit
 
-/** The app's typography as it is: Android's system fonts cover every style and glyph. */
+/** The app's typography in Fredoka (`res/font`, SIL OFL); glyphs it lacks fall back to the system font. */
 @Composable
-fun platformTypography(base: Typography): Typography = base
+fun platformTypography(base: Typography): Typography = base.withFamily(fredoka)
+
+private val fredoka = FontFamily(
+    Font(R.font.fredoka_regular, FontWeight.Normal),
+    Font(R.font.fredoka_medium, FontWeight.Medium),
+    Font(R.font.fredoka_semibold, FontWeight.SemiBold),
+    Font(R.font.fredoka_bold, FontWeight.Bold),
+)
 
 private val soundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

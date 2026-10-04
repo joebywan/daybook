@@ -65,16 +65,21 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   showing its message on Android, where it also turns a spinner (`GENERATION_ANIMATES`); on the web
   both are off: the delay is zero because nothing can be painted once a board is underway, and a
   spinner would sit frozen.
-- **Fonts.** A browser lends wasm none of its fonts; without help, text falls back to the one font
-  Compose ships, which has no `→` and no serif. `platformTypography` in the seam swaps the bundled
-  Noto Serif Bold (Android's serif) into the serif styles and preloads a few arrows from Noto Sans
-  Symbols, which Skia then uses as a fallback for glyphs the default lacks. Both live in
-  `web/src/wasmJsMain/composeResources/font`, cut down to Latin-1 plus common punctuation (and the
-  arrows) with glyph ids kept, so kerning still applies: 134 KB + 17 KB, 57 KB + 5 KB gzipped,
-  against 612 KB for the whole serif. `tools/subset-font.py` cut them: it keeps glyph ids, empties every other
-  glyph, rewrites `cmap` and drops `GSUB` (whose ligatures would land on emptied glyphs); a new
-  non-Latin-1 character in a serif string needs the font re-cut. Check any non-ASCII glyph in a
-  shared string by rendering it.
+- **Fonts.** A browser lends wasm none of its fonts, so the app ships its own: Fredoka (SIL OFL; notice in
+  `docs/fonts/LICENSE-FREDOKA-OFL.txt`) is the typeface on both builds. `platformTypography` in each seam
+  applies it to every style through the shared `Typography.withFamily` (`ui/theme/Palette.kt`, which names no
+  family itself). Android bundles four static instances in `app/src/main/res/font` (400, 500, 600, 700: the
+  styles use Normal, Medium, SemiBold, Bold); the web bundles the same four cut down in
+  `web/src/wasmJsMain/composeResources/font`, ~39 KB each, plus 17 KB of arrows from Noto Sans Symbols that
+  Skia uses as a fallback for glyphs Fredoka lacks. The statics are the variable `Fredoka.ttf` from Google
+  Fonts pinned with fontTools' `instancer` (`wdth=100`, `wght=400/500/600/700`, `updateFontNames=True`;
+  fontTools is build-time only, not a dependency) rather than relying on variable-font support in
+  Compose/Wasm. `tools/subset-font.py` cuts the web copies (see its docstring): Latin-1 plus common
+  punctuation, glyph ids kept so kerning applies, `GSUB` dropped, name table (OFL notice) kept. Fredoka lacks
+  `→ ✓ ⌊ ⌋ ′ ″ ≤ ≥` and the chess/arrow symbols; no shipped string uses them (only comments do), and an
+  arrow would fall back (the system font on Android, the bundled arrows on the web). A new non-Latin-1
+  character in a string needs the web fonts re-cut; check any non-ASCII glyph by rendering it. Board glyphs
+  drawn with their own `TextStyle` (Sudoku, Snap, Nonogram, ...) name no family and are still the default font.
 - The Material icons: `compose.materialIconsExtended` costs 4.5 KB of wasm (<1 KB gzipped) over the
   core set, because Kotlin/Wasm drops every unreferenced icon.
 
