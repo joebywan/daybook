@@ -6,7 +6,9 @@ import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.applyKey
-import com.joebywan.daybook.puzzles.cycled
+import com.joebywan.daybook.puzzles.grassed
+import com.joebywan.daybook.puzzles.tapped
+import com.joebywan.daybook.puzzles.withTent
 import com.joebywan.daybook.puzzles.tentsKeyAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,17 +30,32 @@ class TentsUiTest {
     @Test fun `walkthrough frames accept their own move only`() {
         val frames = Tents.tutorial
         val first = frames.first { it.accepts != null }.accepts!!
-        assertTrue(first(board.withMark(1, TentsLogic.TENT)))
-        assertTrue(!first(board.withMark(3, TentsLogic.TENT)))
+        assertTrue(first(board.withTent(1)))
+        assertTrue(!first(board.withTent(3)))
         assertTrue(frames.last().freePlay)
     }
 
-    @Test fun `a tap cycles empty tent grass empty and leaves a tree alone`() {
-        val a = board.cycled(0)
-        assertEquals(TentsLogic.TENT, a.marks[0])
-        assertEquals(TentsLogic.GRASS, a.cycled(0).marks[0])
-        assertEquals(0, a.cycled(0).cycled(0).marks[0])
-        assertSame(board, board.cycled(2)) // a tree
+    @Test fun `a tap toggles grass, a double tap a tent that sprouts grass`() {
+        val g = board.tapped(0)
+        assertEquals(TentsLogic.GRASS, g.marks[0])
+        assertEquals(0, g.tapped(0).marks[0])
+        assertSame(board, board.tapped(2)) // a tree
+        val t = board.withTent(1)
+        assertEquals(TentsLogic.TENT, t.marks[1])
+        assertEquals(listOf(0, 5, 6, 7), listOf(0, 5, 6, 7).filter { t.marks[it] == TentsLogic.GRASS })
+        assertEquals(1, t.moves)
+        assertEquals(0, t.withTent(1).marks[1]) // again takes it back
+        assertSame(board, board.withTent(2))
+    }
+
+    @Test fun `a sweep lays grass on empty squares only, as one move`() {
+        val t = board.withTent(1)
+        val g = t.grassed(setOf(1, 2, 0, 10, 11))
+        assertEquals(TentsLogic.TENT, g.marks[1]) // a tent stays
+        assertEquals(TentsLogic.GRASS, g.marks[10])
+        assertEquals(TentsLogic.GRASS, g.marks[11])
+        assertEquals(t.moves + 1, g.moves)
+        assertSame(t, t.grassed(setOf(1, 2, 0)))
     }
 
     @Test fun `keys map and apply`() {
