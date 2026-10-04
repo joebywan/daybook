@@ -19,8 +19,7 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
-- [ ] **Fredoka follow-ups.** README/Play/F-Droid screenshots (`docs/screenshots/`, `fastlane/metadata/`) still show the
-  old serif and need recapturing on the emulator (clean install, date pinned). Settings and Stats were not rendered
+- [ ] **Fredoka follow-ups.** Settings and Stats were not rendered
   with Fredoka (the harness cannot open them); look at both on Android and the web. Board glyphs drawn with their own
   `TextStyle` (Sudoku, Snap, Nonogram, Atoms, ...) name no family and stay the default font: decide whether they
   should be Fredoka too (it would move digit metrics inside cells).
@@ -202,4 +201,10 @@ not demand thought, against the owner's stated taste.
      fills stay clear of the surface; no hex literal for content colour outside the helper; `PUZZLE_STANDARDS.md`
      checklist gets a "content hues from the helper" row so new puzzles start compliant.
 
-- **Home screenshot may be stale.** Today's pick now has a gold sparkle frame and "Try me!" over its thumbnail (was a star); recapture `docs/screenshots/` home shot in the next pass that recaptures them.
+
+## Tents: not verified
+
+- The walkthrough's free-play frame (7 of 7) never shows its `done` line on any puzzle (`TutorialRunner` prints `frame.done` only when
+  `frame.accepts != null`); the chime and the Hint button vanishing are the only signs of a solve. Show `done` for a solved free-play frame.
+- Tents' touch path was driven with taps only (Chromium CDP, WebKit `touchscreen.tap`) on 5x5 walkthrough, 8x8 and 10x10. Headless WebKit
+  is not Safari; tap on a real iPhone and Android 15x15-sized squares are untested (Tents tops out at 10x10, so squares are ~31dp at 375).
