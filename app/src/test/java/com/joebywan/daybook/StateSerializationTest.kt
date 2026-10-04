@@ -15,6 +15,7 @@ import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.MamboState
 import com.joebywan.daybook.puzzles.MosaicState
 import com.joebywan.daybook.puzzles.NonogramLogic
+import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -92,6 +93,7 @@ class StateSerializationTest {
         is AtomsState -> state.pairs.indices.take(2).fold(state) { acc, i -> acc.cycle(i) }
         is ChessState -> state.play(ChessRules.legalMoves(ChessPosition.fromFen(state.start)).first())
         is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
+        is TentsState -> state.withMark(state.trees.indexOfFirst { !it }, 1)
         is KingsState -> state.toggleMark(0).toggleKing(1)
         is LitsState -> state.toggle(0)
         is MamboState -> state.withCell(state.cells.indices.first { !state.givens[it] }, Sym.SUN)
