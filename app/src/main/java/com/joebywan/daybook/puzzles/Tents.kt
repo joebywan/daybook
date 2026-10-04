@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -20,8 +21,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,13 +60,19 @@ import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
+import kotlin.time.TimeSource
 
 /**
  * Tents. The board is one canvas: a row of column counts across the top, a column of row counts down the
- * left, and the grid. A tap cycles a square empty, tent, grass, empty (grass is a note, never counted).
+ * left, and the grid. A tap marks grass (a note, never counted), a double tap places a tent and sprouts grass around it.
  * Highlight indices follow [TentsState]: squares `0 until n*n`, row clue `n*n + r`, column clue `n*n + n + c`.
  */
 object Tents : PuzzleType {
+
+    private const val DOUBLE_TAP_MS = 300L
+    private val tapClock = TimeSource.Monotonic.markNow()
+
+    private data class Pending(val cell: Int, val base: TentsState, val after: TentsState)
 
     override val id = "tents"
     override val displayName = "Tents"
@@ -72,11 +82,11 @@ object Tents : PuzzleType {
         "Put one tent beside every tree, up, down, left or right of it. Each tent belongs to one tree.",
         "Tents never touch each other, not even at a corner.",
         "The numbers say how many tents each row and column holds.",
-        "Tap a square to place a tent, tap again for grass (a note that a tent can't go there), and again to clear it.",
+        "Tap a square for grass (a note that a tent can't go there), tap again to clear it. Drag to lay grass across squares. Double-tap for a tent (grass sprouts around it); tap a tent to remove it.",
     )
 
     override val keyboardHelp = listOf(
-        "Arrows move, T or Enter places a tent, X or G grass, Space cycles, Backspace clears.",
+        "Arrows move, T or Enter places a tent, X, G or Space grass, Backspace clears.",
     )
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
@@ -112,9 +122,9 @@ object Tents : PuzzleType {
         )
     }
 
-    /** Accepts exactly [base] with [cell] made a tent and nothing else. */
+    /** Accepts exactly [base] with [cell] made a tent, as a double tap makes it (grass around it). */
     private fun onlyTent(base: TentsState, cell: Int): (PuzzleState) -> Boolean = { next ->
-        next is TentsState && next.marks.indices.all { i -> next.marks[i] == if (i == cell) TentsLogic.TENT else base.marks[i] }
+        next is TentsState && next.marks == base.withTent(cell).marks
     }
 
     override val tutorial: List<TutorialFrame> by lazy {
@@ -122,8 +132,8 @@ object Tents : PuzzleType {
         val rowClue0 = n * n
         val solved = tutorialBoard(tents = setOf(1, 3, 10, 17))
         val empty = tutorialBoard()
-        val one = tutorialBoard(tents = setOf(1))
-        val two = tutorialBoard(tents = setOf(1, 3))
+        val one = empty.withTent(1)
+        val two = one.withTent(3)
         listOf(
             TutorialFrame(
                 state = solved,
@@ -145,23 +155,23 @@ object Tents : PuzzleType {
             TutorialFrame(
                 state = empty,
                 caption = "The top row needs two tents, and only two of its squares sit beside a tree, " +
-                    "so both are tents. Tap the glowing square to place one.",
+                    "so both are tents. Double-tap the glowing square to place one.",
                 highlight = BoardHighlight(strong = setOf(1), soft = setOf(rowClue0, 3)),
                 accepts = onlyTent(empty, 1),
-                retry = "Tap the glowing square once.",
+                retry = "Double-tap the glowing square.",
                 done = "A tent.",
             ),
             TutorialFrame(
                 state = one,
-                caption = "The other square in that row is a tent too. Tap it.",
+                caption = "The other square in that row is a tent too. Double-tap it.",
                 highlight = BoardHighlight(strong = setOf(3), soft = setOf(rowClue0)),
                 accepts = onlyTent(one, 3),
-                retry = "Tap the glowing square once.",
+                retry = "Double-tap the glowing square.",
                 done = "Two tents, and the count is met.",
             ),
             TutorialFrame(
                 state = tutorialBoard(tents = setOf(1, 3), grass = setOf(0, 4, 5, 6, 7, 9)),
-                caption = "Tap a square twice for grass: a note that no tent can go there. " +
+                caption = "A single tap marks grass: a note that no tent can go there, and it sprouts around every tent you place. " +
                     "Squares touching a tent, and squares with no tree beside them, are grass. " +
                     "Grass is only for you; it never counts against you.",
                 highlight = BoardHighlight(soft = setOf(0, 4, 5, 6, 7, 9)),
@@ -334,8 +344,29 @@ object Tents : PuzzleType {
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
-        val s = state as TentsState
-        val n = s.size
+        val base = state as TentsState
+        val n = base.size
+        // A single tap (grass) is drawn at once but handed to the screen only after the double-tap
+        // window, so a double tap becomes one tent move, not a grass entry under it (as Kings' crowns).
+        // [Pending.base] ties it to the board it was made on: undo or a hint drops it.
+        var pending by remember(base.solution) { mutableStateOf<Pending?>(null) }
+        var lastCell by remember(base.solution) { mutableIntStateOf(-1) }
+        var lastTapAt by remember(base.solution) { mutableLongStateOf(0L) }
+        val held = pending?.takeIf { it.base === base }
+        // A sweep lays grass on every empty square the finger crosses, drawn as it goes and emitted
+        // once on lift (one move, one undo). Transient, so not in the state.
+        var sweepBase by remember(base.solution) { mutableStateOf<TentsState?>(null) }
+        var swept by remember(base.solution) { mutableStateOf(emptySet<Int>()) }
+        val s = sweepBase?.grassed(swept) ?: held?.after ?: base
+        val heldNow by rememberUpdatedState(held)
+        val baseNow by rememberUpdatedState(base)
+        val onStateNow by rememberUpdatedState(onState)
+        LaunchedEffect(held, base) {
+            if (held == null) return@LaunchedEffect
+            delay(DOUBLE_TAP_MS)
+            pending = null
+            onState(held.after)
+        }
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
@@ -403,14 +434,60 @@ object Tents : PuzzleType {
                         .padding(start = unit, top = unit)
                         .size(unit * n)
                         .gridCursor(cursor.takeIf { interactive }, n, n, scheme.primary)
+                        .pointerInput(interactive) {
+                            if (!interactive) return@pointerInput
+                            fun cellAt(o: Offset) = (o.y / unitPx).toInt().coerceIn(0, n - 1) * n + (o.x / unitPx).toInt().coerceIn(0, n - 1)
+                            detectDragGestures(
+                                onDragStart = { o ->
+                                    // Any tap still held rides along as the sweep's base.
+                                    sweepBase = heldNow?.after ?: baseNow
+                                    pending = null
+                                    lastCell = -1
+                                    swept = setOf(cellAt(o))
+                                },
+                                onDrag = { change, _ ->
+                                    change.consume()
+                                    val i = cellAt(change.position)
+                                    cursor = i
+                                    if (i !in swept) swept = swept + i
+                                },
+                                onDragEnd = {
+                                    val next = sweepBase!!.grassed(swept)
+                                    sweepBase = null
+                                    swept = emptySet()
+                                    if (next !== baseNow) onStateNow(next)
+                                },
+                                onDragCancel = { sweepBase = null; swept = emptySet() },
+                            )
+                        }
                         .pointerInput(s, interactive) {
                             if (!interactive) return@pointerInput
                             detectTapGestures { offset ->
                                 val r = (offset.y / unitPx).toInt().coerceIn(0, n - 1)
                                 val c = (offset.x / unitPx).toInt().coerceIn(0, n - 1)
                                 cursor = r * n + c
-                                val next = s.cycled(r * n + c)
-                                if (next !== s) onState(next)
+                                val i = r * n + c
+                                if (s.marks[i] == TentsLogic.TENT) { // taking a tent back is one tap
+                                    lastCell = -1
+                                    pending = null
+                                    onState(s.tapped(i))
+                                    return@detectTapGestures
+                                }
+                                val now = tapClock.elapsedNow().inWholeMilliseconds
+                                if (i == lastCell && now - lastTapAt < DOUBLE_TAP_MS) {
+                                    lastCell = -1
+                                    pending = null
+                                    val next = base.withTent(i)
+                                    if (next !== base) onState(next)
+                                    return@detectTapGestures
+                                }
+                                lastCell = i
+                                lastTapAt = now
+                                // A tap on another square settles the one held before it.
+                                if (held != null && held.cell != i) onState(held.after)
+                                val from = if (held != null && held.cell != i) held.after else base
+                                val next = from.tapped(i)
+                                pending = if (next === from) null else Pending(i, from, next)
                             }
                         },
                 )
