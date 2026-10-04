@@ -14,16 +14,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.border
-import androidx.compose.foundation.Canvas
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -307,13 +297,14 @@ private fun PuzzleTile(
     val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
     val solved = (puzzle.id to difficulty) in doneToday
+    val marked = isPick && !solved
 
     Column(
         modifier
             .clip(RoundedCornerShape(18.dp))
             .background(if (solved) accent.copy(alpha = 0.20f) else scheme.surface)
-            // Today's pick: a thin ring and a star. A border draws inside the tile, so nothing moves.
-            .then(if (isPick) Modifier.border(1.5.dp, accent.copy(alpha = 0.7f), RoundedCornerShape(18.dp)) else Modifier)
+            // Today's pick (unsolved): gold ring and sparkles, drawn inside the tile, so nothing moves.
+            .then(if (marked) Modifier.sparkleFrame() else Modifier)
             .clickable(onClick = { onLaunch(puzzle.id) })
             .padding(TilePadding),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -324,22 +315,7 @@ private fun PuzzleTile(
                     .size(previewSize)
                     .clip(RoundedCornerShape(10.dp))
             )
-            if (isPick) {
-                // Drawn, not an icon: the core icon set has no star.
-                Canvas(Modifier.align(Alignment.TopStart).padding(2.dp).size(14.dp).semantics { contentDescription = "Today's pick" }) {
-                    val c = center
-                    val path = Path()
-                    for (i in 0 until 10) {
-                        val r = if (i % 2 == 0) size.minDimension / 2 else size.minDimension / 5
-                        val a = -PI / 2 + i * PI / 5
-                        val pt = Offset(c.x + (r * cos(a)).toFloat(), c.y + (r * sin(a)).toFloat())
-                        if (i == 0) path.moveTo(pt.x, pt.y) else path.lineTo(pt.x, pt.y)
-                    }
-                    path.close()
-                    drawPath(path, scheme.onSurface, style = Stroke(5f))
-                    drawPath(path, scheme.surface)
-                }
-            }
+            if (marked) TryMeLabel(previewSize, Modifier.align(Alignment.Center))
             if (solved) {
                 Box(
                     Modifier.size(16.dp).clip(CircleShape).background(scheme.surface),

@@ -204,3 +204,5 @@ not demand thought, against the owner's stated taste.
   8. Acceptance for the whole thing: every board shows at least two non-grey, non-accent hues in both schemes; dark
      fills stay clear of the surface; no hex literal for content colour outside the helper; `PUZZLE_STANDARDS.md`
      checklist gets a "content hues from the helper" row so new puzzles start compliant.
+
+- **Home screenshot may be stale.** Today's pick now has a gold sparkle frame and "Try me!" over its thumbnail (was a star); recapture `docs/screenshots/` home shot in the next pass that recaptures them.
