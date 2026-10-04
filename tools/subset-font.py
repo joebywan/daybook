@@ -4,12 +4,17 @@
 A minimal TrueType (glyf) subsetter with no dependencies: it keeps glyph ids, so GPOS kerning and
 GDEF stay valid; empties every glyph not reachable from the kept characters (composite components
 are followed); rewrites cmap to just those characters; and drops GSUB (a ligature could land on an
-emptied glyph), DSIG and glyph names. The name table, which carries Noto's OFL notice, is kept.
+emptied glyph), DSIG and glyph names. The name table, which carries the OFL notice, is kept.
 
-    python3 tools/subset-font.py web/src/wasmJsMain/composeResources/font
+    python3 tools/subset-font.py web/src/wasmJsMain/composeResources/font <fredoka-static-dir>
 
-reads the system's Noto fonts (Debian/Ubuntu fonts-noto-core paths). Re-run it if a serif string
-gains a character outside Latin-1 and the punctuation listed below.
+reads the system's Noto Sans Symbols (Debian/Ubuntu fonts-noto-core path) and the four Fredoka
+statics `fredoka_{regular,medium,semibold,bold}.ttf` in <fredoka-static-dir>, which are the
+Google Fonts variable Fredoka.ttf (wdth,wght) pinned at wdth=100 and wght=400/500/600/700 with
+fontTools (build time only, not a repo dependency): `instancer.instantiateVariableFont(font,
+{'wght': w, 'wdth': 100}, updateFontNames=True)`. The same four files, uncut, are
+app/src/main/res/font. Re-run it if a string gains a character outside Latin-1 and the
+punctuation listed below.
 """
 import struct
 import sys
@@ -163,5 +168,6 @@ if __name__ == '__main__':
              [0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2026, 0x2032, 0x2033])
     out = sys.argv[1]
     noto = '/usr/share/fonts/truetype/noto/'
-    subset(noto + 'NotoSerif-Bold.ttf', out + '/noto_serif_bold.ttf', latin)
+    for w in ('regular', 'medium', 'semibold', 'bold'):
+        subset(sys.argv[2] + '/fredoka_%s.ttf' % w, out + '/fredoka_%s.ttf' % w, latin)
     subset(noto + 'NotoSansSymbols-Regular.ttf', out + '/noto_sans_symbols_arrows.ttf', [0x2190, 0x2191, 0x2192, 0x2193])

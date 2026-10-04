@@ -52,30 +52,47 @@ internal val LightScheme = lightColorScheme(
 
 internal val DaybookTypography = Typography(
     displaySmall = TextStyle(
-        fontFamily = FontFamily.Serif,
         fontWeight = FontWeight.Bold,
         fontSize = 30.sp,
         letterSpacing = 0.sp,
     ),
     titleLarge = TextStyle(
-        fontFamily = FontFamily.Serif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 21.sp,
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.Serif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 17.sp,
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
         fontSize = 15.sp,
         lineHeight = 21.sp,
     ),
     labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Medium,
         fontSize = 13.sp,
         letterSpacing = 0.6.sp,
     ),
+)
+
+/**
+ * [this] with every style set in [family]. Fredoka comes from each build's seam (a resource on
+ * Android, a bundled file on the web), so the styles above name no family of their own.
+ */
+internal fun Typography.withFamily(family: FontFamily) = copy(
+    displayLarge = displayLarge.copy(fontFamily = family),
+    displayMedium = displayMedium.copy(fontFamily = family),
+    displaySmall = displaySmall.copy(fontFamily = family),
+    headlineLarge = headlineLarge.copy(fontFamily = family),
+    headlineMedium = headlineMedium.copy(fontFamily = family),
+    headlineSmall = headlineSmall.copy(fontFamily = family),
+    titleLarge = titleLarge.copy(fontFamily = family),
+    titleMedium = titleMedium.copy(fontFamily = family),
+    titleSmall = titleSmall.copy(fontFamily = family),
+    bodyLarge = bodyLarge.copy(fontFamily = family),
+    bodyMedium = bodyMedium.copy(fontFamily = family),
+    bodySmall = bodySmall.copy(fontFamily = family),
+    labelLarge = labelLarge.copy(fontFamily = family),
+    labelMedium = labelMedium.copy(fontFamily = family),
+    labelSmall = labelSmall.copy(fontFamily = family),
 )

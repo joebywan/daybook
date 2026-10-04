@@ -19,6 +19,11 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
+- [ ] **Fredoka follow-ups.** README/Play/F-Droid screenshots (`docs/screenshots/`, `fastlane/metadata/`) still show the
+  old serif and need recapturing on the emulator (clean install, date pinned). Settings and Stats were not rendered
+  with Fredoka (the harness cannot open them); look at both on Android and the web. Board glyphs drawn with their own
+  `TextStyle` (Sudoku, Snap, Nonogram, Atoms, ...) name no family and stay the default font: decide whether they
+  should be Fredoka too (it would move digit metrics inside cells).
 - [ ] **Mate: listing and small polish.** Add the Play/F-Droid listing text (`docs/play/LISTING.md`, `fastlane/metadata/`). The hint
   popover can cover the rank under it (on a flipped Expert board it hid the player's king); the promotion button's glow ring is clipped
   at the rounded corners; the home grid's fifth row (where Mate sits) needs a scroll. Not yet exercised: a promotion that is a later

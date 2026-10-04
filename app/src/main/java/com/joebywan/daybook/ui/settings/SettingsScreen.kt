@@ -84,8 +84,9 @@ fun SettingsScreen(
 }
 
 /**
- * The word lists' credit, which SCOWL's licence asks to travel with them. The full notice is
- * `docs/word-lists/LICENSE-SCOWL.txt`; this is the copyright line and the permission it rests on.
+ * The word lists' credit, which SCOWL's licence asks to travel with them, and the typeface's. The full
+ * notices are `docs/word-lists/LICENSE-SCOWL.txt` and `docs/fonts/LICENSE-FREDOKA-OFL.txt`; this is the
+ * copyright line and the permission each rests on.
  */
 @Composable
 private fun Credits() {
@@ -103,6 +104,18 @@ private fun Credits() {
                 "by Kevin Atkinson, used under its permissive licence. The lists are provided \"as is\" " +
                 "without warranty, and Kevin Atkinson makes no representations about their suitability " +
                 "for any purpose.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurfaceVariant,
+        )
+        Text(
+            "Typeface",
+            style = MaterialTheme.typography.titleMedium,
+            color = scheme.onSurface,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+        Text(
+            "Fredoka, Copyright 2016 The Fredoka Project Authors, used under the SIL Open Font " +
+                "License 1.1.",
             style = MaterialTheme.typography.bodyMedium,
             color = scheme.onSurfaceVariant,
         )

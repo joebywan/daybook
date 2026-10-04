@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalFontFamilyResolver
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,11 +41,15 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.SolveTone
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.theme.withFamily
 import com.joebywan.daybook.web.Backup
 import com.joebywan.daybook.web.WebStores
 import com.joebywan.daybook.web.resources.Res
+import com.joebywan.daybook.web.resources.fredoka_bold
+import com.joebywan.daybook.web.resources.fredoka_medium
+import com.joebywan.daybook.web.resources.fredoka_regular
+import com.joebywan.daybook.web.resources.fredoka_semibold
 import com.joebywan.daybook.web.resources.noto_sans_symbols_arrows
-import com.joebywan.daybook.web.resources.noto_serif_bold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.LocalDate
@@ -325,40 +328,27 @@ suspend fun prepareBoards(day: LocalDate, difficulty: Difficulty) {
 
 // ---- Fonts ------------------------------------------------------------------------------------
 //
-// A browser lends wasm none of its fonts, so the only one available is the one Compose ships. Two
-// are bundled (web/src/wasmJsMain/composeResources/font): Noto Serif Bold, Android's serif, for
-// the title styles, and the arrows from Noto Sans Symbols as a fallback for glyphs the default lacks
-// (the walkthrough offer ends in one). Both are cut down to the characters in use; see CLAUDE.md.
-// Noto is under the SIL Open Font License, whose notice both files carry in their name tables.
+// A browser lends wasm none of its fonts, so the only one available is the one Compose ships. Five
+// are bundled (web/src/wasmJsMain/composeResources/font): Fredoka at 400/500/600/700, the same
+// family Android bundles, and the arrows from Noto Sans Symbols as a fallback for glyphs Fredoka
+// lacks. All are cut down to the characters in use; see docs/WEB_BUILD.md.
+// Fredoka and Noto are under the SIL Open Font License, whose notice each file carries in its
+// name table.
 
-/** [base] with the bundled serif in place of the system serif Android would use. */
+/** [base] in the bundled Fredoka; the arrows are what Skia falls back to for a glyph it lacks. */
 @Composable
 fun platformTypography(base: Typography): Typography {
-    val serif = FontFamily(Font(Res.font.noto_serif_bold, FontWeight.Bold))
+    val fredoka = FontFamily(
+        Font(Res.font.fredoka_regular, FontWeight.Normal),
+        Font(Res.font.fredoka_medium, FontWeight.Medium),
+        Font(Res.font.fredoka_semibold, FontWeight.SemiBold),
+        Font(Res.font.fredoka_bold, FontWeight.Bold),
+    )
     val arrows = FontFamily(Font(Res.font.noto_sans_symbols_arrows))
     val resolver = LocalFontFamilyResolver.current
     // Preloaded fonts are what Skia falls back to for a glyph the requested font lacks.
     LaunchedEffect(resolver, arrows) { resolver.preload(arrows) }
-    return remember(base, serif) {
-        fun TextStyle.web() = if (fontFamily == FontFamily.Serif) copy(fontFamily = serif) else this
-        base.copy(
-            displayLarge = base.displayLarge.web(),
-            displayMedium = base.displayMedium.web(),
-            displaySmall = base.displaySmall.web(),
-            headlineLarge = base.headlineLarge.web(),
-            headlineMedium = base.headlineMedium.web(),
-            headlineSmall = base.headlineSmall.web(),
-            titleLarge = base.titleLarge.web(),
-            titleMedium = base.titleMedium.web(),
-            titleSmall = base.titleSmall.web(),
-            bodyLarge = base.bodyLarge.web(),
-            bodyMedium = base.bodyMedium.web(),
-            bodySmall = base.bodySmall.web(),
-            labelLarge = base.labelLarge.web(),
-            labelMedium = base.labelMedium.web(),
-            labelSmall = base.labelSmall.web(),
-        )
-    }
+    return remember(base, fredoka) { base.withFamily(fredoka) }
 }
 
 // --- The solve sound (Web Audio) ---------------------------------------------------------------
