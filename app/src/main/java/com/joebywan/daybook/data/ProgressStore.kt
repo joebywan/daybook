@@ -115,9 +115,19 @@ object SavedGames {
     fun without(all: List<StoredGame>, key: String): List<StoredGame> =
         all.filterNot { it.key == key }
 
-    /** One entry per board: re-saving replaces, and the stalest games fall off the end. */
-    fun upsert(all: List<StoredGame>, entry: StoredGame): List<StoredGame> =
-        (listOf(entry) + without(all, entry.key)).sortedByDescending { it.savedAt }.take(KEEP)
+    /** A solved daily is kept this long so reopening it shows the solve. A day, not a calendar day. */
+    const val SOLVED_KEEP_MS = 24L * 60 * 60 * 1000
+
+    /**
+     * One entry per board: re-saving replaces, and the stalest games fall off the end. Solved boards
+     * (one per tier per puzzle per day, far more than [KEEP]) do not count toward it and expire on their own.
+     */
+    fun upsert(all: List<StoredGame>, entry: StoredGame): List<StoredGame> {
+        val (done, open) = (listOf(entry) + without(all, entry.key))
+            .filter { !it.game.state.solved || entry.savedAt - it.savedAt < SOLVED_KEEP_MS }
+            .partition { it.game.state.solved }
+        return (open.sortedByDescending { it.savedAt }.take(KEEP) + done).sortedByDescending { it.savedAt }
+    }
 }
 
 /**

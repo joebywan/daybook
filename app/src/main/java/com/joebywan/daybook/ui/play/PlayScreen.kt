@@ -265,14 +265,17 @@ private fun PlayBoard(
     val state = game.state
     val seconds = game.seconds
     val finished = state.solved || finishPreview != null
+    var reopenedSolved by remember(initial) { mutableStateOf(false) }
 
     // Reads `game` rather than the values unpacked above: this runs from effects that outlive the
     // composition that started them, where those locals would be frozen at their first value.
     suspend fun flush() {
         val current = game
         when {
-            // A finished board must never come back as "in progress".
-            current.state.solved -> persist(null)
+            // A reopened solve is already stored; rewriting it would only stretch its day.
+            current.state.solved && reopenedSolved -> Unit
+            // A finished daily is kept for the day so it can be looked at, not replayed; practice is not.
+            current.state.solved -> persist(if (day != null) current.copy(history = emptyList()) else null)
             // Opened and never touched. Nothing to record, and nothing of anyone's to clear.
             current == pristine -> Unit
             // Restarted, or only ever selected a cell: no longer a game in progress.
@@ -285,7 +288,16 @@ private fun PlayBoard(
         if (consulted) return@LaunchedEffect
         val stored = restore()
         // Reading the store takes a moment; a tap that landed in the meantime outranks it.
-        if (stored != null && game == pristine) game = stored
+        if (stored != null && game == pristine) {
+            game = stored
+            if (stored.state.solved) {
+                // Already counted; just the board, with the finish frame out of the way.
+                reopenedSolved = true
+                recorded = true
+                resultsHidden = true
+                confettiPlayed = true
+            }
+        }
         consulted = true
     }
 

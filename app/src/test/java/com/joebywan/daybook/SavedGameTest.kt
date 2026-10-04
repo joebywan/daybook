@@ -125,4 +125,14 @@ class SavedGameTest {
         assertNull(SavedGame.decode("""{"state":{"type":"com.example.Gone","moves":2}}"""))
         assertNull(StoredGame.decode("{}"))
     }
+
+    @Test
+    fun `a solved daily outlives the cap, then expires after a day`() {
+        val solved = SavedGame(board.copy(cells = board.solution))
+        var all = listOf(StoredGame("done", 0L, solved))
+        for (i in 1..SavedGames.KEEP + 5) all = SavedGames.upsert(all, stored("board-$i", i.toLong()))
+        assertEquals(solved, SavedGames.find(all, "done"))
+        all = SavedGames.upsert(all, stored("late", SavedGames.SOLVED_KEEP_MS + 1))
+        assertNull(SavedGames.find(all, "done"))
+    }
 }
