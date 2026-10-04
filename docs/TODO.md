@@ -158,9 +158,6 @@ Roughly in order of how well they fit, best first.
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
   prototype the input before committing. *L.*
-- [ ] **Tents and trees.** Place a tent next to every tree, no two tents touching, with row and column
-  counts. Close cousin of Kings (non-touching placement plus counts), so much of the board code and
-  teaching carries over. *M.*
 - [ ] **Region-digit puzzle (no touching repeats).** Each region of size n holds 1..n, and equal digits
   may not touch, even diagonally. Small, regions-based, reuses Kings' region drawing. *S–M.*
 

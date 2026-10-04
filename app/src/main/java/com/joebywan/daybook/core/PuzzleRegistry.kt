@@ -12,6 +12,7 @@ import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.Snap
+import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
@@ -40,6 +41,7 @@ object PuzzleRegistry {
         Nonogram,
         Inequality,
         Chess,
+        Tents,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }

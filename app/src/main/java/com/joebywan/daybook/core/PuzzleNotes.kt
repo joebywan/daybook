@@ -96,6 +96,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "In a chain a < b < c, a is at most two below the top digit.",
         "A row or column with one gap left names its digit.",
     ),
+    "tents" to listOf(
+        "A square with no tree beside it can never hold a tent.",
+        "A tent's eight neighbours are all grass.",
+        "A tree with one free square beside it: a tent there.",
+        "A row at zero is all grass.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */

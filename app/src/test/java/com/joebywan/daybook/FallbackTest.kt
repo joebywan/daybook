@@ -12,6 +12,7 @@ import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
+import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.SnapState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -177,6 +178,23 @@ class FallbackTest {
             }
         }
         assertTrue("inequality shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /** [Tents.generateVerified] returns a board only when logic finished it and a search proved one answer. */
+    @Test
+    fun `tents proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Tents.id, difficulty)
+                val proved = Tents.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("tents $date/${difficulty.name}", proved, Tents.generate(seed, difficulty))
+            }
+        }
+        assertTrue("tents shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     @Test

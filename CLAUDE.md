@@ -138,6 +138,18 @@ White (or Black) to play and mate in 2 / 3 / 4 by tier. Spec and decisions: `doc
 - Expert (mate in 4) hint search is measured on an emulator and the web (p95 94 ms, max 234 ms; `docs/TEACHING.md`); it runs off the main thread.
   `ChessSearchBenchTest` keeps the old search as an oracle: any search change must still agree with it.
 
+## Tents
+
+Tents and trees: a tent beside every tree (orthogonal, one each), no two tents touching even diagonally, row and column counts given.
+`puzzles/TentsRules.kt` (state, `TentsLogic` ladder, generator, exhaustive proof), `TentsTeacher.kt`, `TentsKeys.kt`, `Tents.kt` (object `Tents`,
+board, walkthrough, motif). `id = "tents"` is hashed into every seed: never rename it.
+
+- **Tiers are size alone: 6x6 / 8x8 / 10x10** (7 / 13 / 20 tents).
+- **A board ships only if the ladder finishes it** (`TentsLogic.deduce`) and `countSolutions` proves one answer; `TentsOracle` (walks the trees) is the
+  independent check. No fallback in a year of seeds per tier, so hints never fall back on a generated board.
+- **`solved` checks the rules**; a mistake is a tent the stored answer lacks, sound because the board has one answer. Crosses are notes.
+- A tap cycles empty, tent, grass; no drag sweeps. Highlight indices: squares `0 until n*n`, row clue `n*n+r`, column clue `n*n+n+c`.
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
