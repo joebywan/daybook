@@ -4,6 +4,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Streak
 import com.joebywan.daybook.core.streakOf
 import com.joebywan.daybook.platform.currentTimeMillis
+import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.puzzles.PuzzleState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -105,9 +106,9 @@ object SavedGames {
 
     /**
      * Random games mint a fresh seed every time they are started, so without a ceiling the store
-     * would grow a board for every game ever abandoned. Enough to cover a morning's dabbling.
+     * would grow a board for every game ever abandoned. One resumable game per puzzle and tier (15+ puzzles x 3) plus recent dailies must fit.
      */
-    const val KEEP = 12
+    const val KEEP = 64
 
     fun find(all: List<StoredGame>, key: String): SavedGame? =
         all.firstOrNull { it.key == key }?.game
@@ -163,6 +164,19 @@ class ProgressStore(private val store: KeyValueStore) {
             SavedGames.upsert(raw.savedGames(), entry).encodeAll()
         }
     }
+
+    /**
+     * The random board a puzzle and tier is on. It stays the same until it is solved or the player asks
+     * for a new one, which is what lets a random game be resumed. Nonces are only ever read here.
+     */
+    suspend fun randomNonce(puzzleId: String, difficulty: Difficulty): Long {
+        val key = "random|$puzzleId|${difficulty.name}"
+        store.string(key).first()?.toLongOrNull()?.let { return it }
+        return newRandomNonce(puzzleId, difficulty)
+    }
+
+    suspend fun newRandomNonce(puzzleId: String, difficulty: Difficulty): Long =
+        freshNonce().also { store.putString("random|$puzzleId|${difficulty.name}", it.toString()) }
 
     suspend fun clearSavedGame(key: String) {
         store.updateStringSet(KEY_SAVED) { raw ->

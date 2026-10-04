@@ -20,7 +20,6 @@ import com.joebywan.daybook.data.ProgressStore
 import com.joebywan.daybook.data.savedGameKey
 import com.joebywan.daybook.platform.PlatformBackHandler
 import com.joebywan.daybook.platform.currentDate
-import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.platform.prepareBoards
 import com.joebywan.daybook.platform.rememberKeyValueStore
 import com.joebywan.daybook.platform.rememberSolveSoundPlayer
@@ -168,12 +167,12 @@ fun DaybookApp(startAt: Route = Route.Home) {
                 mode = mode,
                 onMode = { mode = it },
                 onLaunch = { puzzleId ->
-                    route = when (mode) {
-                        LaunchMode.DAILY -> Route.Play(puzzleId, difficulty, today)
-                        // A fresh nonce every tap is what makes a second random game a new board
-                        // rather than the one just finished.
-                        LaunchMode.RANDOM ->
-                            Route.Play(puzzleId, difficulty, null, freshNonce())
+                    when (mode) {
+                        LaunchMode.DAILY -> route = Route.Play(puzzleId, difficulty, today)
+                        // The tier's current random board: resumed until solved or replaced in the game.
+                        LaunchMode.RANDOM -> scope.launch {
+                            route = Route.Play(puzzleId, difficulty, null, store.randomNonce(puzzleId, difficulty))
+                        }
                     }
                 },
                 onArchive = { puzzleId -> route = Route.Archive(puzzleId) },
@@ -245,7 +244,20 @@ fun DaybookApp(startAt: Route = Route.Home) {
                         if (game == null) store.clearSavedGame(gameKey)
                         else store.saveGame(gameKey, game)
                     },
+                    onNewGame = if (current.day != null) null else {
+                        {
+                            scope.launch {
+                                store.clearSavedGame(gameKey)
+                                route = Route.Play(
+                                    puzzle.id, current.difficulty, null,
+                                    store.newRandomNonce(puzzle.id, current.difficulty),
+                                )
+                            }
+                        }
+                    },
                     onSolved = { seconds, hints ->
+                        // The slot moves on, so leaving and tapping the tile again is a new board.
+                        if (current.day == null) scope.launch { store.newRandomNonce(puzzle.id, current.difficulty) }
                         // PlayScreen calls this once per solve (its `recorded` flag survives
                         // recreation), so the chime cannot repeat on a rotation.
                         playSolveSound()
@@ -274,13 +286,14 @@ fun DaybookApp(startAt: Route = Route.Home) {
                     otherTiersDone = tiersDoneOn(completions, puzzle.id, current.day),
                     onNext = { option ->
                         val tier = option.difficulty
-                        route = when {
-                            tier == null -> Route.Home
+                        when {
+                            tier == null -> route = Route.Home
                             // The same date, so on an archive day it is that past date's board.
-                            option.kind == NextKind.DAILY -> Route.Play(puzzle.id, tier, current.day)
-                            // A fresh nonce every time: it is what makes a second random game a new
-                            // board rather than the one just finished.
-                            else -> Route.Play(puzzle.id, tier, null, freshNonce())
+                            option.kind == NextKind.DAILY -> route = Route.Play(puzzle.id, tier, current.day)
+                            // A solved random board has already had its slot renewed (see onSolved).
+                            else -> scope.launch {
+                                route = Route.Play(puzzle.id, tier, null, store.randomNonce(puzzle.id, tier))
+                            }
                         }
                     },
                     tutorialOffered = tutorialsOffered?.let { puzzle.id in it },

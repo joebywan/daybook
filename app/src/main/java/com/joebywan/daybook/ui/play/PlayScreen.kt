@@ -137,6 +137,7 @@ fun PlayScreen(
     otherTiersDone: Set<Difficulty>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
+    onNewGame: (() -> Unit)? = null,
     tutorialOffered: Boolean? = null,
     onTutorialOffered: () -> Unit = {},
     showTimer: Boolean = true,
@@ -156,7 +157,7 @@ fun PlayScreen(
     } else {
         PlayBoard(
             puzzle, difficulty, day, ready, restore, persist, onSolved, praiseFor, otherTiersDone, onNext, onBack,
-            tutorialOffered, onTutorialOffered, showTimer,
+            onNewGame, tutorialOffered, onTutorialOffered, showTimer,
         )
     }
 }
@@ -223,6 +224,7 @@ private fun PlayBoard(
     otherTiersDone: Set<Difficulty>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
+    onNewGame: (() -> Unit)?,
     tutorialOffered: Boolean?,
     onTutorialOffered: () -> Unit,
     showTimer: Boolean,
@@ -240,6 +242,7 @@ private fun PlayBoard(
     var confettiPlayed by rememberSaveable(initial) { mutableStateOf(false) }
     // Set as soon as the store has been asked, and itself saved, so the answer that arrived before
     // the rotation is not thrown away by a second lookup afterwards.
+    var askRestart by rememberSaveable(initial) { mutableStateOf(false) }
     var consulted by rememberSaveable(initial) { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
     // The walkthrough draws over the game rather than replacing the route, so the board, its undo
@@ -251,6 +254,10 @@ private fun PlayBoard(
     // layout they always had.
     val teaches = remember(initial) { hasTutorial || puzzle.teach(initial) != null }
     val hintSession = rememberHintSession(initial)
+    fun restart() {
+        hintSession.clear()
+        game = game.copy(state = initial, history = emptyList())
+    }
     val hintScope = rememberCoroutineScope()
     // Offered on this visit, and only this one. Saved, so a rotation keeps the line it already
     // showed rather than losing it to the store's "already offered".
@@ -518,8 +525,8 @@ private fun PlayBoard(
                 }
                 ToolButton(Icons.Default.Refresh, "Restart", Modifier.weight(1f)) {
                     if (solved) return@ToolButton
-                    hintSession.clear()
-                    game = game.copy(state = initial, history = emptyList())
+                    // A random game can be replaced as well as restarted; a daily has only the one board.
+                    if (onNewGame != null) askRestart = true else restart()
                 }
                 if (puzzle.offersHints) {
                     ToolButton(Icons.Default.AutoAwesome, hintSession.buttonLabel(), Modifier.weight(1f)) {
@@ -591,6 +598,25 @@ private fun PlayBoard(
     }
     }
 
+
+    if (askRestart && onNewGame != null) {
+        AlertDialog(
+            onDismissRequest = { askRestart = false },
+            title = { Text("Start over?") },
+            text = { Text("Clear this board and try it again, or deal a new random one.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    askRestart = false
+                    // Back to the untouched board first, so leaving writes nothing under the old key.
+                    game = pristine
+                    onNewGame()
+                }) { Text("New board") }
+            },
+            dismissButton = {
+                TextButton(onClick = { askRestart = false; restart() }) { Text("Restart this one") }
+            },
+        )
+    }
 
     if (showRules) {
         AlertDialog(
