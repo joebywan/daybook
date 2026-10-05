@@ -9,7 +9,7 @@ No ads. No subscription. No accounts. No network permission in the manifest at a
 
 | Every puzzle, every day | Sudoku | Mosaic | Snap |
 |---|---|---|---|
-| ![The home screen, showing every puzzle for today](docs/screenshots/home.png) | ![A Sudoku board](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
+| ![The home screen: all sixteen puzzles for today, the first nine in view](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
 
 ## Install it
 

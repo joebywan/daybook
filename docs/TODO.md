@@ -19,11 +19,11 @@ from a measurement or review, so you can check it is still true.
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
 
-- [ ] **Fredoka follow-ups.** README/Play/F-Droid screenshots (`docs/screenshots/`, `fastlane/metadata/`) still show the
-  old serif and need recapturing on the emulator (clean install, date pinned). Settings and Stats were not rendered
-  with Fredoka (the harness cannot open them); look at both on Android and the web. Board glyphs drawn with their own
-  `TextStyle` (Sudoku, Snap, Nonogram, Atoms, ...) name no family and stay the default font: decide whether they
-  should be Fredoka too (it would move digit metrics inside cells).
+- [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
+  a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
+  text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it
+  where the shared `TextMeasurer` is made rather than per board. Confirm in WebKit before closing this. Settings and
+  Statistics were checked on Android and the web in Fredoka and are fine.
 - [ ] **Mate: polish left.** The hint popover reports the right side (the board reports its highlight; checked on a flipped Expert
   board at 375x537 in Chromium and WebKit) but it still covers the ranks nearest the player when the highlight is far side,
   which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
@@ -203,5 +203,3 @@ not demand thought, against the owner's stated taste.
   8. Acceptance for the whole thing: every board shows at least two non-grey, non-accent hues in both schemes; dark
      fills stay clear of the surface; no hex literal for content colour outside the helper; `PUZZLE_STANDARDS.md`
      checklist gets a "content hues from the helper" row so new puzzles start compliant.
-
-- **Home screenshot may be stale.** Today's pick now has a gold sparkle frame and "Try me!" over its thumbnail (was a star); recapture `docs/screenshots/` home shot in the next pass that recaptures them.
