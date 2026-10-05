@@ -448,7 +448,6 @@ object Tents : PuzzleType {
                                 onDrag = { change, _ ->
                                     change.consume()
                                     val i = cellAt(change.position)
-                                    cursor = i
                                     if (i !in swept) swept = swept + i
                                 },
                                 onDragEnd = {
@@ -465,12 +464,11 @@ object Tents : PuzzleType {
                             detectTapGestures { offset ->
                                 val r = (offset.y / unitPx).toInt().coerceIn(0, n - 1)
                                 val c = (offset.x / unitPx).toInt().coerceIn(0, n - 1)
-                                cursor = r * n + c
                                 val i = r * n + c
                                 if (s.marks[i] == TentsLogic.TENT) { // taking a tent back is one tap
                                     lastCell = -1
                                     pending = null
-                                    onState(s.tapped(i))
+                                    onState(s.withTent(i))
                                     return@detectTapGestures
                                 }
                                 val now = tapClock.elapsedNow().inWholeMilliseconds

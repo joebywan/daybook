@@ -21,12 +21,17 @@ fun tentsKeyAction(key: Key): TentsKeyAction? = when (key) {
     else -> null
 }
 
-/** A tent on [cell], or taken back if one is there. A new tent sprouts grass on every empty square around it, in one move. `this` on a tree. */
+/** A tent on [cell], or taken back (with the grass it sprouted) if one is there. A new tent sprouts grass on every empty square around it, in one move. `this` on a tree. */
 fun TentsState.withTent(cell: Int): TentsState {
     if (trees[cell]) return this
     val m = marks.toMutableList()
-    if (m[cell] == TentsLogic.TENT) m[cell] = 0
-    else {
+    if (m[cell] == TentsLogic.TENT) {
+        m[cell] = 0
+        // Take back the grass it sprouted, except where another tent still touches. ponytail: grass the player laid there goes too.
+        for (j in TentsLogic.around(size, cell)) {
+            if (m[j] == TentsLogic.GRASS && TentsLogic.around(size, j).none { m[it] == TentsLogic.TENT }) m[j] = 0
+        }
+    } else {
         m[cell] = TentsLogic.TENT
         for (j in TentsLogic.around(size, cell)) if (m[j] == 0 && !trees[j]) m[j] = TentsLogic.GRASS
     }

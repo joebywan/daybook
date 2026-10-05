@@ -48,6 +48,16 @@ class TentsUiTest {
         assertSame(board, board.withTent(2))
     }
 
+    @Test fun `taking a tent back takes its grass, but keeps grass another tent still touches`() {
+        val one = board.withTent(1)
+        assertEquals(board.marks, one.withTent(1).marks)
+        val two = one.withTent(3) // 2 is a tree; grass at 7 touches both tents
+        val back = two.withTent(1)
+        assertEquals(0, back.marks[0])
+        assertEquals(TentsLogic.GRASS, back.marks[7])
+        assertEquals(TentsLogic.TENT, back.marks[3])
+    }
+
     @Test fun `a sweep lays grass on empty squares only, as one move`() {
         val t = board.withTent(1)
         val g = t.grassed(setOf(1, 2, 0, 10, 11))
