@@ -29,7 +29,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.luminance
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -1071,24 +1071,22 @@ object Lits : PuzzleType {
      * be the one accent, which made an L and an S identical on screen: the rule was enforced all
      * along — LitsAuditTest pins that — but nobody could tell it was there.
      *
-     * Blue, amber, green and vermillion: four hues that stay apart from each other, sit clear of
-     * the unshaded [androidx.compose.material3.ColorScheme.surfaceVariant] in both themes, and are
-     * mid-toned enough that the region walls — ink on parchment, parchment on ink — still read
-     * across them. They are deliberately not the scheme's own colours, which are a green and an
-     * amber that the board would then share with its own furniture.
+     * Blue (pale fill), Teal (deep ink), Violet (mid mark) and Rose (deep ink), from [BoardHues]: four hues of the shared
+     * family, the same in both schemes so brightness differs as well as hue. Coral and Green are left out because this board
+     * shows right/wrong, and Amber and Gold because the in-progress tone below is the accent's tan. Fixed per piece
+     * (nothing stored); [LitsPaletteTest] pins distance (colour-blind included), contrast and clearance from the surface.
      *
-     * Hue is only half of it. Four colours is exactly where colour blindness stops being a corner
-     * case — green against vermillion is the common confusion, and blue against purple the next —
-     * so the letter is *also* written on the square. The glyph is what a player who cannot separate
-     * two of these hues reads instead, and it costs nothing: it says the same thing the rules
-     * already print.
+     * Hue is only half of it: the letter is *also* written on the square, in [BoardHues.onFill] for its fill, so a
+     * player who cannot separate two of these hues reads the glyph instead.
      */
-    private fun colourOf(piece: Piece): Long = when (piece) {
-        Piece.I -> 0xFF4C86D9
-        Piece.L -> 0xFFE0B23C
-        Piece.T -> 0xFF54B07A
-        Piece.S -> 0xFFD9584C
-    }
+    val palette: Map<Piece, Color> = mapOf(
+        Piece.I to BoardHues.fill(215f, false),
+        Piece.L to BoardHues.ink(175f, false),
+        Piece.T to BoardHues.mark(268f),
+        Piece.S to BoardHues.ink(330f, false),
+    )
+
+    private fun colourOf(piece: Piece): Color = palette.getValue(piece)
 
     /**
      * Shaded, but not yet anything: the puzzle's own accent, which is what every shaded square
@@ -1280,7 +1278,7 @@ object Lits : PuzzleType {
                     // otherwise the home grid would advertise a board that no longer exists. The
                     // letter itself is left off: at a 20dp cell the glyph is a smudge, and the tile
                     // has to read as LITS from across a grid, not be read word by word.
-                    color = if (previewShaded[i]) Color(colourOf(Piece.L)) else scheme.surfaceVariant,
+                    color = if (previewShaded[i]) colourOf(Piece.L) else scheme.surfaceVariant,
                     topLeft = at,
                     size = Size(step, step),
                 )
@@ -1434,7 +1432,7 @@ object Lits : PuzzleType {
                         color = when {
                             !shown.shaded[i] -> scheme.surfaceVariant
                             piece == null -> inProgress
-                            else -> Color(colourOf(piece))
+                            else -> colourOf(piece)
                         },
                         topLeft = at,
                         size = Size(stepPx, stepPx),
@@ -1448,18 +1446,13 @@ object Lits : PuzzleType {
                     // Marks go on before the walls, so a wall is never drawn under one: the walls
                     // are what the player reads the regions from and they outrank both of these.
                     if (piece != null) {
-                        // Written in whichever of the page and its ink is the darker, rather than
-                        // in the page colour Kings uses for its marks. All four letter colours are
-                        // mid-to-light, so a dark letter carries three to five times the contrast
-                        // of a pale one on every one of them — and the glyph is the channel a
-                        // player who cannot separate two of the hues is left with, so it is the one
-                        // place on this board where legibility outranks matching Kings' polarity.
-                        val glyph = listOf(scheme.background, scheme.onBackground)
-                            .minBy { it.luminance() }
+                        // The glyph is the channel a colour-blind player is left with, so its colour is computed
+                        // per fill for 4.5:1 (BoardHues.onFill), at full alpha.
+                        val glyph = BoardHues.onFill(colourOf(piece))
                         val layout = measurer.measure(
                             piece.name,
                             TextStyle(
-                                color = glyph.copy(alpha = 0.85f),
+                                color = glyph,
                                 fontSize = (stepPx * 0.42f).toSp(),
                                 fontWeight = FontWeight.Bold,
                             ),
