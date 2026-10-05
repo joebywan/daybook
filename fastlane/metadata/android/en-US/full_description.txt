@@ -1,6 +1,6 @@
 Daybook is a daily logic-puzzle app for people who like to think.
 
-Every day brings a fresh set of classic logic puzzles: Sudoku, region and placement puzzles, number, sign and symbol grids, pipe networks, flood-fills, one-line paths and code-breaking. Each comes in three difficulties, Standard, Hard and Expert, and each is built so that it has exactly one answer you can reach by reasoning. Nothing needs guessing.
+Every day brings a fresh set of classic logic puzzles: Sudoku, region and placement puzzles, number, sign and symbol grids, pipe networks, flood-fills, one-line paths, code-breaking and chess mate-in-N puzzles. Each comes in three difficulties, Standard, Hard and Expert, and each is built so that it has exactly one answer you can reach by reasoning. Nothing needs guessing.
 
 NO ADS. NO SUBSCRIPTION. NO ACCOUNT.
 There are no adverts, no paywall, no sign-in and no in-app purchases. The app does not even ask for network access, so it works on a plane, on a train and in a tunnel.
