@@ -28,8 +28,7 @@ from a measurement or review, so you can check it is still true.
   board at 375x537 in Chromium and WebKit) but it still covers the ranks nearest the player when the highlight is far side,
   which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
-  `?fen=` style hook would do it). The home grid's fifth row needs a scroll because 14+ puzzles at three per row cannot fit a
-  phone; inherent to the layout. *S.*
+  `?fen=` style hook would do it). *S.*
 
 ## Rewards
 
