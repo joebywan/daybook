@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
  * no two tents touch, not even at a corner; each row and column holds as many tents as its clue says.
  *
  * Squares are numbered row by row. [marks] is the player's: [TentsLogic.TENT] is a tent, [TentsLogic.GRASS] a cross
- * (a note, never counted by the rules). Trees never carry a mark. [solution] is the tent set the generator
+ * (a note, never counted by the rules; the grass a tent sprouts is not stored, see [seen]). Trees never carry a mark. [solution] is the tent set the generator
  * chose, kept for hints and mistakes only; `solved` reads the rules.
  *
  * Highlight conventions suggested for the board: squares `0 until n*n`, row clue r = `n*n + r`,
@@ -34,6 +34,19 @@ data class TentsState(
     fun withMark(index: Int, mark: Int): TentsState =
         if (trees[index] || marks[index] == mark) this
         else copy(marks = marks.toMutableList().also { it[index] = mark }, moves = moves + 1)
+
+    /**
+     * [marks] as the board shows them: every empty square beside a tent also reads as grass. Derived, never stored,
+     * so taking a tent back takes its grass with it and the player's own grass (in [marks]) is never touched.
+     */
+    val seen: List<Int>
+        get() {
+            val out = marks.toMutableList()
+            for (i in marks.indices) if (marks[i] == TentsLogic.TENT) {
+                for (j in TentsLogic.around(size, i)) if (marks[j] == 0 && !trees[j]) out[j] = TentsLogic.GRASS
+            }
+            return out
+        }
 
     /** Tents in a row / column right now. */
     fun rowTents(r: Int) = (0 until size).count { marks[r * size + it] == TentsLogic.TENT }

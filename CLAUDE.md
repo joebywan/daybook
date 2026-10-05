@@ -148,7 +148,7 @@ board, walkthrough, motif). `id = "tents"` is hashed into every seed: never rena
 - **A board ships only if the ladder finishes it** (`TentsLogic.deduce`) and `countSolutions` proves one answer; `TentsOracle` (walks the trees) is the
   independent check. No fallback in a year of seeds per tier, so hints never fall back on a generated board.
 - **`solved` checks the rules**; a mistake is a tent the stored answer lacks, sound because the board has one answer. Crosses are notes.
-- A tap lays grass (a note), a double tap a tent that sprouts grass on its empty neighbours (one move); a tap on a tent removes it. A drag lays grass on empty squares only, one move on lift. Highlight indices: squares `0 until n*n`, row clue `n*n+r`, column clue `n*n+n+c`.
+- A tap lays grass (a note), a double tap a tent (one move); a tap on a tent removes it. **The grass a tent sprouts is derived, not stored** (`TentsState.seen`, as Kings' crosses), so removing a tent takes it away and the player's own grass in `marks` is never touched; a saved game from before keeps its stored grass as the player's. A drag lays grass on empty squares only, one move on lift. Highlight indices: squares `0 until n*n`, row clue `n*n+r`, column clue `n*n+n+c`.
 
 ## Typography
 

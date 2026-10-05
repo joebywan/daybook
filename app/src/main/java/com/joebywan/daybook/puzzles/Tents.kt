@@ -228,6 +228,7 @@ object Tents : PuzzleType {
 
         drawRoundRect(scheme.surface, Offset(gx, gy), Size(n * u, n * u), CornerRadius(u * 0.12f))
 
+        val seen = s.seen
         for (r in 0 until n) for (c in 0 until n) {
             val i = r * n + c
             val x = gx + c * u
@@ -235,7 +236,7 @@ object Tents : PuzzleType {
             when {
                 s.trees[i] -> drawTree(x, y, u, treeInk, scheme.onSurface)
                 s.marks[i] == TentsLogic.TENT -> drawTent(x, y, u, if (i in overlay.badTents) scheme.error else tentInk, scheme.surface)
-                s.marks[i] == TentsLogic.GRASS -> {
+                seen[i] == TentsLogic.GRASS -> {
                     drawRect(grassFill, Offset(x, y), Size(u, u))
                     drawGrass(x, y, u, treeInk)
                 }
