@@ -9,7 +9,7 @@
       by 0.8 and cropped 6px top and bottom; Play rejects an alpha channel, so it is saved as RGB).
 All three are committed; rerun this after changing the wording or the icon.
 
-Needs Pillow. Title uses the serif already bundled for the web build; the tagline uses DejaVu Sans
+Needs Pillow. Title uses Fredoka Bold, the app's typeface; the tagline uses DejaVu Sans
 (any sans will do if that is missing).
 Run from the repository root:  python3 docs/social-preview/make.py
 """
@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 ICON = ROOT / "android" / "play-icon-512.png"
-SERIF = ROOT / "web/src/wasmJsMain/composeResources/font/noto_serif_bold.ttf"
+SERIF = ROOT / "app/src/main/res/font/fredoka_bold.ttf"
 SANS_CANDIDATES = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/Library/Fonts/Arial.ttf",
