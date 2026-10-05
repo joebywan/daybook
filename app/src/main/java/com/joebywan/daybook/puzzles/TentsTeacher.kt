@@ -63,7 +63,7 @@ internal object TentsTeacher {
     fun teach(s: TentsState): Step? {
         if (s.solved) return null
         mistake(s)?.let { return it }
-        deduce(s.size, s.trees, s.rowCounts, s.colCounts, s.marks)?.let { return it }
+        deduce(s.size, s.trees, s.rowCounts, s.colCounts, s.seen)?.let { return it }
         val i = s.solution.indices.firstOrNull { s.solution[it] && s.marks[it] != TENT } ?: return null
         return Step(
             FALLBACK, TENT, setOf(i), setOf(i), emptySet(),
@@ -89,7 +89,7 @@ internal object TentsTeacher {
             applyTo = { now -> step.targets.fold(now as TentsState) { acc, i -> acc.withMark(i, v) } },
             reachedBy = { now ->
                 val t = now as TentsState
-                if (mistake) step.targets.all { t.marks[it] != TENT } else step.targets.all { t.marks[it] == v }
+                if (mistake) step.targets.all { t.marks[it] != TENT } else step.targets.all { t.seen[it] == v }
             },
         )
     }
