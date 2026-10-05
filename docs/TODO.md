@@ -24,10 +24,12 @@ from a measurement or review, so you can check it is still true.
   with Fredoka (the harness cannot open them); look at both on Android and the web. Board glyphs drawn with their own
   `TextStyle` (Sudoku, Snap, Nonogram, Atoms, ...) name no family and stay the default font: decide whether they
   should be Fredoka too (it would move digit metrics inside cells).
-- [ ] **Mate: listing and small polish.** Add the Play/F-Droid listing text (`docs/play/LISTING.md`, `fastlane/metadata/`). The hint
-  popover can cover the rank under it (on a flipped Expert board it hid the player's king); the promotion button's glow ring is clipped
-  at the rounded corners; the home grid's fifth row (where Mate sits) needs a scroll. Not yet exercised: a promotion that is a later
-  move rather than the first. *S.*
+- [ ] **Mate: polish left.** The hint popover reports the right side (the board reports its highlight; checked on a flipped Expert
+  board at 375x537 in Chromium and WebKit) but it still covers the ranks nearest the player when the highlight is far side,
+  which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
+  glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
+  `?fen=` style hook would do it). The home grid's fifth row needs a scroll because 14+ puzzles at three per row cannot fit a
+  phone; inherent to the layout. *S.*
 
 ## Rewards
 

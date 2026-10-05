@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -253,8 +254,11 @@ object Chess : PuzzleType {
 
     private const val PIECE_LETTERS = "PNBRQK"
 
-    private fun DrawScope.ring(topLeft: Offset, cell: Float, color: Color, width: Float) {
-        drawRect(color, topLeft + Offset(width / 2, width / 2), Size(cell - width, cell - width), style = Stroke(width))
+    private fun DrawScope.ring(topLeft: Offset, cell: Float, color: Color, width: Float, corner: Float = 0f) {
+        drawRoundRect(
+            color, topLeft + Offset(width / 2, width / 2), Size(cell - width, cell - width),
+            CornerRadius(corner), Stroke(width),
+        )
     }
 
     @Composable
@@ -451,7 +455,7 @@ object Chess : PuzzleType {
                                                 PIECE_LETTERS[kind - 1], Offset.Zero, size.width,
                                                 if (white) WHITE_FILL else BLACK_FILL, if (white) WHITE_LINE else BLACK_LINE,
                                             )
-                                            if (look in highlight.strong) ring(Offset.Zero, size.width, glow.copy(alpha = pulse.value), size.width * 0.06f)
+                                            if (look in highlight.strong) ring(Offset.Zero, size.width, glow.copy(alpha = pulse.value), size.width * 0.06f, 10.dp.toPx())
                                         }
                                     }
                                 }

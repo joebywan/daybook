@@ -206,6 +206,24 @@ class ChessTeachingTest {
         if (move.length == 5) assertTrue(d.targets.any { it in 102..105 })
     }
 
+    @Test
+    fun `a promotion that is a later move also asks for the picker button`() {
+        // After some first move the hint's next step is the promotion, and it asks for the picker button too.
+        var later = 0
+        for (fen in listOf("7k/5P2/6K1/8/8/8/8/8 w - -", "8/6P1/5K1k/8/8/8/8/8 w - -", "k7/2P5/1K6/8/8/8/8/8 w - -"))
+            for (n in 2..3) {
+                val p = ChessPosition.fromFen(fen)
+                for (m in ChessRules.legalMoves(p)) {
+                    val st = ChessState(fen, "", n, listOf(ChessRules.uci(m)))
+                    val d = ChessTeacher.teach(st)
+                    if (d == null || d.mistake || pickedMove(st, d).length != 5) continue
+                    later++
+                    assertTrue("$fen ${ChessRules.uci(m)}", d.targets.any { it in 102..105 })
+                }
+            }
+        assertTrue(later > 0)
+    }
+
     // ---- text fit ---------------------------------------------------------------------------------------
 
     @Test
