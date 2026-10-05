@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,7 +60,9 @@ import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.ui.theme.BoardHues
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.time.TimeSource
 
 /**
@@ -71,6 +74,8 @@ object Tents : PuzzleType {
 
     private const val DOUBLE_TAP_MS = 300L
     private val tapClock = TimeSource.Monotonic.markNow()
+
+    private class Cell<T>(var v: T)
 
     private data class Pending(val cell: Int, val base: TentsState, val after: TentsState)
 
@@ -350,24 +355,26 @@ object Tents : PuzzleType {
         // A single tap (grass) is drawn at once but handed to the screen only after the double-tap
         // window, so a double tap becomes one tent move, not a grass entry under it (as Kings' crowns).
         // [Pending.base] ties it to the board it was made on: undo or a hint drops it.
-        var pending by remember(base.solution) { mutableStateOf<Pending?>(null) }
-        var lastCell by remember(base.solution) { mutableIntStateOf(-1) }
-        var lastTapAt by remember(base.solution) { mutableLongStateOf(0L) }
+        var pending by remember { mutableStateOf<Pending?>(null) }
+        var lastCell by remember { mutableIntStateOf(-1) }
+        var lastTapAt by remember { mutableLongStateOf(0L) }
         val held = pending?.takeIf { it.base === base }
         // A sweep lays grass on every empty square the finger crosses, drawn as it goes and emitted
         // once on lift (one move, one undo). Transient, so not in the state.
-        var sweepBase by remember(base.solution) { mutableStateOf<TentsState?>(null) }
-        var swept by remember(base.solution) { mutableStateOf(emptySet<Int>()) }
+        var sweepBase by remember { mutableStateOf<TentsState?>(null) }
+        var swept by remember { mutableStateOf(emptySet<Int>()) }
         val s = sweepBase?.grassed(swept) ?: held?.after ?: base
-        val heldNow by rememberUpdatedState(held)
-        val baseNow by rememberUpdatedState(base)
         val onStateNow by rememberUpdatedState(onState)
-        LaunchedEffect(held, base) {
-            if (held == null) return@LaunchedEffect
-            delay(DOUBLE_TAP_MS)
-            pending = null
-            onState(held.after)
+        // The taps are driven by events and a timer of their own, never by recomposition (a frame can lag
+        // behind a quick tap): [latest] is the board as of the last thing this handler emitted or was handed.
+        val scope = rememberCoroutineScope()
+        val latest = remember { Cell(base) }.also { it.v = base }
+        val commit = remember { Cell<Job?>(null) }
+        fun emit(next: TentsState) {
+            latest.v = next
+            onStateNow(next)
         }
+
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
@@ -441,7 +448,8 @@ object Tents : PuzzleType {
                             detectDragGestures(
                                 onDragStart = { o ->
                                     // Any tap still held rides along as the sweep's base.
-                                    sweepBase = heldNow?.after ?: baseNow
+                                    commit.v?.cancel()
+                                    sweepBase = pending?.takeIf { it.base === latest.v }?.after ?: latest.v
                                     pending = null
                                     lastCell = -1
                                     swept = setOf(cellAt(o))
@@ -455,38 +463,52 @@ object Tents : PuzzleType {
                                     val next = sweepBase!!.grassed(swept)
                                     sweepBase = null
                                     swept = emptySet()
-                                    if (next !== baseNow) onStateNow(next)
+                                    if (next !== latest.v) emit(next)
                                 },
                                 onDragCancel = { sweepBase = null; swept = emptySet() },
                             )
                         }
-                        .pointerInput(s, interactive) {
+                        .pointerInput(interactive, unitPx) {
                             if (!interactive) return@pointerInput
                             detectTapGestures { offset ->
                                 val r = (offset.y / unitPx).toInt().coerceIn(0, n - 1)
                                 val c = (offset.x / unitPx).toInt().coerceIn(0, n - 1)
                                 val i = r * n + c
-                                if (s.marks[i] == TentsLogic.TENT) { // taking a tent back is one tap
+                                val held = pending?.takeIf { it.base === latest.v }
+                                commit.v?.cancel()
+                                if ((held?.after ?: latest.v).marks[i] == TentsLogic.TENT) { // taking a tent back is one tap
                                     lastCell = -1
                                     pending = null
-                                    onState(s.withTent(i))
+                                    emit((held?.after ?: latest.v).withTent(i))
                                     return@detectTapGestures
                                 }
                                 val now = tapClock.elapsedNow().inWholeMilliseconds
                                 if (i == lastCell && now - lastTapAt < DOUBLE_TAP_MS) {
                                     lastCell = -1
                                     pending = null
-                                    val next = base.withTent(i)
-                                    if (next !== base) onState(next)
+                                    val next = latest.v.withTent(i)
+                                    if (next !== latest.v) emit(next)
                                     return@detectTapGestures
                                 }
                                 lastCell = i
                                 lastTapAt = now
                                 // A tap on another square settles the one held before it.
-                                if (held != null && held.cell != i) onState(held.after)
-                                val from = if (held != null && held.cell != i) held.after else base
+                                if (held != null && held.cell != i) emit(held.after)
+                                val from = latest.v
                                 val next = from.tapped(i)
-                                pending = if (next === from) null else Pending(i, from, next)
+                                if (next === from) {
+                                    pending = null
+                                } else {
+                                    val p = Pending(i, from, next)
+                                    pending = p
+                                    commit.v = scope.launch {
+                                        delay(DOUBLE_TAP_MS)
+                                        if (pending === p && p.base === latest.v) {
+                                            pending = null
+                                            emit(p.after)
+                                        }
+                                    }
+                                }
                             }
                         },
                 )
