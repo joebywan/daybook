@@ -40,7 +40,7 @@ F-Droid's main repo hosts only free software and builds from source.
 [gitlab.com/fdroid/fdroiddata](https://gitlab.com/fdroid/fdroiddata) (file `metadata/com.joebywan.daybook.yml`).
 `fdroid lint` passes except for the category list (which only exists in fdroiddata's own
 checkout). It has **not** been through `fdroid build`, which needs F-Droid's build server, so expect the reviewers to ask
-for changes. After that it is automatic: `UpdateCheckMode: HTTP` reads the newest
-release tag, and F-Droid's bot adds the build entry and publishes a few days later.
+for changes. After that it is automatic: `UpdateCheckMode: Tags` (a reviewer's suggestion) reads the newest
+`v<base>.<run number>` tag, the version code coming from the tag name itself, and F-Droid's bot adds the build entry and publishes a few days later.
 The version code and name are the Actions run number, which the build reads from the environment; the entry's `prebuild`
 bakes the substituted values into the defaults, and removes the `web/` module F-Droid cannot build.

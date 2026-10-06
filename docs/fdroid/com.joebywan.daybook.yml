@@ -32,8 +32,7 @@ Builds:
 AllowedAPKSigningKeys: 70248a01bfc43a99422ce6be6c470146531ead24e96acd288d5df81ac18176f4
 
 AutoUpdateMode: Version v%v
-UpdateCheckMode: HTTP
-UpdateCheckData: 
-  https://api.github.com/repos/joebywan/daybook/releases/latest|"tag_name":\s*"v0\.1\.(\d+)"|https://api.github.com/repos/joebywan/daybook/releases/latest|"tag_name":\s*"v(0\.1\.\d+)"
+UpdateCheckMode: Tags ^v\d+\.\d+\.\d+$
+UpdateCheckData: '|^v\d+\.\d+\.(\d+)$||^v(\d+\.\d+\.\d+)$'
 CurrentVersion: 0.1.104
 CurrentVersionCode: 104
