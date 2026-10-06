@@ -14,7 +14,8 @@ Two lists per word length (4 and 5 letters):
   guesses  every plain a-z word at SCOWL level 70 or lower in the dialect-neutral list or in the
            American, Australian, British or Canadian one, so colour and color are both accepted;
            plus every word that is in both ENABLE and WordNet (two independent sources agreeing
-           keeps out the proper names, numerals and misspellings that WordNet or ENABLE alone carry);
+           keeps out the proper names, numerals and misspellings that WordNet or ENABLE alone carry),
+           and ENABLE's plural of each such word (WordNet lists base forms only);
            plus tools/words/guess-extras.txt, words in none of them (larp). Guesses only, never answers.
   answers  common words only: SCOWL levels 10, 20 and 35 of the dialect-neutral list (so no
            word that has an American/Australian spelling variant), minus inflections of another
@@ -82,6 +83,17 @@ def inflection_of(w, everything):
     return any(s != w and len(s) >= 3 and s in everything for s in stems)
 
 
+def plural_stems(w):
+    stems = []
+    if w.endswith("ies"):
+        stems.append(w[:-3] + "y")
+    if w.endswith("es"):
+        stems.append(w[:-2])
+    if w.endswith("s") and not w.endswith("ss"):
+        stems.append(w[:-1])
+    return stems
+
+
 def wordnet(dict_dir):
     words = set()
     for kind in ("noun", "verb", "adj", "adv"):
@@ -92,7 +104,10 @@ def wordnet(dict_dir):
 
 def main(pkg, wordnet_dir, enable_path):
     with open(enable_path) as f:
-        both = wordnet(wordnet_dir) & {w.strip() for w in f}
+        enable = {w.strip() for w in f}
+    both = wordnet(wordnet_dir) & enable
+    # WordNet lists base forms only: take ENABLE's plural of each, so "etui" brings "etuis".
+    both |= {w for w in enable if any(s in both for s in plural_stems(w))}
     extras = read_list("guess-extras.txt")
     dialects = ("english", "american", "australian", "british", "canadian")
     all_levels = (10, 20, 35, 40, 50, 55, 60, 70)

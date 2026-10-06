@@ -26,7 +26,7 @@ class LexiconCluesTest {
 
     @Test
     fun `guesses are wider than answers, and take modern words`() {
-        for (w in listOf("larp", "vlog", "etui", "pricy", "adobo")) assertTrue(w, WordList.isWord(w))
+        for (w in listOf("larp", "larps", "vlog", "etui", "etuis", "pricy", "adobo")) assertTrue(w, WordList.isWord(w))
         for (n in listOf(4, 5)) assertTrue(WordList.answers(n).all { WordList.isWord(it) })
         assertTrue(!WordList.isWord("uriah") && !WordList.isWord("lxxx"))
     }
