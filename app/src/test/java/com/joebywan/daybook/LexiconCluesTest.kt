@@ -23,4 +23,11 @@ class LexiconCluesTest {
         val dupes = answers.groupBy { WordList.clue(it).lowercase() }.filterValues { it.size > 1 }
         assertEquals("shared clues: $dupes", emptyMap<String, List<String>>(), dupes)
     }
+
+    @Test
+    fun `guesses are wider than answers, and take modern words`() {
+        for (w in listOf("larp", "larps", "vlog", "etui", "etuis", "pricy", "adobo")) assertTrue(w, WordList.isWord(w))
+        for (n in listOf(4, 5)) assertTrue(WordList.answers(n).all { WordList.isWord(it) })
+        assertTrue(!WordList.isWord("uriah") && !WordList.isWord("lxxx"))
+    }
 }
