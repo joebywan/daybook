@@ -14,12 +14,15 @@ package com.joebywan.daybook.puzzles
  *
  * - [MISTAKE] — the row cannot be submitted because it is not a word. Any word is allowed, so
  *   probing with one that cannot be the answer is never called wrong.
- * - [OPENER] — nothing is known yet, so a word that splits the answer list best.
+ * - [OPENER] — nothing is known yet, so a word that splits the answer list best, given as a clue.
  * - [PIN] — a letter known to be in the word has only as many slots left as it has copies, because
  *   every other slot is a green of another letter or was marked against it.
  * - [SUBMIT] — the row fits every mark; press Enter.
  * - [ONLY_WORD] / [CHOOSE] — pins have run out. Of the answer list, one word fits (type it), or
  *   several do and this guess leaves the fewest whichever way it is marked.
+ *
+ * Those three name a word, so they give it as a crossword-style clue ([clueFor]) and leave the
+ * player to work it out; only "Show me" types it.
  *
  * A pin is a fact about the marks alone, so it holds for every word that fits them, on the answer
  * list or not. Only [ONLY_WORD] and [CHOOSE] read the answer list, and they say so.
@@ -57,6 +60,9 @@ internal object LexiconTeacher {
      * the right length and still the best of its list).
      */
     fun opener(length: Int): String = if (length == 4) "tale" else "raise"
+
+    /** "Clue: Lift (5)": a clue to [word] without the word, ready to drop into an explanation. */
+    private fun clueFor(word: String) = "\u201C${WordList.clue(word)}\u201D (${word.length})"
 
     // ---- what the indices in a Deduction mean on Lexicon's board -----------------------------------
     // A tile is `row * length + slot`, rows counting down the grid with the row being typed after the
@@ -185,8 +191,8 @@ internal object LexiconTeacher {
             cited = emptySet(),
             targets = word.map { key(it) }.toSet(),
             nudge = "Nothing is known yet. Start with a word of common letters.",
-            explanation = "${word.uppercase()} is a good first guess: its letters turn up in more words than most, " +
-                "so whatever the marks say, they cut the list down fast.",
+            explanation = "A good first guess has common letters, so it cuts the list down fast. " +
+                "Try the word that goes ${clueFor(word)}.",
         )
     }
 
@@ -274,15 +280,15 @@ internal object LexiconTeacher {
                 cited = lastRow,
                 targets = word.map { key(it) }.toSet(),
                 nudge = "Check every mark against the word list.",
-                explanation = "Only one word on the answer list fits every mark: ${word.uppercase()}. Type it.",
+                explanation = "Only one word on the answer list fits every mark. Its clue: ${clueFor(word)}. Type it.",
             )
         }
         val word = bestGuess(fits, fits)
         val worst = worstCase(word, fits)
         val shown = if (fits.size == 2) {
-            "Two words fit every mark: ${fits[0].uppercase()} and ${fits[1].uppercase()}. Either could be it, so try ${word.uppercase()}."
+            "Two words fit every mark, and either could be it. Try the one that goes ${clueFor(word)}."
         } else {
-            "${fits.size} words on the answer list fit every mark. ${word.uppercase()} is one, and " +
+            "${fits.size} words on the answer list fit every mark. Try the one that goes ${clueFor(word)}: " +
                 "however it is marked it leaves at most $worst."
         }
         return Step(

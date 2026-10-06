@@ -171,4 +171,12 @@ object WordList {
 
     /** Whether [word] is accepted as a guess: every answer, and many more besides. */
     fun isWord(word: String): Boolean = guesses(word.length).binarySearch(word) >= 0
+
+    // Probed by word, never iterated, so its order cannot reach a seed.
+    private val clues: Map<String, String> by lazy {
+        LexiconClueText.ALL.split("\n").associate { it.substringBefore(": ") to it.substringAfter(": ") }
+    }
+
+    /** A crossword-style clue for an answer-list [word]; every answer has one (`LexiconCluesTest`). */
+    fun clue(word: String): String = clues.getValue(word)
 }
