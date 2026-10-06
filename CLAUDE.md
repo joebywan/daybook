@@ -69,6 +69,12 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
   all. So Expert gets a guess more than Hard and is still the tier that asks the most. `LexiconBalanceTest` measures
   both players; the constants alone prove nothing. A saved game from the hard-mode build still loads (the old
   `hard` key is ignored) and plays under the new rules.
+- **Hints give a clue, not the word.** `ONLY_WORD`, `CHOOSE` and `OPENER` describe the word as a crossword-style clue
+  (`WordList.clue`); only "Show me" types it. The clues are `tools/words/clues.txt` (one per answer, hand-written; the
+  build fails if an answer has none), compiled into `LexiconClues.kt`. A new answer needs a clue in the same change;
+  `LexiconCluesTest` checks coverage, that no clue contains its word, and that no two answers share one.
+  The word lists were not enlarged: guesses already take every SCOWL level the package ships (to 70, all five
+  dialects), and the next level up for answers (40) is slang and vulgarity.
 - **A probe is never a mistake.** The teacher's only mistake is a row that is not a word. Calling a legal probe
   wrong is the PR #15 bug.
 - **A pin is a fact about the marks alone**, so `LexiconTeachingTest` checks it against every accepted word that

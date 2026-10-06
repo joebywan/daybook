@@ -46,7 +46,10 @@ class LexiconTeachingTest {
         val next = LexiconTeacher.teach(4, guesses, marks, "mol")!!
         assertEquals(LexiconTeacher.ONLY_WORD, next.technique)
         assertEquals(Move.Fill("mole"), next.move)
-        assertEquals("Only one word on the answer list fits every mark: MOLE. Type it.", next.explanation)
+        assertEquals(
+            "Only one word on the answer list fits every mark. Its clue: \u201C${WordList.clue("mole")}\u201D (4). Type it.",
+            next.explanation,
+        )
     }
 
     @Test
@@ -123,6 +126,10 @@ class LexiconTeachingTest {
                     assertTrue("$where: the answer must still be possible", s.answer in fits)
                     assertEquals("$where: candidates", fits, LexiconTeacher.candidates(s.length, before, marks))
                     assertTrue("$where: explanation too long: ${step.explanation}", step.explanation.length <= LexiconTeacher.MAX_EXPLANATION)
+                    // A step that points at a word gives its clue (LexiconCluesTest: and the clue never holds the word).
+                    ((step.move as? Move.Fill)?.word ?: (step.move as? Move.Open)?.word)?.let {
+                        assertTrue("$where: no clue for $it", step.explanation.contains(WordList.clue(it)))
+                    }
                     when (val m = step.move) {
                         is Move.Pin -> {
                             // True of every accepted word that fits the marks, on the answer list or not.
