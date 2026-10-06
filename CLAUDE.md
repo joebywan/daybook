@@ -60,7 +60,9 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
   every daily board after it, so `LexiconWebParityTest` goes red on purpose. Screening lives in
   `tools/words/exclude.txt`: offensive, informal, obscure, plurals the stem rule cannot see. Answers are
   dialect-neutral SCOWL levels 10/20/35 minus inflections; guesses are every plain a-z word to level 70 in
-  every dialect, so colour/color style pairs are both accepted and neither pair is ever an answer.
+  every dialect, so colour/color style pairs are both accepted and neither pair is ever an answer, plus every word in both
+  ENABLE and WordNet (two sources agreeing keeps out WordNet's proper names and numerals) and `tools/words/guess-extras.txt`
+  (modern words no list has: larp). The owner wants guesses wider than answers; answers stay well known.
 - **Tiers: 5 letters / 6 guesses, 5 letters / 5 guesses, 4 letters / 7 guesses.** Any real word is a legal guess on
   every tier: there is **no hard mode** (the owner: don't force players to use their clues, "if they don't, that's on
   them"; an earlier build had one, and it is gone). Four letters is the *harder* length: a player who always guesses
@@ -73,8 +75,7 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
   (`WordList.clue`); only "Show me" types it. The clues are `tools/words/clues.txt` (one per answer, hand-written; the
   build fails if an answer has none), compiled into `LexiconClues.kt`. A new answer needs a clue in the same change;
   `LexiconCluesTest` checks coverage, that no clue contains its word, and that no two answers share one.
-  The word lists were not enlarged: guesses already take every SCOWL level the package ships (to 70, all five
-  dialects), and the next level up for answers (40) is slang and vulgarity.
+  Answers were not enlarged: SCOWL level 40 for answers is slang and vulgarity.
 - **A probe is never a mistake.** The teacher's only mistake is a row that is not a word. Calling a legal probe
   wrong is the PR #15 bug.
 - **A pin is a fact about the marks alone**, so `LexiconTeachingTest` checks it against every accepted word that

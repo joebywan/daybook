@@ -5,12 +5,17 @@ Input is the SCOWL word lists as packaged by the npm module `wordlist-english` 1
 SCOWL licence, see docs/word-lists/LICENSE-SCOWL.txt):
 
     npm pack wordlist-english@1.2.1 && tar xzf wordlist-english-1.2.1.tgz
-    python3 tools/words/build.py package
+    mkdir wn && npm pack wordnet-db@3.1.14 && tar xzf wordnet-db-3.1.14.tgz -C wn      # WordNet 3.1
+    curl -LO https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt     # ENABLE, public domain
+    python3 tools/words/build.py package wn/package/dict enable1.txt
 
 Two lists per word length (4 and 5 letters):
 
   guesses  every plain a-z word at SCOWL level 70 or lower in the dialect-neutral list or in the
-           American, Australian, British or Canadian one, so colour and color are both accepted.
+           American, Australian, British or Canadian one, so colour and color are both accepted;
+           plus every word that is in both ENABLE and WordNet (two independent sources agreeing
+           keeps out the proper names, numerals and misspellings that WordNet or ENABLE alone carry);
+           plus tools/words/guess-extras.txt, words in none of them (larp). Guesses only, never answers.
   answers  common words only: SCOWL levels 10, 20 and 35 of the dialect-neutral list (so no
            word that has an American/Australian spelling variant), minus inflections of another
            word on the list (plurals, -ed, -er/-est), minus tools/words/exclude.txt (offensive,
@@ -77,7 +82,18 @@ def inflection_of(w, everything):
     return any(s != w and len(s) >= 3 and s in everything for s in stems)
 
 
-def main(pkg):
+def wordnet(dict_dir):
+    words = set()
+    for kind in ("noun", "verb", "adj", "adv"):
+        with open(os.path.join(dict_dir, f"index.{kind}")) as f:
+            words |= {line.split()[0] for line in f if not line.startswith(" ")}
+    return {w for w in words if PLAIN.fullmatch(w)}
+
+
+def main(pkg, wordnet_dir, enable_path):
+    with open(enable_path) as f:
+        both = wordnet(wordnet_dir) & {w.strip() for w in f}
+    extras = read_list("guess-extras.txt")
     dialects = ("english", "american", "australian", "british", "canadian")
     all_levels = (10, 20, 35, 40, 50, 55, 60, 70)
     everything = set()
@@ -87,7 +103,7 @@ def main(pkg):
     exclude, include = read_list("exclude.txt"), read_list("include.txt")
     out = {}
     for n in LENGTHS:
-        guesses = {w for w in everything if len(w) == n}
+        guesses = {w for w in everything | both | extras if len(w) == n}
         answers = {w for w in common if len(w) == n and not inflection_of(w, everything)}
         answers = (answers - exclude) | {w for w in include if len(w) == n}
         guesses |= answers
@@ -158,7 +174,7 @@ def clues_kotlin(out):
 
 
 if __name__ == "__main__":
-    result = main(sys.argv[1])
+    result = main(sys.argv[1], sys.argv[2], sys.argv[3])
     for n in LENGTHS:
         print(n, "guesses", len(result[n][0]), "answers", len(result[n][1]), file=sys.stderr)
     if "--words" in sys.argv:
