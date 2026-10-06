@@ -16,9 +16,9 @@ Repo: https://github.com/joebywan/daybook.git
 Binaries: https://github.com/joebywan/daybook/releases/download/v%v/daybook-%v.apk
 
 Builds:
-  - versionName: 0.1.104
-    versionCode: 104
-    commit: 9abf5a53677d698c3fe595a0f8ecf5b44164f261
+  - versionName: 0.1.130
+    versionCode: 130
+    commit: e38e392f35055dfe68944910e2f10fb8cce42d48
     subdir: app
     gradle:
       - yes
@@ -26,13 +26,13 @@ Builds:
       - web
     prebuild:
       - sed -i -e '/include(":web")/d' ../settings.gradle.kts
-      - sed -i 's/\(VERSION_CODE.\{6\}\).1./\1\x22$$VERCODE$$\x22/' build.gradle.kts
-      - sed -i 's/\(VERSION_NAME.\{6\}\).0.1.0./\1\x22$$VERSION$$\x22/' build.gradle.kts
+      - sed -i -e 's/versionCode = .*/versionCode = $$VERCODE$$/' -e 's/versionName
+        = .*/versionName = "$$VERSION$$"/' build.gradle.kts
 
 AllowedAPKSigningKeys: 70248a01bfc43a99422ce6be6c470146531ead24e96acd288d5df81ac18176f4
 
-AutoUpdateMode: Version v%v
+AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v\d+\.\d+\.\d+$
 UpdateCheckData: '|^v\d+\.\d+\.(\d+)$||^v(\d+\.\d+\.\d+)$'
-CurrentVersion: 0.1.104
-CurrentVersionCode: 104
+CurrentVersion: 0.1.130
+CurrentVersionCode: 130

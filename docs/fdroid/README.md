@@ -41,6 +41,6 @@ F-Droid's main repo hosts only free software and builds from source.
 `fdroid lint` passes except for the category list (which only exists in fdroiddata's own
 checkout). It has **not** been through `fdroid build`, which needs F-Droid's build server, so expect the reviewers to ask
 for changes. After that it is automatic: `UpdateCheckMode: Tags` (a reviewer's suggestion) reads the newest
-`v<base>.<run number>` tag, the version code coming from the tag name itself, and F-Droid's bot adds the build entry and publishes a few days later.
+`v<base>.<run number>` tag, the version code coming from the tag name itself, and F-Droid's bot adds the build entry and publishes a few days later. F-Droid's CI wants the entry to already name the newest tag (its `checkupdates` job fails if running the update check would change the file), and checks formatting with a newer `rewritemeta` that wraps at about 100 columns; when a job fails, its log prints the diff it wants.
 The version code and name are the Actions run number, which the build reads from the environment; the entry's `prebuild`
-bakes the substituted values into the defaults, and removes the `web/` module F-Droid cannot build.
+sets `versionCode`/`versionName` in `app/build.gradle.kts` to the values F-Droid substitutes (a reviewer's simplification), and removes the `web/` module F-Droid cannot build.
