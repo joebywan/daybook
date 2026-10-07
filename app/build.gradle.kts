@@ -73,11 +73,16 @@ android {
             // scrutinises hardest, and declining its scan is what blocks an in-place update.
             isDebuggable = false
 
-            // Deliberately off. Saved games are serialised by class name — kotlinx.serialization
-            // writes the state class into the JSON — so shrinking would buy about a megabyte in
-            // exchange for a class of failure that only ever shows up in the shipped build, on
-            // someone's half-finished board.
-            isMinifyEnabled = false
+            // R8 on: the release APK drops from 13.5 MB to 2.3 MB (measured; all of it code). Saved games
+            // are the thing to watch, because kotlinx.serialization writes the state class's name into the
+            // JSON. R8 renames classes but leaves the name it writes (a string constant, and the library
+            // ships its own R8 rules), and that was checked rather than assumed: with R8 on, 48 saves
+            // (every puzzle at every tier) loaded and re-saved byte-identical on an emulator, an in-place
+            // update kept a real game, and saves written by the R8 build load in a normal one. Anything
+            // that touches a PuzzleState or its serialisation still has to be re-checked the same way:
+            // inject saves into files/datastore/daybook.preferences_pb, make one move, and see which
+            // survive the re-save. The build must also stay reproducible for F-Droid (docs/fdroid).
+            isMinifyEnabled = true
             isShrinkResources = false
 
             signingConfig = if (haveReleaseKey) signingConfigs.getByName("release") else null
