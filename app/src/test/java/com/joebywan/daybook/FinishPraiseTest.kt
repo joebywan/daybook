@@ -3,7 +3,9 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.puzzleNote
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.ui.play.SHARE_URL
 import com.joebywan.daybook.ui.play.finishPraise
+import com.joebywan.daybook.ui.play.shareText
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -107,5 +109,18 @@ class FinishPraiseTest {
         val p = run(days(1, 2, 3, 4, 5), c(today))
         assertEquals("1 more day to your 7-day streak.", p.toGo)
         assertNull(run(listOf(c(null)), c(null)).toGo)
+    }
+
+    @Test fun shareTextNamesTheSolveAndNothingOfTheBoard() {
+        assertEquals(
+            "Daybook: Nonogram, Hard\nDaily for 10 Oct 2026, solved in 3:07 with no hints.\n5 day streak.\n$SHARE_URL",
+            shareText("Nonogram", Difficulty.HARD, "10 Oct 2026", "3:07", 0, 5),
+        )
+        assertEquals(
+            "Daybook: Nonogram, Expert\nA random board, solved in 12:00 with 1 hint.\n$SHARE_URL",
+            shareText("Nonogram", Difficulty.EXPERT, null, "12:00", 1, 0),
+        )
+        // A one-day streak is not worth telling.
+        assertFalse(shareText("Nonogram", Difficulty.HARD, "10 Oct 2026", "1:00", 2, 1).contains("streak"))
     }
 }

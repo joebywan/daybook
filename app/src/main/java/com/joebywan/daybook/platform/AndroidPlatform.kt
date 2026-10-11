@@ -2,6 +2,7 @@ package com.joebywan.daybook.platform
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
@@ -193,6 +194,22 @@ private fun playSolveSound(context: Context) {
             } catch (_: Exception) {
             }
             track?.release()
+        }
+    }
+}
+
+/**
+ * Sends a result's text to the system share sheet. Returns what to say on the button afterwards: nothing here,
+ * since the sheet itself is the feedback.
+ */
+@Composable
+fun rememberSharer(): (String) -> String? {
+    val context = LocalContext.current
+    return remember(context) {
+        { text ->
+            val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+            context.startActivity(Intent.createChooser(send, null))
+            null
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.play
 
+import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.nearestToGo
 import com.joebywan.daybook.core.newlyEarned
 import com.joebywan.daybook.core.puzzleNote
@@ -20,6 +21,8 @@ data class Praise(
     val achievements: List<EarnedAchievement> = emptyList(),
     /** "Only X to go": at most one line of progress toward a near achievement. */
     val toGo: String? = null,
+    /** What the Share button sends ([shareText]); null hides the button (a reopened solved board). */
+    val share: String? = null,
 )
 
 /** What the frame shows for one achievement. */
@@ -88,4 +91,22 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
     val earned = newlyEarned(history, solve, today).map { EarnedAchievement(it.id, it.title, it.description) }
     val near = nearestToGo(history, solve, today)
     return Praise(title, big, (lines + personal).take(1), earned, near?.text)
+}
+
+/** Where a shared result points: the web build, which anyone can open without installing anything. */
+const val SHARE_URL = "https://knowhowit.com.au/daybook/"
+
+/**
+ * The text a solve shares. Spoiler-free: the puzzle, the tier, which board (a daily's date, or a random one),
+ * the time and hints, and the streak once it is two days or more; nothing about the board itself. [date] is
+ * the daily's date already formatted, null for a random board.
+ */
+fun shareText(puzzleName: String, tier: Difficulty, date: String?, clock: String, hints: Int, streak: Int): String = buildString {
+    append("Daybook: $puzzleName, ${tier.label}\n")
+    append(if (date != null) "Daily for $date" else "A random board")
+    append(", solved in $clock")
+    append(if (hints == 0) " with no hints" else " with $hints hint${if (hints == 1) "" else "s"}")
+    append(".\n")
+    if (streak >= 2) append("$streak day streak.\n")
+    append(SHARE_URL)
 }

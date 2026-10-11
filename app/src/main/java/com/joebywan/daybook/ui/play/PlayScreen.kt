@@ -46,6 +46,7 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -96,6 +97,7 @@ import com.joebywan.daybook.platform.formatClock
 import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.generateBoard
 import com.joebywan.daybook.platform.readyBoard
+import com.joebywan.daybook.platform.rememberSharer
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
@@ -677,14 +679,17 @@ private fun FinishedFrame(
                 )
                 PartyPopper(Modifier.size(36.dp).graphicsLayer(scaleX = -1f))
             }
-            Text(
-                buildString {
-                    append(formatClock(seconds))
-                    if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurface,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    buildString {
+                        append(formatClock(seconds))
+                        if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onSurface,
+                )
+                praise.share?.let { ShareChip(it, accent) }
+            }
             praise.lines.forEach {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
@@ -713,6 +718,23 @@ private fun FinishedFrame(
                 }
             }
         }
+    }
+}
+
+/** Shares the result's text ([Praise.share]); on a build that copies instead, the label says so. */
+@Composable
+private fun ShareChip(text: String, accent: Color) {
+    val share = rememberSharer()
+    var label by remember { mutableStateOf("Share") }
+    Row(
+        Modifier.clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.22f))
+            .clickable { share(text)?.let { label = it } }
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
