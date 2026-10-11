@@ -431,3 +431,22 @@ fun rememberSolveSoundPlayer(enabled: Boolean): () -> Unit {
         if (!enabled) ({}) else ({ try { startTone() } catch (_: Throwable) { } })
     }
 }
+
+private fun canShare(): Boolean = js("typeof navigator.share === 'function'")
+
+// A cancelled sheet rejects the promise; that is the player's choice, not an error.
+private fun shareNatively(text: String): Unit = js("navigator.share({ text: text }).catch(() => {})")
+
+private fun copyToClipboard(text: String): Unit =
+    js("navigator.clipboard ? navigator.clipboard.writeText(text).catch(() => {}) : undefined")
+
+/**
+ * Hands a result's text to the browser's share sheet where it has one (phones), or copies it to the clipboard
+ * (most desktops), and says so on the button.
+ */
+@Composable
+fun rememberSharer(): (String) -> String? = remember {
+    { text ->
+        if (canShare()) { shareNatively(text); null } else { copyToClipboard(text); "Copied" }
+    }
+}

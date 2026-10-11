@@ -17,9 +17,12 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.ProgressStore
+import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.data.savedGameKey
 import com.joebywan.daybook.platform.PlatformBackHandler
 import com.joebywan.daybook.platform.currentDate
+import com.joebywan.daybook.platform.formatClock
+import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.prepareBoards
 import com.joebywan.daybook.platform.rememberKeyValueStore
 import com.joebywan.daybook.platform.rememberSolveSoundPlayer
@@ -31,12 +34,16 @@ import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.play.NextKind
 import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.play.finishPraise
+import com.joebywan.daybook.ui.play.shareText
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.AchievementsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+
+/** A shared daily's date, as the play screen shows it. */
+private const val SHARE_DATE = "d MMM yyyy"
 
 /** Where the app currently is. Hand-rolled because four screens do not need a nav graph. */
 sealed interface Route {
@@ -274,11 +281,14 @@ fun DaybookApp(startAt: Route = Route.Home) {
                         }
                     },
                     praiseFor = { seconds, hints ->
-                        finishPraise(
-                            completions,
-                            Completion(puzzle.id, current.difficulty, current.day, seconds, hints),
-                            today,
-                            puzzle.displayName,
+                        val solve = Completion(puzzle.id, current.difficulty, current.day, seconds, hints)
+                        // The streak is told only for today's own daily: an archive day or a random board does not extend it.
+                        val streak = if (current.day == today) Stats.streak(completions + solve, today).current else 0
+                        finishPraise(completions, solve, today, puzzle.displayName).copy(
+                            share = shareText(
+                                puzzle.displayName, current.difficulty, current.day?.let { formatDate(it, SHARE_DATE) },
+                                formatClock(seconds), hints, streak,
+                            ),
                         )
                     },
                     // Only what the store already holds; the board being solved is counted by the

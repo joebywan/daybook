@@ -52,10 +52,6 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Achievements follow-ups.** No fanfare yet (the solve chime plays; a distinct short tone would need a second
   sample path in both platform players). The two
   registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
-- [ ] **Share a result.** A spoiler-free text summary of a solve (puzzle, date, tier, time, hints used, streak) handed to
-  the platform share sheet from the finished frame (Android `ACTION_SEND`; web `navigator.share`, clipboard where it is
-  missing), through the `platform` seam. Nothing about the board itself, so it spoils nothing. The main way a free app with
-  no ads spreads. *S–M.*
 - [ ] **Puzzle of the week.** A larger board once a week (e.g. Sundays), from the same `hash(date, puzzle, tier)` scheme so it
   stays offline and free; most generators already scale by size. Decide which puzzles take part (only those whose larger
   sizes are proved and fast on the web) and whether it counts toward streaks. *M.*
