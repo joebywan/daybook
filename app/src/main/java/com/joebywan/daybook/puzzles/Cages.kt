@@ -254,46 +254,55 @@ object Cages : PuzzleType {
 
     // ---- drawing ------------------------------------------------------------------------------
 
+    /** One straight piece of a cage's outline, in squares (a square is 1 by 1), from the grid's top-left corner. */
+    internal class Seg(val x0: Float, val y0: Float, val x1: Float, val y1: Float, val cage: Int)
+
     /**
-     * Dashed outlines for the cages of an [n] x [n] grid of [cell]-pixel squares, drawn just inside each cage's
-     * edge. Each square draws the sides that face outside its cage; at a corner a line stops short (a bend of the
-     * cage), carries on past the edge (a notch in it) or runs straight into the next square's, so the outline of an
-     * L or a bar closes up without a gap.
+     * The outline of every cage of an [n] x [n] grid, drawn [inset] squares inside the cage's edge. Each square makes the
+     * pieces for its sides that face outside its cage; at a corner a piece stops short (a bend of the cage), carries on
+     * past the edge (a notch in it) or runs straight into the next square's, so the outline of an L or a bar closes up
+     * without a gap. Pure, so the closing can be tested.
      */
-    internal fun DrawScope.drawCages(cageOf: List<Int>, n: Int, cell: Float, ink: Color, stroke: Float) {
-        val inset = cell * 0.09f
-        val dash = PathEffect.dashPathEffect(floatArrayOf(cell * 0.13f, cell * 0.09f))
+    internal fun cageOutline(cageOf: List<Int>, n: Int, inset: Float = 0.09f): List<Seg> {
+        val out = ArrayList<Seg>()
         fun inCage(r: Int, c: Int, k: Int) = r in 0 until n && c in 0 until n && cageOf[r * n + c] == k
-        fun line(x0: Float, y0: Float, x1: Float, y1: Float) =
-            drawLine(ink, Offset(x0, y0), Offset(x1, y1), strokeWidth = stroke, pathEffect = dash)
+        // How far a side's end moves past the square's edge: in if the cage bends, out if it notches, 0 if it runs on.
+        fun ext(neighbour: Boolean, diagonal: Boolean) = if (!neighbour) -inset else if (diagonal) inset else 0f
         for (r in 0 until n) for (c in 0 until n) {
             val k = cageOf[r * n + c]
-            val left = c * cell
-            val top = r * cell
-            val right = left + cell
-            val bottom = top + cell
-            // How far a side's end moves past the square's edge: in if the cage bends, out if it notches, 0 if it runs on.
-            fun ext(neighbour: Boolean, diagonal: Boolean) = if (!neighbour) -inset else if (diagonal) inset else 0f
+            val left = c.toFloat()
+            val top = r.toFloat()
+            val right = left + 1f
+            val bottom = top + 1f
             if (!inCage(r - 1, c, k)) {
                 val a = left - ext(inCage(r, c - 1, k), inCage(r - 1, c - 1, k))
                 val b = right + ext(inCage(r, c + 1, k), inCage(r - 1, c + 1, k))
-                line(a, top + inset, b, top + inset)
+                out += Seg(a, top + inset, b, top + inset, k)
             }
             if (!inCage(r + 1, c, k)) {
                 val a = left - ext(inCage(r, c - 1, k), inCage(r + 1, c - 1, k))
                 val b = right + ext(inCage(r, c + 1, k), inCage(r + 1, c + 1, k))
-                line(a, bottom - inset, b, bottom - inset)
+                out += Seg(a, bottom - inset, b, bottom - inset, k)
             }
             if (!inCage(r, c - 1, k)) {
                 val a = top - ext(inCage(r - 1, c, k), inCage(r - 1, c - 1, k))
                 val b = bottom + ext(inCage(r + 1, c, k), inCage(r + 1, c - 1, k))
-                line(left + inset, a, left + inset, b)
+                out += Seg(left + inset, a, left + inset, b, k)
             }
             if (!inCage(r, c + 1, k)) {
                 val a = top - ext(inCage(r - 1, c, k), inCage(r - 1, c + 1, k))
                 val b = bottom + ext(inCage(r + 1, c, k), inCage(r + 1, c + 1, k))
-                line(right - inset, a, right - inset, b)
+                out += Seg(right - inset, a, right - inset, b, k)
             }
+        }
+        return out
+    }
+
+    /** Dashed outlines for the cages of an [n] x [n] grid of [cell]-pixel squares (see [cageOutline]). */
+    internal fun DrawScope.drawCages(cageOf: List<Int>, n: Int, cell: Float, ink: Color, stroke: Float) {
+        val dash = PathEffect.dashPathEffect(floatArrayOf(cell * 0.13f, cell * 0.09f))
+        for (g in cageOutline(cageOf, n)) {
+            drawLine(ink, Offset(g.x0 * cell, g.y0 * cell), Offset(g.x1 * cell, g.y1 * cell), strokeWidth = stroke, pathEffect = dash)
         }
     }
 

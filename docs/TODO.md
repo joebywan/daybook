@@ -30,6 +30,15 @@ from a measurement or review, so you can check it is still true.
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
 
+- [ ] **Recapture the README screenshots for Cage Sudoku.** `docs/screenshots/home.png` shows the old puzzle count and has no Cage
+  Sudoku tile; a Cage Sudoku board shot (a Hard board with a hint open shows the cages best) could join the table. Needs an emulator
+  on a clean install with the date pinned (CLAUDE.md, "README screenshots go stale silently"); not done in the PR that added it. *S.*
+- [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
+  together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
+  would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
+- [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
+  problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
+
 ## Rewards
 
 Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) 5 (calendar) and 6 (daily variety) are done; the rest are separate PRs.

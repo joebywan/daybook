@@ -181,7 +181,9 @@ shares with Sudoku). `id = "cages"` is hashed into every seed: never rename it.
   `solutions` (the same propagation plus branching, no budget, verdict type `Verdict`) proves one answer. Givens are added only where the
   ladder is stuck, then cages are merged and givens taken back while it still finishes (the Snap lesson: no board gives away what the
   rest already implies). `CageOracle` (test) works cage by cage on every filling of each cage with no inference at all, so it shares
-  nothing with the prover; it agrees on every sampled board (Expert takes it 3-13 s a board, so three are sampled).
+  nothing with the prover; it agrees on every sampled board (Expert takes it 3-13 s a board, so three are sampled). Generation: Standard and Hard prove on the first attempt (3 of 365 Hard days
+  need a second); Expert's first attempt succeeds about a quarter of the time (a year needed up to 24 of the 40 allowed, none gave up) and
+  costs about 25 ms on the JVM per board and 36 / 51 / 58 ms (median / p95 / max) in Chromium, 50 / 70 / 78 in WebKit.
 - **The logic must stay inside the teacher.** The generator's ladder is the teacher's, so `deduce` ends in `CAGE_CHAIN` ("every group worked
   through together"), which is exactly `settle`. Raise the generator's power (a new rule in `Sight`) and the teacher already has it
   unexplained; the fix is a named technique, not a fallback. `CageTeachingTest` walks 200 boards a tier and a year of daily boards and
