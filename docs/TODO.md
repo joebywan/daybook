@@ -36,6 +36,15 @@ from a measurement or review, so you can check it is still true.
   (Inequality's `SIGN_BOUND` is the model). Also: `docs/screenshots/home.png` still shows sixteen puzzles; it needs an
   emulator recapture on a clean install. *M / S.*
 
+- [ ] **Recapture the README screenshots for Cage Sudoku.** `docs/screenshots/home.png` shows the old puzzle count and has no Cage
+  Sudoku tile; a Cage Sudoku board shot (a Hard board with a hint open shows the cages best) could join the table. Needs an emulator
+  on a clean install with the date pinned (CLAUDE.md, "README screenshots go stale silently"); not done in the PR that added it. *S.*
+- [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
+  together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
+  would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
+- [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
+  problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
+
 ## Rewards
 
 Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) 5 (calendar) and 6 (daily variety) are done; the rest are separate PRs.
@@ -162,9 +171,6 @@ below have a famous branded version; use the descriptive name).
 ### Suggested
 
 Roughly in order of how well they fit, best first.
-- [ ] **Cage-sum Sudoku.** Sudoku plus cages whose digits must total a given sum without repeats. Reuses
-  Sudoku's grid, digit pad, notes and conflict display, so most of the UI exists. Needs a uniqueness
-  solver that handles cages; a teacher using cage combinations ("a 2-cage totalling 3 is {1,2}"). *M.*
 - [ ] **Island-and-sea puzzle.** Numbered cells grow islands of that size, islands never touch, the sea is
   one connected body with no 2x2 pool. Same family as Kings/LITS (region logic, a connectivity
   proof in the solver); the teacher can name each rule it uses. *M–L.*

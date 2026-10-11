@@ -108,6 +108,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A tree with one free square beside it: a tent there.",
         "A row at zero is all grass.",
     ),
+    "cages" to listOf(
+        "A cage of two totalling 3 can only be 1 and 2.",
+        "A cage of two totalling 17 can only be 8 and 9.",
+        "A cage of three totalling 24 can only be 7, 8 and 9.",
+        "A cage never repeats a digit, even across a box edge.",
+        "A row, column or box adds up to 45: use it to find a lone cell.",
+    ),
     "target" to listOf(
         "Work backwards: which two numbers could make the target?",
         "Make a big product near the target, then add or subtract.",

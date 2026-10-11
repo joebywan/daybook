@@ -5,6 +5,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.puzzles.AtomsState
+import com.joebywan.daybook.puzzles.CageState
 import com.joebywan.daybook.puzzles.ChessPosition
 import com.joebywan.daybook.puzzles.ChessRules
 import com.joebywan.daybook.puzzles.ChessState
@@ -94,6 +95,11 @@ class StateSerializationTest {
      */
     private fun mutate(state: PuzzleState): PuzzleState = when (state) {
         is AtomsState -> state.pairs.indices.take(2).fold(state) { acc, i -> acc.cycle(i) }
+        is CageState -> {
+            val cell = state.grid.givens.indexOfFirst { !it }
+            val noted = (cell + 1 until 81).first { !state.grid.givens[it] }
+            state.select(cell).withCell(cell, 5).toggleNote(noted, 3)
+        }
         is ChessState -> state.play(ChessRules.legalMoves(ChessPosition.fromFen(state.start)).first())
         is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is RegionsState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
