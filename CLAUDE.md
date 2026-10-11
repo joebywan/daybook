@@ -157,6 +157,28 @@ board, walkthrough, motif). `id = "tents"` is hashed into every seed: never rena
 - **`solved` checks the rules**; a mistake is a tent the stored answer lacks, sound because the board has one answer. Crosses are notes.
 - A tap lays grass (a note), a double tap a tent (one move); a tap on a tent removes it. **The grass a tent sprouts is derived, not stored** (`TentsState.seen`, as Kings' crosses), so removing a tent takes it away and the player's own grass in `marks` is never touched; a saved game from before keeps its stored grass as the player's. A drag lays grass on empty squares only, one move on lift. Highlight indices: squares `0 until n*n`, row clue `n*n+r`, column clue `n*n+n+c`.
 
+## Regions (region digits, no touching repeats)
+
+A grid cut into regions; a region of N squares holds 1..N once each, and equal digits never touch, even diagonally. `puzzles/RegionsRules.kt`
+(`RegionsLayout`, `RegionsLogic`: rules, generator, exhaustive proof), `RegionsTeacher.kt`, `RegionsKeys.kt`, `Regions.kt` (state, board, walkthrough,
+motif). `id = "regions"` is hashed into every seed: never rename it.
+
+- **Tiers are size alone: 5x5 / 7x7 / 9x9**, regions of 2 to 5 squares. Givens are minimal for the ladder (about 27 / 21 / 19% of squares).
+- **The partition and the fill are built together** (`randomBoard`): a random cut almost never has a legal fill (every region holds a 1, and no two 1s may
+  touch, so a 2x2 window needs four different digits). Pick the first free square in reading order, grow a region, give it 1..k with none touching an
+  equal digit; a dead end redraws. Starting from the most boxed-in square instead failed on most 9x9 draws. Regions of one square are refused.
+- **A board ships only if the teacher's ladder finishes it** (`RegionsTeacher.solvesByLogic`: last square in a region, only digit left, only place in the
+  region), digits are taken back in random order while that holds, and `countSolutions` (candidate masks, exhaustive, no budget) proves one answer.
+  `RegionsOracle` (naive reading-order search) is the independent check. `lastResort` is the board of one fixed seed, itself proved by a test. About 8%
+  of Expert days need a second attempt (`RegionsRulesTest`); a year per tier never reaches `lastResort` (`FallbackTest`). Changing the ladder or the draw
+  changes every board (parity pins go red on purpose).
+- **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer. No pencil marks.
+- Region colours are derived (`Regions.regionColours`: a 3 to 5 colouring of the region graph, hues Violet/Amber/Teal/Blue/Gold; the thick walls carry the
+  regions as well). The selected square and its digit's twins go plain (surface) so they stand out from the colours. Highlight indices: squares `0 until n*n`,
+  digit keys `1000 + d`.
+- A locked-candidate technique (a digit whose only places in a region all touch one square rules that square out) would cut the givens further; not built,
+  `docs/TODO.md`.
+
 ## Target (number arithmetic)
 
 Six numbers and a target: combine two tiles with + - x / and the answer is a new tile; any tile equal to the target wins. Many answers per board, so
@@ -200,7 +222,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap and Inequality (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap and Inequality (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

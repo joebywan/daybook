@@ -29,6 +29,12 @@ from a measurement or review, so you can check it is still true.
   which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
+- [ ] **Regions: sparser boards, and README screenshots.** The ladder is three single-digit techniques, so boards carry
+  about 27 / 21 / 19% of squares as givens. A locked-candidate technique (a digit whose every place in a region touches
+  one square rules that square out) would let the generator take more back, but it ends in an elimination, not a
+  placement, and Regions has no pencil marks; it would need a step that explains one elimination and then a placement
+  (Inequality's `SIGN_BOUND` is the model). Also: `docs/screenshots/home.png` still shows sixteen puzzles; it needs an
+  emulator recapture on a clean install. *M / S.*
 
 ## Rewards
 
@@ -37,6 +43,13 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Achievements follow-ups.** No fanfare yet (the solve chime plays; a distinct short tone would need a second
   sample path in both platform players). The two
   registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
+- [ ] **Share a result.** A spoiler-free text summary of a solve (puzzle, date, tier, time, hints used, streak) handed to
+  the platform share sheet from the finished frame (Android `ACTION_SEND`; web `navigator.share`, clipboard where it is
+  missing), through the `platform` seam. Nothing about the board itself, so it spoils nothing. The main way a free app with
+  no ads spreads. *S–M.*
+- [ ] **Puzzle of the week.** A larger board once a week (e.g. Sundays), from the same `hash(date, puzzle, tier)` scheme so it
+  stays offline and free; most generators already scale by size. Decide which puzzles take part (only those whose larger
+  sizes are proved and fast on the web) and whether it counts toward streaks. *M.*
 
 ## Needs a real iPhone
 
@@ -161,12 +174,12 @@ Roughly in order of how well they fit, best first.
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
   prototype the input before committing. *L.*
-- [ ] **Region-digit puzzle (no touching repeats).** Each region of size n holds 1..n, and equal digits
-  may not touch, even diagonally. Small, regions-based, reuses Kings' region drawing. *S–M.*
 
 **Not recommended** (noted so nobody re-investigates): a crossword needs a licensed clue database, which
 we cannot generate or ship offline; plain word-search and sliding-tile puzzles are generator-easy but do
 not demand thought, against the owner's stated taste.
+A practice mode per technique was declined by the owner: players can use the hints themselves, and it would
+only spend their time railroaded through a tutorial.
 
 ## Owner's call
 

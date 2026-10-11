@@ -7,6 +7,7 @@ import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mosaic
+import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Nonogram
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.Pipes
@@ -43,6 +44,7 @@ object PuzzleRegistry {
         Inequality,
         Chess,
         Tents,
+        Regions,
         Target,
     )
 
