@@ -128,17 +128,18 @@ internal object RegionsLogic {
     }
 
     /**
-     * A random partition into connected regions of 1 to [MAX_REGION] squares together with a legal
+     * A random partition into connected regions of 2 to [MAX_REGION] squares together with a legal
      * fill of it, or null if the search ran out of tries (the attempt is then redrawn).
      *
      * Drawing the regions first and filling after almost never works (a digit may not touch itself
      * and every region holds a 1, so nearly every random partition has no legal fill at all), so the
-     * two are built together: take the most boxed-in free square, grow a region from it, and give
+     * two are built together: take the first free square in reading order (starting from the most boxed-in one instead failed far more often),
+     * grow a region of two or more squares from it, and give
      * that region a digit each, 1..k, none touching an equal one already placed. A region the fill
      * cannot take is redrawn; a square no region can take undoes the one before.
      */
     fun randomBoard(n: Int, rng: Rng): Pair<List<Int>, List<Int>>? {
-        repeat(RESTARTS) { restart -> drawBoard(n, rng)?.let { return it } }
+        repeat(RESTARTS) { drawBoard(n, rng)?.let { return it } }
         return null
     }
 
@@ -174,6 +175,7 @@ internal object RegionsLogic {
                 if (++tries > TRIES) return false
                 val k = rng.pick(SIZES)
                 val cells = grow(n, region, start, k, rng)
+                if (cells.size < 2) return@repeat
                 if (!place(cells, 0, 0)) return@repeat
                 for (c in cells) region[c] = id
                 if (go(id + 1)) return true
@@ -223,10 +225,10 @@ internal object RegionsLogic {
         return best
     }
 
-    /** Null when nothing was proved. Pure in (seed, difficulty); only lists reach the `Rng`. */
-    fun generateVerified(seed: Long, difficulty: Difficulty): RegionsState? {
+    /** Null when nothing was proved. Pure in (seed, difficulty); only lists reach the `Rng`. [attempts] is for tests that count redraws. */
+    fun generateVerified(seed: Long, difficulty: Difficulty, attempts: Int = ATTEMPTS): RegionsState? {
         val n = sizeFor(difficulty)
-        for (attempt in 0 until ATTEMPTS) {
+        for (attempt in 0 until attempts) {
             val rng = Rng(seed + attempt)
             val (region, solution) = randomBoard(n, rng) ?: continue
             val layout = RegionsLayout(n, region)

@@ -97,10 +97,10 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A row or column with one gap left names its digit.",
     ),
     "regions" to listOf(
-        "A region of one square is always a 1.",
-        "A digit touching a 3 anywhere around it, even a corner, is not a 3.",
-        "When every other square in a region sees a digit, it goes in the last one.",
+        "A square touching a 3 can never be a 3, even at a corner.",
         "A region of two squares holds a 1 and a 2, nothing else.",
+        "If all but one square in a region touch a 4, the 4 goes there.",
+        "Count what a square's region and its neighbours already hold.",
     ),
     "tents" to listOf(
         "A square with no tree beside it can never hold a tent.",
