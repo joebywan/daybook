@@ -14,6 +14,7 @@ import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
+import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.SnapState
 import org.junit.Assert.assertEquals
@@ -180,6 +181,23 @@ class FallbackTest {
             }
         }
         assertTrue("inequality shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /** [Target.generateVerified] returns a board only when the exhaustive table put the target exactly the tier's number of steps away. */
+    @Test
+    fun `target proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Target.id, difficulty)
+                val proved = Target.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("target $date/${difficulty.name}", proved, Target.generate(seed, difficulty))
+            }
+        }
+        assertTrue("target shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /** [Regions.generateVerified] returns a board only when logic finished it and a search proved one answer. */

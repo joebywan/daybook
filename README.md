@@ -66,6 +66,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Tents | Tents and Trees | One tent beside every tree, no two tents touching, row and column counts to match |
 | Regions | Suguru / Tectonic | A region of N squares holds 1 to N once each, and equal digits never touch, not even at a corner |
 | Cage Sudoku | Sudoku with sum cages | Sudoku in which every dashed cage must add up to its number, with no digit repeated in it |
+| Target | Number-target arithmetic | Combine six numbers with + − × ÷ (whole numbers only) until a tile equals the target |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 

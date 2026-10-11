@@ -216,6 +216,31 @@ shares with Sudoku). `id = "cages"` is hashed into every seed: never rename it.
   (`topBand`). Dashed outlines are `Cages.drawCages` (inset 9% of a square, bends and notches closed), in hue A's ink.
 - Highlight indices are Sudoku's: squares 0..80, digit keys `81 + d`, the pencil 91.
 
+## Target (number arithmetic)
+
+Six numbers and a target: combine two tiles with + - x / and the answer is a new tile; any tile equal to the target wins. Many answers per board, so
+no unique answer to prove. `puzzles/TargetRules.kt` (state, `TargetLogic`: rules, the exhaustive table, generator), `TargetTeacher.kt`, `TargetKeys.kt` (keys and the
+tap/typing entry model), `Target.kt` (board, walkthrough, motif). `id = "target"` is hashed into every seed: never rename it. Named "Target" on purpose, not
+after a game show.
+
+- **Rules:** whole numbers from 1 to 9,999 only (`TargetLogic.CAP`); `-` and `/` put the bigger tile first, so there is no order to get wrong; equal tiles give
+  `5 - 5` (refused, zero) or `5 / 5 = 1`. The cap is a rule, and the search obeys it as the player does, so "reachable" means the same to both.
+- **Tiers: how many large numbers (25/50/75/100) and how many operations the target needs, by the exhaustive search.** Standard 3 large, target needs 3-4; Hard 2 large, 4-5;
+  Expert 1 large, exactly 5 (all six numbers). Targets are 100-999 and never a starting tile. Measured over a year of daily seeds per tier
+  (`TargetRulesTest`, `build/reports/target-par-distribution.txt`): shortest-answer lengths 3/4 = 164/201 (mean 3.55), 4/5 = 285/80 (4.22), 5 = 365 (5.00); no fallback on any day;
+  12-16 ms a board on a desktop JVM. Hard/Expert never ship a target reachable in one or two steps.
+- **`TargetLogic.table` is the proof**: depth-first over every order of every operation, no budget (so nothing truncated can pass for a proof), minimum depth per value.
+  Equal tiles are tried once and `x1`, `/1` are skipped (they change nothing). `generateVerified` draws the numbers, takes the table, picks a target whose
+  depth fits the tier (candidates walked in ascending order; no hash order reaches the `Rng`), retries up to 24 times; `lastResort` is a fixed board per tier, itself checked.
+  `TargetOracle` (test) is the independent check: breadth-first over positions, both operand orders, no pruning; it agrees with the table on every value of 75 boards.
+- **`solved` is "some tile is the target"**; no stored answer exists. `par` (the generator's minimum) is metadata for the fingerprint and tests; the teacher never reads it.
+- **The move is built in `remember` (`TargetEntry`), only a finished operation is a `PuzzleState`** (one undo = one operation). Slots are stable: the answer goes where the first tile was.
+  `TargetState.log` holds the operations so a mistake can be taken back exactly (`withoutFrom`); a save without it still loads.
+- **Teacher: a search over the visible tiles, never the answer.** A step is on a shortest road from where the player stands (finishing if it can, else the answer nearest the
+  target). A mistake is a step after which no sequence reaches the target (found with the same table; a step that merely lengthens the road is fine); "Show me" takes it
+  and what followed back. No fallback exists. Highlight indices: tiles `0..5`, operators `Target.OP0 + ordinal`, the target `Target.TARGET`.
+- Keyboard reads like a calculator: type a tile's number, an operator, another number, Enter. `TargetKeysTest` pins it against the taps.
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;

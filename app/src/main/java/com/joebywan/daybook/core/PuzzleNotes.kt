@@ -115,6 +115,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A cage never repeats a digit, even across a box edge.",
         "A row, column or box adds up to 45: use it to find a lone cell.",
     ),
+    "target" to listOf(
+        "Work backwards: which two numbers could make the target?",
+        "Make a big product near the target, then add or subtract.",
+        "Dividing can shrink a large tile into a handy small one.",
+        "You never have to use every number.",
+        "Subtract or divide, and the bigger tile goes first for you.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */
