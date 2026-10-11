@@ -1,6 +1,7 @@
 package com.joebywan.daybook.core
 
 import com.joebywan.daybook.puzzles.Atoms
+import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.Chess
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Kings
@@ -42,6 +43,7 @@ object PuzzleRegistry {
         Inequality,
         Chess,
         Tents,
+        Cages,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }
