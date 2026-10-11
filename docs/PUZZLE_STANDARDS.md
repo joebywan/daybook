@@ -86,6 +86,7 @@ What varies, as built:
 | Mate | moves to mate | 2 / 3 / 4 (the tier picks the list in `ChessPositions`; a bundled list, not a generator, see `docs/CHESS_SPEC.md`) |
 | Inequality | side (clues are minimal at every size) | 4x4 / 5x5 / 6x6 (`InequalityLogic.sizeFor`; `InequalityRulesTest` `the tiers get larger in the order they are offered`) |
 | Tents | side and trees | 6x6 with 7 trees / 8x8 with 13 / 10x10 with 20 (`TentsLogic.sizeFor`, `treesFor`) |
+| Target | large numbers, fewest operations the target needs | 3 large, 3-4 steps / 2 large, 4-5 / 1 large, 5 (`TargetLogic.specFor`; `TargetRulesTest` `a year of daily boards ... the tiers get harder`) |
 
 Rules for the tiers:
 
@@ -500,6 +501,7 @@ Y = yes, P = partial, N = no.
 | Nonogram | Y side | Y `generateVerified` (a picture ships only if `lineSolvable`, which makes it unique; `lastResort` is a fixed diagonal, also proved), year test | Y `NonogramLogic.isSolved` (clues, not the stored picture) | Y `NonogramOracle` (every arrangement of every row), `NonogramTeachingTest` brute force | Y no fallback exists | Y 6 | Y grid + clue indices | Y `NonogramWebParityTest` | Y | Y 200 / 70 |
 | Mate (chess) | Y mate in 2 / 3 / 4 | n/a no generator: a bundled list (`ChessPositions`), each entry proved offline by python-chess (shortest mate exactly N, one key) and re-proved in tests by `ChessRules.forcedMate`; no fallback exists | Y `ChessState.solved` (checkmate within N moves, not the stored line) | Y `ChessMateCheckerTest` naive minimax, perft with published counts | Y no fallback exists | Y 9 | Y square indices via `reportHighlight` + anchors + keepClear | Y `ChessWebParityTest` | Y | Y 200 / 70 |
 | Tents | Y side, trees | Y `generateVerified` (logic finishes it, then `countSolutions` == 1; `lastResort` proved unique), year test | Y `TentsLogic.isSolved` (rules, not the stored tents) | Y `TentsOracle`, `TentsTeachingTest` | Y | Y 7 | Y squares + clue indices via `reportHighlight` | Y `TentsWebParityTest` | Y | P not measured |
+| Target | Y large numbers, steps | n/a many answers; `generateVerified` (exhaustive table puts the target a tier-specific number of steps away; `lastResort` fixed and checked), year test | Y `TargetState.solved` (a tile is the target) | Y `TargetOracle` (breadth-first over positions) | Y a search of the visible tiles, no fallback exists | Y 6 | Y tile / operator / target anchors + keepClear | Y `TargetWebParityTest` | Y | Y 200 / 70 |
 
 ### Known gaps and open items
 

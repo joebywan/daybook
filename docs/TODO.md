@@ -140,6 +140,12 @@ below have a famous branded version; use the descriptive name).
     The tray competes with the toolbar for height; Tower's controls are the nearest precedent.
   - *Size: L.*
 
+- [ ] **Target: recapture the screenshots and drive it on the emulator.** The new puzzle was rendered on the web build only (Chromium and
+  WebKit, light and dark, 375x537 and tall); `docs/screenshots/home.png` (and its alt text) was not recaptured because that needs the emulator,
+  and nobody has tapped the tiles by touch on Android yet.
+- [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm figure was measured
+  in headless Chromium but not on a real phone.
+
 ### Suggested
 
 Roughly in order of how well they fit, best first.
@@ -149,10 +155,6 @@ Roughly in order of how well they fit, best first.
 - [ ] **Island-and-sea puzzle.** Numbered cells grow islands of that size, islands never touch, the sea is
   one connected body with no 2x2 pool. Same family as Kings/LITS (region logic, a connectivity
   proof in the solver); the teacher can name each rule it uses. *M–L.*
-- [ ] **Number-target arithmetic.** Six numbers and a target; combine them with + − × ÷ to reach the
-  target. Generated so a solution always exists; tiers vary the target distance and how many numbers
-  must be used. No unique answer, like Tower. Tiny UI, fast to play, very different feel from the
-  grid puzzles. *S–M.*
 - [ ] **Word ladder.** Change one letter at a time from a start word to an end word through valid words.
   Needs the same word lists as the word-deduction puzzle (the lists now exist: `LexiconWords`, `WordList`, rebuilt by `tools/words/build.py`); choose pairs
   with a unique shortest ladder to keep it provable. *M after the lists exist.*

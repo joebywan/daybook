@@ -64,6 +64,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Inequality | Futoshiki | 1 to N once per row and column, `<` and `>` signs between some neighbours |
 | Mate | Chess mate-in-N | White to play and mate in 2, 3 or 4; the opponent defends as well as it can |
 | Tents | Tents and Trees | One tent beside every tree, no two tents touching, row and column counts to match |
+| Target | Number-target arithmetic | Combine six numbers with + − × ÷ (whole numbers only) until a tile equals the target |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
