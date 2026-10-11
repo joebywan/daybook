@@ -116,7 +116,7 @@ internal object TargetLogic {
         val lo = minOf(x, y)
         return when (op) {
             TargetOp.Sub -> "$x − $y would be zero"
-            TargetOp.Div -> "$hi ÷ $lo is not a whole number"
+            TargetOp.Div -> "$hi ÷ $lo is not whole"
             else -> "Over $CAP"
         }
     }

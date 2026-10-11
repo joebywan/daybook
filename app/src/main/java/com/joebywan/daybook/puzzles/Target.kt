@@ -194,16 +194,16 @@ object Target : PuzzleType {
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-            val u = minOf(maxWidth, maxHeight) / 3.2f
+            val u = minOf(maxWidth, maxHeight) / 3.0f
             val made = BoardHues.fill(hueB, dark)
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(u * 0.12f)) {
                 Box(
-                    Modifier.width(u * 2.6f).height(u * 0.95f).clip(RoundedCornerShape(u * 0.2f)).background(scheme.surface),
+                    Modifier.width(u * 2.6f).height(u * 0.95f).clip(RoundedCornerShape(u * 0.2f)).background(scheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) { Text("42", color = BoardHues.ink(hueB, dark), fontSize = (u.value * 0.6f).sp, fontWeight = FontWeight.Bold) }
                 Row(horizontalArrangement = Arrangement.spacedBy(u * 0.12f), verticalAlignment = Alignment.CenterVertically) {
                     for (n in listOf(6, 7)) Box(
-                        Modifier.size(u * 0.95f).clip(RoundedCornerShape(u * 0.2f)).background(scheme.surface),
+                        Modifier.size(u * 0.95f).clip(RoundedCornerShape(u * 0.2f)).background(scheme.surfaceVariant),
                         contentAlignment = Alignment.Center,
                     ) { Text("$n", color = scheme.onSurface, fontSize = (u.value * 0.52f).sp, fontWeight = FontWeight.SemiBold) }
                     Text("×", color = BoardHues.ink(hueA, dark), fontSize = (u.value * 0.6f).sp, fontWeight = FontWeight.Bold)
@@ -226,7 +226,7 @@ object Target : PuzzleType {
             first != null || e.typed.isNotEmpty() ->
                 listOfNotNull(first?.toString(), e.op?.symbol, e.typed.ifEmpty { null }).joinToString(" ").let { if (e.typed.isEmpty()) "$it …" else it }
             s.log.isNotEmpty() -> s.log.last().text()
-            else -> "Pick a number, an operator, a number."
+            else -> "Tap a number, then + − × ÷"
         }
     }
 
@@ -306,7 +306,7 @@ object Target : PuzzleType {
                     Text(
                         captionOf(s, entry, note),
                         color = if (note != null) scheme.error else scheme.onSurfaceVariant,
-                        fontSize = (u.value * 0.22f).sp,
+                        fontSize = (u.value * 0.2f).sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,

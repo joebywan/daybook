@@ -103,7 +103,7 @@ class TargetKeysTest {
     @Test
     fun `refusals read as sums`() {
         assertEquals("5 \u2212 5 would be zero", refused(listOf(5, 5, 3, 2, 1, 1), TargetOp.Sub))
-        assertEquals("5 \u00F7 2 is not a whole number", refused(listOf(5, 2, 3, 2, 1, 1), TargetOp.Div))
+        assertEquals("5 \u00F7 2 is not whole", refused(listOf(5, 2, 3, 2, 1, 1), TargetOp.Div))
         assertNull("9900 is fine", refused(listOf(100, 99, 3, 2, 1, 1), TargetOp.Mul))
         assertEquals("Over 9999", refused(listOf(100, 100, 3, 2, 1, 1), TargetOp.Mul))
     }

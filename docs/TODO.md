@@ -143,8 +143,8 @@ below have a famous branded version; use the descriptive name).
 - [ ] **Target: recapture the screenshots and drive it on the emulator.** The new puzzle was rendered on the web build only (Chromium and
   WebKit, light and dark, 375x537 and tall); `docs/screenshots/home.png` (and its alt text) was not recaptured because that needs the emulator,
   and nobody has tapped the tiles by touch on Android yet.
-- [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm figure was measured
-  in headless Chromium but not on a real phone.
+- [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
+  not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
 
 ### Suggested
 
