@@ -37,8 +37,11 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -221,7 +224,7 @@ object Regions : PuzzleType {
             TutorialFrame(
                 state = start,
                 caption = "Each region holds the digits from 1 up to its size, once each. These have four squares, so 1 to 4. Bold digits are given.",
-                highlight = BoardHighlight(strong = setOf(0, 1, 4, 5)),
+                highlight = BoardHighlight(soft = setOf(0, 1, 4, 5)),
             ),
             TutorialFrame(
                 state = start,
@@ -291,20 +294,23 @@ object Regions : PuzzleType {
         }
 
     /** Region walls over a grid of [slot]-sized squares: thin between squares of a region, thick between regions and round the edge. */
-    private fun androidx.compose.ui.graphics.drawscope.DrawScope.walls(n: Int, region: List<Int>, slot: Float, thin: Color, thick: Color, thinW: Float, thickW: Float) {
-        for (i in 0 until n * n) {
-            val x = (i % n) * slot
-            val y = (i / n) * slot
-            if (i % n < n - 1 && region[i] == region[i + 1]) drawLine(thin, Offset(x + slot, y), Offset(x + slot, y + slot), thinW)
-            if (i / n < n - 1 && region[i] == region[i + n]) drawLine(thin, Offset(x, y + slot), Offset(x + slot, y + slot), thinW)
+    private fun DrawScope.walls(n: Int, region: List<Int>, slot: Float, thin: Color, thick: Color, thinW: Float, thickW: Float) {
+        // Clipped to the grid: a thick wall's square end would otherwise poke out past the edge.
+        clipRect(0f, 0f, slot * n, slot * n) {
+            for (i in 0 until n * n) {
+                val x = (i % n) * slot
+                val y = (i / n) * slot
+                if (i % n < n - 1 && region[i] == region[i + 1]) drawLine(thin, Offset(x + slot, y), Offset(x + slot, y + slot), thinW)
+                if (i / n < n - 1 && region[i] == region[i + n]) drawLine(thin, Offset(x, y + slot), Offset(x + slot, y + slot), thinW)
+            }
+            for (i in 0 until n * n) {
+                val x = (i % n) * slot
+                val y = (i / n) * slot
+                if (i % n < n - 1 && region[i] != region[i + 1]) drawLine(thick, Offset(x + slot, y), Offset(x + slot, y + slot), thickW, StrokeCap.Square)
+                if (i / n < n - 1 && region[i] != region[i + n]) drawLine(thick, Offset(x, y + slot), Offset(x + slot, y + slot), thickW, StrokeCap.Square)
+            }
+            drawRect(thick, style = Stroke(thickW * 2), topLeft = Offset.Zero, size = Size(slot * n, slot * n))
         }
-        for (i in 0 until n * n) {
-            val x = (i % n) * slot
-            val y = (i / n) * slot
-            if (i % n < n - 1 && region[i] != region[i + 1]) drawLine(thick, Offset(x + slot, y), Offset(x + slot, y + slot), thickW, StrokeCap.Square)
-            if (i / n < n - 1 && region[i] != region[i + n]) drawLine(thick, Offset(x, y + slot), Offset(x + slot, y + slot), thickW, StrokeCap.Square)
-        }
-        drawRect(thick, style = Stroke(thickW), topLeft = Offset(thickW / 2, thickW / 2), size = Size(slot * n - thickW, slot * n - thickW))
     }
 
     // ---- home-grid motif -------------------------------------------------------------------
@@ -398,7 +404,12 @@ object Regions : PuzzleType {
                         val regionFill = BoardHues.fill(REGION_HUES[colours[s.region[i]]], dark)
                         // A selected square, and every square holding its digit, go plain so they stand out from the colours.
                         val plain = s.selected == i || (selectedValue != 0 && s.cells[i] == selectedValue)
-                        val fill = if (plain) scheme.surface else regionFill
+                        // A square in conflict is filled red (and edged red), so a wrong digit is never only a colour on a colour.
+                        val fill = when {
+                            i in conflicts -> scheme.error.copy(alpha = 0.8f).compositeOver(if (plain) scheme.surface else regionFill)
+                            plain -> scheme.surface
+                            else -> regionFill
+                        }
                         Box(
                             Modifier
                                 .padding(start = slot * (i % n), top = slot * (i / n))
@@ -418,8 +429,7 @@ object Regions : PuzzleType {
                                     fontSize = (slot.value * 0.6f).sp,
                                     fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
                                     color = when {
-                                        i in conflicts -> scheme.error
-                                        s.givens[i] -> BoardHues.onFill(fill)
+                                        i in conflicts || s.givens[i] -> BoardHues.onFill(fill)
                                         else -> own
                                     },
                                     textAlign = TextAlign.Center,
