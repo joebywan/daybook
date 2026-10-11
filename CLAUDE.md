@@ -178,6 +178,43 @@ motif). `id = "regions"` is hashed into every seed: never rename it.
   digit keys `1000 + d`.
 - A locked-candidate technique (a digit whose only places in a region all touch one square rules that square out) would cut the givens further; not built,
   `docs/TODO.md`.
+## Cage Sudoku
+
+Sudoku plus dashed cages: the digits of a cage add up to the small number in its corner and never repeat. Not "Killer Sudoku" in
+any text the player sees (the owner's call). `puzzles/CageRules.kt` (`CageLogic`: the logic, the prover, the generator), `CageTeacher.kt`,
+`CageKeys.kt`, `Cages.kt` (object `Cages`, `CageState`, cage drawing, walkthrough, motif), `SudokuBoard.kt` (the grid and pad it
+shares with Sudoku). `id = "cages"` is hashed into every seed: never rename it.
+
+- **It is a Sudoku underneath, not a copy of one.** `CageState` holds a whole `SudokuState` (`grid`: digits, answer, selection, pencil
+  marks, moves) plus `cageOf` (cage number per square, numbered by first square) and `sums`; every Sudoku mutator is reused and the
+  only addition is that a placed digit also strikes the marks of its cage-mates in the same state. Sudoku's own state, seeds and saves
+  were not touched: `Sudoku.Board` is now a call to `SudokuGridBoard` (moved out unchanged apart from callbacks and an overlay slot),
+  and `Sudoku.fullGrid` went from private to internal. The grid, pad, notes, highlight and keys are shared; `CageKeys.kt` only applies
+  Sudoku's `sudokuKeyAction` to a `CageState`.
+- **Tiers: cages and givens together.** Standard: cages of 2-4, about 28 of them, 14 givens. Hard: up to 5, about 24 cages, 8 givens.
+  Expert: up to 7, about 24 cages, **no givens** (cages alone). Measured by `CageRulesTest` `the tiers get harder in the order they are
+  offered` (fewer givens, bigger biggest cage) and by what the hints must use (`docs/TEACHING.md`: the 45-rule and the cage chain
+  appear from Hard: 3.8 and 0.7 steps a board on Hard, 6.7 and 6.3 on Expert). The cage count is not monotone (Hard and Expert both
+  average about 24): the ladder will not finish a no-given board with many big cages, so Expert gets its difficulty from having no
+  givens to start from, not from more bulk.
+- **A board ships only if the logic finishes it** (`CageLogic.settle`: candidates cut by peers, cage-mates, every cage's combinations and
+  the 45-rule's innie/outie groups to a fixpoint, then every square with one candidate and every digit with one place in a unit), and
+  `solutions` (the same propagation plus branching, no budget, verdict type `Verdict`) proves one answer. Givens are added only where the
+  ladder is stuck, then cages are merged and givens taken back while it still finishes (the Snap lesson: no board gives away what the
+  rest already implies). `CageOracle` (test) works cage by cage on every filling of each cage with no inference at all, so it shares
+  nothing with the prover; it agrees on every sampled board (Expert takes it 3-13 s a board, so three are sampled). Generation: Standard and Hard prove on the first attempt (3 of 365 Hard days
+  need a second); Expert's first attempt succeeds about a quarter of the time (a year needed up to 24 of the 40 allowed, none gave up) and
+  costs about 25 ms on the JVM per board and 36 / 51 / 58 ms (median / p95 / max) in Chromium, 50 / 70 / 78 in WebKit.
+- **The logic must stay inside the teacher.** The generator's ladder is the teacher's, so `deduce` ends in `CAGE_CHAIN` ("every group worked
+  through together"), which is exactly `settle`. Raise the generator's power (a new rule in `Sight`) and the teacher already has it
+  unexplained; the fix is a named technique, not a fallback. `CageTeachingTest` walks 200 boards a tier and a year of daily boards and
+  asserts no fallback; `FallbackTest` `cages proves every daily board of a year` asserts `generateVerified` never gives up.
+- **`solved` checks the rules** (`CageLogic.isSolved`: a finished Sudoku grid, every cage's digits different and totalling its sum). A
+  mistake is a digit that differs from the stored square, sound because the board has one answer. Red: Sudoku clashes plus
+  `CageLogic.cageConflicts` (a repeat in a cage, a cage over its total, a full cage that misses it).
+- **Cage totals are drawn in the top-left of the cage's first square**, so the pencil marks of that square give up the top 27% of it
+  (`topBand`). Dashed outlines are `Cages.drawCages` (inset 9% of a square, bends and notches closed), in hue A's ink.
+- Highlight indices are Sudoku's: squares 0..80, digit keys `81 + d`, the pencil 91.
 
 ## Typography
 

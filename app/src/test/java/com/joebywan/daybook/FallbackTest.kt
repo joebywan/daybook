@@ -3,6 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Atoms
+import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.KingsState
@@ -235,6 +236,32 @@ class FallbackTest {
      * happily while Expert boards shipped 39 numbers out of 42 — true, and useless, because the
      * fallback is not the only way to ruin a board with numbers.
      */
+    /**
+     * [Cages.generateVerified] returns a board only when the ladder finished it and a search proved one answer. Also
+     * measures how many attempts a board takes (printed; asserted well under the allowance).
+     */
+    @Test
+    fun `cages proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            val used = IntArray(com.joebywan.daybook.puzzles.CageLogic.ATTEMPTS + 1)
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Cages.id, difficulty)
+                val proved = Cages.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("cages $date/${difficulty.name}", proved, Cages.generate(seed, difficulty))
+                used[(0 until com.joebywan.daybook.puzzles.CageLogic.ATTEMPTS).first {
+                    com.joebywan.daybook.puzzles.CageLogic.attempt(seed, difficulty, it) != null
+                }]++
+            }
+            println("cages ${difficulty.name}: boards by attempts used ${used.toList()}")
+            assertTrue("${difficulty.name} came close to the allowance: ${used.toList()}", used.drop(30).all { it == 0 })
+        }
+        assertTrue("cages shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
     @Test
     fun `snap never falls back to numbering every square`() {
         for (difficulty in Difficulty.entries) {

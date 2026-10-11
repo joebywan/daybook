@@ -1,0 +1,333 @@
+package com.joebywan.daybook.puzzles
+
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.boardKeys
+import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.core.highlightGrid
+import com.joebywan.daybook.core.highlightAnchor
+import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.ui.theme.BoardHues
+import kotlinx.serialization.Serializable
+
+
+/**
+ * The Sudoku grid and its digit pad, shared by Sudoku and Cage Sudoku: both draw exactly this, and differ in
+ * what a tap, a key and a digit do to their own state (the callbacks), which squares clash ([conflicts]),
+ * and what is drawn over the grid ([overlay]: Cage Sudoku's dashed cages). [topBand] is the share of a
+ * square's height that a label of the overlay takes from the top, which the pencil marks leave clear.
+ */
+
+/** The digit pad under the grid, which the grid's size has to leave room for. */
+private val SUDOKU_PAD_HEIGHT = 48.dp
+private val SUDOKU_PAD_GAP = 18.dp
+
+/** A note's size as a share of its cell's side, and how strongly it is inked. Tuned by rendering. */
+private const val SUDOKU_NOTE_SIZE = 0.34f
+private const val SUDOKU_NOTE_ALPHA = 0.85f
+
+/**
+ * What [LocalBoardHighlight] asks of one cell or key. Cells not named step back while anything
+ * is highlighted, so the named ones read on a busy 9x9 board; the digit keys glow when named but
+ * never dim, because the move a hint asks for is made with them.
+ */
+private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
+
+private fun BoardHighlight.look(index: Int, dims: Boolean = true): Look {
+    val strong = index in this.strong
+    val soft = !strong && index in this.soft
+    return Look(strong, soft, dims && !isEmpty && !strong && !soft)
+}
+
+/**
+ * A ring drawn just inside the element, since the cells sit a dp apart and a ring outside would
+ * cross into the next one. Breathing in [glow] for strong, a quiet fixed line for soft; read in
+ * the draw phase so the pulse repaints without recomposing.
+ */
+private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, corner: Float): Modifier =
+    if (!look.strong && !look.soft) this
+    else drawWithContent {
+        drawContent()
+        val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
+        val colour = if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f)
+        drawRoundRect(
+            colour,
+            topLeft = Offset(w / 2, w / 2),
+            size = Size(size.width - w, size.height - w),
+            cornerRadius = CornerRadius(corner.dp.toPx()),
+            style = Stroke(w),
+        )
+    }
+
+private fun Modifier.dimmed(look: Look): Modifier = if (look.dim) alpha(0.3f) else this
+
+@Composable
+internal fun SudokuGridBoard(
+    s: SudokuState,
+    conflicts: Set<Int>,
+    hueSeed: Int,
+    interactive: Boolean,
+    onSelect: (Int) -> Unit,
+    onEnter: (cell: Int, digit: Int, notesMode: Boolean) -> Unit,
+    onKey: (SudokuKeyAction, notesMode: Boolean) -> Unit,
+    topBand: (Int) -> Float = { 0f },
+    overlay: @Composable BoxScope.(cell: Dp) -> Unit = {},
+) {
+    val scheme = MaterialTheme.colorScheme
+    // Colour is derived per render from the solution, never stored (docs/COLOUR.md "Roles"): A is the
+    // structure (box tint, selection, pencil), B is the player's digits and their twins.
+    val dark = BoardHues.isDark(scheme)
+    val (hueA, hueB) = BoardHues.pair(hueSeed)
+    val boxTint = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.55f else 0.30f).compositeOver(scheme.surface)
+    val selectedValue = s.selected?.let { s.cells[it] } ?: 0
+    val highlight = LocalBoardHighlight.current
+    val glow = if (highlight.warning) scheme.error else scheme.onBackground
+    // Which way the digit keys act. Transient UI state, so it lives here and not in the state:
+    // PlayScreen would otherwise make every flip of it an undo step.
+    var notesMode by rememberSaveable { mutableStateOf(false) }
+    val measurer = rememberTextMeasurer()
+    // The keyboard (web, or a hardware keyboard on Android): digits, clear and arrows, mapped by
+    // sudokuKeyAction and applied through the same state functions the pad and a tap use. See boardKeys.
+    // Breathes only while something glows, as on Kings.
+    val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+        remember { mutableFloatStateOf(1f) }
+    } else {
+        rememberInfiniteTransition(label = "hint").animateFloat(
+            initialValue = 0.45f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+            label = "hint-pulse",
+        )
+    }
+
+    // Sized from both axes (CLAUDE.md): from width alone, a 693dp-tall screen ran the grid up
+    // over the header and down under the hint slot. The pad keeps the full width.
+    BoxWithConstraints(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .boardKeys(interactive) { key, _, repeat ->
+                val action = sudokuKeyAction(key) ?: return@boardKeys false
+                if (!repeat || action is SudokuKeyAction.Move) onKey(action, notesMode)
+                true
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        val side = if (constraints.hasBoundedHeight) {
+            minOf(maxWidth, (maxHeight - SUDOKU_PAD_GAP - SUDOKU_PAD_HEIGHT).coerceAtLeast(0.dp))
+        } else {
+            maxWidth
+        }
+        val cell = side / 9
+        val padWidth = maxWidth
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.size(side).highlightGrid(9, 9)) {
+                for (r in 0 until 9) {
+                    for (c in 0 until 9) {
+                        val i = r * 9 + c
+                        val isSelected = s.selected == i
+                        val sameValue = selectedValue != 0 && s.cells[i] == selectedValue
+                        val look = highlight.look(i)
+                        Box(
+                            Modifier
+                                .padding(start = cell * c, top = cell * r)
+                                .size(cell)
+                                .padding(1.dp)
+                                .dimmed(look)
+                                .ring(look, glow, pulse, corner = 4f)
+                                .clip(RoundedCornerShape(4.dp))
+                                // The selected cell's row, column and box are deliberately
+                                // left alone. Shading them restyled twenty of the eighty-one
+                                // squares on every tap, so the board had to be re-read after
+                                // each selection to find the 3x3 structure again -- the cost
+                                // outweighed the help. Only the selection itself and cells
+                                // holding the same digit react.
+                                .background(
+                                    when {
+                                        isSelected -> BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.40f).compositeOver(scheme.surface)
+                                        sameValue -> BoardHues.fill(hueB, dark).copy(alpha = 0.8f).compositeOver(scheme.surface)
+                                        (r / 3 + c / 3) % 2 == 0 -> boxTint
+                                        else -> scheme.surface
+                                    }
+                                )
+                                .clickable(enabled = interactive) { onSelect(i) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val noted = s.visibleNotes(i)
+                            if (noted != 0) {
+                                val ink = scheme.onSurface.copy(alpha = SUDOKU_NOTE_ALPHA)
+                                // A square that carries a label (a cage's total) gives its top band to it.
+                                val band = topBand(i)
+                                val style = TextStyle(
+                                    fontSize = (cell.value * SUDOKU_NOTE_SIZE * (1f - band * 0.5f)).sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = ink,
+                                    textAlign = TextAlign.Center,
+                                )
+                                // Drawn, not composed: nine Text nodes in each of up to eighty-one
+                                // cells would be a lot of layout for a board that redraws on every tap.
+                                Canvas(Modifier.fillMaxSize()) {
+                                    val sub = size.width / 3f
+                                    for (d in 1..9) {
+                                        if (noted and (1 shl (d - 1)) == 0) continue
+                                        val laid = measurer.measure(d.toString(), style, maxLines = 1)
+                                        val r = (d - 1) / 3
+                                        val c = (d - 1) % 3
+                                        drawText(
+                                            laid,
+                                            topLeft = Offset(
+                                                c * sub + (sub - laid.size.width) / 2f,
+                                                band * size.height + r * (size.height * (1f - band) / 3f) +
+                                                    (size.height * (1f - band) / 3f - laid.size.height) / 2f,
+                                            ),
+                                        )
+                                    }
+                                }
+                            }
+                            if (s.cells[i] != 0) {
+                                Text(
+                                    text = s.cells[i].toString(),
+                                    fontSize = (cell.value * 0.52f).sp,
+                                    fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
+                                    color = when {
+                                        i in conflicts -> scheme.error
+                                        s.givens[i] -> scheme.onSurface
+                                        else -> BoardHues.ink(hueB, dark)
+                                    },
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
+                }
+                overlay(cell)
+            }
+
+            Spacer(Modifier.height(SUDOKU_PAD_GAP))
+
+            Row(
+                Modifier.width(padWidth).keepClear(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                (1..9).forEach { digit ->
+                    val remaining = 9 - s.cells.count { it == digit }
+                    val at = s.selected
+                    // In notes mode a key that is already pencilled on the selected cell is tinted.
+                    val pencilled = notesMode && at != null && s.hasNote(at, digit)
+                    // Notes cannot go on a filled or given cell: the keys show it rather than do nothing.
+                    val inert = notesMode && at != null && !s.canNote(at)
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .alpha(if (inert) 0.35f else 1f)
+                            .height(SUDOKU_PAD_HEIGHT)
+                            .highlightAnchor(SudokuTeacher.pad(digit))
+                            .ring(highlight.look(SudokuTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                when {
+                                    pencilled -> BoardHues.mark(hueA).copy(alpha = 0.40f)
+                                    remaining == 0 -> scheme.surfaceVariant
+                                    else -> scheme.surface
+                                }
+                            )
+                            .clickable(enabled = interactive && at != null && !inert) {
+                                val cell = at ?: return@clickable
+                                // In notes mode the keys are dimmed and inert on a filled or given cell
+                                // (above), so a refusal here is never silent.
+                                onEnter(cell, digit, notesMode)
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            digit.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (remaining == 0) scheme.outline else scheme.onSurface,
+                        )
+                    }
+                }
+                // The mode switch lives with the keys it changes. Not a state: see notesMode.
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(SUDOKU_PAD_HEIGHT)
+                        .highlightAnchor(SudokuTeacher.NOTES_KEY)
+                        .ring(highlight.look(SudokuTeacher.NOTES_KEY, dims = false), glow, pulse, corner = 10f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (notesMode) BoardHues.mark(hueA) else scheme.surface)
+                        .clickable(enabled = interactive) { notesMode = !notesMode }
+                        .semantics { contentDescription = if (notesMode) "Notes on" else "Notes off" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = null,
+                        tint = if (notesMode) Color.White else scheme.onSurface,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
