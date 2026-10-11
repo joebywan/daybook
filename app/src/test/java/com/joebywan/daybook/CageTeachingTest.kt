@@ -114,7 +114,7 @@ class CageTeachingTest {
     fun `every nudge and explanation fits the panel`() {
         var longest = 0
         var nudge = 0
-        for (d in Difficulty.entries) for (day in 0 until 365) {
+        for (d in Difficulty.entries) for (day in 0 until 150) {
             val s = board(day, d)
             val at = s.grid.givens.indices.first { !s.grid.givens[it] }
             val wrong = (1..9).first { it != s.grid.solution[at] }

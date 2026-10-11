@@ -30,7 +30,7 @@ internal object CageLogic {
     const val ALL = 0b11_1111_1110
 
     /** Retries with `Rng(seed + attempt)`; the year walk in `FallbackTest` says how many are used. */
-    const val ATTEMPTS = 24
+    const val ATTEMPTS = 40
 
     /** Units in the order the teacher names them: nine boxes, nine rows, nine columns. */
     val units: Array<IntArray> = Array(27) { u ->
@@ -421,7 +421,7 @@ internal object CageLogic {
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
         Difficulty.STANDARD -> Spec(listOf(2, 2, 3, 3, 4), cap = 4, merges = 0, maxGivens = 40, floorGivens = 14)
         Difficulty.HARD -> Spec(listOf(2, 2, 3, 3, 4), cap = 5, merges = 60, maxGivens = 14, floorGivens = 8)
-        Difficulty.EXPERT -> Spec(listOf(2, 2, 3), cap = 7, merges = 200, maxGivens = 0, floorGivens = 0)
+        Difficulty.EXPERT -> Spec(listOf(2, 2, 2, 2, 3), cap = 7, merges = 250, maxGivens = 0, floorGivens = 0)
     }
 
     /** Four-way neighbours of [cell], in a fixed order. */
@@ -553,10 +553,10 @@ internal object CageLogic {
     }
 
     /** One try at a board for [seed]: null when this attempt's cages and givens could not be made to finish, or proved nothing. */
-    fun attempt(seed: Long, difficulty: Difficulty, attempt: Int): CageState? {
+    fun attempt(seed: Long, difficulty: Difficulty, attempt: Int, spec: Spec = specFor(difficulty)): CageState? {
         val rng = Rng(seed + attempt)
         val solution = Sudoku.fullGrid(rng)
-        val d = draft(rng, solution, specFor(difficulty)) ?: return null
+        val d = draft(rng, solution, spec) ?: return null
         val board = Board(d.cageOf, sumsOf(d.cageOf, solution))
         val start = List(81) { if (d.givens[it]) solution[it] else 0 }
         val verdict = solutions(board, start)

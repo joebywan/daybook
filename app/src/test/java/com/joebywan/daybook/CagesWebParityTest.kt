@@ -40,8 +40,8 @@ class CagesWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            -1862718606, 143994853, -277584393, 2059855175, -1291292223, -1841397117,
-            2112846315, -875673327, 737636464,
+            -1862718606, 143994853, -1779174554, 2059855175, -1291292223, -945129258,
+            2112846315, -875673327, -250928833,
         )
     }
 }

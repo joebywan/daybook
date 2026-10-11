@@ -86,6 +86,7 @@ What varies, as built:
 | Mate | moves to mate | 2 / 3 / 4 (the tier picks the list in `ChessPositions`; a bundled list, not a generator, see `docs/CHESS_SPEC.md`) |
 | Inequality | side (clues are minimal at every size) | 4x4 / 5x5 / 6x6 (`InequalityLogic.sizeFor`; `InequalityRulesTest` `the tiers get larger in the order they are offered`) |
 | Tents | side and trees | 6x6 with 7 trees / 8x8 with 13 / 10x10 with 20 (`TentsLogic.sizeFor`, `treesFor`) |
+| Cage Sudoku | givens and cage size (grid fixed 9x9) | 14 givens, cages of 2-4 / 8 givens, up to 5 / no givens, up to 7 (`CageLogic.specFor`; `CageRulesTest` `the tiers get harder in the order they are offered`) |
 
 Rules for the tiers:
 
@@ -500,6 +501,7 @@ Y = yes, P = partial, N = no.
 | Nonogram | Y side | Y `generateVerified` (a picture ships only if `lineSolvable`, which makes it unique; `lastResort` is a fixed diagonal, also proved), year test | Y `NonogramLogic.isSolved` (clues, not the stored picture) | Y `NonogramOracle` (every arrangement of every row), `NonogramTeachingTest` brute force | Y no fallback exists | Y 6 | Y grid + clue indices | Y `NonogramWebParityTest` | Y | Y 200 / 70 |
 | Mate (chess) | Y mate in 2 / 3 / 4 | n/a no generator: a bundled list (`ChessPositions`), each entry proved offline by python-chess (shortest mate exactly N, one key) and re-proved in tests by `ChessRules.forcedMate`; no fallback exists | Y `ChessState.solved` (checkmate within N moves, not the stored line) | Y `ChessMateCheckerTest` naive minimax, perft with published counts | Y no fallback exists | Y 9 | Y square indices via `reportHighlight` + anchors + keepClear | Y `ChessWebParityTest` | Y | Y 200 / 70 |
 | Tents | Y side, trees | Y `generateVerified` (logic finishes it, then `countSolutions` == 1; `lastResort` proved unique), year test | Y `TentsLogic.isSolved` (rules, not the stored tents) | Y `TentsOracle`, `TentsTeachingTest` | Y | Y 7 | Y squares + clue indices via `reportHighlight` | Y `TentsWebParityTest` | Y | P not measured |
+| Cage Sudoku | Y givens, cage size | Y `generateVerified` (ladder finishes it, then `CageLogic.solutions` == `ExactlyOne`; `lastResort` proved unique), year test | Y `CageLogic.isSolved` (rules, not the stored answer) | Y `CageOracle` (fills one cage at a time, no inference), `CageTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares, Sudoku's anchors + keepClear | Y `CagesWebParityTest` | Y | Y 200 / 70 |
 
 ### Known gaps and open items
 

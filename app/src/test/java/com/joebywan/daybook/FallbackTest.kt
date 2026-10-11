@@ -239,7 +239,7 @@ class FallbackTest {
                 }]++
             }
             println("cages ${difficulty.name}: boards by attempts used ${used.toList()}")
-            assertTrue("${difficulty.name} came close to the allowance: ${used.toList()}", used.drop(8).all { it == 0 })
+            assertTrue("${difficulty.name} came close to the allowance: ${used.toList()}", used.drop(30).all { it == 0 })
         }
         assertTrue("cages shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }

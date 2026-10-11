@@ -107,7 +107,7 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A cage of two totalling 17 can only be 8 and 9.",
         "A cage of three totalling 24 can only be 7, 8 and 9.",
         "A cage never repeats a digit, even across a box edge.",
-        "A row, column or box adds up to 45: use it to find a lone square.",
+        "A row, column or box adds up to 45: use it to find a lone cell.",
     ),
 )
 

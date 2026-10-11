@@ -143,9 +143,6 @@ below have a famous branded version; use the descriptive name).
 ### Suggested
 
 Roughly in order of how well they fit, best first.
-- [ ] **Cage-sum Sudoku.** Sudoku plus cages whose digits must total a given sum without repeats. Reuses
-  Sudoku's grid, digit pad, notes and conflict display, so most of the UI exists. Needs a uniqueness
-  solver that handles cages; a teacher using cage combinations ("a 2-cage totalling 3 is {1,2}"). *M.*
 - [ ] **Island-and-sea puzzle.** Numbered cells grow islands of that size, islands never touch, the sea is
   one connected body with no 2x2 pool. Same family as Kings/LITS (region logic, a connectivity
   proof in the solver); the teacher can name each rule it uses. *M–L.*

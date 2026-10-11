@@ -9,7 +9,7 @@ No ads. No subscription. No accounts. No network permission in the manifest at a
 
 | Every puzzle, every day | Sudoku | Mosaic | Snap |
 |---|---|---|---|
-| ![The home screen: all sixteen puzzles for today, the first nine in view](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
+| ![The home screen: every puzzle for today, the first nine in view](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
 
 ## Install it
 
@@ -64,6 +64,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Inequality | Futoshiki | 1 to N once per row and column, `<` and `>` signs between some neighbours |
 | Mate | Chess mate-in-N | White to play and mate in 2, 3 or 4; the opponent defends as well as it can |
 | Tents | Tents and Trees | One tent beside every tree, no two tents touching, row and column counts to match |
+| Cage Sudoku | Sudoku with sum cages | Sudoku in which every dashed cage must add up to its number, with no digit repeated in it |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -91,6 +92,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   removed, and a board still over its clue budget is abandoned for a different seed. Stopping at
   the first forced board, which is what this used to do, left every redundant clue on the grid and
   shipped Expert boards with 39 of 42 squares numbered.
+- **Cage Sudoku** — a random solved grid, cages grown over it, then givens added only where the hint ladder (singles, each
+  cage's possible digit combinations, and the 45-rule's leftover squares) is stuck, cages merged and givens taken back while
+  it still finishes. So a board is never guessed, Expert has no givens at all, and the shipped board is proved again by an
+  exhaustive search; an independent solver that fills one cage at a time confirms the one answer in the tests.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
 - **Nonogram** — a random picture is kept only if a line solver finishes it: for each row or column, work out
