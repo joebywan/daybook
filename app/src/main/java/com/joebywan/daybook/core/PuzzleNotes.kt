@@ -96,6 +96,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "In a chain a < b < c, a is at most two below the top digit.",
         "A row or column with one gap left names its digit.",
     ),
+    "regions" to listOf(
+        "A square touching a 3 can never be a 3, even at a corner.",
+        "A region of two squares holds a 1 and a 2, nothing else.",
+        "If all but one square in a region touch a 4, the 4 goes there.",
+        "Count what a square's region and its neighbours already hold.",
+    ),
     "tents" to listOf(
         "A square with no tree beside it can never hold a tent.",
         "A tent's eight neighbours are all grass.",
