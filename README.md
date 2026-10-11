@@ -64,6 +64,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Inequality | Futoshiki | 1 to N once per row and column, `<` and `>` signs between some neighbours |
 | Mate | Chess mate-in-N | White to play and mate in 2, 3 or 4; the opponent defends as well as it can |
 | Tents | Tents and Trees | One tent beside every tree, no two tents touching, row and column counts to match |
+| Regions | Suguru / Tectonic | A region of N squares holds 1 to N once each, and equal digits never touch, not even at a corner |
 | Cage Sudoku | Sudoku with sum cages | Sudoku in which every dashed cage must add up to its number, with no digit repeated in it |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -106,6 +107,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   square, only digit, only place, and the same once the signs are counted) can finish it; then every digit
   and sign the rest implies is taken back. So a board is never guessed, and the shipped board is proved
   again by an exhaustive search; an independent naive solver confirms the one answer in the tests.
+- **Regions** — the grid is cut into regions and filled together (a random cut almost never has a legal fill), then
+  digits are given only until the hint ladder (last square in a region, only digit left, only place in the region)
+  can finish it, and every digit the rest implies is taken back. So a board is never guessed; the shipped board is
+  proved again by an exhaustive search, and an independent naive solver confirms the one answer in the tests.
 - **Mate** — not generated: a position is an index into a fixed sorted list of real puzzles from the
   [Lichess puzzle database](https://database.lichess.org/#puzzles) (CC0). `tools/chess/build.py` keeps only those with
   exactly one key move and a shortest forced mate of exactly N, checked with python-chess; the tests re-prove the shipped

@@ -12,6 +12,7 @@ import com.joebywan.daybook.puzzles.MosaicState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.puzzles.RegionsState
 import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsState
@@ -61,6 +62,7 @@ object ParityFingerprint {
             "signs=${s.signs.joinToString(",") { "${it.lo}<${it.hi}" }} solution=${s.solution.joinToString("")}"
         is ChessState -> "start=${s.start} last=${s.last} mateIn=${s.mateIn}"
         is TentsState -> "n=${s.size} trees=${s.trees.joinToString("") { if (it) "1" else "0" }} rows=${s.rowCounts} cols=${s.colCounts} solution=${s.solution.joinToString("") { if (it) "1" else "0" }}"
+        is RegionsState -> "n=${s.size} region=${s.region.joinToString(",")} givens=${s.givens.joinToString("") { if (it) "1" else "0" }} solution=${s.solution.joinToString("")}"
         is CageState -> "givens=" + s.grid.cells.joinToString("") + " cages=" + s.cageOf.joinToString("") { it.toString(36) } +
             " sums=" + s.sums.joinToString(",") + " solution=" + s.grid.solution.joinToString("")
         is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer}"

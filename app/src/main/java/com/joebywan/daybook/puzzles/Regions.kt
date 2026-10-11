@@ -1,0 +1,474 @@
+package com.joebywan.daybook.puzzles
+
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.boardKeys
+import com.joebywan.daybook.core.highlightAnchor
+import com.joebywan.daybook.core.highlightGrid
+import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.theme.BoardHues
+import kotlinx.serialization.Serializable
+
+/**
+ * A Regions board in play. [region] (the region id of each square) and [solution] are fixed for the
+ * board; [cells] holds 0 for an empty square and is what the player changes. Squares are numbered
+ * row by row.
+ */
+@Serializable
+data class RegionsState(
+    val size: Int,
+    val region: List<Int>,
+    val givens: List<Boolean>,
+    val cells: List<Int>,
+    val solution: List<Int>,
+    val selected: Int? = null,
+    override val moves: Int = 0,
+) : PuzzleState {
+
+    internal val layout: RegionsLayout get() = RegionsLayout(size, region)
+
+    /** The rules, not a comparison with [solution]. */
+    override val solved: Boolean get() = RegionsLogic.isSolved(layout, cells)
+
+    /** Filled squares that repeat in their region, touch an equal digit, or exceed their region's size. */
+    fun conflicts(): Set<Int> = RegionsLogic.conflicts(layout, cells)
+
+    /** The largest region on the board: the pad's last key. */
+    val digits: Int get() = layout.digits
+
+    /** Sets a digit, or clears the square with 0. `this` when nothing changes (a given, or the same digit). */
+    fun withCell(index: Int, value: Int): RegionsState =
+        if (givens[index] || cells[index] == value) this
+        else copy(cells = cells.toMutableList().also { it[index] = value }, moves = moves + 1)
+
+    fun select(index: Int): RegionsState = copy(selected = index)
+}
+
+private val PAD_HEIGHT = 48.dp
+private val PAD_GAP = 18.dp
+
+/** Regions: fill each region with 1 up to its size, and never let equal digits touch. */
+object Regions : PuzzleType {
+
+    override val id = "regions"
+    override val displayName = "Regions"
+    override val tagline = "Fill each region, equal digits never touch"
+    override val accent = 0xFF675EC9
+    override val rules = listOf(
+        "A region of N squares holds the digits 1 to N, each once.",
+        "Equal digits may not touch, not even at a corner.",
+        "Tap a square, then tap a digit. Tap the digit again to clear it.",
+        "A repeat, or a touching pair, is shown in red as you go.",
+    )
+
+    override val keyboardHelp = listOf("Arrows move, 1-5 place a digit, Backspace clears.")
+
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        generateVerified(seed, difficulty) ?: RegionsLogic.lastResort(difficulty)
+
+    /** The board when its answer was proved, null otherwise. What `FallbackTest` asserts on. */
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): RegionsState? =
+        RegionsLogic.generateVerified(seed, difficulty)
+
+    // ---- colour ------------------------------------------------------------------------------
+
+    /**
+     * Hues for regions, in docs/COLOUR.md terms: Violet, Amber, Teal, Blue and (only if a board needs
+     * five) Gold. Coral, Green and Rose are left out because the board also shows right and wrong, and
+     * neither the thick borders nor the colours are the only way to see a region.
+     */
+    private val REGION_HUES = listOf(268f, 34f, 175f, 215f, 46f)
+
+    /**
+     * A colour index for each region so that no two regions sharing an edge match: the fewest of 3 to 5
+     * that a depth-first search finds, starting each region's try at a different colour so the board
+     * does not lean on the first. Pure in the layout.
+     */
+    internal fun regionColours(layout: RegionsLayout): IntArray {
+        val adj = List(layout.count) { mutableListOf<Int>() }
+        for ((a, b) in layout.adjacentRegions()) { adj[a] += b; adj[b] += a }
+        for (k in 3..5) {
+            val colour = IntArray(layout.count) { -1 }
+            var budget = 50_000
+            fun go(r: Int): Boolean {
+                if (r == layout.count) return true
+                if (--budget < 0) return false
+                for (j in 0 until k) {
+                    val c = (r + j) % k
+                    if (adj[r].any { colour[it] == c }) continue
+                    colour[r] = c
+                    if (go(r + 1)) return true
+                }
+                colour[r] = -1
+                return false
+            }
+            if (go(0)) return colour
+        }
+        return IntArray(layout.count) { it % 5 } // not reached on a planar layout; the borders still show the regions
+    }
+
+    // ---- teaching --------------------------------------------------------------------------
+
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as RegionsState
+        val step = RegionsTeacher.teach(s) ?: return null
+        val cell = step.cell
+        val digit = step.digit
+        val mistake = step.technique == RegionsTeacher.MISTAKE
+        val wrong = s.cells[cell]
+        return Deduction(
+            technique = step.technique,
+            nudge = step.nudge,
+            explanation = step.explanation,
+            focus = step.focus,
+            cited = step.cited,
+            targets = setOf(cell),
+            mistake = mistake,
+            fallback = step.technique == RegionsTeacher.FALLBACK,
+            applyTo = { now ->
+                val t = now as RegionsState
+                if (t.cells[cell] == digit) t else t.withCell(cell, digit).select(cell)
+            },
+            reachedBy = { now ->
+                val t = now as RegionsState
+                if (mistake) t.cells[cell] != wrong else t.cells[cell] == digit
+            },
+        )
+    }
+
+    // ---- walkthrough -----------------------------------------------------------------------
+
+    /**
+     * Four regions of four, the board's quadrants:
+     * ```
+     * A A B B      3 1 3 1
+     * A A B B      2 4 2 4
+     * C C D D      3 1 3 1
+     * C C D D      4 2 4 2
+     * ```
+     * Four digits are given. Square 9 touches a 2, a 3 and a 4, which is the first thing the walkthrough teaches.
+     */
+    internal val TUTORIAL_REGION = listOf(0, 0, 1, 1, 0, 0, 1, 1, 2, 2, 3, 3, 2, 2, 3, 3)
+    internal val TUTORIAL_SOLUTION = listOf(3, 1, 3, 1, 2, 4, 2, 4, 3, 1, 3, 1, 4, 2, 4, 2)
+    internal val TUTORIAL_GIVEN = setOf(2, 4, 10, 14)
+
+    internal fun tutorialBoard(entered: Map<Int, Int> = emptyMap(), selected: Int? = null): RegionsState =
+        RegionsState(
+            size = 4,
+            region = TUTORIAL_REGION,
+            givens = TUTORIAL_SOLUTION.indices.map { it in TUTORIAL_GIVEN },
+            cells = TUTORIAL_SOLUTION.mapIndexed { i, v -> if (i in TUTORIAL_GIVEN) v else entered[i] ?: 0 },
+            solution = TUTORIAL_SOLUTION,
+            selected = selected,
+        )
+
+    /** The square the walkthrough fills first (a 1: it touches a 2, a 3 and a 4), and the one it fills wrongly. */
+    internal const val TUTORIAL_FIRST = 9
+    internal const val TUTORIAL_WRONG = 8
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val start = tutorialBoard()
+        val placed = mapOf(TUTORIAL_FIRST to 1)
+        val touching = start.layout.around[2].toSet()
+        listOf(
+            TutorialFrame(
+                state = start,
+                caption = "Each region holds the digits from 1 up to its size, once each. These have four squares, so 1 to 4. Bold digits are given.",
+                highlight = BoardHighlight(soft = setOf(0, 1, 4, 5)),
+            ),
+            TutorialFrame(
+                state = start,
+                caption = "Equal digits may never touch, not even at a corner. This 3 rules out a 3 in every square around it.",
+                highlight = BoardHighlight(strong = setOf(2), soft = touching),
+            ),
+            TutorialFrame(
+                state = start,
+                caption = "Look at this square: it touches a 2, a 3 and a 4, so none of those can go here. Tap it.",
+                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST), soft = setOf(4, 10, 14)),
+                accepts = { next -> next is RegionsState && next.cells == start.cells && next.selected == TUTORIAL_FIRST },
+                retry = "Tap the glowing square.",
+                done = "Selected.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(selected = TUTORIAL_FIRST),
+                caption = "Its region needs 1 to 4, and 2, 3 and 4 are out. That leaves 1. Tap 1 below.",
+                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST, RegionsTeacher.pad(1)), soft = setOf(4, 10, 14)),
+                accepts = { next -> next is RegionsState && next.cells == tutorialBoard(placed).cells },
+                retry = "Tap the 1 in the row of digits below.",
+                done = "Touching digits settled it.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(placed + (TUTORIAL_WRONG to 1), selected = TUTORIAL_WRONG),
+                caption = "A digit that breaks a rule turns red: this 1 touches the other 1. It's selected, so tap 1 again to clear it.",
+                highlight = BoardHighlight(strong = setOf(TUTORIAL_WRONG, RegionsTeacher.pad(1)), soft = setOf(TUTORIAL_FIRST), warning = true),
+                accepts = { next -> next is RegionsState && next.cells == tutorialBoard(placed).cells },
+                retry = "Tap the 1 in the row of digits below.",
+                done = "Cleared.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(placed, selected = TUTORIAL_WRONG),
+                caption = "Your turn: finish the board. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's all there is to it.",
+            ),
+        )
+    }
+
+    override fun withoutSelection(state: PuzzleState): PuzzleState =
+        (state as RegionsState).let { if (it.selected == null) it else it.copy(selected = null) }
+
+    // ---- drawing ---------------------------------------------------------------------------
+
+    /** What [LocalBoardHighlight] asks of one square or key. */
+    private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
+
+    private fun BoardHighlight.look(index: Int, dims: Boolean = true): Look {
+        val strong = index in this.strong
+        val soft = !strong && index in this.soft
+        return Look(strong, soft, dims && !isEmpty && !strong && !soft)
+    }
+
+    /** A ring just inside the square, breathing for strong and quiet for soft; the pulse is read at draw time. */
+    private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, corner: Float): Modifier =
+        if (!look.strong && !look.soft) this
+        else drawWithContent {
+            drawContent()
+            val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
+            drawRoundRect(
+                if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
+                topLeft = Offset(w / 2, w / 2),
+                size = Size(size.width - w, size.height - w),
+                cornerRadius = CornerRadius(corner.dp.toPx()),
+                style = Stroke(w),
+            )
+        }
+
+    /** Region walls over a grid of [slot]-sized squares: thin between squares of a region, thick between regions and round the edge. */
+    private fun DrawScope.walls(n: Int, region: List<Int>, slot: Float, thin: Color, thick: Color, thinW: Float, thickW: Float) {
+        // Clipped to the grid: a thick wall's square end would otherwise poke out past the edge.
+        clipRect(0f, 0f, slot * n, slot * n) {
+            for (i in 0 until n * n) {
+                val x = (i % n) * slot
+                val y = (i / n) * slot
+                if (i % n < n - 1 && region[i] == region[i + 1]) drawLine(thin, Offset(x + slot, y), Offset(x + slot, y + slot), thinW)
+                if (i / n < n - 1 && region[i] == region[i + n]) drawLine(thin, Offset(x, y + slot), Offset(x + slot, y + slot), thinW)
+            }
+            for (i in 0 until n * n) {
+                val x = (i % n) * slot
+                val y = (i / n) * slot
+                if (i % n < n - 1 && region[i] != region[i + 1]) drawLine(thick, Offset(x + slot, y), Offset(x + slot, y + slot), thickW, StrokeCap.Square)
+                if (i / n < n - 1 && region[i] != region[i + n]) drawLine(thick, Offset(x, y + slot), Offset(x + slot, y + slot), thickW, StrokeCap.Square)
+            }
+            drawRect(thick, style = Stroke(thickW * 2), topLeft = Offset.Zero, size = Size(slot * n, slot * n))
+        }
+    }
+
+    // ---- home-grid motif -------------------------------------------------------------------
+
+    /** The walkthrough's 4x4 board, a legal board in itself; the digits shown are a few of its answer. */
+    private val PREVIEW_DIGITS = listOf(3, 0, 3, 1, 2, 4, 0, 0, 0, 1, 3, 0, 4, 0, 4, 2)
+    private val PREVIEW_GIVEN = setOf(2, 4, 10, 14)
+
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        BoxWithConstraints(modifier) {
+            val slot = minOf(maxWidth, maxHeight) / 4
+            val dark = BoardHues.isDark(scheme)
+            val hues = listOf(268f, 34f, 175f, 215f)
+            for (i in 0 until 16) {
+                val fill = BoardHues.fill(hues[TUTORIAL_REGION[i]], dark)
+                Box(
+                    Modifier
+                        .padding(start = slot * (i % 4), top = slot * (i / 4))
+                        .size(slot)
+                        .background(fill),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (PREVIEW_DIGITS[i] != 0) {
+                        Text(
+                            PREVIEW_DIGITS[i].toString(),
+                            fontSize = (slot.value * 0.6f).sp,
+                            fontWeight = if (i in PREVIEW_GIVEN) FontWeight.Bold else FontWeight.Normal,
+                            color = BoardHues.onFill(fill),
+                        )
+                    }
+                }
+            }
+            Canvas(Modifier.size(slot * 4)) {
+                walls(4, TUTORIAL_REGION, slot.toPx(), scheme.onSurface.copy(alpha = 0.2f), scheme.onSurface.copy(alpha = 0.8f), 1.dp.toPx(), 2.5.dp.toPx())
+            }
+        }
+    }
+
+    // ---- the board ---------------------------------------------------------------------------
+
+    @Composable
+    override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
+        val s = state as RegionsState
+        val n = s.size
+        val scheme = MaterialTheme.colorScheme
+        val layout = remember(s.region) { s.layout }
+        val colours = remember(s.region) { regionColours(layout) }
+        val conflicts = s.conflicts()
+        val dark = BoardHues.isDark(scheme)
+        val (_, hueB) = BoardHues.pair(s.solution.hashCode())
+        val ink = BoardHues.ink(hueB, dark)
+        val selectedValue = s.selected?.let { s.cells[it] } ?: 0
+        val highlight = LocalBoardHighlight.current
+        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
+            remember { mutableFloatStateOf(1f) }
+        } else {
+            rememberInfiniteTransition(label = "hint").animateFloat(
+                initialValue = 0.45f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+                label = "hint-pulse",
+            )
+        }
+        val digits = layout.digits
+
+        // Sized from both axes (CLAUDE.md): the grid leaves room for the digit pad under it.
+        BoxWithConstraints(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .boardKeys(interactive) { key, _, repeat ->
+                    val action = regionsKeyAction(key, digits) ?: return@boardKeys false
+                    if (!repeat || action is RegionsKeyAction.Move) s.applyKey(action)?.let(onState)
+                    true
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            val side = if (constraints.hasBoundedHeight) {
+                minOf(maxWidth, (maxHeight - PAD_GAP - PAD_HEIGHT).coerceAtLeast(0.dp))
+            } else {
+                maxWidth
+            }
+            val slot = side / n
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(side).highlightGrid(n, n)) {
+                    for (i in 0 until n * n) {
+                        val look = highlight.look(i)
+                        val regionFill = BoardHues.fill(REGION_HUES[colours[s.region[i]]], dark)
+                        // A selected square, and every square holding its digit, go plain so they stand out from the colours.
+                        val plain = s.selected == i || (selectedValue != 0 && s.cells[i] == selectedValue)
+                        // A square in conflict is filled red (and edged red), so a wrong digit is never only a colour on a colour.
+                        val fill = when {
+                            i in conflicts -> scheme.error.copy(alpha = 0.8f).compositeOver(if (plain) scheme.surface else regionFill)
+                            plain -> scheme.surface
+                            else -> regionFill
+                        }
+                        Box(
+                            Modifier
+                                .padding(start = slot * (i % n), top = slot * (i / n))
+                                .size(slot)
+                                .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
+                                .ring(look, glow, pulse, corner = 2f)
+                                .background(fill)
+                                .then(if (i in conflicts) Modifier.border(2.dp, scheme.error) else Modifier)
+                                .then(if (s.selected == i) Modifier.border(3.dp, scheme.onBackground) else Modifier)
+                                .clickable(enabled = interactive) { onState(s.select(i)) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (s.cells[i] != 0) {
+                                val own = if (BoardHues.contrast(ink, fill) >= 4.5f) ink else BoardHues.onFill(fill)
+                                Text(
+                                    s.cells[i].toString(),
+                                    fontSize = (slot.value * 0.6f).sp,
+                                    fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
+                                    color = when {
+                                        i in conflicts || s.givens[i] -> BoardHues.onFill(fill)
+                                        else -> own
+                                    },
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
+                    Canvas(Modifier.fillMaxSize()) {
+                        walls(n, s.region, slot.toPx(), scheme.onSurface.copy(alpha = 0.2f), scheme.onSurface.copy(alpha = 0.8f), 1.dp.toPx(), 3.dp.toPx())
+                    }
+                }
+
+                Spacer(Modifier.height(PAD_GAP))
+
+                Row(
+                    Modifier.width(side).keepClear(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    (1..digits).forEach { digit ->
+                        val at = s.selected
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(PAD_HEIGHT)
+                                .highlightAnchor(RegionsTeacher.pad(digit))
+                                .ring(highlight.look(RegionsTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(scheme.surface)
+                                .clickable(enabled = interactive && at != null) {
+                                    val next = s.enter(at ?: return@clickable, digit)
+                                    if (next !== s) onState(next)
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(digit.toString(), style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

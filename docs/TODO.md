@@ -29,6 +29,12 @@ from a measurement or review, so you can check it is still true.
   which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
+- [ ] **Regions: sparser boards, and README screenshots.** The ladder is three single-digit techniques, so boards carry
+  about 27 / 21 / 19% of squares as givens. A locked-candidate technique (a digit whose every place in a region touches
+  one square rules that square out) would let the generator take more back, but it ends in an elimination, not a
+  placement, and Regions has no pencil marks; it would need a step that explains one elimination and then a placement
+  (Inequality's `SIGN_BOUND` is the model). Also: `docs/screenshots/home.png` still shows sixteen puzzles; it needs an
+  emulator recapture on a clean install. *M / S.*
 
 - [ ] **Recapture the README screenshots for Cage Sudoku.** `docs/screenshots/home.png` shows the old puzzle count and has no Cage
   Sudoku tile; a Cage Sudoku board shot (a Hard board with a hint open shows the cages best) could join the table. Needs an emulator
@@ -165,8 +171,6 @@ Roughly in order of how well they fit, best first.
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
   prototype the input before committing. *L.*
-- [ ] **Region-digit puzzle (no touching repeats).** Each region of size n holds 1..n, and equal digits
-  may not touch, even diagonally. Small, regions-based, reuses Kings' region drawing. *S–M.*
 
 **Not recommended** (noted so nobody re-investigates): a crossword needs a licensed clue database, which
 we cannot generate or ship offline; plain word-search and sliding-tile puzzles are generator-easy but do
