@@ -160,7 +160,7 @@ object Cages : PuzzleType {
     /** The first gap: a cage of 11 beside a 7. */
     internal const val TUTORIAL_FIRST = 63
 
-    /** Where the wrong 5 goes: the cage of 11 beside a 2 needs a 9, and 5 + 2 is only 7. */
+    /** Where the wrong 5 goes: the cage of 11 beside a 2 needs a 9, and 5 + 2 is only 7 (and a 5 already stands in its column). */
     internal const val TUTORIAL_WRONG = 42
     internal const val TUTORIAL_NOTED = 9
 
@@ -216,8 +216,8 @@ object Cages : PuzzleType {
             ),
             TutorialFrame(
                 state = wrong,
-                caption = "A cage that doesn't add up turns red: this one totals 11, but 5 + 2 is only 7. " +
-                    "It's selected, so tap 5 again to clear it.",
+                caption = "A mistake turns red. This cage totals 11 but 5 + 2 is only 7, and the 5 repeats in " +
+                    "its column. It's selected, so tap 5 again to clear it.",
                 highlight = BoardHighlight(
                     strong = setOf(TUTORIAL_WRONG, SudokuTeacher.pad(5)),
                     soft = wrongCage,

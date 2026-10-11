@@ -420,7 +420,7 @@ internal object CageLogic {
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
         Difficulty.STANDARD -> Spec(listOf(2, 2, 3, 3, 4), cap = 4, merges = 0, maxGivens = 40, floorGivens = 14)
-        Difficulty.HARD -> Spec(listOf(2, 2, 3, 3, 4), cap = 5, merges = 40, maxGivens = 12, floorGivens = 6)
+        Difficulty.HARD -> Spec(listOf(2, 2, 3, 3, 4), cap = 5, merges = 60, maxGivens = 14, floorGivens = 8)
         Difficulty.EXPERT -> Spec(listOf(2, 2, 3), cap = 7, merges = 200, maxGivens = 0, floorGivens = 0)
     }
 
@@ -552,23 +552,25 @@ internal object CageLogic {
         return Draft(cageOf, givens)
     }
 
+    /** One try at a board for [seed]: null when this attempt's cages and givens could not be made to finish, or proved nothing. */
+    fun attempt(seed: Long, difficulty: Difficulty, attempt: Int): CageState? {
+        val rng = Rng(seed + attempt)
+        val solution = Sudoku.fullGrid(rng)
+        val d = draft(rng, solution, specFor(difficulty)) ?: return null
+        val board = Board(d.cageOf, sumsOf(d.cageOf, solution))
+        val start = List(81) { if (d.givens[it]) solution[it] else 0 }
+        val verdict = solutions(board, start)
+        if (verdict !is Verdict.ExactlyOne || verdict.cells != solution) return null
+        return CageState(
+            grid = SudokuState(givens = d.givens.toList(), cells = start, solution = solution),
+            cageOf = d.cageOf,
+            sums = board.sums,
+        )
+    }
+
     /** Null when nothing was proved. Pure in (seed, difficulty). */
     fun generateVerified(seed: Long, difficulty: Difficulty): CageState? {
-        val spec = specFor(difficulty)
-        for (attempt in 0 until ATTEMPTS) {
-            val rng = Rng(seed + attempt)
-            val solution = Sudoku.fullGrid(rng)
-            val d = draft(rng, solution, spec) ?: continue
-            val board = Board(d.cageOf, sumsOf(d.cageOf, solution))
-            val start = List(81) { if (d.givens[it]) solution[it] else 0 }
-            val verdict = solutions(board, start)
-            if (verdict !is Verdict.ExactlyOne || verdict.cells != solution) continue
-            return CageState(
-                grid = SudokuState(givens = d.givens.toList(), cells = start, solution = solution),
-                cageOf = d.cageOf,
-                sums = board.sums,
-            )
-        }
+        for (attempt in 0 until ATTEMPTS) attempt(seed, difficulty, attempt)?.let { return it }
         return null
     }
 
