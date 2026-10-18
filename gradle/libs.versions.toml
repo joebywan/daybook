@@ -11,7 +11,7 @@ serialization = "1.9.0"
 # One version for both builds: Android and the web read dates through the same code.
 datetime = "0.8.0"
 junit = "4.13.2"
-composeMultiplatform = "1.12.1"
+composeMultiplatform = "1.12.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
