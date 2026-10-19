@@ -18,6 +18,13 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Accessibility.** Eight boards use raw pointer input and expose no click actions, so a screen reader
   cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
   or another user. *L.* (`CLAUDE.md`, "Settled")
+- [ ] **Wide windows: polish left.** Rotation and resizable windows shipped in October 2026 (`PlayLayout` in `PlayScreen.kt`).
+  Seen on a Pixel Tablet emulator and a phone on its side, three things are plain rather than wrong: the home grid on a phone
+  on its side shows one row of tiles per screen and scrolls (columns come from width alone; letting height pick a smaller tile
+  would fit two); Lexicon's tiles and keyboard keep their phone size on a tablet, leaving the board small in a large box; the
+  side panel is empty between the clock and the toolbar unless a hint is open. *S-M.*
+- [ ] **Tablet store screenshots.** Play's 7-inch and 10-inch slots still hold the phone shots (`docs/play/LISTING.md`); capture
+  the landscape tablet layout instead (`tools/screenshots/capture.sh` pins a phone size; a tablet pass needs its own size). *S.*
 
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI

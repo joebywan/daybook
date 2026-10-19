@@ -431,8 +431,14 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   connectivity rule to the win check to make uniqueness easier. `LitsUniquenessTest` asserts it
   with the independent `LitsOracle`; `FallbackTest` walks a year per tier through `generateVerified`.
 - Accessibility is knowingly absent and deliberately deferred while this is sideloaded.
-- The app is locked to portrait. Landscape broke most boards and the owner does not want it;
-  do not design for it.
+- **Any orientation, any window size** (the owner reversed the old portrait lock in October 2026: Android 16 ignores
+  the lock on large screens anyway, and Play flags it). Do not bring the lock back. A wide window puts the play screen's
+  board beside a 360dp side panel (title, clock, the hint as a panel rather than a popover, toolbar at its foot, and the
+  finish frame and pill) whenever that gives the board more room than stacking: `PlayLayout` in `PlayScreen.kt`, one
+  `Layout` for both shapes so a rotation keeps every board's `rememberSaveable` state. A phone in portrait gets the stacked
+  layout, pixel for pixel what it was. The home grid takes a column per 150dp (3 to 7). Boards size from both axes, as
+  below; Tower caps its width at 480dp. Check a layout change on a tablet in both orientations, in a resized window and
+  on a phone on its side, as well as the phone sizes.
 - If this reaches the Play Store, the developer name and contact details the listing publishes are
   acceptable to the owner ("I don't care about my name being on the playstore"). Not a blocker.
 - `gradle/actions` stays on v5. v6 requires accepting Gradle's Terms of Use for a proprietary
