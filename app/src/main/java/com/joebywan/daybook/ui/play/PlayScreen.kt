@@ -694,20 +694,20 @@ private fun PlayLayout(wide: Boolean, modifier: Modifier, content: @Composable (
             val g = board.measure(Constraints.fixed(w - panel, h))
             val s = slot.measure(Constraints.fixed(panel, rest))
             layout(w, h) {
-                t.place(0, 0)
-                k.place(0, t.height)
-                s.place(0, t.height + k.height)
-                b.place(0, h - b.height)
-                g.place(panel, 0)
+                t.placeRelative(0, 0)
+                k.placeRelative(0, t.height)
+                s.placeRelative(0, t.height + k.height)
+                b.placeRelative(0, h - b.height)
+                g.placeRelative(panel, 0)
             }
         } else {
             // As the Column with a weighted board was: the board gets exactly the height left, any width up to the window.
             val g = board.measure(Constraints(maxWidth = w, minHeight = rest, maxHeight = rest))
             layout(w, h) {
-                t.place(0, 0)
-                k.place(0, t.height)
-                g.place(0, t.height + k.height)
-                b.place(0, t.height + k.height + rest)
+                t.placeRelative(0, 0)
+                k.placeRelative(0, t.height)
+                g.placeRelative(0, t.height + k.height)
+                b.placeRelative(0, t.height + k.height + rest)
             }
         }
     }
