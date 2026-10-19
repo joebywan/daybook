@@ -18,7 +18,7 @@ No ads. No subscription. No accounts. No network permission in the manifest at a
 
 - Take the **`.apk`**, not the `.aab`. The bundle next to it is for Google Play and Android cannot
   install it directly.
-- Needs **Android 8.0 or newer** (API 26).
+- Needs **Android 7.1 or newer** (API 25).
 - Android will ask you to allow installs from whichever app you opened it with — your browser or
   file manager — the first time. That prompt is the usual one for anything not from the Play Store.
 - Later releases install straight over the top, keeping your streaks and statistics, because every

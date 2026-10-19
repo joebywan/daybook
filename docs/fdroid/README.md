@@ -35,6 +35,9 @@ F-Droid's main repo hosts only free software and builds from source.
   landed while the run was queued), so v0.1.100 to v0.1.102 do not match their APKs and cannot verify; the entry
   must name a release made after `--target "$GITHUB_SHA"` was added. F-Droid's scanner also rejects an APK with an extra signing block, which AGP adds unless `dependenciesInfo` is switched off in `app/build.gradle.kts` (it is; first in v0.1.104). Debug a mismatch by diffing the two APKs'
   contents file by file (zip entries outside `META-INF/`), then `dexdump` for the dex.
+  Core library desugaring (on since minSdk went to 25, for `java.time`) adds `com.android.tools:desugar_jdk_libs`, a
+  pinned, GPLv2-with-classpath-exception build dependency from Google's Maven that F-Droid accepts; its dex is built
+  by R8 from that pinned jar, so it does not affect reproducibility (a clean rebuild gave a byte-identical APK).
 
 `com.joebywan.daybook.yml` is the entry as submitted in that merge request to
 [gitlab.com/fdroid/fdroiddata](https://gitlab.com/fdroid/fdroiddata) (file `metadata/com.joebywan.daybook.yml`).

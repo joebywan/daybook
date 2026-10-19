@@ -45,7 +45,9 @@ android {
     defaultConfig {
         // Locked: changing this after the first release makes every installed copy un-updatable.
         applicationId = "com.joebywan.daybook"
-        minSdk = 26
+        // 25, not 26, so the Galaxy Tab A 8.0 (SM-T355Y, stuck on Android 7.1.1) can install it. java.time
+        // (ours and kotlinx-datetime's) is API 26, hence core library desugaring below.
+        minSdk = 25
         targetSdk = 36
         versionCode = buildVersionCode
         versionName = buildVersionName
@@ -92,6 +94,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -136,6 +139,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.datetime)
     debugImplementation(libs.androidx.ui.tooling)
+
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)
 }

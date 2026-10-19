@@ -79,6 +79,6 @@ the look changes" duty as `docs/screenshots/`. The 7-inch and 10-inch tablet slo
 - **Permissions:** none requested.
 - **Government app, financial features, health features, news app:** no to all.
 - **Advertising ID:** the app does not use it (it declares no permission for it).
-- **Target API / architecture:** targetSdk 36, minSdk 26. The only native libraries are AndroidX's
+- **Target API / architecture:** targetSdk 36, minSdk 25 (Android 7.1; `java.time` is desugared). The only native libraries are AndroidX's
   (`graphics.path`, `datastore_shared_counter`) and each ships arm64-v8a and x86_64 alongside the
   32-bit builds, so Play's 64-bit requirement is met; check again if a dependency ever drops them.
