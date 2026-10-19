@@ -393,7 +393,8 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 - Push to `main` builds a signed APK and publishes a GitHub Release automatically.
 - **That release now reaches Google Play automatically, so a merge to `main` ships.** After the GitHub
   Release is made, `release.yml` calls `publish-play.yml`, which uploads the signed `.aab` and rolls it
-  out on the `alpha` track (Play's "Closed testing - Alpha"; the owner does not use internal testing).
+  out to everyone on the `production` track (full rollout, not staged: nobody would raise a staged
+  percentage by hand). The closed test that earned production access ran on `alpha` ("Closed testing - Alpha").
   The version code is the workflow run number, so it rises on its own. Google reviews every update
   before testers or users see it, so "released" means uploaded and in review, not live. The upload
   authenticates with the `PLAY_SERVICE_ACCOUNT_JSON` secret, a service account allowed to release to
@@ -401,9 +402,6 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   that a free puzzle app carries little risk and has asked for hands-off rollout, on the footing that
   testing is Claude's responsibility.
   - A manual upload is Actions > "Publish to Google Play" with a tag and a track.
-  - A personal developer account needs a closed test (12 testers opted in for 14 continuous days) before
-    Google grants production access. When it does: move the default to `production`, roll out in stages,
-    and give the service account the production permission in Play Console. Status: `docs/TODO.md`.
   - Saved games are the real danger: they are serialised by class name, and a bad build cannot be undone
     on someone's phone. Treat any change to a `PuzzleState`, a serialised class or `DataStoreKeyValueStore`
     as one that must load an old save.

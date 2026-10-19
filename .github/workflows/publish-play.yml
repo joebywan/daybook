@@ -8,11 +8,11 @@ name: Publish to Google Play
 # event alone would never fire for our own automated releases. The event is still listed so that a
 # release published by hand in the GitHub UI also reaches Play.
 #
-# The default track is `alpha`, which the Play Console calls "Closed testing - Alpha". The owner
-# does not use internal testing (the GitHub APK and the web build cover quick checks), and a new
-# personal developer account needs a closed test of 12 testers for 14 days before production access.
-# Every release the pipeline builds is uploaded and rolled out to that track; once production access
-# exists the default moves to `production`, with a staged rollout.
+# The default track is `production`: Google granted production access in October 2026 after the
+# closed test ("Closed testing - Alpha", which is `alpha` to the API). Each release goes to every
+# user at once (`status: completed`) rather than a staged rollout, because a staged rollout needs
+# someone to raise its percentage by hand and the owner wants releases hands-off; Google still
+# reviews every update before anyone sees it. A manual run can still send a tag to `alpha`.
 on:
   workflow_call:
     inputs:
@@ -24,7 +24,7 @@ on:
         description: 'Play track'
         required: false
         type: string
-        default: alpha
+        default: production
   release:
     types: [published]
   workflow_dispatch:
@@ -35,7 +35,7 @@ on:
       track:
         description: 'Play track'
         required: false
-        default: alpha
+        default: production
         type: choice
         options: [alpha, internal, beta, production]
 
@@ -85,5 +85,5 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.joebywan.daybook
           releaseFiles: play/*.aab
-          track: ${{ inputs.track || 'alpha' }}
+          track: ${{ inputs.track || 'production' }}
           status: completed

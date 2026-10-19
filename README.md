@@ -220,7 +220,8 @@ the Releases page, so it updates in place. How it works, and why f-droid.org its
 ## Publishing to Google Play
 
 Every release already builds and attaches a signed `.aab` alongside the `.apk`. Once Play is set
-up, `.github/workflows/publish-play.yml` uploads that bundle to the **closed testing** track (`alpha`; the owner does not use internal testing).
+up, `.github/workflows/publish-play.yml` uploads that bundle to the **production** track and rolls it out to everyone (Google reviews it first).
+The closed testing track (`alpha`) is still there for a manual run.
 Until the `PLAY_SERVICE_ACCOUNT_JSON` secret exists the workflow logs a notice and does nothing, so
 it is safe sitting here unconfigured.
 
@@ -257,13 +258,14 @@ Google's copy comes from, and the choice is effectively permanent:
    that has never had a release created in the console.
 5. **Make a service account:** Google Cloud Console → IAM → Service Accounts → create → create a
    JSON key. Then Play Console → Users and permissions → invite that service account's email →
-   grant *View app information* and *Release to testing tracks*.
+   grant *View app information*, *Release to testing tracks* and *Release to production*.
 6. **Add the JSON** as the `PLAY_SERVICE_ACCOUNT_JSON` repository secret.
 
 7. **Production needs a closed test first** (personal developer accounts created after 13 Nov 2023
    only): create a closed-testing track, get at least 12 testers opted in, keep them opted in for 14
    continuous days (dropping below 12 restarts the clock), then apply for production access in the
-   Console's Dashboard. Testers join by a link or a Google Group, and need a Google account. Upload a
+   Console's Dashboard. Done: production access was granted in October 2026, and the workflow's
+   default track moved to `production`. Testers join by a link or a Google Group, and need a Google account. Upload a
    release to the closed track by `workflow_dispatch` on the publish workflow with `track: alpha`
    (the Console's "closed testing" track is `alpha` to the API unless a custom track is made).
 

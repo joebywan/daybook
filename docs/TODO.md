@@ -194,12 +194,8 @@ only spend their time railroaded through a tutorial.
 - **F-Droid.** Our own repo is automatic (`publish-fdroid.yml`; `docs/fdroid/README.md`). f-droid.org: merge request [fdroiddata!51019](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51019) is open (entry: `docs/fdroid/com.joebywan.daybook.yml`); answer the reviewers on GitLab, and when it merges check the app appears and that a later release is picked up
   (lints; never built by F-Droid). It is set up as a reproducible build, so its installs update over Play and GitHub ones if F-Droid's build matches our APK. Once the first run has
   pushed the `fdroid` branch, check the repo address in the F-Droid app and that a new release shows up in it.
-- **Play Store listing.** Set up and publishing: the signing key is chosen, the service account exists,
-  and every merge to `main` uploads a bundle to the closed testing track (`alpha`) through
-  `publish-play.yml`. What remains is the owner's: run the closed test (12 testers opted in for 14
-  continuous days), then request production access; when Google grants it, move `publish-play.yml`'s
-  default track to `production`, roll out in stages, and give the service account the production
-  permission. Also check the Console home page's Android developer verification notice: sideloaded
+- **Play Store.** Production access granted (October 2026; the service account has "Release to production"); every merge to `main` uploads a bundle to
+  the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
