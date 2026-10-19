@@ -31,7 +31,10 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -406,7 +409,7 @@ private fun PlayBoard(
     var contentTop by remember { mutableStateOf(0f) }
     var boardTop by remember { mutableStateOf(0f) }
     var toolbarTop by remember { mutableStateOf(0f) }
-    Box(
+    BoxWithConstraints(
         Modifier
             .fillMaxSize()
             .background(scheme.background)
@@ -425,7 +428,12 @@ private fun PlayBoard(
             }
             .onGloballyPositioned { overlayOrigin = it.positionInWindow() },
     ) {
-    Column(
+    // A wide window (a phone on its side, a tablet, a desktop browser) puts the board beside the title, clock and
+    // toolbar instead of under them, when that gives the board more room than stacking would. A guess from the
+    // window alone, never from what the board or a hint is doing, so nothing in play can flip it.
+    val wide = minOf(maxWidth - SidePanel, maxHeight) > minOf(maxWidth, maxHeight - StackedChrome)
+    PlayLayout(
+        wide,
         Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
@@ -496,7 +504,7 @@ private fun PlayBoard(
         }
 
         Box(
-            Modifier.weight(1f).onGloballyPositioned { boardTop = it.positionInWindow().y },
+            Modifier.onGloballyPositioned { boardTop = it.positionInWindow().y },
             contentAlignment = Alignment.Center,
         ) {
             CompositionLocalProvider(
@@ -537,7 +545,22 @@ private fun PlayBoard(
                 }
             }
         }
+
+        // Wide only: the hint sits in the side panel, between the clock and the toolbar, so it never covers the board.
+        Box {
+            if (wide && hintSession.active && !state.solved) {
+                HintPanel(
+                    hintSession, Color(puzzle.accent), ::onHint,
+                    modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth(),
+                    fill = false,
+                )
+            }
+        }
     }
+
+    // In a wide window the frame and the pill keep to the side panel, beside the solved board rather than over it.
+    val finishArea = if (wide) Modifier.fillMaxHeight().windowInsetsPadding(WindowInsets.safeDrawing).width(SidePanel)
+        else Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)
 
     // The finish: a compact frame docked over the play screen. An overlay, so the board keeps
     // exactly the box it had; the toolbar above stays laid out (hidden) for the same reason.
@@ -555,7 +578,7 @@ private fun PlayBoard(
             visible = !resultsHidden,
             // Full-screen overlay: banner on top, buttons at the bottom, the centre open (the earned badge, if
             // any, sits there). Empty space passes taps to the scrim beneath, which hides the frame.
-            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(vertical = 10.dp),
+            modifier = finishArea.padding(vertical = 10.dp),
             enter = fadeIn(tween(300)),
             exit = ExitTransition.None,
         ) {
@@ -576,13 +599,15 @@ private fun PlayBoard(
                 done = options.last(),
                 onShow = { resultsHidden = false },
                 onOption = onNext,
-                modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 10.dp),
+                modifier = Modifier.align(if (wide) Alignment.BottomStart else Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing).then(if (wide) Modifier.width(SidePanel) else Modifier)
+                    .padding(bottom = 10.dp),
             )
         }
         Confetti(played = confettiPlayed, onPlayed = { confettiPlayed = true })
     }
 
-    if (hintSession.active && !state.solved) {
+    if (hintSession.active && !state.solved && !wide) {
         HintPopover(
             session = hintSession,
             accent = Color(puzzle.accent),
@@ -637,6 +662,54 @@ private fun PlayBoard(
                 }
             },
         )
+    }
+}
+
+/** The side panel's width in a wide window: the title, clock, hint and three tool buttons, with the walkthrough offer on one line. */
+private val SidePanel = 360.dp
+
+/** About what the title, clock and toolbar take from a stacked layout's height; only used to choose between the two. */
+private val StackedChrome = 180.dp
+
+/**
+ * The play screen's four pieces, [content] in this order: title, clock, board, toolbar, then the hint slot. Stacked, it
+ * is the column it always was (the board takes what the rest leaves, and the hint slot is not placed: the hint is a
+ * popover). [wide] puts the first two at the top of a [SidePanel], the toolbar at its foot and the hint slot between,
+ * with the board filling the rest of the window. One layout for both, so a rotation keeps every board's own saved state
+ * (Sudoku's notes mode, Nonogram's pen) where a Row/Column switch would compose the board somewhere new and lose it.
+ */
+@Composable
+private fun PlayLayout(wide: Boolean, modifier: Modifier, content: @Composable () -> Unit) {
+    Layout(content, modifier) { parts, c ->
+        val (title, clock, board, tools, slot) = parts
+        val w = c.maxWidth
+        val h = c.maxHeight
+        val panel = if (wide) SidePanel.roundToPx().coerceAtMost(w) else w
+        val loose = Constraints(maxWidth = panel, maxHeight = h)
+        val t = title.measure(loose)
+        val k = clock.measure(loose)
+        val b = tools.measure(loose)
+        val rest = (h - t.height - k.height - b.height).coerceAtLeast(0)
+        if (wide) {
+            val g = board.measure(Constraints.fixed(w - panel, h))
+            val s = slot.measure(Constraints.fixed(panel, rest))
+            layout(w, h) {
+                t.place(0, 0)
+                k.place(0, t.height)
+                s.place(0, t.height + k.height)
+                b.place(0, h - b.height)
+                g.place(panel, 0)
+            }
+        } else {
+            // As the Column with a weighted board was: the board gets exactly the height left, any width up to the window.
+            val g = board.measure(Constraints(maxWidth = w, minHeight = rest, maxHeight = rest))
+            layout(w, h) {
+                t.place(0, 0)
+                k.place(0, t.height)
+                g.place(0, t.height + k.height)
+                b.place(0, t.height + k.height + rest)
+            }
+        }
     }
 }
 
