@@ -206,7 +206,7 @@ only spend their time railroaded through a tutorial.
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
 - **Accents are crowded.** With twenty puzzles no hue is 25 degrees from every accent (`docs/COLOUR.md` asks for that);
-  Sand took the widest gap, hue 346, 19 degrees from Lexicon's rose and Mambo's coral. A next puzzle needs the rule relaxed
+  Sand took the widest gap, hue 346, 19 degrees from the accents either side of it. A next puzzle needs the rule relaxed
   or a lightness/saturation difference to carry it.
 - **Sand on a tall phone** draws Standard's seven tubes in one row (the spec's choice) at about 40dp, leaving the box half
   empty; two rows would roughly double the tubes. Owner's call whether bigger beats one row.
