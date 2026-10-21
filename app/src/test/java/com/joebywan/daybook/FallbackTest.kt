@@ -14,6 +14,7 @@ import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
+import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.SnapState
@@ -198,6 +199,23 @@ class FallbackTest {
             }
         }
         assertTrue("target shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /** [Sand.generateVerified] returns a board only when the search found a sorting road and the naive player does not always sort it. */
+    @Test
+    fun `sand proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Sand.id, difficulty)
+                val proved = Sand.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("sand $date/${difficulty.name}", proved, Sand.generate(seed, difficulty))
+            }
+        }
+        assertTrue("sand shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /** [Regions.generateVerified] returns a board only when logic finished it and a search proved one answer. */

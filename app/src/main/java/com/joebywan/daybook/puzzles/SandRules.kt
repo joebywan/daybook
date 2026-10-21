@@ -276,15 +276,57 @@ internal object SandLogic {
         for (attempt in 0 until ATTEMPTS) {
             val tubes = deal(seed, attempt, spec)
             if (givesAway(tubes, spec.height)) continue
-            if (solve(tubes, spec.height, spec.budget) is Verdict.Solvable) return SandState(tubes, spec.height, spec.colours)
+            if (solve(tubes, spec.height, spec.budget) !is Verdict.Solvable) continue
+            if (trivial(tubes, spec.height, seed + attempt)) continue
+            return SandState(tubes, spec.height, spec.colours)
         }
         return null
     }
 
-    /** One fixed board per tier for when nothing was proved; a test proves each sortable. */
+    /** Pours a naive player may make before giving up. */
+    const val NAIVE_CAP = 300
+
+    /** Tries of the naive player per board in the difficulty filter. */
+    const val NAIVE_TRIES = 6
+
+    /**
+     * A naive player: each turn a pour picked uniformly (with [rng]) among the legal ones that are not the last pour
+     * poured straight back. True when it sorts the board within [NAIVE_CAP] pours.
+     */
+    fun naiveSorts(tubes: List<List<Int>>, height: Int, rng: Rng): Boolean {
+        var t = tubes
+        var last: Pair<Int, Int>? = null
+        repeat(NAIVE_CAP) {
+            if (isSolved(t, height)) return true
+            val back = last
+            val ps = pours(t, height).filter { back == null || !(it.first == back.second && it.second == back.first) }
+            if (ps.isEmpty()) return false
+            val m = rng.pick(ps)
+            t = pour(t, height, m.first, m.second)
+            last = m
+        }
+        return isSolved(t, height)
+    }
+
+    /** The difficulty filter: a board the naive player sorts on every one of [NAIVE_TRIES] tries asks no thought. */
+    fun trivial(tubes: List<List<Int>>, height: Int, seed: Long): Boolean {
+        val rng = Rng(seed xor NAIVE_SALT)
+        return (0 until NAIVE_TRIES).all { naiveSorts(tubes, height, rng) }
+    }
+
+    private const val NAIVE_SALT = 0x5A4D_5A4DL
+
+    /**
+     * One fixed board per tier for when nothing was proved (a year per tier never reaches it, `FallbackTest`): the board of
+     * seed 1, written out so a change to the deal cannot move it. A test proves each unsolved, `H` of every colour and sortable.
+     */
     fun lastResort(difficulty: Difficulty): SandState {
         val spec = specFor(difficulty)
-        val tubes = deal(0L, 0, spec) // placeholder, replaced by fixed boards once measured
+        val tubes = when (difficulty) {
+            Difficulty.STANDARD -> "4431 3202 4324 0121 1003"
+            Difficulty.HARD -> "5102 2603 4250 6415 5321 0314 4636"
+            Difficulty.EXPERT -> "6501 2740 3521 0514 2047 3166 7267 4335"
+        }.split(" ").map { t -> t.map { it - '0' } } + List(SPARES) { emptyList() }
         return SandState(tubes, spec.height, spec.colours)
     }
 }
