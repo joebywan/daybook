@@ -46,24 +46,31 @@ Pure Kotlin, no `java.*`. The independent oracle in `test/` is written against t
 
 - `canPour(tubes, height, from, to): Boolean`, `pour(tubes, height, from, to): List<List<Int>>` (precondition: `canPour`).
 - `isSolved(tubes, height): Boolean`, `isStuck(tubes, height): Boolean`.
-- `solve(tubes, height, budget): Verdict`, `Verdict` = `Solvable(path: List<Pair<Int, Int>>)` / `Unsolvable` / `Truncated`.
+- `solve(tubes, height, budget): Verdict`, nested as CageLogic's is: `SandLogic.Verdict.Solvable(path: List<Pair<Int, Int>>)`
+  / `SandLogic.Verdict.Unsolvable` / `SandLogic.Verdict.Truncated`. `budget` is an `Int` count of positions visited; a
+  budget too small to finish never yields `Unsolvable` (a budget of 1 on a sortable board is `Truncated`). A board
+  already solved is `Solvable(emptyList())`. `solve` works from any position: part-full tubes, any number of empty
+  tubes, mid-game positions, not only fresh deals.
   Depth-first with a visited set of **canonical** positions (tubes sorted, since tubes are interchangeable). Membership
   only: the visited set's iteration order must never reach a choice. Moves are tried in a fixed order by tube index
   with the pruning below. The verdict says which case it is; never return a count the caller could misread.
 - Pruning that keeps the search exact: never pour a single-colour tube into an empty tube; when two empty tubes would
-  receive the same pour, try only the first; never pour back a pour just made (it restores the previous position, which
-  the visited set already covers).
+  receive the same pour, try only the first. Both skip a position whose canonical key the search reaches anyway. There
+  is **no** "never pour back the pour just made" pruning: A->B then B->A does not restore the position when B already had
+  that colour on top, and the visited set covers the genuine returns. The differential test against the oracle is the
+  check.
 - `generateVerified(seed, difficulty): SandState?` and `lastResort(difficulty)`, `generate = generateVerified ?: lastResort`.
 
 ## Generation
 
 1. `Rng(seed + attempt)`: lay out `C x H` layers (each colour `H` times), shuffle with the `Rng` (Fisher-Yates, list
-   only), deal into `C` full tubes, add two empty tubes.
+   only), deal into `C` full tubes, add two empty tubes last.
 2. Reject a deal that gives the board away: any tube already holding one colour, or any run of the same colour longer
-   than `H - 2` in one tube (`H - 1` would leave only one layer to move). Measure how often this rejects; if the rate is
+   than `H - 2` anywhere in one tube, at any depth, not only the top (`H - 1` would leave only one layer to move). Measure how often this rejects; if the rate is
    high, deal smarter rather than loosening it.
 3. `solve` within the tier's budget. Ship only `Solvable`. `Unsolvable` and `Truncated` redraw. Measure the rates.
-4. `lastResort(difficulty)` is one fixed board per tier, itself proved `Solvable` by a test. `FallbackTest` walks a year
+4. `lastResort(difficulty)` is one fixed board per tier, itself proved `Solvable` by a test. It need not obey the dealing
+   rules of step 2, but it is unsolved, has `H` layers of every colour, and is sortable. `FallbackTest` walks a year
    of daily seeds on every tier through `generateVerified` and asserts it never gives up.
 5. The difficulty filter (below) rejects boards too easy for their tier, after attempts that already succeeded keep their
    layout (standards section 4, "When a fix changes generation").
