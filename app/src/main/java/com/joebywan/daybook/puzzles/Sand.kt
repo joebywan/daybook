@@ -315,17 +315,24 @@ object Sand : PuzzleType {
 
     // ---- the board ----------------------------------------------------------------------------
 
-    /** Rows of tubes for [n] tubes in a box [w] x [h] (dp), and the tube width: one row when the tubes are big enough so. */
-    internal fun layout(n: Int, height: Int, w: Float, h: Float): Pair<Int, Float> {
-        fun unitFor(rows: Int): Float {
+    /**
+     * How [n] tubes sit in a box [w] x [h] (dp): [rows] rows of at most [perRow], each tube [tube] dp wide, standing in a
+     * column [column] dp wide that is its tap target (gap included, full height). The row count is whichever of 1, 2 or 3
+     * gives the widest tube (fewer rows on a tie): the owner's call, after Nonogram Expert's 17-19dp squares were judged
+     * fiddly. The column is at least the tube and its gap, and widens towards [MIN_TAP] where the box has room.
+     */
+    internal class Layout(val rows: Int, val perRow: Int, val tube: Float, val column: Float)
+
+    internal fun layout(n: Int, height: Int, w: Float, h: Float): Layout {
+        var best: Layout? = null
+        for (rows in 1..3) {
             val perRow = ceil(n / rows.toFloat()).toInt()
-            val across = perRow + (perRow - 1) * GAP
             val down = rows * (LIFT + bodyUnits(height) + CAP) + (rows - 1) * ROW_GAP
-            return minOf(w / across, h / down, MAX_TUBE)
+            val tube = minOf(w / (perRow * (1 + GAP)), h / down, MAX_TUBE)
+            val b = best
+            if (b == null || tube > b.tube + 0.01f) best = Layout(rows, perRow, tube, minOf(w / perRow, maxOf(tube * (1 + GAP), MIN_TAP)))
         }
-        val one = unitFor(1)
-        val two = unitFor(2)
-        return if (one >= minOf(two, ONE_ROW_MIN)) 1 to one else 2 to two
+        return best!!
     }
 
     private const val GAP = 0.45f
@@ -333,7 +340,9 @@ object Sand : PuzzleType {
     private const val CAP = 0.2f
     private const val ROW_GAP = 0.3f
     private const val MAX_TUBE = 72f
-    private const val ONE_ROW_MIN = 36f
+
+    /** The tap column the layout widens towards when the box has room (dp). */
+    const val MIN_TAP = 56f
 
     private class PourAnim(val from: Int, val to: Int, val colour: Int)
 
@@ -400,20 +409,21 @@ object Sand : PuzzleType {
             val n = s.tubes.size
             val captionH = 30.dp
             val availH = if (constraints.hasBoundedHeight) (maxHeight - captionH).value else Float.MAX_VALUE / 4
-            val (rows, unitDp) = layout(n, s.height, maxWidth.value, availH)
-            val u = unitDp.dp
-            val perRow = ceil(n / rows.toFloat()).toInt()
+            val fit = layout(n, s.height, maxWidth.value, availH)
+            val rows = fit.rows
+            val perRow = fit.perRow
+            val u = fit.tube.dp
+            val col = fit.column.dp
             val tubeBoxH = u * (LIFT + CAP + bodyUnits(s.height))
             val rowGap = u * ROW_GAP
-            val gap = u * GAP
-            val boardW = u * (perRow + (perRow - 1) * GAP)
+            val boardW = col * perRow
             val boardH = tubeBoxH * rows + rowGap * (rows - 1)
 
+            /** The top-left of tube [i]'s column; a short last row is centred. */
             fun tubeOffset(i: Int): Pair<Dp, Dp> {
                 val r = i / perRow
                 val inRow = minOf(perRow, n - r * perRow)
-                val rowW = u * inRow + gap * (inRow - 1)
-                val x = (boardW - rowW) / 2 + (u + gap) * (i % perRow)
+                val x = (boardW - col * inRow) / 2 + col * (i % perRow)
                 return x to (tubeBoxH + rowGap) * r
             }
 
@@ -428,7 +438,7 @@ object Sand : PuzzleType {
                     Box(
                         Modifier
                             .offset(x, y)
-                            .size(u, tubeBoxH)
+                            .size(col, tubeBoxH)
                             .highlightAnchor(i)
                             .graphicsLayer {
                                 translationY = -up * LIFT * 0.85f * u.toPx()
@@ -441,7 +451,7 @@ object Sand : PuzzleType {
                                 enabled = interactive && !s.solved,
                             ) { go(s.tap(lifted, i)) }
                             .drawBehind {
-                                val w = size.width
+                                val w = u.toPx()
                                 val look = Look(
                                     outline = if (lifted == i) accentColour else scheme.outline,
                                     outlineWidth = if (lifted == i) 2.5.dp.toPx() else 1.5.dp.toPx(),
@@ -453,7 +463,7 @@ object Sand : PuzzleType {
                                     },
                                     glowWidth = if (strong) 3.dp.toPx() else 2.dp.toPx(),
                                 )
-                                drawTube(t, s.height, i, 0f, w * (LIFT + CAP), w, look, symbols = true)
+                                drawTube(t, s.height, i, (size.width - w) / 2, w * (LIFT + CAP), w, look, symbols = true)
                             },
                     )
                 }
@@ -464,8 +474,8 @@ object Sand : PuzzleType {
                     val (fx, fy) = tubeOffset(p.from)
                     val (tx, ty) = tubeOffset(p.to)
                     val uw = u.toPx()
-                    val a = Offset((fx + u / 2).toPx(), (fy + u * (LIFT + CAP)).toPx() - uw * 0.3f)
-                    val b = Offset((tx + u / 2).toPx(), (ty + u * (LIFT + CAP)).toPx() + uw * 0.4f)
+                    val a = Offset((fx + col / 2).toPx(), (fy + u * (LIFT + CAP)).toPx() - uw * 0.3f)
+                    val b = Offset((tx + col / 2).toPx(), (ty + u * (LIFT + CAP)).toPx() + uw * 0.4f)
                     val mid = Offset((a.x + b.x) / 2, minOf(a.y, b.y) - uw * 0.9f)
                     val k = stream.value
                     val colour = palette[p.colour].copy(alpha = 1f - k * k)

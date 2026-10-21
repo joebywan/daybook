@@ -265,6 +265,10 @@ palette, walkthrough, motif), `SandTeacher.kt`, `SandKeys.kt`. `id = "sand"` is 
 - **Hints never fall back** (nothing is hidden). The first three ladder steps are offered only when they make progress (fewer places two colours meet
   in a tube, else fewer tubes in use, else more finished), which no pour ever undoes, so following hints cannot circle; `SandTeachingTest` follows them
   from 200 boards a tier. Highlight indices: tube `i` is `i`.
+- **Layout: the row count (1 to 3) is whichever gives the widest tube**, and a tube's tap target is its whole column (gap and full
+  height), at least 48 dp and widened towards 56 dp (`Sand.layout`, `SandLayoutTest`). The owner's baseline for too small is
+  Nonogram Expert's square on a phone (16.6 dp at 375x537, 19.2 dp at 390x844). At 375x537 every tier is two rows of 39 dp tubes
+  in 57 dp columns; at 390x844 Standard's tubes are 63 dp, Hard's and Expert's 50 dp.
 - Colours: six hues at three steps, ordered by CIEDE2000 with colour-blind vision for the 5 / 7 / 8 prefixes (`SandPaletteTest`), and a symbol on every
   layer. The grain and the uneven tops come from the tube and layer index, never random per frame and never stored.
 

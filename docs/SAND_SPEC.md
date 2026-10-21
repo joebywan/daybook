@@ -124,7 +124,11 @@ emulator and the web.
 
 ## Board UI (`puzzles/Sand.kt`)
 
-- Tubes in one row when they fit, else two rows (Standard 7 likely one row on a phone, Hard and Expert two). Size from
+- Rows: whichever of 1, 2 or 3 gives the widest tube (the owner's decision, replacing "one row when they fit": Nonogram
+  Expert's 16.6 dp squares at 375x537, 19.2 dp at 390x844, are the "works, but fiddly" baseline). Each tube's tap target is
+  its whole column, gap and full height included, at least 48 dp wide and widened towards 56 dp where the box has room;
+  `SandLayoutTest` pins it per tier at 375x537 (all three tiers: two rows, 39 dp tubes, 57 dp columns). The board is
+  centred in its box. Size from
   both axes: tube width and height from `minOf` of what the box allows. Check 375x537 and a tall phone, a tablet in
   both orientations, and the wide-window layout from the tablet work (#188).
 - **Sand, not water:** each layer is a flat band with a slightly uneven top and a fixed grain texture. The texture is a
