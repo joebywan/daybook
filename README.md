@@ -67,6 +67,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Regions | Suguru / Tectonic | A region of N squares holds 1 to N once each, and equal digits never touch, not even at a corner |
 | Cage Sudoku | Sudoku with sum cages | Sudoku in which every dashed cage must add up to its number, with no digit repeated in it |
 | Target | Number-target arithmetic | Combine six numbers with + − × ÷ (whole numbers only) until a tile equals the target |
+| Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -98,6 +99,11 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   cage's possible digit combinations, and the 45-rule's leftover squares) is stuck, cages merged and givens taken back while
   it still finishes. So a board is never guessed, Expert has no givens at all, and the shipped board is proved again by an
   exhaustive search; an independent solver that fills one cage at a time confirms the one answer in the tests.
+- **Sand** — many answers by design, so what is proved is that one exists: a deal is kept only once a search has found a
+  sequence of pours that sorts it (the found road is the proof; a search that runs out of budget proves nothing and the deal
+  is redrawn). Deals that give the board away (a tube already one colour, a long run) are redrawn, and so is a board a player
+  pouring at random sorts every time. An independent breadth-first search confirms in the tests every "can't be sorted" the
+  game and its hints claim.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
 - **Nonogram** — a random picture is kept only if a line solver finishes it: for each row or column, work out

@@ -14,6 +14,7 @@ import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.Snap
+import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
@@ -48,6 +49,7 @@ object PuzzleRegistry {
         Regions,
         Cages,
         Target,
+        Sand,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }
