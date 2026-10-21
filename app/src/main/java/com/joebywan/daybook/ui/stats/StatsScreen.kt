@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -55,7 +56,8 @@ fun StatsScreen(
         Modifier
             .fillMaxSize()
             .background(scheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             // Nothing on Android, where the system back button is the way out.
@@ -76,7 +78,9 @@ fun StatsScreen(
             }
         }
 
+        // A phone's width at most: the calendar's square days would otherwise run a tablet's width and off its foot.
         LazyColumn(
+            Modifier.widthIn(max = 640.dp).fillMaxWidth(),
             contentPadding = PaddingValues(18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

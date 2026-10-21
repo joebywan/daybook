@@ -68,9 +68,12 @@ private const val HEADER_DATE = "EEEE d MMMM"
  * launch options is what fits a phone in one screenful. That is the entire reason this screen is
  * a grid: choosing a puzzle should never involve scrolling to find it. The thirteenth puzzle opens
  * a fifth row; the sixteenth to eighteenth, Tents, Regions and Cage Sudoku, make a sixth, three-tile row, and the nineteenth,
- * Target, a seventh. All scroll into view.
+ * Target, a seventh. All scroll into view. A wider window (a tablet, a phone on its side) takes a column per
+ * [MinTileWidth], up to [MAX_COLUMNS]; a phone in portrait is always under four and keeps its three.
  */
 private const val COLUMNS = 3
+private const val MAX_COLUMNS = 7
+private val MinTileWidth = 150.dp
 
 private val TileGap = 8.dp
 private val TilePadding = 6.dp
@@ -256,10 +259,11 @@ private fun PuzzleGrid(
     onLaunch: (String) -> Unit,
 ) {
     BoxWithConstraints {
-        val tileWidth = (maxWidth - TileGap * (COLUMNS - 1)) / COLUMNS
+        val columns = (maxWidth / MinTileWidth).toInt().coerceIn(COLUMNS, MAX_COLUMNS)
+        val tileWidth = (maxWidth - TileGap * (columns - 1)) / columns
         val previewSize = (tileWidth - TilePadding * 2) * PREVIEW_FRACTION
         Column(verticalArrangement = Arrangement.spacedBy(TileGap)) {
-            PuzzleRegistry.all.chunked(COLUMNS).forEach { rowPuzzles ->
+            PuzzleRegistry.all.chunked(columns).forEach { rowPuzzles ->
                 Row(
                     // The last row is short. Intrinsic height keeps every tile in a row as tall as
                     // the tallest, which only matters once a large font scale wraps a name.
@@ -278,7 +282,7 @@ private fun PuzzleGrid(
                         )
                     }
                     // Keeps the two tiles of the last row the same width as the three above them.
-                    repeat(COLUMNS - rowPuzzles.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(columns - rowPuzzles.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }

@@ -35,6 +35,9 @@ each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthro
   side that still overlaps slides as far as it can (above may rise over the header) and then shrinks
   to 128dp (four lines of text), its text scrolling behind a fade. Taps outside the card reach the board, so the move can
   be made with the explanation up. Changes of side or highlight glide (220ms).
+- **In a wide window** (board beside a side panel: `PlayLayout` in `PlayScreen.kt`) there is no popover: the same
+  `HintPanel` sits in the side panel between the clock and the toolbar, so it covers nothing of the board and the board's
+  box still never changes. The finish frame and the results pill keep to the side panel there too.
 - **Boards report where the highlight is**, in window coordinates, through `core/HighlightBounds.kt`
   (`LocalHighlightBounds`): `highlightGrid(cols, rows)` on an even grid's node, `highlightAnchor(i)`
   on one element that is itself a highlight index (Tower, Sudoku's keys), `reportHighlight { }` for
