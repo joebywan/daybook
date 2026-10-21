@@ -205,9 +205,6 @@ only spend their time railroaded through a tutorial.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
-- **Accents are crowded.** With twenty puzzles no hue is 25 degrees from every accent (`docs/COLOUR.md` asks for that);
-  Sand took the widest gap, hue 346, 19 degrees from the accents either side of it. A next puzzle needs the rule relaxed
-  or a lightness/saturation difference to carry it.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),

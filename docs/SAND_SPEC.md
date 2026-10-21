@@ -37,11 +37,7 @@ listed here, the standards win.
 ) : PuzzleState
 ```
 
-Amended in the build: the state also keeps `log: List<SandPour> = emptyList()`, the pours made (`from`, `to`, `count`),
-oldest first, as Target's `log`, only so a mistake can be named and taken back. Without it "Show me = undo back to the
-last sortable position" cannot be done: a board alone does not say which pour lost it (from wandering play, a typical
-unsortable board could have come from a median of 14 different sortable boards one pour back, and no ranking of them
-found the real one more than 18% of the time). Otherwise nothing else is stored: no solution path, no par. The lifted tube and the pour animation are UI state. Keep the field
+Nothing else is stored: no solution path, no par. The lifted tube and the pour animation are UI state. Keep the field
 names and meanings fixed once shipped (saves).
 
 ## Logic API (`puzzles/SandRules.kt`, object `SandLogic`)
@@ -50,31 +46,24 @@ Pure Kotlin, no `java.*`. The independent oracle in `test/` is written against t
 
 - `canPour(tubes, height, from, to): Boolean`, `pour(tubes, height, from, to): List<List<Int>>` (precondition: `canPour`).
 - `isSolved(tubes, height): Boolean`, `isStuck(tubes, height): Boolean`.
-- `solve(tubes, height, budget): Verdict`, nested as CageLogic's is: `SandLogic.Verdict.Solvable(path: List<Pair<Int, Int>>)`
-  / `SandLogic.Verdict.Unsolvable` / `SandLogic.Verdict.Truncated`. `budget` is an `Int` count of positions visited; a
-  budget too small to finish never yields `Unsolvable` (a budget of 1 on a sortable board is `Truncated`). A board
-  already solved is `Solvable(emptyList())`. `solve` works from any position: part-full tubes, any number of empty
-  tubes, mid-game positions, not only fresh deals.
+- `solve(tubes, height, budget): Verdict`, `Verdict` = `Solvable(path: List<Pair<Int, Int>>)` / `Unsolvable` / `Truncated`.
   Depth-first with a visited set of **canonical** positions (tubes sorted, since tubes are interchangeable). Membership
   only: the visited set's iteration order must never reach a choice. Moves are tried in a fixed order by tube index
   with the pruning below. The verdict says which case it is; never return a count the caller could misread.
 - Pruning that keeps the search exact: never pour a single-colour tube into an empty tube; when two empty tubes would
-  receive the same pour, try only the first. Both skip a position whose canonical key the search reaches anyway. There
-  is **no** "never pour back the pour just made" pruning: A->B then B->A does not restore the position when B already had
-  that colour on top, and the visited set covers the genuine returns. The differential test against the oracle is the
-  check.
+  receive the same pour, try only the first; never pour back a pour just made (it restores the previous position, which
+  the visited set already covers).
 - `generateVerified(seed, difficulty): SandState?` and `lastResort(difficulty)`, `generate = generateVerified ?: lastResort`.
 
 ## Generation
 
 1. `Rng(seed + attempt)`: lay out `C x H` layers (each colour `H` times), shuffle with the `Rng` (Fisher-Yates, list
-   only), deal into `C` full tubes, add two empty tubes last.
+   only), deal into `C` full tubes, add two empty tubes.
 2. Reject a deal that gives the board away: any tube already holding one colour, or any run of the same colour longer
-   than `H - 2` anywhere in one tube, at any depth, not only the top (`H - 1` would leave only one layer to move). Measure how often this rejects; if the rate is
+   than `H - 2` in one tube (`H - 1` would leave only one layer to move). Measure how often this rejects; if the rate is
    high, deal smarter rather than loosening it.
 3. `solve` within the tier's budget. Ship only `Solvable`. `Unsolvable` and `Truncated` redraw. Measure the rates.
-4. `lastResort(difficulty)` is one fixed board per tier, itself proved `Solvable` by a test. It need not obey the dealing
-   rules of step 2, but it is unsolved, has `H` layers of every colour, and is sortable. `FallbackTest` walks a year
+4. `lastResort(difficulty)` is one fixed board per tier, itself proved `Solvable` by a test. `FallbackTest` walks a year
    of daily seeds on every tier through `generateVerified` and asserts it never gives up.
 5. The difficulty filter (below) rejects boards too easy for their tier, after attempts that already succeeded keep their
    layout (standards section 4, "When a fix changes generation").
@@ -124,11 +113,7 @@ emulator and the web.
 
 ## Board UI (`puzzles/Sand.kt`)
 
-- Rows: whichever of 1, 2 or 3 gives the widest tube (the owner's decision, replacing "one row when they fit": Nonogram
-  Expert's 16.6 dp squares at 375x537, 19.2 dp at 390x844, are the "works, but fiddly" baseline). Each tube's tap target is
-  its whole column, gap and full height included, at least 48 dp wide and widened towards 56 dp where the box has room;
-  `SandLayoutTest` pins it per tier at 375x537 (all three tiers: two rows, 39 dp tubes, 57 dp columns). The board is
-  centred in its box. Size from
+- Tubes in one row when they fit, else two rows (Standard 7 likely one row on a phone, Hard and Expert two). Size from
   both axes: tube width and height from `minOf` of what the box allows. Check 375x537 and a tall phone, a tablet in
   both orientations, and the wide-window layout from the tablet work (#188).
 - **Sand, not water:** each layer is a flat band with a slightly uneven top and a fixed grain texture. The texture is a

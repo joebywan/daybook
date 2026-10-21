@@ -122,12 +122,6 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "You never have to use every number.",
         "Subtract or divide, and the bigger tile goes first for you.",
     ),
-    "sand" to listOf(
-        "Pour onto a matching colour before using an empty tube.",
-        "An empty tube is your spare room: try to keep one free.",
-        "Uncover a colour only when it has somewhere to go.",
-        "A finished tube never needs touching again.",
-    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */
