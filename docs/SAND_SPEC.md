@@ -37,7 +37,11 @@ listed here, the standards win.
 ) : PuzzleState
 ```
 
-Nothing else is stored: no solution path, no par. The lifted tube and the pour animation are UI state. Keep the field
+Amended in the build: the state also keeps `log: List<SandPour> = emptyList()`, the pours made (`from`, `to`, `count`),
+oldest first, as Target's `log`, only so a mistake can be named and taken back. Without it "Show me = undo back to the
+last sortable position" cannot be done: a board alone does not say which pour lost it (from wandering play, a typical
+unsortable board could have come from a median of 14 different sortable boards one pour back, and no ranking of them
+found the real one more than 18% of the time). Otherwise nothing else is stored: no solution path, no par. The lifted tube and the pour animation are UI state. Keep the field
 names and meanings fixed once shipped (saves).
 
 ## Logic API (`puzzles/SandRules.kt`, object `SandLogic`)

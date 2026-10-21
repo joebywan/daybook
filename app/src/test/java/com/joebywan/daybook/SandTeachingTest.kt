@@ -106,7 +106,9 @@ class SandTeachingTest {
                         val mended = hint.apply(now) as SandState
                         assertEquals(now.moves + 1, mended.moves)
                         assertTrue("Show me leaves it sortable", provedSortable(mended))
-                        assertTrue("and puts back the sand of one pour", SandSupport.pours(mended.tubes, mended.height).any { (a, b) -> SandSupport.pour(mended.tubes, mended.height, a, b) == now.tubes })
+                        assertTrue("to a board on the player's own road", now.log.subList(0, mended.log.size) == mended.log)
+                        val wrong = now.log[mended.log.size]
+                        assertEquals("whose next pour loses it", false, SandSupport.sortable(SandSupport.pour(mended.tubes, mended.height, wrong.from, wrong.to), mended.height))
                         assertTrue(hint.isReached(mended))
                         assertFalse(hint.isReached(now))
                     }
@@ -126,6 +128,31 @@ class SandTeachingTest {
         }
         File("build/reports").mkdirs()
         File("build/reports/sand-teaching-mistakes.txt").writeText(report.toString())
+    }
+
+    @Test
+    fun `the pour named is the player's own, and Show me goes back to the last board that sorts`() {
+        // Expert, 2026-10-21: tube 1 into the empty tube 9, then tube 4 into the empty tube 10 leaves no pour at all.
+        val s = Sand.generate(DailySeed.seedFor(LocalDate.of(2026, 10, 21), Sand.id, Difficulty.EXPERT), Difficulty.EXPERT) as SandState
+        val one = s.pour(0, 8)!!
+        val stuck = one.pour(3, 9)!!
+        assertTrue(stuck.stuck)
+        val step = SandTeacher.teach(stuck)!!
+        assertEquals(SandTeacher.STUCK, step.technique)
+        assertTrue(step.explanation, step.explanation.contains("from tube 4 onto tube 10"))
+        val back = SandTeacher.deduction(stuck)!!.apply(stuck) as SandState
+        assertEquals(one.tubes, back.tubes)
+        assertEquals(one.log, back.log)
+        assertEquals(stuck.moves + 1, back.moves)
+        // A board with no pours recorded still gets a mend: the sand of one pour put back, leaving it sortable.
+        val bare = stuck.copy(log = emptyList())
+        val mended = SandTeacher.deduction(bare)!!.apply(bare) as SandState
+        assertTrue(provedSortable(mended))
+        assertTrue(SandSupport.pours(mended.tubes, 4).any { (a, b) -> SandSupport.pour(mended.tubes, 4, a, b) == bare.tubes })
+        // Taking back exactly undoes: every board on the way, pour by pour.
+        var t = stuck
+        while (t.log.isNotEmpty()) t = t.withoutFrom(t.log.size - 1)
+        assertEquals(s.tubes, t.tubes)
     }
 
     @Test

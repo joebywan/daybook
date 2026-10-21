@@ -64,9 +64,16 @@ import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.sin
 
+/** One pour made: [count] layers from tube [from] onto tube [to]. Enough to take it back exactly ([SandState.withoutFrom]). */
+@Serializable
+data class SandPour(val from: Int, val to: Int, val count: Int)
+
 /**
  * A Sand board: [tubes] bottom to top, colour indices `0 until colours`, each tube holding up to [height] layers.
- * Nothing else is stored: no solution path, no par. Field names and meanings are fixed once shipped (saves).
+ * [log] is the pours made, oldest first. It only exists so a mistake can be named and taken back to the last board that
+ * could still be sorted (as Target's log): a board alone does not say which pour lost it, since a typical unsortable
+ * board could have come from about 14 different sortable ones (measured, `docs/SAND_SPEC.md`). No solution path, no par.
+ * Field names and meanings are fixed once shipped (saves).
  */
 @Serializable
 data class SandState(
@@ -74,6 +81,7 @@ data class SandState(
     val height: Int,
     val colours: Int,
     override val moves: Int = 0,
+    val log: List<SandPour> = emptyList(),
 ) : PuzzleState {
     override val solved: Boolean get() = SandLogic.isSolved(tubes, height)
 
@@ -81,8 +89,27 @@ data class SandState(
     val stuck: Boolean get() = SandLogic.isStuck(tubes, height)
 
     /** The board after pouring [from] onto [to], one move, or null when the rules refuse it. */
-    fun pour(from: Int, to: Int): SandState? =
-        if (SandLogic.canPour(tubes, height, from, to)) copy(tubes = SandLogic.pour(tubes, height, from, to), moves = moves + 1) else null
+    fun pour(from: Int, to: Int): SandState? {
+        if (!SandLogic.canPour(tubes, height, from, to)) return null
+        val k = SandLogic.pourSize(tubes, height, from, to)
+        return copy(tubes = SandLogic.pour(tubes, height, from, to), moves = moves + 1, log = log + SandPour(from, to, k))
+    }
+
+    /** The board with the pour at [index] of the log taken back, and every pour after it: one move. */
+    fun withoutFrom(index: Int): SandState {
+        var t = tubes
+        for (p in log.subList(index, log.size).asReversed()) {
+            val moved = t[p.to].takeLast(p.count)
+            t = t.mapIndexed { i, v ->
+                when (i) {
+                    p.to -> v.dropLast(p.count)
+                    p.from -> v + moved
+                    else -> v
+                }
+            }
+        }
+        return copy(tubes = t, moves = moves + 1, log = log.take(index))
+    }
 }
 
 /**
@@ -268,16 +295,16 @@ object Sand : PuzzleType {
 
     // ---- the home motif -----------------------------------------------------------------------
 
-    /** Four tubes mid-sort and one finished: a legal crop of a board (each colour four layers). */
-    private val motif = listOf(listOf(0, 0, 0, 0), listOf(1, 2, 2), listOf(2, 1, 1), listOf(1, 2), emptyList())
+    /** Three tubes mid-sort and one finished: a legal crop of a board (each colour four layers). */
+    private val motif = listOf(listOf(0, 0, 0, 0), listOf(1, 2, 2), listOf(2, 1, 1, 2), listOf(1))
 
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
         Canvas(modifier) {
             val n = motif.size
-            val w = minOf(size.width / (n + (n - 1) * 0.4f + 0.3f), size.height / (bodyUnits(4) + 0.4f))
-            val gap = w * 0.4f
+            val w = minOf(size.width / (n + (n - 1) * 0.35f + 0.2f), size.height / (bodyUnits(4) + 0.3f))
+            val gap = w * 0.35f
             val total = n * w + (n - 1) * gap
             val left = (size.width - total) / 2
             val top = (size.height - w * bodyUnits(4)) / 2 + w * 0.1f

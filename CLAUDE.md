@@ -258,9 +258,10 @@ palette, walkthrough, motif), `SandTeacher.kt`, `SandKeys.kt`. `id = "sand"` is 
   `H - 2` anywhere in a tube is redrawn (15 / 14 / 10% of attempts). Then the **difficulty filter**: a board a naive pourer (`naiveSorts`, seeded)
   sorts on all six tries is redrawn; it rejects about half of Standard's deals and almost none above. A year never reaches `lastResort` (`FallbackTest`).
 - **`solved` checks the rules** (every tube empty or `H` of one colour); stuck (no pour at all) is derived and shown in a reserved caption.
-- **The board keeps no history**, so a mistake's "Show me" cannot undo to the real last sortable position: it puts back the sand of one pour that could
-  have made this board (`SandLogic.unpours`, each checked by pouring forward) and that leaves it sortable. One pour back always sufficed in the
-  measurements. The lifted tube, the shake and the pour stream are `remember` state and decoration; one pour is one state.
+- **`SandState.log` keeps the pours** (as Target's log), only so a mistake can name the pour that lost the board and "Show me" can go back to the last
+  board that sorts (`withoutFrom`). The spec first said nothing but the tubes would be stored; without the log the real pour cannot be found (a
+  median of 14 boards one pour back could have led to an unsortable one). A board with no log falls back to putting back one pour's sand
+  (`SandLogic.unpours`). The lifted tube, the shake and the pour stream are `remember` state and decoration; one pour is one state.
 - **Hints never fall back** (nothing is hidden). The first three ladder steps are offered only when they make progress (fewer places two colours meet
   in a tube, else fewer tubes in use, else more finished), which no pour ever undoes, so following hints cannot circle; `SandTeachingTest` follows them
   from 200 boards a tier. Highlight indices: tube `i` is `i`.

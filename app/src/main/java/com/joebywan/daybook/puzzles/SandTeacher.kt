@@ -17,9 +17,10 @@ import com.joebywan.daybook.core.Deduction
  * ever adds a meeting place, so following hints cannot go round in circles through them; only [PLAN] steps are neutral.
  *
  * A mistake is a board no order of pours can sort, proved exhaustively ([SandLogic.Verdict.Unsolvable]); a search that
- * ran out of budget ([SandLogic.Verdict.Truncated]) is never called a mistake. The board keeps no history, so "Show me"
- * puts back the sand of one pour that could have made this board ([SandLogic.unpours]) and leaves it sortable again (one
- * always existed in the measurements: `docs/TEACHING.md`). [STUCK] is the same from a board with no pours left.
+ * ran out of budget ([SandLogic.Verdict.Truncated]) is never called a mistake. The pour named is the one after the last
+ * board in [SandState.log] that still sorts ([badPour]), and "Show me" takes it back with every pour after it. A board with
+ * no log (made elsewhere) instead gets the sand of one pour that could have made it put back ([takeBack]). [STUCK] is the
+ * same from a board with no pours left.
  *
  * Highlight indices: tube `i` is `i`. Every loop walks tubes in index order; no hash order reaches a choice.
  */
@@ -58,6 +59,8 @@ internal object SandTeacher {
         /** The pour, or -1s for a mistake (which puts sand back rather than pouring). */
         val from: Int = -1,
         val to: Int = -1,
+        /** For a mistake: how much of the log to keep ([SandState.withoutFrom]), or -1 when the board had no log. */
+        val keep: Int = -1,
     )
 
     fun teach(s: SandState): Step? {
@@ -202,37 +205,68 @@ internal object SandTeacher {
 
     /**
      * The sand of one pour put back, leaving a board [SandLogic.solve] proves sortable, nearest first (breadth first, at
-     * most [BACK_DEPTH] pours back). Null when none is found within that.
+     * most [BACK_DEPTH] pours back), for a board with no log. Several boards could have come before it (a median of 14
+     * that sort, measured), so this is a guess: of those that sort, the one nearest sorted ([progress]), then the first in
+     * index order. Null when none is found within that.
      */
     fun takeBack(s: SandState): Pair<List<List<Int>>, List<Triple<List<List<Int>>, Int, Int>>>? {
         var frontier = listOf(s.tubes to emptyList<Triple<List<List<Int>>, Int, Int>>())
         val seen = mutableListOf(s.tubes)
         repeat(BACK_DEPTH) {
             val next = mutableListOf<Pair<List<List<Int>>, List<Triple<List<List<Int>>, Int, Int>>>>()
+            var best: Pair<List<List<Int>>, List<Triple<List<List<Int>>, Int, Int>>>? = null
             for ((t, chain) in frontier) for (u in SandLogic.unpours(t, s.height)) {
                 if (u.first in seen) continue
                 seen += u.first
                 val line = chain + u
-                if (SandLogic.solve(u.first, s.height, HINT_BUDGET) is SandLogic.Verdict.Solvable) return u.first to line
                 next += u.first to line
+                if (SandLogic.solve(u.first, s.height, HINT_BUDGET) !is SandLogic.Verdict.Solvable) continue
+                val b = best
+                if (b == null || closer(progress(u.first, s.height), progress(b.first, s.height))) best = u.first to line
             }
+            best?.let { return it }
             frontier = next
         }
         return null
     }
 
+    /** The log index of the pour after which the board stopped being sortable (the latest board before it that sorts), or null. */
+    fun badPour(s: SandState): Int? {
+        for (j in s.log.indices.reversed()) {
+            if (SandLogic.solve(s.withoutFrom(j).tubes, s.height, HINT_BUDGET) is SandLogic.Verdict.Solvable) return j
+        }
+        return null
+    }
+
     private fun back(s: SandState, technique: String): Step? {
-        val (before, line) = takeBack(s) ?: return null
-        val (_, from, to) = line.first()
-        val k = s.tubes[to].size - line.first().first[to].size
-        val c = s.tubes[to].last()
-        val more = if (line.size > 1) " and ${line.size - 1} more" else ""
-        val putBack = "Put ${layers(k, c)} on ${tube(to)} back in ${tube(from)}$more (Undo), and it can be sorted again."
         val (nudge, why) = when (technique) {
             STUCK -> "No pours left." to "No pour is possible, and the board is not sorted."
             UNSURE -> "I can't see a way through from here quickly." to "I can't find a way through from here quickly; try undoing."
             else -> "This board can no longer be sorted." to "No order of pours sorts this board now."
         }
+        badPour(s)?.let { j ->
+            val p = s.log[j]
+            val after = s.log.size - 1 - j
+            val then = when (after) {
+                0 -> "Take that pour back."
+                1 -> "Take it back, and the pour after it."
+                else -> "Take it back, and the $after pours after it."
+            }
+            val before = s.withoutFrom(j)
+            val c = before.tubes[p.from].last()
+            return Step(
+                technique, nudge,
+                "$why It went wrong when ${layers(p.count, c)} went from ${tube(p.from)} onto ${tube(p.to)}. $then",
+                setOf(p.to), setOf(p.from), setOf(p.from, p.to), before.tubes, keep = j,
+            )
+        }
+        // A board with no pours recorded (made elsewhere): put back the sand of one pour that could have made it.
+        val (before, line) = takeBack(s) ?: return null
+        val (_, from, to) = line.first()
+        val k = s.tubes[to].size - line.first().first[to].size
+        val c = s.tubes[to].last()
+        val more = if (line.size > 1) " and ${line.size - 1} more" else ""
+        val putBack = "Put ${layers(k, c)} on ${tube(to)} back in ${tube(from)}$more, and it can be sorted again."
         return Step(technique, nudge, "$why $putBack", setOf(to), setOf(from), setOf(from, to), before)
     }
 
@@ -254,6 +288,7 @@ internal object SandTeacher {
             applyTo = { now ->
                 val n = now as SandState
                 when {
+                    back && n.tubes == s.tubes && step.keep >= 0 && n.log.size > step.keep -> n.withoutFrom(step.keep)
                     back && n.tubes == s.tubes -> n.copy(tubes = step.after, moves = n.moves + 1)
                     !back && n.tubes == s.tubes -> n.pour(step.from, step.to) ?: n
                     // The board moved on while the hint was open: reason afresh.
