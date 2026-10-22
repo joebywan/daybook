@@ -67,12 +67,11 @@ import kotlinx.datetime.LocalDate
 private const val HEADER_DATE = "EEEE d MMMM"
 
 /**
- * Twelve puzzles at three columns is four rows (fifteen is five full ones), and four rows of tiles plus a header and the
- * launch options is what fits a phone in one screenful. That is the entire reason this screen is
- * a grid: choosing a puzzle should never involve scrolling to find it. The thirteenth puzzle opens
- * a fifth row; the sixteenth to eighteenth, Tents, Regions and Cage Sudoku, make a sixth, three-tile row, and the nineteenth to
- * twenty-first, Target, Cipher and Word Wheel, a seventh, and the twenty-second to twenty-fourth, Tally, Sand and Pointers, an eighth; the twenty-fifth, Dominoes, opens a ninth. All scroll into view. A wider window (a tablet, a phone on its side) takes a column per
- * [MinTileWidth], up to [MAX_COLUMNS]; a phone in portrait is always under four and keeps its three.
+ * The grid was first sized so every puzzle fitted one phone screen; with more than twenty it scrolls, so the order does
+ * the work instead. By default the most played sit at the top (`PuzzleOrder.mostPlayed`, read once a day so a solve never
+ * moves a tile under the player's finger), and a player can set their own order (`ArrangeScreen`). Nothing is hidden:
+ * anything else is a scroll away. A phone in portrait has three columns; a wider window (a tablet, a phone on its side)
+ * takes a column per [MinTileWidth], up to [MAX_COLUMNS].
  */
 private const val COLUMNS = 3
 private const val MAX_COLUMNS = 7
@@ -108,6 +107,9 @@ fun HomeScreen(
     onStats: () -> Unit,
     onAchievements: () -> Unit,
     onSettings: () -> Unit,
+    puzzles: List<PuzzleType>,
+    inProgress: Set<String>,
+    onArrange: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val doneToday = remember(completions, today) {
@@ -146,6 +148,8 @@ fun HomeScreen(
         }
         item {
             PuzzleGrid(
+                puzzles = puzzles,
+                inProgress = inProgress,
                 difficulty = difficulty,
                 // Random boards are freshly seeded on every tap, so "solved today" says nothing
                 // about the game a tile is about to start. The tiles keep their marks-shaped space
@@ -154,6 +158,20 @@ fun HomeScreen(
                 pick = PuzzleRegistry.featured(today.toEpochDays()).id,
                 onLaunch = onLaunch,
             )
+        }
+        item {
+            Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
+                Text(
+                    "Arrange puzzles",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = scheme.primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .clickable(onClick = onArrange)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                )
+            }
         }
         item { GetTheAppCard() }
     }
@@ -258,12 +276,14 @@ private fun StreakBadge(streak: Streak) {
 }
 
 /**
- * Laid out by hand rather than with a lazy grid. Eleven tiles never justify recycling, and a lazy
+ * Laid out by hand rather than with a lazy grid. A couple of dozen tiles never justify recycling, and a lazy
  * grid demands a height of its own — it cannot sit in a scrolling column, which is what lets this
  * grid take exactly the room it needs and scroll only when it does not fit.
  */
 @Composable
 private fun PuzzleGrid(
+    puzzles: List<PuzzleType>,
+    inProgress: Set<String>,
     difficulty: Difficulty,
     doneToday: Set<Pair<String, Difficulty>>,
     pick: String,
@@ -274,7 +294,7 @@ private fun PuzzleGrid(
         val tileWidth = (maxWidth - TileGap * (columns - 1)) / columns
         val previewSize = (tileWidth - TilePadding * 2) * PREVIEW_FRACTION
         Column(verticalArrangement = Arrangement.spacedBy(TileGap)) {
-            PuzzleRegistry.all.chunked(columns).forEach { rowPuzzles ->
+            puzzles.chunked(columns).forEach { rowPuzzles ->
                 Row(
                     // The last row is short. Intrinsic height keeps every tile in a row as tall as
                     // the tallest, which only matters once a large font scale wraps a name.
@@ -287,6 +307,7 @@ private fun PuzzleGrid(
                             difficulty = difficulty,
                             doneToday = doneToday,
                             isPick = puzzle.id == pick,
+                            inProgress = puzzle.id in inProgress,
                             previewSize = previewSize,
                             onLaunch = onLaunch,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -306,6 +327,7 @@ private fun PuzzleTile(
     difficulty: Difficulty,
     doneToday: Set<Pair<String, Difficulty>>,
     isPick: Boolean,
+    inProgress: Boolean,
     previewSize: Dp,
     onLaunch: (String) -> Unit,
     modifier: Modifier,
@@ -313,7 +335,8 @@ private fun PuzzleTile(
     val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
     val solved = (puzzle.id to difficulty) in doneToday
-    val marked = isPick && !solved
+    // A started pick shows "In progress" alone: the invitation has been taken up, and two labels cannot share a thumbnail.
+    val marked = isPick && !solved && !inProgress
 
     Column(
         modifier
@@ -332,6 +355,7 @@ private fun PuzzleTile(
                     .clip(RoundedCornerShape(10.dp))
             )
             if (marked) TryMeLabel(previewSize, Modifier.align(Alignment.Center))
+            if (inProgress) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
             if (solved) {
                 Box(
                     Modifier.size(16.dp).clip(CircleShape).background(scheme.surface),

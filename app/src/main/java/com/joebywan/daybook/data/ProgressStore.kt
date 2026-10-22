@@ -99,6 +99,10 @@ data class StoredGame(val key: String, val savedAt: Long, val game: SavedGame) {
     }
 }
 
+/** A [StoredGame] read only as far as its key; the game itself is skipped. */
+@Serializable
+private class StoredKey(val key: String)
+
 /**
  * Identifies one board exactly. A daily puzzle and a practice game of the same genre and
  * difficulty differ by seed, which is what stops yesterday's Sudoku reopening as today's.
@@ -174,14 +178,27 @@ class ProgressStore(private val store: KeyValueStore) {
      * The random board a puzzle and tier is on. It stays the same until it is solved or the player asks
      * for a new one, which is what lets a random game be resumed. Nonces are only ever read here.
      */
-    suspend fun randomNonce(puzzleId: String, difficulty: Difficulty): Long {
-        val key = "random|$puzzleId|${difficulty.name}"
-        store.string(key).first()?.toLongOrNull()?.let { return it }
-        return newRandomNonce(puzzleId, difficulty)
-    }
+    suspend fun randomNonce(puzzleId: String, difficulty: Difficulty): Long =
+        currentRandomNonce(puzzleId, difficulty) ?: newRandomNonce(puzzleId, difficulty)
+
+    /** The random board a puzzle and tier is on, if one has been dealt; never deals one. */
+    suspend fun currentRandomNonce(puzzleId: String, difficulty: Difficulty): Long? =
+        store.string("random|$puzzleId|${difficulty.name}").first()?.toLongOrNull()
 
     suspend fun newRandomNonce(puzzleId: String, difficulty: Difficulty): Long =
         freshNonce().also { store.putString("random|$puzzleId|${difficulty.name}", it.toString()) }
+
+    /**
+     * Which of [keys] hold a game in progress: saved, unsolved and with a move made, the one kind of unsolved game
+     * `PlayScreen` keeps (a restart, or only a selection, clears the save). Only the saves named are decoded in full; the
+     * rest are read as far as their key. Re-emits whenever a game is saved, so a board saved on the way out still shows.
+     */
+    fun inProgress(keys: Set<String>): Flow<Set<String>> = store.stringSet(KEY_SAVED).map { raw ->
+        raw.filter { r -> runCatching { SavedJson.decodeFromString<StoredKey>(r).key }.getOrNull() in keys }
+            .mapNotNull(StoredGame::decode)
+            .filter { !it.game.state.solved && it.game.state.moves > 0 }
+            .mapTo(mutableSetOf()) { it.key }
+    }
 
     suspend fun clearSavedGame(key: String) {
         store.updateStringSet(KEY_SAVED) { raw ->
@@ -227,4 +244,29 @@ object Stats {
     fun bestTime(all: List<Completion>, puzzleId: String, difficulty: Difficulty): Int? =
         all.filter { it.puzzleId == puzzleId && it.difficulty == difficulty }
             .minOfOrNull { it.seconds }
+}
+
+/** The home grid's order (docs/REWARDS.md, "Puzzle order"). Pure, so it is testable on its own. */
+object PuzzleOrder {
+
+    /** How far back a daily solve counts toward "most played". */
+    const val WINDOW_DAYS = 60
+
+    /**
+     * [ids] with the most solved first: dailies of the last [WINDOW_DAYS] days, plus every practice game (they carry no
+     * day). The sort is stable, so ties and puzzles never played keep [ids]' order. The caller reads [all] once a day
+     * rather than live, so a solve never moves a tile under the player's finger on the way back home.
+     */
+    fun mostPlayed(all: List<Completion>, today: LocalDate, ids: List<String>): List<String> {
+        val from = today.toEpochDays() - WINDOW_DAYS
+        val counts = all.filter { it.day == null || it.day.toEpochDays() >= from }.groupingBy { it.puzzleId }.eachCount()
+        return ids.sortedByDescending { counts[it] ?: 0 }
+    }
+
+    /**
+     * The player's own order of [ids]: [stored] less any id no longer registered, then every puzzle added since, at the
+     * end. So a stored order survives a puzzle being added or removed.
+     */
+    fun arranged(stored: List<String>, ids: List<String>): List<String> =
+        stored.filter { it in ids }.distinct() + ids.filterNot { it in stored }
 }

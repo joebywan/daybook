@@ -6,6 +6,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
@@ -17,6 +18,7 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.ProgressStore
+import com.joebywan.daybook.data.PuzzleOrder
 import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.data.savedGameKey
 import com.joebywan.daybook.platform.PlatformBackHandler
@@ -36,9 +38,11 @@ import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.play.finishPraise
 import com.joebywan.daybook.ui.play.shareCard
 import com.joebywan.daybook.ui.play.tiersDoneOn
+import com.joebywan.daybook.ui.settings.ArrangeScreen
 import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.AchievementsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 
@@ -52,6 +56,8 @@ sealed interface Route {
     data object Settings : Route
     /** [fromHome]: back returns to where it was opened from. */
     data class Achievements(val fromHome: Boolean = false) : Route
+    /** [fromHome]: back returns to where it was opened from (Home's link, or Settings). */
+    data class Arrange(val fromHome: Boolean = false) : Route
     data class Archive(val puzzleId: String) : Route
     data class Play(
         val puzzleId: String,
@@ -69,6 +75,7 @@ private val RouteSaver = Saver<Route, String>(
             Route.Stats -> "stats"
             Route.Settings -> "settings"
             is Route.Achievements -> "achievements|${r.fromHome}"
+            is Route.Arrange -> "arrange|${r.fromHome}"
             is Route.Archive -> "archive|${r.puzzleId}"
             is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}"
         }
@@ -79,6 +86,7 @@ private val RouteSaver = Saver<Route, String>(
             "stats" -> Route.Stats
             "settings" -> Route.Settings
             "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
+            "arrange" -> Route.Arrange(f.getOrNull(1) == "true")
             "archive" -> Route.Archive(f[1])
             "play" -> Route.Play(
                 puzzleId = f[1],
@@ -135,6 +143,22 @@ fun DaybookApp(startAt: Route = Route.Home) {
     // back to Daily, because that is what the app is for.
     var mode by rememberSaveable { mutableStateOf(LaunchMode.DAILY) }
 
+    // The grid's order (PuzzleOrder). The solves are read once a day, not collected: a tile must not move under the
+    // player's finger because the game they just left was solved. An empty stored order means most played first.
+    val ids = remember { PuzzleRegistry.all.map { it.id } }
+    val playedBasis by produceState<List<Completion>?>(null, today) { value = store.completions.first() }
+    val mostPlayed = remember(playedBasis, today) { PuzzleOrder.mostPlayed(playedBasis.orEmpty(), today, ids) }
+    val storedOrder by launchPrefs.puzzleOrder.collectAsState(initial = emptyList())
+    var pickedOrder by remember { mutableStateOf<List<String>?>(null) }
+    val customOrder = pickedOrder ?: storedOrder
+    val puzzles = remember(customOrder, mostPlayed) {
+        (if (customOrder.isEmpty()) mostPlayed else PuzzleOrder.arranged(customOrder, ids)).mapNotNull(PuzzleRegistry::byId)
+    }
+    fun setOrder(order: List<String>) {
+        pickedOrder = order
+        scope.launch { launchPrefs.setPuzzleOrder(order) }
+    }
+
     // Roll the date over without needing the app to be restarted at midnight.
     LaunchedEffect(Unit) {
         while (true) {
@@ -156,13 +180,29 @@ fun DaybookApp(startAt: Route = Route.Home) {
     // so this cannot fire while the archive picker or the rules sheet is open.
     //
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
-    PlatformBackHandler(enabled = route != Route.Home) { route = Route.Home }
+    // Arrange opened from Settings is the one screen that goes back somewhere other than Home.
+    PlatformBackHandler(enabled = route != Route.Home) {
+        route = if ((route as? Route.Arrange)?.fromHome == false) Route.Settings else Route.Home
+    }
 
     when (val current = route) {
         Route.Home -> {
             // Nothing on Android. On the web, today's boards are generated while the grid is being
             // read, so the tap that opens one does not have to wait for it; see the platform seam.
             LaunchedEffect(today, difficulty) { prepareBoards(today, difficulty) }
+            // The board each tile would open, by save key; then only those saves are read (ProgressStore.inProgress).
+            val tileKeys by produceState(emptyMap<String, String>(), today, difficulty, mode) {
+                value = PuzzleRegistry.all.mapNotNull { p ->
+                    val seed = when (mode) {
+                        LaunchMode.DAILY -> DailySeed.seedFor(today, p.id, difficulty)
+                        LaunchMode.RANDOM -> DailySeed.randomSeed(
+                            p.id, difficulty, store.currentRandomNonce(p.id, difficulty) ?: return@mapNotNull null,
+                        )
+                    }
+                    savedGameKey(p.id, difficulty, seed) to p.id
+                }.toMap()
+            }
+            val inProgress by remember(tileKeys) { store.inProgress(tileKeys.keys) }.collectAsState(initial = emptySet())
             HomeScreen(
                 today = today,
                 completions = completions,
@@ -186,8 +226,19 @@ fun DaybookApp(startAt: Route = Route.Home) {
                 onStats = { route = Route.Stats },
                 onAchievements = { route = Route.Achievements(fromHome = true) },
                 onSettings = { route = Route.Settings },
+                puzzles = puzzles,
+                inProgress = remember(inProgress, tileKeys) { inProgress.mapNotNull(tileKeys::get).toSet() },
+                onArrange = { route = Route.Arrange(fromHome = true) },
             )
         }
+
+        is Route.Arrange -> ArrangeScreen(
+            puzzles = puzzles,
+            custom = customOrder.isNotEmpty(),
+            onOrder = ::setOrder,
+            onReset = { setOrder(emptyList()) },
+            onBack = { route = if (current.fromHome) Route.Home else Route.Settings },
+        )
 
         Route.Stats -> StatsScreen(
             today = today,
@@ -213,6 +264,8 @@ fun DaybookApp(startAt: Route = Route.Home) {
                 pickedPlaySound = play
                 scope.launch { launchPrefs.setPlaySound(play) }
             },
+            customOrder = customOrder.isNotEmpty(),
+            onArrange = { route = Route.Arrange() },
             onBack = { route = Route.Home },
         )
 
