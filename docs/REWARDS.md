@@ -21,7 +21,7 @@ under "Rewards".
   Population baselines would need real times from testers, which is its own decision.
 - **No goodbye screen.** Predicting when the player is done needs usage tracking; "all three Kings done today"
   (per-puzzle completion) covers it without guessing.
-- **Not doing:** points/XP/levels, loss-framed notifications ("your streak is about to end"), leaderboards,
+- **Not doing:** points/XP (levels as fixed packs of boards are a separate idea, reopened by the owner on 2026-10-22: `docs/LEVELS_SPEC.md`), loss-framed notifications ("your streak is about to end"), leaderboards,
   random or login rewards.
 
 ## Streak implementation (`core/Streak.kt`)
