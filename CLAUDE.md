@@ -318,6 +318,10 @@ selected colour, palette choice, drag in progress, a settle timer — must live 
 `remember`/`rememberSaveable` inside the composable, never in `PuzzleState`. A drag or a
 double-tap must emit exactly one combined state.
 
+**The play log is part of the saved game.** `SavedGame.log` (`ui/play/ShareCard.kt`, `PlayLog`) is one character per move, undo,
+restart and counted hint, and the share graphic is drawn from it. Append to it exactly where the hint count goes up and where
+`push`/`undo`/`restart` change the board; keep it out of `PuzzleState`; it defaults to "" so older saves load (`ShareCardTest`).
+
 **Feedback must not move the board.** Mambo's caption shifted it ~45dp when an error appeared,
 which causes mistaps. Reserve the space (`minLines == maxLines` works well), or float it over the content as the hint
 popover does. Violations also

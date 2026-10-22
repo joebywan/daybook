@@ -60,6 +60,12 @@ from a measurement or review, so you can check it is still true.
   hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
   reasoning. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
 
+- [ ] **Share preview: check on a phone.** The spoiler-free share card (`ui/play/ShareCard.kt`, `SharePreview.kt`) was rendered on
+  the web only (Chromium and WebKit, 375x537, 390x844, 844x390). Check the dialog and the Android share sheet on the emulator, and
+  that the emoji squares and Tower's pips read right once pasted into WhatsApp/Messages on Android and iOS. Restart counts as
+  undoing every move so far, and Target's "steps" is the operations still on the board at the finish (not only those that
+  build the target); both are simple readings the owner may want changed.
+
 ## Rewards
 
 Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) 5 (calendar) and 6 (daily variety) are done; the rest are separate PRs.
