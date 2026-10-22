@@ -211,6 +211,8 @@ differs from the plan above:
   button is the level the player is on, not the one after the replayed level.
 - **A solved level board is cleared like a practice board**, so opening it again (from home or the list) is a fresh replay;
   it records a practice `Completion` but nothing new for the level.
+- **Home's arranged order (#231) does not apply to a level:** its five tiles keep the order they were dealt, and "Arrange
+  puzzles" is hidden in Levels mode. The "In progress" label does apply: a level board with a saved game says so, as a daily does.
 - `PlayScreen` now takes the finish frame's `options` from its caller (daily, random or level) instead of `otherTiersDone`.
 - Back from a level board goes home, where the mode is still Levels; back from one level's boards goes to the list.
 - Web render hooks: `?mode=levels`, `?screen=levels[&level=N]`, `?puzzle=<id>&level=N`, and `&leveldone` with `?finish=`;
