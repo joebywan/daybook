@@ -192,6 +192,13 @@ below have a famous branded version; use the descriptive name).
 - [ ] **Cipher: candidate notes, if players ask.** Not built: every hint ends in a digit placed, so none relies on an elimination the player must track.
   Sudoku's notes are the model (a mask per letter, defaulted; the mode `rememberSaveable`).
 
+- [ ] **Tally: recapture the screenshots and drive it on the emulator.** Rendered on the web build only (Chromium and WebKit, light and
+  dark, 375x537 and 390x844, every tier, a hint open, the finished frame); `docs/screenshots/home.png` was not recaptured (it needs the
+  emulator), and nobody has swept a line by touch on Android yet.
+- [ ] **Tally: a regions variant, deliberately not built.** The published genre also comes with coloured regions whose kept numbers must hit
+  a region target as well. It adds a third kind of line to the ladder and a colour layer to a board that already carries targets on two
+  edges; left out until the plain board has been played.
+
 ### Suggested
 
 Roughly in order of how well they fit, best first. Before adding one, read the existing puzzles' `rules`, not just their

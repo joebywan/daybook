@@ -304,6 +304,36 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   the stored word, so it is the fallback). No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
   `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.
 
+## Tally (keep the numbers that make every sum)
+
+A square of digits 1-9 with a target beside every row and under every column; remove numbers until what is left in every line adds
+up to its target. Exactly one answer. The genre is published as Rullo and as "Number Sums"; neither name (nor "Kakuro", a different
+puzzle) appears anywhere the player sees. `puzzles/TallyRules.kt` (state, `TallyLogic`: line logic, what-if, exhaustive count with a
+`TallyVerdict`, generator), `TallyTeacher.kt`, `TallyKeys.kt`, `Tally.kt` (object `Tally`, board, walkthrough, motif). `id = "tally"`
+is hashed into every seed: never rename it.
+
+- **Marks:** untouched, removed (`x`, faded and struck: it no longer counts) and kept (`o`, circled: a note that the player is sure,
+  counting exactly as untouched does). Nonogram's pen model: Remove/Keep is `rememberSaveable` in the board, a sweep locks to the
+  row or column of the larger move and is one state, a pen writes only over untouched squares. Targets are derived from the stored
+  answer (`keep`), never stored. **`solved` checks the rule** (every line's non-removed sum is its target), not `keep`.
+- **Tiers are size and ladder depth together: 5x5 / 6x6 / 7x7, about 55% kept, every line keeping at least one number and removing
+  at least one.** Standard is finished by the four shortcuts alone (done, all left, too big, too much to lose), Hard must need the
+  ways of a line at least once, Expert must need a what-if at least once (`TallyLogic.depth`, `Spec.needs`); a draw needing more or
+  less is redrawn. Without the depth rule random 7x7 boards are 97% finished by single lines and Standard/Hard barely differ.
+- **A board ships only if the ladder finishes it** (`TallyLogic.accepts`) **and `countSolutions` proves one answer** (row by row over
+  each row's ways, no budget; only `TallyVerdict.ExactlyOne` carries an answer). `TallyOracle` (test: every column's subsets by
+  recursion, combined with no lookahead) is the independent check. Draws per board over a year: 2.4 / 3.9 / 67 mean, 15 / 23 / 395 most,
+  of `ATTEMPTS` = 2000; no day reaches `lastResort` (a fixed board per tier, itself accepted by a test). Generation on a desktop JVM:
+  Expert about 5 ms mean, 30 ms worst; in the browser (a year of Expert days) 10 / 34 / 69 ms median / p95 / max in Chromium, 10 / 40 / 68 in WebKit.
+- **The generator's ladder is the teacher's.** Techniques 1-4 are `TallyLogic.shortcuts`, 5 is `forced` (the ways of one line: a number
+  in every way stays, in none goes), 6 is `firstWhatIf` (suppose a number stays or goes, follow at most `MAX_LINKS` = 3 lines, some line
+  is left with no way). Raise the generator and the teacher must learn the new step; no fallback exists. A mistake is a removed number
+  the answer keeps or a circled one it removes, sound because the board has one answer.
+- Feedback is derived: a target chip turns green (Green mark) when its line adds up, red (`scheme.error`) when no choice of its open
+  numbers can make it any more (solid `scheme.error`, so it cannot be mistaken for a Rose or Amber chip), after a 1 s debounce. Hue pair from `BoardHues.pair(digits.hashCode())`: A tints the target chips, B
+  inks the circles. Highlight indices: squares `0 until n*n`, row target `n*n + r`, column target `n*n + n + c`.
+- The regions variant of the genre (sums per coloured region as well as per line) was deliberately not built; see `docs/TODO.md`.
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
@@ -322,7 +352,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality and Cipher (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality and Cipher (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

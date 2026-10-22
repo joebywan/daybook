@@ -14,6 +14,7 @@ import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.RegionsState
+import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.Sets
@@ -69,6 +70,7 @@ object ParityFingerprint {
         is CageState -> "givens=" + s.grid.cells.joinToString("") + " cages=" + s.cageOf.joinToString("") { it.toString(36) } +
             " sums=" + s.sums.joinToString(",") + " solution=" + s.grid.solution.joinToString("")
         is TargetState -> "start=${s.start.joinToString(",")} target=${s.target} par=${s.par}"
+        is TallyState -> "n=${s.size} digits=${s.digits} keep=${s.keep}"
         is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer}"
         is CipherState -> "words=${s.words.joinToString(",")} solution=${s.solution.joinToString("")}"
         is WordWheelState -> "wheel=${s.wheel} ${s.width}x${s.height} slots=" +

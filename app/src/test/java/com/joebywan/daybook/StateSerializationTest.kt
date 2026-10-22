@@ -18,6 +18,8 @@ import com.joebywan.daybook.puzzles.MamboState
 import com.joebywan.daybook.puzzles.MosaicState
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.RegionsState
+import com.joebywan.daybook.puzzles.TallyLogic
+import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.TargetOp
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.WordWheelState
@@ -106,6 +108,7 @@ class StateSerializationTest {
         is ChessState -> state.play(ChessRules.legalMoves(ChessPosition.fromFen(state.start)).first())
         is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is RegionsState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
+        is TallyState -> state.tap(0, TallyLogic.REMOVED).tap(1, TallyLogic.KEPT)
         is TargetState -> state.combine(0, TargetOp.Add, 1)!!
         is WordWheelState -> state.enter(state.slots[1].word)
         is TentsState -> state.withMark(state.trees.indexOfFirst { !it }, 1)
