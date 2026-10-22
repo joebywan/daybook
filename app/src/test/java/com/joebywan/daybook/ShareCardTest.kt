@@ -64,6 +64,9 @@ class ShareCardTest {
         assertEquals("No hints. 1 undone from a clean strip. Tomorrow?", undid.nudge)
         // Restart takes back every move so far.
         assertEquals("🟨🟨🟩🟩", card(Sudoku, sudoku, "mmrmm").lines.single().text(false))
+        // Undoing the restart hands those moves back; a move made after it is taken back first.
+        assertEquals("🟩🟩🟩", card(Sudoku, sudoku, "mmrum").lines.single().text(false))
+        assertEquals("🟩🟨🟨🟩", card(Sudoku, sudoku, "mmrmuuum").lines.single().text(false))
     }
 
     @Test fun `lexicon is wordle rows with a red square after a hinted guess`() {

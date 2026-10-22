@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -183,10 +184,20 @@ fun BackButton(onBack: () -> Unit) {
     }
 }
 
-/** The page's theme-color meta tags already follow the colour scheme; nothing to do per frame. */
+/**
+ * The page behind the canvas (the safe-area margins, the loading note's colours) and the browser's
+ * theme-color, set to the theme the app chose rather than the system's, so a Dark choice on a light
+ * device has no light edges. index.html makes the same choice from storage before the app loads.
+ */
+private fun setPageTheme(dark: Boolean): Unit = js("""(() => {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = dark ? '#11201C' : '#F6F1E7');
+})()""")
+
 @Composable
-@Suppress("UNUSED_PARAMETER")
-fun SystemBarsAppearance(darkTheme: Boolean) = Unit
+fun SystemBarsAppearance(darkTheme: Boolean) {
+    SideEffect { setPageTheme(darkTheme) }
+}
 
 /**
  * A browser can drop a site's storage, and there is no cloud backup behind it the way Android has,

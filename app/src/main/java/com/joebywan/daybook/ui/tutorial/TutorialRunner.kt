@@ -32,18 +32,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.play.KeyboardHelpLine
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.HintSlotHeight
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** The solve chime (a no-op when sound is off), so a finished step in a tutorial announces its new caption. */
@@ -53,6 +56,12 @@ val LocalChime = staticCompositionLocalOf<() -> Unit> { {} }
 private enum class Status { WAITING, RETRY, DONE }
 
 /**
+ * How long a finished move stays on screen, with its done line, before the next frame: long enough
+ * to see the move land and read a short line. Not an animation, so reduced motion does not shorten it.
+ */
+internal const val TUTORIAL_HOLD_MS = 1000L
+
+/**
  * Plays [puzzle]'s [PuzzleType.tutorial] on its own real board.
  *
  * Nothing here knows which puzzle it is: each frame brings its board, its caption, the squares to
@@ -60,6 +69,8 @@ private enum class Status { WAITING, RETRY, DONE }
  * gestures exactly as it does in a game — which is the point, since the gestures are what is being
  * taught. A move the frame does not want is not applied, so the board can never drift away from
  * what the next caption describes; the player is just asked, gently, to try the glowing square.
+ * A finished move holds for [TUTORIAL_HOLD_MS] and then moves on by itself, its done line carried
+ * into the next frame, so Next is only ever pressed on a frame that has nothing to do but read.
  *
  * Frame, board and hint state are all transient and live here, never in a saved game. Skip is
  * always on screen. Free of `android.*`, like the puzzle files, so the web build can use it too.
@@ -83,6 +94,10 @@ fun TutorialRunner(
     val frame = frames[index.coerceIn(0, frames.lastIndex)]
     var board by remember(index) { mutableStateOf(frame.state) }
     var moved by remember(index) { mutableStateOf(Status.WAITING) }
+    // The done line of the move that brought us here, shown until this frame has news of its own.
+    // Back clears it: a frame reached backwards starts fresh.
+    var carried by rememberSaveable { mutableStateOf<String?>(null) }
+    val judge = frame.judge
     // Free play is done when the board is, which is read off the board rather than stored.
     val status = if (frame.freePlay && board.solved) Status.DONE else moved
     var showRules by remember { mutableStateOf(false) }
@@ -105,21 +120,30 @@ fun TutorialRunner(
         }
     }
 
+    // A finished move holds, then moves on. Keyed on the index too, so Back during the hold cancels it,
+    // and the board is not interactive meanwhile, so a quick extra tap can't count twice or land on
+    // the next frame's board. The last frame waits for Play instead.
+    if (status == Status.DONE && judge != null && !last) {
+        LaunchedEffect(index) {
+            delay(TUTORIAL_HOLD_MS)
+            carried = frame.done
+            index++
+        }
+    }
+
     val highlight = when {
         frame.freePlay -> hints.highlight
         status == Status.DONE -> BoardHighlight.None
-        else -> frame.highlight
+        else -> frame.glow?.invoke(board) ?: frame.highlight
     }
     val interactive = when {
         frame.freePlay -> !board.solved
-        frame.accepts != null -> status != Status.DONE
+        judge != null -> status != Status.DONE
         else -> false
     }
-    val canAdvance = when {
-        frame.freePlay -> true
-        frame.accepts != null -> status == Status.DONE
-        else -> true
-    }
+    // A move frame advances by itself; its Next would only invite a tap that does nothing.
+    val showNext = judge == null || last
+    val canAdvance = judge == null || status == Status.DONE
 
     Column(modifier.fillMaxSize().background(scheme.background)) {
         Row(
@@ -151,14 +175,21 @@ fun TutorialRunner(
                     onState = { next ->
                         when {
                             frame.freePlay -> board = next
-                            frame.accepts == null || status == Status.DONE -> Unit
-                            frame.accepts.invoke(next) -> {
-                                board = next
-                                moved = Status.DONE
-                                // The caption changes at once; the chime says there is something new to read.
-                                chime()
+                            judge == null || status == Status.DONE -> Unit
+                            else -> when (judge(next)) {
+                                TutorialStep.DONE -> {
+                                    board = next
+                                    moved = Status.DONE
+                                    // The done line shows at once; the chime says the move landed.
+                                    chime()
+                                }
+                                TutorialStep.PROGRESS -> {
+                                    board = next
+                                    moved = Status.WAITING
+                                }
+                                // Not applied: the progress so far stays on the board.
+                                TutorialStep.REJECT -> moved = Status.RETRY
                             }
-                            else -> moved = Status.RETRY
                         }
                     },
                     interactive = interactive,
@@ -182,14 +213,16 @@ fun TutorialRunner(
                         // Never cut a word: a caption longer than the slot scrolls instead.
                         modifier = Modifier.weight(1f).verticalScroll(androidx.compose.runtime.key(index) { rememberScrollState() }),
                     )
-                    // Only a frame that asks for a move has feedback to show; the others give the
-                    // caption the whole slot.
-                    if (frame.accepts != null) Text(
-                        when (status) {
-                            Status.WAITING -> ""
-                            Status.RETRY -> frame.retry
-                            Status.DONE -> frame.done
-                        },
+                    // Only a frame that asks for a move, or that carries the last move's done line,
+                    // has feedback to show; the others give the caption the whole slot.
+                    val feedback = when {
+                        status == Status.RETRY -> frame.retry
+                        status == Status.DONE -> frame.done
+                        carried != null -> "\u2713 $carried"
+                        else -> ""
+                    }
+                    if (judge != null || frame.freePlay || carried != null) Text(
+                        feedback,
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (status == Status.RETRY) scheme.onSurfaceVariant else accent,
                         maxLines = 2,
@@ -205,7 +238,10 @@ fun TutorialRunner(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedButton(
-                onClick = { index-- },
+                onClick = {
+                    carried = null
+                    index--
+                },
                 enabled = index > 0,
                 modifier = Modifier.weight(1f),
             ) { Text("Back") }
@@ -216,11 +252,15 @@ fun TutorialRunner(
                     modifier = Modifier.weight(1f),
                 ) { Text(hints.buttonLabel()) }
             }
+            // Invisible rather than gone on a move frame, so the row keeps its shape and Back its place.
             Button(
-                onClick = { if (last) onClose() else index++ },
-                enabled = canAdvance,
+                onClick = {
+                    carried = null
+                    if (last) onClose() else index++
+                },
+                enabled = showNext && canAdvance,
                 colors = ButtonDefaults.buttonColors(containerColor = accent),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).alpha(if (showNext) 1f else 0f),
             ) { Text(if (last) "Play" else "Next") }
         }
     }

@@ -2,9 +2,11 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.LexiconKeyAction
 import com.joebywan.daybook.puzzles.LexiconState
+import com.joebywan.daybook.puzzles.LexiconTeacher
 import com.joebywan.daybook.puzzles.lexiconKeyAction
 import androidx.compose.ui.input.key.Key
 import org.junit.Assert.assertEquals
@@ -80,20 +82,24 @@ class LexiconDeductionTest {
     @Test
     fun `the walkthrough is playable frame by frame and ends in a board the hints can finish`() {
         val frames = Lexicon.tutorial
-        assertTrue(frames.size >= 6)
+        assertTrue(frames.size >= 5)
         var board: LexiconState? = null
         for (frame in frames) {
             val start = frame.state as LexiconState
-            val accepts = frame.accepts
-            if (accepts != null) {
-                // The one move it asks for is accepted; an unrelated one is not.
-                val next = when {
-                    start.current.length < 4 && frame.done.endsWith("goes in slot ${start.current.length + 1}.") ->
-                        start.withLetter("boat"[start.current.length])
-                    else -> start.submit()
+            val judge = frame.judge
+            if (judge != null) {
+                // BOAT typed a letter at a time is progress, each letter's key glowing in turn, and
+                // scoring it is the move; a stray letter at any point is refused.
+                var s = start
+                for (c in "boat") {
+                    assertEquals(setOf(LexiconTeacher.key(c)), frame.glow!!(s).strong)
+                    assertEquals(TutorialStep.REJECT, judge(s.withLetter('z')))
+                    s = s.withLetter(c)
+                    assertEquals(TutorialStep.PROGRESS, judge(s))
                 }
-                assertTrue("frame '${frame.caption.take(30)}' refuses its own move", accepts(next))
-                assertFalse("frame '${frame.caption.take(30)}' accepts a stray letter", accepts(start.withLetter('z')))
+                assertEquals(setOf(LexiconTeacher.ENTER), frame.glow!!(s).strong)
+                assertEquals("Backspace", TutorialStep.PROGRESS, judge(s.copy(current = "boa")))
+                assertEquals(TutorialStep.DONE, judge(s.submit()))
             }
             board = start
         }

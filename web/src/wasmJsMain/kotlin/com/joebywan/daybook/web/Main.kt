@@ -107,11 +107,13 @@ private fun fingerprint(type: PuzzleType, day: Day, tier: Difficulty): String =
  * of N days from 2026-01-01 plus a `TIMING` line per puzzle and tier. `WebParityDumpTest` writes the
  * JVM's side of the range in the same order, so the two diff directly. `&puzzle=<id>` narrows it to
  * one puzzle, which lets a harness split a year across pages. `&times` adds a `TIME <id> <date>
- * <tier> <ms>` line per board, for a distribution rather than only the mean and worst.
+ * <tier> <ms>` line per board, for a distribution rather than only the mean and worst. `&puzzle=levels`
+ * prints levels 1..N instead (five `RANGE levels ...` lines each), which `check.py` diffs as one more page.
  */
 private fun dump(params: Map<String, String>, today: Day, tier: Difficulty) {
+    val levelsOnly = params["puzzle"] == "levels"
     val only = params["puzzle"]?.let(PuzzleRegistry::byId)
-    val types = if (only != null) listOf(only) else PuzzleRegistry.all
+    val types = if (levelsOnly) emptyList() else if (only != null) listOf(only) else PuzzleRegistry.all
     for (type in types) for (d in PARITY_DAYS) for (t in Difficulty.entries) println("PARITY ${fingerprint(type, d, t)}")
     for (type in types) println("TODAY ${fingerprint(type, today, tier)}")
     val range = params["range"]?.toIntOrNull() ?: 0
@@ -138,6 +140,10 @@ private fun dump(params: Map<String, String>, today: Day, tier: Difficulty) {
                 println("TIMING ${type.id} ${t.name} mean=${total[t.ordinal] / range}ms max=${worst[t.ordinal]}ms")
             }
         }
+    }
+    // Levels 1..N, five boards each, under the pseudo-puzzle "levels": with `&puzzle=levels`, or with no `&puzzle`.
+    if (levelsOnly || params["puzzle"] == null) {
+        for (level in 1..range) ParityFingerprint.levelLines(level).forEach { println("RANGE $it") }
     }
     println("DUMP DONE")
 }
