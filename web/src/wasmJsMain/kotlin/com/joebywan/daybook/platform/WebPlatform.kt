@@ -236,13 +236,21 @@ fun BackupControls() {
 private fun isIos(): Boolean =
     js("/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)")
 
+private fun isAndroid(): Boolean = js("/Android/.test(navigator.userAgent)")
+
+/** Opened from a home-screen icon rather than a browser tab. */
+private fun isStandalone(): Boolean =
+    js("navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches")
+
 /**
- * Under the home grid: the Android app and where to get it. Hidden on iPhone and iPad, which cannot install it.
- * The claims are the manifest's: no INTERNET permission, no other permission a player is asked for.
+ * Under the home grid, by device: on Android, the app and where to get it; on iPhone and iPad, how to add this
+ * page to the home screen (already there: nothing). Desktops get nothing.
+ * The Android claims are the manifest's: no INTERNET permission, nothing a player is asked to grant.
  */
 @Composable
 fun GetTheAppCard() {
-    if (remember { isIos() }) return
+    val device = remember { if (isAndroid()) 'a' else if (isIos() && !isStandalone()) 'i' else '-' }
+    if (device == '-') return
     val scheme = MaterialTheme.colorScheme
     val uri = LocalUriHandler.current
     Column(
@@ -253,17 +261,28 @@ fun GetTheAppCard() {
             .background(scheme.surface)
             .padding(14.dp),
     ) {
-        Text("On Android? Get the app", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-        Text(
-            "The same daily puzzles, installed. It asks for no permissions at all, not even the internet, " +
-                "so there is no tracking and nothing to sign up for. No ads, free, works offline.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BackupButton("Google Play", Modifier.weight(1f)) { uri.openUri(PLAY_URL) }
-            BackupButton("F-Droid", Modifier.weight(1f)) { uri.openUri(FDROID_URL) }
+        if (device == 'a') {
+            Text("Get the Android app", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            Text(
+                "The same daily puzzles, installed. It asks for no permissions at all, not even the internet, " +
+                    "so there is no tracking and nothing to sign up for. No ads, free, works offline.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BackupButton("Google Play", Modifier.weight(1f)) { uri.openUri(PLAY_URL) }
+                BackupButton("F-Droid", Modifier.weight(1f)) { uri.openUri(FDROID_URL) }
+            }
+        } else {
+            Text("Add Daybook to your Home Screen", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            Text(
+                "Tap Share, then Add to Home Screen. It opens full screen like an app and works offline, and " +
+                    "your progress is safer: Safari can clear a website's data after a week unused, " +
+                    "but not a Home Screen app's.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+            )
         }
     }
 }
