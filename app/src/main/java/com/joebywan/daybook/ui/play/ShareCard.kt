@@ -134,12 +134,12 @@ internal fun strip(moves: List<PlayLog.Played>): List<Mark> {
 
 /**
  * The share card for a solve: [puzzle] finished in [state], with the play [log] ([PlayLog]). [date] is the daily's date
- * already formatted, null for a random board; [hints] is the game's counted hints (the log may have started part way,
+ * already formatted, null for a random board or a [level] board (whose header names the level where the daily has the date); [hints] is the game's counted hints (the log may have started part way,
  * from an older save). Spoiler-free: marks, pips and counts only, never a square, piece, word or number of the board.
  */
 fun shareCard(
     puzzle: PuzzleType, tier: Difficulty, date: String?, clock: String, streak: Int,
-    state: PuzzleState, log: String, hints: Int,
+    state: PuzzleState, log: String, hints: Int, level: Int? = null,
 ): ShareCard {
     val moves = PlayLog.played(log)
     val undone = moves.count { it.undone }
@@ -230,7 +230,8 @@ fun shareCard(
         }
     }
     return ShareCard(
-        header = "Daybook · ${puzzle.displayName} · ${tier.label} · ${date ?: "random board"}$suffix",
+        header = if (level != null) "Daybook · Level $level · ${puzzle.displayName} · ${tier.label}$suffix"
+            else "Daybook · ${puzzle.displayName} · ${tier.label} · ${date ?: "random board"}$suffix",
         lines = lines,
         stats = clock + if (streak >= 2) " · $streak day streak" else "",
         key = key,

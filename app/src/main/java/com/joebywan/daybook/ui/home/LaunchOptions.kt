@@ -14,7 +14,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +36,9 @@ import kotlinx.coroutines.flow.map
  */
 enum class LaunchMode(val label: String) {
     DAILY("Daily"),
+
+    /** Numbered levels of five boards (`docs/LEVELS_SPEC.md`); the level sets each board's tier. */
+    LEVELS("Levels"),
     RANDOM("Random"),
 }
 
@@ -88,7 +93,11 @@ class LaunchPreferences(private val store: KeyValueStore) {
 
 /**
  * The two choices that used to live on every card, hoisted above the grid: what difficulty, and
- * whether the tap opens today's puzzle or a freshly seeded random board.
+ * whether the tap opens today's puzzle, a level's board or a freshly seeded random board.
+ *
+ * In Levels mode the level sets the tier, so the tier row is hidden and [levelStrip] is drawn in
+ * its place. The row is still laid out underneath (invisible, and it takes no taps), so the strip
+ * has exactly its height and the mode row never moves under the finger that switched it.
  */
 @Composable
 fun LaunchOptions(
@@ -96,18 +105,24 @@ fun LaunchOptions(
     onDifficulty: (Difficulty) -> Unit,
     mode: LaunchMode,
     onMode: (LaunchMode) -> Unit,
+    levelStrip: @Composable () -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
+    val levels = mode == LaunchMode.LEVELS
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SegmentedControl(
-            options = Difficulty.entries,
-            selected = difficulty,
-            label = { it.label },
-            tone = scheme.primary,
-            onTone = scheme.onPrimary,
-            verticalPadding = 9.dp,
-            onSelect = onDifficulty,
-        )
+        Box {
+            SegmentedControl(
+                options = Difficulty.entries,
+                selected = difficulty,
+                label = { it.label },
+                tone = scheme.primary,
+                onTone = scheme.onPrimary,
+                verticalPadding = 9.dp,
+                onSelect = { if (!levels) onDifficulty(it) },
+                modifier = if (levels) Modifier.alpha(0f).clearAndSetSemantics { } else Modifier,
+            )
+            if (levels) Box(Modifier.matchParentSize()) { levelStrip() }
+        }
         // A second tone rather than a second green row: two identical-looking controls stacked
         // read as one four-choice thing, and these are different questions.
         SegmentedControl(
@@ -131,10 +146,11 @@ private fun <T> SegmentedControl(
     onTone: Color,
     verticalPadding: Dp,
     onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(scheme.surface)
