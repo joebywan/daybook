@@ -119,7 +119,7 @@ object Cipher : PuzzleType {
         "Two letters on one digit, a word starting with 0, or a column that doesn't add up turns red.",
     )
 
-    override val keyboardHelp = listOf("Type a letter to pick it, then a digit. Backspace clears, arrows move along the letters.")
+    override val keyboardHelp = listOf("Type a letter to pick it (H too, when the sum has an H), then a digit. Backspace clears, arrows walk the letters.")
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
         generateVerified(seed, difficulty) ?: CipherLogic.lastResort(difficulty)
@@ -306,14 +306,15 @@ object Cipher : PuzzleType {
                         .padding(start = at.x.dp, top = at.y.dp)
                         .size(tile)
                         .then(tileModifier(r, c, l))
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(minOf(8.dp, tile * 0.16f)))
                         .background(tileColour(l))
                         .then(if (selected == l) Modifier.border(2.5.dp, scheme.onBackground, RoundedCornerShape(8.dp)) else Modifier),
                     contentAlignment = Alignment.Center,
                 ) {
                     val letter = sum.letters[l].uppercaseChar().toString()
                     if (placed) {
-                        Text(
+                        // The letter in the corner, too small to read on the home grid's motif.
+                        if (tile >= 28.dp) Text(
                             letter,
                             Modifier.align(Alignment.TopStart).padding(start = tile * 0.08f, top = tile * 0.02f),
                             fontSize = (tile.value * 0.24f).sp,
@@ -389,6 +390,8 @@ object Cipher : PuzzleType {
                 .padding(horizontal = 12.dp)
                 .boardKeys(interactive) { key, _, repeat ->
                     val action = cipherKeyAction(key) ?: return@boardKeys false
+                    // A letter the sum lacks is left to the play screen, so H still asks for a hint there.
+                    if (action is CipherKeyAction.Letter && action.letter !in sum.letters) return@boardKeys false
                     if (!repeat || action is CipherKeyAction.Move) s.applyKey(action)?.let(onState)
                     true
                 },
@@ -415,6 +418,8 @@ object Cipher : PuzzleType {
                     textColour = { l, placed ->
                         when {
                             l in shown.letters -> scheme.error
+                            // On the selection's tint the player's hue would be faint.
+                            placed && s.selected == l -> scheme.onSurface
                             placed -> ink
                             else -> scheme.onSurface
                         }

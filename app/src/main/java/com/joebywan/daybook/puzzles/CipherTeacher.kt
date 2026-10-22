@@ -384,8 +384,8 @@ internal object CipherTeacher {
             LEADING -> Step(
                 LEADING, l, d, sum.tilesOf(l), sum.columnTiles(c - 1),
                 "Look at the first letter of the total.",
-                "The total is a letter longer than the addends, so its first letter, $x, is what the ${columnName(c - 1)} " +
-                    "carries. Two digits and a carry make at most 19, so $x is 1.",
+                "The total's extra first letter, $x, is the carry out of the ${columnName(c - 1)}. Two digits and a carry " +
+                    "make at most 19, so $x is 1.",
             )
             COLUMN -> column(sum, digits, l, d, c)
             ONLY_LETTER -> Step(
