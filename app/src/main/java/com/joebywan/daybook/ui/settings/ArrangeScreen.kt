@@ -99,7 +99,8 @@ fun ArrangeScreen(
             contentPadding = PaddingValues(18.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            itemsIndexed(puzzles, key = { _, p -> p.id }) { i, puzzle ->
+            // No item keys: keyed, the list follows a top row moved up out of view and jumps under the finger.
+            itemsIndexed(puzzles) { i, puzzle ->
                 Row(
                     Modifier
                         .fillMaxWidth()

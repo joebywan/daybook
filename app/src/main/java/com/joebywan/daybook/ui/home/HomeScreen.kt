@@ -108,7 +108,7 @@ fun HomeScreen(
     onAchievements: () -> Unit,
     onSettings: () -> Unit,
     puzzles: List<PuzzleType>,
-    inProgress: Set<String>,
+    inProgress: () -> Set<String>,
     onArrange: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -283,7 +283,7 @@ private fun StreakBadge(streak: Streak) {
 @Composable
 private fun PuzzleGrid(
     puzzles: List<PuzzleType>,
-    inProgress: Set<String>,
+    inProgress: () -> Set<String>,
     difficulty: Difficulty,
     doneToday: Set<Pair<String, Difficulty>>,
     pick: String,
@@ -307,7 +307,7 @@ private fun PuzzleGrid(
                             difficulty = difficulty,
                             doneToday = doneToday,
                             isPick = puzzle.id == pick,
-                            inProgress = puzzle.id in inProgress,
+                            inProgress = inProgress,
                             previewSize = previewSize,
                             onLaunch = onLaunch,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -327,7 +327,7 @@ private fun PuzzleTile(
     difficulty: Difficulty,
     doneToday: Set<Pair<String, Difficulty>>,
     isPick: Boolean,
-    inProgress: Boolean,
+    inProgress: () -> Set<String>,
     previewSize: Dp,
     onLaunch: (String) -> Unit,
     modifier: Modifier,
@@ -336,7 +336,8 @@ private fun PuzzleTile(
     val accent = Color(puzzle.accent)
     val solved = (puzzle.id to difficulty) in doneToday
     // A started pick shows "In progress" alone: the invitation has been taken up, and two labels cannot share a thumbnail.
-    val marked = isPick && !solved && !inProgress
+    val started = puzzle.id in inProgress()
+    val marked = isPick && !solved && !started
 
     Column(
         modifier
@@ -355,7 +356,7 @@ private fun PuzzleTile(
                     .clip(RoundedCornerShape(10.dp))
             )
             if (marked) TryMeLabel(previewSize, Modifier.align(Alignment.Center))
-            if (inProgress) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
+            if (started) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
             if (solved) {
                 Box(
                     Modifier.size(16.dp).clip(CircleShape).background(scheme.surface),

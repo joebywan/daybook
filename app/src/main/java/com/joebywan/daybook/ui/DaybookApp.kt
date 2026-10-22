@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -202,7 +203,10 @@ fun DaybookApp(startAt: Route = Route.Home) {
                     savedGameKey(p.id, difficulty, seed) to p.id
                 }.toMap()
             }
-            val inProgress by remember(tileKeys) { store.inProgress(tileKeys.keys) }.collectAsState(initial = emptySet())
+            val savesInProgress by remember(tileKeys) { store.inProgress(tileKeys.keys) }.collectAsState(initial = emptySet())
+            // Handed down as a state read in the tile itself: passed as a plain set it reached the tile stale on the web
+            // about half the time when it landed during the first frames (the pick kept "Try me!" over its saved game).
+            val inProgress = remember { derivedStateOf { savesInProgress.mapNotNull(tileKeys::get).toSet() } }
             HomeScreen(
                 today = today,
                 completions = completions,
@@ -227,7 +231,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
                 onAchievements = { route = Route.Achievements(fromHome = true) },
                 onSettings = { route = Route.Settings },
                 puzzles = puzzles,
-                inProgress = remember(inProgress, tileKeys) { inProgress.mapNotNull(tileKeys::get).toSet() },
+                inProgress = { inProgress.value },
                 onArrange = { route = Route.Arrange(fromHome = true) },
             )
         }
