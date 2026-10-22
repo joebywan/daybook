@@ -461,6 +461,13 @@ internal class DominoLadder private constructor(
     /** Whether a domino has settled since [forced] last checked every region's settled pips. */
     private var regionsToCheck = true
 
+    /**
+     * Hypotheses [whatIf] has already refuted in this run, with why. The ladder only ever learns, so a
+     * refuted hypothesis stays refuted: only the survivors need trying again. Never copied into a hypothesis.
+     */
+    private var refutedKind: IntArray? = null
+    private var refutedArg: IntArray? = null
+
     private val n = layout.size
     private val regions = layout.regionSquares
 
@@ -735,6 +742,8 @@ internal class DominoLadder private constructor(
      * candidates but one run into a contradiction within [DominoTeacher.WHAT_IF_ROUNDS] rounds.
      */
     fun whatIf(): WhatIf? {
+        val kinds = refutedKind ?: IntArray(alive.size).also { refutedKind = it }
+        val args = refutedArg ?: IntArray(alive.size).also { refutedArg = it }
         for (size in 2..3) {
             for (q in 0 until n) {
                 if (!free[q] || known[q] >= 0 || aliveSq[q] != size) continue
@@ -742,10 +751,14 @@ internal class DominoLadder private constructor(
                 var survivor = -1
                 for (o in bySquare[q]) {
                     if (!alive[o]) continue
-                    val h = hypothesis()
-                    h.fix(o)
-                    h.propagate(DominoTeacher.WHAT_IF_ROUNDS)
-                    if (h.broken != NONE) refuted.add(Refuted(o, h.broken, h.brokenArg))
+                    if (kinds[o] == NONE) {
+                        val h = hypothesis()
+                        h.fix(o)
+                        h.propagate(DominoTeacher.WHAT_IF_ROUNDS)
+                        kinds[o] = h.broken
+                        args[o] = h.brokenArg
+                    }
+                    if (kinds[o] != NONE) refuted.add(Refuted(o, kinds[o], args[o]))
                     else if (survivor < 0) survivor = o else { survivor = -2; break }
                 }
                 if (survivor >= 0 && refuted.size == size - 1) return WhatIf(q, survivor, refuted)

@@ -440,7 +440,7 @@ internal object DominoLogic {
         if (!cut.finishesAllGiven(tray)) return null
         cut.carve(rng)
         // One fact at a time. (Doubling batches was measured: the overshoot left Hard boards too easy for their tier.)
-        while (!cut.finishes(tray, spec.needs)) {
+        while (!cut.finishes(tray, minOf(spec.needs, DominoTeacher.LEVEL_COUNTING))) {
             if (!cut.tighten(rng)) return null
         }
         cut.loosen(rng, tray)
@@ -499,7 +499,11 @@ internal object DominoLogic {
         /** The strongest rule [squares] keep: EQUAL when all show one value (and there are two or more), else their SUM. */
         fun readRule(squares: List<Int>): RegionRule {
             val v = squares.map { values[it] }
-            return if (v.size > 1 && v.all { it == v[0] }) RegionRule(RuleKind.EQUAL) else RegionRule(RuleKind.SUM, v.sum())
+            return when {
+                v.size > 1 && v.all { it == v[0] } -> RegionRule(RuleKind.EQUAL)
+                spec.different && v.size > 1 && allDifferent(v) -> RegionRule(RuleKind.DIFFERENT)
+                else -> RegionRule(RuleKind.SUM, v.sum())
+            }
         }
 
         fun newRegion(squares: List<Int>): Int {
