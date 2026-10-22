@@ -231,7 +231,7 @@ object Dominoes : PuzzleType {
 
     /** Caps, in dp: a square no larger than a comfortable thumb, the tray's domino no larger than the board's. */
     private const val MAX_UNIT = 64f
-    private const val MAX_TRAY = 30f
+    private const val MAX_TRAY = 26f
     private const val TRAY_RATIO = 0.8f
 
     /**
@@ -316,14 +316,15 @@ object Dominoes : PuzzleType {
         val trayRows = if (dominoes == 0) 0 else ceil(dominoes / MAX_PER_ROW.toFloat()).toInt()
         val perRow = if (dominoes == 0) 0 else ceil(dominoes / trayRows.toFloat()).toInt()
         val t0 = if (dominoes == 0) 0f else minOf(boxW / (perRow * SLOT_W), MAX_TRAY * dp)
-        var t = t0
-        var u = 0f
-        repeat(6) {
+        fun square(t: Float): Float {
             val trayH = if (dominoes == 0) 0f else TRAY_GAP * t + trayRows * SLOT_H * t
-            u = maxOf(1f, minOf(boxW / (cols + MARGIN_START + MARGIN_END), (boxH - trayH) / (rows + MARGIN_TOP + MARGIN_BOTTOM), MAX_UNIT * dp))
-            t = minOf(t0, u * TRAY_RATIO)
+            return maxOf(1f, minOf(boxW / (cols + MARGIN_START + MARGIN_END), (boxH - trayH) / (rows + MARGIN_TOP + MARGIN_BOTTOM), MAX_UNIT * dp))
         }
-        return Fit(u, t, c0, r0, cols, rows, dominoes, trayRows, perRow)
+        var t = t0
+        repeat(6) { t = minOf(t0, square(t) * TRAY_RATIO) }
+        // The last square is sized for the last tray; shrinking the tray to it only frees height, so both fit.
+        val u = square(t)
+        return Fit(u, minOf(t, u * TRAY_RATIO), c0, r0, cols, rows, dominoes, trayRows, perRow)
     }
 
     // ---- colours --------------------------------------------------------------------------------
