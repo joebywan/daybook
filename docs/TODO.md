@@ -15,9 +15,6 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **Accessibility.** Eight boards use raw pointer input and expose no click actions, so a screen reader
-  cannot operate them. Knowingly deferred while sideloaded; becomes real the day this reaches a store
-  or another user. *L.* (`CLAUDE.md`, "Settled")
 - [ ] **Wide windows: polish left.** Rotation and resizable windows shipped in October 2026 (`PlayLayout` in `PlayScreen.kt`).
   Seen on a Pixel Tablet emulator and a phone on its side, three things are plain rather than wrong: the home grid on a phone
   on its side shows one row of tiles per screen and scrolls (columns come from width alone; letting height pick a smaller tile
@@ -44,19 +41,14 @@ from a measurement or review, so you can check it is still true.
   would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
-- [ ] **Word Wheel: check on a real touch screen.** The swipe was driven in Chromium (CDP touch and mouse) and WebKit (mouse; taps by
-  touch), not on the Android emulator or a phone: check a swipe, a back-out along the path, taps and the middle-of-wheel submit there,
-  and that a swipe over the wheel never scrolls or steals the back gesture. *S.*
 - [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
   (`tools/words/wheel-clues.txt`); cluing more widens the boards (every added word moves daily boards, as Lexicon's do). About 40% of
   hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
   reasoning. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
 
-- [ ] **Share preview: check on a phone.** The spoiler-free share card (`ui/play/ShareCard.kt`, `SharePreview.kt`) was rendered on
-  the web only (Chromium and WebKit, 375x537, 390x844, 844x390). Check the dialog and the Android share sheet on the emulator, and
-  that the emoji squares and Tower's pips read right once pasted into WhatsApp/Messages on Android and iOS. Restart counts as
-  undoing every move so far, and Target's "steps" is the operations still on the board at the finish (not only those that
-  build the target); both are simple readings the owner may want changed.
+- [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far, and Target's "steps" is the
+  operations still on the board at the finish (not only those that build the target); both are simple readings the owner may
+  want changed (`ui/play/ShareCard.kt`).
 
 ## Rewards
 
@@ -68,7 +60,8 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Levels.** A third mode beside Daily and Random: numbered packs of five boards that open one after another, so
   boards after the dailies have something to tick off (a player's feedback, 2026-10-22). Spec: `docs/LEVELS_SPEC.md`. *L.*
 - [ ] **Puzzle of the week.** A larger board once a week (e.g. Sundays), from the same `hash(date, puzzle, tier)` scheme so it
-  stays offline and free; most generators already scale by size. Decide which puzzles take part (only those whose larger
+  stays offline and free; most generators already scale by size. The owner wants it argued with worked examples per puzzle that fit a
+  phone screen first: Nonogram Expert is already as big as a phone allows. Decide which puzzles take part (only those whose larger
   sizes are proved and fast on the web) and whether it counts toward streaks. *M.*
 
 ## Needs a real iPhone
@@ -104,8 +97,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Pages HTTPS.** The Pages API reports `https_enforced=false` with no CNAME on the project site
   (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
-- [ ] **Repo description is stale.** GitHub's "About" text still says "ten" puzzle types (it is fourteen) and "for
-  Android" (there is a web version too). Settings > About on the repo page; no API needed, but it is the owner's call.
 - [ ] **Dependencies still behind after the toolchain majors.** The `androidx` libraries (Compose BOM
   2025.09 -> 2026.09, lifecycle, activity, navigation, datastore, core-ktx) and kotlinx-serialization 1.11
   are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
@@ -128,7 +119,7 @@ Still open: WebKit pass with `keyboard.press` (only Chromium was driven).
 
 ## Future puzzle candidates
 
-Ideas for puzzles 13 onwards, none started. Any new puzzle follows `docs/PUZZLE_STANDARDS.md` (three
+Ideas for further puzzles, none started. Any new puzzle follows `docs/PUZZLE_STANDARDS.md` (three
 tiers, proved or deliberately-unproved boards, a teacher, a walkthrough, parity pins, tests).
 
 **What makes a candidate fit Daybook:** it generates on the device from `hash(date, puzzle, tier)` with
@@ -173,27 +164,14 @@ below have a famous branded version; use the descriptive name).
     The tray competes with the toolbar for height; Tower's controls are the nearest precedent.
   - *Size: L.*
 
-- [ ] **Target: recapture the screenshots and drive it on the emulator.** The new puzzle was rendered on the web build only (Chromium and
-  WebKit, light and dark, 375x537 and tall); `docs/screenshots/home.png` (and its alt text) was not recaptured because that needs the emulator,
-  and nobody has tapped the tiles by touch on Android yet.
-- [ ] **Pointers: touch targets on Expert, on a phone.** Expert is 14x17 (capped from 18x20 so a square is about 23dp at 360dp
-  wide, 26 at 390, 27 on a 1080x2400 phone at 420dpi, about 18 in a phone browser at 375x537); a mis-tap on a blocked arrow costs a
-  life. On the emulator (1080x2400) all 49 taps of a daily Expert board, aimed at square centres by `adb input tap`, took the arrow
-  aimed at; a real thumb is not that precise, so check on a phone and widen `Pointers.REACH` or cap the size further if needed.
-  Also recapture `docs/screenshots/home.png` (and its alt text) with Pointers in the grid, on a clean install. *S.*
 - [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
   not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
-- [ ] **Cipher: recapture the screenshots and drive it on the emulator.** Rendered on the web build only (Chromium and WebKit, light and dark,
-  375x537 and 390x844); `docs/screenshots/home.png` and its alt text were not recaptured (needs the emulator), and nobody has played it by touch on Android.
 - [ ] **Cipher: other shapes need longer words.** Every tier is 4 + 4 = 5 because the leading carry is the foothold the no-trial ladder needs, and the
   answer lists stop at five letters. A screened six-letter answer list (SCOWL through `tools/words/build.py`, screened by hand as the others were) would
   allow 5 + 5 = 6, which would give Hard and Expert a different look. Measured without it: 5 + 5 = 5 gave one ladder board per 30 pairs, three addends none.
 - [ ] **Cipher: candidate notes, if players ask.** Not built: every hint ends in a digit placed, so none relies on an elimination the player must track.
   Sudoku's notes are the model (a mask per letter, defaulted; the mode `rememberSaveable`).
 
-- [ ] **Tally: recapture the screenshots and drive it on the emulator.** Rendered on the web build only (Chromium and WebKit, light and
-  dark, 375x537 and 390x844, every tier, a hint open, the finished frame); `docs/screenshots/home.png` was not recaptured (it needs the
-  emulator), and nobody has swept a line by touch on Android yet.
 - [ ] **Tally: a regions variant, deliberately not built.** The published genre also comes with coloured regions whose kept numbers must hit
   a region target as well. It adds a third kind of line to the ladder and a colour layer to a board that already carries targets on two
   edges; left out until the plain board has been played.
@@ -203,9 +181,6 @@ below have a famous branded version; use the descriptive name).
 Roughly in order of how well they fit, best first. Before adding one, read the existing puzzles' `rules`, not just their
 names: Bridges (Hashi) turned out to be Atoms, Star Battle is Kings, Takuzu is Mambo, Calcudoku is Cage Sudoku plus Inequality,
 and Battleships is close to Tents.
-- [ ] **Island-and-sea puzzle.** Numbered cells grow islands of that size, islands never touch, the sea is
-  one connected body with no 2x2 pool. Same family as Kings/LITS (region logic, a connectivity
-  proof in the solver); the teacher can name each rule it uses. *M–L.*
 - [ ] **Word ladder.** Change one letter at a time from a start word to an end word through valid words.
   Needs the same word lists as the word-deduction puzzle (the lists now exist: `LexiconWords`, `WordList`, rebuilt by `tools/words/build.py`); choose pairs
   with a unique shortest ladder to keep it provable. *M after the lists exist.*
@@ -238,6 +213,7 @@ puzzle first needs the accent-spacing rule relaxed (see "Accents are crowded" be
 **Not recommended** (noted so nobody re-investigates): a crossword needs a licensed clue database, which
 we cannot generate or ship offline; plain word-search and sliding-tile puzzles are generator-easy but do
 not demand thought, against the owner's stated taste.
+An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
 A practice mode per technique was declined by the owner: players can use the hints themselves, and it would
 only spend their time railroaded through a tutorial.
 
@@ -256,7 +232,7 @@ only spend their time railroaded through a tutorial.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
-- **Accents are crowded.** With twenty puzzles no hue is 25 degrees from every accent (`docs/COLOUR.md` asks for that);
+- **Accents are crowded.** With twenty-four puzzles no hue is 25 degrees from every accent (`docs/COLOUR.md` asks for that);
   Sand took the widest gap, hue 346, 19 degrees from the accents either side of it. A next puzzle needs the rule relaxed
   or a lightness/saturation difference to carry it.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,

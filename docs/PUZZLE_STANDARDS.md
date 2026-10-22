@@ -443,6 +443,8 @@ assert each claim a caption makes about the board, and walk the last frame with 
 - `moves` is shown on the results card; keep it honest (one per player action).
 - Round-trip test: `test/StateSerializationTest` iterates the registry but needs a branch in its `mutate`
   (an exhaustive `when`; the build fails until you add one), which must change the board.
+- Save capture: `test/SaveCompatibilityTest` fails until a released-build save of every puzzle exists. Write a new
+  capture file in the PR that adds the puzzle (the command is in the class comment); never edit an old one.
 
 ## 10. Tests required
 
@@ -457,6 +459,7 @@ Each puzzle `<N>`. "Template" is the file to copy.
 | Tier balance | harder tiers are not easier; no slack creeping in | `TowerBalanceTest`, `MosaicOptimumTest`, `SetsRulesTest` |
 | Reachability | tapping the real handler can reach the stated target | `SetsRulesTest` `claiming every set on the board finishes the puzzle` |
 | Serialization | part-played state round-trips; computed fields not written | `StateSerializationTest` (add a `mutate` branch) |
+| Old saves | a save the shipped build writes keeps loading | `SaveCompatibilityTest` (a new capture file) |
 | Teaching soundness | steps hold for every answer still possible; sound from player-made boards; mistakes outrank steps and are real | `KingsTeachingTest` |
 | Teaching coverage | which techniques boards need per tier; fallback ceiling asserted | `KingsTeachingTest` `coverage - ...` |
 | Text fit | nudge/explanation/caption inside the panel | `LitsTeachingTest`, `SetsTeachingTest`, and for Kings, Pipes and Atoms `every nudge and explanation fits the panel` (730 daily boards per tier, mistakes planted, 200 / 70 characters) |
@@ -550,7 +553,7 @@ In order. `X` is the new puzzle's name. Do this on a branch, never `main`.
 6. **`Preview`:** a fixed motif of the real glyphs. Render it at true size, both themes.
 7. **`ParityFingerprint.body`:** add the `when` branch (the build tells you).
 8. **Tests, first pass:** `XRulesTest` (rules, independent checker, win by a non-stored legal answer),
-   `StateSerializationTest.mutate` branch, parity pin test (run, copy the printed lines in).
+   `StateSerializationTest.mutate` branch, a `SaveCompatibilityTest` capture, parity pin test (run, copy the printed lines in).
    Run `GeneratorTest` and a year-long proof of the verified path.
 9. **`puzzles/XTeacher.kt`:** technique ladder, mistake, `deduce` over visible state only, fallback if the
    puzzle has a hidden answer; the `X.teach` wrapper and `applyStep`. Copy `KingsTeacher`. Write

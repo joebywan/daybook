@@ -567,7 +567,8 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   - A manual upload is Actions > "Publish to Google Play" with a tag and a track.
   - Saved games are the real danger: they are serialised by class name, and a bad build cannot be undone
     on someone's phone. Treat any change to a `PuzzleState`, a serialised class or `DataStoreKeyValueStore`
-    as one that must load an old save.
+    as one that must load an old save. `SaveCompatibilityTest` reads saves a released build wrote
+    (`app/src/test/resources/saves/`, never edited) and fails if any no longer loads or loses a field.
 - **A merge to `main` also reaches our own F-Droid repo** (`publish-fdroid.yml`, same APK and key as the GitHub
   Release; `docs/fdroid/README.md`). The listing text and images are `fastlane/metadata/`, the one copy for both stores: a
   merge that changes the text pushes it to Play (`play-listing.yml`), so edit it there, never in Play Console. The code is AGPL-3.0-or-later (`LICENSE`, chosen by the owner); f-droid.org's entry is live (https://f-droid.org/packages/com.joebywan.daybook/).
@@ -593,7 +594,8 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   finished candidate is proved again with no connectivity rule before it ships. Do not restore the
   connectivity rule to the win check to make uniqueness easier. `LitsUniquenessTest` asserts it
   with the independent `LitsOracle`; `FallbackTest` walks a year per tier through `generateVerified`.
-- Accessibility is knowingly absent and deliberately deferred while this is sideloaded.
+- Screen readers are not a goal: these are visual puzzles a blind player could not play however the boards were
+  exposed (the owner, 2026-10-22). Text size, colour-only signals and reduced motion were offered and left too.
 - **Any orientation, any window size** (the owner reversed the old portrait lock in October 2026: Android 16 ignores
   the lock on large screens anyway, and Play flags it). Do not bring the lock back. A wide window puts the play screen's
   board beside a 360dp side panel (title, clock, the hint as a panel rather than a popover, toolbar at its foot, and the
@@ -608,9 +610,6 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   caching component, and the owner has declined for now; `renovate.json` holds it back.
 
 ## Open
-
-Accessibility — eight boards use raw pointer input and expose no click
-actions, so a screen reader cannot operate them.
 
 **The full list of outstanding work is `docs/TODO.md`.** Keep it current as you work: add what you
 find but are not fixing, delete what you finish, in the same PR.
