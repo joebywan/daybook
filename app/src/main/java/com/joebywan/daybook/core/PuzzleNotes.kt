@@ -129,6 +129,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Work from the units: each column tells the next its carry.",
         "No word starts with 0, so 0 hides in a word's later letters.",
     ),
+    "wordwheel" to listOf(
+        "The longest slot always uses every letter on the wheel.",
+        "A crossing letter cuts a slot down to a handful of words.",
+        "Shuffle the wheel when a word will not come.",
+        "A bonus word rules that word out for every slot.",
+        "Plurals and -ED or -ING forms are never grid words.",
+    ),
     "pointers" to listOf(
         "An arrow with an empty line to the edge can always go.",
         "Clearing an arrow never blocks another: free stays free.",

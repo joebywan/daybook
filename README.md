@@ -72,6 +72,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Cage Sudoku | Sudoku with sum cages | Sudoku in which every dashed cage must add up to its number, with no digit repeated in it |
 | Target | Number-target arithmetic | Combine six numbers with + − × ÷ (whole numbers only) until a tile equals the target |
 | Cipher | Cryptarithm (alphametic) | A sum of real words in which each letter stands for one digit: find the digits that make it true |
+| Word Wheel | Letter-wheel crossword | Spell words from a wheel of letters to fill a small crossword; other real words count as bonus words |
 | Pointers | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -128,6 +129,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   [Lichess puzzle database](https://database.lichess.org/#puzzles) (CC0). `tools/chess/build.py` keeps only those with
   exactly one key move and a shortest forced mate of exactly N, checked with python-chess; the tests re-prove the shipped
   lists with the app's own engine and an independent naive minimax.
+- **Word Wheel** — the wheel is an index into a fixed sorted list of well-known words (the same SCOWL screening as
+  Lexicon), and its crossword is laid from the words it spells. A board ships only if, solving it from the hints alone,
+  no slot ever has more than six words that fit it; an independent checker re-reads every row and column of the
+  squares to prove no two words touch and no word was made by accident.
 - **Pointers** — arrows are laid one at a time, each only where "is in the way of" stays free of cycles, so some order always
   clears the board, and since taking an arrow away only ever opens a way out, no order of free taps can strand you. The
   finished board is cleared greedily before it ships, and the tests check a year of boards with an independent cycle check.
