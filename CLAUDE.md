@@ -504,7 +504,7 @@ assertion loose enough to survive the bug is the same thing wearing a number.
     as one that must load an old save.
 - **A merge to `main` also reaches our own F-Droid repo** (`publish-fdroid.yml`, same APK and key as the GitHub
   Release; `docs/fdroid/README.md`). The listing text and images for F-Droid are `fastlane/metadata/`; keep the text in
-  step with `docs/play/LISTING.md`. The code is AGPL-3.0-or-later (`LICENSE`, chosen by the owner); f-droid.org's entry is ready but not submitted.
+  step with `docs/play/LISTING.md`. The code is AGPL-3.0-or-later (`LICENSE`, chosen by the owner); f-droid.org's entry is live (https://f-droid.org/packages/com.joebywan.daybook/).
 - Signing key: `~/Documents/github/Claude/daybook-android-signing/` — the only readable copy.
   Certificate pinned in `android/release-key.sha256`; `tools/verify-apk.sh` fails a release whose
   certificate, name or debuggable flag is wrong. A green Gradle build is **not** proof of signing.

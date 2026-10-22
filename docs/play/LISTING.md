@@ -7,6 +7,9 @@ file; the account steps are in the README under "Publishing to Google Play". Lim
 Keep the wording free of a puzzle count (it ages) and of any newspaper's or game show's brand name
 for a puzzle.
 
+The text is not uploaded by any workflow: after changing it here (and in `fastlane/metadata/android/en-US/`,
+which F-Droid reads), paste it into the main store listing in Play Console.
+
 ## Store listing
 
 **App name** (max 30): `Daybook: Daily Logic Puzzles`
@@ -14,15 +17,18 @@ for a puzzle.
 **Short description** (max 80):
 
 ```
-New logic puzzles every day. No ads, no subscription, works offline.
+New logic and word puzzles every day. No ads, no account, works offline.
 ```
 
 **Full description** (max 4000):
 
 ```
-Daybook is a daily logic-puzzle app for people who like to think.
+Fresh logic and word puzzles every day, free, with every past day open from the start. No ads, no account, no internet needed.
 
-Every day brings a fresh set of classic logic puzzles: Sudoku, region and placement puzzles, number, sum, sign and symbol grids, pipe networks, flood-fills, one-line paths, code-breaking, letter sums, word wheels and chess mate-in-N puzzles. Each comes in three difficulties, Standard, Hard and Expert, and each is built so that it has exactly one answer you can reach by reasoning. Nothing needs guessing.
+Every day brings a new set of classic puzzles: Sudoku and Sudoku with sum cages, region and placement puzzles, picture grids, number, sum, sign and symbol grids, pipe networks, flood-fills, one-line paths, code-breaking, a hidden-word guessing game, letter sums, word wheels and chess mate-in-N. Each comes in three difficulties, Standard, Hard and Expert, and each is built so that it has exactly one answer you can reach by reasoning. Nothing needs guessing.
+
+HINTS THAT TEACH
+Stuck? Ask for a hint and Daybook explains the next step in plain language, pointing at the cells it is talking about. You make the move yourself, so you learn the technique instead of watching it get filled in. Every puzzle has a short walkthrough for first-timers, and "How to play" is always one tap away.
 
 NO ADS. NO SUBSCRIPTION. NO ACCOUNT.
 There are no adverts, no paywall, no sign-in and no in-app purchases. The app does not even ask for network access, so it works on a plane, on a train and in a tunnel.
@@ -30,14 +36,14 @@ There are no adverts, no paywall, no sign-in and no in-app purchases. The app do
 THE WHOLE ARCHIVE, FROM DAY ONE
 Puzzles are made on your device from the date, so every past day is already there. Missed a week? Play it. Want something different? Switch to Random boards at any difficulty.
 
-LEARN AS YOU GO
-Stuck? Ask for a hint and Daybook explains the next step in plain language, pointing at the cells it is talking about, rather than just filling one in. Every puzzle has a short walkthrough for first-timers, and "How to play" is always one tap away.
-
 KEEP YOUR STREAK
 Track your daily streak, your times and your statistics, all stored privately on your phone.
 
 PRIVATE BY DESIGN
 Daybook collects nothing. No analytics, no trackers, no third-party SDKs. Your progress never leaves your device.
+
+PLAY ANYWHERE
+The same daily puzzles run in a web browser at knowhowit.com.au/daybook, no install needed.
 
 Hand-built puzzle generators, proven boards and a calm, uncluttered design. Come back tomorrow for the next one.
 ```
