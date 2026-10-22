@@ -310,6 +310,7 @@ def build_parser():
     ap.add_argument("--finish", type=int, choices=range(4), metavar="N",
                     help="show the finished frame over each board with N (0-3) earned achievements (?finish=N)")
     ap.add_argument("--togo", action="store_true", help="with --finish: add the 'only X to go' line")
+    ap.add_argument("--share", action="store_true", help="with --finish: open the share preview over the frame")
     ap.add_argument("--home", action="store_true", help="screenshot the home grid instead of a puzzle")
     ap.add_argument("--dist", type=Path, default=DEFAULT_DIST, help=f"built web distribution (default: {DEFAULT_DIST})")
     ap.add_argument("-o", "--out", type=Path, default=DEFAULT_OUT, help=f"output directory (default: {DEFAULT_OUT})")
@@ -414,7 +415,7 @@ def shoot(ctx, base_url, args, puzzle, tier, w, h, tag) -> list[str]:
     page.on("pageerror", lambda e: problems.append(f"{tag}: page error: {e}"))
     query = f"?date={args.date}&tier={tier}" + ("" if args.home else f"&puzzle={puzzle}")
     if args.finish is not None:
-        query += f"&finish={args.finish}" + ("&togo" if args.togo else "")
+        query += f"&finish={args.finish}" + ("&togo" if args.togo else "") + ("&share" if args.share else "")
     try:
         page.goto(base_url + query, wait_until="load", timeout=int(args.timeout * 1000))
         png, settled = settle(page, args.timeout)
