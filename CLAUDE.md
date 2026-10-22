@@ -599,7 +599,7 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   board beside a 360dp side panel (title, clock, the hint as a panel rather than a popover, toolbar at its foot, and the
   finish frame and pill) whenever that gives the board more room than stacking: `PlayLayout` in `PlayScreen.kt`, one
   `Layout` for both shapes so a rotation keeps every board's `rememberSaveable` state. A phone in portrait gets the stacked
-  layout, pixel for pixel what it was. The home grid takes a column per 150dp (3 to 7). Boards size from both axes, as
+  layout, pixel for pixel what it was. The home grid takes a column per 150dp (3 to 7); a short wide window (under 480dp tall: a phone on its side) puts the date and streak beside the title and the two toggles side by side, and adds columns, down to 110dp tiles, until two rows fit (`homeColumns`). Boards size from both axes, as
   below; Tower caps its width at 480dp. Check a layout change on a tablet in both orientations, in a resized window and
   on a phone on its side, as well as the phone sizes.
 - If this reaches the Play Store, the developer name and contact details the listing publishes are
