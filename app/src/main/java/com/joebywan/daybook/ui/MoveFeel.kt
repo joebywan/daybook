@@ -15,6 +15,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.scale
 import kotlin.math.abs
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 
 /**
  * How many moves the play screen has been handed this visit. Only `PlayScreen.push` raises it: undo, restart, a
@@ -89,6 +92,11 @@ class MoveFeel internal constructor() {
         this.cells = cells
         this.done = done
     }
+
+    companion object {
+        /** One that never plays, for a motif or a preview drawn with a board's own code. */
+        val Still = MoveFeel()
+    }
 }
 
 /**
@@ -134,3 +142,18 @@ fun Modifier.moveFeel(feel: MoveFeel, i: Int, glow: Color): Modifier = drawWithC
 
 /** The strongest a finished unit's glow is drawn: a wash, never a fill. */
 const val GLOW_ALPHA = 0.35f
+
+/** A [w] x [h] grid's rows (top to bottom, each left to right), then its columns (each top to bottom). */
+fun lineUnits(w: Int, h: Int): List<IntArray> =
+    List(h) { r -> IntArray(w) { r * w + it } } + List(w) { c -> IntArray(h) { it * w + c } }
+
+/**
+ * For a board drawn on one canvas: [draw] square [i] at its settle scale about the middle of the square at
+ * [topLeft] and [size], then its glow in [glow] over it.
+ */
+inline fun DrawScope.feelSquare(feel: MoveFeel, i: Int, topLeft: Offset, size: Size, glow: Color, draw: DrawScope.() -> Unit) {
+    val s = feel.scale(i)
+    if (s == 1f) draw() else scale(s, Offset(topLeft.x + size.width / 2, topLeft.y + size.height / 2)) { draw() }
+    val g = feel.glow(i)
+    if (g > 0f) drawRect(glow.copy(alpha = GLOW_ALPHA * g), topLeft, size)
+}

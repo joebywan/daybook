@@ -58,6 +58,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.TimeSource
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * Tents. The board is one canvas: a row of column counts across the top, a column of row counts down the
@@ -212,6 +216,8 @@ object Tents : PuzzleType {
         scheme: ColorScheme,
         hues: Pair<Float, Float>,
         overlay: Overlay,
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val n = s.size
         val dark = BoardHues.isDark(scheme)
@@ -232,12 +238,14 @@ object Tents : PuzzleType {
             val i = r * n + c
             val x = gx + c * u
             val y = gy + r * u
-            when {
-                s.trees[i] -> drawTree(x, y, u, treeInk, scheme.onSurface)
-                s.marks[i] == TentsLogic.TENT -> drawTent(x, y, u, if (i in overlay.badTents) scheme.error else tentInk, scheme.surface)
-                seen[i] == TentsLogic.GRASS -> {
-                    drawRect(grassFill, Offset(x, y), Size(u, u))
-                    drawGrass(x, y, u, treeInk)
+            feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
+                when {
+                    s.trees[i] -> drawTree(x, y, u, treeInk, scheme.onSurface)
+                    s.marks[i] == TentsLogic.TENT -> drawTent(x, y, u, if (i in overlay.badTents) scheme.error else tentInk, scheme.surface)
+                    seen[i] == TentsLogic.GRASS -> {
+                        drawRect(grassFill, Offset(x, y), Size(u, u))
+                        drawGrass(x, y, u, treeInk)
+                    }
                 }
             }
         }
@@ -390,6 +398,15 @@ object Tents : PuzzleType {
             settled = bad
         }
 
+        // A row or column is finished when it has its count of tents, none touching another.
+        val units = remember(n) { lineUnits(n, n) }
+        val touching = base.touching()
+        val feel = rememberMoveFeel(base.marks, units) { u ->
+            val line = units[u]
+            line.count { base.marks[it] == TentsLogic.TENT } == (if (u < n) base.rowCounts[u] else base.colCounts[u - n]) &&
+                line.none { it in touching }
+        }
+
         // The keyboard cursor: transient, so not in the state.
         var cursor by remember(s.solution) { mutableStateOf<Int?>(null) }
 
@@ -420,7 +437,7 @@ object Tents : PuzzleType {
                             .reduceOrNull { a, b -> Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom)) }
                     },
             ) {
-                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, hues, overlay) }
+                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, hues, overlay, feel, Color(accent)) }
                 // Taps are read over the grid alone; the counts beside it are not part of the play area.
                 Box(
                     Modifier

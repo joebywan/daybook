@@ -53,6 +53,8 @@ import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * A Regions board in play. [region] (the region id of each square) and [solution] are fixed for the
@@ -364,6 +366,12 @@ object Regions : PuzzleType {
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         val digits = layout.digits
+        // A region is finished when it holds 1..its size, none of them touching an equal digit.
+        val units = remember(s.region) { s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() } }
+        val feel = rememberMoveFeel(s.cells, units) { u ->
+            val r = units[u]
+            r.map { s.cells[it] }.toSet() == (1..r.size).toSet() && r.none { it in conflicts }
+        }
 
         // Sized from both axes (CLAUDE.md): the grid leaves room for the digit pad under it.
         BoxWithConstraints(
@@ -400,6 +408,7 @@ object Regions : PuzzleType {
                             Modifier
                                 .padding(start = slot * (i % n), top = slot * (i / n))
                                 .size(slot)
+                                .moveFeel(feel, i, Color(accent))
                                 .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
                                 .ring(look, glow, pulse, corner = 2f)
                                 .background(fill)

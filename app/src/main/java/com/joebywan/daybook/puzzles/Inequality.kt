@@ -53,6 +53,9 @@ import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * An Inequality square in play. [signs] and [solution] are fixed for the board; [cells] holds 0 for
@@ -339,6 +342,13 @@ object Inequality : PuzzleType {
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        // A row or column is finished when it holds 1..n and every sign inside it is true.
+        val units = remember(n) { lineUnits(n, n) }
+        val feel = rememberMoveFeel(s.cells, units) { u ->
+            val line = units[u]
+            line.map { s.cells[it] }.toSet() == (1..n).toSet() &&
+                broken.none { s.signs[it].lo in line && s.signs[it].hi in line }
+        }
 
         // Sized from both axes (CLAUDE.md): the grid leaves room for the digit pad under it.
         BoxWithConstraints(
@@ -367,6 +377,7 @@ object Inequality : PuzzleType {
                             Modifier
                                 .padding(start = slot * (i % n) + (slot - cell) / 2, top = slot * (i / n) + (slot - cell) / 2)
                                 .size(cell)
+                                .moveFeel(feel, i, Color(accent))
                                 .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
                                 .ring(look, glow, pulse, corner = 8f)
                                 .clip(RoundedCornerShape(8.dp))

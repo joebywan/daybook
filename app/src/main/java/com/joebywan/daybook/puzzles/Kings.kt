@@ -53,6 +53,9 @@ import com.joebywan.daybook.ui.rememberHintPulse
 import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -929,6 +932,15 @@ object Kings : PuzzleType {
         // the draw phase, so it repaints the outlines without recomposing the board every frame.
         val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         val palette = remember(s.region) { regionPalette(s.size, s.region) }
+        // Rows, columns and regions: one finished holds exactly one king, clashing with nothing.
+        val units = remember(s.region) {
+            lineUnits(s.size, s.size) + s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() }
+        }
+        val settled = s.conflicts()
+        val feel = rememberMoveFeel(s.marks, units) { u ->
+            val kings = units[u].filter { s.marks[it] == Mark.KING }
+            kings.size == 1 && kings[0] !in settled
+        }
 
         // Keyed on the board as well as the tap: a board that moved underneath a held tap restarts
         // this, and [held] is null the second time round, so the stale mark is quietly dropped.
@@ -1080,6 +1092,7 @@ object Kings : PuzzleType {
                             Modifier
                                 .padding(start = cell * c, top = cell * r)
                                 .size(cell)
+                                .moveFeel(feel, i, Color(accent))
                                 .padding(1.dp)
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(
