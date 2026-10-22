@@ -19,11 +19,6 @@ from a measurement or review, so you can check it is still true.
   (`docs/PUZZLE_STANDARDS.md` section 8); only Lexicon's BOAT and Sudoku's cell-then-digit were converted. The other 23 still
   split one idea over several frames (Inequality, Regions, Cages, Cipher select then digit), teach gestures only in captions,
   and carry claims the rules contradict (Lexicon frame 4: "no guess can tell COAT, GOAT and MOAT apart", but CLOG does). *M.*
-- [ ] **Wide windows: polish left.** Rotation and resizable windows shipped in October 2026 (`PlayLayout` in `PlayScreen.kt`).
-  Seen on a Pixel Tablet emulator and a phone on its side, three things are plain rather than wrong: the home grid on a phone
-  on its side shows one row of tiles per screen and scrolls (columns come from width alone; letting height pick a smaller tile
-  would fit two); Lexicon's tiles and keyboard keep their phone size on a tablet, leaving the board small in a large box; the
-  side panel is empty between the clock and the toolbar unless a hint is open. *S-M.*
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
   text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it
