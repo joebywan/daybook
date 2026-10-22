@@ -564,7 +564,7 @@ private fun PlayBoard(
                     modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth(),
                     fill = false,
                 )
-            } else if (wide && !state.solved) {
+            } else if (wide && !finished) {
                 Column(
                     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 8.dp),
                 ) {
