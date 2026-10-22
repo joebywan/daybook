@@ -9,7 +9,6 @@ import com.joebywan.daybook.platform.currentDate
 import com.joebywan.daybook.platform.dateOverride
 import com.joebywan.daybook.ui.DaybookApp
 import com.joebywan.daybook.ui.Route
-import com.joebywan.daybook.ui.theme.DaybookTheme
 import kotlinx.datetime.LocalDate
 
 /**
@@ -30,7 +29,5 @@ fun DaybookWebApp(dateParam: String?, tierParam: String?, puzzleParam: String?) 
         val tier = Difficulty.fromKey(launch.read("difficulty").orEmpty())
         puzzleParam?.let(PuzzleRegistry::byId)?.let { Route.Play(it.id, tier, currentDate()) } ?: Route.Home
     }
-    DaybookTheme {
-        DaybookApp(startAt = start)
-    }
+    DaybookApp(startAt = start)
 }

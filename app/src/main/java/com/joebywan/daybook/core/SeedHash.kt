@@ -21,6 +21,23 @@ object SeedHash {
         mix(nonce xor puzzleId.stableHash() xor (difficulty.ordinal * 0x9E3779B9L))
 
     /**
+     * The seed of one board of a level ([Levels]). Started from its own constant and mixed before the
+     * puzzle id goes in, so a level board is not a daily board of some day nor a random board.
+     */
+    fun level(level: Int, puzzleId: String, difficulty: Difficulty): Long {
+        var h = mix(level.toLong() * 0x100000001B3L xor LEVEL)
+        h = mix(h xor puzzleId.stableHash())
+        h = mix(h xor (difficulty.ordinal + 1).toLong())
+        return h
+    }
+
+    /** The seed of a draw [Levels] makes: [index] is a deck or a level number, [salt] says which draw. */
+    fun levelPick(index: Int, salt: Long): Long = mix(mix(index.toLong() xor LEVEL_PICK) xor salt)
+
+    private const val LEVEL = 0x4C6576656C730001L // "Levels" and a version
+    private const val LEVEL_PICK = 0x4C65766C50696B01L
+
+    /**
      * Days since 1970-01-01 in the proleptic Gregorian calendar — the same number
      * `LocalDate.of(year, month, day).toEpochDay()` gives, which a JVM test checks day by day.
      * Howard Hinnant's days-from-civil; [month] is 1-12.

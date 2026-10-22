@@ -41,11 +41,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -302,8 +304,15 @@ private fun StreakBadge(streak: Streak) {
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (streak.lapsed) {
-            Text("Welcome back", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+        // Never a bare 0 (docs/REWARDS.md). An unseen, zero-width number holds the badge, and so the header, at the
+        // height it has with one, so the first solve moves nothing.
+        if (!streak.alive) {
+            Text("0", style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(0.dp).alpha(0f).clearAndSetSemantics { })
+            Text(
+                if (streak.lapsed) "Welcome back" else "Day one awaits",
+                style = MaterialTheme.typography.labelLarge,
+                color = scheme.onSurfaceVariant,
+            )
         } else {
             Text(
                 "${streak.current}",

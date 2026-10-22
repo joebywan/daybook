@@ -85,6 +85,16 @@ class StateSerializationTest {
     }
 
     @Test
+    fun `trimming the undo stack keeps each restart pointing at the board it cleared`() {
+        val board = PuzzleRegistry.all.first().generate(seed, Difficulty.EXPERT)
+        val long = SavedGame(board, history = List(30) { board }, restarts = listOf(3, 10, 30))
+
+        // 6 entries dropped: the first restart's board went with them, the others move down.
+        assertEquals(listOf(4, 24), SavedGame.decode(long.encode())?.restarts)
+        assertEquals(emptyList<Int>(), SavedGame.decode(SavedGame(board).encode())?.restarts)
+    }
+
+    @Test
     fun `the computed win condition is never written`() {
         for (puzzle in PuzzleRegistry.all) {
             val json = SavedGame(mutate(puzzle.generate(seed, Difficulty.HARD))).encode()

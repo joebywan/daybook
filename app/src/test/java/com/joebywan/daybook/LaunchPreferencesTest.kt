@@ -2,6 +2,8 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.ui.home.LaunchPreferences
+import com.joebywan.daybook.ui.home.timerShown
+import com.joebywan.daybook.ui.theme.Appearance
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -23,13 +25,55 @@ class LaunchPreferencesTest {
     }
 
     @Test
-    fun timerShowsByDefaultAndFollowsTheSwitch() = runBlocking {
+    fun timerIsHiddenByDefaultAndFollowsTheSwitch() = runBlocking {
         val prefs = LaunchPreferences(MemoryStore())
-        assertEquals("a player who never opened Settings keeps the clock", true, prefs.showTimer.first())
-        prefs.setShowTimer(false)
-        assertEquals(false, prefs.showTimer.first())
+        assertEquals("nothing stored hides the clock", false, prefs.showTimer.first())
         prefs.setShowTimer(true)
         assertEquals(true, prefs.showTimer.first())
+        prefs.setShowTimer(false)
+        assertEquals(false, prefs.showTimer.first())
+    }
+
+    @Test
+    fun theTimerRuleKeepsAStoredChoiceAndOtherwiseAsksWhetherThePlayerHasPlayed() {
+        assertEquals(false, timerShown(null, hasPlayed = false))
+        assertEquals("an update must not take an existing player's clock away", true, timerShown(null, hasPlayed = true))
+        for (played in listOf(false, true)) {
+            assertEquals(true, timerShown("on", played))
+            assertEquals(false, timerShown("off", played))
+            assertEquals(true, timerShown("garbage", played))
+        }
+    }
+
+    @Test
+    fun settlingWritesTheDefaultOnceAndNeverOverwritesAChoice() = runBlocking {
+        val returning = MemoryStore()
+        LaunchPreferences(returning).settleShowTimer { true }
+        assertEquals("on", returning.strings.value["show_timer"])
+
+        val fresh = MemoryStore()
+        LaunchPreferences(fresh).settleShowTimer { false }
+        assertEquals("off", fresh.strings.value["show_timer"])
+        // Once written, later progress does not turn it back on: the first answer is the default.
+        LaunchPreferences(fresh).settleShowTimer { true }
+        assertEquals("off", fresh.strings.value["show_timer"])
+
+        val chose = MemoryStore()
+        LaunchPreferences(chose).setShowTimer(false)
+        LaunchPreferences(chose).settleShowTimer { true }
+        assertEquals(false, LaunchPreferences(chose).showTimer.first())
+    }
+
+    @Test
+    fun appearanceFollowsTheSystemUntilChosenAndAnUnknownValueFallsBack() = runBlocking {
+        val store = MemoryStore()
+        val prefs = LaunchPreferences(store)
+        assertEquals(Appearance.SYSTEM, prefs.appearance.first())
+        prefs.setAppearance(Appearance.DARK)
+        assertEquals(Appearance.DARK, prefs.appearance.first())
+        assertEquals("the web page's start-up script reads this exact value", "DARK", store.strings.value["appearance"])
+        store.putString("appearance", "garbage")
+        assertEquals(Appearance.SYSTEM, prefs.appearance.first())
     }
 
     @Test
@@ -47,8 +91,8 @@ class LaunchPreferencesTest {
         val store = MemoryStore()
         val prefs = LaunchPreferences(store)
         prefs.setPlaySound(false)
-        assertEquals(true, prefs.showTimer.first())
-        prefs.setShowTimer(false)
+        assertEquals(false, prefs.showTimer.first())
+        prefs.setShowTimer(true)
         assertEquals(false, prefs.playSound.first())
         store.putString("play_sound", "garbage")
         assertEquals(true, prefs.playSound.first())
