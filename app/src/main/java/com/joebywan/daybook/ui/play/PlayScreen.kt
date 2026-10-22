@@ -100,7 +100,9 @@ import com.joebywan.daybook.platform.formatClock
 import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.generateBoard
 import com.joebywan.daybook.platform.readyBoard
+import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.LocalHaptics
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
@@ -239,6 +241,7 @@ private fun PlayBoard(
     var game by rememberSaveable(initial, stateSaver = SavedGameSaver) { mutableStateOf(pristine) }
     // Saved alongside the game: without it, rotating a finished board would record the win twice.
     var recorded by rememberSaveable(initial) { mutableStateOf(false) }
+    val haptics = LocalHaptics.current
     // Transient: a reopened solved board shows the plain frame.
     var praise by remember { mutableStateOf(finishPreview ?: Praise()) }
     // Finished-frame state: hidden to inspect the board, and confetti played once. Never PuzzleState.
@@ -339,13 +342,24 @@ private fun PlayBoard(
             // Asked before onSolved: the history must not yet contain this solve.
             praise = praiseFor(seconds, game.hints, game.state, game.log)
             onSolved(seconds, game.hints)
+            haptics.success()
         }
     }
 
     // Reads through `game` rather than the unpacked locals so that two taps landing in the same
     // frame stack up properly instead of pushing the same board twice.
     fun push(next: PuzzleState) {
-        game = game.copy(state = next, history = game.history + game.state, log = game.log + PlayLog.step(puzzle, game.state, next))
+        val prev = game.state
+        val step = PlayLog.step(puzzle, prev, next)
+        game = game.copy(state = next, history = game.history + prev, log = game.log + step)
+        // A buzz for a move that lands (not a selection or a typed letter), a firmer one for a bump; a solve gets
+        // its own, with the chime, so the move that solves stays quiet here.
+        when {
+            next.solved -> Unit
+            step == PlayLog.WRONG.toString() ||
+                (next is PointersState && prev is PointersState && next.bumps.size > prev.bumps.size) -> haptics.bump()
+            step.isNotEmpty() -> haptics.tick()
+        }
     }
 
     // One logged hint per counted hint, exactly where the count goes up.
@@ -877,7 +891,7 @@ private fun NextTile(option: NextOption, accent: Color, modifier: Modifier, onCl
 private fun IconCircle(icon: ImageVector, label: String, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Box(
-        Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick),
+        Modifier.size(48.dp).clip(CircleShape).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, label, tint = scheme.onSurfaceVariant)

@@ -76,8 +76,8 @@ Owner's design (Figma "Daybook-achieve-draft"): a full-screen overlay on the sol
 ("Congratulations!" or the streak title between two drawn party poppers, `PartyPopper` in `FinishExtras.kt`, then the time
 and one personal line), the next-step BUTTONS in a box at the bottom, and the CENTRE left open so the board shows through.
 - **Confetti** (`Confetti`): 70 pieces on a Canvas over the whole screen, ~2 s, once per finish (`confettiPlayed` is
-  `rememberSaveable`, so a rotation does not replay it), takes no input. There is no reduced-motion setting in the app,
-  so none is honoured; the Sound switch governs the chime only. No emoji: the web build has no emoji font.
+  `rememberSaveable`, so a rotation does not replay it), takes no input. Not drawn at all under the system's reduced motion
+  (`LocalReducedMotion`, below); the Sound switch governs the chime only. No emoji: the web build has no emoji font.
 - **Centre** (`ResultsBlock`), only when the solve earned achievements; otherwise empty (no silhouette, no block). One
   achievement at a time: badge (`AchievementBadge`, 72dp, 44dp under 640dp tall), title, description. With several: "1 of 3",
   dots and "Tap to see next achievement"; one tap on the block shows the next and it **wraps** after the last.
@@ -111,8 +111,25 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
 - **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added. Its
   home tile, while unsolved, gets a thin gold ring, a frame of twinkling gold sparkles (`ui/home/FeaturedMark.kt`; one infinite
   transition read only in the draw phase) and "Try me!" tilted across the thumbnail with a halo, content description
-  "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved. The grid does not reorder.
+  "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved, and under reduced motion the sparkles are drawn still. The grid does not reorder.
   Nothing is stored.
+
+## Reduced motion and haptics (`ui/Motion.kt`, the platform seam)
+
+- **Reduced motion** follows the system: Android's "Remove animations" (animator duration scale 0), the web's
+  `prefers-reduced-motion: reduce`. Both are watched, so a change applies at once. `rememberReducedMotion` is read once
+  in `DaybookApp` and handed down as `LocalReducedMotion`. Under it: no confetti; the Today's-pick sparkles drawn still (no
+  infinite transition runs); the hint glow steady at full strength (`rememberHintPulse`, which every board uses); Pointers'
+  arrow simply goes and a bump flashes red without the shake; Sand has no pour stream and no refusal shake, and a lifted tube
+  rises at once; a Pipes tile shows its new turn; the hint popover jumps rather than slides. Fades (the finished frame's
+  fade-in) and the loading spinner stay: they are not motion across the screen. A new decorative animation should read
+  `LocalReducedMotion` too.
+- **Haptics** (`rememberHaptics`, `LocalHaptics`): `tick` when a push changes the board (the same test as the play log's
+  move: a selection or a typed letter is silent), `bump` for a Pointers bump or a wrong Sets pick, `success` on a solve
+  beside the chime (the solving move does not tick as well). Android uses `performHapticFeedback` (CLOCK_TICK; REJECT and
+  CONFIRM from Android 11, LONG_PRESS and VIRTUAL_KEY before), which honours the system's touch-feedback setting; the web
+  uses `navigator.vibrate` (8 ms, 50 ms, a 20-60-40 pattern), which iOS lacks. The walkthrough does not buzz. The
+  Settings switch "Vibration" (`LaunchPreferences.vibrate`, key `vibrate`, default on) turns it all off.
 
 ## Claim to keep honest
 

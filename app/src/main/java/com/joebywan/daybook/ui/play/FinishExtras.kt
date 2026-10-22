@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.stats.AchievementBadge
 import kotlin.math.sin
 import kotlin.random.Random
@@ -58,6 +59,8 @@ private class Piece(val x: Float, val delay: Float, val speed: Float, val sway: 
  */
 @Composable
 fun Confetti(played: Boolean, onPlayed: () -> Unit) {
+    // Reduced motion: no confetti at all.
+    if (LocalReducedMotion.current) return
     val t = remember { Animatable(if (played) 1f else 0f) }
     val pieces = remember {
         val r = Random(2026)

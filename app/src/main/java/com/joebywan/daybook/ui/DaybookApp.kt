@@ -24,7 +24,9 @@ import com.joebywan.daybook.platform.currentDate
 import com.joebywan.daybook.platform.formatClock
 import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.prepareBoards
+import com.joebywan.daybook.platform.rememberHaptics
 import com.joebywan.daybook.platform.rememberKeyValueStore
+import com.joebywan.daybook.platform.rememberReducedMotion
 import com.joebywan.daybook.platform.rememberSolveSoundPlayer
 import com.joebywan.daybook.ui.tutorial.LocalChime
 import com.joebywan.daybook.ui.archive.ArchiveScreen
@@ -131,6 +133,11 @@ fun DaybookApp(startAt: Route = Route.Home) {
     val playSound = pickedPlaySound ?: storedPlaySound
     // Armed while the switch is on (the web wakes its audio on the first taps); a no-op when off.
     val playSolveSound = rememberSolveSoundPlayer(playSound)
+    val storedVibrate by launchPrefs.vibrate.collectAsState(initial = true)
+    var pickedVibrate by remember { mutableStateOf<Boolean?>(null) }
+    val vibrate = pickedVibrate ?: storedVibrate
+    val haptics = rememberHaptics(vibrate)
+    val reducedMotion = rememberReducedMotion()
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
     // back to Daily, because that is what the app is for.
     var mode by rememberSaveable { mutableStateOf(LaunchMode.DAILY) }
@@ -158,6 +165,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
     PlatformBackHandler(enabled = route != Route.Home) { route = Route.Home }
 
+    CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics) {
     when (val current = route) {
         Route.Home -> {
             // Nothing on Android. On the web, today's boards are generated while the grid is being
@@ -212,6 +220,11 @@ fun DaybookApp(startAt: Route = Route.Home) {
             onPlaySound = { play ->
                 pickedPlaySound = play
                 scope.launch { launchPrefs.setPlaySound(play) }
+            },
+            vibrate = vibrate,
+            onVibrate = { on ->
+                pickedVibrate = on
+                scope.launch { launchPrefs.setVibrate(on) }
             },
             onBack = { route = Route.Home },
         )
@@ -314,5 +327,6 @@ fun DaybookApp(startAt: Route = Route.Home) {
                 }
             }
         }
+    }
     }
 }

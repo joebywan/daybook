@@ -428,6 +428,12 @@ hashed into every seed: never rename it.
   (Fredoka has no `≠`); green when the region is covered and keeps its rule, solid `scheme.error` once it cannot (1 s settle).
   Highlight indices: squares `row * width + col`, tray slot `DominoTeacher.TRAY + k`, badge `DominoTeacher.RULE + r`.
 
+## Motion and haptics
+
+The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s
+`rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
+Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
@@ -623,7 +629,8 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   connectivity rule to the win check to make uniqueness easier. `LitsUniquenessTest` asserts it
   with the independent `LitsOracle`; `FallbackTest` walks a year per tier through `generateVerified`.
 - Screen readers are not a goal: these are visual puzzles a blind player could not play however the boards were
-  exposed (the owner, 2026-10-22). Text size, colour-only signals and reduced motion were offered and left too.
+  exposed (the owner, 2026-10-22). Text size and colour-only signals were offered and left;
+  reduced motion (following the system setting) was added at the owner's request, 2026-10-23.
 - **Any orientation, any window size** (the owner reversed the old portrait lock in October 2026: Android 16 ignores
   the lock on large screens anyway, and Play flags it). Do not bring the lock back. A wide window puts the play screen's
   board beside a 360dp side panel (title, clock, the hint as a panel rather than a popover, toolbar at its foot, and the

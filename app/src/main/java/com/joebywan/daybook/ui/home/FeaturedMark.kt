@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -32,12 +34,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlin.math.PI
 import kotlin.math.cos
 
 // Today's pick marker (docs/REWARDS.md): a twinkling gold sparkle frame on the tile and "Try me!" across the
-// thumbnail. Only drawn while the pick is unsolved, so nothing animates once it is done. Neither changes layout.
+// thumbnail. Only drawn while the pick is unsolved, so nothing animates once it is done (nor under reduced motion).
+// Neither changes layout.
 
 private val SparkleGold = Color(0xFFF5C542)
 private val RingGold = Color(0xFFE8A317).copy(alpha = 0.7f)
@@ -46,9 +50,12 @@ private const val SPARKLES = 30
 /** Gold ring plus sparkles around the edge of the tile, drawn inside its bounds. The one phase is read only while drawing. */
 @Composable
 fun Modifier.sparkleFrame(corner: Dp = 18.dp): Modifier {
-    val phase by rememberInfiniteTransition(label = "sparkle").animateFloat(
-        0f, 1f, infiniteRepeatable(tween(1600, easing = LinearEasing), RepeatMode.Restart), label = "phase",
-    )
+    // Reduced motion: the sparkles hold still, each caught at its own point in the twinkle.
+    val phase by if (LocalReducedMotion.current) remember { mutableFloatStateOf(0f) } else {
+        rememberInfiniteTransition(label = "sparkle").animateFloat(
+            0f, 1f, infiniteRepeatable(tween(1600, easing = LinearEasing), RepeatMode.Restart), label = "phase",
+        )
+    }
     return drawWithContent {
         drawContent()
         val ring = 1.5.dp.toPx()

@@ -137,7 +137,7 @@ private fun Arrow(glyph: String, enabled: Boolean, onClick: () -> Unit) {
         color = MaterialTheme.colorScheme.onSurface,
         textAlign = TextAlign.Center,
         modifier = Modifier
-            .size(44.dp)
+            .size(48.dp)
             .alpha(if (enabled) 1f else 0.25f)
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(top = 4.dp),

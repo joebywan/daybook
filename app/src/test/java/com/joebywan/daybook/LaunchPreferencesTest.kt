@@ -43,6 +43,17 @@ class LaunchPreferencesTest {
     }
 
     @Test
+    fun vibrationIsOnByDefaultAndIndependentOfSound() = runBlocking {
+        val prefs = LaunchPreferences(MemoryStore())
+        assertEquals("a player who never opened Settings feels the buzz", true, prefs.vibrate.first())
+        prefs.setVibrate(false)
+        prefs.setPlaySound(true)
+        assertEquals(false, prefs.vibrate.first())
+        prefs.setVibrate(true)
+        assertEquals(true, prefs.vibrate.first())
+    }
+
+    @Test
     fun soundAndTimerAreIndependentAndAnUnreadableSoundValueKeepsTheChime() = runBlocking {
         val store = MemoryStore()
         val prefs = LaunchPreferences(store)

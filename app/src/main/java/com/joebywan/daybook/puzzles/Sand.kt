@@ -1,11 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -22,9 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +51,8 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
+import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -353,16 +350,7 @@ object Sand : PuzzleType {
         val highlight = LocalBoardHighlight.current
         val accentColour = Color(accent)
         val glowColour = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // Transient: the lifted tube starts over whenever the board changes (a pour, undo, a hint).
         var lifted by remember(s.tubes) { mutableStateOf<Int?>(null) }
@@ -371,10 +359,12 @@ object Sand : PuzzleType {
         var shaking by remember { mutableIntStateOf(-1) }
         val stream = remember { Animatable(1f) }
         var pouring by remember { mutableStateOf<PourAnim?>(null) }
+        // Reduced motion: no shake and no stream; a lifted tube still rises, at once.
+        val still = LocalReducedMotion.current
 
         fun go(step: SandStep) {
             lifted = step.lifted
-            step.refused?.let { b ->
+            if (!still) step.refused?.let { b ->
                 shaking = b
                 scope.launch {
                     shake.snapTo(0f)
@@ -385,7 +375,7 @@ object Sand : PuzzleType {
                 val moved = next.tubes.indices.first { next.tubes[it].size > s.tubes[it].size }
                 val from = s.tubes.indices.first { next.tubes[it].size < s.tubes[it].size }
                 pouring = PourAnim(from, moved, next.tubes[moved].last())
-                scope.launch {
+                if (!still) scope.launch {
                     stream.snapTo(0f)
                     stream.animateTo(1f, tween(260))
                 }
@@ -433,7 +423,7 @@ object Sand : PuzzleType {
                     val strong = i in highlight.strong
                     val soft = !strong && i in highlight.soft
                     val dim = !highlight.isEmpty && !strong && !soft
-                    val up by animateFloatAsState(if (lifted == i) 1f else 0f, tween(120), label = "lift")
+                    val up by animateFloatAsState(if (lifted == i) 1f else 0f, if (still) snap() else tween(120), label = "lift")
                     val t = s.tubes[i]
                     Box(
                         Modifier
