@@ -33,6 +33,13 @@ internal val DarkScheme = darkColorScheme(
     surfaceVariant = Color(0xFF24403A),
     onSurfaceVariant = ParchmentDim,
     outline = Color(0xFF3C5B53),
+    // Material's defaults for these are lavender; every AlertDialog (rules, restart, share) uses
+    // surfaceContainerHigh, so unset they put a purple box on a parchment app.
+    surfaceContainerLowest = Ink,
+    surfaceContainerLow = InkSoft,
+    surfaceContainer = InkSoft,
+    surfaceContainerHigh = InkSoft,
+    surfaceContainerHighest = Color(0xFF24403A),
 )
 
 internal val LightScheme = lightColorScheme(
@@ -48,6 +55,11 @@ internal val LightScheme = lightColorScheme(
     surfaceVariant = Color(0xFFE8E0D0),
     onSurfaceVariant = Color(0xFF41504B),
     outline = Color(0xFFB9AE99),
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color(0xFFFFFBF2),
+    surfaceContainer = Color(0xFFFFFBF2),
+    surfaceContainerHigh = Color(0xFFFFFBF2),
+    surfaceContainerHighest = Color(0xFFE8E0D0),
 )
 
 internal val DaybookTypography = Typography(
