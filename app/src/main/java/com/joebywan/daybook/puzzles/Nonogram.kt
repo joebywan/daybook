@@ -61,6 +61,10 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** Each board draws its filled squares as a diagonal blend of two colours; the pair is the board's own. */
 private val PALETTES = listOf(
@@ -297,6 +301,8 @@ object Nonogram : PuzzleType {
         rowBad: BooleanArray = BooleanArray(s.height),
         colBad: BooleanArray = BooleanArray(s.width),
         overlay: Overlay = Overlay(),
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val u = g.u
         val highlight = overlay.highlight
@@ -311,16 +317,18 @@ object Nonogram : PuzzleType {
                 val x = g.gridX + c * u
                 val y = g.gridY + r * u
                 drawRect(scheme.surface, Offset(x, y), Size(u, u))
-                when (s.cells[r * s.width + c]) {
-                    NonogramLogic.FILLED -> drawRoundRect(
-                        lerp(palette.first, palette.second, (r + c).toFloat() / (s.width + s.height - 2).coerceAtLeast(1)), Offset(x + u * 0.07f, y + u * 0.07f), Size(u * 0.86f, u * 0.86f), CornerRadius(u * 0.14f),
-                    )
-                    NonogramLogic.CROSSED -> {
-                        val a = u * 0.30f
-                        val stroke = maxOf(u * 0.09f, 1.2f)
-                        val ink = scheme.onSurfaceVariant.copy(alpha = 0.8f)
-                        drawLine(ink, Offset(x + a, y + a), Offset(x + u - a, y + u - a), stroke, StrokeCap.Round)
-                        drawLine(ink, Offset(x + u - a, y + a), Offset(x + a, y + u - a), stroke, StrokeCap.Round)
+                feelSquare(feel, r * s.width + c, Offset(x, y), Size(u, u), accent) {
+                    when (s.cells[r * s.width + c]) {
+                        NonogramLogic.FILLED -> drawRoundRect(
+                            lerp(palette.first, palette.second, (r + c).toFloat() / (s.width + s.height - 2).coerceAtLeast(1)), Offset(x + u * 0.07f, y + u * 0.07f), Size(u * 0.86f, u * 0.86f), CornerRadius(u * 0.14f),
+                        )
+                        NonogramLogic.CROSSED -> {
+                            val a = u * 0.30f
+                            val stroke = maxOf(u * 0.09f, 1.2f)
+                            val ink = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            drawLine(ink, Offset(x + a, y + a), Offset(x + u - a, y + u - a), stroke, StrokeCap.Round)
+                            drawLine(ink, Offset(x + u - a, y + a), Offset(x + a, y + u - a), stroke, StrokeCap.Round)
+                        }
                     }
                 }
             }
@@ -512,6 +520,12 @@ object Nonogram : PuzzleType {
                 val shown = sweep?.let { w -> s.sweep(sweptCells(w, s.width), w.mark, w.startedOn) } ?: s
                 val (rowDone, colDone) = linesDone(shown, rows, cols)
                 val palette = remember(s.solution) { paletteFor(s) }
+                // Lines finished by their clues, on the board as handed (not the sweep still under the finger).
+                val units = remember(s.solution) { lineUnits(s.width, s.height) }
+                val done = linesDone(s, rows, cols)
+                val feel = rememberMoveFeel(s.cells.toList(), units) { u ->
+                    if (u < s.height) done.first[u] else done.second[u - s.height]
+                }
 
                 // A line must stay impossible for a second, and be so now, before it turns red.
                 // The next change cancels the wait and starts it over.
@@ -534,7 +548,7 @@ object Nonogram : PuzzleType {
                     Canvas(Modifier.fillMaxSize()) {
                         drawBoard(
                             shown, g, rowText, colText, rowDone, colDone, scheme, palette, rowBad, colBad,
-                            Overlay(highlight, glow, pulse.value),
+                            Overlay(highlight, glow, pulse.value), feel, Color(accent),
                         )
                     }
                     // Taps and sweeps are read over the grid alone, in its own coordinates; the

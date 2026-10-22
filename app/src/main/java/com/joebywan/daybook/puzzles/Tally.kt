@@ -62,6 +62,10 @@ import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** How long a line must stay impossible before its target turns red, so a sweep passing through is not shouted at. */
 private const val SETTLE_MILLIS = 1000L
@@ -254,6 +258,8 @@ object Tally : PuzzleType {
         bad: BooleanArray,
         scheme: ColorScheme,
         overlay: Overlay = Overlay(),
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val n = s.size
         val highlight = overlay.highlight
@@ -273,20 +279,22 @@ object Tally : PuzzleType {
             drawRect(scheme.surface, Offset(x, y), Size(u, u))
             val layout = texts.digits[s.digitAt(i)]
             val at = Offset(x + (u - layout.size.width) / 2f, y + (u - layout.size.height) / 2f)
-            when (s.marks[i]) {
-                TallyLogic.REMOVED -> {
-                    drawText(layout, scheme.onSurface.copy(alpha = 0.22f), at)
-                    val a = u * 0.28f
-                    drawLine(
-                        scheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        Offset(x + a, y + u - a), Offset(x + u - a, y + a), maxOf(u * 0.05f, 1f), StrokeCap.Round,
-                    )
+            feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
+                when (s.marks[i]) {
+                    TallyLogic.REMOVED -> {
+                        drawText(layout, scheme.onSurface.copy(alpha = 0.22f), at)
+                        val a = u * 0.28f
+                        drawLine(
+                            scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            Offset(x + a, y + u - a), Offset(x + u - a, y + a), maxOf(u * 0.05f, 1f), StrokeCap.Round,
+                        )
+                    }
+                    TallyLogic.KEPT -> {
+                        drawText(layout, scheme.onSurface, at)
+                        drawCircle(circle, u * 0.34f, Offset(x + u / 2f, y + u / 2f), style = Stroke(maxOf(u * 0.07f, 1.5f)))
+                    }
+                    else -> drawText(layout, scheme.onSurface, at)
                 }
-                TallyLogic.KEPT -> {
-                    drawText(layout, scheme.onSurface, at)
-                    drawCircle(circle, u * 0.34f, Offset(x + u / 2f, y + u / 2f), style = Stroke(maxOf(u * 0.07f, 1.5f)))
-                }
-                else -> drawText(layout, scheme.onSurface, at)
             }
         }
 
@@ -429,6 +437,10 @@ object Tally : PuzzleType {
 
                 val shown = sweep?.let { w -> s.sweep(sweptCells(w, n), w.mark, w.startedOn) } ?: s
                 val done = linesDone(shown, targets)
+                // Lines that add up, on the board as handed (not the sweep still under the finger).
+                val units = remember(n) { lineUnits(n, n) }
+                val handed = linesDone(s, targets)
+                val feel = rememberMoveFeel(s.marks.toList(), units) { handed[it] }
 
                 // A line must stay impossible for a second, and be so now, before it turns red.
                 val impossible = linesImpossible(shown, targets)
@@ -447,7 +459,7 @@ object Tally : PuzzleType {
 
                 Box(Modifier.size((unitsAcross(n) * unitPx).asDp(density), (unitsDown(n) * unitPx).asDp(density))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(shown, unitPx, texts, done, bad, scheme, Overlay(highlight, glow, pulse.value))
+                        drawBoard(shown, unitPx, texts, done, bad, scheme, Overlay(highlight, glow, pulse.value), feel, Color(accent))
                     }
                     // Taps and sweeps are read over the grid alone; the targets are not part of the play area.
                     Box(
