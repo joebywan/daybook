@@ -7,6 +7,7 @@ import com.joebywan.daybook.data.LevelProgress
 import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.ui.Route
+import com.joebywan.daybook.ui.backFrom
 import com.joebywan.daybook.ui.decodeRoute
 import com.joebywan.daybook.ui.encodeRoute
 import com.joebywan.daybook.ui.home.levelNote
@@ -46,6 +47,17 @@ class LevelsUiTest {
         // Exactly what the released build wrote: five fields, no level.
         assertEquals(Route.Play("kings", Difficulty.HARD, LocalDate(2026, 10, 1), 0L), decodeRoute("play|kings|HARD|2026-10-01|0"))
         assertEquals(Route.Play("sets", Difficulty.STANDARD, null, 3L), decodeRoute("play|sets|STANDARD||3"))
+        // And from the build that added the archive's back (six fields).
+        assertEquals(
+            Route.Play("kings", Difficulty.HARD, LocalDate(2026, 10, 1), 0L, fromArchive = true),
+            decodeRoute("play|kings|HARD|2026-10-01|0|true"),
+        )
+    }
+
+    @Test fun `back from one level's boards is the list, from the list or a level board home`() {
+        assertEquals(Route.Levels(), backFrom(Route.Levels(3)))
+        assertEquals(Route.Home, backFrom(Route.Levels()))
+        assertEquals(Route.Home, backFrom(Route.Play("kings", Difficulty.HARD, null, level = 3)))
     }
 
     @Test fun `mid level offers the first unsolved board, then home`() {

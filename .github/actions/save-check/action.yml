@@ -1,0 +1,46 @@
+name: Release save check
+description: >
+  Install an APK on an emulator and fail if any frozen save in app/src/test/resources/saves/ does not load in it
+  unchanged (tools/save-check/check.py). Meant for the minified, signed release, which SaveCompatibilityTest
+  (debug JVM build) never sees. The caller has checked out the repo and set up the Android SDK.
+
+inputs:
+  apk:
+    description: Path to the APK to check
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # The emulator needs KVM, which hosted Linux runners offer after this udev rule.
+    - name: Enable KVM
+      shell: bash
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+    # google_apis, not google_apis_playstore: a release APK is not debuggable, so only `adb root` can write its saves.
+    - name: Load the saves in the APK
+      id: first
+      continue-on-error: true
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 34
+        arch: x86_64
+        target: google_apis
+        profile: pixel_6
+        disable-animations: true
+        script: python3 tools/save-check/check.py "${{ inputs.apk }}"
+
+    # Once more on failure: the emulator download ("Premature EOF") and a hung launcher each fail a run in ten or so,
+    # and this gates a release. A save that really breaks fails both.
+    - name: Load the saves in the APK (retry)
+      if: steps.first.outcome == 'failure'
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 34
+        arch: x86_64
+        target: google_apis
+        profile: pixel_6
+        disable-animations: true
+        script: python3 tools/save-check/check.py "${{ inputs.apk }}"

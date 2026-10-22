@@ -10,7 +10,6 @@ import com.joebywan.daybook.platform.dateOverride
 import com.joebywan.daybook.ui.DaybookApp
 import com.joebywan.daybook.ui.Route
 import com.joebywan.daybook.ui.home.LaunchMode
-import com.joebywan.daybook.ui.theme.DaybookTheme
 import kotlinx.datetime.LocalDate
 
 /**
@@ -41,7 +40,5 @@ fun DaybookWebApp(dateParam: String?, tierParam: String?, puzzleParam: String?, 
         }
     }
     val mode = LaunchMode.entries.firstOrNull { it.name.equals(params["mode"], ignoreCase = true) } ?: LaunchMode.DAILY
-    DaybookTheme {
-        DaybookApp(startAt = start, startMode = mode)
-    }
+    DaybookApp(startAt = start, startMode = mode)
 }

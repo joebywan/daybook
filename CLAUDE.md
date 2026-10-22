@@ -494,6 +494,12 @@ double-tap must emit exactly one combined state.
 **The play log is part of the saved game.** `SavedGame.log` (`ui/play/ShareCard.kt`, `PlayLog`) is one character per move, undo,
 restart and counted hint, and the share graphic is drawn from it. Append to it exactly where the hint count goes up and where
 `push`/`undo`/`restart` change the board; keep it out of `PuzzleState`; it defaults to "" so older saves load (`ShareCardTest`).
+Restart is undoable (except in Pointers, which has no Undo): it pushes the cleared board, and `SavedGame.restarts` marks where, so
+an Undo that crosses one logs `u` and `PlayLog.played` hands the restarted moves back.
+
+**Back goes where the screen was opened from** (`backFrom` in `ui/DaybookApp.kt`): an archive game returns to its archive at that
+day, for system back, the web's back, the BackButton and the finish frame's Done alike. Route strings only gain fields at the end,
+read with `getOrNull`, so a route saved by an older build still decodes (`RouteTest`).
 
 **Feedback must not move the board.** Mambo's caption shifted it ~45dp when an error appeared,
 which causes mistaps. Reserve the space (`minLines == maxLines` works well), or float it over the content as the hint
@@ -535,7 +541,7 @@ checked in). Then check on the emulator; several bugs only appeared there. For t
 checked-in harness: `tools/render/render.py` (see "Rendering harness" under Web build).
 
 **README screenshots go stale silently.** `docs/screenshots/*.png` are emulator captures at half
-scale (540x1200), taken on a *clean install* with the date pinned so the home screen shows a 0-day streak and unplayed
+scale (540x1200), taken on a *clean install* with the date pinned so the home screen shows a fresh streak badge and unplayed
 boards rather than whatever the session happened to leave behind. Nothing checks them, so a change
 to a board's look or to the home grid means recapturing them in the same pass — the home shot in
 particular names the puzzle count in its alt text.
@@ -619,6 +625,9 @@ assertion loose enough to survive the bug is the same thing wearing a number.
     on someone's phone. Treat any change to a `PuzzleState`, a serialised class or `DataStoreKeyValueStore`
     as one that must load an old save. `SaveCompatibilityTest` reads saves a released build wrote
     (`app/src/test/resources/saves/`, never edited) and fails if any no longer loads or loses a field.
+    That is the debug build; `release.yml` runs the same saves through the signed, R8-minified APK on an emulator
+    before publishing (`tools/save-check/check.py`, `.github/actions/save-check`), and a lost or changed save blocks
+    the release. Run it locally on any APK, or on a published one with Actions > "Release save check".
 - **A merge to `main` also reaches our own F-Droid repo** (`publish-fdroid.yml`, same APK and key as the GitHub
   Release; `docs/fdroid/README.md`). The listing text and images are `fastlane/metadata/`, the one copy for both stores: a
   merge that changes the text pushes it to Play (`play-listing.yml`), so edit it there, never in Play Console. The code is AGPL-3.0-or-later (`LICENSE`, chosen by the owner); f-droid.org's entry is live (https://f-droid.org/packages/com.joebywan.daybook/).
