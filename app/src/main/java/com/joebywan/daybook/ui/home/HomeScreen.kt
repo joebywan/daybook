@@ -42,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -73,14 +75,34 @@ private const val HEADER_DATE = "EEEE d MMMM"
  * a grid: choosing a puzzle should never involve scrolling to find it. The thirteenth puzzle opens
  * a fifth row; the sixteenth to eighteenth, Tents, Regions and Cage Sudoku, make a sixth, three-tile row, and the nineteenth to
  * twenty-first, Target, Cipher and Word Wheel, a seventh, and the twenty-second to twenty-fourth, Tally, Sand and Pointers, an eighth; the twenty-fifth, Dominoes, opens a ninth. All scroll into view. A wider window (a tablet, a phone on its side) takes a column per
- * [MinTileWidth], up to [MAX_COLUMNS]; a phone in portrait is always under four and keeps its three.
+ * [MinTileWidth], up to [MAX_COLUMNS]; a phone in portrait is always under four and keeps its three. A short wide window
+ * (a phone on its side) takes more columns, down to [MinShortTileWidth], until two rows fit under the header: see [homeColumns].
  */
 private const val COLUMNS = 3
 private const val MAX_COLUMNS = 7
 private val MinTileWidth = 150.dp
-
+private val MinShortTileWidth = 110.dp
 private val TileGap = 8.dp
 private val TilePadding = 6.dp
+
+/** A tile's height less its motif: padding, the gap, one line of name, the gap and the tier dots. */
+private val TileChrome = TilePadding * 2 + 4.dp + 24.dp + 3.dp + 7.dp
+
+/**
+ * Columns for a grid [width] wide with [height] left under the header. A column per [MinTileWidth] (3 to [MAX_COLUMNS]),
+ * then, while two rows of tiles would not fit in [height], one more, as long as a tile stays [MinShortTileWidth] wide.
+ * Only a short wide window (a phone on its side) ever gets past the first step: a phone in portrait has the height, and
+ * is too narrow for a fourth tile of that width anyway.
+ */
+internal fun homeColumns(width: Dp, height: Dp): Int {
+    var columns = (width / MinTileWidth).toInt().coerceIn(COLUMNS, MAX_COLUMNS)
+    while (twoRows(width, columns) > height && tileWidth(width, columns + 1) >= MinShortTileWidth) columns++
+    return columns
+}
+
+private fun tileWidth(width: Dp, columns: Int) = (width - TileGap * (columns - 1)) / columns
+private fun previewSize(tileWidth: Dp) = (tileWidth - TilePadding * 2) * PREVIEW_FRACTION
+private fun twoRows(width: Dp, columns: Int) = (previewSize(tileWidth(width, columns)) + TileChrome) * 2 + TileGap
 
 /**
  * The motif is deliberately smaller than the tile it sits in. At full tile width four rows run
@@ -121,46 +143,63 @@ fun HomeScreen(
     val streak = remember(completions, today) { Stats.streak(completions, today) }
     var pickingArchive by rememberSaveable { mutableStateOf(false) }
 
-    // The tier and Daily/Random rows stay pinned while the title and the grid scroll under them, so a player
-    // halfway down the grid can change either without scrolling back. The grid is sized to fit without
-    // scrolling, but a short screen or a large font scale can still overflow it.
-    LazyColumn(
+    // What the header and the pinned rows take, so the grid knows the height left for its tiles (homeColumns).
+    var headerHeight by remember { mutableStateOf(0) }
+    var optionsHeight by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
+    BoxWithConstraints(
         Modifier
             .fillMaxSize()
             .background(scheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
     ) {
-        item {
-            Header(
-                today = today,
-                streak = streak,
-                onArchive = { pickingArchive = true },
-                onStats = onStats,
-                onAchievements = onAchievements,
-                onSettings = onSettings,
-            )
-        }
-        stickyHeader {
-            // Opaque, so the tiles scrolling under it do not show through.
-            Column(Modifier.fillMaxWidth().background(scheme.background).padding(vertical = 14.dp)) {
-                LaunchOptions(difficulty, onDifficulty, mode, onMode, levelStrip = { LevelStrip(levels, onLevels) })
+        // A phone on its side. A tablet in landscape is taller than this and keeps the stacked rows.
+        val short = maxHeight < 480.dp && maxWidth > maxHeight
+        val gridHeight = maxHeight - TopPadding - with(density) { (headerHeight + optionsHeight).toDp() }
+        // The tier and Daily/Random rows stay pinned while the title and the grid scroll under them, so a player
+        // halfway down the grid can change either without scrolling back. The grid is sized to fit without
+        // scrolling, but a short screen or a large font scale can still overflow it.
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = TopPadding, bottom = 18.dp),
+        ) {
+            item {
+                Header(
+                    modifier = Modifier.onSizeChanged { headerHeight = it.height },
+                    compact = short,
+                    today = today,
+                    streak = streak,
+                    onArchive = { pickingArchive = true },
+                    onStats = onStats,
+                    onAchievements = onAchievements,
+                    onSettings = onSettings,
+                )
             }
+            stickyHeader {
+                // Opaque, so the tiles scrolling under it do not show through.
+                Column(
+                    Modifier.fillMaxWidth().background(scheme.background).padding(vertical = if (short) 8.dp else 14.dp)
+                        .onSizeChanged { optionsHeight = it.height },
+                ) {
+                    LaunchOptions(difficulty, onDifficulty, mode, onMode, levelStrip = { LevelStrip(levels, onLevels) }, sideBySide = short)
+                }
+            }
+            if (mode == LaunchMode.LEVELS) item {
+                LevelGrid(levels, levels.current, onPlay = onLaunch, onAllLevels = onLevels, height = gridHeight)
+            } else item {
+                PuzzleGrid(
+                    difficulty = difficulty,
+                    // Random boards are freshly seeded on every tap, so "solved today" says nothing
+                    // about the game a tile is about to start. The tiles keep their marks-shaped space
+                    // either way, so switching mode never shuffles the grid under a finger.
+                    doneToday = if (mode == LaunchMode.DAILY) doneToday else emptySet(),
+                    pick = PuzzleRegistry.featured(today.toEpochDays()).id,
+                    height = gridHeight,
+                    onLaunch = onLaunch,
+                )
+            }
+            item { GetTheAppCard() }
         }
-        if (mode == LaunchMode.LEVELS) item {
-            LevelGrid(levels, levels.current, onPlay = onLaunch, onAllLevels = onLevels)
-        } else item {
-            PuzzleGrid(
-                difficulty = difficulty,
-                // Random boards are freshly seeded on every tap, so "solved today" says nothing
-                // about the game a tile is about to start. The tiles keep their marks-shaped space
-                // either way, so switching mode never shuffles the grid under a finger.
-                doneToday = if (mode == LaunchMode.DAILY) doneToday else emptySet(),
-                pick = PuzzleRegistry.featured(today.toEpochDays()).id,
-                onLaunch = onLaunch,
-            )
-        }
-        item { GetTheAppCard() }
     }
 
     if (pickingArchive) {
@@ -174,8 +213,12 @@ fun HomeScreen(
     }
 }
 
+private val TopPadding = 14.dp
+
 @Composable
 private fun Header(
+    modifier: Modifier,
+    compact: Boolean,
     today: LocalDate,
     streak: Streak,
     onArchive: () -> Unit,
@@ -184,40 +227,56 @@ private fun Header(
     onSettings: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        DaybookMark(Modifier.size(36.dp))
-        Spacer(Modifier.width(10.dp))
-        Text(
-            "Daybook",
-            // 24sp, one line: with four buttons a 360dp-wide phone wrapped the 30sp name.
-            style = MaterialTheme.typography.displaySmall.copy(fontSize = 24.sp),
-            maxLines = 1,
-            color = scheme.onBackground,
-            modifier = Modifier.weight(1f),
-        )
-        HeaderButton(Icons.Default.History, "Archive", onArchive)
-        Spacer(Modifier.width(6.dp))
-        HeaderButton(Icons.Default.InsertChart, "Statistics", onStats)
-        Spacer(Modifier.width(6.dp))
-        Box(
-            Modifier.size(HeaderButtonSize).clip(CircleShape).background(scheme.surface).clickable(onClick = onAchievements),
-            contentAlignment = Alignment.Center,
-        ) { MedalIcon(Modifier.size(22.dp), scheme.onSurfaceVariant, "Achievements") }
-        Spacer(Modifier.width(6.dp))
-        HeaderButton(Icons.Default.Settings, "Settings", onSettings)
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DaybookMark(Modifier.size(36.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(
+                "Daybook",
+                // 24sp, one line: with four buttons a 360dp-wide phone wrapped the 30sp name.
+                style = MaterialTheme.typography.displaySmall.copy(fontSize = 24.sp),
+                maxLines = 1,
+                color = scheme.onBackground,
+                modifier = if (compact) Modifier else Modifier.weight(1f),
+            )
+            // On a short window the date and streak join the title's row, which gives the grid back about 44dp.
+            if (compact) {
+                Spacer(Modifier.width(14.dp))
+                HeaderDate(today, oneLine = true, Modifier.weight(1f))
+                StreakBadge(streak)
+                Spacer(Modifier.width(10.dp))
+            }
+            HeaderButton(Icons.Default.History, "Archive", onArchive)
+            Spacer(Modifier.width(6.dp))
+            HeaderButton(Icons.Default.InsertChart, "Statistics", onStats)
+            Spacer(Modifier.width(6.dp))
+            Box(
+                Modifier.size(HeaderButtonSize).clip(CircleShape).background(scheme.surface).clickable(onClick = onAchievements),
+                contentAlignment = Alignment.Center,
+            ) { MedalIcon(Modifier.size(22.dp), scheme.onSurfaceVariant, "Achievements") }
+            Spacer(Modifier.width(6.dp))
+            HeaderButton(Icons.Default.Settings, "Settings", onSettings)
+        }
+        if (!compact) Row(
+            Modifier.fillMaxWidth().padding(top = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            HeaderDate(today, oneLine = false, Modifier.weight(1f))
+            StreakBadge(streak)
+        }
     }
-    Row(
-        Modifier.fillMaxWidth().padding(top = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            formatDate(today, HEADER_DATE),
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        StreakBadge(streak)
-    }
+}
+
+@Composable
+private fun HeaderDate(today: LocalDate, oneLine: Boolean, modifier: Modifier) {
+    Text(
+        formatDate(today, HEADER_DATE),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = if (oneLine) 1 else Int.MAX_VALUE,
+        overflow = if (oneLine) TextOverflow.Ellipsis else TextOverflow.Clip,
+        modifier = modifier,
+    )
 }
 
 /** Four of them share the header with the title, so each is a little under the 40dp the three used to be. */
@@ -272,10 +331,11 @@ private fun PuzzleGrid(
     difficulty: Difficulty,
     doneToday: Set<Pair<String, Difficulty>>,
     pick: String,
+    height: Dp,
     onLaunch: (String) -> Unit,
 ) {
     val puzzles = PuzzleRegistry.all
-    TileGrid(puzzles.size) { i, previewSize, modifier ->
+    TileGrid(puzzles.size, height) { i, previewSize, modifier ->
         val puzzle = puzzles[i]
         val solved = (puzzle.id to difficulty) in doneToday
         PuzzleTile(puzzle, solved, isPick = puzzle.id == pick, previewSize, { onLaunch(puzzle.id) }, modifier) { accent ->
@@ -288,13 +348,12 @@ private fun PuzzleGrid(
     }
 }
 
-/** [count] tiles in rows of a column per [MinTileWidth] (3 to [MAX_COLUMNS]); [tile] draws tile `i` at the motif size given. */
+/** [count] tiles in rows of [homeColumns] for a grid with [height] below the header; [tile] draws tile `i` at the motif size given. */
 @Composable
-internal fun TileGrid(count: Int, tile: @Composable (index: Int, previewSize: Dp, modifier: Modifier) -> Unit) {
+internal fun TileGrid(count: Int, height: Dp, tile: @Composable (index: Int, previewSize: Dp, modifier: Modifier) -> Unit) {
     BoxWithConstraints {
-        val columns = (maxWidth / MinTileWidth).toInt().coerceIn(COLUMNS, MAX_COLUMNS)
-        val tileWidth = (maxWidth - TileGap * (columns - 1)) / columns
-        val previewSize = (tileWidth - TilePadding * 2) * PREVIEW_FRACTION
+        val columns = homeColumns(maxWidth, height)
+        val previewSize = previewSize(tileWidth(maxWidth, columns))
         Column(verticalArrangement = Arrangement.spacedBy(TileGap)) {
             (0 until count).chunked(columns).forEach { row ->
                 Row(

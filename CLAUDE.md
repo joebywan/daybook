@@ -535,7 +535,8 @@ Full detail (seam, storage, fonts, harnesses, parity, lessons): `docs/WEB_BUILD.
 - **Hash iteration order must never reach the `Rng`.** The JVM and Wasm walk hash containers differently, so
   the same seed carved a different board. Audit any new generator code, and replay (don't re-pick) an order
   already baked into shipped boards (`core/JvmHashOrder.kt`).
-- **Parity:** CI diffs a year of boards between JVM and browser (`tools/web-parity/check.py`) and gates the deploy.
+- **Parity:** CI diffs a year of boards between JVM and browser (`tools/web-parity/check.py`): the required `web-parity`
+  check on pull requests, and again before the deploy.
 - **Check any web layout change in WebKit as well as Chromium**, at 375x537 as well as a tall screen:
   `tools/render/render.py`.
 - Build: `./gradlew :web:wasmJsBrowserDistribution`. Several sessions share the one browser pane: pass a `tabId`.
@@ -560,12 +561,13 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 ## Git and releases
 
 - **Standing instruction: finish the job.** When the work is done and the local tests are green, push
-  the branch, open the PR and merge it once CI's `build` is green, without asking first. The owner
+  the branch, open the PR and merge it once CI's `build` and `web-parity` are green, without asking first. The owner
   has authorised this for good and is tired of repeating it. Only stop and ask if CI fails in a way
   you cannot fix, or the change touches something under "Settled — do not reopen".
 - Never commit to `main`. Branch, PR, merge — I do the merging, not the owner. This is now enforced: a
   repository ruleset ("Protect main", set up 2026-10-02) requires a pull request, requires the CI
-  check named `build` to pass, and blocks force-pushes and deletion. The repo owner's account can
+  checks named `build` and `web-parity` to pass on a branch that is up to date with `main` (added
+  2026-10-23, after two pull requests each green alone broke `main` together), and blocks force-pushes and deletion. The repo owner's account can
   bypass on pull requests only.
 - **Docs-only changes do not need CI, and the owner has said so outright** ("it doesn't impact tests,
   and it doesn't impact the app, why burn the compute time?"). A PR that touches only documentation
@@ -577,11 +579,12 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   Gradle files, `web/`, `tools/` or a workflow, even alongside docs, waits for green CI. Nothing in the workflows pushes commits to `main` (releases are created
   with `gh release create`), so the rule does not get in their way.
 - Renovate's PRs get their `build` from `tools/dispatch-ci-for-renovate.sh`, which dispatches
-  `ci.yml` on their branch; a dispatched run posts a `build` commit status because its check run
-  alone does not satisfy the ruleset. Keep those steps in `ci.yml` and the job named `build`.
+  `ci.yml` on their branch; a dispatched run posts `build` and `web-parity` commit statuses because its check runs
+  alone do not satisfy the ruleset. Keep those steps in `ci.yml` and the jobs named `build` and `web-parity`.
 - Commits use `4845431+joebywan@users.noreply.github.com`. The personal address must never reach
   a commit or a remote. No `Co-Authored-By: Claude` trailer.
-- Push to `main` builds a signed APK and publishes a GitHub Release automatically.
+- Push to `main` builds a signed APK and publishes a GitHub Release automatically. It runs the unit tests again unless
+  `ci.yml` already passed the identical source tree (its `tested-tree-<sha>` artifact); a different tree is always tested.
 - **That release now reaches Google Play automatically, so a merge to `main` ships.** After the GitHub
   Release is made, `release.yml` calls `publish-play.yml`, which uploads the signed `.aab` and rolls it
   out to everyone on the `production` track (full rollout, not staged: nobody would raise a staged
@@ -629,7 +632,7 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   board beside a 360dp side panel (title, clock, the hint as a panel rather than a popover, toolbar at its foot, and the
   finish frame and pill) whenever that gives the board more room than stacking: `PlayLayout` in `PlayScreen.kt`, one
   `Layout` for both shapes so a rotation keeps every board's `rememberSaveable` state. A phone in portrait gets the stacked
-  layout, pixel for pixel what it was. The home grid takes a column per 150dp (3 to 7). Boards size from both axes, as
+  layout, pixel for pixel what it was. The home grid takes a column per 150dp (3 to 7); a short wide window (under 480dp tall: a phone on its side) puts the date and streak beside the title and the two toggles side by side, and adds columns, down to 110dp tiles, until two rows fit (`homeColumns`). Boards size from both axes, as
   below; Tower caps its width at 480dp. Check a layout change on a tablet in both orientations, in a resized window and
   on a phone on its side, as well as the phone sizes.
 - If this reaches the Play Store, the developer name and contact details the listing publishes are

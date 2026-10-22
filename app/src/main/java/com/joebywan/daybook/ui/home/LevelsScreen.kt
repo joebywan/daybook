@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Levels
@@ -100,6 +101,7 @@ internal fun LevelGrid(
     onPlay: (puzzleId: String) -> Unit,
     onAllLevels: (() -> Unit)?,
     note: String = levelNote(progress, level),
+    height: Dp = Dp.Infinity,
 ) {
     val scheme = MaterialTheme.colorScheme
     val solved = progress.solved(level)
@@ -110,7 +112,7 @@ internal fun LevelGrid(
             note, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, maxLines = 1,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp, bottom = 10.dp),
         )
-        TileGrid(boards.size + if (onAllLevels != null) 1 else 0) { i, previewSize, modifier ->
+        TileGrid(boards.size + if (onAllLevels != null) 1 else 0, height) { i, previewSize, modifier ->
             val board = boards.getOrNull(i)
             if (board == null) {
                 val tone = scheme.secondary

@@ -106,12 +106,15 @@ fun LaunchOptions(
     mode: LaunchMode,
     onMode: (LaunchMode) -> Unit,
     levelStrip: @Composable () -> Unit = {},
+    sideBySide: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
     val levels = mode == LaunchMode.LEVELS
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box {
+    // Side by side on a short wide window (a phone on its side), where a second row costs the grid most of a row of tiles.
+    val controls = @Composable { half: Modifier ->
+        Box(half) {
             SegmentedControl(
+                modifier = if (levels) Modifier.alpha(0f).clearAndSetSemantics { } else Modifier,
                 options = Difficulty.entries,
                 selected = difficulty,
                 label = { it.label },
@@ -119,13 +122,13 @@ fun LaunchOptions(
                 onTone = scheme.onPrimary,
                 verticalPadding = 9.dp,
                 onSelect = { if (!levels) onDifficulty(it) },
-                modifier = if (levels) Modifier.alpha(0f).clearAndSetSemantics { } else Modifier,
             )
             if (levels) Box(Modifier.matchParentSize()) { levelStrip() }
         }
         // A second tone rather than a second green row: two identical-looking controls stacked
         // read as one four-choice thing, and these are different questions.
         SegmentedControl(
+            modifier = half,
             options = LaunchMode.entries,
             selected = mode,
             label = { it.label },
@@ -135,10 +138,18 @@ fun LaunchOptions(
             onSelect = onMode,
         )
     }
+    if (sideBySide) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            controls(Modifier.weight(1f))
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { controls(Modifier) }
+    }
 }
 
 @Composable
 private fun <T> SegmentedControl(
+    modifier: Modifier,
     options: List<T>,
     selected: T,
     label: (T) -> String,
@@ -146,7 +157,6 @@ private fun <T> SegmentedControl(
     onTone: Color,
     verticalPadding: Dp,
     onSelect: (T) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
     Row(
