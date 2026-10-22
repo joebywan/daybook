@@ -85,7 +85,9 @@ android {
             // inject saves into files/datastore/daybook.preferences_pb, make one move, and see which
             // survive the re-save. The build must also stay reproducible for F-Droid (docs/fdroid).
             isMinifyEnabled = true
-            isShrinkResources = false
+            // Drops the libraries' resources nothing references (Play recommends it). Every resource of ours is
+            // referenced from code or the manifest, never looked up by name.
+            isShrinkResources = true
 
             signingConfig = if (haveReleaseKey) signingConfigs.getByName("release") else null
         }

@@ -1,6 +1,5 @@
 <resources>
-    <style name="Theme.Daybook" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-    </style>
+    <!-- No bar colours here: android:statusBarColor and navigationBarColor are deprecated from Android 15 (Play flags
+         them), and MainActivity's enableEdgeToEdge() makes both bars transparent on every version. -->
+    <style name="Theme.Daybook" parent="android:Theme.Material.NoActionBar" />
 </resources>
