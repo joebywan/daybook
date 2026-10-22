@@ -99,7 +99,7 @@ class StateSerializationTest {
      * — the blocks in Shikaku, the guesses in Tower, the sets found in Sets. Exhaustive because
      * [PuzzleState] is sealed, so a new puzzle cannot be added without landing here.
      */
-    private fun mutate(state: PuzzleState): PuzzleState = when (state) {
+    internal fun mutate(state: PuzzleState): PuzzleState = when (state) {
         is AtomsState -> state.pairs.indices.take(2).fold(state) { acc, i -> acc.cycle(i) }
         is CageState -> {
             val cell = state.grid.givens.indexOfFirst { !it }
