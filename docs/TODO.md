@@ -51,6 +51,14 @@ from a measurement or review, so you can check it is still true.
   would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
+- [ ] **Word Wheel: check on a real touch screen.** The swipe was driven in Chromium (CDP touch and mouse) and WebKit (mouse; taps by
+  touch), not on the Android emulator or a phone: check a swipe, a back-out along the path, taps and the middle-of-wheel submit there,
+  and that a swipe over the wheel never scrolls or steals the back gesture. Recapture `docs/screenshots/home.png` (the home grid gained
+  a tile) on a clean install. *S.*
+- [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
+  (`tools/words/wheel-clues.txt`); cluing more widens the boards (every added word moves daily boards, as Lexicon's do). About 40% of
+  hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
+  reasoning. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
 
 ## Rewards
 

@@ -241,6 +241,39 @@ after a game show.
   and what followed back. No fallback exists. Highlight indices: tiles `0..5`, operators `Target.OP0 + ordinal`, the target `Target.TARGET`.
 - Keyboard reads like a calculator: type a tile's number, an operator, another number, Enter. `TargetKeysTest` pins it against the taps.
 
+## Word Wheel (letter-wheel crossword)
+
+A wheel of 5-7 letters and a small crossword: spell words by swiping across the wheel (or tapping letters, then the word); a word the
+grid holds fills its slot, any other real word is a bonus word (counted, shown, never needed). No lives, no way to lose. Never name it
+after, or borrow from, a commercial letter-wheel app. `puzzles/WordWheelRules.kt` (state, `WheelWords`, `WordWheelLogic`: judge, layout,
+generator), `WordWheelTeacher.kt`, `WordWheelKeys.kt` (keys, and the pure tap/swipe/type functions), `WordWheel.kt` (board, walkthrough,
+motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwheel"` is hashed into every seed: never rename it.
+
+- **The lists are a contract, as Lexicon's are.** `tools/words/build.py` writes `WordWheelWords.kt` beside Lexicon's files (which it
+  leaves byte-identical): `GRID_3..7` (Lexicon's answer screening at every length, limited to words with a clue: `clues.txt` for 4/5,
+  `tools/words/wheel-clues.txt` for every 3-letter answer and the chosen 6/7-letter words, so 4/5 are exactly Lexicon's answers),
+  `ROOTS_5..7` (the wheels: grid words spelling at least 8 / 12 / 14 other grid words, a seven also a six) and `BONUS` (Lexicon's guess
+  rule at every length, kept to words some root can spell). A wheel is an index into `ROOTS_n` and the grid is laid from the `GRID`
+  lists in order, so adding or removing a word moves daily boards and `WordWheelWebParityTest` goes red on purpose. Exclusions for
+  3/6/7 letters are in their own section of `exclude.txt` (Lexicon never draws those lengths). A new 6/7-letter grid word needs a clue
+  in `wheel-clues.txt`; `WordWheelRulesTest` checks every grid word has one, none contains its word, no two share one (with Lexicon's).
+- **Tiers: 5 letters, 4-6 words in 6x6 / 6 letters, 6-8 words in 7x7 / 7 letters, 8-11 words in 8x8 with a six besides the root.**
+  Slot 0 is the root (all the letters); the wheel is shown scrambled. Layout: words cross only on equal letters, one across one down;
+  no side-by-side squares and nothing before or after a word, so every run is exactly one word; every word crosses the grid. The pool
+  is shuffled from the sorted list (no hash order), longest first, each placed at a spot drawn from those with the most crossings.
+- **A board ships only if it is winnable without luck:** walking it by hints alone, the slot a clue names never has more than
+  `MAX_CHOICE` (6) grid words that fit. `generateVerified` tries 40 seeds (Expert: 70% first attempt, at most 6 in a year);
+  `lastResort` is the board of seed 1, proved by a test; a year per tier never reaches it (`FallbackTest`). `WordWheelOracle` (test)
+  re-reads every board's squares run by run, shares nothing with the placer. JVM: median 0.3 / 0.5 / 0.7 ms a board, max 3.5 ms.
+- **A word goes to the slot it was laid for**; every slot holds a different word, so two same-length slots never compete for one.
+  `solved` checks the rule: every slot's word is found. The word being spelled, the finger and the notice are `remember`; Shuffle is a
+  `rememberSaveable` count that reorders the display only; one accepted word is one state. The gesture is keyed on the wheel and reads
+  the board through `rememberUpdatedState` (Snap's lesson). The notice uses the header line, whose room is always kept.
+- **Teacher:** `PINNED` (an empty slot whose length, crossing letters and the wheel leave one grid word, found and bonus words excluded:
+  reads the public grid list, never a slot's word) then `CLUE` (the slot with the fewest words that fit, given as its word's clue: reads
+  the stored word, so it is the fallback). No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
+  `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
@@ -259,7 +292,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap and Inequality (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Word Wheel (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap and Inequality (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

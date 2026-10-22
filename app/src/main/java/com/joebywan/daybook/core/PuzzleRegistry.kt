@@ -19,6 +19,7 @@ import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
+import com.joebywan.daybook.puzzles.WordWheel
 
 /**
  * The one place the app learns which puzzles exist.
@@ -48,6 +49,7 @@ object PuzzleRegistry {
         Regions,
         Cages,
         Target,
+        WordWheel,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }

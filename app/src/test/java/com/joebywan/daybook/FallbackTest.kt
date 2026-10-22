@@ -15,6 +15,7 @@ import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Target
+import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.SnapState
 import org.junit.Assert.assertEquals
@@ -198,6 +199,23 @@ class FallbackTest {
             }
         }
         assertTrue("target shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /** [WordWheel.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
+    @Test
+    fun `wordwheel proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, WordWheel.id, difficulty)
+                val proved = WordWheel.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("wordwheel $date/${difficulty.name}", proved, WordWheel.generate(seed, difficulty))
+            }
+        }
+        assertTrue("wordwheel shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /** [Regions.generateVerified] returns a board only when logic finished it and a search proved one answer. */
