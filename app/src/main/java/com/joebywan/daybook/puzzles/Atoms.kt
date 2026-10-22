@@ -42,6 +42,7 @@ import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import kotlinx.serialization.Serializable
 
 /** An atom sits on a lattice point and needs exactly [bonds] bond-ends. */
@@ -435,7 +436,7 @@ object Atoms : PuzzleType {
      *
      * Hand-built so the moves the frames teach are moves the board needs, in order: the top 2 has one
      * neighbour, so it takes a double bond (drag, then tap); a double between the bottom two 2s would
-     * close them off (so it is shown, and cleared); that leaves the bottom-right 2 needing a bond
+     * close them off (so the player makes it, and clears it); that leaves the bottom-right 2 needing a bond
      * upward. The ring C–R–Q–P could otherwise go three ways, and only the all-single one keeps the
      * molecule in one piece — AtomsTeachingTest proves the answer is unique.
      */
@@ -471,6 +472,15 @@ object Atoms : PuzzleType {
         val n = TUTORIAL_ATOMS.size
         fun line(p: Int) = AtomsTeacher.pairCell(n, p)
         val solved = tutorialBoard(*TUTORIAL_SOLUTION.toIntArray())
+        // A bond, by drag (or tap), then the tap that doubles it.
+        val double = TutorialPath(only(1, 0, 0, 0, 0, 0), only(2, 0, 0, 0, 0, 0))
+        // The bottom 2s: one bond, a double that cuts them off, then none again, which is the board the
+        // frame started on, so only a move counted since tells the two apart.
+        val cut = TutorialPath(
+            only(2, 0, 0, 0, 0, 1),
+            only(2, 0, 0, 0, 0, 2),
+            { only(2, 0, 0, 0, 0, 0)(it) && it.moves > 0 },
+        )
         listOf(
             TutorialFrame(
                 state = solved,
@@ -486,28 +496,28 @@ object Atoms : PuzzleType {
             ),
             TutorialFrame(
                 state = tutorialBoard(),
-                caption = "This 2 has only one neighbour, the 3 below, so both its bonds go there. " +
-                    "Drag from the 2 down to the 3 to lay the first.",
-                highlight = BoardHighlight(strong = setOf(0), soft = setOf(1, line(0))),
-                accepts = only(1, 0, 0, 0, 0, 0),
-                retry = "Drag from the glowing 2 down to the 3.",
-                done = "Bonded.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(1, 0, 0, 0, 0, 0),
-                caption = "It needs two. Tap the bond itself to make it a double.",
-                highlight = BoardHighlight(strong = setOf(line(0)), soft = setOf(0, 1)),
-                accepts = only(2, 0, 0, 0, 0, 0),
-                retry = "Tap once on the glowing bond.",
+                caption = "This 2 has only one neighbour, the 3 below, so both its bonds go there. Drag from " +
+                    "the 2 down to the 3 to lay one, then tap the bond to make it a double.",
+                // The 2 glows until the first bond is down, then the bond.
+                glow = { s ->
+                    if (double.stage(s) < 0) BoardHighlight(strong = setOf(0), soft = setOf(1, line(0)))
+                    else BoardHighlight(strong = setOf(line(0)), soft = setOf(0, 1))
+                },
+                steps = double.steps,
+                retry = "Drag from the glowing 2 down to the 3, then tap the bond.",
                 done = "Doubled. A full atom turns blue.",
             ),
             TutorialFrame(
-                state = tutorialBoard(2, 0, 0, 0, 0, 2),
-                caption = "A double bond here would fill both 2s and cut them off from the rest of the " +
-                    "molecule, so it can't be right. Tap it once to clear it.",
-                highlight = BoardHighlight(strong = setOf(line(5)), soft = setOf(4, 5)),
-                accepts = only(2, 0, 0, 0, 0, 0),
-                retry = "Tap once on the glowing double bond.",
+                state = tutorialBoard(2, 0, 0, 0, 0, 0),
+                caption = "Tap the glowing gap twice for a double bond: it fills both 2s and cuts them off from " +
+                    "the rest of the molecule, so it can't be right. Tap once more to clear it.",
+                // The board draws no red for a molecule cut off, so the glow turns red on the double.
+                glow = { s ->
+                    if (cut.stage(s) == 1) BoardHighlight(strong = setOf(line(5), 4, 5), warning = true)
+                    else BoardHighlight(strong = setOf(line(5)), soft = setOf(4, 5))
+                },
+                steps = cut.steps,
+                retry = "Tap the glowing gap: once, twice, then once more.",
                 done = "Cleared. A tap goes none, one, two, and back to none.",
             ),
             TutorialFrame(
