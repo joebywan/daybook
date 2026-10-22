@@ -442,6 +442,8 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 - **Everything about progress is derived** (`LevelProgress.of`): the current level, done levels, "Level N done" on home. Nothing pops up.
 - A level solve is recorded twice: `recordLevelSolve` (a replay records nothing new) and a practice `Completion` (`day = null`), so the
   streak never counts levels and totals and best times do. No "New game" on a level board; a solved one is cleared, so reopening replays it.
+- **The play screen is keyed on its board** (`key(puzzle.id, seed)` in `DaybookApp`): "Next in level" goes straight from one
+  puzzle to another, and without the key `PlayScreen`'s produced board was the last puzzle's state for a frame (a crash on the emulator).
 - `RouteSaver` fields are only ever added at the end: a route saved before `level` existed still reads (`LevelsUiTest`).
 - In Levels mode the tier row stays laid out, invisible, under the level strip, so the mode row cannot move when the mode changes.
 
