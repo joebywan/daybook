@@ -447,6 +447,23 @@ internal object CipherTeacher {
             }
             return Step(COLUMN, l, d, tiles, tiles, nudge, explanation)
         }
+        // X + Y + carry ends in X: Y and the carry add nothing to X's last digit, so Y + carry is 0 or 10. Said
+        // outright, because "only Y = 9 works" left a player asking why X could not be the 9 instead.
+        if (l != t && t in adds && adds.size == 2 && adds.count { it == l } == 1 && (d == 0 || d == 9)) {
+            val other = 9 - d
+            val why = when {
+                carry != null -> "With $carry carried, $x is $d."
+                other == 0 && sum.leading and (1 shl l) != 0 -> "$x starts a word, so it isn't 0: $x is 9."
+                digits.indexOf(other).let { it >= 0 && it != l } ->
+                    "${name(sum, digits.indexOf(other))} already has $other, so $x is $d."
+                else -> "Of the two, only $d fits the carries on either side."
+            }
+            return Step(
+                COLUMN, l, d, tiles, tiles, nudge,
+                "In the ${columnName(c)}, ${columnText(sum, digits, c, carry)}, so $x + carry is 0 or 10: " +
+                    "$x is 0 (nothing carried) or 9 (1 carried). $why",
+            )
+        }
         return Step(
             COLUMN, l, d, tiles, tiles, nudge,
             "In the ${columnName(c)}, ${columnText(sum, digits, c, carry)}. Of the digits still free, only $x = $d makes that work.",
