@@ -71,6 +71,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Regions | Suguru / Tectonic | A region of N squares holds 1 to N once each, and equal digits never touch, not even at a corner |
 | Cage Sudoku | Sudoku with sum cages | Sudoku in which every dashed cage must add up to its number, with no digit repeated in it |
 | Target | Number-target arithmetic | Combine six numbers with + − × ÷ (whole numbers only) until a tile equals the target |
+| Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -102,6 +103,9 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   cage's possible digit combinations, and the 45-rule's leftover squares) is stuck, cages merged and givens taken back while
   it still finishes. So a board is never guessed, Expert has no givens at all, and the shipped board is proved again by an
   exhaustive search; an independent solver that fills one cage at a time confirms the one answer in the tests.
+- **Tally** — random digits and a random answer, kept only if a person's ladder finishes it (shortcuts, the ways one line can
+  make its target, and on Expert a short what-if) needing exactly the tier's deepest step, and an exhaustive count finds one answer.
+  An independent solver that lists every way each column can make its target confirms it in the tests.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
 - **Nonogram** — a random picture is kept only if a line solver finishes it: for each row or column, work out

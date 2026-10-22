@@ -177,6 +177,13 @@ below have a famous branded version; use the descriptive name).
 - [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
   not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
 
+- [ ] **Tally: recapture the screenshots and drive it on the emulator.** Rendered on the web build only (Chromium and WebKit, light and
+  dark, 375x537 and 390x844, every tier, a hint open, the finished frame); `docs/screenshots/home.png` was not recaptured (it needs the
+  emulator), and nobody has swept a line by touch on Android yet.
+- [ ] **Tally: a regions variant, deliberately not built.** The published genre also comes with coloured regions whose kept numbers must hit
+  a region target as well. It adds a third kind of line to the ladder and a colour layer to a board that already carries targets on two
+  edges; left out until the plain board has been played.
+
 ### Suggested
 
 Roughly in order of how well they fit, best first.

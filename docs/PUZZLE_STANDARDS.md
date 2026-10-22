@@ -88,6 +88,7 @@ What varies, as built:
 | Tents | side and trees | 6x6 with 7 trees / 8x8 with 13 / 10x10 with 20 (`TentsLogic.sizeFor`, `treesFor`) |
 | Regions | side (regions of 2 to 5 squares, givens minimal for the ladder) | 5x5 / 7x7 / 9x9 (`RegionsLogic.sizeFor`; `RegionsRulesTest` `the tiers get larger in the order they are offered`) |
 | Cage Sudoku | givens and cage size (grid fixed 9x9) | 14 givens, cages of 2-4 / 8 givens, up to 5 / no givens, up to 7 (`CageLogic.specFor`; `CageRulesTest` `the tiers get harder in the order they are offered`) |
+| Tally | side, and the deepest step of the ladder a board must need | 5x5 shortcuts only / 6x6 needs the ways of a line / 7x7 needs a what-if (`TallyLogic.specFor`, `depth`; `TallyRulesTest` `the tiers get harder in the order they are offered`) |
 | Target | large numbers, fewest operations the target needs | 3 large, 3-4 steps / 2 large, 4-5 / 1 large, 5 (`TargetLogic.specFor`; `TargetRulesTest` `a year of daily boards ... the tiers get harder`) |
 
 Rules for the tiers:
@@ -134,7 +135,7 @@ without editing it.
   returns `null` when the budget runs out, and `test/MosaicOptimumTest` `a search that runs out of budget reports
   nothing at all` pins that.
 - *Expose the split.* `generateVerified(seed, difficulty): State?` (null when nothing was proved) is what tests
-  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap` and `Inequality` (internal). `generate` is
+  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap`, `Inequality` and `Tally` (internal). `generate` is
   `generateVerified(...) ?: lastResort(...)` (Shikaku's is `fallbackBoard`).
 - *Fallbacks.* Keep it named, tiny and honest (`Atoms.lastResort` is a three-atom chain; Snap's is a numbered
   boustrophedon). Before adding one, ask what fraction of seeds reach it and measure it; size the test sample
@@ -505,6 +506,7 @@ Y = yes, P = partial, N = no.
 | Tents | Y side, trees | Y `generateVerified` (logic finishes it, then `countSolutions` == 1; `lastResort` proved unique), year test | Y `TentsLogic.isSolved` (rules, not the stored tents) | Y `TentsOracle`, `TentsTeachingTest` | Y | Y 7 | Y squares + clue indices via `reportHighlight` | Y `TentsWebParityTest` | Y | P not measured |
 | Regions | Y side | Y `generateVerified` (partition and fill built together, a board ships only if the ladder finishes it, then `countSolutions` == 1; `lastResort` is one fixed seed's proved board), year test | Y `RegionsLogic.isSolved` (rules, not the stored digits) | Y `RegionsOracle` (naive reading-order search, counts every answer), `RegionsTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares + digit-key indices | Y `RegionsWebParityTest` | Y | Y 200 / 70 |
 | Cage Sudoku | Y givens, cage size | Y `generateVerified` (ladder finishes it, then `CageLogic.solutions` == `ExactlyOne`; `lastResort` proved unique), year test | Y `CageLogic.isSolved` (rules, not the stored answer) | Y `CageOracle` (fills one cage at a time, no inference), `CageTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares, Sudoku's anchors + keepClear | Y `CagesWebParityTest` | Y | Y 200 / 70 |
+| Tally | Y side, ladder depth | Y `generateVerified` (internal; the tier's ladder finishes it needing exactly its deepest step, then `countSolutions` == `TallyVerdict.ExactlyOne`; `lastResort` a fixed board per tier, accepted by a test), year test | Y `TallyLogic.isSolved` (every line's sum, not the stored answer) | Y `TallyOracle` (every column's subsets, no lookahead), `TallyTeachingTest` | Y no fallback exists | Y 5 | Y grid + target indices | Y `TallyWebParityTest` | Y | Y 200 / 70 |
 | Target | Y large numbers, steps | n/a many answers; `generateVerified` (exhaustive table puts the target a tier-specific number of steps away; `lastResort` fixed and checked), year test | Y `TargetState.solved` (a tile is the target) | Y `TargetOracle` (breadth-first over positions) | Y a search of the visible tiles, no fallback exists | Y 6 | Y tile / operator / target anchors + keepClear | Y `TargetWebParityTest` | Y | Y 200 / 70 |
 
 ### Known gaps and open items

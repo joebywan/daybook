@@ -14,6 +14,8 @@ import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
+import com.joebywan.daybook.puzzles.Tally
+import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.SnapState
@@ -278,6 +280,35 @@ class FallbackTest {
             assertTrue("${difficulty.name} came close to the allowance: ${used.toList()}", used.drop(30).all { it == 0 })
         }
         assertTrue("cages shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
+     * [Tally.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the tier's
+     * deepest step, and the count proved one answer. Also measures the redraws (printed): a draw is redrawn when a
+     * line keeps all or none of its numbers, when the ladder does not finish it or needs the wrong depth, or when
+     * it has several answers. Expert, which must need a what-if, redraws most.
+     */
+    @Test
+    fun `tally proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            var total = 0
+            var most = 0
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Tally.id, difficulty)
+                val proved = Tally.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("tally $date/${difficulty.name}", proved, Tally.generate(seed, difficulty))
+                val used = 1 + (0 until TallyLogic.ATTEMPTS).first { TallyLogic.attempt(seed, difficulty, it) != null }
+                total += used
+                most = maxOf(most, used)
+            }
+            println("tally ${difficulty.name}: draws per board mean ${"%.1f".format(total / 365.0)}, most $most of ${TallyLogic.ATTEMPTS}")
+            assertTrue("${difficulty.name} came close to the allowance: $most", most < TallyLogic.ATTEMPTS / 2)
+        }
+        assertTrue("tally shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     @Test
