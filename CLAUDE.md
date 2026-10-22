@@ -241,6 +241,35 @@ after a game show.
   and what followed back. No fallback exists. Highlight indices: tiles `0..5`, operators `Target.OP0 + ordinal`, the target `Target.TARGET`.
 - Keyboard reads like a calculator: type a tile's number, an operator, another number, Enter. `TargetKeysTest` pins it against the taps.
 
+## Cipher (word sums, a cryptarithm)
+
+A sum of words in which each letter stands for one digit: different letters, different digits, no word starts with 0, the sum true, one answer.
+`puzzles/CipherRules.kt` (`CipherSum`: columns from the right; `CipherLogic`: rules, conflicts, the exhaustive proof, the pick), `CipherTeacher.kt`
+(the ladder and its explanations), `CipherKeys.kt`, `Cipher.kt` (state, board, walkthrough, motif), `CipherSums.kt` (generated).
+`id = "cipher"` is hashed into every seed: never rename it. Not "Target": Target builds up to a number, this works back from columns and carries.
+
+- **The total is a real word, so the sums are found offline.** `CipherSums.kt` is written by `CipherSumsBuildTest` (env-gated, `DAYBOOK_CIPHER_SUMS=<file>`,
+  `--rerun`; reproducible: a fixed seed draws addend pairs, threads are read back in draw order). Every word is a Lexicon *answer* (screened, well known).
+  Measured: about a quarter of four-letter addend pairs have a five-letter total with one answer that the ladder finishes, out of 1,801 tried, ~45 ms a pair on
+  a desktop JVM: far too slow to search on a phone. Two five-letter addends (no leading carry, no 6-letter list) gave one ladder board per 30 pairs, three
+  addends none, though both have many one-answer sums: they need trial, not columns. So **every tier is 4 + 4 = 5**, and the tier is the hardest technique the
+  ladder needs (`CipherSumsBuildTest.tierOf`): Standard columns and pairs only, Hard all columns together, Expert a two-column what-if. 1,200 sums a tier,
+  sorted; the list's order is a contract (`CipherWebParityTest` goes red on purpose when it moves). Rebuilding after a ladder change re-rates every sum.
+- **The device proves each board again:** `generateVerified` picks an entry with `Rng(seed + attempt)`, requires the ladder to finish it and
+  `CipherLogic.prove` (column by column, no budget, sealed `Verdict` where only `ExactlyOne` carries an answer) to find one answer, which becomes the stored
+  solution. Under a millisecond a board. `lastResort` is one fixed sum per tier, proved by `CipherRulesTest`; `FallbackTest` walks a year per tier.
+  `CipherOracle` (test) tries every digit for every letter and adds the words as numbers: no columns at all.
+- **`solved` checks the rules** (`CipherLogic.isSolved`); a mistake is a letter whose digit differs from the stored answer, sound because the board has one.
+  Red, after a 1 s settle held in `remember`: letters sharing a digit, a leading 0, and the first column that is filled in (with everything to its right) and
+  does not add up. A digit another letter holds is greyed on the pad with that letter under it, never refused.
+- **Teacher: candidates per letter and per carry, derived from the placed digits on every call.** Leading carry, one column (with the carry once everything to
+  its right is placed), only letter left for a digit (ten letters), a pair of columns through their carry, all columns together (named as such, as Cage's chain),
+  then a what-if on two neighbouring columns (never a trial of the whole sum). The generator's ladder is the teacher's. Every step ends in a placement, so there
+  are **no candidate notes**: a hint never asks the player to track an elimination it has not turned into a digit. Highlight indices: tile `row * 10 + column`
+  (column 0 the units, the total the last row), letter key `100 + letter`, digit key `1000 + d`.
+- State: `words`, `solution`, `digits` (a digit per letter in alphabetical order, -1 for none) and `selected` (in state, as Inequality's; `withoutSelection`).
+  The letter key row under the sum shows each letter's digit and selects it; keyboard: a letter key selects it, a digit sets it, Backspace clears, arrows walk the letters.
+
 ## Tally (keep the numbers that make every sum)
 
 A square of digits 1-9 with a target beside every row and under every column; remove numbers until what is left in every line adds
@@ -289,7 +318,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Tally (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap and Inequality (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Tally (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality and Cipher (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
