@@ -646,7 +646,7 @@ private fun PlayBoard(
                     .padding(bottom = 10.dp),
             )
         }
-        Confetti(played = confettiPlayed, onPlayed = { confettiPlayed = true })
+        Confetti(played = confettiPlayed, full = praise.full, onPlayed = { confettiPlayed = true })
     }
 
     if (hintSession.active && !state.solved && !wide) {
