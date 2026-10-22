@@ -63,6 +63,15 @@
       left: env(safe-area-inset-left, 0px);
       touch-action: none;
     }
+    /* Safari's floating bottom toolbar (iOS 26) sits over the bottom of a fixed, full-height page, and the
+       safe-area inset does not include it. 100svh is the viewport with every browser bar showing, so sizing
+       from the top by it keeps the toolbar row clear. A Home Screen app has no bars, so svh is the screen. */
+    @supports (height: 100svh) {
+      #app {
+        bottom: auto;
+        height: calc(100svh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+      }
+    }
     #app canvas { touch-action: none; outline: none; }
     #loading {
       position: fixed; inset: 0; display: flex; flex-direction: column; gap: 14px;
