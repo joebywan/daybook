@@ -3,6 +3,8 @@ package com.joebywan.daybook.ui.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -116,37 +118,44 @@ fun HomeScreen(
     val streak = remember(completions, today) { Stats.streak(completions, today) }
     var pickingArchive by rememberSaveable { mutableStateOf(false) }
 
-    Column(
+    // The tier and Daily/Random rows stay pinned while the title and the grid scroll under them, so a player
+    // halfway down the grid can change either without scrolling back. The grid is sized to fit without
+    // scrolling, but a short screen or a large font scale can still overflow it.
+    LazyColumn(
         Modifier
             .fillMaxSize()
             .background(scheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
-            // The grid is sized to fit without scrolling, but a short screen or a large font scale
-            // can still overflow it, and a clipped bottom row would hide two whole puzzles.
-            .verticalScroll(rememberScrollState())
-            .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
     ) {
-        Header(
-            today = today,
-            streak = streak,
-            onArchive = { pickingArchive = true },
-            onStats = onStats,
-            onAchievements = onAchievements,
-            onSettings = onSettings,
-        )
-        Spacer(Modifier.height(14.dp))
-        LaunchOptions(difficulty, onDifficulty, mode, onMode)
-        Spacer(Modifier.height(14.dp))
-        PuzzleGrid(
-            difficulty = difficulty,
-            // Random boards are freshly seeded on every tap, so "solved today" says nothing
-            // about the game a tile is about to start. The tiles keep their marks-shaped space
-            // either way, so switching mode never shuffles the grid under a finger.
-            doneToday = if (mode == LaunchMode.DAILY) doneToday else emptySet(),
-            pick = PuzzleRegistry.featured(today.toEpochDays()).id,
-            onLaunch = onLaunch,
-        )
-        GetTheAppCard()
+        item {
+            Header(
+                today = today,
+                streak = streak,
+                onArchive = { pickingArchive = true },
+                onStats = onStats,
+                onAchievements = onAchievements,
+                onSettings = onSettings,
+            )
+        }
+        stickyHeader {
+            // Opaque, so the tiles scrolling under it do not show through.
+            Column(Modifier.fillMaxWidth().background(scheme.background).padding(vertical = 14.dp)) {
+                LaunchOptions(difficulty, onDifficulty, mode, onMode)
+            }
+        }
+        item {
+            PuzzleGrid(
+                difficulty = difficulty,
+                // Random boards are freshly seeded on every tap, so "solved today" says nothing
+                // about the game a tile is about to start. The tiles keep their marks-shaped space
+                // either way, so switching mode never shuffles the grid under a finger.
+                doneToday = if (mode == LaunchMode.DAILY) doneToday else emptySet(),
+                pick = PuzzleRegistry.featured(today.toEpochDays()).id,
+                onLaunch = onLaunch,
+            )
+        }
+        item { GetTheAppCard() }
     }
 
     if (pickingArchive) {
