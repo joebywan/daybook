@@ -17,6 +17,7 @@ import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.TallyLogic
+import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.Tents
@@ -236,6 +237,26 @@ class FallbackTest {
             }
         }
         assertTrue("wordwheel shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
+     * [Pointers.generateVerified] returns a board only when it covered the grid to the tier's density and the greedy
+     * clear emptied it; the last resort is rows of arrows all pointing right.
+     */
+    @Test
+    fun `pointers proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Pointers.id, difficulty)
+                val proved = Pointers.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("pointers $date/${difficulty.name}", proved, Pointers.generate(seed, difficulty))
+            }
+        }
+        assertTrue("pointers shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /** [Regions.generateVerified] returns a board only when logic finished it and a search proved one answer. */

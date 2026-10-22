@@ -142,6 +142,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Circled numbers that already make the target: the rest go.",
         "List the ways a short line can make its target.",
     ),
+    "pointers" to listOf(
+        "An arrow with an empty line to the edge can always go.",
+        "Clearing an arrow never blocks another: free stays free.",
+        "Follow a blocked arrow's line to find what to clear first.",
+        "An arrow on the edge pointing outwards is always free.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */

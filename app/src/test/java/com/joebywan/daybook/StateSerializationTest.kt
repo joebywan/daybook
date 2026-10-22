@@ -26,6 +26,7 @@ import com.joebywan.daybook.puzzles.WordWheelState
 import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
+import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsState
@@ -118,6 +119,12 @@ class StateSerializationTest {
         is MosaicState -> state.flood(0, (state.cells[0] + 1) % state.colours)
         is NonogramState -> state.tap(0, NonogramLogic.FILLED).tap(1, NonogramLogic.CROSSED)
         is PipesState -> state.rotate(0)
+        // A clear arrow taken off and a bump, so both the removals and the lives must survive.
+        is PointersState -> {
+            val free = state.arrows.indices.first { state.blocker(it) < 0 }
+            val stuck = state.arrows.indices.first { state.blocker(it) >= 0 }
+            state.tap(state.arrows[free][0])!!.tap(state.arrows[stuck][0])!!
+        }
         is SetsState -> state.copy(
             found = listOf(Sets.allSets(state.cards).first()),
             selected = listOf(1),

@@ -73,7 +73,7 @@ the band with the largest bounding box is reported as the board. All bands are p
 board, popover, toolbar), in CSS px. It is a heuristic, but a stable one for "did the board's box
 change?" because the same board gives the same band. Compare two runs' lines, or use
 `--tap X,Y` (repeatable, CSS px, in order) to move and print the box before and after
-(`<name>-after.png`). A board closer than 14 CSS px to its neighbours (Mosaic under its caption,
+(`<name>-after.png`); `--mid MS` waits MS ms after each tap and also shoots `<name>-mid.png` straight after the last one, for an animation in progress (a Pointers bump). A board closer than 14 CSS px to its neighbours (Mosaic under its caption,
 Sets) is reported with them, Tower's is only its `LazyColumn` strip, and a popover that overlaps the
 board merges with it, so compare like with like (same puzzle, tier, size, state) rather than reading
 the absolute numbers as the board's exact box. Across browsers and schemes the same board measures

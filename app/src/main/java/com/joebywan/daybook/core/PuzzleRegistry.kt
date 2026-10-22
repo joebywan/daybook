@@ -13,6 +13,7 @@ import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Nonogram
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.Pipes
+import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Tally
@@ -54,6 +55,7 @@ object PuzzleRegistry {
         Cipher,
         WordWheel,
         Tally,
+        Pointers,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }
