@@ -424,7 +424,8 @@ private fun PlayBoard(
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown || state.solved || event.isAltPressed) return@onKeyEvent false
                 when {
-                    event.key == Key.Z && (event.isCtrlPressed || event.isMetaPressed) && !event.isShiftPressed -> undo()
+                    event.key == Key.Z && (event.isCtrlPressed || event.isMetaPressed) && !event.isShiftPressed ->
+                        if (puzzle.offersUndo) undo() else return@onKeyEvent false
                     event.isCtrlPressed || event.isMetaPressed || event.isShiftPressed -> return@onKeyEvent false
                     event.key == Key.H && puzzle.offersHints -> onHint()
                     event.key == Key.Escape && hintSession.active -> hintSession.clear()
@@ -536,8 +537,10 @@ private fun PlayBoard(
                     .then(if (solved) Modifier.alpha(0f).clearAndSetSemantics { } else Modifier),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                ToolButton(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.weight(1f)) {
-                    if (!solved) undo()
+                if (puzzle.offersUndo) {
+                    ToolButton(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.weight(1f)) {
+                        if (!solved) undo()
+                    }
                 }
                 ToolButton(Icons.Default.Refresh, "Restart", Modifier.weight(1f)) {
                     if (solved) return@ToolButton
@@ -890,8 +893,11 @@ private fun ToolButton(icon: ImageVector, label: String, modifier: Modifier, onC
 internal fun KeyboardHelpLine(puzzle: PuzzleType) {
     if (puzzle.keyboardHelp.isEmpty()) return
     Text(
-        "Keyboard: " + puzzle.keyboardHelp.joinToString(" ") + " Ctrl+Z undoes" +
-            (if (puzzle.offersHints) ", H asks for a hint, Esc closes it." else "."),
+        "Keyboard: " + puzzle.keyboardHelp.joinToString(" ") +
+            listOfNotNull(
+                "Ctrl+Z undoes".takeIf { puzzle.offersUndo },
+                "H asks for a hint, Esc closes it".takeIf { puzzle.offersHints },
+            ).joinToString(", ", prefix = " ").let { if (it.isBlank()) "" else "$it." },
         style = MaterialTheme.typography.bodyMedium,
     )
 }

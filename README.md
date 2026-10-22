@@ -79,6 +79,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Word Wheel | Letter-wheel crossword | Spell words from a wheel of letters to fill a small crossword; other real words count as bonus words |
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
+| Pointers | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -146,6 +147,9 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   Lexicon), and its crossword is laid from the words it spells. A board ships only if, solving it from the hints alone,
   no slot ever has more than six words that fit it; an independent checker re-reads every row and column of the
   squares to prove no two words touch and no word was made by accident.
+- **Pointers** — arrows are laid one at a time, each only where "is in the way of" stays free of cycles, so some order always
+  clears the board, and since taking an arrow away only ever opens a way out, no order of free taps can strand you. The
+  finished board is cleared greedily before it ships, and the tests check a year of boards with an independent cycle check.
 - **Tower and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by

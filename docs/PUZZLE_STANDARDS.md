@@ -49,11 +49,13 @@ A puzzle is done when all of these are true:
 | `teach(state): Deduction?` | yes unless `offersHints = false` | Section 7. |
 | `hint(state)` | no | Legacy "move goes straight on the board", used only when `teach` returns null. Six boards still define it (`Lits`, `Mambo`, `Mosaic`, `Sets`, `Shikaku`, `Sudoku`) as a fallback; a new puzzle should not write one. |
 | `tutorial: List<TutorialFrame>` | yes | Section 8. |
-| `offersHints` | default true | `false` only for Snap (section 7). Hides the Hint button in `PlayScreen` and the walkthrough's free-play frame. |
+| `offersHints` | default true | `false` only for Snap and Pointers (section 7). Hides the Hint button in `PlayScreen` and the walkthrough's free-play frame. |
+| `offersUndo` | default true | `false` only for Pointers (the owner's call: a cleared arrow never needs to come back, so undo could only hand back a life). Hides the Undo button and Ctrl/Cmd+Z in `PlayScreen`, in both layouts. |
 
 `PuzzleState` (`puzzles/PuzzleState.kt`): `solved` (computed), `moves`, optional `failed`
-(computed; only `MosaicState` and `TowerState` override it, and only their own boards draw the lost
-state: `PlayScreen` never reads it).
+(computed; only `MosaicState`, `TowerState` and `PointersState` override it, and only their own boards draw the lost
+state: `PlayScreen` never reads it. Pointers, having no undo, draws its own Try again, one state that restores the
+board and its lives).
 
 Registry line: `core/PuzzleRegistry.kt` `all` is the home-grid order. `featured(epochDay)` rotates over it.
 The home grid is three columns (`ui/home/HomeScreen.kt` `COLUMNS`, with a comment that four rows of tiles is what one
@@ -93,6 +95,7 @@ What varies, as built:
 | Cipher | hardest technique the ladder needs (every tier is two four-letter words and a five-letter total) | columns and pairs / all columns together / a two-column what-if (`CipherSumsBuildTest.tierOf`; `CipherRulesTest` `a year of daily boards - the tiers get harder`) |
 | Word Wheel | wheel letters, words, box | 5 letters, 4-6 words, 6x6 / 6, 6-8, 7x7 / 7, 8-11, 8x8 with a six besides the root (`WordWheelLogic.specFor`; `WordWheelRulesTest` `a year of daily boards ...` asserts the mean word count rises) |
 | Sand | colours (height 4 and two spare tubes on every tier) | 5 / 7 / 8 colours (`SandLogic.specFor`; `SandBalanceTest` `the tiers get harder in the order they are offered`: over a year a naive pourer sorts 79 / 44 / 27% of tries, a careful one 84 / 52 / 33%, the solver's median search is 21 / 30 / 37 positions; 8x4 is clearly harder than 7x4, so Expert kept height 4). Deals redrawn for giving the board away: 15 / 14 / 10% of attempts; the difficulty filter (a random pourer sorts it six times out of six) redraws about half of Standard's deals, 3% of Hard's, none of Expert's. Generation on the JVM, median / p95 / max ms: 0.7 / 2.1 / 8, 0.2 / 1.2 / 1.8, 0.2 / 1.4 / 3.1 |
+| Pointers | grid, arrow length and bends | 6x7, 2-4 squares / 12x12, 3-7 / 14x17, 3-9 (`PointersLogic.specFor`; `PointersRulesTest` `the tiers get bigger and more tangled in the order they are offered`, by mean depth) |
 
 Rules for the tiers:
 
@@ -153,7 +156,8 @@ without editing it.
   candidate is re-proved with no connectivity rule (CLAUDE.md "Settled", `test/LitsUniquenessTest` via
   `test/LitsOracle`). Where several answers are possible, the teacher and `solved` must be written for
   that (below).
-- *No unique answer to prove:* Tower (a random code), Lexicon (a random word from a sorted list), Sets (target = the number of sets on the table;
+- *No unique answer to prove:* Pointers (many removal orders win; what is proved is that the board clears, by a greedy
+  clear that removal's monotonicity makes complete), Tower (a random code), Lexicon (a random word from a sorted list), Sets (target = the number of sets on the table;
   `Sets.generateVerified` redraws up to `DRAWS` and returns null if none lands, then `Sets.lastResort`, an
   exhaustive search for a board of the tier's own shape, ships instead of throwing; a year per tier
   reaches neither, pinned by `test/SetsRulesTest`).
@@ -368,7 +372,9 @@ cannot tell reasoning from peeking); a wrong move is addressed first and a corre
 explain the real choices. Snap is the sole case: its teacher fell back on 6/13/16% of steps and 89-100% of boards,
 and the choices left are exactly what the sparse numbering exists to leave the player. The reason, with the
 numbers, is in the doc comment above `Snap.offersHints` (`puzzles/Snap.kt`); a puzzle that opts out must write
-its own, and must teach through its walkthrough instead (`test/SnapTutorialTest`). `PlayScreen` then shows no
+its own, and must teach through its walkthrough instead (`test/SnapTutorialTest`). Pointers is the other case, and the
+owner's decision rather than a measured failure: a free arrow can be seen to be free and taking it never hurts, so a hint
+could only say "this one is free" (`Pointers.offersHints`, `test/PointersTutorialTest`). `PlayScreen` then shows no
 Hint button and the walkthrough's free-play frame omits it.
 
 ## 8. The walkthrough
@@ -447,7 +453,7 @@ Each puzzle `<N>`. "Template" is the file to copy.
 | Rules / validator | each rule on its own refuses a placement; the win check accepts a legal answer that is not the stored one | `KingsRulesTest`, `MamboRulesTest` + `MamboSolvedTest`, `LitsRulesTest` |
 | Independent checker | uniqueness of generated boards by a solver sharing nothing with the generator | `SnapCluesTest`, `ShikakuClueTest`, `LitsUniquenessTest` + `LitsOracle` |
 | Generator contract | unsolved start, deterministic, time budget | `GeneratorTest` (automatic via registry) |
-| Proof / fallback | the verified path never gives up over a rate-sized sample; each fallback pinned by a property only the real generator has | `FallbackTest` (year x tier: Kings, Atoms, LITS, Shikaku, Snap) |
+| Proof / fallback | the verified path never gives up over a rate-sized sample; each fallback pinned by a property only the real generator has | `FallbackTest` (year x tier: Kings, Atoms, LITS, Shikaku, Snap, Target, Pointers, ...) |
 | Tier balance | harder tiers are not easier; no slack creeping in | `TowerBalanceTest`, `MosaicOptimumTest`, `SetsRulesTest` |
 | Reachability | tapping the real handler can reach the stated target | `SetsRulesTest` `claiming every set on the board finishes the puzzle` |
 | Serialization | part-played state round-trips; computed fields not written | `StateSerializationTest` (add a `mutate` branch) |
@@ -510,6 +516,7 @@ Y = yes, P = partial, N = no.
 | Regions | Y side | Y `generateVerified` (partition and fill built together, a board ships only if the ladder finishes it, then `countSolutions` == 1; `lastResort` is one fixed seed's proved board), year test | Y `RegionsLogic.isSolved` (rules, not the stored digits) | Y `RegionsOracle` (naive reading-order search, counts every answer), `RegionsTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares + digit-key indices | Y `RegionsWebParityTest` | Y | Y 200 / 70 |
 | Cage Sudoku | Y givens, cage size | Y `generateVerified` (ladder finishes it, then `CageLogic.solutions` == `ExactlyOne`; `lastResort` proved unique), year test | Y `CageLogic.isSolved` (rules, not the stored answer) | Y `CageOracle` (fills one cage at a time, no inference), `CageTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares, Sudoku's anchors + keepClear | Y `CagesWebParityTest` | Y | Y 200 / 70 |
 | Tally | Y side, ladder depth | Y `generateVerified` (internal; the tier's ladder finishes it needing exactly its deepest step, then `countSolutions` == `TallyVerdict.ExactlyOne`; `lastResort` a fixed board per tier, accepted by a test), year test | Y `TallyLogic.isSolved` (every line's sum, not the stored answer) | Y `TallyOracle` (every column's subsets, no lookahead), `TallyTeachingTest` | Y no fallback exists | Y 5 | Y grid + target indices | Y `TallyWebParityTest` | Y | Y 200 / 70 |
+| Pointers | Y size, length, bends | n/a many orders win; `generateVerified` (built acyclic, density checked, cleared greedily; `lastResort` rows pointing right, checked), year test | Y `PointersState.solved` (every arrow gone) | Y `PointersRulesTest` (own heading arithmetic, greedy player, DFS cycle check, monotone removal) | N by design (`offersHints = false`, and `offersUndo = false`) | Y 6 | n/a no hints (arrow indices for the walkthrough) | Y `PointersWebParityTest` | Y | Y 170 |
 | Target | Y large numbers, steps | n/a many answers; `generateVerified` (exhaustive table puts the target a tier-specific number of steps away; `lastResort` fixed and checked), year test | Y `TargetState.solved` (a tile is the target) | Y `TargetOracle` (breadth-first over positions) | Y a search of the visible tiles, no fallback exists | Y 6 | Y tile / operator / target anchors + keepClear | Y `TargetWebParityTest` | Y | Y 200 / 70 |
 | Cipher | Y technique depth | Y a bundled list of real-word sums (`CipherSums`, built offline), each re-proved on the device: ladder finishes it, then `CipherLogic.prove` == `ExactlyOne`; `lastResort` proved, year test | Y `CipherLogic.isSolved` (rules, not the stored answer) | Y `CipherOracle` (every digit for every letter, no columns), `CipherTeachingTest` | Y no fallback on generated boards | Y 7 | Y tiles via `reportHighlight` + key and digit anchors + keepClear | Y `CipherWebParityTest` | Y | Y 200 / 70 |
 | Word Wheel | Y letters, words | n/a the grid's words are the answer; `generateVerified` (laid to the tier's size, and no clued slot leaves more than 6 words; `lastResort` is seed 1's proved board), year test | Y `WordWheelState.solved` (every slot's word found) | Y `WordWheelOracle` (re-reads every run of the squares) | Y clue fallback measured | Y 5 | Y squares + wheel letters via `reportHighlight` + keepClear | Y `WordWheelWebParityTest` | Y | Y 200 / 70 |

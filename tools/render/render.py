@@ -319,6 +319,9 @@ def build_parser():
     ap.add_argument("--tap", action="append", type=parse_tap, metavar="X,Y",
                     help="after settling, tap this CSS-px point (repeatable, in order), then settle and screenshot "
                          "again as <name>-after.png; with --measure both boxes are printed")
+    ap.add_argument("--mid", type=int, metavar="MS",
+                    help="with --tap: wait MS ms after each tap instead of 150, and shoot <name>-mid.png straight after the "
+                         "last one, before anything settles (an animation in progress)")
     ap.add_argument("--storage", type=Path, metavar="JSON",
                     help="a JSON object of localStorage entries ({\"file.key\": \"value\"}) to seed before the page "
                          "loads, e.g. a saved game copied out of a browser; this is how a solved board is shown")
@@ -432,7 +435,11 @@ def shoot(ctx, base_url, args, puzzle, tier, w, h, tag) -> list[str]:
             for (x, y) in args.tap:
                 page.touchscreen.tap(x, y)
                 frame(page)
-                page.wait_for_timeout(150)
+                page.wait_for_timeout(150 if args.mid is None else args.mid)
+            if args.mid is not None:
+                # Mid-animation (a bump's shake, a slide): no settling, which would wait it out.
+                frame(page)
+                (args.out / f"{tag}-mid.png").write_bytes(page.screenshot())
             png2, settled2 = settle(page, AFTER_TAP_SETTLE_S)
             if not settled2:
                 notes.append("after tap: did not go still (clock or hint pulse?); screenshot is the last frame")

@@ -5,6 +5,8 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.puzzles.ChessState
 import com.joebywan.daybook.puzzles.LexiconMark
 import com.joebywan.daybook.puzzles.LexiconState
+import com.joebywan.daybook.puzzles.PointersLogic
+import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.SetsState
 import com.joebywan.daybook.puzzles.TargetState
@@ -76,6 +78,10 @@ enum class Mark(val text: String) {
     CLOSE("○"),
     /** Tower: a peg that scored nothing. */
     NONE("·"),
+    /** Pointers: a life left. */
+    HEART("❤️"),
+    /** Pointers: a life lost to a bump. */
+    LOST("🖤"),
 }
 
 /** A line of the graphic: [marks], then a red square when a hint came before it ([hinted]), then [tail] as written. */
@@ -205,6 +211,13 @@ fun shareCard(
                 steps > state.par -> "No hints, nothing undone. Par is ${state.par}: tomorrow?"
                 else -> "On par, nothing undone. Nothing to improve on."
             }
+        }
+        // No hints and no undo: the lives are the whole story.
+        is PointersState -> {
+            val lost = PointersLogic.LIVES - state.lives
+            lines = listOf(ShareLine(List(state.lives) { Mark.HEART } + List(lost) { Mark.LOST }))
+            key = listOf(Mark.HEART to "life left", Mark.LOST to "life lost")
+            nudge = if (lost == 0) "Not a single bump." else "${plural(lost, "bump")}. None tomorrow?"
         }
         else -> {
             lines = listOf(ShareLine(strip(moves)))

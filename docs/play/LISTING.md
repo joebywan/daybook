@@ -25,7 +25,7 @@ New logic and word puzzles every day. No ads, no account, works offline.
 ```
 Fresh logic and word puzzles every day, free, with every past day open from the start. No ads, no account, no internet needed.
 
-Every day brings a new set of classic puzzles: Sudoku and Sudoku with sum cages, region and placement puzzles, picture grids, number, sum, sign and symbol grids, pipe networks, flood-fills, one-line paths, code-breaking, a hidden-word guessing game, letter sums, word wheels and chess mate-in-N. Each comes in three difficulties, Standard, Hard and Expert, and each is built so that it has exactly one answer you can reach by reasoning. Nothing needs guessing.
+Every day brings a new set of classic puzzles: Sudoku and Sudoku with sum cages, region and placement puzzles, picture grids, number, sum, sign and symbol grids, pipe networks, flood-fills, one-line paths, arrows to clear, code-breaking, a hidden-word guessing game, letter sums, word wheels and chess mate-in-N. Each comes in three difficulties, Standard, Hard and Expert, and each is built so that it has exactly one answer you can reach by reasoning. Nothing needs guessing.
 
 HINTS THAT TEACH
 Stuck? Ask for a hint and Daybook explains the next step in plain language, pointing at the cells it is talking about. You make the move yourself, so you learn the technique instead of watching it get filled in. Every puzzle has a short walkthrough for first-timers, and "How to play" is always one tap away.
