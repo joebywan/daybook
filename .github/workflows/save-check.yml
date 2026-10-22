@@ -1,0 +1,34 @@
+name: Release save check
+
+# The release gate's save check (.github/actions/save-check) on an APK already published, publishing nothing:
+# to try a change to the check, or to look at a past release (one older than a fixture file fails on that file's
+# new puzzles, as it should: v0.1.160 reports the three Dominoes saves lost).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to check (empty: the latest release)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: android-actions/setup-android@v4
+
+      - name: Download the APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release download $TAG --pattern '*.apk' --output "$RUNNER_TEMP/daybook.apk"
+
+      - uses: ./.github/actions/save-check
+        with:
+          apk: ${{ runner.temp }}/daybook.apk
