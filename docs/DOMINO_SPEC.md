@@ -128,6 +128,66 @@ answer is proved unique. "Show me" lifts it.
 Highlight indices: squares `0 until w*h`, tray slot `i` is `TRAY + i` (`TRAY = 1000`), region rule badge `RULE + r`
 (`RULE = 2000`).
 
+## Measured (logic built; JVM, a year of daily seeds per tier unless stated)
+
+From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes-generation.txt`), `FallbackTest`
+`dominoes proves every daily board of a year on every tier` and `DominoTeachingTest` `coverage ...`
+(`app/build/reports/dominoes-teaching-coverage.txt`, 200 boards a tier).
+
+| | Standard | Hard | Expert |
+|---|---|---|---|
+| Box, dominoes | 5x5, 6-7 | 6x6, 9-10 | 7x7, 12-14 |
+| Draws per board (mean / most of `ATTEMPTS` = 200) | 1.4 / 5 | 2.7 / 18 | 3.4 / 21 |
+| Days reaching `lastResort` | 0 | 0 | 0 |
+| Ladder level needed (every board) | rule fit (3) | region value (4) on 183, counting (5) on 182 | what-if (6) on all 365 |
+| Squares in a ruled region | 68% | 74% | 79% |
+| Squares whose value a one-square sum states outright | 39% | 12% | 15% |
+| Rules that are exact sums | 96% | 25% | 28% |
+| Rules a board (sum / < / > / = / ≠, a year) | 6.7 (2352 / 0 / 0 / 97 / 0) | 11.5 (1052 / 1434 / 1397 / 243 / 84) | 17.1 (1720 / 1950 / 2057 / 396 / 109) |
+| Hint steps a board | 6.5 | 9.5 | 13.1 |
+| of which partner / place / domino | 3.5 / 0.5 / 2.5 | 3.8 / 0.7 / 2.8 | 4.2 / 0.8 / 3.6 |
+| of which region value / counting / what-if | 0 / 0 / 0 | 1.2 / 1.0 / 0 | 0.9 / 1.3 / 2.3 |
+| Generation ms, median / p95 / max | 0.3 / 0.4 / 0.5 | 1.7 / 4.5 / 11.6 | 14.3 / 34.8 / 53.8 |
+
+- **Oracle agreement:** `DominoOracle` agrees with `solutions` on 40 / 40 / 12 generated boards (one answer, the
+  stored one; the oracle takes about 0.2 s an Expert board, which is why the sample thins) and on 5,774 small planted
+  boards: 1,842 with no answer, 83 with one, 3,849 with several. `lastResort` is the board of seed 20261022 per tier,
+  proved by the oracle in a test.
+- **Hints:** hints alone finish every daily board of a year on every tier with no fallback and no mistake, and from
+  over 500 part-played boards; on 582 steps from small boards with several answers (1,495 of the sample ambiguous) every
+  step holds for every answer still possible. Longest explanation 200 characters (the cap); nudges 70.
+- **Standard gives the most away.** Its ladder has no region reasoning (placement steps only, as decided), so the
+  facts it can use are mostly one-square sums: 39% of its squares are stated outright. `DominoRulesTest` holds it under
+  45% (Hard and Expert under 20%). If that reads as too easy, the lever is letting Standard use region values (level 4),
+  which is the owner's call, not a tuning knob.
+- **≠ is rare** (0.2 / 0.3 a board on Hard / Expert even with all-different regions read as ≠): it is the weakest rule,
+  so loosening keeps it only where nothing weaker would do.
+- The web runs generation single-threaded; Expert has not yet been timed in a browser (the UI agent's `?dump&times` check).
+
+### Where the build departs from the text above, and why
+
+- **Tightening, then loosening, as measured.** A draw is rejected at once when the ladder cannot finish it even with
+  every square given (two tilings both made of tray dominoes): before this, every rejected draw cost a full tightening
+  walk to find out. Tightening adds one fact at a time (doubling batches was tried: the overshoot left Hard boards too
+  easy for their tier and draws rose sixfold) and is checked against the ladder without the what-if (level 5); loosening
+  then runs at the tier's full ladder.
+- **Loosening order:** each region once, in random order, trying its strongest loosening first (drop the rule, then a
+  merge with a neighbour, then a bound), keeping the first the ladder still finishes. One pass in fully random order
+  over every loosening left more of the board ruled (Expert 82% against 79%) at the same cost; a second such pass
+  doubled the time and gained under a point. Loosenings also
+  include a sum to ≠ where the values all differ (the spec listed only bounds, drops and merges).
+- **Uniqueness during loosening** is not re-proved per trial: a ladder that places every domino by sound strikes has
+  proved the answer unique. `solutions` proves the finished board once, and has never disagreed.
+- **Hard needs a region-value *or* a counting step** (level 4 or 5): about half its boards need each.
+- **Ladder details:** counting is "as many squares that can take only v as halves of v left in the tray, so no other
+  square gets a v" (covers "only one domino still has a 6"). The what-if tries squares only (two candidates before
+  three), follows two rounds of steps 1-5, and is emitted only when every candidate but one breaks, so it always ends in a
+  placement. Restricting it to two-candidate squares raised Expert draws by 40%; three rounds cost more for nothing.
+  The step names `only-partner` / `only-place` / `only-domino` are all placement-level (3); which one a hint gets
+  follows how the placement settled.
+- `ruleBroken(rule, pips, open)` takes the covered squares' pips and the count of uncovered squares. Added for the
+  board: `DominoLogic.flip`, `dominoAt`, `regionHolds`, `regionBroken`.
+
 ## Board UI (`puzzles/Dominoes.kt`)
 
 - **Layout:** the board above, the tray below in a fixed grid sized for the tier's tray (at most 7 slots a row); a
