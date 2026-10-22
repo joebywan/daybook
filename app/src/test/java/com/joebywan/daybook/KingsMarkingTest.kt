@@ -19,21 +19,9 @@ class KingsMarkingTest {
 
     private val size = 5
 
-    /**
-     * Regions that deliberately cut across rows and columns, so a derivation that quietly ignored
-     * the region (or stood in a row for it) would still fail.
-     */
-    private val regions = listOf(
-        0, 0, 1, 1, 1,
-        0, 0, 1, 1, 1,
-        2, 2, 2, 3, 3,
-        2, 4, 4, 3, 3,
-        4, 4, 4, 3, 3,
-    )
-
     private fun board(vararg marks: Pair<Int, Mark>): KingsState = KingsState(
         size = size,
-        region = regions,
+        region = KINGS_CROSS_REGIONS,
         marks = List(size * size) { Mark.EMPTY }.toMutableList()
             .also { list -> marks.forEach { (i, m) -> list[i] = m } },
         solution = setOf(12),
@@ -183,3 +171,15 @@ class KingsMarkingTest {
         assertEquals(s.moves + 2, cleared.moves)
     }
 }
+
+/**
+ * A 5x5 board's regions that deliberately cut across rows and columns, so a derivation or a check that quietly
+ * ignored the region (or stood in a row for it) would still fail. Shared by [KingsMarkingTest] and [KingsRulesTest].
+ */
+internal val KINGS_CROSS_REGIONS = listOf(
+    0, 0, 1, 1, 1,
+    0, 0, 1, 1, 1,
+    2, 2, 2, 3, 3,
+    2, 4, 4, 3, 3,
+    4, 4, 4, 3, 3,
+)

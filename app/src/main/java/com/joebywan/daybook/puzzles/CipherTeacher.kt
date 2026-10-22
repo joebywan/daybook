@@ -82,75 +82,32 @@ internal object CipherTeacher {
          * Column [c] on its own: keeps only the digits and carries some choice for the whole column supports
          * (different letters different digits within it). -1 when nothing does, 1 when something was cut.
          */
-        fun revise(c: Int): Int {
-            val adds = sum.columnAddends[c]
-            val t = sum.columnTotal[c]
-            val vars = (adds + t).distinct()
-            val sup = IntArray(vars.size)
-            var supIn = 0
-            var supOut = 0
-            val value = IntArray(n)
-            fun go(k: Int, used: Int) {
-                if (k == vars.size) {
-                    val s0 = adds.sumOf { value[it] }
-                    for (cin in 0..sum.maxCarry) {
-                        if (carry[c] and (1 shl cin) == 0) continue
-                        val s = s0 + cin
-                        if (s % 10 != value[t] || carry[c + 1] and (1 shl (s / 10)) == 0) continue
-                        for (i in vars.indices) sup[i] = sup[i] or (1 shl value[vars[i]])
-                        supIn = supIn or (1 shl cin)
-                        supOut = supOut or (1 shl (s / 10))
-                    }
-                    return
-                }
-                val l = vars[k]
-                var m = cand[l] and used.inv()
-                while (m != 0) {
-                    val d = m.countTrailingZeroBits()
-                    m = m and (m - 1)
-                    value[l] = d
-                    go(k + 1, used or (1 shl d))
-                }
-            }
-            go(0, 0)
-            var changed = 0
-            for (i in vars.indices) {
-                val next = cand[vars[i]] and sup[i]
-                if (next == 0) return -1
-                if (next != cand[vars[i]]) { cand[vars[i]] = next; changed = 1 }
-            }
-            if (supIn == 0) return -1
-            if (supIn != carry[c]) { carry[c] = supIn; changed = 1 }
-            if (supOut != carry[c + 1]) { carry[c + 1] = supOut; changed = 1 }
-            return changed
-        }
+        fun revise(c: Int): Int = reviseSpan(c, 1)
 
         /** Columns [c] and [c] + 1 as one: every choice for both, through the carry between them. */
-        fun reviseJoint(c: Int): Int {
-            val addsA = sum.columnAddends[c]
-            val addsB = sum.columnAddends[c + 1]
-            val tA = sum.columnTotal[c]
-            val tB = sum.columnTotal[c + 1]
-            val vars = (addsA + tA + addsB + tB).distinct()
+        fun reviseJoint(c: Int): Int = reviseSpan(c, 2)
+
+        /** Columns [c] until [c] + [span] as one, as [revise] does for one: the carries between them are cut too. */
+        private fun reviseSpan(c: Int, span: Int): Int {
+            val vars = (c until c + span).flatMap { sum.columnAddends[it] + sum.columnTotal[it] }.distinct()
             val sup = IntArray(vars.size)
-            var supIn = 0
-            var supMid = 0
-            var supOut = 0
+            val supCarry = IntArray(span + 1) // the carries into c .. c + span that some choice supports
+            val cy = IntArray(span + 1)
+            val adds = IntArray(span)
             val value = IntArray(n)
             fun go(k: Int, used: Int) {
                 if (k == vars.size) {
-                    val a0 = addsA.sumOf { value[it] }
-                    val b0 = addsB.sumOf { value[it] }
-                    for (cin in 0..sum.maxCarry) {
+                    for (j in 0 until span) adds[j] = sum.columnAddends[c + j].sumOf { value[it] }
+                    cin@ for (cin in 0..sum.maxCarry) {
                         if (carry[c] and (1 shl cin) == 0) continue
-                        val s = a0 + cin
-                        if (s % 10 != value[tA] || carry[c + 1] and (1 shl (s / 10)) == 0) continue
-                        val s2 = b0 + s / 10
-                        if (s2 % 10 != value[tB] || carry[c + 2] and (1 shl (s2 / 10)) == 0) continue
+                        cy[0] = cin
+                        for (j in 0 until span) {
+                            val s = adds[j] + cy[j]
+                            if (s % 10 != value[sum.columnTotal[c + j]] || carry[c + j + 1] and (1 shl (s / 10)) == 0) continue@cin
+                            cy[j + 1] = s / 10
+                        }
                         for (i in vars.indices) sup[i] = sup[i] or (1 shl value[vars[i]])
-                        supIn = supIn or (1 shl cin)
-                        supMid = supMid or (1 shl (s / 10))
-                        supOut = supOut or (1 shl (s2 / 10))
+                        for (j in 0..span) supCarry[j] = supCarry[j] or (1 shl cy[j])
                     }
                     return
                 }
@@ -170,10 +127,8 @@ internal object CipherTeacher {
                 if (next == 0) return -1
                 if (next != cand[vars[i]]) { cand[vars[i]] = next; changed = 1 }
             }
-            if (supIn == 0) return -1
-            if (supIn != carry[c]) { carry[c] = supIn; changed = 1 }
-            if (supMid != carry[c + 1]) { carry[c + 1] = supMid; changed = 1 }
-            if (supOut != carry[c + 2]) { carry[c + 2] = supOut; changed = 1 }
+            if (supCarry[0] == 0) return -1
+            for (j in 0..span) if (supCarry[j] != carry[c + j]) { carry[c + j] = supCarry[j]; changed = 1 }
             return changed
         }
 

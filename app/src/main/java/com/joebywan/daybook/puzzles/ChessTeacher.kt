@@ -26,27 +26,24 @@ internal object ChessTeacher {
     const val MAX_EXPLANATION = 200
     const val MAX_NUDGE = 70
 
-    /** [move] is the key to play, or (for a mistake) the move to take back, the player's move number [undoTo] (0-based). */
+    /** [move] is the key to play, or (for a mistake) the move to take back. */
     class Step(
         val technique: String,
         val move: Int,
         val keys: List<Int>,
-        val undoTo: Int,
         val focus: Set<Int>,
         val cited: Set<Int>,
         val nudge: String,
         val explanation: String,
     ) {
         val targets: Set<Int>
-            get() = if (promo(move) != 0 && technique != MISTAKE) setOf(fromSq(move), toSq(move), 100 + promo(move))
-            else setOf(fromSq(move), toSq(move))
+            get() {
+                val squares = setOf(ChessRules.from(move), ChessRules.to(move))
+                val promo = ChessRules.promo(move)
+                return if (promo != 0 && technique != MISTAKE) squares + (100 + promo) else squares
+            }
     }
 
-    private fun fromSq(m: Int) = m and 63
-    private fun toSq(m: Int) = (m shr 6) and 63
-    private fun promo(m: Int) = m shr 12
-
-    private fun sqName(s: Int) = "${'a' + s % 8}${'1' + s / 8}"
     private val KIND = listOf("", "pawn", "knight", "bishop", "rook", "queen", "king")
     private fun side(white: Boolean) = if (white) "White" else "Black"
     /** Black's moves are written "...Kg8"; White's plain. [p] is the position the move is made in. */
@@ -56,7 +53,7 @@ internal object ChessTeacher {
     /** "Rd1", "pawn d4": a piece and its square, for naming what covers a square. */
     private fun named(p: ChessPosition, s: Int): String {
         val k = kind(p, s)
-        return if (k == 1) "pawn ${sqName(s)}" else "${" PNBRQK"[k]}${sqName(s)}"
+        return if (k == 1) "pawn ${ChessRules.name(s)}" else "${" PNBRQK"[k]}${ChessRules.name(s)}"
     }
 
     private fun kind(p: ChessPosition, s: Int): Int = p.pieceAt(s).let { if (it < 0) -it else it }
@@ -139,8 +136,8 @@ internal object ChessTeacher {
                 "$san lets $who escape: ${reply}there is no forced mate in ${l.movesLeftAfter}. Take it back."
             }
         }
-        val f = setOf(fromSq(l.bad), toSq(l.bad))
-        return Step(MISTAKE, l.bad, emptyList(), l.mistakeIndex, f, f,
+        val f = setOf(ChessRules.from(l.bad), ChessRules.to(l.bad))
+        return Step(MISTAKE, l.bad, emptyList(), f, f,
             "That move gives up the mate. Look at it again.", fit(why))
     }
 
@@ -152,16 +149,16 @@ internal object ChessTeacher {
         val key = res.keys.firstOrNull { ChessRules.inCheck(ChessRules.play(position, it)) } ?: res.keys.first()
         val c = ChessRules.play(position, key)
         val king = kingSquare(c, !white)
-        val piece = "${KIND[kind(position, fromSq(key))]} on ${sqName(fromSq(key))}"
+        val piece = "${KIND[kind(position, ChessRules.from(key))]} on ${ChessRules.name(ChessRules.from(key))}"
         return if (res.inMoves == 1) {
             val cited = mutableSetOf(king)
             val text = mateText(position, key, c, king, cited)
-            Step(MATE_IN_ONE, key, res.keys, -1, setOf(king, fromSq(key)), cited,
+            Step(MATE_IN_ONE, key, res.keys, setOf(king, ChessRules.from(key)), cited,
                 "One move ends it. Where can that king go?", fit(text))
         } else {
             val check = ChessRules.inCheck(c)
             val text = forcingText(position, key, c, res.inMoves - 1, check)
-            Step(if (check) FORCING_KEY else QUIET_KEY, key, res.keys, -1, setOf(fromSq(key)), setOf(king, toSq(key)),
+            Step(if (check) FORCING_KEY else QUIET_KEY, key, res.keys, setOf(ChessRules.from(key)), setOf(king, ChessRules.to(key)),
                 "Look at the $piece.", fit(text))
         }
     }
@@ -196,8 +193,8 @@ internal object ChessTeacher {
         else "nothing can capture the checker or block it"
         cited.addAll(own); cited.addAll(covered.map { it.first }); cited.addAll(covered.map { it.second })
         cited.addAll(checkers)
-        val ownPart = if (own.isEmpty()) "" else "own pieces on ${own.joinToString(" ") { sqName(it) }}"
-        val covPart = covered.joinToString(", ") { "${sqName(it.first)} by ${named(c, it.second)}" }
+        val ownPart = if (own.isEmpty()) "" else "own pieces on ${own.joinToString(" ") { ChessRules.name(it) }}"
+        val covPart = covered.joinToString(", ") { "${ChessRules.name(it.first)} by ${named(c, it.second)}" }
         val full = "$san is mate: check; " +
             listOf(ownPart, covPart).filter { it.isNotEmpty() }.joinToString("; ") + "; $end."
         if (full.length <= MAX_EXPLANATION) return full
@@ -216,7 +213,7 @@ internal object ChessTeacher {
         // the likeliest escapes first: checks, captures, then the rest, each group in move order
         val checks = replies.filter { ChessRules.inCheck(ChessRules.play(c, it)) }
         val rest = replies.filter { it !in checks }
-        val ranked = checks + rest.filter { c.pieceAt(toSq(it)) != 0 } + rest.filter { c.pieceAt(toSq(it)) == 0 }
+        val ranked = checks + rest.filter { c.pieceAt(ChessRules.to(it)) != 0 } + rest.filter { c.pieceAt(ChessRules.to(it)) == 0 }
         val shown = ranked.take(2).mapNotNull { r ->
             val d = ChessRules.play(c, r)
             val res = ChessRules.forcedMate(d, left, Int.MAX_VALUE) as? ChessRules.Mate.Forced ?: return@mapNotNull null
