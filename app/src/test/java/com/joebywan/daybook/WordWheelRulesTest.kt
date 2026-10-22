@@ -22,6 +22,7 @@ import java.time.LocalDate
 class WordWheelRulesTest {
 
     private val start = LocalDate.of(2026, 1, 1)
+    private val lenient = Json { ignoreUnknownKeys = true }
 
     private fun daily(day: Int, d: Difficulty): WordWheelState? =
         WordWheel.generateVerified(DailySeed.seedFor(start.plusDays(day.toLong()), WordWheel.id, d), d)
@@ -77,7 +78,7 @@ class WordWheelRulesTest {
     @Test
     fun `an old save without bonus words still loads`() {
         val json = """{"wheel":"irnba","width":5,"height":4,"slots":[{"word":"brain","row":2,"col":0,"across":true}],"found":["brain"]}"""
-        val s = Json { ignoreUnknownKeys = true }.decodeFromString(WordWheelState.serializer(), json)
+        val s = lenient.decodeFromString(WordWheelState.serializer(), json)
         assertEquals(emptyList<String>(), s.bonus)
         assertTrue(s.solved)
     }
