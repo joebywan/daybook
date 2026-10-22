@@ -56,7 +56,7 @@ internal object DominoTeacher {
     const val LEVEL_WHAT_IF = 6
 
     /** How far a what-if follows its supposition: rounds of steps 1-5 over the whole board. */
-    const val WHAT_IF_ROUNDS = 3
+    const val WHAT_IF_ROUNDS = 2
 
     const val TRAY = 1000
     const val RULE = 2000
@@ -154,8 +154,10 @@ internal object DominoTeacher {
      * The generator's acceptance test: the ladder, capped at [maxLevel], places every domino of
      * [layout] from an empty board. The deepest level it used, or null when it gets stuck.
      */
-    fun solveLevel(layout: DominoLogic.Layout, maxLevel: Int): Int? =
-        DominoLadder.build(layout, List(layout.tray.size) { null }).solve(maxLevel)
+    fun solveLevel(layout: DominoLogic.Layout, maxLevel: Int, candidates: DominoCandidates? = null): Int? {
+        val empty = List(layout.tray.size) { null }
+        return DominoLadder.build(layout, empty, candidates ?: DominoCandidates(layout, empty)).solve(maxLevel)
+    }
 
     /**
      * The next placement reasoned from what the player sees, or null when there is none (a finished
@@ -341,29 +343,98 @@ internal object DominoTeacher {
 }
 
 /**
- * The ladder's working state for one board: every candidate (tray domino, two free neighbouring
- * squares, way round) and which are still alive. Built from the visible board alone.
+ * Every candidate of a board: each unplaced tray domino on each pair of free neighbouring squares,
+ * both ways round (a double once). It depends on the shape, the tray and the placements, not on the
+ * regions, so the generator builds it once per draw and reuses it for every rule it tries.
+ */
+internal class DominoCandidates(layout: DominoLogic.Layout, placed: List<Placement?>) {
+    val n = layout.size
+
+    /** Open and not under a placed domino. */
+    val free = BooleanArray(n) { layout.open[it] }
+
+    /** Pips under the placed dominoes, -1 elsewhere. */
+    val placedPips = IntArray(n) { -1 }
+    val placedDom = BooleanArray(layout.tray.size)
+    val dom: IntArray
+    val s: IntArray
+    val t: IntArray
+    val vs: IntArray
+    val vt: IntArray
+    val bySquare: Array<IntArray>
+    val byDomino: Array<IntArray>
+
+    init {
+        val tray = layout.tray
+        for (k in tray.indices) {
+            val p = placed[k] ?: continue
+            placedDom[k] = true
+            free[p.first] = false
+            free[p.second] = false
+            placedPips[p.first] = tray[k].a
+            placedPips[p.second] = tray[k].b
+        }
+        var count = 0
+        for (k in tray.indices) {
+            if (placedDom[k]) continue
+            for (x in 0 until n) if (free[x]) for (y in layout.neighbours[x]) if (y > x && free[y]) count += if (tray[k].isDouble) 1 else 2
+        }
+        dom = IntArray(count); s = IntArray(count); t = IntArray(count); vs = IntArray(count); vt = IntArray(count)
+        val sqCount = IntArray(n)
+        val domCount = IntArray(tray.size)
+        var c = 0
+        fun add(k: Int, x: Int, y: Int) {
+            dom[c] = k; s[c] = x; t[c] = y; vs[c] = tray[k].a; vt[c] = tray[k].b
+            sqCount[x]++; sqCount[y]++; domCount[k]++
+            c++
+        }
+        for (k in tray.indices) {
+            if (placedDom[k]) continue
+            for (x in 0 until n) {
+                if (!free[x]) continue
+                for (y in layout.neighbours[x]) {
+                    if (y < x || !free[y]) continue
+                    add(k, x, y)
+                    if (!tray[k].isDouble) add(k, y, x)
+                }
+            }
+        }
+        bySquare = Array(n) { IntArray(sqCount[it]) }
+        byDomino = Array(tray.size) { IntArray(domCount[it]) }
+        val sqFill = IntArray(n)
+        val domFill = IntArray(tray.size)
+        for (i in 0 until count) {
+            bySquare[s[i]][sqFill[s[i]]++] = i
+            bySquare[t[i]][sqFill[t[i]]++] = i
+            byDomino[dom[i]][domFill[dom[i]]++] = i
+        }
+    }
+}
+
+/**
+ * The ladder's working state for one board: which candidates ([DominoCandidates]) are still alive,
+ * why each struck one went, and what has settled. Built from the visible board alone.
  */
 internal class DominoLadder private constructor(
     val layout: DominoLogic.Layout,
-    /** Open and not under a placed domino. */
-    val free: BooleanArray,
-    val placedDom: BooleanArray,
-    val cDom: IntArray,
-    val cS: IntArray,
-    val cT: IntArray,
-    val cVs: IntArray,
-    val cVt: IntArray,
-    val bySquare: Array<IntArray>,
-    val byDomino: Array<IntArray>,
+    private val k: DominoCandidates,
     val alive: BooleanArray,
-    /** Why each struck candidate went: an index into [reasons], or -1 while alive. */
-    val reasonOf: IntArray,
+    /** Why each struck candidate went: an index into [reasons], or -1 while alive (or when not recorded). */
+    private val reasonOf: IntArray,
     /** Pips on each square under a placed or settled domino, -1 elsewhere. */
     val known: IntArray,
     /** The candidate each settled (not yet placed) domino is fixed to, or -1. */
-    val fixedAt: IntArray,
-    val reasons: ArrayList<Reason>,
+    private val fixedAt: IntArray,
+    private val aliveSq: IntArray,
+    private val aliveDom: IntArray,
+    /** Regions whose settled pips changed since [ruleFit] last looked (only they can strike anything new). */
+    private val ruleDirty: BooleanArray,
+    /** Regions whose squares' possible pips changed since [regionValue] last looked. */
+    private val valueDirty: BooleanArray,
+    /** Squares whose candidates changed since [geometry] last looked. */
+    private val squareDirty: BooleanArray,
+    /** Null inside a what-if, which needs only whether it breaks. */
+    private val reasons: ArrayList<Reason>?,
 ) {
     class Reason(val level: Int, val kind: Int, val arg: Int)
     class Forced(val cand: Int, val square: Int)
@@ -374,25 +445,52 @@ internal class DominoLadder private constructor(
     var broken = NONE
     var brokenArg = -1
 
+    /** Whether a domino has settled since [forced] last checked every region's settled pips. */
+    private var regionsToCheck = true
+
     private val n = layout.size
     private val regions = layout.regionSquares
 
+    val free: BooleanArray get() = k.free
+    val cDom: IntArray get() = k.dom
+    val bySquare: Array<IntArray> get() = k.bySquare
+    val byDomino: Array<IntArray> get() = k.byDomino
+    private val cS = k.s
+    private val cT = k.t
+    private val cVs = k.vs
+    private val cVt = k.vt
+
     fun placement(c: Int) = Placement(cS[c], cT[c])
 
-    fun copy() = DominoLadder(
-        layout, free, placedDom, cDom, cS, cT, cVs, cVt, bySquare, byDomino,
-        alive.copyOf(), reasonOf.copyOf(), known.copyOf(), fixedAt.copyOf(), ArrayList(reasons),
-    ).also { it.broken = broken; it.brokenArg = brokenArg }
+    /** A copy for a what-if: same knowledge, no reasons kept. */
+    private fun hypothesis() = DominoLadder(
+        layout, k, alive.copyOf(), reasonOf, known.copyOf(), fixedAt.copyOf(), aliveSq.copyOf(), aliveDom.copyOf(),
+        ruleDirty.copyOf(), valueDirty.copyOf(), squareDirty.copyOf(), null,
+    ).also { it.broken = broken; it.brokenArg = brokenArg; it.regionsToCheck = regionsToCheck }
 
     private fun reason(level: Int, kind: Int, arg: Int): Int {
-        reasons.add(Reason(level, kind, arg))
-        return reasons.size - 1
+        val list = reasons ?: return -1
+        list.add(Reason(level, kind, arg))
+        return list.size - 1
+    }
+
+    private fun markRegions(flags: BooleanArray, c: Int) {
+        val rs = layout.regionOf[cS[c]]
+        val rt = layout.regionOf[cT[c]]
+        if (rs >= 0) flags[rs] = true
+        if (rt >= 0) flags[rt] = true
     }
 
     private fun kill(c: Int, r: Int): Boolean {
         if (!alive[c]) return false
         alive[c] = false
-        reasonOf[c] = r
+        if (reasons != null) reasonOf[c] = r
+        aliveSq[cS[c]]--
+        aliveSq[cT[c]]--
+        aliveDom[cDom[c]]--
+        squareDirty[cS[c]] = true
+        squareDirty[cT[c]] = true
+        markRegions(valueDirty, c)
         return true
     }
 
@@ -400,15 +498,18 @@ internal class DominoLadder private constructor(
         if (broken == NONE) { broken = kind; brokenArg = arg }
     }
 
+    private fun settled(d: Int) = k.placedDom[d] || fixedAt[d] >= 0
+
     /** Every domino placed or settled. */
-    fun done(): Boolean = layout.tray.indices.all { placedDom[it] || fixedAt[it] >= 0 }
+    fun done(): Boolean = layout.tray.indices.all { settled(it) }
 
     /** The distinct reasons that struck [cands], cheapest level first, in the order they were found. */
     fun reasonsOf(cands: List<Int>): List<Reason> {
+        val list = reasons ?: return emptyList()
         val ids = cands.map { reasonOf[it] }.filter { it >= 0 }.distinct().sorted()
         val out = ArrayList<Reason>()
         for (i in ids) {
-            val r = reasons[i]
+            val r = list[i]
             if (out.none { it.kind == r.kind && it.arg == r.arg }) out.add(r)
         }
         return out.sortedBy { it.level }
@@ -420,10 +521,18 @@ internal class DominoLadder private constructor(
         fixedAt[d] = c
         known[cS[c]] = cVs[c]
         known[cT[c]] = cVt[c]
+        markRegions(ruleDirty, c)
+        markRegions(valueDirty, c)
+        regionsToCheck = true
         val r = reason(DominoTeacher.LEVEL_FIX, FIX_KIND, d)
         for (o in byDomino[d]) if (o != c) kill(o, r)
         for (o in bySquare[cS[c]]) if (o != c) kill(o, r)
         for (o in bySquare[cT[c]]) if (o != c) kill(o, r)
+    }
+
+    private fun lastAlive(list: IntArray): Int {
+        for (c in list) if (alive[c]) return c
+        return -1
     }
 
     /**
@@ -435,20 +544,16 @@ internal class DominoLadder private constructor(
         if (broken != NONE) return null
         for (q in 0 until n) {
             if (!free[q] || known[q] >= 0) continue
-            var count = 0
-            var last = -1
-            for (c in bySquare[q]) if (alive[c]) { count++; last = c }
-            if (count == 0) { fail(SQUARE, q); return null }
-            if (count == 1) return Forced(last, q)
+            if (aliveSq[q] == 0) { fail(SQUARE, q); return null }
+            if (aliveSq[q] == 1) return Forced(lastAlive(bySquare[q]), q)
         }
         for (d in layout.tray.indices) {
-            if (placedDom[d] || fixedAt[d] >= 0) continue
-            var count = 0
-            var last = -1
-            for (c in byDomino[d]) if (alive[c]) { count++; last = c }
-            if (count == 0) { fail(DOMINO, d); return null }
-            if (count == 1) return Forced(last, -1)
+            if (settled(d)) continue
+            if (aliveDom[d] == 0) { fail(DOMINO, d); return null }
+            if (aliveDom[d] == 1) return Forced(lastAlive(byDomino[d]), -1)
         }
+        if (!regionsToCheck) return null
+        regionsToCheck = false
         for (r in regions.indices) {
             val sq = regions[r]
             val pips = sq.filter { known[it] >= 0 }.map { known[it] }
@@ -461,6 +566,8 @@ internal class DominoLadder private constructor(
     fun geometry(): Boolean {
         var changed = false
         for (q in 0 until n) {
+            if (!squareDirty[q]) continue
+            squareDirty[q] = false
             if (!free[q] || known[q] >= 0) continue
             var partner = -1
             var single = true
@@ -470,36 +577,32 @@ internal class DominoLadder private constructor(
                 if (partner < 0) partner = t else if (partner != t) { single = false; break }
             }
             if (!single || partner < 0) continue
-            var r = -1
+            var r = -2
             for (c in bySquare[partner]) {
                 if (!alive[c] || cS[c] == q || cT[c] == q) continue
-                if (r < 0) r = reason(DominoTeacher.LEVEL_GEOMETRY, GEOMETRY_KIND, q)
+                if (r == -2) r = reason(DominoTeacher.LEVEL_GEOMETRY, GEOMETRY_KIND, q)
                 changed = kill(c, r) || changed
             }
         }
         return changed
     }
 
-    /** The regions candidate [c] touches: one or two, never the same twice. */
-    private inline fun forRegions(c: Int, body: (Int) -> Unit) {
-        val rs = layout.regionOf[cS[c]]
-        val rt = layout.regionOf[cT[c]]
-        if (rs >= 0) body(rs)
-        if (rt >= 0 && rt != rs) body(rt)
-    }
-
     /** Level 3: a candidate that breaks a region's rule whatever goes on the region's other empty squares. */
     fun ruleFit(): Boolean {
         var changed = false
-        val struck = IntArray(regions.size) { -1 }
+        val look = ruleDirty.copyOf()
+        ruleDirty.fill(false)
+        val struck = IntArray(regions.size) { -2 }
+        val pips = ArrayList<Int>(DominoLogic.MAX_REGION)
         for (c in alive.indices) {
             if (!alive[c] || fixedAt[cDom[c]] == c) continue
-            forRegions(c) { r ->
-                if (!alive[c]) return@forRegions
-                val sq = regions[r]
-                val pips = ArrayList<Int>()
+            val rs = layout.regionOf[cS[c]]
+            val rt = layout.regionOf[cT[c]]
+            for (r in intArrayOf(rs, if (rt == rs) -1 else rt)) {
+                if (r < 0 || !look[r]) continue
+                pips.clear()
                 var open = 0
-                for (q in sq) {
+                for (q in regions[r]) {
                     when {
                         q == cS[c] -> pips.add(cVs[c])
                         q == cT[c] -> pips.add(cVt[c])
@@ -508,8 +611,9 @@ internal class DominoLadder private constructor(
                     }
                 }
                 if (DominoLogic.ruleBroken(layout.rules[r], pips, open)) {
-                    if (struck[r] < 0) struck[r] = reason(DominoTeacher.LEVEL_RULE_FIT, RULE_KIND, r)
+                    if (struck[r] == -2) struck[r] = reason(DominoTeacher.LEVEL_RULE_FIT, RULE_KIND, r)
                     changed = kill(c, struck[r]) || changed
+                    break
                 }
             }
         }
@@ -530,15 +634,22 @@ internal class DominoLadder private constructor(
 
     /** Level 4: a candidate after which a region cannot keep its rule from the values its other squares can still take. */
     fun regionValue(): Boolean {
+        val look = valueDirty.copyOf()
+        if (look.none { it }) return false
+        valueDirty.fill(false)
         val dom = domains()
         var changed = false
-        val struck = IntArray(regions.size) { -1 }
+        val struck = IntArray(regions.size) { -2 }
+        val fixed = ArrayList<Int>(DominoLogic.MAX_REGION)
+        val masks = ArrayList<Int>(DominoLogic.MAX_REGION)
         for (c in alive.indices) {
             if (!alive[c] || fixedAt[cDom[c]] == c) continue
-            forRegions(c) { r ->
-                if (!alive[c]) return@forRegions
-                val fixed = ArrayList<Int>()
-                val masks = ArrayList<Int>()
+            val rs = layout.regionOf[cS[c]]
+            val rt = layout.regionOf[cT[c]]
+            for (r in intArrayOf(rs, if (rt == rs) -1 else rt)) {
+                if (r < 0 || !look[r]) continue
+                fixed.clear()
+                masks.clear()
                 for (q in regions[r]) {
                     when {
                         q == cS[c] -> fixed.add(cVs[c])
@@ -548,8 +659,9 @@ internal class DominoLadder private constructor(
                     }
                 }
                 if (!feasible(layout.rules[r], fixed, masks)) {
-                    if (struck[r] < 0) struck[r] = reason(DominoTeacher.LEVEL_REGION_VALUE, VALUE_KIND, r)
+                    if (struck[r] == -2) struck[r] = reason(DominoTeacher.LEVEL_REGION_VALUE, VALUE_KIND, r)
                     changed = kill(c, struck[r]) || changed
+                    break
                 }
             }
         }
@@ -568,17 +680,17 @@ internal class DominoLadder private constructor(
             var need = 0
             for (q in 0 until n) if (free[q] && dom[q] == only) need++
             var supply = 0
-            for (d in layout.tray.indices) if (!placedDom[d]) {
+            for (d in layout.tray.indices) if (!k.placedDom[d]) {
                 if (layout.tray[d].a == v) supply++
                 if (layout.tray[d].b == v) supply++
             }
             if (need > supply) { fail(COUNT, v); return changed }
             if (need < supply) continue
-            var r = -1
+            var r = -2
             for (c in alive.indices) {
                 if (!alive[c] || fixedAt[cDom[c]] == c) continue
                 if ((cVs[c] == v && dom[cS[c]] != only) || (cVt[c] == v && dom[cT[c]] != only)) {
-                    if (r < 0) r = reason(DominoTeacher.LEVEL_COUNTING, COUNT_KIND, v)
+                    if (r == -2) r = reason(DominoTeacher.LEVEL_COUNTING, COUNT_KIND, v)
                     changed = kill(c, r) || changed
                 }
             }
@@ -600,8 +712,7 @@ internal class DominoLadder private constructor(
             changed = ruleFit() || changed
             changed = regionValue() || changed
             changed = counting() || changed
-            if (broken != NONE) return
-            if (!changed) return
+            if (broken != NONE || !changed) return
         }
         forced()
     }
@@ -611,21 +722,20 @@ internal class DominoLadder private constructor(
      * candidates but one run into a contradiction within [DominoTeacher.WHAT_IF_ROUNDS] rounds.
      */
     fun whatIf(): WhatIf? {
-        for (k in 2..3) {
+        for (size in 2..3) {
             for (q in 0 until n) {
-                if (!free[q] || known[q] >= 0) continue
-                val options = bySquare[q].filter { alive[it] }
-                if (options.size != k) continue
+                if (!free[q] || known[q] >= 0 || aliveSq[q] != size) continue
                 val refuted = ArrayList<Refuted>()
                 var survivor = -1
-                for (o in options) {
-                    val h = copy()
+                for (o in bySquare[q]) {
+                    if (!alive[o]) continue
+                    val h = hypothesis()
                     h.fix(o)
                     h.propagate(DominoTeacher.WHAT_IF_ROUNDS)
                     if (h.broken != NONE) refuted.add(Refuted(o, h.broken, h.brokenArg))
                     else if (survivor < 0) survivor = o else { survivor = -2; break }
                 }
-                if (survivor >= 0 && refuted.size == k - 1) return WhatIf(q, survivor, refuted)
+                if (survivor >= 0 && refuted.size == size - 1) return WhatIf(q, survivor, refuted)
             }
         }
         return null
@@ -684,10 +794,11 @@ internal class DominoLadder private constructor(
                         for (v in 0..DominoLogic.MAX_PIPS) if (m shr v and 1 == 1) next = next or (reach shl v)
                         reach = next
                     }
+                    // Totals never pass 6 * 6 = 36, so every bit fits a Long.
                     return when (rule.kind) {
                         RuleKind.SUM -> rule.n in 0..62 && reach shr rule.n and 1L == 1L
-                        RuleKind.LESS -> rule.n > 0 && (if (rule.n >= 63) reach != 0L else reach and ((1L shl rule.n) - 1) != 0L)
-                        else -> rule.n < 62 && (reach ushr (maxOf(rule.n, -1) + 1)) != 0L
+                        RuleKind.LESS -> rule.n > 0 && reach and ((1L shl minOf(rule.n, 62)) - 1) != 0L
+                        else -> rule.n < 62 && reach ushr (rule.n + 1) != 0L
                     }
                 }
                 RuleKind.EQUAL -> {
@@ -698,66 +809,37 @@ internal class DominoLadder private constructor(
                 }
                 RuleKind.DIFFERENT -> {
                     if (!DominoLogic.allDifferent(fixed)) return false
-                    var usedMask = 0
-                    for (v in fixed) usedMask = usedMask or (1 shl v)
+                    var taken = 0
+                    for (v in fixed) taken = taken or (1 shl v)
                     fun place(i: Int, taken: Int): Boolean {
                         if (i == masks.size) return true
-                        var free = masks[i] and taken.inv() and 0x7F
-                        while (free != 0) {
-                            val bit = free and -free
+                        var open = masks[i] and taken.inv() and 0x7F
+                        while (open != 0) {
+                            val bit = open and -open
                             if (place(i + 1, taken or bit)) return true
-                            free = free xor bit
+                            open = open xor bit
                         }
                         return false
                     }
-                    return place(0, usedMask)
+                    return place(0, taken)
                 }
             }
         }
 
-        /** The candidates for [layout] with [placed] down: every unplaced domino on every free neighbouring pair, both ways round (a double once). */
-        fun build(layout: DominoLogic.Layout, placed: List<Placement?>): DominoLadder {
-            val n = layout.size
+        /** The ladder for [layout] with [placed] down, from scratch; [candidates] when the caller already has them. */
+        fun build(
+            layout: DominoLogic.Layout,
+            placed: List<Placement?>,
+            candidates: DominoCandidates = DominoCandidates(layout, placed),
+        ): DominoLadder {
+            val k = candidates
+            val count = k.dom.size
             val d = layout.tray.size
-            val free = BooleanArray(n) { layout.open[it] }
-            val known = IntArray(n) { -1 }
-            val placedDom = BooleanArray(d)
-            for (k in 0 until d) {
-                val p = placed[k] ?: continue
-                placedDom[k] = true
-                free[p.first] = false
-                free[p.second] = false
-                known[p.first] = layout.tray[k].a
-                known[p.second] = layout.tray[k].b
-            }
-            val dom = ArrayList<Int>()
-            val s = ArrayList<Int>()
-            val t = ArrayList<Int>()
-            val vs = ArrayList<Int>()
-            val vt = ArrayList<Int>()
-            for (k in 0 until d) {
-                if (placedDom[k]) continue
-                val tile = layout.tray[k]
-                for (x in 0 until n) {
-                    if (!free[x]) continue
-                    for (y in layout.neighbours[x]) {
-                        if (y < x || !free[y]) continue
-                        dom.add(k); s.add(x); t.add(y); vs.add(tile.a); vt.add(tile.b)
-                        if (!tile.isDouble) { dom.add(k); s.add(y); t.add(x); vs.add(tile.a); vt.add(tile.b) }
-                    }
-                }
-            }
-            val count = dom.size
-            val sq = Array(n) { ArrayList<Int>() }
-            val byD = Array(d) { ArrayList<Int>() }
-            for (c in 0 until count) {
-                sq[s[c]].add(c); sq[t[c]].add(c); byD[dom[c]].add(c)
-            }
             return DominoLadder(
-                layout, free, placedDom,
-                dom.toIntArray(), s.toIntArray(), t.toIntArray(), vs.toIntArray(), vt.toIntArray(),
-                Array(n) { sq[it].toIntArray() }, Array(d) { byD[it].toIntArray() },
-                BooleanArray(count) { true }, IntArray(count) { -1 }, known, IntArray(d) { -1 }, ArrayList(),
+                layout, k, BooleanArray(count) { true }, IntArray(count) { -1 }, k.placedPips.copyOf(), IntArray(d) { -1 },
+                IntArray(layout.size) { k.bySquare[it].size }, IntArray(d) { k.byDomino[it].size },
+                BooleanArray(layout.rules.size) { true }, BooleanArray(layout.rules.size) { true }, BooleanArray(layout.size) { true },
+                ArrayList(),
             )
         }
     }

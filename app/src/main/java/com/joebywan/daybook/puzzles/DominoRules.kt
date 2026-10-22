@@ -630,7 +630,14 @@ internal object DominoLogic {
             }
         }
 
-        fun finishes(tray: List<Domino>, maxLevel: Int): Boolean = DominoTeacher.solveLevel(layout(tray), maxLevel) != null
+        /** The candidates depend on the shape and the tray alone, so one table serves every rule tried. */
+        private var candidates: DominoCandidates? = null
+
+        fun finishes(tray: List<Domino>, maxLevel: Int): Boolean {
+            val l = layout(tray)
+            val k = candidates ?: DominoCandidates(l, List(tray.size) { null }).also { candidates = it }
+            return DominoTeacher.solveLevel(l, maxLevel, k) != null
+        }
 
         /** The board as it stands, regions renumbered by their first square in reading order. */
         fun layout(tray: List<Domino>): Layout {
@@ -652,7 +659,7 @@ internal object DominoLogic {
             const val TO_MORE = 2
             const val TO_DIFFERENT = 3
             const val MERGE = 4
-            const val LOOSEN_PASSES = 2
+            const val LOOSEN_PASSES = 1
         }
     }
 
