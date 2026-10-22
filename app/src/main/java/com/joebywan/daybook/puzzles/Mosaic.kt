@@ -927,7 +927,7 @@ object Mosaic : PuzzleType {
             TutorialFrame(
                 state = start,
                 caption = "Touching cells of one colour make an area, outlined in black. Turn the whole board " +
-                    "one colour. The line above counts your fills, up to the fewest it can take: here 3.",
+                    "one colour. The line above counts your fills against the fewest this board needs: here 3.",
                 highlight = BoardHighlight(strong = tealArea),
             ),
             TutorialFrame(

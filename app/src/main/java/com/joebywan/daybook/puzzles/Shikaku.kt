@@ -50,7 +50,6 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
-import com.joebywan.daybook.core.TutorialStep
 import kotlinx.serialization.Serializable
 
 /** An axis-aligned block of cells, inclusive on both corners. */
@@ -392,6 +391,7 @@ object Shikaku : PuzzleType {
         // The 4 drawn where it fits but strands the corner, then taken away: back to the board it
         // started on, so only a move counted since tells the two apart.
         val wrong = TutorialPath(only(top, TUTORIAL_WRONG_FOUR), { only(top)(it) && it.moves > 0 })
+        val pair = TutorialPath(only(top, four), only(top, four, three))
         listOf(
             TutorialFrame(
                 state = tutorialBoard(*TUTORIAL_SOLUTION.toTypedArray()),
@@ -423,21 +423,14 @@ object Shikaku : PuzzleType {
             TutorialFrame(
                 state = tutorialBoard(top),
                 caption = "Only the 4 can reach the glowing corner, and just one of its rectangles covers it. " +
-                    "Only the 3 can reach the other glowing square. Draw them both.",
+                    "Draw it. Then only one rectangle of the 3 reaches the square below: draw that too.",
+                // The 4 first: until it is down, the 3 has two rectangles over the square.
                 glow = { s ->
-                    val covered = (s as ShikakuState).blocks.flatMap { cellsOf(it) }.toSet()
-                    BoardHighlight(strong = setOf(0, 10) - covered, soft = setOf(1, 15))
+                    if (pair.stage(s) < 0) BoardHighlight(strong = setOf(0), soft = setOf(1))
+                    else BoardHighlight(strong = setOf(10), soft = setOf(15))
                 },
-                // Either first.
-                steps = { next ->
-                    when {
-                        next !is ShikakuState -> TutorialStep.REJECT
-                        only(top, four, three)(next) -> TutorialStep.DONE
-                        only(top)(next) || only(top, four)(next) || only(top, three)(next) -> TutorialStep.PROGRESS
-                        else -> TutorialStep.REJECT
-                    }
-                },
-                retry = "Draw the 4 over one glowing square and the 3 over the other.",
+                steps = pair.steps,
+                retry = "Draw the rectangle over the glowing square.",
                 done = "Drawn: a square only one number reaches is that number's.",
             ),
             TutorialFrame(
