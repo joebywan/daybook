@@ -1,7 +1,6 @@
 name: Publish to Google Play
 
-# Uploads a release's bundle to Play. A no-op until PLAY_SERVICE_ACCOUNT_JSON exists, so it can
-# sit here safely before the Play Console side is set up.
+# Uploads a release's bundle to Play. Fails if PLAY_SERVICE_ACCOUNT_JSON is missing.
 #
 # release.yml calls this directly via workflow_call rather than relying on the `release: published`
 # event, because a release created with GITHUB_TOKEN does not trigger other workflows — so that
@@ -50,24 +49,16 @@ jobs:
   upload:
     runs-on: ubuntu-26.04
     steps:
-      # The secrets context is not usable in a job-level `if`, so the gate is a step.
+      # Play is live, so a missing key is a failed release, not a skipped one.
       - name: Is Play configured?
-        id: gate
         env:
           PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          if [ -z "$PLAY_JSON" ]; then
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::PLAY_SERVICE_ACCOUNT_JSON is not set — skipping the Play upload. See README, 'Publishing to Google Play'."
-          else
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          fi
+          test -n "$PLAY_JSON" || { echo "::error::PLAY_SERVICE_ACCOUNT_JSON is not set; nothing was uploaded to Play."; exit 1; }
 
       - uses: actions/checkout@v7
-        if: steps.gate.outputs.configured == 'true'
 
       - name: Fetch the bundle from the release
-        if: steps.gate.outputs.configured == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag || github.event.release.tag_name }}
@@ -79,7 +70,6 @@ jobs:
           test -n "$(ls -1 play/*.aab 2>/dev/null)" || { echo "::error::no .aab on release $TAG"; exit 1; }
 
       - name: Upload to Play
-        if: steps.gate.outputs.configured == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
