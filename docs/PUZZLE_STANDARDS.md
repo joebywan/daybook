@@ -90,6 +90,7 @@ What varies, as built:
 | Cage Sudoku | givens and cage size (grid fixed 9x9) | 14 givens, cages of 2-4 / 8 givens, up to 5 / no givens, up to 7 (`CageLogic.specFor`; `CageRulesTest` `the tiers get harder in the order they are offered`) |
 | Target | large numbers, fewest operations the target needs | 3 large, 3-4 steps / 2 large, 4-5 / 1 large, 5 (`TargetLogic.specFor`; `TargetRulesTest` `a year of daily boards ... the tiers get harder`) |
 | Cipher | hardest technique the ladder needs (every tier is two four-letter words and a five-letter total) | columns and pairs / all columns together / a two-column what-if (`CipherSumsBuildTest.tierOf`; `CipherRulesTest` `a year of daily boards - the tiers get harder`) |
+| Word Wheel | wheel letters, words, box | 5 letters, 4-6 words, 6x6 / 6, 6-8, 7x7 / 7, 8-11, 8x8 with a six besides the root (`WordWheelLogic.specFor`; `WordWheelRulesTest` `a year of daily boards ...` asserts the mean word count rises) |
 
 Rules for the tiers:
 
@@ -135,7 +136,7 @@ without editing it.
   returns `null` when the budget runs out, and `test/MosaicOptimumTest` `a search that runs out of budget reports
   nothing at all` pins that.
 - *Expose the split.* `generateVerified(seed, difficulty): State?` (null when nothing was proved) is what tests
-  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap`, `Inequality` and `Cipher` (internal). `generate` is
+  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap`, `Inequality`, `Cipher` and `WordWheel` (internal). `generate` is
   `generateVerified(...) ?: lastResort(...)` (Shikaku's is `fallbackBoard`).
 - *Fallbacks.* Keep it named, tiny and honest (`Atoms.lastResort` is a three-atom chain; Snap's is a numbered
   boustrophedon). Before adding one, ask what fraction of seeds reach it and measure it; size the test sample
@@ -508,6 +509,7 @@ Y = yes, P = partial, N = no.
 | Cage Sudoku | Y givens, cage size | Y `generateVerified` (ladder finishes it, then `CageLogic.solutions` == `ExactlyOne`; `lastResort` proved unique), year test | Y `CageLogic.isSolved` (rules, not the stored answer) | Y `CageOracle` (fills one cage at a time, no inference), `CageTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares, Sudoku's anchors + keepClear | Y `CagesWebParityTest` | Y | Y 200 / 70 |
 | Target | Y large numbers, steps | n/a many answers; `generateVerified` (exhaustive table puts the target a tier-specific number of steps away; `lastResort` fixed and checked), year test | Y `TargetState.solved` (a tile is the target) | Y `TargetOracle` (breadth-first over positions) | Y a search of the visible tiles, no fallback exists | Y 6 | Y tile / operator / target anchors + keepClear | Y `TargetWebParityTest` | Y | Y 200 / 70 |
 | Cipher | Y technique depth | Y a bundled list of real-word sums (`CipherSums`, built offline), each re-proved on the device: ladder finishes it, then `CipherLogic.prove` == `ExactlyOne`; `lastResort` proved, year test | Y `CipherLogic.isSolved` (rules, not the stored answer) | Y `CipherOracle` (every digit for every letter, no columns), `CipherTeachingTest` | Y no fallback on generated boards | Y 7 | Y tiles via `reportHighlight` + key and digit anchors + keepClear | Y `CipherWebParityTest` | Y | Y 200 / 70 |
+| Word Wheel | Y letters, words | n/a the grid's words are the answer; `generateVerified` (laid to the tier's size, and no clued slot leaves more than 6 words; `lastResort` is seed 1's proved board), year test | Y `WordWheelState.solved` (every slot's word found) | Y `WordWheelOracle` (re-reads every run of the squares) | Y clue fallback measured | Y 5 | Y squares + wheel letters via `reportHighlight` + keepClear | Y `WordWheelWebParityTest` | Y | Y 200 / 70 |
 
 ### Known gaps and open items
 

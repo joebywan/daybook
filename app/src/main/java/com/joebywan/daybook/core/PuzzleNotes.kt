@@ -129,6 +129,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Work from the units: each column tells the next its carry.",
         "No word starts with 0, so 0 hides in a word's later letters.",
     ),
+    "wordwheel" to listOf(
+        "The longest slot always uses every letter on the wheel.",
+        "A crossing letter cuts a slot down to a handful of words.",
+        "Shuffle the wheel when a word will not come.",
+        "A bonus word rules that word out for every slot.",
+        "Plurals and -ED or -ING forms are never grid words.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */
