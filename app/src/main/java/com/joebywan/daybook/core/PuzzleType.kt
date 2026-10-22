@@ -126,4 +126,10 @@ interface PuzzleType {
 
     /** Whether this puzzle can offer a deducible next step. Drives whether the Hint button appears. */
     val offersHints: Boolean get() = true
+
+    /**
+     * Whether the play screen offers Undo (the toolbar button and Ctrl/Cmd+Z). False only for Pointers, where a
+     * cleared arrow never needs to come back and undo would only hand back a life (see `Pointers.offersUndo`).
+     */
+    val offersUndo: Boolean get() = true
 }

@@ -33,7 +33,7 @@ sounded. Do not turn it off.
 
 ## Teaching: hints that explain, and walkthroughs
 
-All puzzles teach (Snap through its walkthrough only). Shared code: `core/Teaching.kt`, `ui/teach/Hints.kt`,
+All puzzles teach (Snap and Pointers through their walkthrough only; Pointers has no undo either). Shared code: `core/Teaching.kt`, `ui/teach/Hints.kt`,
 `ui/tutorial/TutorialRunner.kt`, `ui/play/PlayScreen.kt`. How to write a teacher: `docs/PUZZLE_STANDARDS.md`
 section 7. The settled play-screen UX (popover, finish frame, solve sound) and the measured fallback table:
 `docs/TEACHING.md`. Keep that table current when a teacher changes. What must not be broken:
@@ -241,6 +241,41 @@ after a game show.
   and what followed back. No fallback exists. Highlight indices: tiles `0..5`, operators `Target.OP0 + ordinal`, the target `Target.TARGET`.
 - Keyboard reads like a calculator: type a tile's number, an operator, another number, Enter. `TargetKeysTest` pins it against the taps.
 
+## Pointers (clear the arrows)
+
+The board is covered in arrows, each a bent line of squares ending in a head. Tap one and it slides off the way its head points if
+nothing is in its way to the edge; if something is, it bumps (a shake, a warning flash) and a life goes. Clear every arrow; lose three
+lives and the board is lost (Try again restarts it, lives restored). `puzzles/PointersRules.kt` (`PointersState`, `PointersLogic`: rules,
+generator, `depths`), `PointersKeys.kt`, `Pointers.kt` (object `Pointers`, board, hit testing, walkthrough, motif). `id = "pointers"` is
+hashed into every seed: never rename it.
+
+- **No hints and no undo, the owner's decisions; do not reopen.** A free arrow can be seen to be free and taking it never hurts, so a
+  hint could only say "this one is free"; a cleared arrow never needs to come back (removal only ever opens lines), so undo could only
+  hand back a life. `PuzzleType.offersUndo` (default true) is false here alone: `PlayScreen` drops the Undo button and Ctrl/Cmd+Z, in
+  both `PlayLayout` shapes. It is the one Daybook puzzle about care rather than deduction, deliberately: the lives are the challenge.
+  Teaching is the walkthrough (a free arrow leaving, a bump costing a life, the blocker cleared first), as Snap's.
+- **Lives and the cleared arrows are `PuzzleState`**: `removed` (in the order they left) and `bumps` (the arrows that bumped, in
+  order; `lives` is three less those, so the two cannot disagree, and the walkthrough can tell *which* arrow bumped). Both defaulted, so
+  a save without them loads as a fresh board. A tap is one state: a removal or a bump (`moves` + 1 either way); a tap on a bare square or a cleared arrow
+  emits nothing and costs nothing. Try again is `retry()`, one state. The slide and the bump are `remember` animations in a
+  `rememberCoroutineScope`, never state; a slide is drawn only for an arrow the state says is gone, so a move the walkthrough refuses
+  shows nothing leaving.
+- **`solved` is every arrow removed; `failed` is no lives left and not solved.** Losing is never a completion: only a solve records.
+- **A board ships only if it clears.** Arrows go down one at a time (a random bare square as the head, a body walked back from it with a
+  tier's chance of keeping straight, never onto its own way out), each only where the "is in the way of" graph stays acyclic; then bare
+  squares beside a tail fold into that arrow under the same check, and the board is cleared greedily before it ships. Removal is
+  monotone (taking an arrow away never blocks another), so a player can never be stranded and greedy clearing is a proof. No unique
+  answer: many orders win. `lastResort` is rows of arrows all pointing right; a year per tier never reaches it (`FallbackTest`).
+  `PointersRulesTest` checks a year per tier with its own heading arithmetic, a greedy player and a DFS cycle check, none of it shared
+  with the generator.
+- **Tiers: size, length and bends.** 6x7 / 12x12 / 14x17 squares, arrows of 2-4 / 3-7 / 3-9 squares: about 14 / 33 / 49 arrows, 2% of squares bare, mean depth 2.0 / 4.4 / 6.3 (depth: rounds of "take every free arrow" before an arrow can go; `PointersLogic.depths`), worst 10 / 23 / 27. Generation on the JVM: 0.02 / 0.2 / 0.8 ms median, 1.2 ms p95 on Expert. Expert was
+  meant to be 18x20; at 360dp wide that is a square of about 18dp, too small for a thumb when a mis-tap costs a life, so it is capped at 14
+  wide (about 23dp at 360, 26 at 390; Nonogram's 15x15 is the precedent).
+- Hit testing (`Pointers.hit`): the square under the finger if an arrow is on it, else the nearest line within 0.75 of a square. Arrow
+  colours are derived (four hues, Blue/Amber/Violet/Teal ink, touching arrows differ where four allow), never stored; a bump flashes the
+  arrow and the one in its way in `scheme.error`. Keyboard: arrows move a cursor (a square) to the nearest other arrow that way, Enter or
+  Space taps it. Highlight indices (the walkthrough only) are arrow indices.
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
@@ -259,7 +294,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap and Inequality (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality and Pointers (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

@@ -67,6 +67,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Regions | Suguru / Tectonic | A region of N squares holds 1 to N once each, and equal digits never touch, not even at a corner |
 | Cage Sudoku | Sudoku with sum cages | Sudoku in which every dashed cage must add up to its number, with no digit repeated in it |
 | Target | Number-target arithmetic | Combine six numbers with + − × ÷ (whole numbers only) until a tile equals the target |
+| Pointers | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -116,6 +117,9 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   [Lichess puzzle database](https://database.lichess.org/#puzzles) (CC0). `tools/chess/build.py` keeps only those with
   exactly one key move and a shortest forced mate of exactly N, checked with python-chess; the tests re-prove the shipped
   lists with the app's own engine and an independent naive minimax.
+- **Pointers** — arrows are laid one at a time, each only where "is in the way of" stays free of cycles, so some order always
+  clears the board, and since taking an arrow away only ever opens a way out, no order of free taps can strand you. The
+  finished board is cleared greedily before it ships, and the tests check a year of boards with an independent cycle check.
 - **Tower and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by

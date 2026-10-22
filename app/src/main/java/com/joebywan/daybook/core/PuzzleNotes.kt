@@ -122,6 +122,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "You never have to use every number.",
         "Subtract or divide, and the bigger tile goes first for you.",
     ),
+    "pointers" to listOf(
+        "An arrow with an empty line to the edge can always go.",
+        "Clearing an arrow never blocks another: free stays free.",
+        "Follow a blocked arrow's line to find what to clear first.",
+        "An arrow on the edge pointing outwards is always free.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */

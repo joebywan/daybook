@@ -5,8 +5,8 @@ Moved out of CLAUDE.md. The *what to build* for a teacher is `PUZZLE_STANDARDS.m
 
 All puzzles teach. The shared pieces are `core/Teaching.kt` (the contract), `ui/teach/Hints.kt`
 (the session, the panel, `WatchHint`), `ui/tutorial/TutorialRunner.kt` and `ui/play/PlayScreen.kt`;
-each puzzle has a `<Name>Teacher.kt` except Snap, whose teaching is its walkthrough
-(`offersHints = false`). Everything in the contract has a default, so a board adopts it alone:
+each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is their walkthrough
+(`offersHints = false`). Pointers has no undo either (`offersUndo = false`): see CLAUDE.md, the owner's decision. Everything in the contract has a default, so a board adopts it alone:
 
 - `teach(state): Deduction?` — a mistake to take back, or one step reasoned from what the player can
   see: nudge + focus cells, explanation + cited cells, targets, and `apply`/`isReached` closures.
@@ -98,6 +98,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
 | Atoms | one neighbour, all forced, at least one, crossing, isolation, only way out, what-if | 0 / 0 / 0.5% |
 | Snap | walkthrough only: corners, dead ends, cutting back, rubbing out | no hints |
+| Pointers | walkthrough only: a free arrow leaving, a bump costing a life, the blocker cleared first | no hints (nothing to teach: a free arrow is visibly free and taking one never hurts) |
 | LITS | whole region, overlap, avoid 2x2 / letter clash, neighbour, what-if | 0 / 0 / 0% (300 boards per tier). It was 42 / 23 / 30% while 43 / 22 / 29% of boards had several answers under the win check; the generator now proves one (the test holds one-answer boards under 2%) |
 | Tower | one change, only colour left, accounted for, what-if; else a guess that fits every score | every board, 28-35% of turns: Mastermind is mostly choosing a guess |
 | Lexicon | a typed row that cannot be submitted, a letter pinned to its slot by the marks, one word left, else the word that leaves the fewest (given as a crossword clue, not the word) | every board; 93% of turns after the opener (pins are the other 7%): choosing a word is most of the game. A pin holds for every accepted word that fits, not only the answer list |
