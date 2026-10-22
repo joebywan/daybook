@@ -17,6 +17,7 @@ import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Tally
+import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
@@ -55,6 +56,7 @@ object PuzzleRegistry {
         Cipher,
         WordWheel,
         Tally,
+        Sand,
         Pointers,
     )
 

@@ -142,6 +142,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Circled numbers that already make the target: the rest go.",
         "List the ways a short line can make its target.",
     ),
+    "sand" to listOf(
+        "Pour onto a matching colour before using an empty tube.",
+        "An empty tube is your spare room: try to keep one free.",
+        "Uncover a colour only when it has somewhere to go.",
+        "A finished tube never needs touching again.",
+    ),
     "pointers" to listOf(
         "An arrow with an empty line to the edge can always go.",
         "Clearing an arrow never blocks another: free stays free.",

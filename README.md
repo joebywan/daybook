@@ -78,6 +78,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Cipher | Cryptarithm (alphametic) | A sum of real words in which each letter stands for one digit: find the digits that make it true |
 | Word Wheel | Letter-wheel crossword | Spell words from a wheel of letters to fill a small crossword; other real words count as bonus words |
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
+| Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
 | Pointers | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -113,6 +114,11 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
 - **Tally** — random digits and a random answer, kept only if a person's ladder finishes it (shortcuts, the ways one line can
   make its target, and on Expert a short what-if) needing exactly the tier's deepest step, and an exhaustive count finds one answer.
   An independent solver that lists every way each column can make its target confirms it in the tests.
+- **Sand** — many answers by design, so what is proved is that one exists: a deal is kept only once a search has found a
+  sequence of pours that sorts it (the found road is the proof; a search that runs out of budget proves nothing and the deal
+  is redrawn). Deals that give the board away (a tube already one colour, a long run) are redrawn, and so is a board a player
+  pouring at random sorts every time. An independent breadth-first search confirms in the tests every "can't be sorted" the
+  game and its hints claim.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
 - **Nonogram** — a random picture is kept only if a line solver finishes it: for each row or column, work out
