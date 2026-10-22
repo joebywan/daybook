@@ -71,6 +71,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Regions | Suguru / Tectonic | A region of N squares holds 1 to N once each, and equal digits never touch, not even at a corner |
 | Cage Sudoku | Sudoku with sum cages | Sudoku in which every dashed cage must add up to its number, with no digit repeated in it |
 | Target | Number-target arithmetic | Combine six numbers with + − × ÷ (whole numbers only) until a tile equals the target |
+| Cipher | Cryptarithm (alphametic) | A sum of real words in which each letter stands for one digit: find the digits that make it true |
 | Pointers | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -117,6 +118,12 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   digits are given only until the hint ladder (last square in a region, only digit left, only place in the region)
   can finish it, and every digit the rest implies is taken back. So a board is never guessed; the shipped board is
   proved again by an exhaustive search, and an independent naive solver confirms the one answer in the tests.
+- **Cipher** — every sum is two four-letter words and a five-letter word, all from Lexicon's screened answer lists,
+  found offline (`CipherSumsBuildTest`) because sums of real words with one answer are rare: about one pair of
+  addends in four has one, among 1,801 possible totals. A sum is listed only if the hint ladder (the leading carry,
+  one column at a time, two columns through their carry, all columns together, a what-if on two columns) finishes it,
+  and the device proves it again with an exhaustive search before showing it; an independent solver that tries every
+  digit for every letter confirms the one answer in the tests.
 - **Mate** — not generated: a position is an index into a fixed sorted list of real puzzles from the
   [Lichess puzzle database](https://database.lichess.org/#puzzles) (CC0). `tools/chess/build.py` keeps only those with
   exactly one key move and a shortest forced mate of exactly N, checked with python-chess; the tests re-prove the shipped

@@ -91,6 +91,7 @@ What varies, as built:
 | Regions | side (regions of 2 to 5 squares, givens minimal for the ladder) | 5x5 / 7x7 / 9x9 (`RegionsLogic.sizeFor`; `RegionsRulesTest` `the tiers get larger in the order they are offered`) |
 | Cage Sudoku | givens and cage size (grid fixed 9x9) | 14 givens, cages of 2-4 / 8 givens, up to 5 / no givens, up to 7 (`CageLogic.specFor`; `CageRulesTest` `the tiers get harder in the order they are offered`) |
 | Target | large numbers, fewest operations the target needs | 3 large, 3-4 steps / 2 large, 4-5 / 1 large, 5 (`TargetLogic.specFor`; `TargetRulesTest` `a year of daily boards ... the tiers get harder`) |
+| Cipher | hardest technique the ladder needs (every tier is two four-letter words and a five-letter total) | columns and pairs / all columns together / a two-column what-if (`CipherSumsBuildTest.tierOf`; `CipherRulesTest` `a year of daily boards - the tiers get harder`) |
 | Pointers | grid, arrow length and bends | 6x7, 2-4 squares / 12x12, 3-7 / 14x17, 3-9 (`PointersLogic.specFor`; `PointersRulesTest` `the tiers get bigger and more tangled in the order they are offered`, by mean depth) |
 
 Rules for the tiers:
@@ -137,7 +138,7 @@ without editing it.
   returns `null` when the budget runs out, and `test/MosaicOptimumTest` `a search that runs out of budget reports
   nothing at all` pins that.
 - *Expose the split.* `generateVerified(seed, difficulty): State?` (null when nothing was proved) is what tests
-  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap` and `Inequality` (internal). `generate` is
+  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap`, `Inequality` and `Cipher` (internal). `generate` is
   `generateVerified(...) ?: lastResort(...)` (Shikaku's is `fallbackBoard`).
 - *Fallbacks.* Keep it named, tiny and honest (`Atoms.lastResort` is a three-atom chain; Snap's is a numbered
   boustrophedon). Before adding one, ask what fraction of seeds reach it and measure it; size the test sample
@@ -513,6 +514,7 @@ Y = yes, P = partial, N = no.
 | Cage Sudoku | Y givens, cage size | Y `generateVerified` (ladder finishes it, then `CageLogic.solutions` == `ExactlyOne`; `lastResort` proved unique), year test | Y `CageLogic.isSolved` (rules, not the stored answer) | Y `CageOracle` (fills one cage at a time, no inference), `CageTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares, Sudoku's anchors + keepClear | Y `CagesWebParityTest` | Y | Y 200 / 70 |
 | Pointers | Y size, length, bends | n/a many orders win; `generateVerified` (built acyclic, density checked, cleared greedily; `lastResort` rows pointing right, checked), year test | Y `PointersState.solved` (every arrow gone) | Y `PointersRulesTest` (own heading arithmetic, greedy player, DFS cycle check, monotone removal) | N by design (`offersHints = false`, and `offersUndo = false`) | Y 6 | n/a no hints (arrow indices for the walkthrough) | Y `PointersWebParityTest` | Y | Y 170 |
 | Target | Y large numbers, steps | n/a many answers; `generateVerified` (exhaustive table puts the target a tier-specific number of steps away; `lastResort` fixed and checked), year test | Y `TargetState.solved` (a tile is the target) | Y `TargetOracle` (breadth-first over positions) | Y a search of the visible tiles, no fallback exists | Y 6 | Y tile / operator / target anchors + keepClear | Y `TargetWebParityTest` | Y | Y 200 / 70 |
+| Cipher | Y technique depth | Y a bundled list of real-word sums (`CipherSums`, built offline), each re-proved on the device: ladder finishes it, then `CipherLogic.prove` == `ExactlyOne`; `lastResort` proved, year test | Y `CipherLogic.isSolved` (rules, not the stored answer) | Y `CipherOracle` (every digit for every letter, no columns), `CipherTeachingTest` | Y no fallback on generated boards | Y 7 | Y tiles via `reportHighlight` + key and digit anchors + keepClear | Y `CipherWebParityTest` | Y | Y 200 / 70 |
 
 ### Known gaps and open items
 

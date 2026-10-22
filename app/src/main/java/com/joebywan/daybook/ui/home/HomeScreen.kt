@@ -69,7 +69,7 @@ private const val HEADER_DATE = "EEEE d MMMM"
  * launch options is what fits a phone in one screenful. That is the entire reason this screen is
  * a grid: choosing a puzzle should never involve scrolling to find it. The thirteenth puzzle opens
  * a fifth row; the sixteenth to eighteenth, Tents, Regions and Cage Sudoku, make a sixth, three-tile row, and the nineteenth,
- * Target, a seventh, which Pointers, the twentieth, joins. All scroll into view. A wider window (a tablet, a phone on its side) takes a column per
+ * Target, a seventh, which Cipher and Pointers, the twentieth and twenty-first, join. All scroll into view. A wider window (a tablet, a phone on its side) takes a column per
  * [MinTileWidth], up to [MAX_COLUMNS]; a phone in portrait is always under four and keeps its three.
  */
 private const val COLUMNS = 3
