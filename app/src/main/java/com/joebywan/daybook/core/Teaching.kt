@@ -77,18 +77,32 @@ data class BoardHighlight(
  */
 val LocalBoardHighlight = compositionLocalOf { BoardHighlight.None }
 
+/** What a walkthrough frame makes of a state its board emits: see [TutorialFrame.steps]. */
+enum class TutorialStep {
+    /** Not what the frame asks for: not applied, and the frame's retry line is shown. */
+    REJECT,
+    /** On the way: applied to the board, and the frame waits for more. */
+    PROGRESS,
+    /** The move the frame asks for: applied, and the walkthrough moves on by itself. */
+    DONE,
+}
+
 /**
  * One step of a walkthrough, played on the puzzle's real board.
  *
- * With [accepts] null the frame is explanatory: the board is shown but not playable and the player
- * moves on with Next. Otherwise the board is live, and each state it emits is offered to [accepts];
- * a state it rejects is *not* applied and [retry] is shown instead, so a stray tap cannot leave the
- * walkthrough on a board its later frames were not written for. [done] replaces the caption once
- * the move is made.
+ * With neither [accepts] nor [steps] the frame is explanatory (a READ frame): the board is shown but
+ * not playable and the player moves on with Next. Otherwise the board is live (a MOVE frame), and each
+ * state it emits is judged: a rejected one is *not* applied and [retry] is shown instead, so a stray
+ * tap cannot leave the walkthrough on a board its later frames were not written for. Once the move is
+ * made the runner shows [done], holds a moment and moves on by itself, carrying [done] into the next
+ * frame as a confirmation line; a move frame never needs Next.
  *
- * A move must therefore be a single emitted state, or the runner drops it. A gesture that emits
- * several (Sets' three taps, Snap's drag a square at a time) gets one frame per emission, each
- * frame's [state] being the previous one's result.
+ * [accepts] takes one emitted state as the whole move. [steps] lets a move take several (select a
+ * square, then a digit; type a word, then Enter): each [TutorialStep.PROGRESS] state is applied and
+ * the frame waits, and a [TutorialStep.REJECT] leaves the progress made so far on the board. [steps]
+ * is handed every state, including the frame's own start state after an undoing tap (a Backspace), so
+ * it should call any state on the way to the move PROGRESS. [glow], when set, replaces [highlight]
+ * with one read off the current board, so the glow can walk along with the progress.
  *
  * With [freePlay] set, every move is applied, the puzzle's hints are available, and the frame ends
  * when the board is solved — the "your turn" frame at the end.
@@ -101,4 +115,10 @@ class TutorialFrame(
     val retry: String = "Try the glowing square.",
     val done: String = "That's it.",
     val freePlay: Boolean = false,
-)
+    val steps: ((PuzzleState) -> TutorialStep)? = null,
+    val glow: ((PuzzleState) -> BoardHighlight)? = null,
+) {
+    /** [steps], or [accepts] read as a one-state move; null on a READ or free-play frame. */
+    val judge: ((PuzzleState) -> TutorialStep)? =
+        steps ?: accepts?.let { a -> { next -> if (a(next)) TutorialStep.DONE else TutorialStep.REJECT } }
+}

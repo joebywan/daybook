@@ -388,23 +388,33 @@ Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.
   whenever; the `rules` list is the runner's "Rules" button. Skip is always on screen.
 - Frame, board and hint state are transient (never in a saved game). The walkthrough draws over the game, so
   the board, undo stack and clock are where the player left them, and the clock pauses.
+- **A finished move moves on by itself.** The move lands, the chime plays, the frame's `done` line shows for
+  `TUTORIAL_HOLD_MS` (1 s) with the board locked, then the next frame opens with that line carried into its
+  feedback line as "✓ done". Next is shown only on a frame with nothing to do but read (and on the last frame,
+  as Play); on a move frame its place is kept but empty. Back lands on the previous frame's start state.
 
 **Writing the frames** (`TutorialFrame`, `core/Teaching.kt`; reference: `Kings.tutorial` in `puzzles/Kings.kt`,
 7 frames, and its `only(base, changes)` helper):
 
 1. Hand-build a tiny board (4x4 to 5x5; `Kings.TUTORIAL_REGIONS`/`TUTORIAL_SOLUTION`/`tutorialBoard`). It has
    **exactly one answer** and that answer is the stored one; a test enumerates it independently.
-2. Open with explanatory frames (`accepts = null`, board not playable, Next to continue) on a solved board
-   with a `BoardHighlight` showing the rule.
-3. Then teach each gesture with a frame whose `accepts` demands exactly the resulting state
+2. Open with explanatory frames (READ: no `accepts` or `steps`, board not playable, Next to continue) on a
+   solved board with a `BoardHighlight` showing the rule.
+3. Then teach each gesture with a MOVE frame whose `accepts` demands exactly the resulting state
    (`only(...)` compares the whole mark list, so a stray tap cannot slip through) and whose `highlight` points at
    the cell. Each frame's `state` is the previous frame's result, so a caption never describes a board the
    player is not looking at. Write `retry` (what to do) and `done` (what that taught) for each.
 4. Cover every distinct gesture the board has: Kings tap/double-tap/sweep; Snap start-drag, resume, cut-back,
    rub-out; Sets pick/unpick/third card; Tower copy/change/submit.
-5. **A refused state is dropped**, so a move must be a single emitted state. If a gesture legitimately emits
-   several (Sets' three taps, a Snap drag a square at a time), write one frame per emission, as the existing
-   walkthroughs do.
+5. **A move that takes several emitted states is one frame**, with `steps` in place of `accepts`:
+   `steps: (PuzzleState) -> TutorialStep` returns `REJECT` (not applied, `retry` shown, the progress so far stays
+   on the board), `PROGRESS` (applied, the frame waits) or `DONE` (applied, the frame finishes). It is handed
+   every state the board emits, so a state on the way back (a Backspace, a deselect you allow) must be
+   `PROGRESS` too, and the frame's own start state must never be `DONE` (`TutorialFramesTest`). Give it
+   `glow: (PuzzleState) -> BoardHighlight` when the glow should walk with the progress. Worked examples:
+   `Lexicon.tutorial` (type BOAT, then Enter: each letter's key glows in turn) and `Sudoku.tutorial` (tap the
+   cell, then the 6). Gestures whose in-between state is `remember` (Target, Sand, Mate's two-tap move) are a
+   single emitted state already and need nothing.
 6. **Finish with a free-play frame** (`freePlay = true`): every move applies, hints are available (when the puzzle
    offers them) and the frame ends when the board is solved. The test must prove hints alone finish it with no
    fallback and no mistake.
@@ -412,11 +422,33 @@ Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.
    170 chars (LITS, Sudoku, Tower, Sets) or 200 (Snap). Teach with the board's own numbers and names, not
    abstractions (Kings builds region names with `regionNames`).
 
+**Style.** The rules every walkthrough follows; a new one, or a rewrite, is checked against them:
+
+- **At most two READ frames before the first move.** One frame per idea, not per tap: "type BOAT and score
+  it" is one frame, not five. Later READ frames only where the board has something new to show.
+- **A move frame never needs Next.** Its `done` line confirms and, where it can, teaches, in one short
+  sentence ("Crossed out. That square can never hold a king."), because it is read during a one-second hold
+  and again as the next frame's "✓" line.
+- **Every gesture free play needs is made once before free play** (tap a note, double-tap, drag, the pencil,
+  rotate, Cross/Fill, Shuffle...). Never introduced only in a caption, never only described.
+- **Mistakes are shown by letting the player make them** (Pointers' bump, Mambo's three moons that ring red),
+  not described in text and not pre-placed, wherever the board allows.
+- **Shared input models are taught the same way, in the same words.** Kings and Tents (tap a note, double-tap
+  to place, drag notes); the digit-pad puzzles (Sudoku, Cage Sudoku, Inequality, Regions, Cipher: tap the
+  square, then the digit, in one frame; tap the digit again to clear).
+- **Consistent wording.** Retry lines start "Tap the glowing ..." (or "Drag along the glowing ...") and say the
+  gesture, not the reason. The free-play caption is "Your turn: <goal>. Stuck? Hint shows you why."; where there
+  are no hints (Snap, Pointers) drop the second sentence or say what to do instead.
+- **Every claim in a caption is true of the rules**, not only of the walkthrough's board as you imagine it
+  being played. Check absolute words (no, every, only, can't) against the rules: "no guess can tell COAT, GOAT
+  and MOAT apart" is false, since CLOG does. A test asserts each claim it can.
+
 **The test pattern** (copy `test/KingsTeachingTest` `each walkthrough frame accepts its move, made by the real
 gestures, and rejects a wrong one`, and `the walkthrough board has exactly one answer, and it is the stored
 one`): assert the frame count, assert which frames are Next-only, build each accepted state by calling the
 board's real state functions (`toggleMark`, `paint`, `tap`...), assert `accepts` true for it and false for a
-near miss (wrong cell, wrong gesture, partial sweep), assert each frame's board is the previous frame's result,
+near miss (for a `steps` frame, walk every state on the way and assert `PROGRESS`, then `DONE`, with a
+`REJECT` at each point: `LexiconDeductionTest`, `SudokuTeachingTest`) (wrong cell, wrong gesture, partial sweep), assert each frame's board is the previous frame's result,
 assert each claim a caption makes about the board, and walk the last frame with `teach` until solved asserting
 `!d.fallback`. `test/SnapTutorialTest` is the pattern for a puzzle with no teacher (its own enumerator and
 `movesFrom`, every move the gestures can make).

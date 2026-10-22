@@ -66,6 +66,7 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
@@ -390,7 +391,6 @@ object Sudoku : PuzzleType {
     override val tutorial: List<TutorialFrame> by lazy {
         val row1 = (0 until 9).toSet()
         val start = tutorialBoard()
-        val chosen = tutorialBoard(selected = TUTORIAL_FIRST)
         val placed = mapOf(TUTORIAL_FIRST to 6)
         val wrong = tutorialBoard(placed + (TUTORIAL_WRONG to 9), selected = TUTORIAL_WRONG)
         // The 9s the wrong one clashes with: one in its column, one in its box.
@@ -404,18 +404,22 @@ object Sudoku : PuzzleType {
             ),
             TutorialFrame(
                 state = start,
-                caption = "Row 1 has one empty cell left. Tap it to select it.",
-                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST), soft = row1),
-                accepts = { next -> next is SudokuState && next.cells == start.cells && next.selected == TUTORIAL_FIRST },
-                retry = "Tap the glowing cell in row 1.",
-                done = "Selected.",
-            ),
-            TutorialFrame(
-                state = chosen,
-                caption = "Row 1 holds every digit but 6, so it's a 6. Tap 6 below.",
-                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST, SudokuTeacher.pad(6)), soft = row1),
-                accepts = { next -> next is SudokuState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 6 in the row of digits below.",
+                caption = "Row 1 has one empty cell left, and it holds every digit but 6. Tap the cell, " +
+                    "then 6 below.",
+                // The cell glows until it is selected, then the 6.
+                glow = { s ->
+                    val strong = if ((s as SudokuState).selected == TUTORIAL_FIRST) SudokuTeacher.pad(6) else TUTORIAL_FIRST
+                    BoardHighlight(strong = setOf(strong), soft = row1)
+                },
+                steps = { next ->
+                    when {
+                        next !is SudokuState -> TutorialStep.REJECT
+                        next.cells == tutorialBoard(placed).cells -> TutorialStep.DONE
+                        next.cells == start.cells && next.selected == TUTORIAL_FIRST -> TutorialStep.PROGRESS
+                        else -> TutorialStep.REJECT
+                    }
+                },
+                retry = "Tap the glowing cell in row 1, then the 6.",
                 done = "Row 1 is complete.",
             ),
             TutorialFrame(

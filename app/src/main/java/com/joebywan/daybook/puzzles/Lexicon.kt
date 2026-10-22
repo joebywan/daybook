@@ -48,6 +48,7 @@ import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
@@ -160,21 +161,22 @@ object Lexicon : PuzzleType {
         current = current,
     )
 
-    /** Accepts exactly [guesses] submitted and [current] typed, nothing else: each frame's board is written for the one before. */
-    private fun only(guesses: Int, current: String): (PuzzleState) -> Boolean = { next ->
-        next is LexiconState && next.guesses == TUTORIAL_GUESSES.take(guesses) && next.current == current
+    /**
+     * Guess 2 typed a letter at a time and then scored, in one frame: any start of BOAT is progress
+     * (a Backspace included), BOAT scored is the move, and anything else is refused.
+     */
+    private val typeBoat: (PuzzleState) -> TutorialStep = { next ->
+        val word = TUTORIAL_GUESSES[1]
+        when {
+            next !is LexiconState -> TutorialStep.REJECT
+            next.guesses == TUTORIAL_GUESSES && next.current.isEmpty() -> TutorialStep.DONE
+            next.guesses == TUTORIAL_GUESSES.take(1) && word.startsWith(next.current) -> TutorialStep.PROGRESS
+            else -> TutorialStep.REJECT
+        }
     }
 
     override val tutorial: List<TutorialFrame> by lazy {
         fun tiles(row: Int, vararg slots: Int) = slots.map { LexiconTeacher.tile(4, row, it) }.toSet()
-        fun typeFrame(typed: String, caption: String) = TutorialFrame(
-            state = tutorialBoard(1, typed.dropLast(1)),
-            caption = caption,
-            highlight = BoardHighlight(strong = setOf(LexiconTeacher.key(typed.last()))),
-            accepts = only(1, typed),
-            retry = "Tap the glowing key.",
-            done = "${typed.last().uppercaseChar()} goes in slot ${typed.length}.",
-        )
         listOf(
             TutorialFrame(
                 state = tutorialBoard(1),
@@ -188,20 +190,22 @@ object Lexicon : PuzzleType {
                     "Grey means the word has none of it: P and E are out.",
                 highlight = BoardHighlight(strong = tiles(0, 0, 1), soft = tiles(0, 2, 3)),
             ),
-            typeFrame(
-                "b",
-                "Use what you know: T and A are in the word, so move them. BOAT puts them in new places. " +
-                    "Tap B on the keyboard.",
-            ),
-            typeFrame("bo", "Now O."),
-            typeFrame("boa", "Then A."),
-            typeFrame("boat", "And T."),
             TutorialFrame(
-                state = tutorialBoard(1, "boat"),
-                caption = "A full row can be scored. Tap Enter.",
-                highlight = BoardHighlight(strong = setOf(LexiconTeacher.ENTER)),
-                accepts = only(2, ""),
-                retry = "Tap Enter, at the end of the keyboard.",
+                state = tutorialBoard(1),
+                caption = "Use what you know: T and A are in the word, so move them. BOAT puts them in new " +
+                    "places. Type BOAT on the keyboard, then tap Enter to score it.",
+                // The next key to tap glows: the next letter of BOAT, then Enter.
+                glow = { s ->
+                    val typed = (s as LexiconState).current
+                    val word = TUTORIAL_GUESSES[1]
+                    BoardHighlight(
+                        strong = setOf(
+                            if (typed.length < word.length) LexiconTeacher.key(word[typed.length]) else LexiconTeacher.ENTER,
+                        ),
+                    )
+                },
+                steps = typeBoat,
+                retry = "Tap the glowing key.",
                 done = "Scored.",
             ),
             TutorialFrame(

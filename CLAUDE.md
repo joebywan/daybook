@@ -484,6 +484,12 @@ double-tap must emit exactly one combined state.
 **The play log is part of the saved game.** `SavedGame.log` (`ui/play/ShareCard.kt`, `PlayLog`) is one character per move, undo,
 restart and counted hint, and the share graphic is drawn from it. Append to it exactly where the hint count goes up and where
 `push`/`undo`/`restart` change the board; keep it out of `PuzzleState`; it defaults to "" so older saves load (`ShareCardTest`).
+Restart is undoable (except in Pointers, which has no Undo): it pushes the cleared board, and `SavedGame.restarts` marks where, so
+an Undo that crosses one logs `u` and `PlayLog.played` hands the restarted moves back.
+
+**Back goes where the screen was opened from** (`backFrom` in `ui/DaybookApp.kt`): an archive game returns to its archive at that
+day, for system back, the web's back, the BackButton and the finish frame's Done alike. Route strings only gain fields at the end,
+read with `getOrNull`, so a route saved by an older build still decodes (`RouteTest`).
 
 **Feedback must not move the board.** Mambo's caption shifted it ~45dp when an error appeared,
 which causes mistaps. Reserve the space (`minLines == maxLines` works well), or float it over the content as the hint
@@ -525,7 +531,7 @@ checked in). Then check on the emulator; several bugs only appeared there. For t
 checked-in harness: `tools/render/render.py` (see "Rendering harness" under Web build).
 
 **README screenshots go stale silently.** `docs/screenshots/*.png` are emulator captures at half
-scale (540x1200), taken on a *clean install* with the date pinned so the home screen shows a 0-day streak and unplayed
+scale (540x1200), taken on a *clean install* with the date pinned so the home screen shows a fresh streak badge and unplayed
 boards rather than whatever the session happened to leave behind. Nothing checks them, so a change
 to a board's look or to the home grid means recapturing them in the same pass — the home shot in
 particular names the puzzle count in its alt text.
@@ -544,7 +550,8 @@ Full detail (seam, storage, fonts, harnesses, parity, lessons): `docs/WEB_BUILD.
 - **Hash iteration order must never reach the `Rng`.** The JVM and Wasm walk hash containers differently, so
   the same seed carved a different board. Audit any new generator code, and replay (don't re-pick) an order
   already baked into shipped boards (`core/JvmHashOrder.kt`).
-- **Parity:** CI diffs a year of boards between JVM and browser (`tools/web-parity/check.py`) and gates the deploy.
+- **Parity:** CI diffs a year of boards between JVM and browser (`tools/web-parity/check.py`): the required `web-parity`
+  check on pull requests, and again before the deploy.
 - **Check any web layout change in WebKit as well as Chromium**, at 375x537 as well as a tall screen:
   `tools/render/render.py`.
 - Build: `./gradlew :web:wasmJsBrowserDistribution`. Several sessions share the one browser pane: pass a `tabId`.
@@ -569,12 +576,13 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 ## Git and releases
 
 - **Standing instruction: finish the job.** When the work is done and the local tests are green, push
-  the branch, open the PR and merge it once CI's `build` is green, without asking first. The owner
+  the branch, open the PR and merge it once CI's `build` and `web-parity` are green, without asking first. The owner
   has authorised this for good and is tired of repeating it. Only stop and ask if CI fails in a way
   you cannot fix, or the change touches something under "Settled — do not reopen".
 - Never commit to `main`. Branch, PR, merge — I do the merging, not the owner. This is now enforced: a
   repository ruleset ("Protect main", set up 2026-10-02) requires a pull request, requires the CI
-  check named `build` to pass, and blocks force-pushes and deletion. The repo owner's account can
+  checks named `build` and `web-parity` to pass on a branch that is up to date with `main` (added
+  2026-10-23, after two pull requests each green alone broke `main` together), and blocks force-pushes and deletion. The repo owner's account can
   bypass on pull requests only.
 - **Docs-only changes do not need CI, and the owner has said so outright** ("it doesn't impact tests,
   and it doesn't impact the app, why burn the compute time?"). A PR that touches only documentation
@@ -586,11 +594,12 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   Gradle files, `web/`, `tools/` or a workflow, even alongside docs, waits for green CI. Nothing in the workflows pushes commits to `main` (releases are created
   with `gh release create`), so the rule does not get in their way.
 - Renovate's PRs get their `build` from `tools/dispatch-ci-for-renovate.sh`, which dispatches
-  `ci.yml` on their branch; a dispatched run posts a `build` commit status because its check run
-  alone does not satisfy the ruleset. Keep those steps in `ci.yml` and the job named `build`.
+  `ci.yml` on their branch; a dispatched run posts `build` and `web-parity` commit statuses because its check runs
+  alone do not satisfy the ruleset. Keep those steps in `ci.yml` and the jobs named `build` and `web-parity`.
 - Commits use `4845431+joebywan@users.noreply.github.com`. The personal address must never reach
   a commit or a remote. No `Co-Authored-By: Claude` trailer.
-- Push to `main` builds a signed APK and publishes a GitHub Release automatically.
+- Push to `main` builds a signed APK and publishes a GitHub Release automatically. It runs the unit tests again unless
+  `ci.yml` already passed the identical source tree (its `tested-tree-<sha>` artifact); a different tree is always tested.
 - **That release now reaches Google Play automatically, so a merge to `main` ships.** After the GitHub
   Release is made, `release.yml` calls `publish-play.yml`, which uploads the signed `.aab` and rolls it
   out to everyone on the `production` track (full rollout, not staged: nobody would raise a staged
@@ -606,6 +615,9 @@ assertion loose enough to survive the bug is the same thing wearing a number.
     on someone's phone. Treat any change to a `PuzzleState`, a serialised class or `DataStoreKeyValueStore`
     as one that must load an old save. `SaveCompatibilityTest` reads saves a released build wrote
     (`app/src/test/resources/saves/`, never edited) and fails if any no longer loads or loses a field.
+    That is the debug build; `release.yml` runs the same saves through the signed, R8-minified APK on an emulator
+    before publishing (`tools/save-check/check.py`, `.github/actions/save-check`), and a lost or changed save blocks
+    the release. Run it locally on any APK, or on a published one with Actions > "Release save check".
 - **A merge to `main` also reaches our own F-Droid repo** (`publish-fdroid.yml`, same APK and key as the GitHub
   Release; `docs/fdroid/README.md`). The listing text and images are `fastlane/metadata/`, the one copy for both stores: a
   merge that changes the text pushes it to Play (`play-listing.yml`), so edit it there, never in Play Console. The code is AGPL-3.0-or-later (`LICENSE`, chosen by the owner); f-droid.org's entry is live (https://f-droid.org/packages/com.joebywan.daybook/).

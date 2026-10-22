@@ -41,6 +41,9 @@ import com.joebywan.daybook.ui.play.tiersDoneOn
 import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.AchievementsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
+import com.joebywan.daybook.ui.theme.Appearance
+import com.joebywan.daybook.ui.theme.DaybookTheme
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import androidx.compose.animation.Crossfade
@@ -61,51 +64,83 @@ sealed interface Route {
     data object Settings : Route
     /** [fromHome]: back returns to where it was opened from. */
     data class Achievements(val fromHome: Boolean = false) : Route
-    data class Archive(val puzzleId: String) : Route
+    /** [day]: the day last played from it, which the list opens at. */
+    data class Archive(val puzzleId: String, val day: LocalDate? = null) : Route
+    /** [fromArchive]: back returns to the puzzle's archive, at this day, rather than Home. */
     data class Play(
         val puzzleId: String,
         val difficulty: Difficulty,
         val day: LocalDate?,
         val nonce: Long = 0L,
+        val fromArchive: Boolean = false,
     ) : Route
 }
 
+/** Where back goes from [r]: the screen it was opened from. */
+internal fun backFrom(r: Route): Route = when {
+    r is Route.Achievements && !r.fromHome -> Route.Stats
+    r is Route.Play && r.fromArchive -> Route.Archive(r.puzzleId, r.day)
+    else -> Route.Home
+}
+
 /** A route as one string, for rotation and process death. */
-private val RouteSaver = Saver<Route, String>(
-    save = { r ->
-        when (r) {
-            Route.Home -> "home"
-            Route.Stats -> "stats"
-            Route.Settings -> "settings"
-            is Route.Achievements -> "achievements|${r.fromHome}"
-            is Route.Archive -> "archive|${r.puzzleId}"
-            is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}"
-        }
-    },
-    restore = { text ->
-        val f = text.split('|')
-        when (f[0]) {
-            "stats" -> Route.Stats
-            "settings" -> Route.Settings
-            "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
-            "archive" -> Route.Archive(f[1])
-            "play" -> Route.Play(
-                puzzleId = f[1],
-                difficulty = Difficulty.valueOf(f[2]),
-                day = f[3].takeIf { it.isNotEmpty() }?.let(LocalDate::parse),
-                nonce = f[4].toLong(),
-            )
-            else -> Route.Home
-        }
-    },
-)
+private val RouteSaver = Saver<Route, String>(save = { encodeRoute(it) }, restore = { decodeRoute(it) })
+
+internal fun encodeRoute(r: Route): String =
+    when (r) {
+        Route.Home -> "home"
+        Route.Stats -> "stats"
+        Route.Settings -> "settings"
+        is Route.Achievements -> "achievements|${r.fromHome}"
+        is Route.Archive -> "archive|${r.puzzleId}|${r.day ?: ""}"
+        is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}|${r.fromArchive}"
+    }
+
+internal fun decodeRoute(text: String): Route {
+    val f = text.split('|')
+    return when (f[0]) {
+        "stats" -> Route.Stats
+        "settings" -> Route.Settings
+        "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
+        // The fields after the first few came later: a string saved before them still decodes.
+        "archive" -> Route.Archive(f[1], f.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse))
+        "play" -> Route.Play(
+            puzzleId = f[1],
+            difficulty = Difficulty.valueOf(f[2]),
+            day = f[3].takeIf { it.isNotEmpty() }?.let(LocalDate::parse),
+            nonce = f[4].toLong(),
+            fromArchive = f.getOrNull(5) == "true",
+        )
+        else -> Route.Home
+    }
+}
 
 /**
- * The whole app. [startAt] is where it opens — Home unless something asked for a particular
- * screen, which on the web is a `?puzzle=` link.
+ * The whole app, in its theme. [startAt] is where it opens — Home unless something asked for a
+ * particular screen, which on the web is a `?puzzle=` link.
+ *
+ * Nothing is drawn until the light/dark choice is known, so a player who picked Dark on a light
+ * phone never sees one light frame. Saveable, so a rotation does not wait for the store again; it
+ * is read once, since Settings (below) is the only thing that changes it.
  */
 @Composable
 fun DaybookApp(startAt: Route = Route.Home) {
+    val launchFile = rememberKeyValueStore(KeyValueStore.LAUNCH)
+    val launchPrefs = remember(launchFile) { LaunchPreferences(launchFile) }
+    val scope = rememberCoroutineScope()
+    var appearance by rememberSaveable { mutableStateOf<Appearance?>(null) }
+    LaunchedEffect(Unit) { if (appearance == null) appearance = launchPrefs.appearance.first() }
+    val current = appearance ?: return
+    DaybookTheme(current) {
+        DaybookScreens(startAt, current) { picked ->
+            appearance = picked
+            scope.launch { launchPrefs.setAppearance(picked) }
+        }
+    }
+}
+
+@Composable
+private fun DaybookScreens(startAt: Route, appearance: Appearance, onAppearance: (Appearance) -> Unit) {
     val progressFile = rememberKeyValueStore(KeyValueStore.PROGRESS)
     val store = remember(progressFile) { ProgressStore(progressFile) }
     val scope = rememberCoroutineScope()
@@ -132,7 +167,8 @@ fun DaybookApp(startAt: Route = Route.Home) {
     var pickedDifficulty by remember { mutableStateOf<Difficulty?>(null) }
     val difficulty = pickedDifficulty ?: storedDifficulty ?: Difficulty.STANDARD
     // Same reasoning as the difficulty: a flip of the switch shows at once, not after the store answers.
-    val storedShowTimer by launchPrefs.showTimer.collectAsState(initial = true)
+    val storedShowTimer by launchPrefs.showTimer.collectAsState(initial = false)
+    LaunchedEffect(Unit) { launchPrefs.settleShowTimer { store.hasPlayed() } }
     var pickedShowTimer by remember { mutableStateOf<Boolean?>(null) }
     val showTimer = pickedShowTimer ?: storedShowTimer
     val storedPlaySound by launchPrefs.playSound.collectAsState(initial = true)
@@ -170,7 +206,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
     // so this cannot fire while the archive picker or the rules sheet is open.
     //
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
-    PlatformBackHandler(enabled = route != Route.Home) { route = Route.Home }
+    PlatformBackHandler(enabled = route != Route.Home) { route = backFrom(route) }
 
     CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics) {
     // A short fade between screens (none under reduced motion). Each route is its own keyed content, so a screen's
@@ -218,7 +254,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
         is Route.Achievements -> AchievementsScreen(
             today = today,
             completions = completions,
-            onBack = { route = if (current.fromHome) Route.Home else Route.Stats },
+            onBack = { route = backFrom(current) },
         )
 
         Route.Settings -> SettingsScreen(
@@ -237,6 +273,8 @@ fun DaybookApp(startAt: Route = Route.Home) {
                 pickedVibrate = on
                 scope.launch { launchPrefs.setVibrate(on) }
             },
+            appearance = appearance,
+            onAppearance = onAppearance,
             onBack = { route = Route.Home },
         )
 
@@ -245,8 +283,9 @@ fun DaybookApp(startAt: Route = Route.Home) {
             today = today,
             completions = completions,
             onPlay = { day, difficulty ->
-                route = Route.Play(current.puzzleId, difficulty, day)
+                route = Route.Play(current.puzzleId, difficulty, day, fromArchive = true)
             },
+            openAt = current.day,
             onBack = { route = Route.Home },
         )
 
@@ -321,9 +360,9 @@ fun DaybookApp(startAt: Route = Route.Home) {
                     onNext = { option ->
                         val tier = option.difficulty
                         when {
-                            tier == null -> route = Route.Home
-                            // The same date, so on an archive day it is that past date's board.
-                            option.kind == NextKind.DAILY -> route = Route.Play(puzzle.id, tier, current.day)
+                            tier == null -> route = backFrom(current)
+                            // The same date, so on an archive day it is that past date's board (and back is still the archive).
+                            option.kind == NextKind.DAILY -> route = current.copy(difficulty = tier)
                             // A solved random board has already had its slot renewed (see onSolved).
                             else -> scope.launch {
                                 route = Route.Play(puzzle.id, tier, null, store.randomNonce(puzzle.id, tier))
@@ -333,7 +372,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
                     tutorialOffered = tutorialsOffered?.let { puzzle.id in it },
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
                     showTimer = showTimer,
-                    onBack = { route = Route.Home },
+                    onBack = { route = backFrom(current) },
                 )
                 }
             }

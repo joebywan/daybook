@@ -14,7 +14,8 @@ the `RANGE <fingerprint>` console lines until `DUMP DONE`, and compares them wit
     python3 tools/web-parity/check.py --jvm /tmp/jvm.txt
 
 The range is read from the JVM file (lines per puzzle / 3 tiers), so the two cannot disagree about
-it. One page per puzzle, all at once: a year is twelve independent pages, and the slowest puzzle sets
+it. The JVM file also holds levels 1..N under the pseudo-puzzle `levels` (five boards a level), which is
+one more page, `&puzzle=levels`. One page per puzzle, all at once: a year is twelve independent pages, and the slowest puzzle sets
 the pace. Exits 0 when every line of every puzzle matches in every browser; 1 on any difference,
 missing line, page error, crash or timeout; 2 on bad inputs.
 
@@ -32,6 +33,8 @@ import time
 from pathlib import Path
 
 TIERS = 3  # Standard, Hard, Expert: the order the JVM file and the page both use
+LEVELS = "levels"  # the pseudo-puzzle: levels 1..days, LEVEL_SIZE boards each (`&puzzle=levels`)
+LEVEL_SIZE = 5
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -116,7 +119,7 @@ async def dump_one(browser, base: str, puzzle: str, days: int, timeout: float, e
         await page.goto(f"{base}/index.html?dump&range={days}&puzzle={puzzle}", wait_until="commit")
         await asyncio.wait_for(done.wait(), timeout)
     except asyncio.TimeoutError:
-        errors.append(f"{puzzle}: no DUMP DONE within {timeout:.0f}s ({len(lines)} of {days * TIERS} RANGE lines seen)")
+        errors.append(f"{puzzle}: no DUMP DONE within {timeout:.0f}s ({len(lines)} RANGE lines seen)")
         return None
     except Exception as e:  # noqa: BLE001 - report any browser failure as one
         errors.append(f"{puzzle}: {type(e).__name__}: {str(e)[:300]}")
@@ -139,7 +142,7 @@ async def check_browser(pw, name: str, base: str, expected: dict[str, list[str]]
         if got is not None:
             problems += compare(puzzle, expected[puzzle], got, limit)
     status = "FAIL" if problems else "ok"
-    print(f"[{name}] {status}: {len(expected)} puzzles x {days} days x {TIERS} tiers in {time.monotonic() - started:.0f}s", flush=True)
+    print(f"[{name}] {status}: {len(expected)} pages ({days} days x {TIERS} tiers, or {days} levels) in {time.monotonic() - started:.0f}s", flush=True)
     return [f"[{name}] {p}" for p in problems]
 
 
@@ -184,11 +187,14 @@ def main() -> int:
         print(f"{args.jvm} does not exist: run WebParityDumpTest with DAYBOOK_PARITY_DUMP set", file=sys.stderr)
         return 2
     expected = read_expected(args.jvm)
-    sizes = {len(v) for v in expected.values()}
+    sizes = {len(v) for k, v in expected.items() if k != LEVELS}
     if not expected or len(sizes) != 1 or sizes.pop() % TIERS:
         print(f"{args.jvm} is not a parity dump (puzzles: {[(k, len(v)) for k, v in expected.items()]})", file=sys.stderr)
         return 2
-    days = len(next(iter(expected.values()))) // TIERS
+    days = len(next(v for k, v in expected.items() if k != LEVELS)) // TIERS
+    if LEVELS in expected and len(expected[LEVELS]) != days * LEVEL_SIZE:
+        print(f"{args.jvm}: {len(expected[LEVELS])} level lines, expected {days} levels x {LEVEL_SIZE}", file=sys.stderr)
+        return 2
     print(f"JVM dump: {len(expected)} puzzles x {days} days x {TIERS} tiers; browsers: {', '.join(args.browsers)}", flush=True)
     return asyncio.run(main_async(args, expected, days))
 
