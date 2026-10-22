@@ -179,7 +179,16 @@ below have a famous branded version; use the descriptive name).
 
 ### Suggested
 
-Roughly in order of how well they fit, best first.
+Roughly in order of how well they fit, best first. Before adding one, read the existing puzzles' `rules`, not just their
+names: Bridges (Hashi) turned out to be Atoms, Star Battle is Kings, Takuzu is Mambo, Calcudoku is Cage Sudoku plus Inequality,
+and Battleships is close to Tents.
+- [ ] **Cryptic sum (cryptarithm), wanted by the owner (2026-10-22).** Letters stand for digits in a sum (SEND + MORE = MONEY);
+  each letter one digit, no leading zero. Not to be confused with Target: Target builds up to a number, this works backwards
+  from columns and carries to which digit each letter is. Words from `LexiconWords` make the sums read as words. Generation:
+  pick words, keep sums with exactly one assignment (backtracking proof, no budget; an independent column-by-column oracle in
+  the test). Tiers by word length and count of addends. Check the teacher can explain every step from carries and column
+  parity ("the sum is longer than both addends, so its first letter is 1") before committing; if steps need trial, the board
+  fails the owner's "think, don't guess" test. Share graphic: the strip. *M-L.*
 - [ ] **Island-and-sea puzzle.** Numbered cells grow islands of that size, islands never touch, the sea is
   one connected body with no 2x2 pool. Same family as Kings/LITS (region logic, a connectivity
   proof in the solver); the teacher can name each rule it uses. *M–L.*
