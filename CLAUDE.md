@@ -400,6 +400,34 @@ palette, walkthrough, motif), `SandTeacher.kt`, `SandKeys.kt`. `id = "sand"` is 
 - Colours: six hues at three steps, ordered by CIEDE2000 with colour-blind vision for the 5 / 7 / 8 prefixes (`SandPaletteTest`), and a symbol on every
   layer. The grain and the uneven tops come from the tube and layer index, never random per frame and never stored.
 
+## Dominoes (domino placement on a region board)
+
+Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule: a total, `<n`, `>n`, `=` (all
+equal) or `≠` (all different). Spec and decisions: `docs/DOMINO_SPEC.md`. The genre is published by the New York Times as *Pips*;
+that name and their art never appear anywhere the player sees. `puzzles/DominoRules.kt` (state, `DominoLogic`: rules, the
+exhaustive count with a sealed `Verdict`, generator), `DominoTeacher.kt` (the ladder, shared with the generator), `DominoKeys.kt`
+(the tap model `DominoPick` and the keys, pure), `Dominoes.kt` (board, tray, badges, walkthrough, motif). `id = "dominoes"` is
+hashed into every seed: never rename it.
+
+- **Tiers: 5x5 with 6-7 dominoes / 6x6 with 9-10 / 7x7 with 12-14**, distinct dominoes from the double-six set, and the deepest ladder
+  step a board must need: region values / counting / a what-if (`DominoLogic.specFor`). Measured numbers: the spec's Measured section.
+- **A board ships only if the ladder finishes it** and `solutions` (no budget; only `Verdict.ExactlyOne` carries an answer) proves one
+  answer; `DominoOracle` (reading order, no pruning) is the independent check. A year per tier never reaches `lastResort`, so hints
+  never fall back on a daily board. **`solved` checks the rules**; a mistake is a domino off the stored answer (squares or way
+  round), sound because the answer is unique. Every hint ends in a placement.
+- **Input: tap model, no drag from the tray** (height is scarce). Tap a tray domino to pick it up, again to turn it; tap a square, then
+  a neighbour: its leading half (the larger one, unturned, as the tray draws it and the hints name it) goes on the first. A drag
+  square to neighbour is the two taps. A tap on a laid domino lifts it into the hand (after the 300 ms double-tap window); a double
+  tap or long press turns it in place. The pick, the first square, the drag and the cursor are `remember` state (`DominoPick`), never
+  `PuzzleState`; one state per gesture; gestures read the board through a cell updated on every emit (Tents' pattern).
+- **The board is the whole box, never cropped to the shape**: the hints name squares by row and column of the box. The tray is a fixed
+  grid of at most seven slots a row under the board, sized from both axes (`Dominoes.fit`, `DominoLayoutTest`); a laid domino leaves
+  its slot empty but reserved. The tray is `keepClear`.
+- Region hues are derived (`Dominoes.regionColours`: a four-colouring of the region graph in Violet/Amber/Teal/Blue, Gold spare; no
+  Coral, Green or Rose, since the badges show right and wrong). Badges hang off each region's top-right square, drawn as strokes
+  (Fredoka has no `≠`); green when the region is covered and keeps its rule, solid `scheme.error` once it cannot (1 s settle).
+  Highlight indices: squares `row * width + col`, tray slot `DominoTeacher.TRAY + k`, badge `DominoTeacher.RULE + r`.
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;

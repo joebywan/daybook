@@ -12,6 +12,7 @@ import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Cipher
+import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
@@ -384,6 +385,33 @@ class FallbackTest {
             assertTrue("${difficulty.name} came close to the allowance: $most", most < TallyLogic.ATTEMPTS / 2)
         }
         assertTrue("tally shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
+     * [DominoLogic.generateVerified] returns a board only when the tier's ladder finished it, needing at least the
+     * tier's deepest step, and the count proved one answer. Also measures the redraws (printed).
+     */
+    @Test
+    fun `dominoes proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            var total = 0
+            var most = 0
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, "dominoes", difficulty)
+                val proved = DominoLogic.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("dominoes $date/${difficulty.name}", proved, DominoLogic.generate(seed, difficulty))
+                val used = 1 + (0 until DominoLogic.ATTEMPTS).first { DominoLogic.attempt(seed, difficulty, it) != null }
+                total += used
+                most = maxOf(most, used)
+            }
+            println("dominoes ${difficulty.name}: draws per board mean ${"%.1f".format(total / 365.0)}, most $most of ${DominoLogic.ATTEMPTS}")
+            assertTrue("${difficulty.name} came close to the allowance: $most", most < DominoLogic.ATTEMPTS / 4)
+        }
+        assertTrue("dominoes shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     @Test

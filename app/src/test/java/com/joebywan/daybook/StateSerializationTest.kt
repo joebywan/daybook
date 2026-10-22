@@ -4,6 +4,8 @@ import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.SavedGame
+import com.joebywan.daybook.puzzles.DominoLogic
+import com.joebywan.daybook.puzzles.DominoState
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.CipherState
 import com.joebywan.daybook.puzzles.CageState
@@ -111,6 +113,7 @@ class StateSerializationTest {
         is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is RegionsState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is TallyState -> state.tap(0, TallyLogic.REMOVED).tap(1, TallyLogic.KEPT)
+        is DominoState -> DominoLogic.flip(DominoLogic.place(DominoLogic.place(state, 0, state.answer[0]), 1, state.answer[1]), 1)
         is TargetState -> state.combine(0, TargetOp.Add, 1)!!
         is WordWheelState -> state.enter(state.slots[1].word)
         is SandState -> state.pour(0, state.tubes.size - 1)!!

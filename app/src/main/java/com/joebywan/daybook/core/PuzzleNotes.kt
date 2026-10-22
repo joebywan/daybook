@@ -154,6 +154,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Follow a blocked arrow's line to find what to clear first.",
         "An arrow on the edge pointing outwards is always free.",
     ),
+    "dominoes" to listOf(
+        "A square with one free neighbour must pair with it.",
+        "A one-square region tells you that square's pips outright.",
+        "The tray holds one of each domino: count what is left.",
+        "A big total over two squares needs big halves on both.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */
