@@ -17,6 +17,13 @@ import java.time.LocalDate
  * The web page prints the same lines, prefixed with `kings`, under `?dump` (see CLAUDE.md, "Web
  * build", and [WebParityDumpTest]); diffing the two is how parity with the browser is checked.
  */
+/** The dates every web parity pin is taken on; the web page's `?dump` prints the same three. */
+internal val PARITY_DATES: List<LocalDate> = listOf(
+    LocalDate.of(2026, 1, 1),
+    LocalDate.of(2026, 9, 30),
+    LocalDate.of(2027, 2, 28),
+)
+
 class WebParityTest {
 
     @Test
@@ -54,12 +61,6 @@ class WebParityTest {
             "kings=${s.solution.sorted().joinToString(",")}"
 
     private companion object {
-        val PARITY_DATES = listOf(
-            LocalDate.of(2026, 1, 1),
-            LocalDate.of(2026, 9, 30),
-            LocalDate.of(2027, 2, 28),
-        )
-
         val KINGS_FINGERPRINTS = listOf(
             "2026-01-01 STANDARD seed=7195351499143569672 regions=1110000111023314442234444333646455564665556666555 kings=3,7,18,27,29,40,44",
             "2026-01-01 HARD seed=-5638635270955423271 regions=1102555511025555122222551442335544444455444665554466665746666667 kings=2,8,19,29,33,46,52,63",
