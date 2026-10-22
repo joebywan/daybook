@@ -136,6 +136,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A bonus word rules that word out for every slot.",
         "Plurals and -ED or -ING forms are never grid words.",
     ),
+    "tally" to listOf(
+        "A number bigger than what its line still needs must go.",
+        "If removing a number would leave too little, it stays.",
+        "Circled numbers that already make the target: the rest go.",
+        "List the ways a short line can make its target.",
+    ),
     "pointers" to listOf(
         "An arrow with an empty line to the edge can always go.",
         "Clearing an arrow never blocks another: free stays free.",
