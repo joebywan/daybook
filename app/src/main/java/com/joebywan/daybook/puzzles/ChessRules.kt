@@ -95,9 +95,9 @@ internal object ChessRules {
     private val BOTH = arrayOf(DIAG, ORTHO)
     private val PAWN_DF = intArrayOf(-1, 1)
 
-    private fun from(m: Int) = m and 63
-    private fun to(m: Int) = (m shr 6) and 63
-    private fun promo(m: Int) = m shr 12
+    internal fun from(m: Int) = m and 63
+    internal fun to(m: Int) = (m shr 6) and 63
+    internal fun promo(m: Int) = m shr 12
     private fun mv(f: Int, t: Int, pr: Int = 0) = f or (t shl 6) or (pr shl 12)
 
     // ---- attacks -------------------------------------------------------------------------------------------
@@ -344,7 +344,7 @@ internal object ChessRules {
 
     // ---- notation ------------------------------------------------------------------------------------------
 
-    private fun name(s: Int) = "${'a' + s % 8}${'1' + s / 8}"
+    internal fun name(s: Int) = "${'a' + s % 8}${'1' + s / 8}"
 
     fun uci(m: Int): String {
         val pr = promo(m)

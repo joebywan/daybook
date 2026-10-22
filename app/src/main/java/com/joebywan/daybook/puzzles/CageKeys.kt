@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.stepCursor
+
 /**
  * Cage Sudoku takes the keys Sudoku does ([sudokuKeyAction]); this applies them to a [CageState] through the
  * same state functions a tap uses, so notes, undo, conflicts and the striking of marks cannot differ.
@@ -16,12 +18,7 @@ fun CageState.clearCell(cell: Int): CageState =
 fun CageState.applyKey(action: SudokuKeyAction, notesMode: Boolean): CageState? {
     val at = grid.selected
     val next = when (action) {
-        is SudokuKeyAction.Move -> {
-            if (at == null) return select(0)
-            val row = (at / 9 + action.dRow).coerceIn(0, 8)
-            val col = (at % 9 + action.dCol).coerceIn(0, 8)
-            select(row * 9 + col)
-        }
+        is SudokuKeyAction.Move -> if (at == null) return select(0) else select(stepCursor(at, action.dRow, action.dCol, 9, 9))
         is SudokuKeyAction.Digit -> if (at == null) this else enter(at, action.digit, notesMode)
         SudokuKeyAction.Clear -> if (at == null) this else clearCell(at)
     }
