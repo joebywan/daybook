@@ -55,44 +55,56 @@ sealed interface Route {
     data object Settings : Route
     /** [fromHome]: back returns to where it was opened from. */
     data class Achievements(val fromHome: Boolean = false) : Route
-    data class Archive(val puzzleId: String) : Route
+    /** [day]: the day last played from it, which the list opens at. */
+    data class Archive(val puzzleId: String, val day: LocalDate? = null) : Route
+    /** [fromArchive]: back returns to the puzzle's archive, at this day, rather than Home. */
     data class Play(
         val puzzleId: String,
         val difficulty: Difficulty,
         val day: LocalDate?,
         val nonce: Long = 0L,
+        val fromArchive: Boolean = false,
     ) : Route
 }
 
+/** Where back goes from [r]: the screen it was opened from. */
+internal fun backFrom(r: Route): Route = when {
+    r is Route.Achievements && !r.fromHome -> Route.Stats
+    r is Route.Play && r.fromArchive -> Route.Archive(r.puzzleId, r.day)
+    else -> Route.Home
+}
+
 /** A route as one string, for rotation and process death. */
-private val RouteSaver = Saver<Route, String>(
-    save = { r ->
-        when (r) {
-            Route.Home -> "home"
-            Route.Stats -> "stats"
-            Route.Settings -> "settings"
-            is Route.Achievements -> "achievements|${r.fromHome}"
-            is Route.Archive -> "archive|${r.puzzleId}"
-            is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}"
-        }
-    },
-    restore = { text ->
-        val f = text.split('|')
-        when (f[0]) {
-            "stats" -> Route.Stats
-            "settings" -> Route.Settings
-            "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
-            "archive" -> Route.Archive(f[1])
-            "play" -> Route.Play(
-                puzzleId = f[1],
-                difficulty = Difficulty.valueOf(f[2]),
-                day = f[3].takeIf { it.isNotEmpty() }?.let(LocalDate::parse),
-                nonce = f[4].toLong(),
-            )
-            else -> Route.Home
-        }
-    },
-)
+private val RouteSaver = Saver<Route, String>(save = { encodeRoute(it) }, restore = { decodeRoute(it) })
+
+internal fun encodeRoute(r: Route): String =
+    when (r) {
+        Route.Home -> "home"
+        Route.Stats -> "stats"
+        Route.Settings -> "settings"
+        is Route.Achievements -> "achievements|${r.fromHome}"
+        is Route.Archive -> "archive|${r.puzzleId}|${r.day ?: ""}"
+        is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}|${r.fromArchive}"
+    }
+
+internal fun decodeRoute(text: String): Route {
+    val f = text.split('|')
+    return when (f[0]) {
+        "stats" -> Route.Stats
+        "settings" -> Route.Settings
+        "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
+        // The fields after the first few came later: a string saved before them still decodes.
+        "archive" -> Route.Archive(f[1], f.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse))
+        "play" -> Route.Play(
+            puzzleId = f[1],
+            difficulty = Difficulty.valueOf(f[2]),
+            day = f[3].takeIf { it.isNotEmpty() }?.let(LocalDate::parse),
+            nonce = f[4].toLong(),
+            fromArchive = f.getOrNull(5) == "true",
+        )
+        else -> Route.Home
+    }
+}
 
 /**
  * The whole app, in its theme. [startAt] is where it opens — Home unless something asked for a
@@ -180,7 +192,7 @@ private fun DaybookScreens(startAt: Route, appearance: Appearance, onAppearance:
     // so this cannot fire while the archive picker or the rules sheet is open.
     //
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
-    PlatformBackHandler(enabled = route != Route.Home) { route = Route.Home }
+    PlatformBackHandler(enabled = route != Route.Home) { route = backFrom(route) }
 
     when (val current = route) {
         Route.Home -> {
@@ -223,7 +235,7 @@ private fun DaybookScreens(startAt: Route, appearance: Appearance, onAppearance:
         is Route.Achievements -> AchievementsScreen(
             today = today,
             completions = completions,
-            onBack = { route = if (current.fromHome) Route.Home else Route.Stats },
+            onBack = { route = backFrom(current) },
         )
 
         Route.Settings -> SettingsScreen(
@@ -247,8 +259,9 @@ private fun DaybookScreens(startAt: Route, appearance: Appearance, onAppearance:
             today = today,
             completions = completions,
             onPlay = { day, difficulty ->
-                route = Route.Play(current.puzzleId, difficulty, day)
+                route = Route.Play(current.puzzleId, difficulty, day, fromArchive = true)
             },
+            openAt = current.day,
             onBack = { route = Route.Home },
         )
 
@@ -323,9 +336,9 @@ private fun DaybookScreens(startAt: Route, appearance: Appearance, onAppearance:
                     onNext = { option ->
                         val tier = option.difficulty
                         when {
-                            tier == null -> route = Route.Home
-                            // The same date, so on an archive day it is that past date's board.
-                            option.kind == NextKind.DAILY -> route = Route.Play(puzzle.id, tier, current.day)
+                            tier == null -> route = backFrom(current)
+                            // The same date, so on an archive day it is that past date's board (and back is still the archive).
+                            option.kind == NextKind.DAILY -> route = current.copy(difficulty = tier)
                             // A solved random board has already had its slot renewed (see onSolved).
                             else -> scope.launch {
                                 route = Route.Play(puzzle.id, tier, null, store.randomNonce(puzzle.id, tier))
@@ -335,7 +348,7 @@ private fun DaybookScreens(startAt: Route, appearance: Appearance, onAppearance:
                     tutorialOffered = tutorialsOffered?.let { puzzle.id in it },
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
                     showTimer = showTimer,
-                    onBack = { route = Route.Home },
+                    onBack = { route = backFrom(current) },
                 )
                 }
             }

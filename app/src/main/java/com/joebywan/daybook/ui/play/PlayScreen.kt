@@ -258,9 +258,15 @@ private fun PlayBoard(
     // layout they always had.
     val teaches = remember(initial) { hasTutorial || puzzle.teach(initial) != null }
     val hintSession = rememberHintSession(initial)
+    // Undoable: the cleared board goes on the history, so one mis-tap beside Undo costs nothing. Pointers has no Undo.
     fun restart() {
         hintSession.clear()
-        game = game.copy(state = initial, history = emptyList(), log = game.log + PlayLog.RESTART)
+        game = if (puzzle.offersUndo) {
+            val history = game.history + game.state
+            game.copy(state = initial, history = history, restarts = game.restarts + history.size, log = game.log + PlayLog.RESTART)
+        } else {
+            game.copy(state = initial, history = emptyList(), log = game.log + PlayLog.RESTART)
+        }
     }
     val hintScope = rememberCoroutineScope()
     // Offered on this visit, and only this one. Saved, so a rotation keeps the line it already
@@ -286,11 +292,11 @@ private fun PlayBoard(
             // A reopened solve is already stored; rewriting it would only stretch its day.
             current.state.solved && reopenedSolved -> Unit
             // A finished daily is kept for the day so it can be looked at, not replayed; practice is not.
-            current.state.solved -> persist(if (day != null) current.copy(history = emptyList()) else null)
+            current.state.solved -> persist(if (day != null) current.copy(history = emptyList(), restarts = emptyList()) else null)
             // Opened and never touched. Nothing to record, and nothing of anyone's to clear.
             current == pristine -> Unit
-            // Restarted, or only ever selected a cell: no longer a game in progress.
-            current.state.moves == 0 -> persist(null)
+            // Only ever selected a cell, or restarted past Undo's reach: no longer a game in progress.
+            current.state.moves == 0 && current.restarts.isEmpty() -> persist(null)
             else -> persist(current)
         }
     }
@@ -386,9 +392,15 @@ private fun PlayBoard(
         // that is no longer there.
         hintSession.clear()
         undone(puzzle, game.state, game.history)?.let {
-            // Logged only when it takes back a move (not a typed letter, a peg, or only a selection).
-            val back = if (PlayLog.step(puzzle, it.state, game.state).isNotEmpty()) PlayLog.UNDO.toString() else ""
-            game = game.copy(state = it.state, history = it.history, log = game.log + back)
+            // A restart is taken back once the history no longer reaches the board it cleared; logged as an undo each.
+            val restarts = game.restarts.filter { r -> r <= it.history.size }
+            // Otherwise logged only when it takes back a move (not a typed letter, a peg, or only a selection).
+            val back = when {
+                restarts.size < game.restarts.size -> PlayLog.UNDO.toString().repeat(game.restarts.size - restarts.size)
+                PlayLog.step(puzzle, it.state, game.state).isNotEmpty() -> PlayLog.UNDO.toString()
+                else -> ""
+            }
+            game = game.copy(state = it.state, history = it.history, restarts = restarts, log = game.log + back)
         }
     }
 

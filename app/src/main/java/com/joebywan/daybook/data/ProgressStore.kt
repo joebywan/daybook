@@ -139,6 +139,11 @@ data class SavedGame(
      * graphic is drawn from. Kept whole, unlike [history]. Defaulted: a save from before it loads with an empty log.
      */
     val log: String = "",
+    /**
+     * Each Restart still in reach of Undo, as the size [history] had once it took the board the restart cleared. An Undo
+     * that leaves the history shorter than one has taken that restart back. Defaulted: an older save loads with none.
+     */
+    val restarts: List<Int> = emptyList(),
 ) {
     /**
      * Keeps only the tail of the undo stack. Every entry is a whole board, so a Sudoku Expert game
@@ -146,7 +151,10 @@ data class SavedGame(
      * savedInstanceState Bundle, which is a crash rather than a lost undo. The live stack on the
      * play screen stays whole; it is only leaving the screen that costs the oldest steps.
      */
-    fun trimmed(): SavedGame = copy(history = history.takeLast(UNDO_DEPTH))
+    fun trimmed(): SavedGame {
+        val dropped = (history.size - UNDO_DEPTH).coerceAtLeast(0)
+        return copy(history = history.drop(dropped), restarts = restarts.map { it - dropped }.filter { it > 0 })
+    }
 
     fun encode(): String = SavedJson.encodeToString(trimmed())
 
