@@ -120,7 +120,7 @@ class WordWheelTeachingTest {
     }
 
     @Test
-    fun `every nudge and explanation fits the panel`() {
+    fun `every nudge and explanation fits the panel and never names the word`() {
         for (d in Difficulty.entries) {
             for (day in 0 until 730) {
                 var s = board(day, d)
@@ -128,6 +128,10 @@ class WordWheelTeachingTest {
                     val step = WordWheelTeacher.teach(s)!!
                     assertTrue("${step.nudge.length}: ${step.nudge}", step.nudge.length <= WordWheelTeacher.MAX_NUDGE)
                     assertTrue("${step.explanation.length}: ${step.explanation}", step.explanation.length <= WordWheelTeacher.MAX_EXPLANATION)
+                    // A hint gives a clue, not the word: only "Show me" types it. Words are shown in capitals, so a capital
+                    // spelling is the word handed over; the same letters in the prose ("fit", "one") give nothing away.
+                    assertFalse(step.explanation, step.word.uppercase() in step.explanation)
+                    assertFalse(step.nudge, step.word.uppercase() in step.nudge)
                     s = s.enter(step.word)
                 }
             }
