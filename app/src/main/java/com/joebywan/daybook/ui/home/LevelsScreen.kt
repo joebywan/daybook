@@ -173,7 +173,7 @@ fun LevelsScreen(
                     color = scheme.onBackground,
                 )
                 Text(
-                    if (level == null) "Five boards each. Finish one to open the next." else levelLine(progress, level),
+                    if (level == null) "Finish all five boards to open the next." else levelLine(progress, level),
                     style = MaterialTheme.typography.labelLarge,
                     color = scheme.onSurfaceVariant,
                 )
@@ -217,11 +217,10 @@ fun LevelsScreen(
     }
 }
 
-/** "3 of 5 · Mostly Standard, one Hard" for the current level; the tiers alone for a finished one. */
-private fun levelLine(progress: LevelProgress, level: Int): String {
-    val summary = Levels.summary(progress.plan(level))
-    return if (level in progress.done) summary else "${solvedCount(progress, level)} of ${Levels.SIZE}  ·  $summary"
-}
+/** Under one level's title: "3 of 5" for the current level, the total time for a finished one (the tiers are above its grid). */
+private fun levelLine(progress: LevelProgress, level: Int): String =
+    if (level in progress.done) "Done in ${formatClock(progress.solves[level].orEmpty().sumOf { it.seconds })}"
+    else "${solvedCount(progress, level)} of ${Levels.SIZE} done"
 
 @Composable
 private fun LevelRow(progress: LevelProgress, level: Int, onClick: () -> Unit, trailing: @Composable () -> Unit) {
