@@ -3,6 +3,7 @@ package com.joebywan.daybook.core
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.CageState
 import com.joebywan.daybook.puzzles.CipherState
+import com.joebywan.daybook.puzzles.DominoState
 import com.joebywan.daybook.puzzles.ChessState
 import com.joebywan.daybook.puzzles.InequalityState
 import com.joebywan.daybook.puzzles.KingsState
@@ -73,6 +74,9 @@ object ParityFingerprint {
             " sums=" + s.sums.joinToString(",") + " solution=" + s.grid.solution.joinToString("")
         is TargetState -> "start=${s.start.joinToString(",")} target=${s.target} par=${s.par}"
         is TallyState -> "n=${s.size} digits=${s.digits} keep=${s.keep}"
+        is DominoState -> "${s.width}x${s.height} open=${s.open.joinToString("") { if (it) "1" else "0" }} " +
+            "regions=${s.regionOf.joinToString(",")} rules=${s.rules.joinToString(",") { "${it.kind.name[0]}${it.n}" }} " +
+            "tray=${s.tray.joinToString(",") { "${it.a}${it.b}" }} answer=${s.answer.joinToString(",") { "${it.first}-${it.second}" }}"
         is SandState -> "c=${s.colours} h=${s.height} tubes=${s.tubes.joinToString("/") { t -> t.joinToString("") }}"
         is PointersState -> "${s.width}x${s.height} arrows=" + s.arrows.joinToString(",") { it.joinToString(".") }
         is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer}"

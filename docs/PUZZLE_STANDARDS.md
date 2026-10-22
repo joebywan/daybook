@@ -96,6 +96,7 @@ What varies, as built:
 | Word Wheel | wheel letters, words, box | 5 letters, 4-6 words, 6x6 / 6, 6-8, 7x7 / 7, 8-11, 8x8 with a six besides the root (`WordWheelLogic.specFor`; `WordWheelRulesTest` `a year of daily boards ...` asserts the mean word count rises) |
 | Sand | colours (height 4 and two spare tubes on every tier) | 5 / 7 / 8 colours (`SandLogic.specFor`; `SandBalanceTest` `the tiers get harder in the order they are offered`: over a year a naive pourer sorts 79 / 44 / 27% of tries, a careful one 84 / 52 / 33%, the solver's median search is 21 / 30 / 37 positions; 8x4 is clearly harder than 7x4, so Expert kept height 4). Deals redrawn for giving the board away: 15 / 14 / 10% of attempts; the difficulty filter (a random pourer sorts it six times out of six) redraws about half of Standard's deals, 3% of Hard's, none of Expert's. Generation on the JVM, median / p95 / max ms: 0.7 / 2.1 / 8, 0.2 / 1.2 / 1.8, 0.2 / 1.4 / 3.1 |
 | Pointers | grid, arrow length and bends | 6x7, 2-4 squares / 12x12, 3-7 / 14x17, 3-9 (`PointersLogic.specFor`; `PointersRulesTest` `the tiers get bigger and more tangled in the order they are offered`, by mean depth) |
+| Dominoes | box and tray, rule kinds, and the deepest step of the ladder a board must need | 5x5 with 6-7 dominoes, sums, bounds and =, needs a region-value step / 6x6 with 9-10, adds all-different, needs counting / 7x7 with 12-14, needs a what-if (`DominoLogic.specFor`; `DominoRulesTest` `the tiers get harder in the order they are offered`) |
 
 Rules for the tiers:
 
@@ -443,6 +444,8 @@ assert each claim a caption makes about the board, and walk the last frame with 
 - `moves` is shown on the results card; keep it honest (one per player action).
 - Round-trip test: `test/StateSerializationTest` iterates the registry but needs a branch in its `mutate`
   (an exhaustive `when`; the build fails until you add one), which must change the board.
+- Save capture: `test/SaveCompatibilityTest` fails until a released-build save of every puzzle exists. Write a new
+  capture file in the PR that adds the puzzle (the command is in the class comment); never edit an old one.
 
 ## 10. Tests required
 
@@ -457,6 +460,7 @@ Each puzzle `<N>`. "Template" is the file to copy.
 | Tier balance | harder tiers are not easier; no slack creeping in | `TowerBalanceTest`, `MosaicOptimumTest`, `SetsRulesTest` |
 | Reachability | tapping the real handler can reach the stated target | `SetsRulesTest` `claiming every set on the board finishes the puzzle` |
 | Serialization | part-played state round-trips; computed fields not written | `StateSerializationTest` (add a `mutate` branch) |
+| Old saves | a save the shipped build writes keeps loading | `SaveCompatibilityTest` (a new capture file) |
 | Teaching soundness | steps hold for every answer still possible; sound from player-made boards; mistakes outrank steps and are real | `KingsTeachingTest` |
 | Teaching coverage | which techniques boards need per tier; fallback ceiling asserted | `KingsTeachingTest` `coverage - ...` |
 | Text fit | nudge/explanation/caption inside the panel | `LitsTeachingTest`, `SetsTeachingTest`, and for Kings, Pipes and Atoms `every nudge and explanation fits the panel` (730 daily boards per tier, mistakes planted, 200 / 70 characters) |
@@ -521,6 +525,7 @@ Y = yes, P = partial, N = no.
 | Cipher | Y technique depth | Y a bundled list of real-word sums (`CipherSums`, built offline), each re-proved on the device: ladder finishes it, then `CipherLogic.prove` == `ExactlyOne`; `lastResort` proved, year test | Y `CipherLogic.isSolved` (rules, not the stored answer) | Y `CipherOracle` (every digit for every letter, no columns), `CipherTeachingTest` | Y no fallback on generated boards | Y 7 | Y tiles via `reportHighlight` + key and digit anchors + keepClear | Y `CipherWebParityTest` | Y | Y 200 / 70 |
 | Word Wheel | Y letters, words | n/a the grid's words are the answer; `generateVerified` (laid to the tier's size, and no clued slot leaves more than 6 words; `lastResort` is seed 1's proved board), year test | Y `WordWheelState.solved` (every slot's word found) | Y `WordWheelOracle` (re-reads every run of the squares) | Y clue fallback measured | Y 5 | Y squares + wheel letters via `reportHighlight` + keepClear | Y `WordWheelWebParityTest` | Y | Y 200 / 70 |
 | Sand | Y colours (spares fixed) | n/a many answers; `generateVerified` (internal; a found sorting road is the witness, sealed `SandLogic.Verdict` with `Solvable(path)` / `Unsolvable` / `Truncated`, only `Solvable` ships; deals that give the board away and boards a random pourer always sorts are redrawn; `lastResort` fixed and proved), year test | Y `SandLogic.isSolved` (rules) | Y `SandSupport` (one layer at a time, breadth-first over raw positions), `SandOracle` (differential) | Y a search of the visible tubes, no fallback exists | Y 6 | Y tube anchors | Y `SandWebParityTest` | Y | Y 200 / 70 |
+| Dominoes | Y box, tray, ladder depth | Y `generateVerified` (internal; the tier's ladder finishes it needing exactly its deepest step, then `DominoLogic.solutions` == `Verdict.ExactlyOne`; `lastResort` one fixed seed's board per tier, proved by the oracle), year test | Y `DominoLogic.isSolved` (rules, not the stored answer) | Y `DominoOracle` (reading order, no pruning), `DominoTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares + tray slots + rule badges via `reportHighlight` + keepClear | N not yet (the lead adds it) | Y | Y 200 / 70 |
 
 ### Known gaps and open items
 
@@ -550,7 +555,7 @@ In order. `X` is the new puzzle's name. Do this on a branch, never `main`.
 6. **`Preview`:** a fixed motif of the real glyphs. Render it at true size, both themes.
 7. **`ParityFingerprint.body`:** add the `when` branch (the build tells you).
 8. **Tests, first pass:** `XRulesTest` (rules, independent checker, win by a non-stored legal answer),
-   `StateSerializationTest.mutate` branch, parity pin test (run, copy the printed lines in).
+   `StateSerializationTest.mutate` branch, a `SaveCompatibilityTest` capture, parity pin test (run, copy the printed lines in).
    Run `GeneratorTest` and a year-long proof of the verified path.
 9. **`puzzles/XTeacher.kt`:** technique ladder, mistake, `deduce` over visible state only, fallback if the
    puzzle has a hidden answer; the `X.teach` wrapper and `applyStep`. Copy `KingsTeacher`. Write
