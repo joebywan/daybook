@@ -28,7 +28,7 @@ class SudokuNotesTest {
      */
     private val oldJson = """{"state":{"type":"com.joebywan.daybook.puzzles.SudokuState","givens":[true,true,true,true,false,true,true,true,true,true,false,true,true,true,true,true,true,true,true,true,true,true,true,true,false,true,true,true,true,true,false,true,true,true,true,true,true,true,false,true,true,true,false,true,true,true,true,true,true,true,true,true,false,true,true,true,true,true,false,true,true,true,true,false,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,false],"cells":[8,2,3,1,6,4,5,7,9,1,0,4,2,7,5,6,8,3,5,6,7,9,8,3,0,4,2,9,4,1,0,5,2,3,6,7,7,8,0,6,3,1,0,2,4,6,3,2,4,9,7,8,0,1,2,5,6,3,0,9,7,1,8,0,7,9,5,1,8,2,3,6,3,1,8,7,2,6,4,9,0],"solution":[8,2,3,1,6,4,5,7,9,1,9,4,2,7,5,6,8,3,5,6,7,9,8,3,1,4,2,9,4,1,8,5,2,3,6,7,7,8,5,6,3,1,9,2,4,6,3,2,4,9,7,8,5,1,2,5,6,3,4,9,7,1,8,4,7,9,5,1,8,2,3,6,3,1,8,7,2,6,4,9,5],"selected":10,"moves":1},"history":[{"type":"com.joebywan.daybook.puzzles.SudokuState","givens":[true,true,true,true,false,true,true,true,true,true,false,true,true,true,true,true,true,true,true,true,true,true,true,true,false,true,true,true,true,true,false,true,true,true,true,true,true,true,false,true,true,true,false,true,true,true,true,true,true,true,true,true,false,true,true,true,true,true,false,true,true,true,true,false,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,false],"cells":[8,2,3,1,0,4,5,7,9,1,0,4,2,7,5,6,8,3,5,6,7,9,8,3,0,4,2,9,4,1,0,5,2,3,6,7,7,8,0,6,3,1,0,2,4,6,3,2,4,9,7,8,0,1,2,5,6,3,0,9,7,1,8,0,7,9,5,1,8,2,3,6,3,1,8,7,2,6,4,9,0],"solution":[8,2,3,1,6,4,5,7,9,1,9,4,2,7,5,6,8,3,5,6,7,9,8,3,1,4,2,9,4,1,8,5,2,3,6,7,7,8,5,6,3,1,9,2,4,6,3,2,4,9,7,8,5,1,2,5,6,3,4,9,7,1,8,4,7,9,5,1,8,2,3,6,3,1,8,7,2,6,4,9,5],"selected":4}],"hints":1,"seconds":42}"""
 
-    private fun oldBoard(): SudokuState = Sudoku.tutorial[2].state as SudokuState
+    private fun oldBoard(): SudokuState = (Sudoku.tutorial[1].state as SudokuState).select(4)
 
     private fun board(seed: Long = 7L, difficulty: Difficulty = Difficulty.HARD) =
         Sudoku.generate(seed, difficulty) as SudokuState
@@ -264,8 +264,8 @@ class SudokuNotesTest {
     @Test
     fun `the walkthrough's notes frame wants the pencil mark made by the real gestures`() {
         val frames = Sudoku.tutorial
-        assertEquals(6, frames.size)
-        val frame = frames[4]
+        assertEquals(5, frames.size)
+        val frame = frames[3]
         val s = frame.state as SudokuState
         val cell = s.selected!!
         val accepts = frame.accepts!!
@@ -287,7 +287,7 @@ class SudokuNotesTest {
         assertTrue(com.joebywan.daybook.puzzles.SudokuTeacher.NOTES_KEY in frame.highlight.strong)
 
         // The next frame starts from exactly that result, and hints alone finish it.
-        val next = frames[5]
+        val next = frames[4]
         assertEquals(s.toggleNote(cell, key).notes, (next.state as SudokuState).notes)
         assertTrue(next.freePlay)
     }
