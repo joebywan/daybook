@@ -147,6 +147,18 @@ class CipherTeachingTest {
     }
 
     @Test
+    fun `a letter that adds nothing to its column says why it is 9, not just that it is`() {
+        // The owner's board: DEED + EASE = LEGAL, L placed. "Only D = 9 works" left them asking why E could not be 9.
+        val sum = CipherSum(listOf("deed", "ease", "legal"))
+        val digits = MutableList(sum.letters.size) { EMPTY }.also { it[sum.letters.indexOf('l')] = 1 }
+        val step = CipherTeacher.deduce(sum, digits)!!
+        assertEquals('d', sum.letters[step.letter])
+        assertEquals(9, step.digit)
+        assertTrue(step.explanation, "D + carry is 0 or 10" in step.explanation && "D starts a word" in step.explanation)
+        assertTrue(step.explanation, step.explanation.length <= CipherTeacher.MAX_EXPLANATION)
+    }
+
+    @Test
     fun `the teacher cannot see the answer`() {
         // deduce takes the sum and the digits placed, nothing else; a changed stored answer changes no step.
         val s = board(0, Difficulty.EXPERT)
