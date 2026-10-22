@@ -213,18 +213,6 @@ class MosaicFloodTest {
         return null
     }
 
-    /** One cell out of each area on the board. */
-    private fun areaCells(board: MosaicState): List<Int> {
-        val seen = BooleanArray(board.cells.size)
-        val out = mutableListOf<Int>()
-        for (cell in board.cells.indices) {
-            if (seen[cell]) continue
-            out += cell
-            for (member in board.area(cell)) seen[member] = true
-        }
-        return out
-    }
-
     /**
      * Colours held by the areas touching this one. Pouring anything else merges nothing, and a fill
      * that merges nothing can always be swapped for one that does, so they are not worth the branch.

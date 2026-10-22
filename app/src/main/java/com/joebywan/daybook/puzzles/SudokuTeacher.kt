@@ -556,5 +556,4 @@ internal object SudokuTeacher {
     private fun lineOf(kind: Kind, cell: Int) = if (kind == Kind.ROW) cell / 9 else cell % 9
 
     private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
-    private fun String.decap() = replaceFirstChar { it.lowercaseChar() }
 }

@@ -1,5 +1,7 @@
 package com.joebywan.daybook
 
+import com.joebywan.daybook.puzzles.NonogramLogic
+
 /**
  * An independent checker for Nonogram boards, deliberately written on a different principle from
  * the line solver it checks: no per-line reasoning at all, just every arrangement of every row,
@@ -106,5 +108,28 @@ object NonogramOracle {
         }
         walk(0, IntArray(width), IntArray(width))
         return found
+    }
+
+    /**
+     * What every layout of [clue] consistent with [marks] agrees on, by trying all 2^n lines: the line
+     * solver's answer worked out without it. [marks] and the result use `NonogramLogic`'s line encoding.
+     */
+    fun bruteForced(clue: List<Int>, marks: IntArray): IntArray? {
+        val n = marks.size
+        val fits = (0 until (1 shl n)).filter { mask ->
+            val line = List(n) { mask shr it and 1 == 1 }
+            runsOf(line) == clue && (0 until n).all {
+                marks[it] == NonogramLogic.UNKNOWN || (marks[it] == NonogramLogic.FILL) == line[it]
+            }
+        }
+        if (fits.isEmpty()) return null
+        return IntArray(n) { x ->
+            if (marks[x] != NonogramLogic.UNKNOWN) NonogramLogic.UNKNOWN
+            else when {
+                fits.all { it shr x and 1 == 1 } -> NonogramLogic.FILL
+                fits.none { it shr x and 1 == 1 } -> NonogramLogic.CROSS
+                else -> NonogramLogic.UNKNOWN
+            }
+        }
     }
 }
