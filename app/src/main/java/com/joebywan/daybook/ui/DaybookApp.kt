@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -300,7 +301,9 @@ fun DaybookApp(startAt: Route = Route.Home, startMode: LaunchMode = LaunchMode.D
                     // Only what the store already holds, for the same reason.
                     nextOptions(daily = current.day != null, tier = difficulty, doneTiers = tiersDoneOn(completions, puzzle.id, current.day))
                 }
-                CompositionLocalProvider(LocalChime provides playSolveSound) {
+                // Keyed on the board: a level's next step goes straight to another puzzle, and PlayScreen's
+                // produced board would otherwise be the old puzzle's state for a frame (a ClassCastException in Board).
+                CompositionLocalProvider(LocalChime provides playSolveSound) { key(puzzle.id, seed) {
                 PlayScreen(
                     puzzle = puzzle,
                     difficulty = difficulty,
@@ -377,7 +380,7 @@ fun DaybookApp(startAt: Route = Route.Home, startMode: LaunchMode = LaunchMode.D
                     level = level,
                     onBack = { route = Route.Home },
                 )
-                }
+                } }
             }
             // Otherwise a level board waits the moment it takes the store to say how its level was opened.
         }
