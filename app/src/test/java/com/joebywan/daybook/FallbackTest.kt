@@ -11,6 +11,7 @@ import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
+import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
@@ -182,6 +183,23 @@ class FallbackTest {
             }
         }
         assertTrue("inequality shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /** [Cipher.generateVerified] returns a board only when the ladder finished its sum and the search proved one answer. */
+    @Test
+    fun `cipher proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Cipher.id, difficulty)
+                val proved = Cipher.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("cipher $date/${difficulty.name}", proved, Cipher.generate(seed, difficulty))
+            }
+        }
+        assertTrue("cipher shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /** [Target.generateVerified] returns a board only when the exhaustive table put the target exactly the tier's number of steps away. */
