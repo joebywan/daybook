@@ -19,6 +19,10 @@ from a measurement or review, so you can check it is still true.
   play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
   Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)
   and the calendar's day cells (sized from width, ~40dp at 360). *S each.*
+- [ ] **Walkthroughs: rewrite to the style rules.** The runner now advances by itself and takes multi-state moves
+  (`docs/PUZZLE_STANDARDS.md` section 8); only Lexicon's BOAT and Sudoku's cell-then-digit were converted. The other 23 still
+  split one idea over several frames (Inequality, Regions, Cages, Cipher select then digit), teach gestures only in captions,
+  and carry claims the rules contradict (Lexicon frame 4: "no guess can tell COAT, GOAT and MOAT apart", but CLOG does). *M.*
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
   text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it
@@ -103,6 +107,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Web icons are pinned at `material-icons-extended` 1.7.3** (`gradle/libs.versions.toml`, the last
   published; move to Material Symbols vector resources eventually). The deprecated `compose.*` accessors and
   `getting` in `web/build.gradle.kts` are gone. *S.*
+- [ ] **`app/proguard-rules.pro` is not used.** The release build type names no `proguardFiles`, so R8 runs on the
+  library consumer rules alone and the file's `-keepclassmembers class com.joebywan.daybook.core.**` never applies (found
+  while building the release save check: a rule added there changed nothing until `proguardFiles(...)` was added). Saves load
+  without it (the check passes), so either delete the file or wire it in; wiring it in changes the shipped code, so run
+  `tools/save-check/check.py` on the result. *S.*
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 
