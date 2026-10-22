@@ -268,8 +268,8 @@ class DominoRulesTest {
 
     @Test
     fun `the tiers get harder in the order they are offered`() {
-        // Each tier needs a deeper rung of the ladder than the one before (Standard placement steps only,
-        // Hard a region-value or counting step, Expert a what-if), and lays more dominoes.
+        // Each tier needs a deeper rung of the ladder than the one before (Standard a region-value step,
+        // Hard a counting step, Expert a what-if), and lays more dominoes.
         var lastSteps = 0.0
         for (d in Difficulty.entries) {
             val spec = DominoLogic.specFor(d)
@@ -331,8 +331,8 @@ class DominoRulesTest {
                     "ms median %.1f p95 %.1f max %.1f".format(ms[ms.size / 2], ms[ms.size * 95 / 100], ms.last()),
             )
             // Budgets: a board must leave work to do (the Snap lesson), and stay cheap for the browser.
-            // Standard's ladder has no region reasoning, so it leans on one-square sums (measured 39%; Hard and Expert 12-15%).
-            val statedBudget = if (d == Difficulty.STANDARD) 45 else 20
+            // Measured 9 / 12 / 15%. (Standard was 39% while its ladder had no region reasoning and no bounds.)
+            val statedBudget = 20
             assertTrue("$d rules cover $ruledShare% of squares", ruledShare < 85)
             assertTrue("$d states $statedShare% of squares outright", statedShare < statedBudget)
             assertTrue("$d median ${ms[ms.size / 2]} ms", ms[ms.size / 2] < 30)
