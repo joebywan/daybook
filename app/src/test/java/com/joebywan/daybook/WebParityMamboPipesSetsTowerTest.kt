@@ -14,7 +14,6 @@ import com.joebywan.daybook.puzzles.Tower
 import com.joebywan.daybook.puzzles.TowerState
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * Mambo, Pipes, Sets and Tower on the web route, pinned the way [WebParityTest] pins Kings. The
@@ -41,12 +40,6 @@ class WebParityMamboPipesSetsTowerTest {
 
     companion object {
         val PUZZLES = listOf(Mambo.id, Pipes.id, Sets.id, Tower.id)
-
-        val PARITY_DATES = listOf(
-            LocalDate.of(2026, 1, 1),
-            LocalDate.of(2026, 9, 30),
-            LocalDate.of(2027, 2, 28),
-        )
 
         /** Same format as the web's `?dump` lines, which come from `core/ParityFingerprint.kt`. */
         fun fingerprint(id: String, date: String, tier: Difficulty, seed: Long): String {

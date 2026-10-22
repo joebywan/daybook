@@ -10,7 +10,6 @@ import com.joebywan.daybook.puzzles.MosaicState
 import com.joebywan.daybook.puzzles.PuzzleState
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * Mosaic and Atoms on the web route, pinned the same way [WebParityTest] pins Kings.
@@ -52,12 +51,6 @@ class MosaicAtomsWebParityTest {
         }
 
     private companion object {
-        val PARITY_DATES = listOf(
-            LocalDate.of(2026, 1, 1),
-            LocalDate.of(2026, 9, 30),
-            LocalDate.of(2027, 2, 28),
-        )
-
         val FINGERPRINTS = listOf(
             "mosaic 2026-01-01 STANDARD seed=-6380546271103897721 8x12 colours=3 limit=4 cells=222222002222222200221222000212221100102110000021202221112222210002222212010001120100001101001111",
             "mosaic 2026-01-01 HARD seed=-5457262211716178932 9x14 colours=4 limit=5 cells=100000332112222332222220002222210001002112011001112233001112233222100333022000000002300222003330223000331233331111133331111122",

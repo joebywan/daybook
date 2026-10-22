@@ -2,11 +2,11 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.puzzles.Atoms
 import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.Kings
-import com.joebywan.daybook.puzzles.KingsState
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.Shikaku
@@ -41,6 +41,31 @@ class FallbackTest {
     }
 
     /**
+     * Walks every tier of 2026's daily seeds through [verified] (null when nothing was proved), asserts no day gave up,
+     * and that the first [shipsChecked] days of each tier are what [PuzzleType.generate] ships.
+     */
+    private fun assertYearProved(
+        p: PuzzleType,
+        fellBack: String = "shipped its last resort",
+        unit: String = "days",
+        shipsChecked: Long = 365,
+        verified: (Long, Difficulty) -> Any?,
+    ) {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, p.id, difficulty)
+                val proved = verified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                if (day < shipsChecked) assertEquals("${p.id} $date/${difficulty.name}", proved, p.generate(seed, difficulty))
+            }
+        }
+        assertTrue("${p.id} $fellBack on ${gaveUp.size} $unit: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
      * A whole year of real daily seeds on every tier, not the twenty probe seeds the others use.
      * Before the strict attempts, 13 Expert days of 2026 (2026-01-09 the first) shipped the
      * three-atom chain — 3.6%, which twenty seeds miss about half the time. Run against that
@@ -48,23 +73,8 @@ class FallbackTest {
      * that carries a proof, so no property the fallback happens to share can let it through.
      */
     @Test
-    fun `atoms proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Atoms.id, difficulty)
-                val proved = Atoms.generateVerified(seed, difficulty)
-                if (proved == null) {
-                    gaveUp += "$date/${difficulty.name}"
-                    continue
-                }
-                assertEquals("atoms $date/${difficulty.name}", proved, Atoms.generate(seed, difficulty) as AtomsState)
-            }
-        }
-        assertTrue("atoms fell back to the three-atom chain on ${gaveUp.size} boards: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `atoms proves every daily board of a year on every tier`() =
+        assertYearProved(Atoms, fellBack = "fell back to the three-atom chain", unit = "boards") { seed, d -> Atoms.generateVerified(seed, d) }
 
     /**
      * The tier names how many atoms a board has (10 / 16 / 24), and the growth loop used to give up
@@ -96,221 +106,66 @@ class FallbackTest {
      * thousand, which twenty seeds would never see.
      */
     @Test
-    fun `lits proves every daily board in a year`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Lits.id, difficulty)
-                val proved = Lits.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("lits $date/${difficulty.name}", proved, Lits.generate(seed, difficulty) as LitsState)
-            }
-        }
-        assertTrue("lits shipped an unproved board on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `lits proves every daily board in a year`() = assertYearProved(Lits, fellBack = "shipped an unproved board") { seed, d -> Lits.generateVerified(seed, d) }
 
     /**
      * Kings used to be pinned by thirty probe seeds a tier, which cannot see a fallback rate of a
      * few in a hundred. A year of real daily seeds on every tier, through [Kings.generateVerified].
      */
     @Test
-    fun `kings proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Kings.id, difficulty)
-                val proved = Kings.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("kings $date/${difficulty.name}", proved, Kings.generate(seed, difficulty) as KingsState)
-            }
-        }
-        assertTrue("kings shipped an unproved board on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `kings proves every daily board of a year on every tier`() = assertYearProved(Kings, fellBack = "shipped an unproved board") { seed, d -> Kings.generateVerified(seed, d) }
 
     /**
      * Shikaku proves its single tiling with `countTilings`; its fallback (a clue in each
      * rectangle's corner) is trivially unique but is not what the generator is for. A year per tier.
      */
     @Test
-    fun `shikaku proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Shikaku.id, difficulty)
-                val proved = Shikaku.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("shikaku $date/${difficulty.name}", proved, Shikaku.generate(seed, difficulty) as ShikakuState)
-            }
-        }
-        assertTrue("shikaku shipped its corner-clue fallback on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `shikaku proves every daily board of a year on every tier`() = assertYearProved(Shikaku, fellBack = "shipped its corner-clue fallback") { seed, d -> Shikaku.generateVerified(seed, d) }
 
     /**
      * [Snap.generateVerified] returns a board only when the search proved one answer inside
      * the clue budget; the fallback numbers every square. A year per tier.
      */
     @Test
-    fun `snap proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Snap.id, difficulty)
-                val proved = Snap.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                // generate() would search the same board a second time, and Expert boards cost
-                // seconds apiece, so only a fortnight per tier is checked to be what ships.
-                if (day < 14) assertEquals("snap $date/${difficulty.name}", proved, Snap.generate(seed, difficulty) as SnapState)
-            }
-        }
-        assertTrue("snap shipped its number-every-square fallback on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `snap proves every daily board of a year on every tier`() =
+        // generate() would search the same board a second time, and Expert boards cost
+        // seconds apiece, so only a fortnight per tier is checked to be what ships.
+        assertYearProved(Snap, fellBack = "shipped its number-every-square fallback", shipsChecked = 14) { seed, d -> Snap.generateVerified(seed, d) }
 
     /** [Inequality.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test
-    fun `inequality proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Inequality.id, difficulty)
-                val proved = Inequality.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("inequality $date/${difficulty.name}", proved, Inequality.generate(seed, difficulty))
-            }
-        }
-        assertTrue("inequality shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `inequality proves every daily board of a year on every tier`() = assertYearProved(Inequality) { seed, d -> Inequality.generateVerified(seed, d) }
 
     /** [Cipher.generateVerified] returns a board only when the ladder finished its sum and the search proved one answer. */
     @Test
-    fun `cipher proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Cipher.id, difficulty)
-                val proved = Cipher.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("cipher $date/${difficulty.name}", proved, Cipher.generate(seed, difficulty))
-            }
-        }
-        assertTrue("cipher shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `cipher proves every daily board of a year on every tier`() = assertYearProved(Cipher) { seed, d -> Cipher.generateVerified(seed, d) }
 
     /** [Target.generateVerified] returns a board only when the exhaustive table put the target exactly the tier's number of steps away. */
     @Test
-    fun `target proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Target.id, difficulty)
-                val proved = Target.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("target $date/${difficulty.name}", proved, Target.generate(seed, difficulty))
-            }
-        }
-        assertTrue("target shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `target proves every daily board of a year on every tier`() = assertYearProved(Target) { seed, d -> Target.generateVerified(seed, d) }
 
     /** [WordWheel.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
     @Test
-    fun `wordwheel proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, WordWheel.id, difficulty)
-                val proved = WordWheel.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("wordwheel $date/${difficulty.name}", proved, WordWheel.generate(seed, difficulty))
-            }
-        }
-        assertTrue("wordwheel shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `wordwheel proves every daily board of a year on every tier`() = assertYearProved(WordWheel) { seed, d -> WordWheel.generateVerified(seed, d) }
 
     /** [Sand.generateVerified] returns a board only when the search found a sorting road and the naive player does not always sort it. */
     @Test
-    fun `sand proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Sand.id, difficulty)
-                val proved = Sand.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("sand $date/${difficulty.name}", proved, Sand.generate(seed, difficulty))
-            }
-        }
-        assertTrue("sand shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `sand proves every daily board of a year on every tier`() = assertYearProved(Sand) { seed, d -> Sand.generateVerified(seed, d) }
 
     /**
      * [Pointers.generateVerified] returns a board only when it covered the grid to the tier's density and the greedy
      * clear emptied it; the last resort is rows of arrows all pointing right.
      */
     @Test
-    fun `pointers proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Pointers.id, difficulty)
-                val proved = Pointers.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("pointers $date/${difficulty.name}", proved, Pointers.generate(seed, difficulty))
-            }
-        }
-        assertTrue("pointers shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `pointers proves every daily board of a year on every tier`() = assertYearProved(Pointers) { seed, d -> Pointers.generateVerified(seed, d) }
 
     /** [Regions.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test
-    fun `regions proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Regions.id, difficulty)
-                val proved = Regions.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("regions $date/${difficulty.name}", proved, Regions.generate(seed, difficulty))
-            }
-        }
-        assertTrue("regions shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `regions proves every daily board of a year on every tier`() = assertYearProved(Regions) { seed, d -> Regions.generateVerified(seed, d) }
 
     /** [Tents.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test
-    fun `tents proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Tents.id, difficulty)
-                val proved = Tents.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("tents $date/${difficulty.name}", proved, Tents.generate(seed, difficulty))
-            }
-        }
-        assertTrue("tents shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
-    }
+    fun `tents proves every daily board of a year on every tier`() = assertYearProved(Tents) { seed, d -> Tents.generateVerified(seed, d) }
 
     @Test
     fun `lits never falls back to a single region`() {
@@ -327,11 +182,6 @@ class FallbackTest {
         }
     }
 
-    /**
-     * Asserts the clue budget, not merely "fewer than every square". The loose version passed
-     * happily while Expert boards shipped 39 numbers out of 42 — true, and useless, because the
-     * fallback is not the only way to ruin a board with numbers.
-     */
     /**
      * [Cages.generateVerified] returns a board only when the ladder finished it and a search proved one answer. Also
      * measures how many attempts a board takes (printed; asserted well under the allowance).
@@ -414,6 +264,11 @@ class FallbackTest {
         assertTrue("dominoes shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
+    /**
+     * Asserts the clue budget, not merely "fewer than every square". The loose version passed
+     * happily while Expert boards shipped 39 numbers out of 42 — true, and useless, because the
+     * fallback is not the only way to ruin a board with numbers.
+     */
     @Test
     fun `snap never falls back to numbering every square`() {
         for (difficulty in Difficulty.entries) {
