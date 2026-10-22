@@ -386,8 +386,8 @@ internal object DominoLogic {
     )
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
-        Difficulty.STANDARD -> Spec(5, 5, 6, 7, 1, 3, 150, bounds = false, different = false, minLevel = 0, needs = DominoTeacher.LEVEL_RULE_FIT)
-        Difficulty.HARD -> Spec(6, 6, 9, 10, 1, 4, 150, bounds = true, different = true, minLevel = DominoTeacher.LEVEL_REGION_VALUE, needs = DominoTeacher.LEVEL_COUNTING)
+        Difficulty.STANDARD -> Spec(5, 5, 6, 7, 1, 3, 150, bounds = true, different = false, minLevel = DominoTeacher.LEVEL_REGION_VALUE, needs = DominoTeacher.LEVEL_REGION_VALUE)
+        Difficulty.HARD -> Spec(6, 6, 9, 10, 1, 4, 150, bounds = true, different = true, minLevel = DominoTeacher.LEVEL_COUNTING, needs = DominoTeacher.LEVEL_COUNTING)
         Difficulty.EXPERT -> Spec(7, 7, 12, 14, 1, 4, 150, bounds = true, different = true, minLevel = DominoTeacher.LEVEL_WHAT_IF, needs = DominoTeacher.LEVEL_WHAT_IF)
     }
 

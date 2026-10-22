@@ -92,8 +92,8 @@ Pure Kotlin, no `java.*`, no hash iteration order reaching the `Rng` or any choi
 |---|---|---|---|
 | Box | 5x5 | 6x6 | 7x7 |
 | Dominoes | 6-7 | 9-10 | 12-14 |
-| Rule kinds | SUM, EQUAL | + DIFFERENT, LESS, MORE | all |
-| Ladder must need | placement-level steps only | a region-value step | a what-if |
+| Rule kinds | SUM, EQUAL, LESS, MORE (no DIFFERENT) | + DIFFERENT | all |
+| Ladder must need | a region-value step (and nothing deeper) | a counting step (and no what-if) | a what-if |
 
 Slack never varies (there is none). `DominoRulesTest` needs a test that fails if a harder tier gets easier
 (the deepest step needed and the number of steps, over a year of daily boards).
@@ -137,17 +137,17 @@ From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes
 | | Standard | Hard | Expert |
 |---|---|---|---|
 | Box, dominoes | 5x5, 6-7 | 6x6, 9-10 | 7x7, 12-14 |
-| Draws per board (mean / most of `ATTEMPTS` = 200) | 1.4 / 5 | 2.7 / 18 | 3.4 / 21 |
+| Draws per board (mean / most of `ATTEMPTS` = 200) | 1.9 / 7 | 5.6 / 29 | 3.4 / 21 |
 | Days reaching `lastResort` | 0 | 0 | 0 |
-| Ladder level needed (every board) | rule fit (3) | region value (4) on 183, counting (5) on 182 | what-if (6) on all 365 |
-| Squares in a ruled region | 68% | 74% | 79% |
-| Squares whose value a one-square sum states outright | 39% | 12% | 15% |
-| Rules that are exact sums | 96% | 25% | 28% |
-| Rules a board (sum / < / > / = / ≠, a year) | 6.7 (2352 / 0 / 0 / 97 / 0) | 11.5 (1052 / 1434 / 1397 / 243 / 84) | 17.1 (1720 / 1950 / 2057 / 396 / 109) |
+| Ladder level needed (every board) | region value (4), all 365 | counting (5), all 365 | what-if (6), all 365 |
+| Squares in a ruled region | 71% | 74% | 79% |
+| Squares whose value a one-square sum states outright | 9% | 12% | 15% |
+| Rules that are exact sums | 44% | 23% | 28% |
+| Rules a board (sum / < / > / = / ≠, a year) | 6.4 (1035 / 608 / 605 / 106 / 0) | 11.7 (974 / 1467 / 1520 / 214 / 103) | 17.1 (1720 / 1950 / 2057 / 396 / 109) |
 | Hint steps a board | 6.5 | 9.5 | 13.1 |
-| of which partner / place / domino | 3.5 / 0.5 / 2.5 | 3.8 / 0.7 / 2.8 | 4.2 / 0.8 / 3.6 |
-| of which region value / counting / what-if | 0 / 0 / 0 | 1.2 / 1.0 / 0 | 0.9 / 1.3 / 2.3 |
-| Generation ms, median / p95 / max | 0.3 / 0.4 / 0.5 | 1.7 / 4.5 / 11.6 | 14.3 / 34.8 / 53.8 |
+| of which partner / place / domino | 3.1 / 0.4 / 1.5 | 3.7 / 0.5 / 2.7 | 4.2 / 0.8 / 3.6 |
+| of which region value / counting / what-if | 1.6 / 0 / 0 | 0.6 / 2.0 / 0 | 0.9 / 1.3 / 2.3 |
+| Generation ms, median / p95 / max | 0.5 / 1.2 / 1.9 | 3.3 / 10.5 / 22.7 | 14.0 / 33.0 / 53.8 |
 
 - **Oracle agreement:** `DominoOracle` agrees with `solutions` on 40 / 40 / 12 generated boards (one answer, the
   stored one; the oracle takes about 0.2 s an Expert board, which is why the sample thins) and on 5,774 small planted
@@ -156,11 +156,12 @@ From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes
 - **Hints:** hints alone finish every daily board of a year on every tier with no fallback and no mistake, and from
   over 500 part-played boards; on 582 steps from small boards with several answers (1,495 of the sample ambiguous) every
   step holds for every answer still possible. Longest explanation 200 characters (the cap); nudges 70.
-- **Standard gives the most away.** Its ladder has no region reasoning (placement steps only, as decided), so the
-  facts it can use are mostly one-square sums: 39% of its squares are stated outright. `DominoRulesTest` holds it under
-  45% (Hard and Expert under 20%). If that reads as too easy, the lever is letting Standard use region values (level 4),
-  which is the owner's call, not a tuning knob.
-- **≠ is rare** (0.2 / 0.3 a board on Hard / Expert even with all-different regions read as ≠): it is the weakest rule,
+- **Standard was changed after measuring, to give less away.** With placement steps only and no bounds it stated 39%
+  of its squares outright through one-square sums: the ladder had nothing else to lean on. The owner's stance is that
+  sparser beats friendlier (CLAUDE.md, Snap), so Standard now needs a region-value step on every board and may use
+  < and >; that took it to 9%. Hard now needs a counting step on every board (before, about half its boards needed only
+  region values), so the tiers stay strictly ascending. `DominoRulesTest` holds every tier under 20%.
+- **≠ is rare** (0.3 a board on Hard and Expert even with all-different regions read as ≠): it is the weakest rule,
   so loosening keeps it only where nothing weaker would do.
 - The web runs generation single-threaded; Expert has not yet been timed in a browser (the UI agent's `?dump&times` check).
 
@@ -178,7 +179,8 @@ From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes
   include a sum to ≠ where the values all differ (the spec listed only bounds, drops and merges).
 - **Uniqueness during loosening** is not re-proved per trial: a ladder that places every domino by sound strikes has
   proved the answer unique. `solutions` proves the finished board once, and has never disagreed.
-- **Hard needs a region-value *or* a counting step** (level 4 or 5): about half its boards need each.
+- **Tiers by ladder level:** Standard needs region values (4) and nothing deeper, Hard counting (5), Expert a what-if (6);
+  each tier is capped at its level while loosening and redraws a board that needs less.
 - **Ladder details:** counting is "as many squares that can take only v as halves of v left in the tray, so no other
   square gets a v" (covers "only one domino still has a 6"). The what-if tries squares only (two candidates before
   three), follows two rounds of steps 1-5, and is emitted only when every candidate but one breaks, so it always ends in a
