@@ -264,7 +264,8 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
 - **A board ships only if it is winnable without luck:** walking it by hints alone, the slot a clue names never has more than
   `MAX_CHOICE` (6) grid words that fit. `generateVerified` tries 40 seeds (Expert: 70% first attempt, at most 6 in a year);
   `lastResort` is the board of seed 1, proved by a test; a year per tier never reaches it (`FallbackTest`). `WordWheelOracle` (test)
-  re-reads every board's squares run by run, shares nothing with the placer. JVM: median 0.3 / 0.5 / 0.7 ms a board, max 3.5 ms.
+  re-reads every board's squares run by run, shares nothing with the placer. JVM: median 0.3 / 0.5 / 0.7 ms a board, max 3.5 ms;
+  Chromium Expert median / p95 / max 1.7 / 4.4 / 10.6 ms, WebKit 4 / 12 / 19 ms.
 - **A word goes to the slot it was laid for**; every slot holds a different word, so two same-length slots never compete for one.
   `solved` checks the rule: every slot's word is found. The word being spelled, the finger and the notice are `remember`; Shuffle is a
   `rememberSaveable` count that reorders the display only; one accepted word is one state. The gesture is keyed on the wheel and reads
