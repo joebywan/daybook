@@ -188,7 +188,7 @@ object WordWheel : PuzzleType {
             ),
             TutorialFrame(
                 state = s3,
-                caption = "Your turn: fill the last slot. Stuck? Hint shows which word must go where.",
+                caption = "Your turn: fill the last slot. Stuck? A hint gives you its clue.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
             ),

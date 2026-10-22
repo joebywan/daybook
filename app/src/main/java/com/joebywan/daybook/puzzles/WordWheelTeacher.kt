@@ -6,9 +6,10 @@ import com.joebywan.daybook.core.Deduction
  * Word Wheel, reasoned from what the player can see: the wheel, the shape of each slot, the letters already in the grid,
  * and the words already tried (found ones and bonus ones, which are known not to be the word of any empty slot).
  *
- * - [PINNED]: an empty slot whose length, crossing letters and the wheel leave exactly one grid word ("five letters,
- *   S _ O _ E from the wheel: only STONE"). This reads the grid list, the public list of well-known words a slot can
- *   hold ([WheelWords.grid]), never the board's stored words, so it is reasoning: the stored word is always among the words
+ * - [PINNED]: an empty slot whose length, crossing letters and the wheel leave exactly one grid word, given by its
+ *   crossword clue ("five letters, S _ O _ E: only one fits. Its clue: “A small rock” (5)"), never the word itself,
+ *   which only "Show me" types. This reads the grid list, the public list of well-known words a slot can hold
+ *   ([WheelWords.grid]), never the board's stored words, so it is reasoning: the stored word is always among the words
  *   that fit, and when one fits it is that one.
  * - [CLUE]: nothing is pinned. The slot with the fewest words that fit is named with its word's crossword clue. That reads
  *   the stored word, so it is the fallback, and it says so ("the one here is clued").
@@ -84,10 +85,10 @@ internal object WordWheelTeacher {
             val known = cells.filter { shown[it] != null }.toSet()
             val shapeText = pattern.joinToString(" ") { it?.uppercaseChar()?.toString() ?: "_" }
             val explanation = if (known.isEmpty()) {
-                "Of the well-known words the wheel spells, only ${word.uppercase()} has ${shape.length} letters" +
-                    (if (shape.length == wheel.length) ": it uses every letter." else ".")
+                "Of the well-known words the wheel spells, only one has ${shape.length} letters" +
+                    (if (shape.length == wheel.length) ", using every letter" else "") + ". Its clue: ${clueFor(word)}."
             } else {
-                "${shape.length} letters, $shapeText. Of the well-known words the wheel spells, only ${word.uppercase()} fits."
+                "${shape.length} letters, $shapeText. Of the well-known words the wheel spells, only one fits. Its clue: ${clueFor(word)}."
             }
             return Step(
                 PINNED, k, word, 1,
@@ -123,12 +124,15 @@ internal object WordWheelTeacher {
             CLUE, best, slot.word, bestCount,
             nudge = "Try the slot with the fewest words that fit.",
             explanation = "$bestCount words from the wheel fit this ${slot.length}-letter slot. " +
-                "The one here is clued “${WheelWords.clue(slot.word)}”.",
+                "The one here is clued ${clueFor(slot.word)}.",
             focus = cells.toSet(),
             cited = cells.filter { shown[it] != null }.toSet(),
             targets = cells.toSet() + letters(s.wheel, slot.word),
         )
     }
+
+    /** "“Lift” (5)": a crossword clue to [word] without the word, as Lexicon gives it. Only "Show me" types the word. */
+    private fun clueFor(word: String) = "\u201C${WheelWords.clue(word)}\u201D (${word.length})"
 
     /** The wheel letters that spell [word], first unused copy of each letter, as highlight indices. */
     fun letters(wheel: String, word: String): Set<Int> {
