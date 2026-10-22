@@ -39,6 +39,9 @@ import com.joebywan.daybook.ui.play.tiersDoneOn
 import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.AchievementsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
+import com.joebywan.daybook.ui.theme.Appearance
+import com.joebywan.daybook.ui.theme.DaybookTheme
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 
@@ -92,11 +95,31 @@ private val RouteSaver = Saver<Route, String>(
 )
 
 /**
- * The whole app. [startAt] is where it opens — Home unless something asked for a particular
- * screen, which on the web is a `?puzzle=` link.
+ * The whole app, in its theme. [startAt] is where it opens — Home unless something asked for a
+ * particular screen, which on the web is a `?puzzle=` link.
+ *
+ * Nothing is drawn until the light/dark choice is known, so a player who picked Dark on a light
+ * phone never sees one light frame. Saveable, so a rotation does not wait for the store again; it
+ * is read once, since Settings (below) is the only thing that changes it.
  */
 @Composable
 fun DaybookApp(startAt: Route = Route.Home) {
+    val launchFile = rememberKeyValueStore(KeyValueStore.LAUNCH)
+    val launchPrefs = remember(launchFile) { LaunchPreferences(launchFile) }
+    val scope = rememberCoroutineScope()
+    var appearance by rememberSaveable { mutableStateOf<Appearance?>(null) }
+    LaunchedEffect(Unit) { if (appearance == null) appearance = launchPrefs.appearance.first() }
+    val current = appearance ?: return
+    DaybookTheme(current) {
+        DaybookScreens(startAt, current) { picked ->
+            appearance = picked
+            scope.launch { launchPrefs.setAppearance(picked) }
+        }
+    }
+}
+
+@Composable
+private fun DaybookScreens(startAt: Route, appearance: Appearance, onAppearance: (Appearance) -> Unit) {
     val progressFile = rememberKeyValueStore(KeyValueStore.PROGRESS)
     val store = remember(progressFile) { ProgressStore(progressFile) }
     val scope = rememberCoroutineScope()
@@ -123,7 +146,8 @@ fun DaybookApp(startAt: Route = Route.Home) {
     var pickedDifficulty by remember { mutableStateOf<Difficulty?>(null) }
     val difficulty = pickedDifficulty ?: storedDifficulty ?: Difficulty.STANDARD
     // Same reasoning as the difficulty: a flip of the switch shows at once, not after the store answers.
-    val storedShowTimer by launchPrefs.showTimer.collectAsState(initial = true)
+    val storedShowTimer by launchPrefs.showTimer.collectAsState(initial = false)
+    LaunchedEffect(Unit) { launchPrefs.settleShowTimer { store.hasPlayed() } }
     var pickedShowTimer by remember { mutableStateOf<Boolean?>(null) }
     val showTimer = pickedShowTimer ?: storedShowTimer
     val storedPlaySound by launchPrefs.playSound.collectAsState(initial = true)
@@ -213,6 +237,8 @@ fun DaybookApp(startAt: Route = Route.Home) {
                 pickedPlaySound = play
                 scope.launch { launchPrefs.setPlaySound(play) }
             },
+            appearance = appearance,
+            onAppearance = onAppearance,
             onBack = { route = Route.Home },
         )
 

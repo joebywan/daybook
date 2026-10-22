@@ -22,7 +22,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.data.KeyValueStore
+import com.joebywan.daybook.ui.theme.Appearance
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /**
@@ -60,13 +62,32 @@ class LaunchPreferences(private val store: KeyValueStore) {
     }
 
     /**
-     * Whether the running clock is drawn on the play screen. On unless the player turned it off.
-     * Only the clock: the time is still counted, shown on the solved card and kept for Stats.
+     * Whether the running clock is drawn on the play screen. Only the clock: the time is still
+     * counted, shown on the solved card and kept for Stats. Off for a new player, since a running
+     * clock is pressure the app does not mean to add; see [timerShown] and [settleShowTimer].
      */
-    val showTimer: Flow<Boolean> = store.string(KEY_SHOW_TIMER).map { it != "off" }
+    val showTimer: Flow<Boolean> = store.string(KEY_SHOW_TIMER).map { timerShown(it, hasPlayed = false) }
 
     suspend fun setShowTimer(show: Boolean) {
         store.putString(KEY_SHOW_TIMER, if (show) "on" else "off")
+    }
+
+    /**
+     * Writes the switch down the first time a build with the off default runs: on for a player who
+     * already has progress (earlier builds showed everyone the clock, and it must not vanish on an
+     * update), off for a new one. A stored value is the player's own and is never touched.
+     */
+    suspend fun settleShowTimer(hasPlayed: suspend () -> Boolean) {
+        if (store.string(KEY_SHOW_TIMER).first() == null) setShowTimer(timerShown(null, hasPlayed()))
+    }
+
+    /** Light, dark or the device's; [Appearance.SYSTEM] until the player picks. */
+    val appearance: Flow<Appearance> = store.string(KEY_APPEARANCE).map { stored ->
+        Appearance.entries.firstOrNull { it.name == stored } ?: Appearance.SYSTEM
+    }
+
+    suspend fun setAppearance(appearance: Appearance) {
+        store.putString(KEY_APPEARANCE, appearance.name)
     }
 
     /**
@@ -83,8 +104,16 @@ class LaunchPreferences(private val store: KeyValueStore) {
         const val KEY_SOUND = "play_sound"
         const val KEY_DIFFICULTY = "difficulty"
         const val KEY_SHOW_TIMER = "show_timer"
+        // The web page reads it before the app loads, as `daybook_launch.appearance` (index.html).
+        const val KEY_APPEARANCE = "appearance"
     }
 }
+
+/**
+ * The timer switch from what is [stored]: "off" hides the clock and any other value shows it. Nothing
+ * stored means a player who never touched the switch, and they see the clock only if they [hasPlayed].
+ */
+internal fun timerShown(stored: String?, hasPlayed: Boolean): Boolean = stored?.let { it != "off" } ?: hasPlayed
 
 /**
  * The two choices that used to live on every card, hoisted above the grid: what difficulty, and
@@ -123,7 +152,7 @@ fun LaunchOptions(
 }
 
 @Composable
-private fun <T> SegmentedControl(
+internal fun <T> SegmentedControl(
     options: List<T>,
     selected: T,
     label: (T) -> String,
@@ -131,13 +160,14 @@ private fun <T> SegmentedControl(
     onTone: Color,
     verticalPadding: Dp,
     onSelect: (T) -> Unit,
+    track: Color = MaterialTheme.colorScheme.surface,
 ) {
     val scheme = MaterialTheme.colorScheme
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(scheme.surface)
+            .background(track)
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
