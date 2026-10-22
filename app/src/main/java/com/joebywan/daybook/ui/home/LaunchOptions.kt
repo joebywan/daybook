@@ -104,10 +104,13 @@ fun LaunchOptions(
     onDifficulty: (Difficulty) -> Unit,
     mode: LaunchMode,
     onMode: (LaunchMode) -> Unit,
+    sideBySide: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Side by side on a short wide window (a phone on its side), where a second row costs the grid most of a row of tiles.
+    val controls = @Composable { half: Modifier ->
         SegmentedControl(
+            modifier = half,
             options = Difficulty.entries,
             selected = difficulty,
             label = { it.label },
@@ -119,6 +122,7 @@ fun LaunchOptions(
         // A second tone rather than a second green row: two identical-looking controls stacked
         // read as one four-choice thing, and these are different questions.
         SegmentedControl(
+            modifier = half,
             options = LaunchMode.entries,
             selected = mode,
             label = { it.label },
@@ -128,10 +132,18 @@ fun LaunchOptions(
             onSelect = onMode,
         )
     }
+    if (sideBySide) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            controls(Modifier.weight(1f))
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { controls(Modifier) }
+    }
 }
 
 @Composable
 private fun <T> SegmentedControl(
+    modifier: Modifier,
     options: List<T>,
     selected: T,
     label: (T) -> String,
@@ -142,7 +154,7 @@ private fun <T> SegmentedControl(
 ) {
     val scheme = MaterialTheme.colorScheme
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(scheme.surface)
