@@ -120,8 +120,8 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   `prefers-reduced-motion: reduce`. Both are watched, so a change applies at once. `rememberReducedMotion` is read once
   in `DaybookApp` and handed down as `LocalReducedMotion`. Under it: no confetti; the Today's-pick sparkles drawn still (no
   infinite transition runs); the hint glow steady at full strength (`rememberHintPulse`, which every board uses); Pointers'
-  arrow simply goes and a bump flashes red without the shake; Sand has no pour stream and no refusal shake, and a lifted tube
-  rises at once; a Pipes tile shows its new turn; the hint popover jumps rather than slides. Fades (the finished frame's
+  arrow simply goes and a bump flashes red without the shake; Sand has no pour stream and no refusal shake (the refused tube's red tint, shown always, is held 400 ms
+  instead of fading), and a lifted tube rises at once; a Pipes tile shows its new turn; the hint popover jumps rather than slides. Fades (the finished frame's
   fade-in) and the loading spinner stay: they are not motion across the screen. A new decorative animation should read
   `LocalReducedMotion` too.
 - **Haptics** (`rememberHaptics`, `LocalHaptics`): `tick` when a push changes the board (the same test as the play log's

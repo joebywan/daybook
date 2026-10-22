@@ -15,7 +15,7 @@ listed here, the standards win.
 | Proof | A found solution is the proof (a witness). The search is budgeted, and its verdict is structural: `Solvable(path)`, `Unsolvable` (exhaustive, budget not reached), `Truncated`. Only `Solvable` may ship; only `Unsolvable` may call a pour a mistake. |
 | Spare tubes | **Two empty tubes on every tier.** Spare tubes are slack, and tiers never vary slack (standards section 3). |
 | Input | Tap a tube to lift it, tap another to pour. Tap the lifted tube again to put it down. The lifted tube is `remember` state, never `PuzzleState`. One pour = one state = one undo. |
-| No hard refusals beyond the rules | An illegal pour (onto a different colour, into a full tube) is refused with a short shake of the target, nothing else. A legal pour that makes the board unsortable is allowed; it is a *mistake* the teacher flags, not a refusal (the owner's "bad judgements allowed"). |
+| No hard refusals beyond the rules | An illegal pour (onto a different colour, into a full tube) is refused with a short shake of the target and a brief red tint (the tint alone under reduced motion), nothing else. A legal pour that makes the board unsortable is allowed; it is a *mistake* the teacher flags, not a refusal (the owner's "bad judgements allowed"). |
 
 ## Rules
 
@@ -138,7 +138,7 @@ emulator and the web.
   put a small **symbol** on every layer (colour is never the only signal). Same colours in both schemes.
 - **Pour:** a short animation (sand stream from source to target, ~250 ms). The state changes at once; the animation is
   decoration and must not block the next tap or the undo.
-- Lifted tube rises a little; a refused pour gives the target a small shake. Neither moves the board's box.
+- Lifted tube rises a little; a refused pour gives the target a small shake and a 400 ms red tint. Neither moves the board's box.
 - Solved: each full tube gets a small flourish (a cap or a settled top). Reuse the shared finish frame.
 - Keyboard (`SandKeys.kt`, as `TargetKeys.kt`): `1`-`9`, `0` pick tube 1-10 (first press lifts, second pours), Escape
   puts it down. Pure and tested.

@@ -15,9 +15,6 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **Reduced motion: Sand's refused pour has no cue.** Under reduced motion (`LocalReducedMotion`) the shaking tube is
-  skipped, and that shake was the only sign a pour was refused. A brief error tint on the tube (as Pointers' bump flash)
-  would carry it without motion. `Sand.kt` `go()`. *S.*
 - [ ] **Touch targets left under 48dp.** Fixed in the UX pass: Home header buttons (48dp targets round 36dp circles), the
   play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
   Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)

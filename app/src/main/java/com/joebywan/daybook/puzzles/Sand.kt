@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -54,6 +56,7 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
@@ -204,6 +207,9 @@ object Sand : PuzzleType {
             }
         }
     }
+
+    /** How long a refused pour's tint lasts. */
+    private const val REFUSAL_MS = 400
 
     /** Geometry of one tube, in units of its width: the body's height for [h] layers. */
     private const val LAYER = 0.72f
@@ -359,14 +365,25 @@ object Sand : PuzzleType {
         var shaking by remember { mutableIntStateOf(-1) }
         val stream = remember { Animatable(1f) }
         var pouring by remember { mutableStateOf<PourAnim?>(null) }
-        // Reduced motion: no shake and no stream; a lifted tube still rises, at once.
+        // A refused pour tints the tube it was refused by, fading over 400 ms (alongside the shake).
+        val refusal = remember { Animatable(0f) }
+        // Reduced motion: no shake and no stream; the tint is held, then cleared; a lifted tube still rises, at once.
         val still = LocalReducedMotion.current
 
         fun go(step: SandStep) {
             lifted = step.lifted
-            if (!still) step.refused?.let { b ->
+            step.refused?.let { b ->
                 shaking = b
                 scope.launch {
+                    refusal.snapTo(1f)
+                    if (still) {
+                        delay(REFUSAL_MS.toLong())
+                        refusal.snapTo(0f)
+                    } else {
+                        refusal.animateTo(0f, tween(REFUSAL_MS, easing = LinearEasing))
+                    }
+                }
+                if (!still) scope.launch {
                     shake.snapTo(0f)
                     for (x in listOf(1f, -1f, 0.6f, -0.6f, 0f)) shake.animateTo(x, tween(45))
                 }
@@ -442,10 +459,11 @@ object Sand : PuzzleType {
                             ) { go(s.tap(lifted, i)) }
                             .drawBehind {
                                 val w = u.toPx()
+                                val refused = if (shaking == i) refusal.value else 0f
                                 val look = Look(
-                                    outline = if (lifted == i) accentColour else scheme.outline,
+                                    outline = lerp(if (lifted == i) accentColour else scheme.outline, scheme.error, refused),
                                     outlineWidth = if (lifted == i) 2.5.dp.toPx() else 1.5.dp.toPx(),
-                                    inside = scheme.surface,
+                                    inside = lerp(scheme.surface, scheme.error, 0.22f * refused),
                                     glow = when {
                                         strong -> glowColour.copy(alpha = pulse.value)
                                         soft -> glowColour.copy(alpha = 0.5f)
