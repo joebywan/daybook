@@ -60,6 +60,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -103,6 +104,7 @@ import com.joebywan.daybook.platform.readyBoard
 import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.LocalHaptics
+import com.joebywan.daybook.ui.LocalMoveCount
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
@@ -346,10 +348,14 @@ private fun PlayBoard(
         }
     }
 
+    // Counts moves for the boards' move feel (LocalMoveCount); not saved, so a rotation or a reopened board plays nothing.
+    var pushes by remember { mutableIntStateOf(0) }
+
     // Reads through `game` rather than the unpacked locals so that two taps landing in the same
     // frame stack up properly instead of pushing the same board twice.
     fun push(next: PuzzleState) {
         val prev = game.state
+        pushes++
         val step = PlayLog.step(puzzle, prev, next)
         game = game.copy(state = next, history = game.history + prev, log = game.log + step)
         // A buzz for a move that lands (not a selection or a typed letter), a firmer one for a bump; a solve gets
@@ -531,6 +537,7 @@ private fun PlayBoard(
             CompositionLocalProvider(
                 LocalBoardHighlight provides hintSession.highlight,
                 LocalHighlightBounds provides highlightBounds,
+                LocalMoveCount provides pushes,
             ) {
                 puzzle.Board(
                     state = state,

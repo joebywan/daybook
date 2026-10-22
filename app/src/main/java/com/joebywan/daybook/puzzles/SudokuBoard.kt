@@ -62,7 +62,9 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
@@ -115,6 +117,20 @@ private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, corner: 
         )
     }
 
+/** Sudoku's units for the move feel: the rows, the columns and the boxes, each in reading order. */
+internal val SUDOKU_UNITS: List<IntArray> = List(27) { u ->
+    IntArray(9) { k ->
+        when (u / 9) {
+            0 -> u * 9 + k
+            1 -> k * 9 + u % 9
+            else -> (u % 9 / 3 * 3 + k / 3) * 9 + u % 3 * 3 + k % 3
+        }
+    }
+}
+
+/** Whether [unit] holds 1 to 9 once each: finished by the rules, whatever the stored answer says. */
+internal fun List<Int>.holdsOneToNine(unit: IntArray): Boolean = unit.fold(0) { m, i -> m or (1 shl this[i]) } == 0x3FE
+
 private fun Modifier.dimmed(look: Look): Modifier = if (look.dim) alpha(0.3f) else this
 
 @Composable
@@ -126,9 +142,13 @@ internal fun SudokuGridBoard(
     onSelect: (Int) -> Unit,
     onEnter: (cell: Int, digit: Int, notesMode: Boolean) -> Unit,
     onKey: (SudokuKeyAction, notesMode: Boolean) -> Unit,
+    accent: Color,
     topBand: (Int) -> Float = { 0f },
+    units: List<IntArray> = SUDOKU_UNITS,
+    complete: (Int) -> Boolean = { s.cells.holdsOneToNine(SUDOKU_UNITS[it]) },
     overlay: @Composable BoxScope.(cell: Dp) -> Unit = {},
 ) {
+    val feel = rememberMoveFeel(s.cells, units, complete)
     val scheme = MaterialTheme.colorScheme
     // Colour is derived per render from the solution, never stored (docs/COLOUR.md "Roles"): A is the
     // structure (box tint, selection, pencil), B is the player's digits and their twins.
@@ -179,6 +199,7 @@ internal fun SudokuGridBoard(
                             Modifier
                                 .padding(start = cell * c, top = cell * r)
                                 .size(cell)
+                                .moveFeel(feel, i, accent)
                                 .padding(1.dp)
                                 .dimmed(look)
                                 .ring(look, glow, pulse, corner = 4f)
