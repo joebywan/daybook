@@ -926,14 +926,9 @@ object Mosaic : PuzzleType {
         listOf(
             TutorialFrame(
                 state = start,
-                caption = "Touching cells of one colour make an area, outlined in black. " +
-                    "Turn the whole board one colour.",
+                caption = "Touching cells of one colour make an area, outlined in black. Turn the whole board " +
+                    "one colour. The line above counts your fills, up to the fewest it can take: here 3.",
                 highlight = BoardHighlight(strong = tealArea),
-            ),
-            TutorialFrame(
-                state = start,
-                caption = "The line above the board counts your fills. The limit is the fewest fills " +
-                    "this board can be done in: here 3, with none to spare.",
             ),
             TutorialFrame(
                 state = start,
@@ -941,7 +936,7 @@ object Mosaic : PuzzleType {
                     "area it touches: three at once, more than any other fill can.",
                 highlight = BoardHighlight(strong = start.area(c1).toSet(), soft = amberNeighbours(start, c1)),
                 accepts = pour(start, c1, k1),
-                retry = "Pick amber from the swatches, then tap the glowing area.",
+                retry = "Pick amber below, then tap the glowing area.",
                 done = "Four areas became one. The bigger it grows, the more each fill takes.",
             ),
             TutorialFrame(
@@ -950,7 +945,7 @@ object Mosaic : PuzzleType {
                     "patch, so both fills must. Amber is down to one patch: pour teal into it.",
                 highlight = BoardHighlight(strong = second.area(c2).toSet()),
                 accepts = pour(second, c2, k2),
-                retry = "Pick teal, then tap the big amber area.",
+                retry = "Pick teal below, then tap the glowing area.",
                 done = "Amber is gone. Two colours, one fill.",
             ),
             TutorialFrame(
@@ -959,12 +954,12 @@ object Mosaic : PuzzleType {
                     "Pour violet into teal to finish.",
                 highlight = BoardHighlight(strong = third.area(c3).toSet()),
                 accepts = pour(third, c3, k3),
-                retry = "Pick violet, then tap the teal area.",
+                retry = "Pick violet below, then tap the glowing area.",
                 done = "One colour, three fills: the least it could take.",
             ),
             TutorialFrame(
                 state = MosaicState(6, 6, 3, 4, PRACTICE_CELLS),
-                caption = "Your turn: 4 fills, none spare. Out of fills or stuck? Hint shows you why.",
+                caption = "Your turn: one colour in 4 fills, none spare. Stuck, or out of fills? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
             ),

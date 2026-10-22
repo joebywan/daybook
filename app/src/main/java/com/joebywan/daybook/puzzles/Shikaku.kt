@@ -49,6 +49,8 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
+import com.joebywan.daybook.core.TutorialStep
 import kotlinx.serialization.Serializable
 
 /** An axis-aligned block of cells, inclusive on both corners. */
@@ -387,6 +389,9 @@ object Shikaku : PuzzleType {
         val four = TUTORIAL_FOUR
         val three = TUTORIAL_THREE
         val low = TUTORIAL_LOW_SIX
+        // The 4 drawn where it fits but strands the corner, then taken away: back to the board it
+        // started on, so only a move counted since tells the two apart.
+        val wrong = TutorialPath(only(top, TUTORIAL_WRONG_FOUR), { only(top)(it) && it.moves > 0 })
         listOf(
             TutorialFrame(
                 state = tutorialBoard(*TUTORIAL_SOLUTION.toTypedArray()),
@@ -404,30 +409,36 @@ object Shikaku : PuzzleType {
                 done = "Drawn.",
             ),
             TutorialFrame(
-                state = tutorialBoard(top, TUTORIAL_WRONG_FOUR),
-                caption = "This 4 is the right size, but then no number could reach the corner square, and " +
-                    "every square needs one. Tap the rectangle to remove it.",
-                highlight = BoardHighlight(strong = cellsOf(TUTORIAL_WRONG_FOUR), soft = setOf(0), warning = true),
-                accepts = only(top),
-                retry = "Tap the glowing rectangle once.",
+                state = tutorialBoard(top),
+                caption = "Draw the 4 down the glowing squares: the right size, but then no number can reach the " +
+                    "corner, and every square needs one. Then tap the 4 to remove it.",
+                glow = { s ->
+                    if (wrong.stage(s) < 0) BoardHighlight(strong = cellsOf(TUTORIAL_WRONG_FOUR))
+                    else BoardHighlight(strong = cellsOf(TUTORIAL_WRONG_FOUR), soft = setOf(0), warning = true)
+                },
+                steps = wrong.steps,
+                retry = "Drag along the glowing squares, then tap the rectangle once.",
                 done = "Removed. A tap takes any rectangle away.",
             ),
             TutorialFrame(
                 state = tutorialBoard(top),
-                caption = "Only the 4 can reach the glowing corner, and just one of its rectangles covers " +
-                    "it. Draw that one.",
-                highlight = BoardHighlight(strong = setOf(0), soft = setOf(1)),
-                accepts = only(top, four),
-                retry = "Draw the 4's rectangle over the glowing corner.",
-                done = "Drawn.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(top, four),
-                caption = "The same goes for the glowing square: only the 3 can reach it now. Draw the 3.",
-                highlight = BoardHighlight(strong = setOf(10), soft = setOf(15)),
-                accepts = only(top, four, three),
-                retry = "Draw the 3's rectangle over the glowing square.",
-                done = "Drawn.",
+                caption = "Only the 4 can reach the glowing corner, and just one of its rectangles covers it. " +
+                    "Only the 3 can reach the other glowing square. Draw them both.",
+                glow = { s ->
+                    val covered = (s as ShikakuState).blocks.flatMap { cellsOf(it) }.toSet()
+                    BoardHighlight(strong = setOf(0, 10) - covered, soft = setOf(1, 15))
+                },
+                // Either first.
+                steps = { next ->
+                    when {
+                        next !is ShikakuState -> TutorialStep.REJECT
+                        only(top, four, three)(next) -> TutorialStep.DONE
+                        only(top)(next) || only(top, four)(next) || only(top, three)(next) -> TutorialStep.PROGRESS
+                        else -> TutorialStep.REJECT
+                    }
+                },
+                retry = "Draw the 4 over one glowing square and the 3 over the other.",
+                done = "Drawn: a square only one number reaches is that number's.",
             ),
             TutorialFrame(
                 state = tutorialBoard(top, four, three),

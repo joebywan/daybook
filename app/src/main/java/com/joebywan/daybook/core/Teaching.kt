@@ -88,6 +88,25 @@ enum class TutorialStep {
 }
 
 /**
+ * A walkthrough move made of states in a fixed order (tap the square, then the digit; place it, then
+ * clear it): [stages] test each state on the way, the last the move itself. A state stands at the last
+ * stage it passes, so [steps] is PROGRESS on the way, DONE at the end and REJECT off the path, and
+ * [stage] tells a frame's glow where the player has got to.
+ */
+class TutorialPath(private vararg val stages: (PuzzleState) -> Boolean) {
+    /** The last stage [s] passes, -1 for none (the frame's start, or a state off the path). */
+    fun stage(s: PuzzleState): Int = stages.indexOfLast { it(s) }
+
+    val steps: (PuzzleState) -> TutorialStep = { s ->
+        when (stage(s)) {
+            -1 -> TutorialStep.REJECT
+            stages.lastIndex -> TutorialStep.DONE
+            else -> TutorialStep.PROGRESS
+        }
+    }
+}
+
+/**
  * One step of a walkthrough, played on the puzzle's real board.
  *
  * With neither [accepts] nor [steps] the frame is explanatory (a READ frame): the board is shown but
