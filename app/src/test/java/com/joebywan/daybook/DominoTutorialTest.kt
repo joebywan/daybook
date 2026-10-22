@@ -94,7 +94,7 @@ class DominoTutorialTest {
         assertTrue(lift(m.board!!))
         assertEquals(2, m.pick.selected)
         assertFalse("lifting the 1-0 instead", lift(board(4).tapSquare(DominoPick(), 6).board!!))
-        assertEquals(m.board!!.placed, board(5).placed)
+        assertEquals(m.board.placed, board(5).placed)
 
         // No frame's board holds a mistake.
         frames.forEach { f -> assertFalse(DominoTeacher.teach(f.state as DominoState)?.mistake ?: false) }

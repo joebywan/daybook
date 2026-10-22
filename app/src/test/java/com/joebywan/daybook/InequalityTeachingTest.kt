@@ -107,7 +107,7 @@ class InequalityTeachingTest {
         var longest = 0
         for (d in Difficulty.entries) for (day in 0 until 365) {
             val s = board(day, d)
-            var now: InequalityState = s
+            val now: InequalityState = s
             // Plant a mistake at the start so those texts are measured too.
             val at = s.cells.indices.first { s.cells[it] == 0 }
             for (state in listOf(now, now.withCell(at, s.solution[at] % s.size + 1))) {
