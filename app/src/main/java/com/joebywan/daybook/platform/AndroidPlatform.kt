@@ -85,14 +85,20 @@ fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
 @Suppress("UNUSED_PARAMETER")
 fun BackButton(onBack: () -> Unit) = Unit
 
-/** Status-bar icon tint to match the theme. Bar colours come from enableEdgeToEdge(). */
+/**
+ * System-bar icon tint to match the theme, which is the player's choice and not always the system's.
+ * Bar colours come from enableEdgeToEdge().
+ */
 @Composable
 fun SystemBarsAppearance(darkTheme: Boolean) {
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
         }
     }
 }

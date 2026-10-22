@@ -305,6 +305,10 @@ class ProgressStore(private val store: KeyValueStore) {
         store.updateStringSet(KEY_TUTORIALS_OFFERED) { offered -> offered + puzzleId }
     }
 
+    /** Whether anything at all is here: a solve, a game left behind, or a walkthrough offered. */
+    suspend fun hasPlayed(): Boolean =
+        listOf(KEY_COMPLETIONS, KEY_SAVED, KEY_TUTORIALS_OFFERED).any { store.stringSet(it).first().isNotEmpty() }
+
     private fun Set<String>.savedGames(): List<StoredGame> = mapNotNull(StoredGame::decode)
 
     private fun List<StoredGame>.encodeAll(): Set<String> = map(StoredGame::encode).toSet()
