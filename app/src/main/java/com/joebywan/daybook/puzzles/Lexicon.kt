@@ -375,95 +375,101 @@ object Lexicon : PuzzleType {
             }
         }
 
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp)
-                .boardKeys(playable) { key, _, repeat ->
-                    // A held Backspace would eat the whole row, a held letter fill it.
-                    val action = lexiconKeyAction(key) ?: return@boardKeys false
-                    if (!repeat) press(action)
-                    true
-                },
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // One line, always laid out: the guesses left, or why Enter refused, or the word.
-            val line = when {
-                notice != null -> notice!!
-                s.failed -> "Out of guesses. The word was ${s.answer.uppercase()}."
-                else -> "${s.maxGuesses - s.guesses.size} guesses left"
-            }
-            Text(
-                line,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (notice != null || s.failed) scheme.error else scheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                minLines = 1,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            )
+        // Grows past phone size on a tablet or a large window, from both axes (CLAUDE.md): 1 wherever the
+        // phone keyboard's 520dp cap does not bind on width or the box is under 640dp tall, so a phone in
+        // either orientation keeps its exact look; at most 1.5 (keys about 63dp tall, tiles up to 96dp).
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val scale = minOf(maxWidth / MAX_KEYBOARD, maxHeight / SCALE_HEIGHT).coerceIn(1f, MAX_SCALE)
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp)
+                    .boardKeys(playable) { key, _, repeat ->
+                        // A held Backspace would eat the whole row, a held letter fill it.
+                        val action = lexiconKeyAction(key) ?: return@boardKeys false
+                        if (!repeat) press(action)
+                        true
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // One line, always laid out: the guesses left, or why Enter refused, or the word.
+                val line = when {
+                    notice != null -> notice!!
+                    s.failed -> "Out of guesses. The word was ${s.answer.uppercase()}."
+                    else -> "${s.maxGuesses - s.guesses.size} guesses left"
+                }
+                Text(
+                    line,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (notice != null || s.failed) scheme.error else scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    minLines = 1,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                )
 
-            // Sized from both axes (CLAUDE.md): the grid is the width, or the height left once the
-            // keyboard has its room, whichever binds. It never changes size, so a hint opening or a
-            // solve cannot move it.
-            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                val cell = minOf(maxWidth / s.length, maxHeight / s.maxGuesses, MAX_CELL).coerceAtLeast(0.dp)
-                Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses)) {
-                    repeat(s.maxGuesses) { row ->
-                        Row {
-                            repeat(s.length) { slot ->
-                                val guess = s.guesses.getOrNull(row)
-                                val typing = row == s.guesses.size && s.open
-                                val letter = guess?.get(slot) ?: if (typing) s.current.getOrNull(slot) else null
-                                val mark = guess?.let { s.marks(it)[slot] }
-                                val look = highlight.look(LexiconTeacher.tile(s.length, row, slot), dims = tilesNamed)
-                                Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent)
+                // Sized from both axes (CLAUDE.md): the grid is the width, or the height left once the
+                // keyboard has its room, whichever binds. It never changes size, so a hint opening or a
+                // solve cannot move it.
+                BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    val cell = minOf(maxWidth / s.length, maxHeight / s.maxGuesses, MAX_CELL * scale).coerceAtLeast(0.dp)
+                    Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses)) {
+                        repeat(s.maxGuesses) { row ->
+                            Row {
+                                repeat(s.length) { slot ->
+                                    val guess = s.guesses.getOrNull(row)
+                                    val typing = row == s.guesses.size && s.open
+                                    val letter = guess?.get(slot) ?: if (typing) s.current.getOrNull(slot) else null
+                                    val mark = guess?.let { s.marks(it)[slot] }
+                                    val look = highlight.look(LexiconTeacher.tile(s.length, row, slot), dims = tilesNamed)
+                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
 
-            val known = keyMarks(s)
-            Column(
-                Modifier.widthIn(max = MAX_KEYBOARD).fillMaxWidth().keepClear().padding(bottom = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(KEY_GAP),
-            ) {
-                keyRows.forEachIndexed { r, letters ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KEY_GAP)) {
-                        // The nine-key row is centred under the ten above it.
-                        if (r == 1) Spacer(Modifier.weight(0.5f))
-                        if (r == 2) {
-                            KeyButton("Enter", Modifier.weight(1.5f), playable, LexiconTeacher.ENTER, highlight, glow, pulse,
-                                scheme.surfaceVariant, scheme.onSurfaceVariant, small = true) {
-                                press(LexiconKeyAction.Enter)
+                val known = keyMarks(s)
+                Column(
+                    Modifier.widthIn(max = MAX_KEYBOARD * scale).fillMaxWidth().keepClear().padding(bottom = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(KEY_GAP * scale),
+                ) {
+                    keyRows.forEachIndexed { r, letters ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KEY_GAP * scale)) {
+                            // The nine-key row is centred under the ten above it.
+                            if (r == 1) Spacer(Modifier.weight(0.5f))
+                            if (r == 2) {
+                                KeyButton("Enter", Modifier.weight(1.5f), playable, LexiconTeacher.ENTER, highlight, glow, pulse,
+                                    scheme.surfaceVariant, scheme.onSurfaceVariant, small = true, scale) {
+                                    press(LexiconKeyAction.Enter)
+                                }
                             }
-                        }
-                        letters.forEach { c ->
-                            val mark = known[c - 'a']
-                            val fill = when (mark) {
-                                -1 -> scheme.surfaceVariant
-                                // Faded, not recoloured: outline at 30% was the same beige as an untried key in light.
-                                LexiconMark.ABSENT -> scheme.surfaceVariant.copy(alpha = 0.3f)
-                                else -> markColour(mark, absent)
+                            letters.forEach { c ->
+                                val mark = known[c - 'a']
+                                val fill = when (mark) {
+                                    -1 -> scheme.surfaceVariant
+                                    // Faded, not recoloured: outline at 30% was the same beige as an untried key in light.
+                                    LexiconMark.ABSENT -> scheme.surfaceVariant.copy(alpha = 0.3f)
+                                    else -> markColour(mark, absent)
+                                }
+                                val text = when {
+                                    mark > LexiconMark.ABSENT -> onMark
+                                    mark == LexiconMark.ABSENT -> scheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    else -> scheme.onSurfaceVariant
+                                }
+                                KeyButton(c.uppercase(), Modifier.weight(1f), playable, LexiconTeacher.key(c), highlight, glow, pulse,
+                                    fill, text, small = false, scale) {
+                                    press(LexiconKeyAction.Letter(c))
+                                }
                             }
-                            val text = when {
-                                mark > LexiconMark.ABSENT -> onMark
-                                mark == LexiconMark.ABSENT -> scheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                else -> scheme.onSurfaceVariant
-                            }
-                            KeyButton(c.uppercase(), Modifier.weight(1f), playable, LexiconTeacher.key(c), highlight, glow, pulse,
-                                fill, text, small = false) {
-                                press(LexiconKeyAction.Letter(c))
-                            }
-                        }
-                        if (r == 1) Spacer(Modifier.weight(0.5f))
-                        if (r == 2) {
-                            KeyButton("Del", Modifier.weight(1.5f), playable, LexiconTeacher.DELETE, highlight, glow, pulse,
-                                scheme.surfaceVariant, scheme.onSurfaceVariant, small = true) {
-                                press(LexiconKeyAction.Backspace)
+                            if (r == 1) Spacer(Modifier.weight(0.5f))
+                            if (r == 2) {
+                                KeyButton("Del", Modifier.weight(1.5f), playable, LexiconTeacher.DELETE, highlight, glow, pulse,
+                                    scheme.surfaceVariant, scheme.onSurfaceVariant, small = true, scale) {
+                                    press(LexiconKeyAction.Backspace)
+                                }
                             }
                         }
                     }
@@ -473,6 +479,8 @@ object Lexicon : PuzzleType {
     }
 
     private val MAX_CELL = 64.dp
+    private val SCALE_HEIGHT = 640.dp
+    private const val MAX_SCALE = 1.5f
     private val MAX_KEYBOARD = 520.dp
     private val KEY_GAP = 5.dp
     private val KEY_HEIGHT = 42.dp
@@ -528,12 +536,13 @@ object Lexicon : PuzzleType {
         fill: Color,
         text: Color,
         small: Boolean,
+        scale: Float,
         onClick: () -> Unit,
     ) {
         val shape = RoundedCornerShape(6.dp)
         Box(
             modifier
-                .height(KEY_HEIGHT)
+                .height(KEY_HEIGHT * scale)
                 .highlightAnchor(index)
                 .ring(highlight.look(index, dims = false), glow, pulse)
                 .clip(shape)
@@ -543,7 +552,7 @@ object Lexicon : PuzzleType {
         ) {
             Text(
                 label,
-                fontSize = if (small) 12.sp else 16.sp,
+                fontSize = (if (small) 12f else 16f).times(scale).sp,
                 fontWeight = FontWeight.SemiBold,
                 color = text,
                 maxLines = 1,
