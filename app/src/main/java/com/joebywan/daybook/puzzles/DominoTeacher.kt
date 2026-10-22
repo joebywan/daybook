@@ -1,0 +1,764 @@
+package com.joebywan.daybook.puzzles
+
+/**
+ * Dominoes, reasoned the way a person reasons it (`docs/DOMINO_SPEC.md` "Teacher").
+ *
+ * The ladder ([DominoLadder]) keeps every *candidate*: a tray domino on two free neighbouring
+ * squares, one way round. Named steps strike candidates, cheapest first, and a hint is emitted only
+ * when one domino's placement is settled (a square with one candidate left, or a domino with one
+ * place left), so every hint ends in a placement and never asks the player to remember an
+ * elimination (Cipher's rule). The steps, by level:
+ *
+ * 1. geometry — a square with one partner left pairs with it, so its partner pairs with nothing else.
+ * 3. rule fit — a candidate that breaks a region's rule whatever goes on the region's other empty
+ *    squares ([DominoLogic.ruleBroken]).
+ * 4. region values — a candidate that leaves a region no way to keep its rule from the values its
+ *    other squares can still take (those are what the tray can still put there).
+ * 5. counting — as many squares that can only take a value as there are halves of it left in the
+ *    tray, so no other square gets one (this covers "only one domino still has a 6").
+ * 6. what-if — a square with two or three candidates, all but one of which run into a contradiction
+ *    within [WHAT_IF_ROUNDS] rounds of steps 1-5.
+ *
+ * Level 2 is a settled domino striking what overlaps it; it is free on every tier. The hint's
+ * technique is named from the deepest level used before the placement settled: [ONLY_PARTNER],
+ * [ONLY_PLACE] or [ONLY_DOMINO] for levels up to 3 (by how the placement settled), else
+ * [REGION_VALUE], [COUNTING] or [WHAT_IF].
+ *
+ * **The generator's ladder is this one**: a board ships only if [solveLevel] places every domino
+ * within the tier's levels, so hints never fall back on a generated board. [deduce] takes only the
+ * visible [DominoLogic.Layout] and the placements; the answer is read in [teach] alone, for mistakes
+ * and the [FALLBACK] (boards not made here).
+ *
+ * Every loop walks squares, dominoes and regions in index order: no hash container is iterated.
+ *
+ * ## Highlight indices
+ * Squares are `row * width + col`; tray slot `i` is [TRAY] `+ i`; region `r`'s rule badge is [RULE] `+ r`.
+ */
+internal object DominoTeacher {
+
+    const val ONLY_PARTNER = "only-partner"
+    const val ONLY_PLACE = "only-place"
+    const val ONLY_DOMINO = "only-domino"
+    const val REGION_VALUE = "region-value"
+    const val COUNTING = "counting"
+    const val WHAT_IF = "what-if"
+    const val MISTAKE = "mistake"
+    const val FALLBACK = "fallback"
+
+    /** Every technique in the order [deduce] prefers them, for reports. */
+    val TECHNIQUES = listOf(ONLY_PARTNER, ONLY_PLACE, ONLY_DOMINO, REGION_VALUE, COUNTING, WHAT_IF)
+
+    const val LEVEL_GEOMETRY = 1
+    const val LEVEL_FIX = 2
+    const val LEVEL_RULE_FIT = 3
+    const val LEVEL_REGION_VALUE = 4
+    const val LEVEL_COUNTING = 5
+    const val LEVEL_WHAT_IF = 6
+
+    /** How far a what-if follows its supposition: rounds of steps 1-5 over the whole board. */
+    const val WHAT_IF_ROUNDS = 3
+
+    const val TRAY = 1000
+    const val RULE = 2000
+
+    const val MAX_NUDGE = 70
+    const val MAX_EXPLANATION = 200
+
+    /**
+     * One hint. [domino] is a tray index; [placement] is where it goes, or null for a [MISTAKE]
+     * (lift [domino]). [level] is the ladder level the step needed.
+     */
+    class Step(
+        val technique: String,
+        val level: Int,
+        val domino: Int,
+        val placement: Placement?,
+        val focus: Set<Int>,
+        val cited: Set<Int>,
+        val nudge: String,
+        val explanation: String,
+        val fallback: Boolean = false,
+    ) {
+        val targets: Set<Int>
+            get() = (placement?.let { setOf(it.first, it.second) } ?: emptySet()) + (TRAY + domino)
+        val mistake: Boolean get() = technique == MISTAKE
+    }
+
+    fun teach(s: DominoState): Step? {
+        if (s.solved) return null
+        mistake(s)?.let { return it }
+        return deduce(s.layout, s.placed) ?: fallback(s)
+    }
+
+    /** [s] with [step] made, as Show me does: the domino laid, or for a mistake lifted. */
+    fun applyTo(s: DominoState, step: Step): DominoState {
+        val p = step.placement ?: return DominoLogic.lift(s, step.domino)
+        return DominoLogic.place(s, step.domino, p)
+    }
+
+    /** Whether the board shows [step] made: the domino where it says (a double either way round), or lifted. */
+    fun reached(s: DominoState, step: Step): Boolean {
+        val now = s.placed.getOrNull(step.domino)
+        val p = step.placement ?: return now == null
+        return now == p || (s.tray[step.domino].isDouble && now == Placement(p.second, p.first))
+    }
+
+    // ---- mistakes and the fallback ----------------------------------------------------------------
+
+    private fun same(dom: Domino, a: Placement, b: Placement) =
+        a == b || (dom.isDouble && a == Placement(b.second, b.first))
+
+    /** The first placed domino, in tray order, that the board's one answer does not have there that way round. */
+    private fun mistake(s: DominoState): Step? {
+        val words = Words(s.layout)
+        for (d in s.tray.indices) {
+            val p = s.placed[d] ?: continue
+            if (same(s.tray[d], p, s.answer[d])) continue
+            return Step(
+                technique = MISTAKE,
+                level = 0,
+                domino = d,
+                placement = null,
+                focus = setOf(p.first, p.second),
+                cited = emptySet(),
+                nudge = "One of your dominoes isn't where it belongs.",
+                explanation = "The ${words.domino(s.tray[d])} at ${words.square(p.first)} can't stay as it is: no way of keeping " +
+                    "every rule has it there that way round. Lift it.",
+            )
+        }
+        return null
+    }
+
+    /** Only for a board the ladder cannot finish (not one made here): point at a domino of the stored answer, openly. */
+    private fun fallback(s: DominoState): Step? {
+        val d = s.placed.indexOfFirst { it == null }.takeIf { it >= 0 } ?: return null
+        val p = s.answer[d]
+        val words = Words(s.layout)
+        return Step(
+            technique = FALLBACK,
+            level = 0,
+            domino = d,
+            placement = p,
+            focus = setOf(p.first, p.second),
+            cited = emptySet(),
+            nudge = "Try the ${words.domino(s.tray[d])}.",
+            explanation = "No step I can explain from here, so this is the answer itself: the ${words.domino(s.tray[d])} goes here, " +
+                words.half(s.tray[d], p) + ".",
+            fallback = true,
+        )
+    }
+
+    // ---- the ladder --------------------------------------------------------------------------------
+
+    /**
+     * The generator's acceptance test: the ladder, capped at [maxLevel], places every domino of
+     * [layout] from an empty board. The deepest level it used, or null when it gets stuck.
+     */
+    fun solveLevel(layout: DominoLogic.Layout, maxLevel: Int): Int? =
+        DominoLadder.build(layout, List(layout.tray.size) { null }).solve(maxLevel)
+
+    /**
+     * The next placement reasoned from what the player sees, or null when there is none (a finished
+     * board, one with a wrong domino on it, or one the ladder cannot finish).
+     */
+    fun deduce(layout: DominoLogic.Layout, placed: List<Placement?>): Step? {
+        val ladder = DominoLadder.build(layout, placed)
+        var used = 0
+        while (true) {
+            ladder.forced()?.let { return placementStep(ladder, it, used) }
+            if (ladder.broken != DominoLadder.NONE || ladder.done()) return null
+            used = maxOf(
+                used,
+                when {
+                    ladder.geometry() -> LEVEL_GEOMETRY
+                    ladder.ruleFit() -> LEVEL_RULE_FIT
+                    ladder.regionValue() -> LEVEL_REGION_VALUE
+                    ladder.counting() -> LEVEL_COUNTING
+                    else -> return ladder.whatIf()?.let { whatIfStep(ladder, it) }
+                },
+            )
+        }
+    }
+
+    private fun placementStep(ladder: DominoLadder, forced: DominoLadder.Forced, used: Int): Step {
+        val layout = ladder.layout
+        val words = Words(layout)
+        val c = forced.cand
+        val d = ladder.cDom[c]
+        val dom = layout.tray[d]
+        val p = ladder.placement(c)
+        val q = forced.square
+        // The candidates whose striking settled this one.
+        val rivals = if (q >= 0) ladder.bySquare[q].filter { it != c } else ladder.byDomino[d].filter { it != c }
+        val facts = ladder.reasonsOf(rivals)
+        val technique = when {
+            used >= LEVEL_COUNTING -> COUNTING
+            used >= LEVEL_REGION_VALUE -> REGION_VALUE
+            q >= 0 && layout.neighbours[q].count { ladder.free[it] && ladder.known[it] < 0 } == 1 -> ONLY_PARTNER
+            q < 0 -> ONLY_PLACE
+            else -> ONLY_DOMINO
+        }
+        val name = words.domino(dom)
+        val so = "So the $name goes here, ${words.half(dom, p)}."
+        val where = if (q >= 0) words.square(q) else ""
+        val partner = if (q >= 0) (if (p.first == q) p.second else p.first) else -1
+        fun factList(max: Int) = words.facts(facts.take(max))
+        val leaves = if (q >= 0) "one way to cover $where" else "one place for the $name"
+        val nudge: String
+        val text: (Int) -> String
+        when (technique) {
+            ONLY_PARTNER -> {
+                nudge = "Look at $where: how many free neighbours has it?"
+                text = { m -> "${words.cap(where)} has one free neighbour, so the two share a domino. " +
+                    (if (facts.isEmpty()) "Only the $name is left. " else "Only the $name fits ${factList(m)}. ") + so }
+            }
+            ONLY_PLACE -> {
+                nudge = "Where can the $name go?"
+                text = { m -> if (facts.isEmpty()) "The $name has one place left. $so" else "Everywhere else the $name could lie breaks ${factList(m)}. $so" }
+            }
+            ONLY_DOMINO -> {
+                nudge = "Which dominoes could cover $where?"
+                text = { m -> "Only one domino can cover $where: ${factList(m)} rule${if (facts.size == 1) "s" else ""} out the rest. $so" }
+            }
+            REGION_VALUE -> {
+                nudge = "Look at what ${words.regionOrThis(facts)} can be made of."
+                text = { m -> "Count what the squares of ${factList(m)} can still take from the tray: that leaves $leaves. $so" }
+            }
+            else -> {
+                nudge = "Count the ${words.countValue(facts)} left in the tray."
+                text = { m -> "Weigh ${factList(m)} against the squares that need them: no other square can have one, which leaves $leaves. $so" }
+            }
+        }
+        val explanation = fit(listOf(3, 2, 1).map(text) + "${words.cap(words.techniqueName(technique))}. $so")
+        val cited = regionsIn(facts).map { RULE + it }.toSet() + (if (partner >= 0) setOf(q, partner) else emptySet())
+        return Step(technique, used, d, p, setOf(p.first, p.second), cited, fitNudge(nudge, "Look at the $name."), explanation)
+    }
+
+    private fun whatIfStep(ladder: DominoLadder, w: DominoLadder.WhatIf): Step {
+        val layout = ladder.layout
+        val words = Words(layout)
+        val c = w.survivor
+        val d = ladder.cDom[c]
+        val dom = layout.tray[d]
+        val p = ladder.placement(c)
+        val where = words.square(w.square)
+        val so = "So the ${words.domino(dom)} goes here, ${words.half(dom, p)}."
+        fun refute(r: DominoLadder.Refuted, full: Boolean): String {
+            val other = layout.tray[ladder.cDom[r.cand]]
+            val head = "with the ${words.domino(other)} there"
+            return if (full) "$head, ${words.broken(r.kind, r.arg)}" else head + " something breaks"
+        }
+        val texts = listOf(true, false).map { full ->
+            "Try each domino that could cover $where: " + w.refuted.joinToString("; ") { refute(it, full) } + ". $so"
+        } + "Every other domino that could cover $where runs into trouble within a few steps. $so"
+        val cited = w.refuted.filter { it.kind == DominoLadder.REGION }.map { RULE + it.arg }.toSet()
+        return Step(
+            WHAT_IF, LEVEL_WHAT_IF, d, p, setOf(w.square), cited,
+            fitNudge("Try each domino that could cover $where.", "Try each domino that could cover this square."),
+            fit(texts),
+        )
+    }
+
+    private fun fit(options: List<String>): String = options.firstOrNull { it.length <= MAX_EXPLANATION } ?: options.last()
+
+    private fun fitNudge(nudge: String, short: String) = if (nudge.length <= MAX_NUDGE) nudge else short
+
+    /** Region indices named by [facts], in order, without a hash set. */
+    private fun regionsIn(facts: List<DominoLadder.Reason>): List<Int> {
+        val out = ArrayList<Int>()
+        for (f in facts) if ((f.kind == DominoLadder.RULE_KIND || f.kind == DominoLadder.VALUE_KIND) && f.arg !in out) out.add(f.arg)
+        return out
+    }
+
+    // ---- words -------------------------------------------------------------------------------------
+
+    private class Words(val layout: DominoLogic.Layout) {
+        fun square(q: Int) = "row ${q / layout.width + 1}, column ${q % layout.width + 1}"
+
+        fun cap(s: String) = s.replaceFirstChar { it.uppercaseChar() }
+
+        fun domino(d: Domino) = if (d.isDouble) "double ${d.a}" else "${d.b}-${d.a}"
+
+        /** Which half goes where: "its 6 on row 2, column 3" (the larger half), or "across both squares" for a double. */
+        fun half(d: Domino, p: Placement) = if (d.isDouble) "a ${d.a} on each square" else "its ${d.b} on ${square(p.second)}"
+
+        private fun ruleWords(r: Int): String {
+            val rule = layout.rules[r]
+            val one = layout.regionSquares[r].size == 1
+            return when (rule.kind) {
+                RuleKind.SUM -> if (one) "the square marked ${rule.n}" else "the region totalling ${rule.n}"
+                RuleKind.LESS -> if (one) "the square under ${rule.n}" else "the region under ${rule.n}"
+                RuleKind.MORE -> if (one) "the square over ${rule.n}" else "the region over ${rule.n}"
+                RuleKind.EQUAL -> "the equal region"
+                RuleKind.DIFFERENT -> "the all-different region"
+            }
+        }
+
+        /** A region by its rule, with where it starts when another region reads the same. */
+        fun region(r: Int): String {
+            val words = ruleWords(r)
+            val twin = layout.rules.indices.any { it != r && ruleWords(it) == words }
+            return if (twin) "$words at ${square(layout.regionSquares[r][0])}" else words
+        }
+
+        fun fact(f: DominoLadder.Reason): String = when (f.kind) {
+            DominoLadder.GEOMETRY_KIND -> "the pairing at ${square(f.arg)}"
+            DominoLadder.RULE_KIND, DominoLadder.VALUE_KIND -> region(f.arg)
+            DominoLadder.COUNT_KIND -> "the ${f.arg}s"
+            else -> "where the other dominoes must go"
+        }
+
+        fun facts(list: List<DominoLadder.Reason>): String {
+            val parts = list.map { fact(it) }
+            return when (parts.size) {
+                0 -> "the rules"
+                1 -> parts[0]
+                else -> parts.dropLast(1).joinToString(", ") + " and " + parts.last()
+            }
+        }
+
+        fun regionOrThis(facts: List<DominoLadder.Reason>): String =
+            facts.firstOrNull { it.kind == DominoLadder.VALUE_KIND }?.let { region(it.arg) }?.takeIf { it.length <= 30 } ?: "this region"
+
+        fun countValue(facts: List<DominoLadder.Reason>): String =
+            facts.firstOrNull { it.kind == DominoLadder.COUNT_KIND }?.let { "${it.arg}s" } ?: "values"
+
+        fun broken(kind: Int, arg: Int): String = when (kind) {
+            DominoLadder.SQUARE -> "${square(arg)} could not be covered"
+            DominoLadder.DOMINO -> "the ${domino(layout.tray[arg])} would have nowhere to go"
+            DominoLadder.REGION -> "${region(arg)} could not keep its rule"
+            else -> "there would not be enough ${arg}s"
+        }
+
+        fun techniqueName(t: String) = when (t) {
+            ONLY_PARTNER -> "a square with one free neighbour"
+            ONLY_PLACE -> "the domino has one place left"
+            ONLY_DOMINO -> "one domino fits this square"
+            REGION_VALUE -> "a region's values settle it"
+            else -> "counting the values left in the tray"
+        }
+    }
+}
+
+/**
+ * The ladder's working state for one board: every candidate (tray domino, two free neighbouring
+ * squares, way round) and which are still alive. Built from the visible board alone.
+ */
+internal class DominoLadder private constructor(
+    val layout: DominoLogic.Layout,
+    /** Open and not under a placed domino. */
+    val free: BooleanArray,
+    val placedDom: BooleanArray,
+    val cDom: IntArray,
+    val cS: IntArray,
+    val cT: IntArray,
+    val cVs: IntArray,
+    val cVt: IntArray,
+    val bySquare: Array<IntArray>,
+    val byDomino: Array<IntArray>,
+    val alive: BooleanArray,
+    /** Why each struck candidate went: an index into [reasons], or -1 while alive. */
+    val reasonOf: IntArray,
+    /** Pips on each square under a placed or settled domino, -1 elsewhere. */
+    val known: IntArray,
+    /** The candidate each settled (not yet placed) domino is fixed to, or -1. */
+    val fixedAt: IntArray,
+    val reasons: ArrayList<Reason>,
+) {
+    class Reason(val level: Int, val kind: Int, val arg: Int)
+    class Forced(val cand: Int, val square: Int)
+    class Refuted(val cand: Int, val kind: Int, val arg: Int)
+    class WhatIf(val square: Int, val survivor: Int, val refuted: List<Refuted>)
+
+    /** What contradiction was found ([NONE], [SQUARE], [DOMINO], [REGION], [COUNT]) and about what. */
+    var broken = NONE
+    var brokenArg = -1
+
+    private val n = layout.size
+    private val regions = layout.regionSquares
+
+    fun placement(c: Int) = Placement(cS[c], cT[c])
+
+    fun copy() = DominoLadder(
+        layout, free, placedDom, cDom, cS, cT, cVs, cVt, bySquare, byDomino,
+        alive.copyOf(), reasonOf.copyOf(), known.copyOf(), fixedAt.copyOf(), ArrayList(reasons),
+    ).also { it.broken = broken; it.brokenArg = brokenArg }
+
+    private fun reason(level: Int, kind: Int, arg: Int): Int {
+        reasons.add(Reason(level, kind, arg))
+        return reasons.size - 1
+    }
+
+    private fun kill(c: Int, r: Int): Boolean {
+        if (!alive[c]) return false
+        alive[c] = false
+        reasonOf[c] = r
+        return true
+    }
+
+    private fun fail(kind: Int, arg: Int) {
+        if (broken == NONE) { broken = kind; brokenArg = arg }
+    }
+
+    /** Every domino placed or settled. */
+    fun done(): Boolean = layout.tray.indices.all { placedDom[it] || fixedAt[it] >= 0 }
+
+    /** The distinct reasons that struck [cands], cheapest level first, in the order they were found. */
+    fun reasonsOf(cands: List<Int>): List<Reason> {
+        val ids = cands.map { reasonOf[it] }.filter { it >= 0 }.distinct().sorted()
+        val out = ArrayList<Reason>()
+        for (i in ids) {
+            val r = reasons[i]
+            if (out.none { it.kind == r.kind && it.arg == r.arg }) out.add(r)
+        }
+        return out.sortedBy { it.level }
+    }
+
+    /** Settles candidate [c]: its domino lies there, and nothing else may use the domino or the squares. */
+    fun fix(c: Int) {
+        val d = cDom[c]
+        fixedAt[d] = c
+        known[cS[c]] = cVs[c]
+        known[cT[c]] = cVt[c]
+        val r = reason(DominoTeacher.LEVEL_FIX, FIX_KIND, d)
+        for (o in byDomino[d]) if (o != c) kill(o, r)
+        for (o in bySquare[cS[c]]) if (o != c) kill(o, r)
+        for (o in bySquare[cT[c]]) if (o != c) kill(o, r)
+    }
+
+    /**
+     * The first placement now settled and not yet fixed: a square with one candidate left (reading
+     * order), else a domino with one place left (tray order). Notes a contradiction instead when a
+     * square or domino has none, or a region can no longer keep its rule.
+     */
+    fun forced(): Forced? {
+        if (broken != NONE) return null
+        for (q in 0 until n) {
+            if (!free[q] || known[q] >= 0) continue
+            var count = 0
+            var last = -1
+            for (c in bySquare[q]) if (alive[c]) { count++; last = c }
+            if (count == 0) { fail(SQUARE, q); return null }
+            if (count == 1) return Forced(last, q)
+        }
+        for (d in layout.tray.indices) {
+            if (placedDom[d] || fixedAt[d] >= 0) continue
+            var count = 0
+            var last = -1
+            for (c in byDomino[d]) if (alive[c]) { count++; last = c }
+            if (count == 0) { fail(DOMINO, d); return null }
+            if (count == 1) return Forced(last, -1)
+        }
+        for (r in regions.indices) {
+            val sq = regions[r]
+            val pips = sq.filter { known[it] >= 0 }.map { known[it] }
+            if (DominoLogic.ruleBroken(layout.rules[r], pips, sq.size - pips.size)) { fail(REGION, r); return null }
+        }
+        return null
+    }
+
+    /** Level 1: a square with one partner left pairs with it, so the partner takes no other candidate. */
+    fun geometry(): Boolean {
+        var changed = false
+        for (q in 0 until n) {
+            if (!free[q] || known[q] >= 0) continue
+            var partner = -1
+            var single = true
+            for (c in bySquare[q]) {
+                if (!alive[c]) continue
+                val t = if (cS[c] == q) cT[c] else cS[c]
+                if (partner < 0) partner = t else if (partner != t) { single = false; break }
+            }
+            if (!single || partner < 0) continue
+            var r = -1
+            for (c in bySquare[partner]) {
+                if (!alive[c] || cS[c] == q || cT[c] == q) continue
+                if (r < 0) r = reason(DominoTeacher.LEVEL_GEOMETRY, GEOMETRY_KIND, q)
+                changed = kill(c, r) || changed
+            }
+        }
+        return changed
+    }
+
+    /** The regions candidate [c] touches: one or two, never the same twice. */
+    private inline fun forRegions(c: Int, body: (Int) -> Unit) {
+        val rs = layout.regionOf[cS[c]]
+        val rt = layout.regionOf[cT[c]]
+        if (rs >= 0) body(rs)
+        if (rt >= 0 && rt != rs) body(rt)
+    }
+
+    /** Level 3: a candidate that breaks a region's rule whatever goes on the region's other empty squares. */
+    fun ruleFit(): Boolean {
+        var changed = false
+        val struck = IntArray(regions.size) { -1 }
+        for (c in alive.indices) {
+            if (!alive[c] || fixedAt[cDom[c]] == c) continue
+            forRegions(c) { r ->
+                if (!alive[c]) return@forRegions
+                val sq = regions[r]
+                val pips = ArrayList<Int>()
+                var open = 0
+                for (q in sq) {
+                    when {
+                        q == cS[c] -> pips.add(cVs[c])
+                        q == cT[c] -> pips.add(cVt[c])
+                        known[q] >= 0 -> pips.add(known[q])
+                        else -> open++
+                    }
+                }
+                if (DominoLogic.ruleBroken(layout.rules[r], pips, open)) {
+                    if (struck[r] < 0) struck[r] = reason(DominoTeacher.LEVEL_RULE_FIT, RULE_KIND, r)
+                    changed = kill(c, struck[r]) || changed
+                }
+            }
+        }
+        return changed
+    }
+
+    /** Each square's possible pips, as a bit mask, from what is alive. */
+    private fun domains(): IntArray {
+        val out = IntArray(n)
+        for (q in 0 until n) if (known[q] >= 0) out[q] = 1 shl known[q]
+        for (c in alive.indices) {
+            if (!alive[c]) continue
+            out[cS[c]] = out[cS[c]] or (1 shl cVs[c])
+            out[cT[c]] = out[cT[c]] or (1 shl cVt[c])
+        }
+        return out
+    }
+
+    /** Level 4: a candidate after which a region cannot keep its rule from the values its other squares can still take. */
+    fun regionValue(): Boolean {
+        val dom = domains()
+        var changed = false
+        val struck = IntArray(regions.size) { -1 }
+        for (c in alive.indices) {
+            if (!alive[c] || fixedAt[cDom[c]] == c) continue
+            forRegions(c) { r ->
+                if (!alive[c]) return@forRegions
+                val fixed = ArrayList<Int>()
+                val masks = ArrayList<Int>()
+                for (q in regions[r]) {
+                    when {
+                        q == cS[c] -> fixed.add(cVs[c])
+                        q == cT[c] -> fixed.add(cVt[c])
+                        known[q] >= 0 -> fixed.add(known[q])
+                        else -> masks.add(dom[q])
+                    }
+                }
+                if (!feasible(layout.rules[r], fixed, masks)) {
+                    if (struck[r] < 0) struck[r] = reason(DominoTeacher.LEVEL_REGION_VALUE, VALUE_KIND, r)
+                    changed = kill(c, struck[r]) || changed
+                }
+            }
+        }
+        return changed
+    }
+
+    /**
+     * Level 5: as many squares that can only take value v as there are halves of v left in the tray
+     * (a double has two), so no other square can get a v.
+     */
+    fun counting(): Boolean {
+        val dom = domains()
+        var changed = false
+        for (v in 0..DominoLogic.MAX_PIPS) {
+            val only = 1 shl v
+            var need = 0
+            for (q in 0 until n) if (free[q] && dom[q] == only) need++
+            var supply = 0
+            for (d in layout.tray.indices) if (!placedDom[d]) {
+                if (layout.tray[d].a == v) supply++
+                if (layout.tray[d].b == v) supply++
+            }
+            if (need > supply) { fail(COUNT, v); return changed }
+            if (need < supply) continue
+            var r = -1
+            for (c in alive.indices) {
+                if (!alive[c] || fixedAt[cDom[c]] == c) continue
+                if ((cVs[c] == v && dom[cS[c]] != only) || (cVt[c] == v && dom[cT[c]] != only)) {
+                    if (r < 0) r = reason(DominoTeacher.LEVEL_COUNTING, COUNT_KIND, v)
+                    changed = kill(c, r) || changed
+                }
+            }
+        }
+        return changed
+    }
+
+    /** Steps 1-5 and settling, for at most [rounds] rounds or until nothing changes or something breaks. */
+    private fun propagate(rounds: Int) {
+        repeat(rounds) {
+            var changed = false
+            while (true) {
+                val f = forced() ?: break
+                fix(f.cand)
+                changed = true
+            }
+            if (broken != NONE) return
+            changed = geometry() || changed
+            changed = ruleFit() || changed
+            changed = regionValue() || changed
+            changed = counting() || changed
+            if (broken != NONE) return
+            if (!changed) return
+        }
+        forced()
+    }
+
+    /**
+     * Level 6: the first square (two candidates before three, then reading order) all of whose
+     * candidates but one run into a contradiction within [DominoTeacher.WHAT_IF_ROUNDS] rounds.
+     */
+    fun whatIf(): WhatIf? {
+        for (k in 2..3) {
+            for (q in 0 until n) {
+                if (!free[q] || known[q] >= 0) continue
+                val options = bySquare[q].filter { alive[it] }
+                if (options.size != k) continue
+                val refuted = ArrayList<Refuted>()
+                var survivor = -1
+                for (o in options) {
+                    val h = copy()
+                    h.fix(o)
+                    h.propagate(DominoTeacher.WHAT_IF_ROUNDS)
+                    if (h.broken != NONE) refuted.add(Refuted(o, h.broken, h.brokenArg))
+                    else if (survivor < 0) survivor = o else { survivor = -2; break }
+                }
+                if (survivor >= 0 && refuted.size == k - 1) return WhatIf(q, survivor, refuted)
+            }
+        }
+        return null
+    }
+
+    /**
+     * The whole ladder, capped at [maxLevel]: settle what is settled, else the cheapest step that
+     * strikes something, else (at level 6) a what-if. The deepest level used once every domino is
+     * settled; null when it gets stuck or finds a contradiction.
+     */
+    fun solve(maxLevel: Int): Int? {
+        var used = 0
+        while (true) {
+            while (true) {
+                val f = forced() ?: break
+                fix(f.cand)
+            }
+            if (broken != NONE) return null
+            if (done()) return used
+            val level = when {
+                geometry() -> DominoTeacher.LEVEL_GEOMETRY
+                maxLevel >= DominoTeacher.LEVEL_RULE_FIT && ruleFit() -> DominoTeacher.LEVEL_RULE_FIT
+                maxLevel >= DominoTeacher.LEVEL_REGION_VALUE && regionValue() -> DominoTeacher.LEVEL_REGION_VALUE
+                maxLevel >= DominoTeacher.LEVEL_COUNTING && counting() -> DominoTeacher.LEVEL_COUNTING
+                maxLevel >= DominoTeacher.LEVEL_WHAT_IF -> {
+                    val w = whatIf() ?: return null
+                    fix(w.survivor)
+                    DominoTeacher.LEVEL_WHAT_IF
+                }
+                else -> return null
+            }
+            used = maxOf(used, level)
+        }
+    }
+
+    companion object {
+        const val NONE = 0
+        const val SQUARE = 1
+        const val DOMINO = 2
+        const val REGION = 3
+        const val COUNT = 4
+
+        const val GEOMETRY_KIND = 1
+        const val FIX_KIND = 2
+        const val RULE_KIND = 3
+        const val VALUE_KIND = 4
+        const val COUNT_KIND = 5
+
+        /** Whether [rule] can hold with pips [fixed] and one value from each of [masks] (bit v: value v possible). */
+        fun feasible(rule: RegionRule, fixed: List<Int>, masks: List<Int>): Boolean {
+            when (rule.kind) {
+                RuleKind.SUM, RuleKind.LESS, RuleKind.MORE -> {
+                    var reach = 1L shl fixed.sum()
+                    for (m in masks) {
+                        var next = 0L
+                        for (v in 0..DominoLogic.MAX_PIPS) if (m shr v and 1 == 1) next = next or (reach shl v)
+                        reach = next
+                    }
+                    return when (rule.kind) {
+                        RuleKind.SUM -> rule.n in 0..62 && reach shr rule.n and 1L == 1L
+                        RuleKind.LESS -> rule.n > 0 && (if (rule.n >= 63) reach != 0L else reach and ((1L shl rule.n) - 1) != 0L)
+                        else -> rule.n < 62 && (reach ushr (maxOf(rule.n, -1) + 1)) != 0L
+                    }
+                }
+                RuleKind.EQUAL -> {
+                    if (fixed.any { it != fixed[0] }) return false
+                    var m = if (fixed.isEmpty()) 0x7F else 1 shl fixed[0]
+                    for (x in masks) m = m and x
+                    return m != 0
+                }
+                RuleKind.DIFFERENT -> {
+                    if (!DominoLogic.allDifferent(fixed)) return false
+                    var usedMask = 0
+                    for (v in fixed) usedMask = usedMask or (1 shl v)
+                    fun place(i: Int, taken: Int): Boolean {
+                        if (i == masks.size) return true
+                        var free = masks[i] and taken.inv() and 0x7F
+                        while (free != 0) {
+                            val bit = free and -free
+                            if (place(i + 1, taken or bit)) return true
+                            free = free xor bit
+                        }
+                        return false
+                    }
+                    return place(0, usedMask)
+                }
+            }
+        }
+
+        /** The candidates for [layout] with [placed] down: every unplaced domino on every free neighbouring pair, both ways round (a double once). */
+        fun build(layout: DominoLogic.Layout, placed: List<Placement?>): DominoLadder {
+            val n = layout.size
+            val d = layout.tray.size
+            val free = BooleanArray(n) { layout.open[it] }
+            val known = IntArray(n) { -1 }
+            val placedDom = BooleanArray(d)
+            for (k in 0 until d) {
+                val p = placed[k] ?: continue
+                placedDom[k] = true
+                free[p.first] = false
+                free[p.second] = false
+                known[p.first] = layout.tray[k].a
+                known[p.second] = layout.tray[k].b
+            }
+            val dom = ArrayList<Int>()
+            val s = ArrayList<Int>()
+            val t = ArrayList<Int>()
+            val vs = ArrayList<Int>()
+            val vt = ArrayList<Int>()
+            for (k in 0 until d) {
+                if (placedDom[k]) continue
+                val tile = layout.tray[k]
+                for (x in 0 until n) {
+                    if (!free[x]) continue
+                    for (y in layout.neighbours[x]) {
+                        if (y < x || !free[y]) continue
+                        dom.add(k); s.add(x); t.add(y); vs.add(tile.a); vt.add(tile.b)
+                        if (!tile.isDouble) { dom.add(k); s.add(y); t.add(x); vs.add(tile.a); vt.add(tile.b) }
+                    }
+                }
+            }
+            val count = dom.size
+            val sq = Array(n) { ArrayList<Int>() }
+            val byD = Array(d) { ArrayList<Int>() }
+            for (c in 0 until count) {
+                sq[s[c]].add(c); sq[t[c]].add(c); byD[dom[c]].add(c)
+            }
+            return DominoLadder(
+                layout, free, placedDom,
+                dom.toIntArray(), s.toIntArray(), t.toIntArray(), vs.toIntArray(), vt.toIntArray(),
+                Array(n) { sq[it].toIntArray() }, Array(d) { byD[it].toIntArray() },
+                BooleanArray(count) { true }, IntArray(count) { -1 }, known, IntArray(d) { -1 }, ArrayList(),
+            )
+        }
+    }
+}
