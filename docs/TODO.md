@@ -15,6 +15,10 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **Walkthroughs: rewrite to the style rules.** The runner now advances by itself and takes multi-state moves
+  (`docs/PUZZLE_STANDARDS.md` section 8); only Lexicon's BOAT and Sudoku's cell-then-digit were converted. The other 23 still
+  split one idea over several frames (Inequality, Regions, Cages, Cipher select then digit), teach gestures only in captions,
+  and carry claims the rules contradict (Lexicon frame 4: "no guess can tell COAT, GOAT and MOAT apart", but CLOG does). *M.*
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
   text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it

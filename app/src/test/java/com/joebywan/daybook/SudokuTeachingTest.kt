@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.SudokuState
 import com.joebywan.daybook.puzzles.SudokuTeacher
@@ -328,44 +329,41 @@ class SudokuTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Sudoku.tutorial
-        assertEquals(6, frames.size)
+        assertEquals(5, frames.size)
         fun at(i: Int) = frames[i].state as SudokuState
-        assertNull(frames[0].accepts)
+        assertNull(frames[0].judge)
 
-        // 2: tapping the glowing cell selects it.
-        val select = frames[1].accepts!!
-        val first = frames[1].highlight.strong.single()
+        // 2: one frame, two taps. Tapping the glowing cell selects it (progress, and the 6 glows
+        // next), then 6 on the keys, as the Board does, places it; another cell or digit does not.
+        val move = frames[1].steps!!
+        val first = frames[1].glow!!(at(1)).strong.single()
         assertEquals(1, at(1).cells.take(9).count { it == 0 })
         assertEquals(0, at(1).cells[first])
-        assertTrue(select(at(1).select(first)))
-        assertFalse("another cell", select(at(1).select(first + 9)))
-        assertEquals(at(2), at(1).select(first))
-
-        // 3: tapping 6 on the keys, as the Board does, places it; another digit does not.
-        val place = frames[2].accepts!!
-        assertEquals(first, at(2).selected)
+        val selected = at(1).select(first)
+        assertEquals(TutorialStep.PROGRESS, move(selected))
+        assertEquals(setOf(SudokuTeacher.pad(6)), frames[1].glow!!(selected).strong)
+        assertEquals(TutorialStep.REJECT, move(at(1).select(first + 9)))
+        assertEquals(TutorialStep.REJECT, move(selected.withCell(first, 5)))
         assertEquals(6, Sudoku.TUTORIAL_SOLUTION[first])
-        assertTrue(place(at(2).withCell(first, 6)))
-        assertFalse("a wrong digit", place(at(2).withCell(first, 5)))
-        assertEquals(at(4).cells, at(2).withCell(first, 6).cells)
-        assertTrue(SudokuTeacher.pad(6) in frames[2].highlight.strong)
+        assertEquals(TutorialStep.DONE, move(selected.withCell(first, 6)))
+        assertEquals(at(3).cells, selected.withCell(first, 6).cells)
 
-        // 4: the wrong 9 is red, is a mistake, and tapping 9 again clears it.
-        val clear = frames[3].accepts!!
-        val wrong = at(3).selected!!
-        assertEquals(9, at(3).cells[wrong])
-        assertTrue(wrong in at(3).conflicts())
-        assertTrue(Sudoku.teach(at(3))!!.mistake)
-        assertTrue("the Board's toggle", clear(at(3).withCell(wrong, if (at(3).cells[wrong] == 9) 0 else 9)))
-        assertFalse("selecting elsewhere", clear(at(3).select(0)))
-        assertTrue(frames[3].highlight.soft.all { at(3).cells[it] == 9 })
-        assertEquals(2, frames[3].highlight.soft.size)
+        // 3: the wrong 9 is red, is a mistake, and tapping 9 again clears it.
+        val clear = frames[2].accepts!!
+        val wrong = at(2).selected!!
+        assertEquals(9, at(2).cells[wrong])
+        assertTrue(wrong in at(2).conflicts())
+        assertTrue(Sudoku.teach(at(2))!!.mistake)
+        assertTrue("the Board's toggle", clear(at(2).withCell(wrong, if (at(2).cells[wrong] == 9) 0 else 9)))
+        assertFalse("selecting elsewhere", clear(at(2).select(0)))
+        assertTrue(frames[2].highlight.soft.all { at(2).cells[it] == 9 })
+        assertEquals(2, frames[2].highlight.soft.size)
 
-        // 5: pencilling a note is SudokuNotesTest's. 6: free play, finishable by hints without the
+        // 4: pencilling a note is SudokuNotesTest's. 5: free play, finishable by hints without the
         // fallback or a mistake, from a board that carries the note the last frame asked for.
-        assertTrue(frames[5].freePlay)
-        assertTrue(at(5).notes.any { it != 0 })
-        var s = at(5)
+        assertTrue(frames[4].freePlay)
+        assertTrue(at(4).notes.any { it != 0 })
+        var s = at(4)
         while (!s.solved) {
             val d = Sudoku.teach(s)!!
             assertFalse(d.fallback)
