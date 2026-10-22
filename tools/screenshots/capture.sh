@@ -28,8 +28,11 @@ adb shell settings put secure show_ime_with_hard_keyboard 0
 # demo-mode status bar: 9:00, full wifi, full battery, no notifications
 adb shell settings put global sysui_demo_allowed 1
 demo() { adb shell am broadcast -a com.android.systemui.demo -e command "$@" >/dev/null; }
-demo enter; demo clock -e hhmm 0900; demo battery -e level 100 -e plugged false
-demo network -e wifi show -e level 4 -e fully true -e mobile hide -e nosim hide; demo notifications -e visible false
+demo_bar() {
+  demo enter; demo clock -e hhmm 0900; demo battery -e level 100 -e plugged false
+  demo network -e wifi show -e level 4 -e fully true -e mobile hide -e nosim hide; demo notifications -e visible false
+}
+demo_bar
 
 adb uninstall $PKG >/dev/null 2>&1 || true
 adb install -r "$APK" >/dev/null
@@ -113,15 +116,21 @@ shots
 
 # Tablet pass: the same set in landscape, where the board sits beside the controls. 2560x1440 at 320 dpi is a
 # 1280x720 dp window (a 10-inch tablet's shape) and fits both of Play's tablet slots (16:9, sides 1080-3840).
+# A window this wide gets the launcher's taskbar along the bottom, so the launcher is switched off for the pass;
+# the size change also restarts the status bar, which drops demo mode until it is set again.
+LAUNCHERS="com.google.android.apps.nexuslauncher com.android.launcher3"
+for l in $LAUNCHERS; do adb shell pm disable-user --user 0 $l >/dev/null 2>&1 || true; done
 DIR=$TABLET
 adb shell wm size 2560x1440
 adb shell wm density 320
+sleep 5; demo_bar
 back; sleep 2; shot 1-home
 shots
 
 demo exit
 adb shell wm size reset
 adb shell wm density reset
+for l in $LAUNCHERS; do adb shell pm enable $l >/dev/null 2>&1 || true; done
 # README copies are half scale: home, sudoku, cage sudoku, word wheel, and the tablet layout
 for p in 1-home:home 2-sudoku-hint:sudoku 3-cage-sudoku-hint:cage-sudoku 4-word-wheel:word-wheel; do
   convert "$OUT/${p%%:*}.png" -resize 50% "docs/screenshots/${p##*:}.png"
