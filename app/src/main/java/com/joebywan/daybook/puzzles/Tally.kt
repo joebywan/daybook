@@ -171,7 +171,7 @@ object Tally : PuzzleType {
                 highlight = BoardHighlight(strong = setOf(5, row(1)), soft = setOf(4, 6)),
                 accepts = only(afterSweep, mapOf(5 to TallyLogic.REMOVED)),
                 retry = "Tap the glowing 5 once.",
-                done = "Too much: 4 + 1 can never make 6, so row 2 turns red.",
+                done = "Too much: 4 + 1 can never make 6, so row 2 turns red, and column 2 with it.",
             ),
             TutorialFrame(
                 state = afterSlip,

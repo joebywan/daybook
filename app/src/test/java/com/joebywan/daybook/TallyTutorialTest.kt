@@ -64,6 +64,7 @@ class TallyTutorialTest {
         assertEquals(board(4).marks, afterSlip.marks)
         assertEquals("the hint calls it a mistake", TallyTeacher.MISTAKE, TallyTeacher.teach(afterSlip)!!.technique)
         assertTrue("row 2 turns red", TallyLogic.lineImpossible(afterSlip, 1, TallyLogic.rowTargets(afterSlip)[1]))
+        assertTrue("and column 2", TallyLogic.lineImpossible(afterSlip, 4 + 1, TallyLogic.colTargets(afterSlip)[1]))
 
         // 5: Keep, then tap the 5: the removed 5 becomes a circle in one tap.
         val circle = frames[4].accepts!!
