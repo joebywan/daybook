@@ -14,7 +14,7 @@ class RouteTest {
 
     @Test fun `routes round-trip, and strings saved before the archive fields still decode`() {
         listOf(
-            Route.Home, Route.Stats, Route.Settings, Route.Achievements(true), Route.Archive("kings"), Route.Archive("kings", day),
+            Route.Home, Route.Stats, Route.Settings, Route.Achievements(true), Route.Arrange(true), Route.Arrange(), Route.Archive("kings"), Route.Archive("kings", day),
             Route.Play("kings", Difficulty.HARD, day, fromArchive = true), Route.Play("kings", Difficulty.HARD, null, 7),
         ).forEach { assertEquals(it, decodeRoute(encodeRoute(it))) }
         assertEquals(Route.Archive("kings"), decodeRoute("archive|kings"))
@@ -26,5 +26,7 @@ class RouteTest {
         assertEquals(Route.Home, backFrom(Route.Play("kings", Difficulty.HARD, day)))
         assertEquals(Route.Stats, backFrom(Route.Achievements()))
         assertEquals(Route.Home, backFrom(Route.Archive("kings", day)))
+        assertEquals(Route.Settings, backFrom(Route.Arrange()))
+        assertEquals(Route.Home, backFrom(Route.Arrange(fromHome = true)))
     }
 }

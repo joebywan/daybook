@@ -113,8 +113,27 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
 - **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added. Its
   home tile, while unsolved, gets a thin gold ring, a frame of twinkling gold sparkles (`ui/home/FeaturedMark.kt`; one infinite
   transition read only in the draw phase) and "Try me!" tilted across the thumbnail with a halo, content description
-  "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved, and under reduced motion the sparkles are drawn still. The grid does not reorder.
-  Nothing is stored.
+  "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved or
+  started, and under reduced motion the sparkles are drawn still. The pick does not move its tile. Nothing is stored.
+- **In progress.** A tile whose board at the grid's tier and mode (today's daily; in Random, the tier's current random board)
+  has a saved game that is unsolved and has a move in it says "In progress", tilted with the same halo as "Try me!" but in the
+  scheme's moss on its surface (`InProgressLabel`). That is exactly the game `PlayScreen` keeps: a restart, or only a selection,
+  clears the save. A pick in progress shows only "In progress", no ring or sparkles. `ProgressStore.inProgress` reads each save
+  only as far as its key and decodes in full just the boards the tiles would open; it follows the store, so a game saved on the
+  way out of the play screen shows at once.
+
+## Puzzle order (`PuzzleOrder` in `data/ProgressStore.kt`, `ui/settings/ArrangeScreen.kt`)
+
+The grid scrolls (more than twenty puzzles), so the order decides what is on the first screen. Nothing is hidden; the owner
+would rather let people rearrange than hide.
+
+- **Most played first** (the default): solves per puzzle, dailies of the last 60 days plus every practice game (they carry no
+  day); ties and never-played puzzles keep registry order. The solves are read once per app start and day, not live, so
+  coming home from a solve never moves a tile under the player's finger.
+- **My own order**: "Arrange puzzles" (from Settings' "Puzzle order" row, or the link under the grid) lists every puzzle with
+  up and down buttons; the first move stores the current order as the player's own (`puzzle_order` in the launch file, ids
+  joined by commas; empty means most played). On load, unknown ids drop out and puzzles added later join at the end
+  (`PuzzleOrder.arranged`). "Reset to most played" clears it. Pinned by `HomeOrderTest`.
 
 ## Reduced motion and haptics (`ui/Motion.kt`, the platform seam)
 
