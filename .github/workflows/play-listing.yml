@@ -1,0 +1,47 @@
+name: Play listing text
+
+# Pushes the store text in fastlane/metadata/android/en-US/ (title, short and full description) to
+# the Play listing whenever it changes on main. F-Droid reads the same files, so they are the one
+# source for both stores. Every listing change goes to Google review.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'fastlane/metadata/android/en-US/*.txt'
+      - 'tools/play/upload-listing.py'
+      - '.github/workflows/play-listing.yml'
+  pull_request:
+    paths:
+      - 'fastlane/metadata/android/en-US/*.txt'
+      - 'tools/play/upload-listing.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play-listing
+  cancel-in-progress: false
+
+jobs:
+  listing:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pull requests only check the limits, so a too-long description fails before it merges.
+      - name: Check
+        run: python3 tools/play/upload-listing.py --check
+
+      - name: Upload to Play
+        if: github.event_name != 'pull_request'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::notice::PLAY_SERVICE_ACCOUNT_JSON is not set; skipping the upload."
+            exit 0
+          fi
+          pip install --quiet google-api-python-client google-auth
+          python3 tools/play/upload-listing.py
