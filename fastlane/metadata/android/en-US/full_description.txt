@@ -1,15 +1,25 @@
-Fresh logic and word puzzles every day, free, with every past day open from the start. No ads, no account, no internet needed.
+Daily Sudoku, killer sudoku, nonograms, word games and logic puzzles, free and with no ads. No account, no internet needed, and every past day is open from the start.
 
-Every day brings a new set of classic puzzles: Sudoku and Sudoku with sum cages, region and placement puzzles, picture grids, number, sum, sign and symbol grids, pipe networks, flood-fills, one-line paths, arrows to clear, code-breaking, a hidden-word guessing game, letter sums, word wheels and chess mate-in-N. Each comes in three difficulties, Standard, Hard and Expert, and each is built so that it has exactly one answer you can reach by reasoning. Nothing needs guessing.
+Every day brings a fresh set of classic pencil puzzles and brain games, each in three difficulties (Standard, Hard and Expert), each built so it has exactly one answer you can reach by reasoning. Nothing needs guessing.
+
+WHAT'S INSIDE
+• Sudoku, and Cage Sudoku (killer sudoku, with sum cages)
+• Nonogram picture grids
+• Futoshiki-style inequality grids, Shikaku rectangles, LITS, Tents and trees
+• Star Battle-style crown placement, Takuzu-style binary grids, Hashi-style bridges
+• Number puzzles: sums, letter sums (cryptarithms) and hit-the-target arithmetic
+• Word puzzles: a hidden-word guessing game and a word wheel
+• Chess puzzles: mate in 2, 3 and 4
+• Relaxing ones too: pipe rotation, flood-fill, one-line paths, colour sorting and arrows to clear
 
 HINTS THAT TEACH
-Stuck? Ask for a hint and Daybook explains the next step in plain language, pointing at the cells it is talking about. You make the move yourself, so you learn the technique instead of watching it get filled in. Every puzzle has a short walkthrough for first-timers, and "How to play" is always one tap away.
+Stuck? Ask for a hint and Daybook explains the next step in plain language, pointing at the squares it is talking about. You make the move yourself, so you learn the technique instead of watching it get filled in. Every puzzle has a short walkthrough for first-timers, and "How to play" is always one tap away.
 
 NO ADS. NO SUBSCRIPTION. NO ACCOUNT.
-There are no adverts, no paywall, no sign-in and no in-app purchases. The app does not even ask for network access, so it works on a plane, on a train and in a tunnel.
+There are no adverts, no paywall, no sign-in and no in-app purchases. The app does not even ask for network access, so these are true offline puzzles: they work on a plane, on a train and in a tunnel.
 
 THE WHOLE ARCHIVE, FROM DAY ONE
-Puzzles are made on your device from the date, so every past day is already there. Missed a week? Play it. Want something different? Switch to Random boards at any difficulty.
+Puzzles are made on your device from the date, so every past day is already there. Missed a week? Play it. Want more? Switch to Random boards at any difficulty.
 
 KEEP YOUR STREAK
 Track your daily streak, your times and your statistics, all stored privately on your phone.
@@ -17,7 +27,10 @@ Track your daily streak, your times and your statistics, all stored privately on
 PRIVATE BY DESIGN
 Daybook collects nothing. No analytics, no trackers, no third-party SDKs. Your progress never leaves your device.
 
+PHONES AND TABLETS
+Turn your phone on its side or play on a tablet and the board sits beside the controls.
+
 PLAY ANYWHERE
 The same daily puzzles run in a web browser at knowhowit.com.au/daybook, no install needed.
 
-Hand-built puzzle generators, proven boards and a calm, uncluttered design. Come back tomorrow for the next one.
+Open source, with hand-built puzzle generators, proven boards and a calm, uncluttered design. Come back tomorrow for the next one.

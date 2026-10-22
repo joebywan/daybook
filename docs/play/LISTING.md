@@ -12,6 +12,12 @@ for a puzzle.
 text** workflow (`tools/play/upload-listing.py`), which pushes it to Play, and pull requests check the limits.
 Do not edit the text in Play Console; the next run overwrites it.
 
+**Search terms.** "Daybook" alone also finds a popular diary app, so the title says "Daybook Puzzles" and spends the rest
+on the most searched genre (sudoku). The short description and the first line of the full one carry the other terms
+people type: daily, nonogram, word, logic, no ads, offline. Genre names that are generic (killer sudoku, futoshiki, star
+battle, takuzu, hashi) may be named as "-style" descriptions of our puzzles; product names (a card game, a board game,
+a newspaper's or app's puzzle) may not. Play's policy keeps "free" and "no ads" out of the title.
+
 ## Store listing
 
 **App name, short description, full description:** `fastlane/metadata/android/en-US/` (see above).
@@ -28,12 +34,12 @@ Do not edit the text in Play Console; the next run overwrites it.
 |---|---|---|
 | App icon | `../../android/play-icon-512.png` | 512x512 |
 | Feature graphic | `feature-graphic.png` | 1024x500, no alpha (`python3 docs/social-preview/make.py`) |
-| Phone screenshots | `screenshots/1-home.png` ... `5-snap.png` | 1080x1920, 9:16 (the first set was 2:1, which Play also accepted). The emulator's own 1080x2400 is over 2:1 |
-| Tablet screenshots (7-inch and 10-inch) | the same five | Both slots are marked required in the Console, so the phone shots are reused. Tablets now get their own layout in landscape (board beside the controls), so real tablet captures would sell it better; see `docs/TODO.md` |
+| Phone screenshots | `screenshots/1-home.png` ... `7-snap.png` | 1080x1920, 9:16 (the first set was 2:1, which Play also accepted). The emulator's own 1080x2400 is over 2:1 |
+| Tablet screenshots (7-inch and 10-inch) | `tablet-screenshots/1-home.png` ... `7-snap.png` | 2560x1440 landscape at 320 dpi (a 1280x720 dp window, so the board sits beside the controls). One set fills both slots |
 
-The screenshots are emulator captures made by `tools/screenshots/capture.sh` (`wm size 1080x1920`, a clean install, the date pinned to 24 Sep 2026, demo-mode
+The screenshots are emulator captures made by `tools/screenshots/capture.sh` (`wm size 1080x1920`, then 2560x1440 for the tablet set, a clean install, the date pinned to 24 Sep 2026, demo-mode
 status bar: 9:00, no notifications). Run the **Update screenshots** workflow (Actions, manual): it captures, uploads to the listing with `tools/screenshots/upload-play.py` (the service account needs "Manage store presence"; Google reviews the change and the live listing keeps the old images meanwhile) and opens a PR for the `docs/` images, which makes them part of the same "recapture when
-the look changes" duty as `docs/screenshots/`. The 7-inch and 10-inch tablet slots were filled with the same five.
+the look changes" duty as `docs/screenshots/`.
 
 ## Declarations
 

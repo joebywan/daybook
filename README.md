@@ -11,9 +11,11 @@ No ads. No subscription. No accounts. No network permission in the manifest at a
 **[Get it on F-Droid](https://f-droid.org/packages/com.joebywan.daybook/)** ·
 **[Play in the browser](https://knowhowit.com.au/daybook/)**
 
-| Every puzzle, every day | Sudoku | Mosaic | Snap |
+| Every puzzle, every day | Sudoku | Cage Sudoku | Word Wheel |
 |---|---|---|---|
-| ![The home screen: every puzzle for today, the first nine in view](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
+| ![The home screen: today's puzzles, the first nine in view](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Hard Cage Sudoku board with a hint open](docs/screenshots/cage-sudoku.png) | ![A Word Wheel board](docs/screenshots/word-wheel.png) |
+
+![On a tablet the board sits beside the clock, hints and tools: a Cage Sudoku with a hint open](docs/screenshots/tablet-cage-sudoku.png)
 
 ## Install it
 

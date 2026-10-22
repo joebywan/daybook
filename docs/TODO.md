@@ -23,9 +23,6 @@ from a measurement or review, so you can check it is still true.
   on its side shows one row of tiles per screen and scrolls (columns come from width alone; letting height pick a smaller tile
   would fit two); Lexicon's tiles and keyboard keep their phone size on a tablet, leaving the board small in a large box; the
   side panel is empty between the clock and the toolbar unless a hint is open. *S-M.*
-- [ ] **Tablet store screenshots.** Play's 7-inch and 10-inch slots still hold the phone shots (`docs/play/LISTING.md`); capture
-  the landscape tablet layout instead (`tools/screenshots/capture.sh` pins a phone size; a tablet pass needs its own size). *S.*
-
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
   text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it
@@ -40,12 +37,8 @@ from a measurement or review, so you can check it is still true.
   about 27 / 21 / 19% of squares as givens. A locked-candidate technique (a digit whose every place in a region touches
   one square rules that square out) would let the generator take more back, but it ends in an elimination, not a
   placement, and Regions has no pencil marks; it would need a step that explains one elimination and then a placement
-  (Inequality's `SIGN_BOUND` is the model). Also: `docs/screenshots/home.png` still shows sixteen puzzles; it needs an
-  emulator recapture on a clean install. *M / S.*
+  (Inequality's `SIGN_BOUND` is the model). *M.*
 
-- [ ] **Recapture the README screenshots for Cage Sudoku.** `docs/screenshots/home.png` shows the old puzzle count and has no Cage
-  Sudoku tile; a Cage Sudoku board shot (a Hard board with a hint open shows the cages best) could join the table. Needs an emulator
-  on a clean install with the date pinned (CLAUDE.md, "README screenshots go stale silently"); not done in the PR that added it. *S.*
 - [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
   together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
   would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
@@ -53,8 +46,7 @@ from a measurement or review, so you can check it is still true.
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
 - [ ] **Word Wheel: check on a real touch screen.** The swipe was driven in Chromium (CDP touch and mouse) and WebKit (mouse; taps by
   touch), not on the Android emulator or a phone: check a swipe, a back-out along the path, taps and the middle-of-wheel submit there,
-  and that a swipe over the wheel never scrolls or steals the back gesture. Recapture `docs/screenshots/home.png` (the home grid gained
-  a tile) on a clean install. *S.*
+  and that a swipe over the wheel never scrolls or steals the back gesture. *S.*
 - [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
   (`tools/words/wheel-clues.txt`); cluing more widens the boards (every added word moves daily boards, as Lexicon's do). About 40% of
   hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
@@ -207,6 +199,28 @@ and Battleships is close to Tents.
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
   prototype the input before committing. *L.*
+- [ ] **Mines, no guessing.** Minesweeper rules: tap reveals, long-press flags. Ship only boards logic clears from the
+  first reveal (a solver proves it, as the Tents and Tally ladders do); a hint names the deduction ("this 2 already
+  touches two flags, so the rest are safe"). Tiers: size and density. A mine loses the board, as Pointers' lives do. *M.*
+- [ ] **Codeword.** A filled crossword grid with a number for each letter and a few letters given; work out the
+  substitution. No clues, so it avoids the clue-database problem below. Reuses Lexicon's and Word Wheel's lists and
+  Word Wheel's grid layout; uniqueness is pattern matching against the list. Not Cipher: word shapes, not columns. *M–L.*
+- [ ] **Skyscrapers.** A Latin square with edge clues (how many buildings are visible from that side). Inequality's
+  Latin-square rules, generator and prover carry over; only the clue type is new. *S–M.*
+- [ ] **Hitori.** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.
+  Tap-only; the connectivity proof is LITS's shape. *M.*
+- [ ] **Pearl loop (Masyu rules).** One closed loop through squares: it turns on black pearls, goes straight through
+  white ones. Drawn through squares, not along edges, so Snap's drag works and the edge-tapping problem goes away. *L.*
+- [ ] **Dominosa.** A pip grid holds each domino 0-0..N-N once; find where each lies. Tap between two squares to
+  place one. Pairs well with the domino-placement idea above. *M.*
+- [ ] **Galaxies.** Cut the grid into regions, each symmetric under a half-turn about its dot. Shikaku's input,
+  a different deduction. *M–L.*
+- [ ] **Unblock (sliding cars; not the trademarked name).** Slide cars to free the red one. Breadth-first search gives
+  the minimum, so tiers by minimum moves and a cap equal to it (Mosaic's zero slack). Planning, not the 15-puzzle
+  ruled out below, but the least deductive of these. *M.*
+
+Close to existing puzzles, so not suggested: Kakuro (Cages), Kropki (Inequality), Battleships (Tents). Any new
+puzzle first needs the accent-spacing rule relaxed (see "Accents are crowded" below).
 
 **Not recommended** (noted so nobody re-investigates): a crossword needs a licensed clue database, which
 we cannot generate or ship offline; plain word-search and sliding-tile puzzles are generator-easy but do
