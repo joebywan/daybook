@@ -175,8 +175,9 @@ below have a famous branded version; use the descriptive name).
   WebKit, light and dark, 375x537 and tall); `docs/screenshots/home.png` (and its alt text) was not recaptured because that needs the emulator,
   and nobody has tapped the tiles by touch on Android yet.
 - [ ] **Pointers: touch targets on Expert, on a phone.** Expert is 14x17 (capped from 18x20 so a square is about 23dp at 360dp
-  wide, 26 at 390); a mis-tap on a blocked arrow costs a life. Tapped only with Playwright's touch on the web build; check on the
-  emulator and a real phone that a thumb lands on the arrow it aims at, and widen `Pointers.REACH` or cap the size further if not.
+  wide, 26 at 390, 27 on a 1080x2400 phone at 420dpi, about 18 in a phone browser at 375x537); a mis-tap on a blocked arrow costs a
+  life. On the emulator (1080x2400) all 49 taps of a daily Expert board, aimed at square centres by `adb input tap`, took the arrow
+  aimed at; a real thumb is not that precise, so check on a phone and widen `Pointers.REACH` or cap the size further if needed.
   Also recapture `docs/screenshots/home.png` (and its alt text) with Pointers in the grid, on a clean install. *S.*
 - [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
   not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
