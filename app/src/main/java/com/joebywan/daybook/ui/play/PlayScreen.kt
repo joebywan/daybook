@@ -556,6 +556,7 @@ private fun PlayBoard(
         }
 
         // Wide only: the hint sits in the side panel, between the clock and the toolbar, so it never covers the board.
+        // With no hint open the space holds the rules, quietly; a hint takes it over rather than stacking on them.
         Box {
             if (wide && hintSession.active && !state.solved) {
                 HintPanel(
@@ -563,6 +564,17 @@ private fun PlayBoard(
                     modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth(),
                     fill = false,
                 )
+            } else if (wide && !finished) {
+                Column(
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 8.dp),
+                ) {
+                    Text("How to play", style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
+                    Spacer(Modifier.height(6.dp))
+                    puzzle.rules.forEach { rule ->
+                        Text("•  $rule", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                        Spacer(Modifier.height(6.dp))
+                    }
+                }
             }
         }
     }
@@ -683,7 +695,8 @@ private val StackedChrome = 180.dp
 /**
  * The play screen's four pieces, [content] in this order: title, clock, board, toolbar, then the hint slot. Stacked, it
  * is the column it always was (the board takes what the rest leaves, and the hint slot is not placed: the hint is a
- * popover). [wide] puts the first two at the top of a [SidePanel], the toolbar at its foot and the hint slot between,
+ * popover). [wide] puts the first two at the top of a [SidePanel], the toolbar at its foot and the hint slot (the hint, else
+ * the rules) between,
  * with the board filling the rest of the window. One layout for both, so a rotation keeps every board's own saved state
  * (Sudoku's notes mode, Nonogram's pen) where a Row/Column switch would compose the board somewhere new and lose it.
  */
