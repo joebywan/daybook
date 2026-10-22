@@ -23,9 +23,6 @@ from a measurement or review, so you can check it is still true.
   on its side shows one row of tiles per screen and scrolls (columns come from width alone; letting height pick a smaller tile
   would fit two); Lexicon's tiles and keyboard keep their phone size on a tablet, leaving the board small in a large box; the
   side panel is empty between the clock and the toolbar unless a hint is open. *S-M.*
-- [ ] **Tablet store screenshots.** Play's 7-inch and 10-inch slots still hold the phone shots (`docs/play/LISTING.md`); capture
-  the landscape tablet layout instead (`tools/screenshots/capture.sh` pins a phone size; a tablet pass needs its own size). *S.*
-
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
   text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it
@@ -40,12 +37,8 @@ from a measurement or review, so you can check it is still true.
   about 27 / 21 / 19% of squares as givens. A locked-candidate technique (a digit whose every place in a region touches
   one square rules that square out) would let the generator take more back, but it ends in an elimination, not a
   placement, and Regions has no pencil marks; it would need a step that explains one elimination and then a placement
-  (Inequality's `SIGN_BOUND` is the model). Also: `docs/screenshots/home.png` still shows sixteen puzzles; it needs an
-  emulator recapture on a clean install. *M / S.*
+  (Inequality's `SIGN_BOUND` is the model). *M.*
 
-- [ ] **Recapture the README screenshots for Cage Sudoku.** `docs/screenshots/home.png` shows the old puzzle count and has no Cage
-  Sudoku tile; a Cage Sudoku board shot (a Hard board with a hint open shows the cages best) could join the table. Needs an emulator
-  on a clean install with the date pinned (CLAUDE.md, "README screenshots go stale silently"); not done in the PR that added it. *S.*
 - [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
   together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
   would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
@@ -53,8 +46,7 @@ from a measurement or review, so you can check it is still true.
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
 - [ ] **Word Wheel: check on a real touch screen.** The swipe was driven in Chromium (CDP touch and mouse) and WebKit (mouse; taps by
   touch), not on the Android emulator or a phone: check a swipe, a back-out along the path, taps and the middle-of-wheel submit there,
-  and that a swipe over the wheel never scrolls or steals the back gesture. Recapture `docs/screenshots/home.png` (the home grid gained
-  a tile) on a clean install. *S.*
+  and that a swipe over the wheel never scrolls or steals the back gesture. *S.*
 - [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
   (`tools/words/wheel-clues.txt`); cluing more widens the boards (every added word moves daily boards, as Lexicon's do). About 40% of
   hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
