@@ -1,7 +1,8 @@
 # Levels — spec
 
 A third way to play beside Daily and Random: numbered levels, each a fixed set of five boards from different puzzles.
-Finish all five and the next level opens. Not built yet; this file is the plan.
+Finish all five and the next level opens. Part 1 (the plan, the seeds, storage, tests) is built: see "As built"
+below. The screens are not yet; the rest of this file is the plan.
 
 **Why.** A player's feedback (2026-10-22): they finish the dailies, but lose interest in Random because nothing on the
 home screen ticks off. Levels give the boards after the dailies something to tick off and a place in a sequence, without
@@ -157,6 +158,40 @@ The mockup shown to the owner on 2026-10-22 is the reference.
 **L**: two to three days. One PR, or two if it helps review:
 1. `Levels.kt`, `SeedHash.level`, storage and their tests (no UI).
 2. The home mode, the list, the play route, the share card and the docs (`REWARDS.md`, `CLAUDE.md`, `TODO.md`).
+
+## As built (part 1)
+
+`core/Levels.kt`, `SeedHash.level` / `SeedHash.levelPick`, `LevelSolve` and `LevelProgress` in `data/ProgressStore.kt`,
+tests `LevelsTest`, `LevelProgressTest`, `LevelBoardsProvedTest`, and a year of levels in the parity dump. Where it
+differs from the plan above:
+
+- **The deck is a stream of decks, each seeded on its own** (`SeedHash.levelPick(deck, ...)`), not one `Rng` per level.
+  Deck 0 is the first `Levels.STARTER` (25) pool ids shuffled, which is exactly levels 1-5; decks 1, 2, ... are the whole
+  pool (`POOL.take(poolSize)`), and level `n` takes stream cards `5(n-1) until 5n`. A plan builds at most three decks, so
+  level 500 costs what level 6 does (1.3 us a plan on a desktop JVM, measured by `LevelsTest`); nothing is replayed from
+  level 1. Where two decks meet, the first ten cards of the new deck are repaired (a card that would repeat a puzzle in its
+  own level or the level before is swapped with the first later card that does not); a deck's own last ten cards are never
+  moved, so no deck's repair depends on a repair before it and the plan stays pure.
+- **Coverage is "any ten levels" at today's pool of 25.** Every puzzle is in every deck once, so the window is about
+  `2 * poolSize / 5` levels: a bigger pool stretches it (ten levels hold only 50 boards). `LevelsTest` checks ten levels at 25
+  and the stretched window at 26, 30, 40 and 60 (with made-up ids appended), plus five different puzzles and no repeat from
+  the level before at every pool size from 25 to 60.
+- **Levels 1-5 are the first 25 pool ids, not "puzzles with a tutorial today"**, so a plan is a function of (level, pool size)
+  alone and a walkthrough added later cannot move an opened level. A test checks all 25 have a walkthrough; new puzzles never
+  reach levels 1-5.
+- **Tiers** come from `Rng(SeedHash.levelPick(level, ...))` shuffling the curve's multiset, in draw order. The card's line is
+  `Levels.summary(boards)`: "All Standard", "Mostly Hard, one Expert", "Two Standard, two Hard, one Expert".
+- **Storage:** `ProgressStore.openLevel(n): Int` writes `"n|poolSize"` once and returns the stored size;
+  `recordLevelSolve(LevelSolve): Boolean` writes `"n|puzzleId|seconds|hints"` unless that puzzle of that level was solved
+  before (so a replay records nothing for the level). The caller records the practice `Completion` as well. `levelProgress`
+  is a flow of `LevelProgress.of(levels, levelSolves)`, pure: `current`, `opened`, `solves`, `done`, `plan(n)`, `solved(n)`,
+  `isUnlocked(n)`.
+- **Backup needed no change:** the web export copies every `daybook.*` localStorage entry verbatim, so the two new keys
+  travel with it.
+- **Proof:** `LevelBoardsProvedTest` walks levels 1-365 (1,387 boards with a `generateVerified`) and none falls back; about
+  25 s on a desktop JVM, half of it proving (Regions 4 s, Snap 2.4 s, Cages, LITS and Dominoes about 1 s each).
+- **Parity:** `WebParityDumpTest` appends levels 1..N under the pseudo-puzzle `levels` (`ParityFingerprint.levelLines`), the
+  page prints them for `?dump&range=N&puzzle=levels`, and `tools/web-parity/check.py` diffs it as one more page.
 
 ## Open questions for the owner
 
