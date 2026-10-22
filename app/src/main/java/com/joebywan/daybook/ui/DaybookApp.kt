@@ -46,6 +46,10 @@ import kotlinx.datetime.LocalDate
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
 
 /** A shared daily's date: day and month, as the owner's share example has it. */
 private const val SHARE_DATE = "d MMM"
@@ -171,7 +175,8 @@ fun DaybookApp(startAt: Route = Route.Home) {
     CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics) {
     // A short fade between screens (none under reduced motion). Each route is its own keyed content, so a screen's
     // rememberSaveable state is kept across a rotation as before; the screen going out stays composed for the fade.
-    Crossfade(route, animationSpec = if (reducedMotion) snap() else tween(ROUTE_FADE_MS), label = "route") { current ->
+    // On the page colour: fading two screens over the bare window would dim the middle of the fade.
+    Crossfade(route, Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), animationSpec = if (reducedMotion) snap() else tween(ROUTE_FADE_MS), label = "route") { current ->
     when (current) {
         Route.Home -> {
             // Nothing on Android. On the web, today's boards are generated while the grid is being
