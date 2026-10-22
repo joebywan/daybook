@@ -104,6 +104,10 @@ const val OFFERS_BACKUP: Boolean = false
 @Composable
 fun BackupControls() = Unit
 
+/** The web build's pointer to the Android app, under the home grid; this is the app. */
+@Composable
+fun GetTheAppCard() = Unit
+
 /** A board, generated off the main thread so a slow one never freezes the frame. */
 suspend fun generateBoard(puzzle: PuzzleType, seed: Long, difficulty: Difficulty): PuzzleState =
     withContext(Dispatchers.Default) { puzzle.generate(seed, difficulty) }

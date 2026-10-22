@@ -325,6 +325,8 @@ def build_parser():
     ap.add_argument("--storage", type=Path, metavar="JSON",
                     help="a JSON object of localStorage entries ({\"file.key\": \"value\"}) to seed before the page "
                          "loads, e.g. a saved game copied out of a browser; this is how a solved board is shown")
+    ap.add_argument("--user-agent", metavar="UA",
+                    help="browser user agent, e.g. an Android or iPhone one, for device-specific screens")
     ap.add_argument("--timeout", type=float, default=60, help="seconds to wait for a page to settle (default 60)")
     ap.add_argument("--list", action="store_true", help="print the puzzle ids and exit")
     return ap
@@ -377,6 +379,7 @@ def main(argv=None) -> int:
                             viewport={"width": w, "height": h}, device_scale_factor=DEVICE_SCALE,
                             has_touch=True, color_scheme=scheme, locale="en-US",
                             service_workers="block",  # a cached shell would hide a rebuilt dist
+                            user_agent=args.user_agent,
                         )
                         if seed:
                             ctx.add_init_script(
