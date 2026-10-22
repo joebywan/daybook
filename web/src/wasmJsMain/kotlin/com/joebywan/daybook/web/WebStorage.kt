@@ -66,9 +66,7 @@ class LocalStorageKeyValueStore(private val name: String) : KeyValueStore {
     override fun string(key: String): Flow<String?> =
         version.map { lsGet(storageKey(key)) }.distinctUntilChanged()
 
-    override suspend fun putString(key: String, value: String) {
-        write(key, value)
-    }
+    override suspend fun putString(key: String, value: String) = write(key, value)
 
     /** [string]'s current value, read straight away, for start-up code that is not in a coroutine. */
     fun read(key: String): String? = lsGet(storageKey(key))
@@ -134,10 +132,11 @@ object Backup {
     private const val FORMAT = "daybook-backup"
     private val Entries = MapSerializer(String.serializer(), String.serializer())
 
+    /** A key in one of the app's own files. */
+    private fun isOwn(key: String) = key.substringBefore('.') in listOf(KeyValueStore.PROGRESS, KeyValueStore.LAUNCH)
+
     private fun ownKeys(): List<String> =
-        lsKeys().split('\n').filter { key ->
-            key.substringBefore('.') in listOf(KeyValueStore.PROGRESS, KeyValueStore.LAUNCH)
-        }
+        lsKeys().split('\n').filter(::isOwn)
 
     fun export(): String {
         val entries = ownKeys().associateWith { lsGet(it).orEmpty() }
@@ -165,9 +164,7 @@ object Backup {
         val entries = runCatching {
             StoreJson.decodeFromJsonElement(Entries, root.getValue("entries"))
         }.getOrNull() ?: return "That backup is damaged."
-        val wanted = entries.filterKeys { key ->
-            key.substringBefore('.') in listOf(KeyValueStore.PROGRESS, KeyValueStore.LAUNCH)
-        }
+        val wanted = entries.filterKeys(::isOwn)
         ownKeys().forEach(::lsRemove)
         val failed = wanted.count { (key, value) -> !lsSet(key, value) }
         WebStores.reloadAll()

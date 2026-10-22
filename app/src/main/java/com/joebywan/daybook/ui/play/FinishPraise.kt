@@ -28,7 +28,7 @@ data class Praise(
 data class EarnedAchievement(val id: String, val title: String, val description: String)
 
 /** Streak lengths that get the loud treatment. */
-val STREAK_MILESTONES = setOf(7, 30, 100)
+private val STREAK_MILESTONES = setOf(7, 30, 100)
 
 private const val MIN_SAMPLES = 5      // own solves at the tier before a percentile or "long" is meaningful
 private const val PERCENT_FLOOR = 75   // "faster than N%" shown only from here up
