@@ -44,6 +44,8 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.jvmHashSetOrder
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 @Serializable
 data class LitsState(
@@ -1331,6 +1333,11 @@ object Lits : PuzzleType {
         // a drag that is the preview, so letters and crosses follow the finger.
         val letters = remember(shown.shaded) { shown.letters() }
         val impossible = remember(shown.shaded) { shown.impossible() }
+        // A region is finished when its four shaded squares make a piece (the letters, which read the rules).
+        val units = remember(s.region) { s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() } }
+        val handed = remember(s.shaded) { s.letters() }
+        val feel = rememberMoveFeel(s.shaded, units) { u -> units[u].count { s.shaded[it] } == 4 && units[u].all { !s.shaded[it] || handed[it] != null } }
+        val accentColour = Color(accent)
 
         // What a hint or the walkthrough is pointing at. Everything it does not name is dimmed, so
         // the named squares can be found at a glance; [BoardHighlight.strong] squares get a
@@ -1413,15 +1420,17 @@ object Lits : PuzzleType {
                     val c = i % s.width
                     val at = Offset(c * stepPx, r * stepPx)
                     val piece = letters[i]
-                    drawRect(
-                        color = when {
-                            !shown.shaded[i] -> scheme.surfaceVariant
-                            piece == null -> inProgress
-                            else -> colourOf(piece)
-                        },
-                        topLeft = at,
-                        size = Size(stepPx, stepPx),
-                    )
+                    feelSquare(feel, i, at, Size(stepPx, stepPx), accentColour) {
+                        drawRect(
+                            color = when {
+                                !shown.shaded[i] -> scheme.surfaceVariant
+                                piece == null -> inProgress
+                                else -> colourOf(piece)
+                            },
+                            topLeft = at,
+                            size = Size(stepPx, stepPx),
+                        )
+                    }
                     drawRect(
                         color = scheme.background.copy(alpha = 0.35f),
                         topLeft = at,

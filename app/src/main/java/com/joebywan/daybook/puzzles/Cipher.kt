@@ -57,6 +57,8 @@ import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * A Cipher sum in play. [words] (the addends, then the total) and [solution] are fixed for the board;
@@ -369,6 +371,8 @@ object Cipher : PuzzleType {
             shown = live
         }
         val redColumn = shown.column?.let { sum.columnTiles(it) } ?: emptySet()
+        // A digit set on a letter settles on every tile of that letter. No units: a column is judged with its carry.
+        val feel = rememberMoveFeel(s.digits)
 
         BoxWithConstraints(
             Modifier
@@ -413,6 +417,7 @@ object Cipher : PuzzleType {
                     tileModifier = { r, c, l ->
                         val look = highlight.look(sum.tile(r, c))
                         Modifier
+                            .moveFeel(feel, l, Color(accent))
                             .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
                             .ring(look, glow, pulse, corner = 8f)
                             .then(if (sum.tile(r, c) in redColumn) Modifier.border(2.dp, scheme.error, RoundedCornerShape(8.dp)) else Modifier)
