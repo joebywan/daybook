@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -231,6 +232,46 @@ fun BackupControls() {
         )
     }
 }
+
+private fun isIos(): Boolean =
+    js("/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)")
+
+/**
+ * Under the home grid: the Android app and where to get it. Hidden on iPhone and iPad, which cannot install it.
+ * The claims are the manifest's: no INTERNET permission, no other permission a player is asked for.
+ */
+@Composable
+fun GetTheAppCard() {
+    if (remember { isIos() }) return
+    val scheme = MaterialTheme.colorScheme
+    val uri = LocalUriHandler.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 18.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.surface)
+            .padding(14.dp),
+    ) {
+        Text("On Android? Get the app", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+        Text(
+            "The same daily puzzles, installed. It asks for no permissions at all, not even the internet, " +
+                "so there is no tracking and nothing to sign up for. No ads, free, works offline.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BackupButton("Google Play", Modifier.weight(1f)) { uri.openUri(PLAY_URL) }
+            BackupButton("F-Droid", Modifier.weight(1f)) { uri.openUri(FDROID_URL) }
+        }
+    }
+}
+
+private const val PLAY_URL = "https://play.google.com/store/apps/details?id=com.joebywan.daybook"
+
+/** The repo's own page: its QR code, the add-repo link and the key fingerprint. */
+private const val FDROID_URL = "https://knowhowit.com.au/daybook/fdroid/repo/index.html"
 
 @Composable
 private fun BackupButton(label: String, modifier: Modifier, onClick: () -> Unit) {
