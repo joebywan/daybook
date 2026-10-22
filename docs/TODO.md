@@ -165,19 +165,8 @@ below have a famous branded version; use the descriptive name).
   (about even odds of a repeat within two months of Standard days). A cycle needs the day count, which the
   `generate(seed, difficulty)` contract does not carry. Only if repeats bother anyone.
 
-- [ ] **Domino placement on a region board.** A board of cells grouped into coloured regions; each
-  region carries a rule (all cells equal, all different, total equals N, total less than or more than
-  N, or no rule). A tray holds a set of dominoes (two pip counts, 0–6 each); place every domino over
-  two adjacent cells so that every region's rule holds.
-  - *Generation:* tile an irregular shape with dominoes, assign pips at random, read the region rules
-    off the solution, then prove uniqueness with an independent solver and tighten or loosen the rules
-    until there is exactly one answer (the same shape as Kings' proof). Tiers differ by board size,
-    region count and which rule types appear; keep slack at zero like Mosaic.
-  - *Teaching:* the deductions are crisp ("a two-cell region that must total 12 needs a double six, and
-    the tray has one"), which suits the teacher pattern well.
-  - *Input:* drag a domino from the tray with snap-to-cell, tap a placed domino to rotate or lift it.
-    The tray competes with the toolbar for height; Tower's controls are the nearest precedent.
-  - *Size: L.*
+- [ ] **Dominoes: recapture the home screenshot.** Dominoes is the twenty-fifth tile, opening a ninth row on a phone;
+  `docs/screenshots/home.png` (and the store screenshots) were not recaptured with it.
 
 - [ ] **Target: recapture the screenshots and drive it on the emulator.** The new puzzle was rendered on the web build only (Chromium and
   WebKit, light and dark, 375x537 and tall); `docs/screenshots/home.png` (and its alt text) was not recaptured because that needs the emulator,
