@@ -7,6 +7,7 @@ import com.joebywan.daybook.puzzles.Chess
 import com.joebywan.daybook.puzzles.ChessState
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.LexiconState
+import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsState
@@ -112,6 +113,22 @@ class ShareCardTest {
         )
         assertEquals("No hints. 1 undone from a clean run. Tomorrow?", c.nudge)
         assertEquals("On par, nothing undone. Nothing to improve on.", card(Target, s, "mmm").nudge)
+    }
+
+    @Test fun `pointers is the lives left as hearts`() {
+        val board = Pointers.tutorialBoard()
+        var s = board.tap(Pointers.TUTORIAL_ARROWS[Pointers.ROW][0])!!
+        for (i in listOf(Pointers.SIDE, Pointers.ROW, Pointers.HOOK, Pointers.TOP, Pointers.SHORT)) s = s.tap(Pointers.TUTORIAL_ARROWS[i][0])!!
+        val c = card(Pointers, s, "m".repeat(6))
+        assertEquals(
+            "Daybook · Pointers · Expert · 22 Oct\n❤️❤️🖤\n12:04 · 6 day streak\n" +
+                "❤️ life left  🖤 life lost\n$SHARE_URL",
+            c.text,
+        )
+        assertEquals("1 bump. None tomorrow?", c.nudge)
+        val clean = board.copy(removed = board.arrows.indices.toList())
+        assertEquals("Not a single bump.", card(Pointers, clean, "mmmmm").nudge)
+        assertEquals("❤️❤️❤️", card(Pointers, clean, "mmmmm").lines.single().text(false))
     }
 
     @Test fun `sets is a square a claim`() {

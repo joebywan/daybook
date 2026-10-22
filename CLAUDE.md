@@ -275,6 +275,8 @@ hashed into every seed: never rename it.
   colours are derived (four hues, Blue/Amber/Violet/Teal ink, touching arrows differ where four allow), never stored; a bump flashes the
   arrow and the one in its way in `scheme.error`. Keyboard: arrows move a cursor (a square) to the nearest other arrow that way, Enter or
   Space taps it. Highlight indices (the walkthrough only) are arrow indices.
+- Share card (`ui/play/ShareCard.kt`): the lives at the solve as hearts, `❤️❤️🖤` for two of three left, key `❤️ life left  🖤 life lost`,
+  nudge "Not a single bump." with all three; the preview draws the hearts with `Pointers.heartPath`.
 
 ## Typography
 

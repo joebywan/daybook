@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.platform.rememberSharer
+import com.joebywan.daybook.puzzles.Pointers
 
 /** Render-harness hook (`?share` on the web build): the share preview starts open. */
 var sharePreviewOpen = false
@@ -91,7 +92,7 @@ fun SharePreview(card: ShareCard, onClose: () -> Unit) {
     )
 }
 
-/** One symbol at [size]: a rounded square, or Tower's pip (filled, hollow, or a dot for nothing). */
+/** One symbol at [size]: a rounded square, Tower's pip (filled, hollow, or a dot for nothing), or a Pointers heart. */
 @Composable
 private fun MarkShape(mark: Mark, size: Dp) {
     val scheme = MaterialTheme.colorScheme
@@ -107,6 +108,8 @@ private fun MarkShape(mark: Mark, size: Dp) {
             Mark.EXACT -> drawCircle(ink, pip)
             Mark.CLOSE -> drawCircle(ink, pip * 0.9f, style = Stroke(this.size.minDimension * 0.1f))
             Mark.NONE -> drawCircle(scheme.outline, this.size.minDimension * 0.08f)
+            Mark.HEART -> drawPath(Pointers.heartPath(this.size.minDimension), scheme.error)
+            Mark.LOST -> drawPath(Pointers.heartPath(this.size.minDimension), scheme.onSurfaceVariant)
         }
     }
 }

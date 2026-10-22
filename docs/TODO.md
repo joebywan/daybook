@@ -178,10 +178,6 @@ below have a famous branded version; use the descriptive name).
   wide, 26 at 390); a mis-tap on a blocked arrow costs a life. Tapped only with Playwright's touch on the web build; check on the
   emulator and a real phone that a thumb lands on the arrow it aims at, and widen `Pointers.REACH` or cap the size further if not.
   Also recapture `docs/screenshots/home.png` (and its alt text) with Pointers in the grid, on a clean install. *S.*
-- [ ] **Pointers: its share format.** When the share-result graphic lands (move log in the saved game, share preview in
-  FinishPraise/PlayScreen), Pointers gets its own: lives left as hearts in place of the strip, e.g. `❤️❤️🖤` for two left of three,
-  with the key line `❤️ life left  🖤 life lost`, and a preview nudge (all three left: "Not a single bump."). `PointersState.bumps`
-  already logs which arrows bumped. *S.*
 - [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
   not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
 

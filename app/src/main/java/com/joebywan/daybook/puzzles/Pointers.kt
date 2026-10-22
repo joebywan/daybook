@@ -309,7 +309,8 @@ object Pointers : PuzzleType {
         for (r in 0 until h) for (c in 0 until w) drawCircle(colour, 0.05f * unit, Offset((c + 0.5f) * unit, (r + 0.5f) * unit))
     }
 
-    private fun heartPath(size: Float): Path = Path().apply {
+    /** A heart in a [size] square: the lives row, and the share card's. */
+    internal fun heartPath(size: Float): Path = Path().apply {
         val s = size
         moveTo(s * 0.5f, s * 0.9f)
         cubicTo(s * 0.1f, s * 0.62f, s * 0.0f, s * 0.38f, s * 0.08f, s * 0.22f)
