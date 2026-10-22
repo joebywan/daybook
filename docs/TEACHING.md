@@ -14,10 +14,16 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
 - `LocalBoardHighlight` — a CompositionLocal, **not** a `Board` parameter, so boards that ignore it
   compile untouched. Strong cells get the outline; everything else dims.
 - `tutorial: List<TutorialFrame>` — played by `TutorialRunner` on the puzzle's real `Board`. A frame's
-  `accepts` gates the move; a refused state is dropped, so **a walkthrough move must be a single
-  emitted state**. A gesture that emits several (Sets' three taps, Snap's drag a square at a time) is
-  written as one frame per emission, each frame's `state` the previous one's result.
-  The "your turn" frame shows Hint only when the puzzle offers hints.
+  `accepts` (one emitted state is the move) or `steps` (`TutorialStep.REJECT` / `PROGRESS` / `DONE`, for a
+  move of several states: Lexicon's BOAT then Enter, Sudoku's cell then digit) gates the move; a refused
+  state is dropped and the progress so far stays. The "your turn" frame shows Hint only when the puzzle
+  offers hints. Writing them: `docs/PUZZLE_STANDARDS.md` section 8, with the style rules.
+- **A finished walkthrough move moves on by itself** (owner's request: Next after a move only confirmed what the
+  player had just done). The move lands and chimes, its `done` line shows for `TUTORIAL_HOLD_MS` (1 s) while the
+  board takes no input (so a quick extra tap cannot count twice or land on the next board), then the next frame
+  opens with "✓ done" in its feedback line until that frame has news of its own. Next appears only on READ frames
+  (and as Play on the last); on a move frame its place stays empty, so the row keeps its shape. Back cancels a
+  hold and lands on the previous frame's start. The hold is not an animation, so reduced motion leaves it alone.
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the
   panel confirms and clears when `isReached` sees it. Only an explicit "Show me" applies it. **One
   hint is counted per deduction opened**; explaining and Show me are free.
