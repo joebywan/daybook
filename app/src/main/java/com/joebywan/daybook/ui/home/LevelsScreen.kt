@@ -102,6 +102,8 @@ internal fun LevelGrid(
     onAllLevels: (() -> Unit)?,
     note: String = levelNote(progress, level),
     height: Dp = Dp.Infinity,
+    /** The puzzles whose level board has a saved game in progress ("In progress" on the tile, as home's other modes). */
+    inProgress: () -> Set<String> = { emptySet() },
 ) {
     val scheme = MaterialTheme.colorScheme
     val solved = progress.solved(level)
@@ -130,7 +132,7 @@ internal fun LevelGrid(
                 )
             } else {
                 val (puzzle, tier) = board
-                PuzzleTile(puzzle, puzzle.id in solved, isPick = false, previewSize, { onPlay(puzzle.id) }, modifier) { accent ->
+                PuzzleTile(puzzle, puzzle.id in solved, isPick = false, inProgress, previewSize, { onPlay(puzzle.id) }, modifier) { accent ->
                     TileFooter(if (tier == Difficulty.STANDARD) "" else tier.label, accent)
                 }
             }

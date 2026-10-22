@@ -105,7 +105,19 @@ class LaunchPreferences(private val store: KeyValueStore) {
         store.putString(KEY_SOUND, if (play) "on" else "off")
     }
 
+    /**
+     * The player's own order of the home grid, as puzzle ids; empty (the default) means most played first. Read through
+     * `PuzzleOrder.arranged`, so an id from a removed puzzle drops out and a new puzzle joins at the end.
+     */
+    val puzzleOrder: Flow<List<String>> =
+        store.string(KEY_ORDER).map { it.orEmpty().split(',').filter(String::isNotEmpty) }
+
+    suspend fun setPuzzleOrder(ids: List<String>) {
+        store.putString(KEY_ORDER, ids.joinToString(","))
+    }
+
     private companion object {
+        const val KEY_ORDER = "puzzle_order"
         const val KEY_SOUND = "play_sound"
         const val KEY_DIFFICULTY = "difficulty"
         const val KEY_SHOW_TIMER = "show_timer"
