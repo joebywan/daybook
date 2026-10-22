@@ -88,7 +88,7 @@ class AchievementsTest {
             val after = got(h + s)
             // Monotone when the solve is the newest day (streakOf's runs are causal); an archive day can in
             // rare cases split a run differently, which the diff (below) still reports correctly.
-            if (s.day!! >= (h.mapNotNull { it.day }.maxOrNull() ?: s.day!!)) assertTrue(before.all { it in after })
+            if (s.day!! >= (h.mapNotNull { it.day }.maxOrNull() ?: s.day)) assertTrue(before.all { it in after })
             assertEquals(after - before, new(h, s))
 
             // Independent model of the registry-wide and tier conditions, by plain loops.

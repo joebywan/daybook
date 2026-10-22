@@ -119,8 +119,8 @@ private fun DrawScope.star(c: Offset, r: Float, colour: Color) {
     for (i in 0 until 10) {
         val rr = if (i % 2 == 0) r else r * 0.45f
         val ang = -PI.toFloat() / 2 + i * PI.toFloat() / 5
-        val x = c.x + (rr * cos(ang)).toFloat()
-        val y = c.y + (rr * sin(ang)).toFloat()
+        val x = c.x + rr * cos(ang)
+        val y = c.y + rr * sin(ang)
         if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
     }
     p.close()
