@@ -37,6 +37,9 @@ import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.GLOW_ALPHA
+import com.joebywan.daybook.ui.rememberMoveFeel
+import androidx.compose.ui.graphics.drawscope.scale
 
 /** An atom sits on a lattice point and needs exactly [bonds] bond-ends. */
 @Serializable
@@ -658,6 +661,9 @@ object Atoms : PuzzleType {
         // it: a new state tears the gesture detector below down, and cancelling a coroutine is not
         // guaranteed to run onDragCancel, so nothing else is certain to retire a stale preview.
         var dragFrom by remember(s) { mutableStateOf<Int?>(null) }
+        // An atom whose bonds a move changed settles; one that the move gave its full count glows once.
+        val units = remember(s.atoms) { List(s.atoms.size) { intArrayOf(it) } }
+        val feel = rememberMoveFeel(List(s.atoms.size) { s.degree(it) }, units) { s.degree(it) == s.atoms[it].bonds }
         var dragAt by remember(s) { mutableStateOf<Offset?>(null) }
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
@@ -813,48 +819,53 @@ object Atoms : PuzzleType {
                     val c = centre(atom)
                     val complete = s.degree(index) == atom.bonds
                     val fade = if (named(index)) 1f else 0.28f
-                    drawCircle(color = scheme.background, radius = radius, center = c)
-                    drawCircle(
-                        color = when {
-                            index in overloaded -> scheme.error
-                            complete -> Color(accent)
-                            else -> scheme.onBackground
-                        }.copy(alpha = fade),
-                        radius = radius,
-                        center = c,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.05f),
-                    )
-                    // The named atoms get a ring outside their own: strong pulses, soft is quiet.
-                    if (index in highlight.strong) {
+                    scale(feel.scale(index), c) {
+                        drawCircle(color = scheme.background, radius = radius, center = c)
+                        // An atom that has just got its last bond glows once, inside its ring.
+                        val lit = feel.glow(index)
+                        if (lit > 0f) drawCircle(Color(accent).copy(alpha = GLOW_ALPHA * lit), radius, c)
                         drawCircle(
-                            color = glow.copy(alpha = pulse.value),
-                            radius = radius + stepPx * 0.09f,
+                            color = when {
+                                index in overloaded -> scheme.error
+                                complete -> Color(accent)
+                                else -> scheme.onBackground
+                            }.copy(alpha = fade),
+                            radius = radius,
                             center = c,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.07f),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.05f),
                         )
-                    } else if (index in highlight.soft) {
-                        drawCircle(
-                            color = glow.copy(alpha = 0.5f),
-                            radius = radius + stepPx * 0.07f,
-                            center = c,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.03f),
+                        // The named atoms get a ring outside their own: strong pulses, soft is quiet.
+                        if (index in highlight.strong) {
+                            drawCircle(
+                                color = glow.copy(alpha = pulse.value),
+                                radius = radius + stepPx * 0.09f,
+                                center = c,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.07f),
+                            )
+                        } else if (index in highlight.soft) {
+                            drawCircle(
+                                color = glow.copy(alpha = 0.5f),
+                                radius = radius + stepPx * 0.07f,
+                                center = c,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.03f),
+                            )
+                        }
+                        val layout = measurer.measure(
+                            atom.bonds.toString(),
+                            TextStyle(
+                                color = (if (complete) Color(accent) else scheme.onBackground).copy(alpha = fade),
+                                fontSize = (step.value * 0.34f).sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        )
+                        drawText(
+                            layout,
+                            topLeft = Offset(
+                                c.x - layout.size.width / 2f,
+                                c.y - layout.size.height / 2f,
+                            ),
                         )
                     }
-                    val layout = measurer.measure(
-                        atom.bonds.toString(),
-                        TextStyle(
-                            color = (if (complete) Color(accent) else scheme.onBackground).copy(alpha = fade),
-                            fontSize = (step.value * 0.34f).sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                    )
-                    drawText(
-                        layout,
-                        topLeft = Offset(
-                            c.x - layout.size.width / 2f,
-                            c.y - layout.size.height / 2f,
-                        ),
-                    )
                 }
             }
         }

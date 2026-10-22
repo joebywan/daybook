@@ -58,6 +58,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.ceil
+import com.joebywan.daybook.ui.GLOW_ALPHA
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
+import androidx.compose.ui.graphics.drawscope.scale
 
 /**
  * Dominoes (`docs/DOMINO_SPEC.md`): an irregular board, some of it cut into coloured regions that each
@@ -523,6 +527,8 @@ object Dominoes : PuzzleType {
         hues: IntArray,
         labels: Map<Int, TextLayoutResult>,
         overlay: Overlay = Overlay(),
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val u = fit.unit
         val w = s.width
@@ -555,7 +561,11 @@ object Dominoes : PuzzleType {
 
         // Laid dominoes, then the region outlines in the gaps around them.
         val pips = DominoLogic.pipsOf(s)
-        for (d in s.tray.indices) s.placed[d]?.let { drawLaid(s, fit, d, it, paint) }
+        for (d in s.tray.indices) s.placed[d]?.let { p ->
+            scale(feel.scale(p.first), (rect(p.first).center + rect(p.second).center) / 2f) { drawLaid(s, fit, d, p, paint) }
+        }
+        // A region that has just kept its rule glows once, square by square.
+        for (i in 0 until n) feel.glow(i).takeIf { it > 0f }?.let { drawRect(accent.copy(alpha = GLOW_ALPHA * it), rect(i).topLeft, rect(i).size) }
         val edgeW = u * 0.065f
         val inset = u * 0.04f
         for (i in 0 until n) {
@@ -768,6 +778,8 @@ object Dominoes : PuzzleType {
             settled = brokenNow
         }
         val broken = BooleanArray(s.rules.size) { brokenNow[it] && settled.getOrElse(it) { false } }
+        // A laid domino settles; a region it completes by its rule glows once.
+        val feel = rememberMoveFeel(DominoLogic.pipsOf(s).toList(), s.layout.regionSquares) { holds[it] }
 
         BoxWithConstraints(
             Modifier
@@ -811,6 +823,7 @@ object Dominoes : PuzzleType {
                             pulse = pulse.value,
                             select = Color(accent),
                         ),
+                        feel, Color(accent),
                     )
                 }
                 // The tray is what the player reaches for to make a hinted move: keep the popover off it.

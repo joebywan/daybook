@@ -56,6 +56,8 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** One fill: the cell tapped, and the colour poured into the area it belongs to. */
 data class MosaicMove(val cell: Int, val colour: Int)
@@ -1107,6 +1109,8 @@ object Mosaic : PuzzleType {
                 // the width alone would run it off the bottom of the screen.
                 val step = minOf(maxWidth / s.width, maxHeight / s.height)
                 val stepPx = with(LocalDensity.current) { step.toPx() }
+                // The area a fill recoloured settles. No units: the only one is the whole board, which is the solve.
+                val feel = rememberMoveFeel(s.cells)
 
                 Canvas(
                     Modifier
@@ -1130,11 +1134,13 @@ object Mosaic : PuzzleType {
                     for (cell in s.cells.indices) {
                         val r = cell / s.width
                         val c = cell % s.width
-                        drawRect(
-                            color = palette[s.cells[cell]],
-                            topLeft = Offset(c * stepPx, r * stepPx),
-                            size = Size(stepPx, stepPx),
-                        )
+                        feelSquare(feel, cell, Offset(c * stepPx, r * stepPx), Size(stepPx, stepPx), Color.Unspecified) {
+                            drawRect(
+                                color = palette[s.cells[cell]],
+                                topLeft = Offset(c * stepPx, r * stepPx),
+                                size = Size(stepPx, stepPx),
+                            )
+                        }
                     }
 
                     // Colour is never the only signal: one digit per area, in its first cell, the same
