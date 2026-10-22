@@ -10,6 +10,9 @@ import com.joebywan.daybook.core.SeedHash
 import com.joebywan.daybook.ui.play.EarnedAchievement
 import com.joebywan.daybook.ui.play.Praise
 import com.joebywan.daybook.ui.play.finishPreview
+import com.joebywan.daybook.ui.play.shareCard
+import com.joebywan.daybook.ui.play.sharePreviewOpen
+import com.joebywan.daybook.puzzles.LexiconState
 import kotlin.time.TimeSource
 
 /**
@@ -121,6 +124,14 @@ private fun dump(params: Map<String, String>, today: Day, tier: Difficulty) {
     println("DUMP DONE")
 }
 
+/** A share card for the render harness: three Lexicon guesses after a hint, or 23 logged moves with undos and a hint. */
+private fun sampleShare(id: String?, tier: Difficulty) = (id?.let(PuzzleRegistry::byId) ?: PuzzleRegistry.all.first()).let { p ->
+    val words = p.id == "words"
+    val state = if (words) LexiconState(5, 6, "crane", listOf("slate", "pride", "crane")) else p.generate(1L, tier)
+    val log = if (words) "mmhm" else "mmmmmmumm" + "m".repeat(9) + "hmmmmm"
+    shareCard(p, tier, "22 Oct", "12:04", 6, state, log, hints = 1)
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     val params = query()
@@ -138,8 +149,10 @@ fun main() {
         finishPreview = Praise(
             title = if (n > 0) "7 day streak" else null, big = n > 0, lines = listOf("No hints needed."),
             achievements = all.take(n), toGo = if ("togo" in params) "Only Hard on Kings left for all done today!" else null,
-            share = "preview",
+            share = sampleShare(params["puzzle"], tier),
         )
+        // `&share` opens the share preview over the frame.
+        sharePreviewOpen = "share" in params
     }
 
     ComposeViewport(viewportContainerId = "app") {
