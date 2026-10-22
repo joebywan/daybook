@@ -6,6 +6,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -24,6 +27,7 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import kotlinx.coroutines.launch
 
 /**
  * The keyboard plumbing every board shares (web, or a hardware keyboard on Android): the board's own
@@ -37,6 +41,11 @@ import androidx.compose.ui.input.key.type
  * [onKey] gets a key that is not part of a chord and says whether the board uses it (true consumes it,
  * even when the key changes nothing). `repeat` is true for the auto-repeat of a held key: act on it
  * only for arrows (see [isArrow]). Shift+key reaches [onKey] only when [shift] is set.
+ *
+ * Keys are paced one per recomposition. Every board works its move out from the state it was last
+ * composed with, so a second key before the next frame acted on the stale board and the first was lost:
+ * "crane" typed at speed into Lexicon came out "CE", and four quick arrows moved Sudoku's cursor once.
+ * A key that arrives while the board is still catching up waits in a queue and is consumed then.
  */
 @Composable
 fun Modifier.boardKeys(
@@ -46,6 +55,27 @@ fun Modifier.boardKeys(
 ): Modifier {
     val focus = remember { FocusRequester() }
     var held by remember { mutableStateOf<Key?>(null) }
+    val latest by rememberUpdatedState(onKey)
+    val live by rememberUpdatedState(enabled)
+    val pacer = remember { KeyPacer() }
+    val scope = rememberCoroutineScope()
+    // Two frames: the key's state lands in the first frame's recomposition, which runs after its frame callbacks.
+    fun press(p: KeyPress): Boolean {
+        val used = latest(p.key, p.shift, p.repeat)
+        if (used) {
+            pacer.settling = true
+            scope.launch {
+                while (true) {
+                    withFrameNanos { }
+                    withFrameNanos { }
+                    val next = pacer.queue.removeFirstOrNull() ?: break
+                    if (live) latest(next.key, next.shift, next.repeat) else pacer.queue.clear()
+                }
+                pacer.settling = false
+            }
+        }
+        return used
+    }
     val strong = LocalBoardHighlight.current.strong
     LaunchedEffect(enabled, strong) { if (enabled) focus.requestFocus() }
     return this
@@ -63,12 +93,28 @@ fun Modifier.boardKeys(
                 KeyEventType.KeyDown -> {
                     val repeat = held == event.key
                     held = event.key
-                    onKey(event.key, event.isShiftPressed, repeat)
+                    val p = KeyPress(event.key, event.isShiftPressed, repeat)
+                    when {
+                        !pacer.settling -> press(p)
+                        // A held key outrunning the frames is dropped rather than piled up to run on after release.
+                        repeat && pacer.queue.isNotEmpty() -> true
+                        // Consumed now and judged later, so a key the board turns down mid-burst (H, Esc) is lost;
+                        // splitting each board's onKey into "uses" and "apply" would fix it if that ever matters.
+                        else -> { pacer.queue.addLast(p); true }
+                    }
                 }
                 else -> false
             }
         }
         .focusable(enabled)
+}
+
+private class KeyPress(val key: Key, val shift: Boolean, val repeat: Boolean)
+
+/** Keys waiting for the board to catch up with the last one. Plain fields: read only from event handlers and the pacing coroutine. */
+private class KeyPacer {
+    var settling = false
+    val queue = ArrayDeque<KeyPress>()
 }
 
 /** (dRow, dCol) for an arrow key, or null. */
