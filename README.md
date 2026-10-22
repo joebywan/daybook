@@ -215,8 +215,9 @@ JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew test
 ## Releases, CI and signing
 
 Every push to `main` builds a signed release APK and publishes it as a GitHub Release.
-Versions come out as `<version.txt>.<run number>` — bump `version.txt` for a meaningful
-version, otherwise the run number keeps `versionCode` rising on its own.
+Versions come out as `<version.txt>.<run number>`. A new feature (a new puzzle, say) bumps the
+middle number in `version.txt` (`1.0` to `1.1`); fixes leave it alone and get the next run number.
+The run number is also `versionCode`, so it keeps rising on its own.
 
 **Signing is what makes updates install over the top.** Three things are checked before
 anything is published, because each has broken an Android release before:
