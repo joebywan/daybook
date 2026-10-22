@@ -333,6 +333,36 @@ is hashed into every seed: never rename it.
   numbers can make it any more (solid `scheme.error`, so it cannot be mistaken for a Rose or Amber chip), after a 1 s debounce. Hue pair from `BoardHues.pair(digits.hashCode())`: A tints the target chips, B
   inks the circles. Highlight indices: squares `0 until n*n`, row target `n*n + r`, column target `n*n + n + c`.
 - The regions variant of the genre (sums per coloured region as well as per line) was deliberately not built; see `docs/TODO.md`.
+## Sand (colour sort)
+
+Tubes of layered coloured sand; pour from tube to tube until every tube holds one colour (the water-sort family). Spec and decisions:
+`docs/SAND_SPEC.md`. `puzzles/SandRules.kt` (`SandLogic`: rules, the budgeted search, the deal, the difficulty filter), `Sand.kt` (state, board,
+palette, walkthrough, motif), `SandTeacher.kt`, `SandKeys.kt`. `id = "sand"` is hashed into every seed: never rename it.
+
+- **Tiers: 5 / 7 / 8 colours, height 4, two spare tubes on every tier** (slack never varies). Measured by `SandBalanceTest` over a year: a naive pourer
+  sorts 79 / 44 / 27% of tries, a careful one 84 / 52 / 33%, the solver's median search 21 / 30 / 37 positions. 8x4 is clearly harder than 7x4, so
+  Expert stayed at height 4.
+- **Several answers by policy; the proof is a witness.** `SandLogic.solve` is depth first over canonical positions (tubes sorted; the visited set is
+  membership only) with a budget, and its verdict is structural: `Verdict.Solvable(path)` / `Unsolvable` (exhaustive) / `Truncated`. Only `Solvable`
+  ships; only `Unsolvable` calls a pour a mistake. There is **no "never pour back" pruning** (it is not exact when the target already had the colour);
+  the two prunings left skip only positions with the same canonical key. Every deal so far has been sortable and none truncated.
+- **The deal** is Fisher-Yates over the `Rng(seed + attempt)`, full tubes then two empty ones; a deal with a tube of one colour or a run longer than
+  `H - 2` anywhere in a tube is redrawn (15 / 14 / 10% of attempts). Then the **difficulty filter**: a board a naive pourer (`naiveSorts`, seeded)
+  sorts on all six tries is redrawn; it rejects about half of Standard's deals and almost none above. A year never reaches `lastResort` (`FallbackTest`).
+- **`solved` checks the rules** (every tube empty or `H` of one colour); stuck (no pour at all) is derived and shown in a reserved caption.
+- **`SandState.log` keeps the pours** (as Target's log), only so a mistake can name the pour that lost the board and "Show me" can go back to the last
+  board that sorts (`withoutFrom`). The spec first said nothing but the tubes would be stored; without the log the real pour cannot be found (a
+  median of 14 boards one pour back could have led to an unsortable one). A board with no log falls back to putting back one pour's sand
+  (`SandLogic.unpours`). The lifted tube, the shake and the pour stream are `remember` state and decoration; one pour is one state.
+- **Hints never fall back** (nothing is hidden). The first three ladder steps are offered only when they make progress (fewer places two colours meet
+  in a tube, else fewer tubes in use, else more finished), which no pour ever undoes, so following hints cannot circle; `SandTeachingTest` follows them
+  from 200 boards a tier. Highlight indices: tube `i` is `i`.
+- **Layout: the row count (1 to 3) is whichever gives the widest tube**, and a tube's tap target is its whole column (gap and full
+  height), at least 48 dp and widened towards 56 dp (`Sand.layout`, `SandLayoutTest`). The owner's baseline for too small is
+  Nonogram Expert's square on a phone (16.6 dp at 375x537, 19.2 dp at 390x844). At 375x537 every tier is two rows of 39 dp tubes
+  in 57 dp columns; at 390x844 Standard's tubes are 63 dp, Hard's and Expert's 50 dp.
+- Colours: six hues at three steps, ordered by CIEDE2000 with colour-blind vision for the 5 / 7 / 8 prefixes (`SandPaletteTest`), and a symbol on every
+  layer. The grain and the uneven tops come from the tube and layer index, never random per frame and never stored.
 
 ## Typography
 
@@ -352,7 +382,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality and Cipher (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Cipher and Sand (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
