@@ -109,6 +109,7 @@ private fun AppearanceChoice(appearance: Appearance, onAppearance: (Appearance) 
             )
         }
         SegmentedControl(
+            modifier = Modifier,
             options = Appearance.entries,
             selected = appearance,
             label = { it.label },
