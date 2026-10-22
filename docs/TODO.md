@@ -104,6 +104,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Web icons are pinned at `material-icons-extended` 1.7.3** (`gradle/libs.versions.toml`, the last
   published; move to Material Symbols vector resources eventually). The deprecated `compose.*` accessors and
   `getting` in `web/build.gradle.kts` are gone. *S.*
+- [ ] **`app/proguard-rules.pro` is not used.** The release build type names no `proguardFiles`, so R8 runs on the
+  library consumer rules alone and the file's `-keepclassmembers class com.joebywan.daybook.core.**` never applies (found
+  while building the release save check: a rule added there changed nothing until `proguardFiles(...)` was added). Saves load
+  without it (the check passes), so either delete the file or wire it in; wiring it in changes the shipped code, so run
+  `tools/save-check/check.py` on the result. *S.*
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 

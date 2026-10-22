@@ -87,6 +87,13 @@ jobs:
           ./tools/verify-apk.sh app/build/outputs/apk/release/app-release.apk
           ./tools/verify-aab.sh app/build/outputs/bundle/release/app-release.aab
 
+      # SaveCompatibilityTest reads the frozen saves with the debug build; this reads them with the R8 build that
+      # ships. A save it cannot load is a player's game lost on update, so it blocks the release.
+      - name: Check the release loads saved games
+        uses: ./.github/actions/save-check
+        with:
+          apk: app/build/outputs/apk/release/app-release.apk
+
       - name: Name the artifacts
         id: artifact
         run: |
