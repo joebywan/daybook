@@ -176,19 +176,19 @@ below have a famous branded version; use the descriptive name).
   and nobody has tapped the tiles by touch on Android yet.
 - [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
   not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
+- [ ] **Cipher: recapture the screenshots and drive it on the emulator.** Rendered on the web build only (Chromium and WebKit, light and dark,
+  375x537 and 390x844); `docs/screenshots/home.png` and its alt text were not recaptured (needs the emulator), and nobody has played it by touch on Android.
+- [ ] **Cipher: other shapes need longer words.** Every tier is 4 + 4 = 5 because the leading carry is the foothold the no-trial ladder needs, and the
+  answer lists stop at five letters. A screened six-letter answer list (SCOWL through `tools/words/build.py`, screened by hand as the others were) would
+  allow 5 + 5 = 6, which would give Hard and Expert a different look. Measured without it: 5 + 5 = 5 gave one ladder board per 30 pairs, three addends none.
+- [ ] **Cipher: candidate notes, if players ask.** Not built: every hint ends in a digit placed, so none relies on an elimination the player must track.
+  Sudoku's notes are the model (a mask per letter, defaulted; the mode `rememberSaveable`).
 
 ### Suggested
 
 Roughly in order of how well they fit, best first. Before adding one, read the existing puzzles' `rules`, not just their
 names: Bridges (Hashi) turned out to be Atoms, Star Battle is Kings, Takuzu is Mambo, Calcudoku is Cage Sudoku plus Inequality,
 and Battleships is close to Tents.
-- [ ] **Cryptic sum (cryptarithm), wanted by the owner (2026-10-22).** Letters stand for digits in a sum (SEND + MORE = MONEY);
-  each letter one digit, no leading zero. Not to be confused with Target: Target builds up to a number, this works backwards
-  from columns and carries to which digit each letter is. Words from `LexiconWords` make the sums read as words. Generation:
-  pick words, keep sums with exactly one assignment (backtracking proof, no budget; an independent column-by-column oracle in
-  the test). Tiers by word length and count of addends. Check the teacher can explain every step from carries and column
-  parity ("the sum is longer than both addends, so its first letter is 1") before committing; if steps need trial, the board
-  fails the owner's "think, don't guess" test. Share graphic: the strip. *M-L.*
 - [ ] **Island-and-sea puzzle.** Numbered cells grow islands of that size, islands never touch, the sea is
   one connected body with no 2x2 pool. Same family as Kings/LITS (region logic, a connectivity
   proof in the solver); the teacher can name each rule it uses. *M–L.*

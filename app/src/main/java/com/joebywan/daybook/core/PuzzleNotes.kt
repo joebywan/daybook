@@ -122,6 +122,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "You never have to use every number.",
         "Subtract or divide, and the bigger tile goes first for you.",
     ),
+    "cipher" to listOf(
+        "A total longer than the addends starts with a carried 1.",
+        "Two digits and a carry make at most 19, so a carry is 0 or 1.",
+        "X + Y ending in X: Y is 0, or 9 with a carry coming in.",
+        "Work from the units: each column tells the next its carry.",
+        "No word starts with 0, so 0 hides in a word's later letters.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */
