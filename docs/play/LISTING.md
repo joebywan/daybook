@@ -12,6 +12,12 @@ for a puzzle.
 text** workflow (`tools/play/upload-listing.py`), which pushes it to Play, and pull requests check the limits.
 Do not edit the text in Play Console; the next run overwrites it.
 
+**Search terms.** "Daybook" alone also finds a popular diary app, so the title says "Daybook Puzzles" and spends the rest
+on the most searched genre (sudoku). The short description and the first line of the full one carry the other terms
+people type: daily, nonogram, word, logic, no ads, offline. Genre names that are generic (killer sudoku, futoshiki, star
+battle, takuzu, hashi) may be named as "-style" descriptions of our puzzles; product names (a card game, a board game,
+a newspaper's or app's puzzle) may not. Play's policy keeps "free" and "no ads" out of the title.
+
 ## Store listing
 
 **App name, short description, full description:** `fastlane/metadata/android/en-US/` (see above).
