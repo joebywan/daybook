@@ -150,6 +150,8 @@ fun HomeScreen(
             .background(scheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
+        // A phone on its side. A tablet in landscape is taller than this and keeps the stacked rows.
+        val short = maxHeight < 480.dp && maxWidth > maxHeight
         val gridHeight = maxHeight - TopPadding - with(density) { (headerHeight + optionsHeight).toDp() }
         // The tier and Daily/Random rows stay pinned while the title and the grid scroll under them, so a player
         // halfway down the grid can change either without scrolling back. The grid is sized to fit without
@@ -161,6 +163,7 @@ fun HomeScreen(
             item {
                 Header(
                     modifier = Modifier.onSizeChanged { headerHeight = it.height },
+                    compact = short,
                     today = today,
                     streak = streak,
                     onArchive = { pickingArchive = true },
@@ -172,10 +175,10 @@ fun HomeScreen(
             stickyHeader {
                 // Opaque, so the tiles scrolling under it do not show through.
                 Column(
-                    Modifier.fillMaxWidth().background(scheme.background).padding(vertical = 14.dp)
+                    Modifier.fillMaxWidth().background(scheme.background).padding(vertical = if (short) 8.dp else 14.dp)
                         .onSizeChanged { optionsHeight = it.height },
                 ) {
-                    LaunchOptions(difficulty, onDifficulty, mode, onMode)
+                    LaunchOptions(difficulty, onDifficulty, mode, onMode, sideBySide = short)
                 }
             }
             item {
@@ -210,6 +213,7 @@ private val TopPadding = 14.dp
 @Composable
 private fun Header(
     modifier: Modifier,
+    compact: Boolean,
     today: LocalDate,
     streak: Streak,
     onArchive: () -> Unit,
@@ -228,8 +232,15 @@ private fun Header(
                 style = MaterialTheme.typography.displaySmall.copy(fontSize = 24.sp),
                 maxLines = 1,
                 color = scheme.onBackground,
-                modifier = Modifier.weight(1f),
+                modifier = if (compact) Modifier else Modifier.weight(1f),
             )
+            // On a short window the date and streak join the title's row, which gives the grid back about 44dp.
+            if (compact) {
+                Spacer(Modifier.width(14.dp))
+                HeaderDate(today, oneLine = true, Modifier.weight(1f))
+                StreakBadge(streak)
+                Spacer(Modifier.width(10.dp))
+            }
             HeaderButton(Icons.Default.History, "Archive", onArchive)
             Spacer(Modifier.width(6.dp))
             HeaderButton(Icons.Default.InsertChart, "Statistics", onStats)
@@ -241,19 +252,26 @@ private fun Header(
             Spacer(Modifier.width(6.dp))
             HeaderButton(Icons.Default.Settings, "Settings", onSettings)
         }
-        Row(
+        if (!compact) Row(
             Modifier.fillMaxWidth().padding(top = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                formatDate(today, HEADER_DATE),
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
+            HeaderDate(today, oneLine = false, Modifier.weight(1f))
             StreakBadge(streak)
         }
     }
+}
+
+@Composable
+private fun HeaderDate(today: LocalDate, oneLine: Boolean, modifier: Modifier) {
+    Text(
+        formatDate(today, HEADER_DATE),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = if (oneLine) 1 else Int.MAX_VALUE,
+        overflow = if (oneLine) TextOverflow.Ellipsis else TextOverflow.Clip,
+        modifier = modifier,
+    )
 }
 
 /** Four of them share the header with the title, so each is a little under the 40dp the three used to be. */
