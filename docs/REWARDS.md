@@ -75,6 +75,10 @@ history already satisfies one sees it earned in the list and is never told, so t
 Owner's design (Figma "Daybook-achieve-draft"): a full-screen overlay on the solved board. A BANNER at the top
 ("Congratulations!" or the streak title between two drawn party poppers, `PartyPopper` in `FinishExtras.kt`, then the time
 and one personal line), the next-step BUTTONS in a box at the bottom, and the CENTRE left open so the board shows through.
+- **Full show or light flourish** (`Praise.full`, decided in `finishPraise`, tested in `FinishPraiseTest`): the full
+  confetti for the first daily solve of today, an Expert solve, a personal record, a streak milestone (7, 30, 100) or an
+  earned achievement; any other solve gets a light flourish, 14 pieces for 1.2 s. A frame with no verdict (the render
+  hook) is full. The banner and poppers are the same either way.
 - **Confetti** (`Confetti`): 70 pieces on a Canvas over the whole screen, ~2 s, once per finish (`confettiPlayed` is
   `rememberSaveable`, so a rotation does not replay it), takes no input. Not drawn at all under the system's reduced motion
   (`LocalReducedMotion`, below); the Sound switch governs the chime only. No emoji: the web build has no emoji font.
@@ -123,7 +127,15 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   arrow simply goes and a bump flashes red without the shake; Sand has no pour stream and no refusal shake (the refused tube's red tint, shown always, is held 400 ms
   instead of fading), and a lifted tube rises at once; a Pipes tile shows its new turn; the hint popover jumps rather than slides. Fades (the finished frame's
   fade-in) and the loading spinner stay: they are not motion across the screen. A new decorative animation should read
-  `LocalReducedMotion` too.
+  `LocalReducedMotion` too. Also off under it: the move feel below, and the 200 ms fade between screens (`DaybookApp`'s
+  `Crossfade`; screens cut).
+- **Move feel** (`ui/MoveFeel.kt`, `rememberMoveFeel`): the squares a move changed are drawn 8% large and ease back over
+  120 ms; a unit the move finished by the rules (a Sudoku row, column, box or cage; an Inequality line; a Regions region; a
+  Kings row, column or region; a Tents or Mambo line; a Nonogram or Tally line, beside their green clue; a LITS region with its
+  piece; a Dominoes region keeping its rule; a full Sand tube; a found Word Wheel word; an Atoms atom with all its bonds)
+  has a soft band of the puzzle's accent run along it once (400 ms, at most 35%). Only a move fires it (`LocalMoveCount`,
+  raised by `PlayScreen.push`): a board loaded, restarted, undone into a finished unit or shown in the walkthrough stays
+  quiet. Draw phase only; nothing moves or resizes. Boards left out: `docs/TODO.md`.
 - **Haptics** (`rememberHaptics`, `LocalHaptics`): `tick` when a push changes the board (the same test as the play log's
   move: a selection or a typed letter is silent), `bump` for a Pointers bump or a wrong Sets pick, `success` on a solve
   beside the chime (the solving move does not tick as well). Android uses `performHapticFeedback` (CLOCK_TICK; REJECT and

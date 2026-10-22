@@ -58,6 +58,12 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
   registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
 - [ ] **Levels.** A third mode beside Daily and Random: numbered packs of five boards that open one after another, so
   boards after the dailies have something to tick off (a player's feedback, 2026-10-22). Spec: `docs/LEVELS_SPEC.md`. *L.*
+- [ ] **Move feel: boards left out.** `ui/MoveFeel.kt` (settle and unit glow) is on every grid board but these: Mate (the
+  reply already lands in a second beat with the last move marked), Pointers (its slide), Pipes (its turn), Snap (the line follows
+  the finger square by square), Sets (a pick, not a placement), Tower (submitting clears the row being built, so a settle would
+  pop empty pegs; the new guess row could settle instead). No unit glow on Cipher (a column is judged with its carry), Mosaic,
+  Target, Lexicon, Shikaku (no unit short of the solve, or a rectangle is itself the move). Home: the solved tick could pop in
+  on the way back from a solve (not built). *S each.*
 - [ ] **Puzzle of the week.** A larger board once a week (e.g. Sundays), from the same `hash(date, puzzle, tier)` scheme so it
   stays offline and free; most generators already scale by size. The owner wants it argued with worked examples per puzzle that fit a
   phone screen first: Nonogram Expert is already as big as a phone allows. Decide which puzzles take part (only those whose larger

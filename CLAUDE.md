@@ -433,6 +433,9 @@ hashed into every seed: never rename it.
 The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
+A move's feel (the changed squares settle, a unit finished by the rules glows once) is `ui/MoveFeel.kt`'s
+`rememberMoveFeel`, read in the draw phase; it fires only on `LocalMoveCount` (raised by `push`, so never on load,
+undo, restart or the walkthrough). A new board passes its cells and units to it rather than animating its own.
 
 ## Typography
 
