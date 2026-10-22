@@ -109,10 +109,11 @@ internal fun decodeRoute(text: String): Route {
 
 /**
  * The whole app. [startAt] is where it opens — Home unless something asked for a particular
- * screen, which on the web is a `?puzzle=` link.
+ * screen, which on the web is a `?puzzle=` link. [startMode] is the home grid's mode: Daily on
+ * every launch, except where the web's render harness asks for another (`?mode=`).
  */
 @Composable
-fun DaybookApp(startAt: Route = Route.Home) {
+fun DaybookApp(startAt: Route = Route.Home, startMode: LaunchMode = LaunchMode.DAILY) {
     val progressFile = rememberKeyValueStore(KeyValueStore.PROGRESS)
     val store = remember(progressFile) { ProgressStore(progressFile) }
     val scope = rememberCoroutineScope()
@@ -149,7 +150,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
     val playSolveSound = rememberSolveSoundPlayer(playSound)
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
     // back to Daily, because that is what the app is for.
-    var mode by rememberSaveable { mutableStateOf(LaunchMode.DAILY) }
+    var mode by rememberSaveable { mutableStateOf(startMode) }
 
     // Null until the store answers: a level board's seed depends on the pool size its level was opened with,
     // so the play route waits for it rather than deal a board from a guess.
