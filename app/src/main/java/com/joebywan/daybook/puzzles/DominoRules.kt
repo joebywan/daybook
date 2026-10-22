@@ -384,9 +384,6 @@ internal object DominoLogic {
     /** Draws tried per seed before [generateVerified] gives up. */
     const val ATTEMPTS = 200
 
-    /** How many times one draw may be tightened before it is abandoned. */
-    private const val TIGHTEN_CAP = 60
-
     /**
      * A board for [seed] that the tier's ladder finishes needing exactly its deepest step, and that
      * [solutions] proves has one answer; null when none of [ATTEMPTS] draws was. Draw `a` uses
@@ -438,10 +435,13 @@ internal object DominoLogic {
         }
 
         val cut = Cut(w, h, openList, values, spec)
+        // With every square's value given the ladder must still finish, or no tightening ever will (two
+        // tilings that both use only tray dominoes): one check instead of tightening to the end to find out.
+        if (!cut.finishesAllGiven(tray)) return null
         cut.carve(rng)
-        var tightened = 0
+        // One fact at a time. (Doubling batches was measured: the overshoot left Hard boards too easy for their tier.)
         while (!cut.finishes(tray, spec.needs)) {
-            if (tightened++ >= TIGHTEN_CAP || !cut.tighten(rng)) return null
+            if (!cut.tighten(rng)) return null
         }
         cut.loosen(rng, tray)
         val layout = cut.layout(tray)
@@ -567,19 +567,16 @@ internal object DominoLogic {
             return true
         }
 
-        /** The loosenings [loosen] may try on the board as it stands, in index order. */
-        private fun loosenings(): List<IntArray> {
-            val out = ArrayList<IntArray>()
-            for (id in rules.indices) {
-                val rule = rules[id] ?: continue
-                out.add(intArrayOf(DROP, id))
-                if (rule.kind == RuleKind.SUM) {
-                    if (spec.bounds) { out.add(intArrayOf(TO_LESS, id)); out.add(intArrayOf(TO_MORE, id)) }
-                    if (spec.different) out.add(intArrayOf(TO_DIFFERENT, id))
-                }
-                for (other in id + 1 until rules.size) if (rules[other] != null) out.add(intArrayOf(MERGE, id, other))
+        /** The loosenings of region [id], strongest first: drop it, merge it with a neighbour (random order), then its bounds (random order). */
+        private fun loosenings(rng: Rng, id: Int): List<IntArray> {
+            val rule = rules[id] ?: return emptyList()
+            val merges = rules.indices.filter { it != id && rules[it] != null }.map { intArrayOf(MERGE, id, it) }
+            val bounds = ArrayList<IntArray>()
+            if (rule.kind == RuleKind.SUM) {
+                if (spec.bounds) { bounds.add(intArrayOf(TO_LESS, id)); bounds.add(intArrayOf(TO_MORE, id)) }
+                if (spec.different) bounds.add(intArrayOf(TO_DIFFERENT, id))
             }
-            return out
+            return listOf(intArrayOf(DROP, id)) + rng.shuffled(merges) + rng.shuffled(bounds)
         }
 
         /** Applies loosening [op] if it still makes sense on the board as it stands; the undo, or null. */
@@ -620,23 +617,35 @@ internal object DominoLogic {
             }
         }
 
-        /** Every loosening in random order, kept while the tier's ladder still finishes the board; two passes. */
+        /**
+         * Each region once, in random order: the strongest loosening of it that the tier's ladder still
+         * finishes, if any (a merge's region is not visited again).
+         */
         fun loosen(rng: Rng, tray: List<Domino>) {
-            repeat(LOOSEN_PASSES) {
-                for (op in rng.shuffled(loosenings())) {
+            for (id in rng.shuffled(rules.indices.toList())) {
+                for (op in loosenings(rng, id)) {
                     val undo = apply(op) ?: continue
-                    if (!finishes(tray, spec.needs)) undo()
+                    if (finishes(tray, spec.needs)) break
+                    undo()
                 }
             }
         }
+
+        /** Whether the ladder finishes the board when every square is a one-square sum. */
+        fun finishesAllGiven(tray: List<Domino>): Boolean {
+            val squares = (0 until n).filter { open[it] }
+            val all = Layout(w, h, open, List(n) { squares.indexOf(it) }, squares.map { RegionRule(RuleKind.SUM, values[it]) }, tray)
+            return DominoTeacher.solveLevel(all, spec.needs, candidates(all)) != null
+        }
+
+        private fun candidates(l: Layout) = candidates ?: DominoCandidates(l, List(l.tray.size) { null }).also { candidates = it }
 
         /** The candidates depend on the shape and the tray alone, so one table serves every rule tried. */
         private var candidates: DominoCandidates? = null
 
         fun finishes(tray: List<Domino>, maxLevel: Int): Boolean {
             val l = layout(tray)
-            val k = candidates ?: DominoCandidates(l, List(tray.size) { null }).also { candidates = it }
-            return DominoTeacher.solveLevel(l, maxLevel, k) != null
+            return DominoTeacher.solveLevel(l, maxLevel, candidates(l)) != null
         }
 
         /** The board as it stands, regions renumbered by their first square in reading order. */
@@ -659,7 +668,6 @@ internal object DominoLogic {
             const val TO_MORE = 2
             const val TO_DIFFERENT = 3
             const val MERGE = 4
-            const val LOOSEN_PASSES = 1
         }
     }
 
