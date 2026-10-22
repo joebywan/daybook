@@ -43,6 +43,9 @@ import com.joebywan.daybook.ui.stats.AchievementsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 
 /** A shared daily's date: day and month, as the owner's share example has it. */
 private const val SHARE_DATE = "d MMM"
@@ -166,7 +169,10 @@ fun DaybookApp(startAt: Route = Route.Home) {
     PlatformBackHandler(enabled = route != Route.Home) { route = Route.Home }
 
     CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics) {
-    when (val current = route) {
+    // A short fade between screens (none under reduced motion). Each route is its own keyed content, so a screen's
+    // rememberSaveable state is kept across a rotation as before; the screen going out stays composed for the fade.
+    Crossfade(route, animationSpec = if (reducedMotion) snap() else tween(ROUTE_FADE_MS), label = "route") { current ->
+    when (current) {
         Route.Home -> {
             // Nothing on Android. On the web, today's boards are generated while the grid is being
             // read, so the tap that opens one does not have to wait for it; see the platform seam.
@@ -329,4 +335,7 @@ fun DaybookApp(startAt: Route = Route.Home) {
         }
     }
     }
+    }
 }
+
+private const val ROUTE_FADE_MS = 200
