@@ -331,9 +331,11 @@ class DominoRulesTest {
                     "ms median %.1f p95 %.1f max %.1f".format(ms[ms.size / 2], ms[ms.size * 95 / 100], ms.last()),
             )
             // Budgets: a board must leave work to do (the Snap lesson), and stay cheap for the browser.
+            // Standard's ladder has no region reasoning, so it leans on one-square sums (measured 39%; Hard and Expert 12-15%).
+            val statedBudget = if (d == Difficulty.STANDARD) 45 else 20
             assertTrue("$d rules cover $ruledShare% of squares", ruledShare < 85)
-            assertTrue("$d states $statedShare% of squares outright", statedShare < 40)
-            assertTrue("$d median ${ms[ms.size / 2]} ms", ms[ms.size / 2] < 40)
+            assertTrue("$d states $statedShare% of squares outright", statedShare < statedBudget)
+            assertTrue("$d median ${ms[ms.size / 2]} ms", ms[ms.size / 2] < 30)
         }
         println(report)
         java.io.File("build/reports").mkdirs()

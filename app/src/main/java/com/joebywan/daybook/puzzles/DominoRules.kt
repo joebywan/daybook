@@ -175,14 +175,24 @@ internal object DominoLogic {
      * Whether no way of filling the region's [open] uncovered squares with 0..6 can keep [rule], given
      * the [pips] already on its covered squares. Ignores the tray: cheap and honest, the red feedback.
      */
-    fun ruleBroken(rule: RegionRule, pips: List<Int>, open: Int): Boolean {
-        val sum = pips.sum()
+    fun ruleBroken(rule: RegionRule, pips: List<Int>, open: Int): Boolean = ruleBroken(rule, pips.toIntArray(), pips.size, open)
+
+    /** [ruleBroken] on the first [count] of [pips]: the ladder's allocation-free form. */
+    fun ruleBroken(rule: RegionRule, pips: IntArray, count: Int, open: Int): Boolean {
+        var sum = 0
+        var seen = 0
+        var repeat = false
+        for (i in 0 until count) {
+            sum += pips[i]
+            if (seen shr pips[i] and 1 == 1) repeat = true
+            seen = seen or (1 shl pips[i])
+        }
         return when (rule.kind) {
             RuleKind.SUM -> sum > rule.n || sum + MAX_PIPS * open < rule.n
             RuleKind.LESS -> sum >= rule.n
             RuleKind.MORE -> sum + MAX_PIPS * open <= rule.n
-            RuleKind.EQUAL -> pips.any { it != pips[0] }
-            RuleKind.DIFFERENT -> !allDifferent(pips) || pips.size + open > MAX_PIPS + 1
+            RuleKind.EQUAL -> seen and (seen - 1) != 0
+            RuleKind.DIFFERENT -> repeat || count + open > MAX_PIPS + 1
         }
     }
 
