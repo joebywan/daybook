@@ -31,7 +31,9 @@ under "Rewards".
 seven days, never reaching back before the run's first day: alive while at most 2 of those days were missed
 (which is 5 of 7 for an established run, and "at most 2 missed since the first play" for a new one). The third
 miss ends the run and the next play starts a fresh one. `current` counts days played. Home shows "Welcome back"
-in place of the badge when lapsed; best streak is on the stats screen (the home header has no room for it).
+in place of the badge when lapsed, and "Day one awaits" before the first daily solve, so never a bare 0 (the stats
+screen's Streak tile shows "-" for both); best streak is on the stats screen (the home header has no room for it).
+The rule is told once, under the stats calendar: "Play on 5 of any 7 days to keep your streak going."
 
 ## Finished-frame praise (`ui/play/FinishPraise.kt`)
 

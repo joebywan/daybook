@@ -20,11 +20,6 @@ from a measurement or review, so you can check it is still true.
   Pointers and Dominoes are rewritten; the grid and digit-pad puzzles (Sudoku, Inequality, Regions, Cages, Cipher, Kings,
   Tents, Mambo, Pipes, Shikaku, Mosaic, LITS, Atoms) are on `claude/walkthroughs-grid`. Not walked through, because neither emits a
   state a frame could ask for: Word Wheel's Shuffle (a labelled button) and Sand's refused pour (it shakes). *S.*
-- [ ] **Wide windows: polish left.** Rotation and resizable windows shipped in October 2026 (`PlayLayout` in `PlayScreen.kt`).
-  Seen on a Pixel Tablet emulator and a phone on its side, three things are plain rather than wrong: the home grid on a phone
-  on its side shows one row of tiles per screen and scrolls (columns come from width alone; letting height pick a smaller tile
-  would fit two); Lexicon's tiles and keyboard keep their phone size on a tablet, leaving the board small in a large box; the
-  side panel is empty between the clock and the toolbar unless a hint is open. *S-M.*
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
   text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it
@@ -51,7 +46,7 @@ from a measurement or review, so you can check it is still true.
   hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
   reasoning. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
 
-- [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far, and Target's "steps" is the
+- [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far (an Undo of the restart hands them back), and Target's "steps" is the
   operations still on the board at the finish (not only those that build the target); both are simple readings the owner may
   want changed (`ui/play/ShareCard.kt`).
 
@@ -109,6 +104,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Web icons are pinned at `material-icons-extended` 1.7.3** (`gradle/libs.versions.toml`, the last
   published; move to Material Symbols vector resources eventually). The deprecated `compose.*` accessors and
   `getting` in `web/build.gradle.kts` are gone. *S.*
+- [ ] **`app/proguard-rules.pro` is not used.** The release build type names no `proguardFiles`, so R8 runs on the
+  library consumer rules alone and the file's `-keepclassmembers class com.joebywan.daybook.core.**` never applies (found
+  while building the release save check: a rule added there changed nothing until `proguardFiles(...)` was added). Saves load
+  without it (the check passes), so either delete the file or wire it in; wiring it in changes the shipped code, so run
+  `tools/save-check/check.py` on the result. *S.*
 - [ ] **Web: a board already generating cannot be interrupted.** A tap during a slow pre-generation on Home
   waits for it. Fine at current speeds; a Web Worker would fix it if generators slow down again. *L.*
 
@@ -157,6 +157,9 @@ below have a famous branded version; use the descriptive name).
 
 - [ ] **Dominoes: recapture the home screenshot.** Dominoes is the twenty-fifth tile, opening a ninth row on a phone;
   `docs/screenshots/home.png` (and the store screenshots) were not recaptured with it.
+- [ ] **Recapture home screenshots after the UX PRs.** The badge now says "Day one awaits" on a clean install, not "0 day
+  streak", and more home changes are landing; recapture every `1-home.png` and `docs/screenshots/home.png` once they are in
+  (`tools/screenshots/capture.sh`). *S.*
 
 - [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
   not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
