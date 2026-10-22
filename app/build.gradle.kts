@@ -81,9 +81,9 @@ android {
             // ships its own R8 rules), and that was checked rather than assumed: with R8 on, 48 saves
             // (every puzzle at every tier) loaded and re-saved byte-identical on an emulator, an in-place
             // update kept a real game, and saves written by the R8 build load in a normal one. Anything
-            // that touches a PuzzleState or its serialisation still has to be re-checked the same way:
-            // inject saves into files/datastore/daybook.preferences_pb, make one move, and see which
-            // survive the re-save. The build must also stay reproducible for F-Droid (docs/fdroid).
+            // that touches a PuzzleState, its serialisation or R8's rules is now re-checked that way on every
+            // release (tools/save-check/check.py, run by release.yml before it publishes). The build must also
+            // stay reproducible for F-Droid (docs/fdroid).
             isMinifyEnabled = true
             // Drops the libraries' resources nothing references (Play recommends it). Every resource of ours is
             // referenced from code or the manifest, never looked up by name.
