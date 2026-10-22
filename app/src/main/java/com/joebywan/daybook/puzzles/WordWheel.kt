@@ -69,6 +69,9 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * Word Wheel: a wheel of five to seven letters and a small crossword of empty slots. Spell words by swiping across the
@@ -255,6 +258,9 @@ object WordWheel : PuzzleType {
         val measurer = rememberTextMeasurer()
 
         val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        // A found word's squares settle, and the glow runs along it.
+        val units = remember(s.wheel) { s.slots.map { it.cells(s.width).toIntArray() } }
+        val feel = rememberMoveFeel(s.shown().toList(), units) { s.slots[it].word in s.found }
 
         // The word being spelled (wheel positions) and the finger, transient: never PuzzleState, so a refused word costs nothing.
         var picked by remember(s.wheel) { mutableStateOf(listOf<Int>()) }
@@ -333,7 +339,7 @@ object WordWheel : PuzzleType {
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.width, maxHeight / s.height, MAX_CELL).coerceAtLeast(0.dp)
                     Canvas(Modifier.size(cell * s.width, cell * s.height).highlightGrid(s.width, s.height)) {
-                        drawGrid(s, cell.toPx(), highlight, glow, pulse.value, hueB, dark, measurer)
+                        drawGrid(s, cell.toPx(), highlight, glow, pulse.value, hueB, dark, measurer, feel, Color(accent))
                     }
                 }
 
@@ -476,6 +482,8 @@ object WordWheel : PuzzleType {
         hueB: Float,
         dark: Boolean,
         measurer: TextMeasurer,
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val used = s.used()
         val shown = s.shown()
@@ -492,12 +500,14 @@ object WordWheel : PuzzleType {
             val soft = !strong && i in highlight.soft
             val alpha = if (anyLit && !strong && !soft) 0.3f else 1f
             val letter = shown[i]
-            if (letter != null) {
-                drawRoundRect(fill.copy(alpha = alpha), topLeft, box, corner)
-                val layout = measurer.measure(letter.uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (cell * 0.5f / density).sp, fontWeight = FontWeight.Bold))
-                drawText(layout, topLeft = Offset(topLeft.x + (box.width - layout.size.width) / 2f, topLeft.y + (box.height - layout.size.height) / 2f))
-            } else {
-                drawRoundRect(BoardHues.ink(hueB, dark).copy(alpha = 0.55f * alpha), topLeft, box, corner, style = Stroke(cell * 0.05f))
+            feelSquare(feel, i, topLeft, box, accent) {
+                if (letter != null) {
+                    drawRoundRect(fill.copy(alpha = alpha), topLeft, box, corner)
+                    val layout = measurer.measure(letter.uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (cell * 0.5f / density).sp, fontWeight = FontWeight.Bold))
+                    drawText(layout, topLeft = Offset(topLeft.x + (box.width - layout.size.width) / 2f, topLeft.y + (box.height - layout.size.height) / 2f))
+                } else {
+                    drawRoundRect(BoardHues.ink(hueB, dark).copy(alpha = 0.55f * alpha), topLeft, box, corner, style = Stroke(cell * 0.05f))
+                }
             }
             if (strong || soft) {
                 val w = if (strong) cell * 0.08f else cell * 0.05f

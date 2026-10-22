@@ -60,6 +60,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** Empty, or one of the two symbols. */
 @Serializable
@@ -1000,6 +1003,12 @@ object Mambo : PuzzleType {
         // phase, so it repaints the rings without recomposing the board every frame.
         val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         fun named(i: Int) = highlight.isEmpty || i in highlight.strong || i in highlight.soft
+        // A row or column is finished when it is full and breaks no rule that lies inside it.
+        val units = remember(s.size) { lineUnits(s.size, s.size) }
+        val feel = rememberMoveFeel(s.cells, units) { u ->
+            val line = units[u]
+            line.none { s.cells[it] == Sym.NONE } && live.none { v -> v.cells.all { it in line } }
+        }
         // The keyboard cursor (see MamboKeys): transient, so not in the state.
         var cursor by remember(s.givens, s.links) { mutableStateOf<Int?>(null) }
 
@@ -1072,6 +1081,7 @@ object Mambo : PuzzleType {
                                 modifier = Modifier
                                     .padding(start = cell * c, top = cell * r)
                                     .size(cell)
+                                    .moveFeel(feel, i, Color(accent))
                                     .padding(cell * 0.06f),
                             )
                         }

@@ -63,6 +63,7 @@ import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.sin
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** One pour made: [count] layers from tube [from] onto tube [to]. Enough to take it back exactly ([SandState.withoutFrom]). */
 @Serializable
@@ -369,6 +370,9 @@ object Sand : PuzzleType {
         val refusal = remember { Animatable(0f) }
         // Reduced motion: no shake and no stream; the tint is held, then cleared; a lifted tube still rises, at once.
         val still = LocalReducedMotion.current
+        // A tube finished by the rules (full, one colour) is ringed in the accent once. No settle: the pour is its own landing.
+        val units = remember(s.tubes.size) { List(s.tubes.size) { intArrayOf(it) } }
+        val feel = rememberMoveFeel(emptyList(), units) { s.tubes[it].size == s.height && s.tubes[it].distinct().size == 1 }
 
         fun go(step: SandStep) {
             lifted = step.lifted
@@ -467,6 +471,7 @@ object Sand : PuzzleType {
                                     glow = when {
                                         strong -> glowColour.copy(alpha = pulse.value)
                                         soft -> glowColour.copy(alpha = 0.5f)
+                                        feel.glow(i) > 0f -> accentColour.copy(alpha = feel.glow(i))
                                         else -> null
                                     },
                                     glowWidth = if (strong) 3.dp.toPx() else 2.dp.toPx(),
