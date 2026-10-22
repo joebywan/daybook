@@ -17,7 +17,8 @@ import com.joebywan.daybook.puzzles.TowerState
  * beside the undo stack. It is never `PuzzleState`. The share graphic is read from it ([shareCard]).
  *
  * `m` a move, `w` a claim that was not a set (Sets: no board change, so Undo never takes it back), `h` a hint opened
- * (one per counted hint), `u` Undo took back the latest live move, `r` Restart took back every live move.
+ * (one per counted hint), `u` Undo took back the latest live move (or, with none since, the latest restart, handing its
+ * moves back), `r` Restart took back every live move.
  */
 object PlayLog {
     const val MOVE = 'm'
@@ -52,6 +53,8 @@ object PlayLog {
     fun played(log: String): List<Played> {
         val all = mutableListOf<Played>()
         val live = ArrayDeque<Played>()
+        // What each restart took back, so an Undo of the restart can hand it back.
+        val restarts = ArrayDeque<List<Played>>()
         var hint = false
         for (c in log) when (c) {
             HINT -> hint = true
@@ -61,8 +64,12 @@ object PlayLog {
                 all += p
                 if (c == MOVE) live.addLast(p)
             }
-            UNDO -> live.removeLastOrNull()?.undone = true
-            RESTART -> { live.forEach { it.undone = true }; live.clear() }
+            UNDO -> if (live.isNotEmpty()) {
+                live.removeLast().undone = true
+            } else {
+                restarts.removeLastOrNull()?.let { back -> back.forEach { it.undone = false }; live.addAll(back) }
+            }
+            RESTART -> { live.forEach { it.undone = true }; restarts.addLast(live.toList()); live.clear() }
         }
         return all
     }

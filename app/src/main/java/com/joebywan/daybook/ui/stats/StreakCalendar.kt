@@ -98,6 +98,12 @@ fun StreakCalendar(played: Set<LocalDate>, today: LocalDate, modifier: Modifier 
             Box(Modifier.size(10.dp).border(BorderStroke(1.5.dp, scheme.primary.copy(alpha = 0.6f)), CircleShape))
             Text(" missed, streak kept", style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
         }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Play on 5 of any 7 days to keep your streak going.",
+            style = MaterialTheme.typography.labelMedium,
+            color = scheme.onSurfaceVariant,
+        )
     }
 }
 

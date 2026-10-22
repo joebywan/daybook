@@ -302,8 +302,13 @@ private fun StreakBadge(streak: Streak) {
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (streak.lapsed) {
-            Text("Welcome back", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+        // Never a bare 0 (docs/REWARDS.md). Set at the number's line height, so the badge, and the header, keep their height.
+        if (!streak.alive) {
+            Text(
+                if (streak.lapsed) "Welcome back" else "Day one awaits",
+                style = MaterialTheme.typography.labelLarge.copy(lineHeight = MaterialTheme.typography.titleMedium.lineHeight),
+                color = scheme.onSurfaceVariant,
+            )
         } else {
             Text(
                 "${streak.current}",
