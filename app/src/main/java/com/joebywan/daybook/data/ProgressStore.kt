@@ -63,6 +63,11 @@ data class SavedGame(
     val history: List<PuzzleState> = emptyList(),
     val hints: Int = 0,
     val seconds: Int = 0,
+    /**
+     * The play log (`ui/play/ShareCard.kt`, `PlayLog`): one character per move, undo, restart and hint, which the share
+     * graphic is drawn from. Kept whole, unlike [history]. Defaulted: a save from before it loads with an empty log.
+     */
+    val log: String = "",
 ) {
     /**
      * Keeps only the tail of the undo stack. Every entry is a whole board, so a Sudoku Expert game
