@@ -44,6 +44,8 @@ import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** An axis-aligned block of cells, inclusive on both corners. */
 @Serializable
@@ -557,6 +559,8 @@ object Shikaku : PuzzleType {
         // Breathes, as the other teaching boards' do, so a glowing square is findable at a glance on
         // a 9x11 board. Only runs while something glows, and is read in the draw phase.
         val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        // The squares a rectangle takes (or gives back) settle. No units: a rectangle is a move, not a line filled in.
+        val feel = rememberMoveFeel(List(s.width * s.height) { s.blockAt(it / s.width, it % s.width) })
         var dragFrom by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
         var dragTo by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
 
@@ -641,6 +645,7 @@ object Shikaku : PuzzleType {
                             Modifier
                                 .padding(start = cell * c, top = cell * r)
                                 .size(cell)
+                                .moveFeel(feel, i, Color.Unspecified)
                                 .padding(0.7.dp)
                                 .clip(RoundedCornerShape(3.dp))
                                 .background(owner?.fill(dark) ?: scheme.surfaceVariant),

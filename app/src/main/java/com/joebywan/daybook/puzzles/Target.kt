@@ -49,6 +49,8 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * Target: six numbers and a target; combine two tiles with + - x / (whole numbers only) and the answer is a new tile.
@@ -239,6 +241,8 @@ object Target : PuzzleType {
         // The move being built is transient: it starts over whenever the board changes (a finished operation, undo, a hint).
         var entry by remember(s.slots) { mutableStateOf(TargetEntry()) }
         var note by remember(s.slots) { mutableStateOf<String?>(null) }
+        // An operation's answer settles into its tile. No units: there is one target, and reaching it is the solve.
+        val feel = rememberMoveFeel(s.slots)
         fun go(step: TargetStep) {
             entry = step.entry
             note = step.note
@@ -312,6 +316,7 @@ object Target : PuzzleType {
                             Box(
                                 Modifier
                                     .size(u * 1.1f, u * 0.95f)
+                                    .moveFeel(feel, slot, Color.Unspecified)
                                     .highlightAnchor(slot)
                                     .ring(l, glow, pulse, corner)
                                     .dimmed(l)
