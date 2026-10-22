@@ -100,7 +100,6 @@ import com.joebywan.daybook.platform.formatClock
 import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.generateBoard
 import com.joebywan.daybook.platform.readyBoard
-import com.joebywan.daybook.platform.rememberSharer
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
@@ -138,7 +137,7 @@ fun PlayScreen(
     restore: suspend () -> SavedGame?,
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
-    praiseFor: (seconds: Int, hints: Int) -> Praise,
+    praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String) -> Praise,
     otherTiersDone: Set<Difficulty>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
@@ -225,7 +224,7 @@ private fun PlayBoard(
     restore: suspend () -> SavedGame?,
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
-    praiseFor: (seconds: Int, hints: Int) -> Praise,
+    praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String) -> Praise,
     otherTiersDone: Set<Difficulty>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
@@ -261,7 +260,7 @@ private fun PlayBoard(
     val hintSession = rememberHintSession(initial)
     fun restart() {
         hintSession.clear()
-        game = game.copy(state = initial, history = emptyList())
+        game = game.copy(state = initial, history = emptyList(), log = game.log + PlayLog.RESTART)
     }
     val hintScope = rememberCoroutineScope()
     // Offered on this visit, and only this one. Saved, so a rotation keeps the line it already
@@ -338,7 +337,7 @@ private fun PlayBoard(
         if (state.solved && !recorded) {
             recorded = true
             // Asked before onSolved: the history must not yet contain this solve.
-            praise = praiseFor(seconds, game.hints)
+            praise = praiseFor(seconds, game.hints, game.state, game.log)
             onSolved(seconds, game.hints)
         }
     }
@@ -346,7 +345,12 @@ private fun PlayBoard(
     // Reads through `game` rather than the unpacked locals so that two taps landing in the same
     // frame stack up properly instead of pushing the same board twice.
     fun push(next: PuzzleState) {
-        game = game.copy(state = next, history = game.history + game.state)
+        game = game.copy(state = next, history = game.history + game.state, log = game.log + PlayLog.step(puzzle, game.state, next))
+    }
+
+    // One logged hint per counted hint, exactly where the count goes up.
+    fun countHint() {
+        game = game.copy(hints = game.hints + 1, log = game.log + PlayLog.HINT)
     }
 
     WatchHint(hintSession, puzzle, state)
@@ -364,13 +368,13 @@ private fun PlayBoard(
         hintScope.launch {
             val taught = hintSession.tap(
                 puzzle, asked,
-                onOpened = { game = game.copy(hints = game.hints + 1) },
+                onOpened = ::countHint,
                 onApply = ::push,
             )
             // The old hint lands on the board, so only on the board it was asked about.
             if (!taught && game.state == asked) {
                 puzzle.hint(asked)?.let {
-                    game = game.copy(hints = game.hints + 1)
+                    countHint()
                     push(it)
                 }
             }
@@ -382,7 +386,9 @@ private fun PlayBoard(
         // that is no longer there.
         hintSession.clear()
         undone(puzzle, game.state, game.history)?.let {
-            game = game.copy(state = it.state, history = it.history)
+            // Logged only when it takes back a move (not a typed letter, a peg, or only a selection).
+            val back = if (PlayLog.step(puzzle, it.state, game.state).isNotEmpty()) PlayLog.UNDO.toString() else ""
+            game = game.copy(state = it.state, history = it.history, log = game.log + back)
         }
     }
 
@@ -794,21 +800,21 @@ private fun FinishedFrame(
     }
 }
 
-/** Shares the result's text ([Praise.share]); on a build that copies instead, the label says so. */
+/** Opens the share preview ([SharePreview]) for the result's card ([Praise.share]). */
 @Composable
-private fun ShareChip(text: String, accent: Color) {
-    val share = rememberSharer()
-    var label by remember { mutableStateOf("Share") }
+private fun ShareChip(card: ShareCard, accent: Color) {
+    var open by remember { mutableStateOf(sharePreviewOpen) }
     Row(
         Modifier.clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.22f))
-            .clickable { share(text)?.let { label = it } }
+            .clickable { open = true }
             .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+        Text("Share", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
     }
+    if (open) SharePreview(card) { open = false }
 }
 
 /** What stays on screen while the frame is hidden: bring it back, or move on. */
