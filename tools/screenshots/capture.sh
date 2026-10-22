@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # Captures the store/README screenshots from a running emulator (google_apis image, so `adb root`
-# works) with the debug or release APK passed as $1. Output: docs/play/screenshots/*.png (1080x1920, copied to fastlane/)
-# and half-scale README copies in docs/screenshots/. The date, size and status bar are pinned so a
-# rerun differs only when the app's look does.
+# works) with the debug or release APK passed as $1. Output: docs/play/screenshots/*.png
+# (phone, 1080x1920), docs/play/tablet-screenshots/*.png (landscape tablet, 2560x1440), both copied to fastlane/,
+# and half-scale README copies in docs/screenshots/. The date, size and status bar are pinned so a rerun differs
+# only when the app's look does.
 set -euo pipefail
 APK=${1:?usage: capture.sh app.apk}
 cd "$(dirname "$0")/../.."
 PKG=com.joebywan.daybook
 OUT=docs/play/screenshots
+TABLET=docs/play/tablet-screenshots
+mkdir -p $OUT $TABLET
+rm -f $OUT/*.png $TABLET/*.png   # a shot that was renamed or dropped must not linger
 adb wait-for-device
 adb root >/dev/null || true; sleep 2; adb wait-for-device; until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 1; done
 
@@ -48,7 +52,37 @@ sys.exit(1)' "$1") && { adb shell input tap $xy; sleep 1; return 0; }
   done
   echo "no '$1' on screen" >&2; return 1
 }
-shot() { adb exec-out screencap -p > "$OUT/$1.png"; }
+# Opens a puzzle from the home grid. Its tile can be below the fold, or under the pinned difficulty row once
+# scrolled, so this swipes until the name sits in the lower part of the screen (30-92% of the height) and taps it.
+open_puzzle() {
+  local found x y h w
+  read -r w h < <(adb shell wm size | sed -n 's/.*: \([0-9]*\)x\([0-9]*\).*/\1 \2/p' | tail -1)
+  for _ in $(seq 15); do
+    found=$(adb exec-out uiautomator dump /dev/tty 2>/dev/null | python3 -c '
+import re, sys, xml.etree.ElementTree as ET
+raw = sys.stdin.read()
+if "<hierarchy" not in raw: sys.exit(1)
+for n in ET.fromstring(raw[raw.index("<?xml"):raw.rindex("</hierarchy>") + 12]).iter("node"):
+    if sys.argv[1] in (n.get("text"), n.get("content-desc")):
+        x0, y0, x1, y1 = map(int, re.findall(r"\d+", n.get("bounds")))
+        if y1 > y0: print((x0 + x1) // 2, (y0 + y1) // 2); sys.exit(0)
+print("none")' "$1") || { sleep 2; continue; }
+    if [ "$found" = none ]; then
+      adb shell input swipe $((w / 2)) $((h * 75 / 100)) $((w / 2)) $((h * 40 / 100)) 400; sleep 1; continue
+    fi
+    read -r x y <<<"$found"
+    if [ "$y" -lt $((h * 30 / 100)) ]; then
+      adb shell input swipe $((w / 2)) $((h * 45 / 100)) $((w / 2)) $((h * 65 / 100)) 400; sleep 1
+    elif [ "$y" -gt $((h * 92 / 100)) ]; then
+      adb shell input swipe $((w / 2)) $((h * 65 / 100)) $((w / 2)) $((h * 45 / 100)) 400; sleep 1
+    else
+      adb shell input tap "$x" "$y"; sleep 1; return 0
+    fi
+  done
+  echo "no '$1' on the home grid" >&2; return 1
+}
+DIR=$OUT
+shot() { adb exec-out screencap -p > "$DIR/$1.png"; }
 # A cold start lands on the home grid whatever the board or hint popover was doing.
 back() { adb shell am start -S -n $PKG/.MainActivity >/dev/null; sleep 4; }
 
@@ -65,15 +99,38 @@ adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Thursday 24 Septem
 }
 shot 1-home
 
-tap Sudoku; sleep 2; tap Hint; tap "Why?"; sleep 3; shot 2-sudoku-hint; back
-tap Kings; sleep 2; shot 3-kings; back
-tap Mosaic; sleep 2; shot 4-mosaic; back
-tap Snap; sleep 2; shot 5-snap; back
+# The set, in store order. A Hard Cage Sudoku with a hint open shows the cages best; the tier is a saved
+# setting, so it goes back to Standard straight after.
+shots() {
+  open_puzzle Sudoku; sleep 2; tap Hint; tap "Why?"; sleep 3; shot 2-sudoku-hint; back
+  tap Hard; open_puzzle "Cage Sudoku"; sleep 2; tap Hint; tap "Why?"; sleep 3; shot 3-cage-sudoku-hint; back; tap Standard
+  open_puzzle "Word Wheel"; sleep 2; shot 4-word-wheel; back
+  open_puzzle Kings; sleep 2; shot 5-kings; back
+  open_puzzle Mosaic; sleep 2; shot 6-mosaic; back
+  open_puzzle Snap; sleep 2; shot 7-snap; back
+}
+shots
+
+# Tablet pass: the same set in landscape, where the board sits beside the controls. 2560x1440 at 320 dpi is a
+# 1280x720 dp window (a 10-inch tablet's shape) and fits both of Play's tablet slots (16:9, sides 1080-3840).
+DIR=$TABLET
+adb shell wm size 2560x1440
+adb shell wm density 320
+back; sleep 2; shot 1-home
+shots
 
 demo exit
-# README copies are half scale: home, sudoku, mosaic, snap
-for p in 1-home:home 2-sudoku-hint:sudoku 4-mosaic:mosaic 5-snap:snap; do
+adb shell wm size reset
+adb shell wm density reset
+# README copies are half scale: home, sudoku, cage sudoku, word wheel, and the tablet layout
+for p in 1-home:home 2-sudoku-hint:sudoku 3-cage-sudoku-hint:cage-sudoku 4-word-wheel:word-wheel; do
   convert "$OUT/${p%%:*}.png" -resize 50% "docs/screenshots/${p##*:}.png"
 done
+convert "$TABLET/3-cage-sudoku-hint.png" -resize 50% docs/screenshots/tablet-cage-sudoku.png
 # F-Droid reads its listing images from the repo (fastlane layout), so they travel with the Play set.
-cp "$OUT"/*.png fastlane/metadata/android/en-US/images/phoneScreenshots/
+F=fastlane/metadata/android/en-US/images
+rm -f $F/phoneScreenshots/*.png $F/sevenInchScreenshots/*.png $F/tenInchScreenshots/*.png
+mkdir -p $F/sevenInchScreenshots $F/tenInchScreenshots
+cp "$OUT"/*.png $F/phoneScreenshots/
+cp "$TABLET"/*.png $F/sevenInchScreenshots/
+cp "$TABLET"/*.png $F/tenInchScreenshots/
