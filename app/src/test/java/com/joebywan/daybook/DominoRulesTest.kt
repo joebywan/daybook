@@ -289,6 +289,57 @@ class DominoRulesTest {
         assertTrue(levels.zipWithNext().all { (a, b) -> a.needs < b.needs && a.minLevel < b.minLevel })
     }
 
+    /**
+     * A measurement over a year of daily boards per tier, printed and written to
+     * `app/build/reports/dominoes-generation.txt`, with budgets it must stay inside: how much of the
+     * board the rules give away (squares in a ruled region; squares whose value a one-square sum states
+     * outright; rules that are exact sums), the ladder level needed, and generation time.
+     */
+    @Test
+    fun `a year of daily boards - what the generator gives away, and what it costs`() {
+        val report = StringBuilder()
+        for (d in Difficulty.entries) {
+            var squares = 0
+            var ruled = 0
+            var stated = 0
+            var rules = 0
+            var sums = 0
+            val kinds = IntArray(RuleKind.entries.size)
+            val levels = IntArray(DominoTeacher.LEVEL_WHAT_IF + 1)
+            val ms = ArrayList<Double>()
+            for (seed in seeds(365, d)) {
+                val t0 = System.nanoTime()
+                val s = DominoLogic.generateVerified(seed, d)!!
+                ms += (System.nanoTime() - t0) / 1e6
+                squares += s.open.count { it }
+                ruled += s.regionOf.count { it >= 0 }
+                for (r in s.rules.indices) {
+                    val size = s.regionOf.count { it == r }
+                    if (s.rules[r].kind == RuleKind.SUM) { sums++; if (size == 1) stated++ }
+                    kinds[s.rules[r].kind.ordinal]++
+                }
+                rules += s.rules.size
+                levels[DominoTeacher.solveLevel(s.layout, DominoTeacher.LEVEL_WHAT_IF)!!]++
+            }
+            ms.sort()
+            val ruledShare = 100.0 * ruled / squares
+            val statedShare = 100.0 * stated / squares
+            report.appendLine(
+                "${d.name}: squares in a ruled region %.0f%%, stated by a one-square sum %.0f%%, exact sums %.0f%% of %.1f rules a board; ".format(
+                    ruledShare, statedShare, 100.0 * sums / rules, rules / 365.0,
+                ) + "kinds ${RuleKind.entries.zip(kinds.toList())}; levels needed ${levels.toList()}; " +
+                    "ms median %.1f p95 %.1f max %.1f".format(ms[ms.size / 2], ms[ms.size * 95 / 100], ms.last()),
+            )
+            // Budgets: a board must leave work to do (the Snap lesson), and stay cheap for the browser.
+            assertTrue("$d rules cover $ruledShare% of squares", ruledShare < 85)
+            assertTrue("$d states $statedShare% of squares outright", statedShare < 40)
+            assertTrue("$d median ${ms[ms.size / 2]} ms", ms[ms.size / 2] < 40)
+        }
+        println(report)
+        java.io.File("build/reports").mkdirs()
+        java.io.File("build/reports/dominoes-generation.txt").writeText(report.toString())
+    }
+
     @Test
     fun `the last resort of every tier is a board that tier would accept, with one answer`() {
         for (d in Difficulty.entries) {

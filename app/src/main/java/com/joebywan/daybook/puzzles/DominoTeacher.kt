@@ -224,11 +224,15 @@ internal object DominoTeacher {
             }
             REGION_VALUE -> {
                 nudge = "Look at what ${words.regionOrThis(facts)} can be made of."
-                text = { m -> "Count what the squares of ${factList(m)} can still take from the tray: that leaves $leaves. $so" }
+                val value = facts.filter { it.kind == DominoLadder.VALUE_KIND }
+                text = { m -> if (value.isEmpty()) "The values the tray can still supply settle the regions around it. That leaves $leaves. $so"
+                    else "${words.cap(words.facts(value.take(m)))} can only be made from what the tray still has. That leaves $leaves. $so" }
             }
             else -> {
                 nudge = "Count the ${words.countValue(facts)} left in the tray."
-                text = { m -> "Weigh ${factList(m)} against the squares that need them: no other square can have one, which leaves $leaves. $so" }
+                val v = words.countValue(facts)
+                text = { _ -> "The tray has only as many $v as squares that can take nothing else, so no other square gets one. " +
+                    "That leaves $leaves. $so" }
             }
         }
         val explanation = fit(listOf(3, 2, 1).map(text) + "${words.cap(words.techniqueName(technique))}. $so")
@@ -246,12 +250,13 @@ internal object DominoTeacher {
         val where = words.square(w.square)
         val so = "So the ${words.domino(dom)} goes here, ${words.half(dom, p)}."
         fun refute(r: DominoLadder.Refuted, full: Boolean): String {
-            val other = layout.tray[ladder.cDom[r.cand]]
-            val head = "with the ${words.domino(other)} there"
+            val d = ladder.cDom[r.cand]
+            val twin = (w.refuted.map { it.cand } + c).count { ladder.cDom[it] == d } > 1
+            val head = "with the " + words.way(layout.tray[d], ladder.placement(r.cand), w.square, twin)
             return if (full) "$head, ${words.broken(r.kind, r.arg)}" else head + " something breaks"
         }
-        val texts = listOf(true, false).map { full ->
-            "Try each domino that could cover $where: " + w.refuted.joinToString("; ") { refute(it, full) } + ". $so"
+        val texts = listOf(w.refuted.size, 1, 0).map { full ->
+            "Try what could cover $where: " + w.refuted.withIndex().joinToString("; ") { (i, r) -> refute(r, i < full) } + ". $so"
         } + "Every other domino that could cover $where runs into trouble within a few steps. $so"
         val cited = w.refuted.filter { it.kind == DominoLadder.REGION }.map { RULE + it.arg }.toSet()
         return Step(
@@ -276,6 +281,14 @@ internal object DominoTeacher {
 
     private class Words(val layout: DominoLogic.Layout) {
         fun square(q: Int) = "row ${q / layout.width + 1}, column ${q % layout.width + 1}"
+
+        /** "6-3 going right, its 3 here": a candidate as seen from square [q]. */
+        fun way(d: Domino, p: Placement, q: Int, which: Boolean): String {
+            val other = if (p.first == q) p.second else p.first
+            val dir = when (other - q) { 1 -> "right"; -1 -> "left"; layout.width -> "down"; else -> "up" }
+            val here = if (p.first == q) d.a else d.b
+            return if (!which) domino(d) else if (d.isDouble) "${domino(d)} going $dir" else "${domino(d)} going $dir, its $here here"
+        }
 
         fun cap(s: String) = s.replaceFirstChar { it.uppercaseChar() }
 
@@ -304,7 +317,7 @@ internal object DominoTeacher {
         }
 
         fun fact(f: DominoLadder.Reason): String = when (f.kind) {
-            DominoLadder.GEOMETRY_KIND -> "the pairing at ${square(f.arg)}"
+            DominoLadder.GEOMETRY_KIND -> "the only partner left for ${square(f.arg)}"
             DominoLadder.RULE_KIND, DominoLadder.VALUE_KIND -> region(f.arg)
             DominoLadder.COUNT_KIND -> "the ${f.arg}s"
             else -> "where the other dominoes must go"
