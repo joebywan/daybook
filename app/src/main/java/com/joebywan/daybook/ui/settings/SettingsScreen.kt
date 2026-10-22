@@ -26,6 +26,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.SOLVE_SOUND_NOTE
+import com.joebywan.daybook.ui.home.SegmentedControl
+import com.joebywan.daybook.ui.theme.Appearance
 
 /**
  * The player's switches. Reached from the gear on Home; the system back button (or, on the web,
@@ -40,6 +42,8 @@ fun SettingsScreen(
     onPlaySound: (Boolean) -> Unit,
     customOrder: Boolean,
     onArrange: () -> Unit,
+    appearance: Appearance,
+    onAppearance: (Appearance) -> Unit,
     onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -67,7 +71,7 @@ fun SettingsScreen(
             item {
                 SettingSwitch(
                     title = "Show the timer while playing",
-                    detail = "Turn off to hide the running clock. Your time is still counted, " +
+                    detail = "A running clock above the board. Off or on, your time is counted, " +
                         "shown when you solve, and kept for your statistics.",
                     checked = showTimer,
                     onChecked = onShowTimer,
@@ -81,9 +85,45 @@ fun SettingsScreen(
                     onChecked = onPlaySound,
                 )
             }
+            item { AppearanceChoice(appearance, onAppearance) }
             item { PuzzleOrderRow(customOrder, onArrange) }
             item { Credits() }
         }
+    }
+}
+
+/** Light, dark or the device's, as the home grid's segmented rows are drawn. */
+@Composable
+private fun AppearanceChoice(appearance: Appearance, onAppearance: (Appearance) -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.surface)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column {
+            Text("Appearance", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            Text(
+                "Light or dark, or the same as your device.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+            )
+        }
+        SegmentedControl(
+            modifier = Modifier,
+            options = Appearance.entries,
+            selected = appearance,
+            label = { it.label },
+            tone = scheme.primary,
+            onTone = scheme.onPrimary,
+            verticalPadding = 7.dp,
+            onSelect = onAppearance,
+            // The card is already surface-coloured, so the track takes the page's colour to show.
+            track = scheme.background,
+        )
     }
 }
 

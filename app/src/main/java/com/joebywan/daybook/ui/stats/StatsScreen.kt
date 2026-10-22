@@ -90,7 +90,7 @@ fun StatsScreen(
                     Tile("Solved", Stats.totalSolved(completions).toString(), Modifier.weight(1f))
                     Tile(
                         if (streak.lapsed) "Welcome back" else "Streak",
-                        if (streak.lapsed) "-" else streak.current.toString(),
+                        if (streak.alive) streak.current.toString() else "-",
                         Modifier.weight(1f),
                     )
                     Tile("Best", streak.best.toString(), Modifier.weight(1f))

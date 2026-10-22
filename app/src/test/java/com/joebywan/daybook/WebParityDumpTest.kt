@@ -45,6 +45,8 @@ class WebParityDumpTest {
                 }
             }
         }
+        // Then as many levels as days, five boards each, under the pseudo-puzzle "levels".
+        for (level in 1..days.toInt()) ParityFingerprint.levelLines(level).forEach { out.append(it).append('\n') }
         File(path!!).writeText(out.toString())
     }
 }

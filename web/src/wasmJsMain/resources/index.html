@@ -43,8 +43,10 @@
   <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
   <style>
-    :root { --bg: #F6F1E7; --fg: #41504B; }
-    @media (prefers-color-scheme: dark) { :root { --bg: #11201C; --fg: #E6DECD; } }
+    /* data-theme is the player's Light/Dark choice in Settings (script below, and the app once it runs). */
+    :root { --bg: #F6F1E7; --fg: #41504B; color-scheme: light; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --bg: #11201C; --fg: #E6DECD; color-scheme: dark; } }
+    :root[data-theme=dark] { --bg: #11201C; --fg: #E6DECD; color-scheme: dark; }
     html, body {
       margin: 0; padding: 0; height: 100%; overflow: hidden;
       background: var(--bg); color: var(--fg);
@@ -79,6 +81,18 @@
       font: 15px -apple-system, system-ui, sans-serif;
     }
   </style>
+  <script>
+    // The Appearance setting (LaunchPreferences' "appearance" key), applied before the first paint so a
+    // Dark choice on a light device does not open on a light loading screen. Storage can throw; then System.
+    (() => {
+      let a = null;
+      try { a = localStorage.getItem('daybook_launch.appearance'); } catch (e) {}
+      if (a !== 'DARK' && a !== 'LIGHT') return;
+      const dark = a === 'DARK';
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = dark ? '#11201C' : '#F6F1E7');
+    })();
+  </script>
 </head>
 <body>
   <div id="loading"><img src="favicon.svg" width="44" height="44" alt=""><span>Opening Daybook…</span></div>

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -61,6 +62,8 @@ fun ArchiveScreen(
     completions: List<Completion>,
     onPlay: (LocalDate, Difficulty) -> Unit,
     onBack: () -> Unit,
+    /** The day to show near the top: the one just played, so coming back keeps the player's place. */
+    openAt: LocalDate? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     val puzzle = PuzzleRegistry.byId(puzzleId) ?: return
@@ -98,7 +101,10 @@ fun ArchiveScreen(
             }
         }
 
+        // One row above the day, so it does not sit hard against the top.
+        val list = rememberLazyListState((days.indexOf(openAt) - 1).coerceAtLeast(0))
         LazyColumn(
+            state = list,
             contentPadding = PaddingValues(18.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {

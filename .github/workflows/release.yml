@@ -15,6 +15,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: read   # the tested-tree artifacts and their runs
 
 jobs:
   release:
@@ -44,7 +45,29 @@ jobs:
           echo "name=${BASE}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           echo "code=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
+      # ci.yml records each source tree whose `build` passed. When this commit's tree is one of them (a pull
+      # request merged onto the main it was tested against), the same tests on the same code are not run twice.
+      # Only a same-repository ci.yml run that succeeded counts. Any other tree is tested here: two pull requests
+      # merged side by side, each green alone, failed this step on 2026-10-22.
+      - name: Was this exact tree tested?
+        id: tested
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          for run in $(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=tested-tree-$tree&per_page=100" \
+                         --jq '.artifacts[] | select(.expired | not) | .workflow_run.id'); do
+            if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" \
+                 --jq 'select(.path == ".github/workflows/ci.yml" and .conclusion == "success"
+                              and .head_repository.full_name == .repository.full_name) | .id' | grep -q .; then
+              echo "::notice::Tree $tree passed ci.yml in run $run; not testing it again."
+              echo "passed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+
       - name: Unit tests
+        if: steps.tested.outputs.passed != 'true'
         run: ./gradlew test
 
       - name: Restore the release key

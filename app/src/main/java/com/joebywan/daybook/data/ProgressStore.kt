@@ -1,12 +1,16 @@
 package com.joebywan.daybook.data
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LevelBoard
+import com.joebywan.daybook.core.Levels
+import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.Streak
 import com.joebywan.daybook.core.streakOf
 import com.joebywan.daybook.platform.currentTimeMillis
 import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.puzzles.PuzzleState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
@@ -50,6 +54,73 @@ data class Completion(
     }
 }
 
+/** One board solved in a level, as `level_solves` holds it: `"n|puzzleId|seconds|hints"`. */
+data class LevelSolve(val level: Int, val puzzleId: String, val seconds: Int, val hints: Int) {
+    fun encode(): String = "$level|$puzzleId|$seconds|$hints"
+
+    companion object {
+        fun decode(raw: String): LevelSolve? {
+            val parts = raw.split("|")
+            if (parts.size != 4) return null
+            return LevelSolve(
+                level = parts[0].toIntOrNull() ?: return null,
+                puzzleId = parts[1],
+                seconds = parts[2].toIntOrNull() ?: return null,
+                hints = parts[3].toIntOrNull() ?: return null,
+            )
+        }
+    }
+}
+
+/**
+ * Where the player stands in the levels, derived from the two stored sets and never stored itself.
+ *
+ * [current] is the lowest opened level that is not done, else the highest done plus one, else 1 (level 1
+ * is open from the start). A level is [done] when every puzzle of its plan has a solve; a puzzle no longer
+ * in the registry counts as solved, as the spec has it show as finished.
+ */
+data class LevelProgress(
+    val current: Int,
+    /** Opened levels and the pool size each was opened with. */
+    val opened: Map<Int, Int>,
+    val solves: Map<Int, List<LevelSolve>>,
+    val done: Set<Int>,
+) {
+    /** The pool size [level] plans with: the stored one once opened, the whole pool before. */
+    fun poolSize(level: Int): Int = opened[level] ?: Levels.POOL.size
+
+    fun plan(level: Int): List<LevelBoard> = Levels.plan(level, poolSize(level))
+
+    fun solved(level: Int): Set<String> = solves[level].orEmpty().map { it.puzzleId }.toSet()
+
+    /** Playable: done, or the current level. Nothing past [current] can be opened. */
+    fun isUnlocked(level: Int): Boolean = level in done || level == current
+
+    companion object {
+        val FRESH = of(emptySet(), emptySet())
+
+        /** From the raw `levels` and `level_solves` sets; malformed entries are skipped. */
+        fun of(levels: Set<String>, levelSolves: Set<String>): LevelProgress {
+            val opened = HashMap<Int, Int>()
+            for (raw in levels) {
+                val parts = raw.split("|")
+                val n = parts.getOrNull(0)?.toIntOrNull() ?: continue
+                val size = parts.getOrNull(1)?.toIntOrNull()?.takeIf { parts.size == 2 && it in Levels.STARTER..Levels.POOL.size } ?: continue
+                opened[n] = minOf(size, opened[n] ?: size)
+            }
+            val solves = levelSolves.mapNotNull(LevelSolve::decode).filter { it.level >= 1 }.groupBy { it.level }
+            fun isDone(n: Int): Boolean {
+                val solved = solves[n].orEmpty().map { it.puzzleId }.toSet()
+                return Levels.plan(n, opened[n] ?: Levels.POOL.size)
+                    .all { it.puzzleId in solved || PuzzleRegistry.byId(it.puzzleId) == null }
+            }
+            val done = (opened.keys + solves.keys).filter { it >= 1 && isDone(it) }.toSet()
+            val current = opened.keys.filter { it >= 1 && it !in done }.minOrNull() ?: ((done.maxOrNull() ?: 0) + 1)
+            return LevelProgress(current, opened, solves, done)
+        }
+    }
+}
+
 /**
  * A game left part-finished: the board plus everything the play screen would otherwise lose.
  *
@@ -68,6 +139,11 @@ data class SavedGame(
      * graphic is drawn from. Kept whole, unlike [history]. Defaulted: a save from before it loads with an empty log.
      */
     val log: String = "",
+    /**
+     * Each Restart still in reach of Undo, as the size [history] had once it took the board the restart cleared. An Undo
+     * that leaves the history shorter than one has taken that restart back. Defaulted: an older save loads with none.
+     */
+    val restarts: List<Int> = emptyList(),
 ) {
     /**
      * Keeps only the tail of the undo stack. Every entry is a whole board, so a Sudoku Expert game
@@ -75,7 +151,10 @@ data class SavedGame(
      * savedInstanceState Bundle, which is a crash rather than a lost undo. The live stack on the
      * play screen stays whole; it is only leaving the screen that costs the oldest steps.
      */
-    fun trimmed(): SavedGame = copy(history = history.takeLast(UNDO_DEPTH))
+    fun trimmed(): SavedGame {
+        val dropped = (history.size - UNDO_DEPTH).coerceAtLeast(0)
+        return copy(history = history.drop(dropped), restarts = restarts.map { it - dropped }.filter { it > 0 })
+    }
 
     fun encode(): String = SavedJson.encodeToString(trimmed())
 
@@ -163,6 +242,40 @@ class ProgressStore(private val store: KeyValueStore) {
         }
     }
 
+    /** Where the player stands in the levels; see [LevelProgress]. */
+    val levelProgress: Flow<LevelProgress> =
+        combine(store.stringSet(KEY_LEVELS), store.stringSet(KEY_LEVEL_SOLVES), LevelProgress::of)
+
+    /**
+     * Records that [level] was opened, with today's pool size unless it was opened before, and returns the
+     * pool size its plan must use from now on, so adding a puzzle never changes a level already started.
+     */
+    suspend fun openLevel(level: Int): Int {
+        var size = Levels.POOL.size
+        store.updateStringSet(KEY_LEVELS) { existing ->
+            val known = LevelProgress.of(existing, emptySet()).opened[level]
+            if (known != null) existing.also { size = known } else existing + "$level|$size"
+        }
+        return size
+    }
+
+    /**
+     * Records a board solved in a level; false (and nothing written) when that puzzle of that level was
+     * solved before, so a replay of a finished level records nothing new for it. The caller records the
+     * solve as a practice [Completion] (`day = null`) as well, for totals and best times.
+     */
+    suspend fun recordLevelSolve(solve: LevelSolve): Boolean {
+        var added = false
+        store.updateStringSet(KEY_LEVEL_SOLVES) { existing ->
+            val seen = existing.any { raw ->
+                LevelSolve.decode(raw)?.let { it.level == solve.level && it.puzzleId == solve.puzzleId } == true
+            }
+            added = !seen
+            if (seen) existing else existing + solve.encode()
+        }
+        return added
+    }
+
     /** The game in progress on this board, if one was left behind. */
     suspend fun savedGame(key: String): SavedGame? =
         SavedGames.find(store.stringSet(KEY_SAVED).first().savedGames(), key)
@@ -217,6 +330,10 @@ class ProgressStore(private val store: KeyValueStore) {
         store.updateStringSet(KEY_TUTORIALS_OFFERED) { offered -> offered + puzzleId }
     }
 
+    /** Whether anything at all is here: a solve, a game left behind, or a walkthrough offered. */
+    suspend fun hasPlayed(): Boolean =
+        listOf(KEY_COMPLETIONS, KEY_SAVED, KEY_TUTORIALS_OFFERED).any { store.stringSet(it).first().isNotEmpty() }
+
     private fun Set<String>.savedGames(): List<StoredGame> = mapNotNull(StoredGame::decode)
 
     private fun List<StoredGame>.encodeAll(): Set<String> = map(StoredGame::encode).toSet()
@@ -226,6 +343,8 @@ class ProgressStore(private val store: KeyValueStore) {
         const val KEY_COMPLETIONS = "completions"
         const val KEY_SAVED = "saved_games"
         const val KEY_TUTORIALS_OFFERED = "tutorials_offered"
+        const val KEY_LEVELS = "levels"
+        const val KEY_LEVEL_SOLVES = "level_solves"
     }
 }
 
