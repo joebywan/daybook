@@ -21,6 +21,7 @@ import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
+import com.joebywan.daybook.puzzles.WordWheel
 
 /**
  * The one place the app learns which puzzles exist.
@@ -51,6 +52,7 @@ object PuzzleRegistry {
         Cages,
         Target,
         Cipher,
+        WordWheel,
         Tally,
     )
 

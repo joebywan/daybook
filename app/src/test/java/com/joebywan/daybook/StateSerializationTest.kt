@@ -22,6 +22,7 @@ import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.TargetOp
 import com.joebywan.daybook.puzzles.TargetState
+import com.joebywan.daybook.puzzles.WordWheelState
 import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
@@ -109,6 +110,7 @@ class StateSerializationTest {
         is RegionsState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is TallyState -> state.tap(0, TallyLogic.REMOVED).tap(1, TallyLogic.KEPT)
         is TargetState -> state.combine(0, TargetOp.Add, 1)!!
+        is WordWheelState -> state.enter(state.slots[1].word)
         is TentsState -> state.withMark(state.trees.indexOfFirst { !it }, 1)
         is KingsState -> state.toggleMark(0).toggleKing(1)
         is LitsState -> state.toggle(0)

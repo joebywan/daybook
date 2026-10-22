@@ -72,6 +72,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Cage Sudoku | Sudoku with sum cages | Sudoku in which every dashed cage must add up to its number, with no digit repeated in it |
 | Target | Number-target arithmetic | Combine six numbers with + − × ÷ (whole numbers only) until a tile equals the target |
 | Cipher | Cryptarithm (alphametic) | A sum of real words in which each letter stands for one digit: find the digits that make it true |
+| Word Wheel | Letter-wheel crossword | Spell words from a wheel of letters to fill a small crossword; other real words count as bonus words |
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -131,6 +132,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   [Lichess puzzle database](https://database.lichess.org/#puzzles) (CC0). `tools/chess/build.py` keeps only those with
   exactly one key move and a shortest forced mate of exactly N, checked with python-chess; the tests re-prove the shipped
   lists with the app's own engine and an independent naive minimax.
+- **Word Wheel** — the wheel is an index into a fixed sorted list of well-known words (the same SCOWL screening as
+  Lexicon), and its crossword is laid from the words it spells. A board ships only if, solving it from the hints alone,
+  no slot ever has more than six words that fit it; an independent checker re-reads every row and column of the
+  squares to prove no two words touch and no word was made by accident.
 - **Tower and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by
