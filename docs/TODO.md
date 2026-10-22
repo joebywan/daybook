@@ -109,9 +109,13 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Keyboard input
 
-Every board but Atoms, Shikaku and Snap takes a keyboard (`core/BoardKeys.kt` is the shared plumbing; each puzzle
-has a pure, tested `<Name>Keys.kt`; the rules dialogs show a "Keyboard" line from `PuzzleType.keyboardHelp`).
-Still open: WebKit pass with `keyboard.press` (only Chromium was driven).
+Every board but Atoms, Shikaku, Snap and Mate takes a keyboard (`core/BoardKeys.kt` is the shared plumbing; each puzzle
+has a pure, tested `<Name>Keys.kt`; the rules dialogs and the wide side panel show a "Keyboard" line from
+`PuzzleType.keyboardHelp`). Sudoku was driven with `keyboard.press` in Chromium and WebKit (headless WebKit drops
+frames, so settle each step with two `requestAnimationFrame`s and a `resize` before trusting a screenshot).
+- [ ] **Undo drops the keyboard cursor.** History entries are stored without the selection (`withoutSelection`),
+  so after Ctrl+Z the next arrow starts again from square 0. Keeping the current selection across undo would fix it. *S.*
+- [ ] **Mate keys.** Arrows move a square cursor, Enter or Space picks up and puts down, as Pointers' cursor. *M.*
 - [ ] **Atoms, Shikaku, Snap keys, only if full coverage is wanted.** Each is a drag gesture needing its own
   mode (Atoms: arrow to the neighbouring atom, Space cycles the bond; Shikaku: Space anchors a corner, arrows
   grow, Enter commits, Esc cancels; Snap: arrows extend the path via `extend`, Backspace retracts). The mouse
