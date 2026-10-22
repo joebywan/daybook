@@ -7,6 +7,10 @@ catalogue open from day one.
 
 No ads. No subscription. No accounts. No network permission in the manifest at all.
 
+**[Get it on Google Play](https://play.google.com/store/apps/details?id=com.joebywan.daybook)** ·
+**[Get it on F-Droid](https://f-droid.org/packages/com.joebywan.daybook/)** ·
+**[Play in the browser](https://knowhowit.com.au/daybook/)**
+
 | Every puzzle, every day | Sudoku | Mosaic | Snap |
 |---|---|---|---|
 | ![The home screen: every puzzle for today, the first nine in view](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Mosaic board](docs/screenshots/mosaic.png) | ![A Snap board](docs/screenshots/snap.png) |
@@ -18,8 +22,8 @@ same key, so you can switch between them later and keep your streaks and statist
 
 - **[Google Play](https://play.google.com/store/apps/details?id=com.joebywan.daybook)**: the easiest; updates
   arrive on their own.
-- **F-Droid**: add `https://knowhowit.com.au/daybook/fdroid/repo` as a repository in the F-Droid app
-  (or scan the QR code on [its page](https://knowhowit.com.au/daybook/fdroid/repo/index.html)). See [F-Droid](#f-droid).
+- **[F-Droid](https://f-droid.org/packages/com.joebywan.daybook/)**: in the main F-Droid repository. Our own repo,
+  `https://knowhowit.com.au/daybook/fdroid/repo`, gets each release sooner. See [F-Droid](#f-droid).
 - **[GitHub Releases](https://github.com/joebywan/daybook/releases/latest)**: download
   `daybook-<version>.apk` and open it on your phone.
   - Take the **`.apk`**, not the `.aab`. The bundle next to it is for Google Play and Android cannot
@@ -236,10 +240,13 @@ readable copy. Losing it means every installed copy must be uninstalled to updat
 
 ## F-Droid
 
-Add `https://knowhowit.com.au/daybook/fdroid/repo` as a repository in the F-Droid app (certificate fingerprint:
-`android/release-key.sha256`). Every release is added to it automatically, signed with the same key as the APK on
-the Releases page, so it updates in place. How it works, and why f-droid.org itself is not there yet:
-[`docs/fdroid/README.md`](docs/fdroid/README.md).
+Daybook is on [f-droid.org](https://f-droid.org/packages/com.joebywan.daybook/). F-Droid builds it from source and,
+because the build is reproducible, ships our own signed APK, so it updates in place over a Play or GitHub install.
+
+Our own repo gets each release as soon as it is made: add `https://knowhowit.com.au/daybook/fdroid/repo` as a
+repository in the F-Droid app (certificate fingerprint: `android/release-key.sha256`, or scan the QR code on
+[its page](https://knowhowit.com.au/daybook/fdroid/repo/index.html)). Same key, so it updates in place too.
+How both work: [`docs/fdroid/README.md`](docs/fdroid/README.md).
 
 ## Publishing to Google Play
 
@@ -338,4 +345,3 @@ The maintained list is [`docs/TODO.md`](docs/TODO.md); the headlines:
 
 - No accessibility work: the eight boards drawn with raw pointer input expose no click actions, so
   a screen reader cannot operate them
-- Play Store listing not yet created — see "Publishing to Google Play" above
