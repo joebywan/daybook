@@ -113,8 +113,10 @@ android {
 // The suite is a few long generator/teacher classes and many short ones, and one JVM ran them in
 // series (~25 min). Forks take whole classes, so nothing is shared but the files under build/reports,
 // each written by one class only. The longest class (TargetTeachingTest, ~6 min) sets the floor.
+// Capped at 4, CI's core count: uncapped, a 32-core desktop started 32 test JVMs per run, and two sessions
+// testing at once left the machine unusable.
 tasks.withType<Test>().configureEach {
-    maxParallelForks = Runtime.getRuntime().availableProcessors()
+    maxParallelForks = minOf(4, Runtime.getRuntime().availableProcessors())
 }
 
 // AGP 9 compiles Kotlin itself (built-in Kotlin), so there is no kotlin-android plugin; this is the
