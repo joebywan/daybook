@@ -1,5 +1,6 @@
 package com.joebywan.daybook
 
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.PointersState
 import org.junit.Assert.assertEquals
@@ -38,24 +39,29 @@ class PointersTutorialTest {
     }
 
     @Test
-    fun `each frame accepts the one tap it asks for and refuses every other`() {
-        assertEquals(6, frames.size)
-        assertNull(frames[0].accepts)
-        for (k in 1..4) {
+    fun `each frame accepts the taps it asks for, in order, and refuses every other`() {
+        assertEquals(5, frames.size)
+        assertNull(frames[0].judge)
+        // The arrows each move frame asks for, in order; the glow names each one as it comes.
+        val asks = listOf(listOf(Pointers.TOP), listOf(Pointers.ROW), listOf(Pointers.SIDE, Pointers.ROW))
+        for ((n, ask) in asks.withIndex()) {
+            val k = n + 1
             val frame = frames[k]
-            assertNotNull(frame.accepts)
-            val accepts = frame.accepts!!
-            val asked = frame.highlight.strong.single()
-            for ((i, next) in tapsFrom(frame.state as PointersState)) {
-                assertEquals("frame $k, tapping arrow $i", i == asked, accepts(next))
+            val judge = frame.judge!!
+            var s = frame.state as PointersState
+            for ((step, asked) in ask.withIndex()) {
+                assertEquals("frame $k glows the arrow it wants", setOf(asked), (frame.glow?.invoke(s) ?: frame.highlight).strong)
+                for ((i, next) in tapsFrom(s)) {
+                    val want = when {
+                        i != asked -> TutorialStep.REJECT
+                        step == ask.lastIndex -> TutorialStep.DONE
+                        else -> TutorialStep.PROGRESS
+                    }
+                    assertEquals("frame $k step $step, tapping arrow $i", want, judge(next))
+                }
+                s = s.tap(arrows[asked][0])!!
             }
-        }
-        // Each frame's board is the previous frame's result.
-        for (k in 2..5) {
-            val prev = frames[k - 1]
-            val asked = prev.highlight.strong.single()
-            val made = (prev.state as PointersState).tap(arrows[asked][0])
-            assertEquals("frame $k", made, frames[k].state)
+            assertEquals("frame ${k + 1} starts where frame $k ends", s, frames[k + 1].state)
         }
         assertTrue(frames.last().freePlay)
     }

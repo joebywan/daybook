@@ -166,6 +166,7 @@ object Dominoes : PuzzleType {
         val empty = tutorialBoard()
         val solved = laid(empty, *tutorialAnswer.mapIndexed { d, p -> d to p }.toTypedArray())
         val six = laid(empty, 3 to tutorialAnswer[3])
+        val backwards = laid(six, 2 to Placement(5, 1))
         val five = laid(six, 2 to tutorialAnswer[2])
         val one = laid(five, 0 to tutorialAnswer[0])
         val lifted = laid(one, 2 to null)
@@ -180,23 +181,31 @@ object Dominoes : PuzzleType {
                 caption = "Only two 6s make 12, so the double 6 goes there. Tap it in the tray, then tap the two glowing squares.",
                 highlight = BoardHighlight(strong = setOf(0, 4, tray + 3), soft = setOf(rule + 0)),
                 accepts = only(six),
-                retry = "Tap the double 6 in the tray, then the two glowing squares, one after the other.",
-                done = "Laid. You can also drag from one square to the other.",
+                retry = "Tap the glowing double 6 in the tray, then the two glowing squares.",
+                done = "Laid. A domino covers two neighbouring squares.",
             ),
             TutorialFrame(
                 state = six,
-                caption = "A one-square region shows its pips: this one is 2, the 5-2's 2. Tap the 5-2 twice to turn it so 2 leads, then this square and the one below.",
-                highlight = BoardHighlight(strong = setOf(1, 5, tray + 2), soft = setOf(rule + 1)),
+                caption = "A one-square region shows its pips: this one needs a 2, the 5-2's 2. Tap the 5-2, then this square, then the one below.",
+                highlight = BoardHighlight(strong = setOf(1, tray + 2), soft = setOf(5, rule + 1)),
+                accepts = only(backwards),
+                retry = "Tap the glowing 5-2 in the tray, then the glowing square, then the one below.",
+                done = "The 5 landed on the 2: the half shown first goes on the first square.",
+            ),
+            TutorialFrame(
+                state = backwards,
+                caption = "Turn it round where it lies: double-tap the 5-2, or long-press it.",
+                highlight = BoardHighlight(strong = setOf(1, 5), soft = setOf(rule + 1)),
                 accepts = only(five),
-                retry = "The 2 must land on the 2 square: turn the 5-2 in the tray, or tap the lower square first.",
-                done = "The half you see first in the tray goes on the first square you tap.",
+                retry = "Double-tap the glowing domino, or long-press it.",
+                done = "Turned. In the tray, a second tap turns a domino before you lay it.",
             ),
             TutorialFrame(
                 state = five,
-                caption = "= wants its squares the same: only 1 is on both dominoes left, and < 2 takes the 0. Lay the 1-0 along the bottom, its 1 on the =.",
+                caption = "= wants its squares the same: only 1 is on both dominoes left, and < 2 takes the 0. Tap the 1-0, then drag from the = square to the right.",
                 highlight = BoardHighlight(strong = setOf(6, 7, tray + 0), soft = setOf(2, rule + 2, rule + 3)),
                 accepts = only(one),
-                retry = "Tap the 1-0, then the glowing = square, then the square to its right.",
+                retry = "Tap the glowing 1-0, then drag from the glowing = square to its right.",
                 done = "Both = squares will show 1, and 0 is under 2.",
             ),
             TutorialFrame(
@@ -204,12 +213,12 @@ object Dominoes : PuzzleType {
                 caption = "Changed your mind? Tap a laid domino to lift it back to the tray. Lift the 5-2.",
                 highlight = BoardHighlight(strong = setOf(1, 5)),
                 accepts = only(lifted),
-                retry = "Tap the 5-2 once, on either of its squares.",
+                retry = "Tap the glowing domino once.",
                 done = "Back in the tray, and in your hand to lay again.",
             ),
             TutorialFrame(
                 state = lifted,
-                caption = "Your turn: lay the last two. Double-tap or long-press a laid domino to turn it round. Stuck? Hint shows where to look.",
+                caption = "Your turn: lay the last two. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. Every board works out one domino at a time.",
             ),

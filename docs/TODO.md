@@ -16,9 +16,10 @@ from a measurement or review, so you can check it is still true.
 ## Could affect players
 
 - [ ] **Walkthroughs: rewrite to the style rules.** The runner now advances by itself and takes multi-state moves
-  (`docs/PUZZLE_STANDARDS.md` section 8); only Lexicon's BOAT and Sudoku's cell-then-digit were converted. The other 23 still
-  split one idea over several frames (Inequality, Regions, Cages, Cipher select then digit), teach gestures only in captions,
-  and carry claims the rules contradict (Lexicon frame 4: "no guess can tell COAT, GOAT and MOAT apart", but CLOG does). *M.*
+  (`docs/PUZZLE_STANDARDS.md` section 8). Lexicon, Sets, Snap, Tower, Nonogram, Mate, Target, Word Wheel, Tally, Sand,
+  Pointers and Dominoes are rewritten; the grid and digit-pad puzzles (Sudoku, Inequality, Regions, Cages, Cipher, Kings,
+  Tents, Mambo, Pipes, Shikaku, Mosaic, LITS, Atoms) are on `claude/walkthroughs-grid`. Not walked through, because neither emits a
+  state a frame could ask for: Word Wheel's Shuffle (a labelled button) and Sand's refused pour (it shakes). *S.*
 - [ ] **Wide windows: polish left.** Rotation and resizable windows shipped in October 2026 (`PlayLayout` in `PlayScreen.kt`).
   Seen on a Pixel Tablet emulator and a phone on its side, three things are plain rather than wrong: the home grid on a phone
   on its side shows one row of tiles per screen and scrolls (columns come from width alone; letting height pick a smaller tile

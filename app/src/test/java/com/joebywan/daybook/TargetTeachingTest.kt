@@ -213,9 +213,9 @@ class TargetTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Target.tutorial
-        assertEquals(6, frames.size)
-        assertTrue(frames[0].accepts == null && frames[1].accepts == null)
-        assertTrue(frames[5].freePlay)
+        assertEquals(3, frames.size)
+        assertTrue(frames[0].accepts == null)
+        assertTrue(frames[2].freePlay)
 
         fun gesture(s: TargetState, first: Int, op: TargetOp, second: Int): TargetState {
             val picked = s.tapTile(TargetEntry(), first).entry
@@ -227,28 +227,24 @@ class TargetTeachingTest {
             frames[frame].accepts!!(gesture(frames[frame].state as TargetState, first, op, second))
 
         // Frame 2: 25 x 4. Either order is the same step.
-        assertTrue(ok(2, 0, TargetOp.Mul, 1))
-        assertTrue(ok(2, 1, TargetOp.Mul, 0))
-        assertFalse("wrong operator", ok(2, 0, TargetOp.Add, 1))
-        assertFalse("wrong tiles", ok(2, 2, TargetOp.Mul, 3))
-        assertFalse("nothing made", frames[2].accepts!!(frames[2].state))
-
-        assertTrue(ok(3, 2, TargetOp.Mul, 3))
-        assertFalse(ok(3, 2, TargetOp.Add, 3))
-        assertFalse(ok(3, 4, TargetOp.Mul, 5))
-
-        assertTrue(ok(4, 0, TargetOp.Add, 2))
-        assertFalse(ok(4, 0, TargetOp.Sub, 2))
+        assertTrue(ok(1, 0, TargetOp.Mul, 1))
+        assertTrue(ok(1, 1, TargetOp.Mul, 0))
+        assertFalse("wrong operator", ok(1, 0, TargetOp.Add, 1))
+        assertFalse("wrong tiles", ok(1, 2, TargetOp.Mul, 3))
+        assertFalse("nothing made", frames[1].accepts!!(frames[1].state))
 
         // Each frame's board is the previous frame's result, so a caption never describes a board the player is not on.
-        assertEquals(frames[2].state, frames[1].state)
-        assertEquals(gesture(frames[2].state as TargetState, 0, TargetOp.Mul, 1), frames[3].state)
-        assertEquals(gesture(frames[3].state as TargetState, 2, TargetOp.Mul, 3), frames[4].state)
-        assertTrue(gesture(frames[4].state as TargetState, 0, TargetOp.Add, 2).solved)
+        assertEquals(frames[1].state, frames[0].state)
+        assertEquals(gesture(frames[1].state as TargetState, 0, TargetOp.Mul, 1), frames[2].state)
 
-        // The captions' claims about the board.
+        // The captions' claims about the board and the rules.
         assertTrue(frames[0].caption.contains("106"))
-        assertTrue(frames[2].caption.contains("25") && frames[2].caption.contains("4") && frames[2].caption.contains("100"))
+        assertEquals(106, (frames[0].state as TargetState).target)
+        val s0 = frames[0].state as TargetState
+        assertNull("7 / 2 is refused", s0.combine(4, TargetOp.Div, 3))
+        assertTrue(frames[1].caption.contains("25") && frames[1].caption.contains("4") && frames[1].caption.contains("100"))
+        // "You need not use every number": a three-step answer from here leaves tiles unused.
+        assertTrue(gesture(gesture(frames[2].state as TargetState, 2, TargetOp.Mul, 3), 0, TargetOp.Add, 2).solved)
         assertTrue(frames.all { it.caption.length <= 170 })
     }
 

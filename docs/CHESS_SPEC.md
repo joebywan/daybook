@@ -155,8 +155,8 @@ The hint flow is the shared one (tap 1 nudge, tap 2 explain, player moves, panel
 Hand-built tiny positions, each with a unique forced mate, proved by the independent checker in tests. About 7 frames:
 (1) read the goal on a solved mate-in-1 (back rank) with a `BoardHighlight`; (2) make the move by the real
 tap-tap gestures (one frame per emitted state: the move is one state, selection is not); (3) a mate-in-2 where the
-reply is shown and the player sees why the first move had to be the one it was; (4) the promotion picker; (5) the
-caption on a mistake (Undo); (6) free play on a mate-in-2 the hints can finish with no fallback and no mistake.
+reply is shown and the player sees why the first move had to be the one it was; (4) the promotion picker; (5) a
+mistake the player makes (Rd7, after which Black's Kb8 leaves no mate; the hint flags it in a game); (6) free play on a mate-in-2 the hints can finish with no fallback and no mistake.
 Captions at most 170 characters. Teach with the position's own squares and pieces.
 
 ## Tests

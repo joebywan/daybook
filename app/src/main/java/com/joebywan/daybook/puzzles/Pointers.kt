@@ -52,6 +52,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.launch
@@ -150,18 +151,17 @@ object Pointers : PuzzleType {
             ),
             TutorialFrame(
                 state = s2,
-                caption = "Clear what is in the way first. The side arrow points down, and its way out is clear. Tap it.",
+                caption = "Clear what is in the way first: tap the side arrow, whose way down is clear, then the second-row arrow again.",
                 highlight = BoardHighlight(strong = setOf(SIDE)),
-                accepts = { it is PointersState && it.removed == listOf(TOP, SIDE) && it.bumps == listOf(ROW) },
-                retry = "Tap the glowing arrow down the right-hand side.",
-                done = "Now the second row's way is open.",
-            ),
-            TutorialFrame(
-                state = s3,
-                caption = "Tap the second-row arrow again.",
-                highlight = BoardHighlight(strong = setOf(ROW)),
-                accepts = { it is PointersState && it.removed == listOf(TOP, SIDE, ROW) && it.bumps == listOf(ROW) },
-                retry = "Tap the glowing arrow in the second row.",
+                steps = { next ->
+                    when ((next as? PointersState)?.takeIf { it.bumps == listOf(ROW) }?.removed) {
+                        listOf(TOP, SIDE) -> TutorialStep.PROGRESS
+                        listOf(TOP, SIDE, ROW) -> TutorialStep.DONE
+                        else -> TutorialStep.REJECT
+                    }
+                },
+                glow = { now -> BoardHighlight(strong = setOf(if (SIDE in (now as PointersState).removed) ROW else SIDE)) },
+                retry = "Tap the glowing arrow.",
                 done = "Taking an arrow away only ever opens the way for others.",
             ),
             TutorialFrame(

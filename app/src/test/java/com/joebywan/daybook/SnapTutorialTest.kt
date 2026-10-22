@@ -165,7 +165,6 @@ class SnapTutorialTest {
 
     @Test
     fun `what the captions say about the board is true`() {
-        val frames = Snap.tutorial
         // "A corner touches only two squares", and the first corner is beside 1.
         assertEquals(listOf(4, 1), neighbours(0))
         assertEquals(1, marks[1])

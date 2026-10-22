@@ -212,7 +212,8 @@ From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes
   holds, red (`scheme.error`, solid) when `ruleBroken`. Never moves the board.
 - **Preview:** a fixed motif (a few squares, two regions with badges, two dominoes with pips). Never calls `generate`.
 - **Walkthrough:** a hand-built tiny board (3-4 dominoes): select and lay a domino; a one-square SUM; an EQUAL region;
-  lift and re-lay; a free-play frame the hints finish.
+  lift and re-lay; a free-play frame the hints finish. As built: the player lays the 5-2 unturned, so its 5 lands on the
+  2 (their own mistake), turns it round where it lies (double tap or long press), and lays the 1-0 by a drag.
 - **Share card:** the standard grid for the play log; nothing board-specific unless it reads better.
 
 ## Tests (section 10 of the standards, plus)
