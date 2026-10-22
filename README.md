@@ -13,19 +13,23 @@ No ads. No subscription. No accounts. No network permission in the manifest at a
 
 ## Install it
 
-**[Download the latest release](https://github.com/joebywan/daybook/releases/latest)** and open the
-`daybook-<version>.apk` on your phone.
+Three ways onto an Android phone (7.1 or newer, API 25). All three ship the same build, signed with the
+same key, so you can switch between them later and keep your streaks and statistics.
 
-- Take the **`.apk`**, not the `.aab`. The bundle next to it is for Google Play and Android cannot
-  install it directly.
-- Needs **Android 7.1 or newer** (API 25).
-- Android will ask you to allow installs from whichever app you opened it with — your browser or
-  file manager — the first time. That prompt is the usual one for anything not from the Play Store.
-- Later releases install straight over the top, keeping your streaks and statistics, because every
-  build is signed with the same key. See [Releases, CI and signing](#releases-ci-and-signing) for
-  why that is checked so carefully.
+- **[Google Play](https://play.google.com/store/apps/details?id=com.joebywan.daybook)**: the easiest; updates
+  arrive on their own.
+- **F-Droid**: add `https://knowhowit.com.au/daybook/fdroid/repo` as a repository in the F-Droid app
+  (or scan the QR code on [its page](https://knowhowit.com.au/daybook/fdroid/repo/index.html)). See [F-Droid](#f-droid).
+- **[GitHub Releases](https://github.com/joebywan/daybook/releases/latest)**: download
+  `daybook-<version>.apk` and open it on your phone.
+  - Take the **`.apk`**, not the `.aab`. The bundle next to it is for Google Play and Android cannot
+    install it directly.
+  - Android will ask you to allow installs from whichever app you opened it with (your browser or
+    file manager) the first time. That prompt is the usual one for anything not from the Play Store.
+  - Later releases install straight over the top. See [Releases, CI and signing](#releases-ci-and-signing)
+    for why the signing is checked so carefully.
 
-Not on Google Play yet (in preparation) — see [Publishing to Google Play](#publishing-to-google-play).
+Not on Android? **[Play in the browser](https://knowhowit.com.au/daybook/)**, no install needed.
 
 ## Why it works offline and for free
 
@@ -219,11 +223,10 @@ the Releases page, so it updates in place. How it works, and why f-droid.org its
 
 ## Publishing to Google Play
 
-Every release already builds and attaches a signed `.aab` alongside the `.apk`. Once Play is set
-up, `.github/workflows/publish-play.yml` uploads that bundle to the **production** track and rolls it out to everyone (Google reviews it first).
+Daybook is live on Google Play. Every release builds and attaches a signed `.aab` alongside the `.apk`, and
+`.github/workflows/publish-play.yml` uploads that bundle to the **production** track and rolls it out to everyone (Google reviews it first).
 The closed testing track (`alpha`) is still there for a manual run.
-Until the `PLAY_SERVICE_ACCOUNT_JSON` secret exists the workflow logs a notice and does nothing, so
-it is safe sitting here unconfigured.
+It authenticates with the `PLAY_SERVICE_ACCOUNT_JSON` secret; without it the workflow logs a notice and does nothing.
 
 `release.yml` calls it directly as a reusable workflow rather than letting it wait on the
 `release: published` event, because a release created with `GITHUB_TOKEN` does not trigger other
