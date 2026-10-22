@@ -176,6 +176,13 @@ below have a famous branded version; use the descriptive name).
   and nobody has tapped the tiles by touch on Android yet.
 - [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
   not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
+- [ ] **Cipher: recapture the screenshots and drive it on the emulator.** Rendered on the web build only (Chromium and WebKit, light and dark,
+  375x537 and 390x844); `docs/screenshots/home.png` and its alt text were not recaptured (needs the emulator), and nobody has played it by touch on Android.
+- [ ] **Cipher: other shapes need longer words.** Every tier is 4 + 4 = 5 because the leading carry is the foothold the no-trial ladder needs, and the
+  answer lists stop at five letters. A screened six-letter answer list (SCOWL through `tools/words/build.py`, screened by hand as the others were) would
+  allow 5 + 5 = 6, which would give Hard and Expert a different look. Measured without it: 5 + 5 = 5 gave one ladder board per 30 pairs, three addends none.
+- [ ] **Cipher: candidate notes, if players ask.** Not built: every hint ends in a digit placed, so none relies on an elimination the player must track.
+  Sudoku's notes are the model (a mask per letter, defaulted; the mode `rememberSaveable`).
 
 ### Suggested
 
