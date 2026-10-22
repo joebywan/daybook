@@ -161,10 +161,20 @@ class TallyTeachingTest {
 
     @Test
     fun `what is left making the target exactly keeps all of it`() {
-        val s = TallyState(3, "472" + "935" + "618", "101" + "011" + "110", marks = ".x." + "......")
+        // Four 1s needing 1 each: with row 1's second 1 removed, row 1 (and column 2) add up already.
+        val s = TallyState(2, "1111", "1001", marks = ".x..")
         val step = deduce(s)!!
         assertEquals(TallyTeacher.ALL_LEFT, step.technique)
-        assertEquals(listOf(0, 2), step.stays)
+        assertEquals(listOf(0), step.stays)
+    }
+
+    @Test
+    fun `circling a line that already adds up waits while an unfinished line has a shortcut`() {
+        // Row 1 (4 7 2, needing 6) adds up once the 7 goes; row 3 (6 1 8, needing 7) still holds an 8 too big to stay.
+        val s = TallyState(3, "472" + "935" + "618", "101" + "011" + "110", marks = ".x." + "......")
+        val step = deduce(s)!!
+        assertEquals(TallyTeacher.TOO_BIG, step.technique)
+        assertTrue(step.goes.none { it < 3 })
     }
 
     @Test

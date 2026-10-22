@@ -15,10 +15,13 @@ package com.joebywan.daybook.puzzles
  *
  * Techniques, simplest first:
  * 1. [DONE] — the circled numbers already make the target, so everything else in the line goes.
- * 2. [ALL_LEFT] — what is left in the line makes the target exactly, so all of it stays.
- * 3. [TOO_BIG] — a number bigger than what the line still needs (target less the circled) goes.
- * 4. [TOO_MUCH] — a number bigger than the line's surplus (what is left less the target) stays:
+ * 2. [TOO_BIG] — a number bigger than what the line still needs (target less the circled) goes.
+ * 3. [TOO_MUCH] — a number bigger than the line's surplus (what is left less the target) stays:
  *    removing it would take away too much.
+ * 4. [ALL_LEFT] — what is left in the line makes the target exactly, so all of it stays. Such a
+ *    line already shows green, so circling it is tidying up; it comes after the shortcuts that
+ *    move an unfinished line on (found on the emulator: a nearly finished board's hint said
+ *    "circle the 6 and 2" in a green row while the last row still had numbers to remove).
  * 5. [WAYS] — everything else one line says: every way to make the target uses this number, or
  *    none does. The general case, which the four above are the common shortcuts of.
  * 6. [WHAT_IF] — suppose one number stays (or goes), follow at most [TallyLogic.MAX_LINKS] lines
@@ -44,7 +47,7 @@ internal object TallyTeacher {
     const val MISTAKE = "mistake"
 
     /** Every technique in the order [deduce] prefers them, for reports. */
-    val TECHNIQUES = listOf(DONE, ALL_LEFT, TOO_BIG, TOO_MUCH, WAYS, WHAT_IF)
+    val TECHNIQUES = listOf(DONE, TOO_BIG, TOO_MUCH, ALL_LEFT, WAYS, WHAT_IF)
 
     /** What the hint panel has room for (the test pins it). */
     const val MAX_NUDGE = 70

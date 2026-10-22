@@ -267,7 +267,7 @@ is hashed into every seed: never rename it.
   is left with no way). Raise the generator and the teacher must learn the new step; no fallback exists. A mistake is a removed number
   the answer keeps or a circled one it removes, sound because the board has one answer.
 - Feedback is derived: a target chip turns green (Green mark) when its line adds up, red (`scheme.error`) when no choice of its open
-  numbers can make it any more, after a 1 s debounce. Hue pair from `BoardHues.pair(digits.hashCode())`: A tints the target chips, B
+  numbers can make it any more (solid `scheme.error`, so it cannot be mistaken for a Rose or Amber chip), after a 1 s debounce. Hue pair from `BoardHues.pair(digits.hashCode())`: A tints the target chips, B
   inks the circles. Highlight indices: squares `0 until n*n`, row target `n*n + r`, column target `n*n + n + c`.
 - The regions variant of the genre (sums per coloured region as well as per line) was deliberately not built; see `docs/TODO.md`.
 

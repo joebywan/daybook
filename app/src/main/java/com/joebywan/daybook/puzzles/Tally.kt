@@ -316,7 +316,7 @@ object Tally : PuzzleType {
                 Offset((line - n) * u + u * 0.08f, n * u + GAP * u) to Size(u * 0.84f, TARGET_H * u)
             }
             val fill = when {
-                bad[line] -> scheme.error.copy(alpha = 0.22f)
+                bad[line] -> scheme.error
                 done[line] -> good
                 else -> band
             }
@@ -325,7 +325,7 @@ object Tally : PuzzleType {
                 drawRoundRect(overlay.glow.copy(alpha = overlay.pulse), topLeft, size, CornerRadius(u * 0.18f), style = Stroke(u * 0.08f))
             }
             val ink = when {
-                bad[line] -> scheme.error
+                bad[line] -> BoardHues.onFill(scheme.error)
                 done[line] -> BoardHues.onFill(good)
                 else -> scheme.onSurface
             }
