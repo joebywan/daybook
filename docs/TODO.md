@@ -41,7 +41,7 @@ from a measurement or review, so you can check it is still true.
   hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
   reasoning. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
 
-- [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far, and Target's "steps" is the
+- [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far (an Undo of the restart hands them back), and Target's "steps" is the
   operations still on the board at the finish (not only those that build the target); both are simple readings the owner may
   want changed (`ui/play/ShareCard.kt`).
 
