@@ -335,7 +335,9 @@ class DominoRulesTest {
             val statedBudget = 20
             assertTrue("$d rules cover $ruledShare% of squares", ruledShare < 85)
             assertTrue("$d states $statedShare% of squares outright", statedShare < statedBudget)
-            assertTrue("$d median ${ms[ms.size / 2]} ms", ms[ms.size / 2] < 30)
+            // Measured 0.4 / 3.3 / 14 ms on a desktop. CI runs test classes in parallel forks, where Expert's median went past an
+            // earlier 30 ms limit; 60 still fails a board that costs four times what it does now.
+            assertTrue("$d median ${ms[ms.size / 2]} ms", ms[ms.size / 2] < 60)
         }
         println(report)
         java.io.File("build/reports").mkdirs()
