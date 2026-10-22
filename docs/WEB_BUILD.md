@@ -117,11 +117,7 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   (12,045 boards) takes 30 s in Chromium and 40 s in WebKit on a 32-core machine, 36 s and 49 s pinned
   to 4 cores, so there is no short-range variant. `WebParityDumpTest` takes `DAYBOOK_PARITY_DAYS`
   (default 365) for a quicker local look. CI wires it as the composite action
-  `.github/actions/web-parity`, used twice: by `web-parity.yml` (a pull-request job, *not* `build`,
-  so it is visible but never holds up the required check; path-filtered to app/src/main, web/, Gradle
-  files and itself) and by `pages.yml`, between building the dist and uploading it, so a divergence
-  that got past review stops the deploy. Renovate's pull requests get no `web-parity` run (their
-  token triggers nothing), so for them `pages.yml` is the gate. The dump test must be run with
+  `.github/actions/web-parity`, used twice: by the `web-parity` job in `ci.yml` (a required check beside `build`; it always runs, and passes at once when the change touches nothing that could alter a board: app/src/main, web/, Gradle files, the parity tools or ci.yml) and by `pages.yml`, between building the dist and uploading it, so a divergence that got past review stops the deploy. Renovate's dispatched CI runs post a `web-parity` commit status as they do `build`. The dump test must be run with
   `--rerun` (the env var is not a Gradle input; a cached test would write no file). Playwright's own
   console errors are not failures (headless WebKit complains about WebGL); a `pageerror`, a crash or
   no `DUMP DONE` is.

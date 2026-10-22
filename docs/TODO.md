@@ -45,7 +45,7 @@ from a measurement or review, so you can check it is still true.
   hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
   reasoning. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
 
-- [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far, and Target's "steps" is the
+- [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far (an Undo of the restart hands them back), and Target's "steps" is the
   operations still on the board at the finish (not only those that build the target); both are simple readings the owner may
   want changed (`ui/play/ShareCard.kt`).
 
@@ -151,6 +151,9 @@ below have a famous branded version; use the descriptive name).
 
 - [ ] **Dominoes: recapture the home screenshot.** Dominoes is the twenty-fifth tile, opening a ninth row on a phone;
   `docs/screenshots/home.png` (and the store screenshots) were not recaptured with it.
+- [ ] **Recapture home screenshots after the UX PRs.** The badge now says "Day one awaits" on a clean install, not "0 day
+  streak", and more home changes are landing; recapture every `1-home.png` and `docs/screenshots/home.png` once they are in
+  (`tools/screenshots/capture.sh`). *S.*
 
 - [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
   not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
