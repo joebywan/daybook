@@ -57,6 +57,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.ui.stats.MedalIcon
+import com.joebywan.daybook.platform.GetTheAppCard
 import com.joebywan.daybook.platform.formatDate
 import kotlinx.datetime.LocalDate
 
@@ -145,6 +146,7 @@ fun HomeScreen(
             pick = PuzzleRegistry.featured(today.toEpochDays()).id,
             onLaunch = onLaunch,
         )
+        GetTheAppCard()
     }
 
     if (pickingArchive) {
