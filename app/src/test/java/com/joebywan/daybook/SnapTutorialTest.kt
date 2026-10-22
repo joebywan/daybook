@@ -1,5 +1,6 @@
 package com.joebywan.daybook
 
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.SnapState
 import org.junit.Assert.assertEquals
@@ -109,7 +110,8 @@ class SnapTutorialTest {
             val next = frames[k + 1].state as SnapState
             assertEquals("frame $k: the next frame does not carry on from here", target, next.path.take(target.size))
         }
-        assertEquals("gesture frames", 6, gestures)
+        assertEquals("one-move frames", 4, gestures)
+        assertEquals("frames with a move", 6, frames.count { it.judge != null })
         assertTrue(frames.last().freePlay)
         assertFalse((frames.last().state as SnapState).solved)
     }
@@ -122,12 +124,43 @@ class SnapTutorialTest {
             val onAnswer = path == solution.take(path.size)
             assertEquals("frame $k: $path", onAnswer, answers(path).isNotEmpty())
         }
-        // Only the two frames that show a wrong turn start off the answer.
+        // Every frame starts on the answer; the wrong turns are the player's, and cannot be finished.
         val offAnswer = Snap.tutorial.count {
             val p = (it.state as SnapState).path
             p != solution.take(p.size)
         }
-        assertEquals(2, offAnswer)
+        assertEquals(0, offAnswer)
+        for ((line, detour) in detours) assertTrue("$line + $detour", answers(line + detour).isEmpty())
+    }
+
+    /** The two mistake frames, 6 and 8: the line each starts on and the wrong turn the player makes. */
+    private val detours = listOf(5 to listOf(9, 10), 7 to listOf(14))
+        .map { (k, d) -> (Snap.tutorial[k].state as SnapState).path to d }
+
+    @Test
+    fun `a mistake frame takes the wrong turn and back, made by the real gestures, and nothing else`() {
+        val frames = Snap.tutorial
+        for ((k, d) in listOf(5 to listOf(9, 10), 7 to listOf(14))) {
+            val judge = frames[k].steps!!
+            val base = frames[k].state as SnapState
+            var s = base
+            // A drag starting on the end of the line hands it in unchanged: not a refusal.
+            assertEquals(TutorialStep.PROGRESS, judge(s.copy()))
+            for (cell in d) {
+                for (m in movesFrom(s)) if (m.path != base.path && (1..d.size).none { m.path == base.path + d.take(it) }) {
+                    assertEquals("frame $k: ${m.path}", TutorialStep.REJECT, judge(m))
+                }
+                s = Snap.extend(s, cell)
+                assertEquals(TutorialStep.PROGRESS, judge(s))
+            }
+            // Back: frame 6 by a drag starting on the glowing square, frame 8 by dragging back a square.
+            val back = if (k == 5) Snap.dragStart(s, 0.5f, 2.5f) else Snap.extend(s, base.path.last())
+            assertEquals("frame $k", base.path, back.path)
+            assertEquals("frame $k", TutorialStep.DONE, judge(back))
+            assertTrue("frame $k glows where to go back to", base.path.last() in frames[k].glow!!(s).strong)
+            assertTrue("frame $k glows the wrong turn first", d.first() in frames[k].glow!!(base).strong)
+            assertEquals("frame $k: the next frame carries on", base.path, (frames[k + 1].state as SnapState).path.take(base.path.size))
+        }
     }
 
     @Test
@@ -139,20 +172,15 @@ class SnapTutorialTest {
         // "The square to the right is 4": from the end of the line after two moves.
         assertEquals(4, solution[2])
         assertEquals(4, marks[solution[2] + 1])
-        // "Say you dashed for 2. Now the bottom corner has one way in."
-        val dashed = (frames[5].state as SnapState).path
-        assertTrue(9 in dashed && marks[9] == 2)
-        assertEquals(1, neighbours(12).count { it !in dashed })
-        // "This line reached 3 before 2."
-        val early = (frames[7].state as SnapState).path
-        assertEquals(3, marks[early.last()])
-        assertFalse(early.any { marks[it] == 2 })
-        // "Drag from 3 back one square": the wanted line is the same line one square shorter.
-        assertTrue(frames[7].accepts!!(board(early.dropLast(1))))
-        // "Start a drag on the glowing square to cut back to it": the glowing square is the end
-        // of the line the frame wants.
-        assertEquals(setOf(8), frames[5].highlight.strong)
-        assertTrue(frames[5].accepts!!(board(dashed.take(dashed.indexOf(8) + 1))))
+        // "Try dashing for 2 ... the bottom corner is left one way in."
+        val (line6, dash) = detours[0]
+        assertTrue(marks[9] == 2 && dash.first() == 9)
+        assertEquals(1, neighbours(12).count { it !in line6 + dash })
+        // "Say you went for 3 first ... 2 has to come before it."
+        val (line8, early) = detours[1]
+        assertEquals(3, marks[early.single()])
+        assertFalse(line8.any { marks[it] == 2 })
+        assertEquals(13, line8.last())
     }
 
     @Test

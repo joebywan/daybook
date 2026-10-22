@@ -147,14 +147,17 @@ object Lexicon : PuzzleType {
      *
      * ```
      * guess 1  tape   yellow yellow grey grey   -> t and a are in it, not there; p and e are out
-     * guess 2  boat   grey green green green    -> made in the walkthrough, a letter at a time
+     * guess 2  boat   grey green green green    -> made in the walkthrough: COAT, GOAT or MOAT
+     * guess 3  clog   green grey yellow grey    -> made in the walkthrough: it can't be the answer,
+     *                                              but C and G tell the three apart
      * ```
      *
-     * After guess 2 the word is ?OAT: COAT, GOAT or MOAT fit, and no guess can tell all three apart,
-     * which is the lesson of four-letter words. The free-play frame hands that board to the hints.
+     * Guessing COAT, GOAT and MOAT in turn could take three guesses; one guess that cannot win settles
+     * it, which is the lesson of four-letter words (`LexiconBalanceTest`). The free-play frame hands
+     * the board after CLOG to the hints.
      */
     internal const val TUTORIAL_ANSWER = "coat"
-    internal val TUTORIAL_GUESSES = listOf("tape", "boat")
+    internal val TUTORIAL_GUESSES = listOf("tape", "boat", "clog")
 
     private fun tutorialBoard(guesses: Int, current: String = "") = LexiconState(
         length = 4,
@@ -165,17 +168,26 @@ object Lexicon : PuzzleType {
     )
 
     /**
-     * Guess 2 typed a letter at a time and then scored, in one frame: any start of BOAT is progress
-     * (a Backspace included), BOAT scored is the move, and anything else is refused.
+     * Guess [n] typed a letter at a time and then scored, in one frame: any start of the word is
+     * progress (a Backspace included), the word scored is the move, and anything else is refused.
      */
-    private val typeBoat: (PuzzleState) -> TutorialStep = { next ->
-        val word = TUTORIAL_GUESSES[1]
+    private fun typeGuess(n: Int): (PuzzleState) -> TutorialStep = { next ->
+        val word = TUTORIAL_GUESSES[n]
         when {
             next !is LexiconState -> TutorialStep.REJECT
-            next.guesses == TUTORIAL_GUESSES && next.current.isEmpty() -> TutorialStep.DONE
-            next.guesses == TUTORIAL_GUESSES.take(1) && word.startsWith(next.current) -> TutorialStep.PROGRESS
+            next.guesses == TUTORIAL_GUESSES.take(n + 1) && next.current.isEmpty() -> TutorialStep.DONE
+            next.guesses == TUTORIAL_GUESSES.take(n) && word.startsWith(next.current) -> TutorialStep.PROGRESS
             else -> TutorialStep.REJECT
         }
+    }
+
+    /** The next key to tap glows: the next letter of guess [n], then Enter. */
+    private fun keyGlow(n: Int): (PuzzleState) -> BoardHighlight = { s ->
+        val typed = (s as LexiconState).current
+        val word = TUTORIAL_GUESSES[n]
+        BoardHighlight(
+            strong = setOf(if (typed.length < word.length) LexiconTeacher.key(word[typed.length]) else LexiconTeacher.ENTER),
+        )
     }
 
     override val tutorial: List<TutorialFrame> by lazy {
@@ -197,29 +209,23 @@ object Lexicon : PuzzleType {
                 state = tutorialBoard(1),
                 caption = "Use what you know: T and A are in the word, so move them. BOAT puts them in new " +
                     "places. Type BOAT on the keyboard, then tap Enter to score it.",
-                // The next key to tap glows: the next letter of BOAT, then Enter.
-                glow = { s ->
-                    val typed = (s as LexiconState).current
-                    val word = TUTORIAL_GUESSES[1]
-                    BoardHighlight(
-                        strong = setOf(
-                            if (typed.length < word.length) LexiconTeacher.key(word[typed.length]) else LexiconTeacher.ENTER,
-                        ),
-                    )
-                },
-                steps = typeBoat,
+                glow = keyGlow(1),
+                steps = typeGuess(1),
                 retry = "Tap the glowing key.",
-                done = "Scored.",
+                done = "Scored: the word ends in OAT.",
             ),
             TutorialFrame(
                 state = tutorialBoard(2),
-                caption = "O, A and T are green and B is grey, so the word ends in OAT. COAT, GOAT and MOAT " +
-                    "all fit, and no guess can tell all three apart. The keys keep score too.",
-                highlight = BoardHighlight(strong = tiles(1, 1, 2, 3), soft = tiles(1, 0)),
+                caption = "COAT, GOAT or MOAT: guess them in turn and it could take three. CLOG can't be the " +
+                    "word, but its C and G tell all three apart. Type CLOG and score it.",
+                glow = keyGlow(2),
+                steps = typeGuess(2),
+                retry = "Tap the glowing key.",
+                done = "C is green and G grey: only COAT is left.",
             ),
             TutorialFrame(
-                state = tutorialBoard(2),
-                caption = "Your turn: find the word. Stuck? Hint shows you how to narrow it down.",
+                state = tutorialBoard(3),
+                caption = "Your turn: find the word. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Found it. That's all there is to it.",
             ),
