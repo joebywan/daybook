@@ -1,52 +1,20 @@
 # Google Play listing
 
-Everything the Play Console asks for that is not a build, ready to paste. Assets live beside this
+Everything the Play Console asks for that is not a build. Assets live beside this
 file; the account steps are in the README under "Publishing to Google Play". Limits are Play's
 (title 30, short description 80, full description 4000 characters).
 
 Keep the wording free of a puzzle count (it ages) and of any newspaper's or game show's brand name
 for a puzzle.
 
-The text is not uploaded by any workflow: after changing it here (and in `fastlane/metadata/android/en-US/`,
-which F-Droid reads), paste it into the main store listing in Play Console.
+**The text lives in `fastlane/metadata/android/en-US/`** (`title.txt`, `short_description.txt`,
+`full_description.txt`), the files F-Droid reads. Change it there: merging to `main` runs the **Play listing
+text** workflow (`tools/play/upload-listing.py`), which pushes it to Play, and pull requests check the limits.
+Do not edit the text in Play Console; the next run overwrites it.
 
 ## Store listing
 
-**App name** (max 30): `Daybook: Daily Logic Puzzles`
-
-**Short description** (max 80):
-
-```
-New logic and word puzzles every day. No ads, no account, works offline.
-```
-
-**Full description** (max 4000):
-
-```
-Fresh logic and word puzzles every day, free, with every past day open from the start. No ads, no account, no internet needed.
-
-Every day brings a new set of classic puzzles: Sudoku and Sudoku with sum cages, region and placement puzzles, picture grids, number, sum, sign and symbol grids, pipe networks, flood-fills, one-line paths, arrows to clear, code-breaking, a hidden-word guessing game, letter sums, word wheels and chess mate-in-N. Each comes in three difficulties, Standard, Hard and Expert, and each is built so that it has exactly one answer you can reach by reasoning. Nothing needs guessing.
-
-HINTS THAT TEACH
-Stuck? Ask for a hint and Daybook explains the next step in plain language, pointing at the cells it is talking about. You make the move yourself, so you learn the technique instead of watching it get filled in. Every puzzle has a short walkthrough for first-timers, and "How to play" is always one tap away.
-
-NO ADS. NO SUBSCRIPTION. NO ACCOUNT.
-There are no adverts, no paywall, no sign-in and no in-app purchases. The app does not even ask for network access, so it works on a plane, on a train and in a tunnel.
-
-THE WHOLE ARCHIVE, FROM DAY ONE
-Puzzles are made on your device from the date, so every past day is already there. Missed a week? Play it. Want something different? Switch to Random boards at any difficulty.
-
-KEEP YOUR STREAK
-Track your daily streak, your times and your statistics, all stored privately on your phone.
-
-PRIVATE BY DESIGN
-Daybook collects nothing. No analytics, no trackers, no third-party SDKs. Your progress never leaves your device.
-
-PLAY ANYWHERE
-The same daily puzzles run in a web browser at knowhowit.com.au/daybook, no install needed.
-
-Hand-built puzzle generators, proven boards and a calm, uncluttered design. Come back tomorrow for the next one.
-```
+**App name, short description, full description:** `fastlane/metadata/android/en-US/` (see above).
 
 **Category:** Game → Puzzle. **Tags:** puzzle, logic, brain games (pick what the console offers).
 
