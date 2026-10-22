@@ -109,7 +109,8 @@ private fun MarkShape(mark: Mark, size: Dp) {
             Mark.CLOSE -> drawCircle(ink, pip * 0.9f, style = Stroke(this.size.minDimension * 0.1f))
             Mark.NONE -> drawCircle(scheme.outline, this.size.minDimension * 0.08f)
             Mark.HEART -> drawPath(Pointers.heartPath(this.size.minDimension), scheme.error)
-            Mark.LOST -> drawPath(Pointers.heartPath(this.size.minDimension), scheme.onSurfaceVariant)
+            // Hollow, as on the board: a filled pale heart reads as a white one in dark mode, not a lost life.
+            Mark.LOST -> drawPath(Pointers.heartPath(this.size.minDimension), scheme.onSurfaceVariant, style = Stroke(this.size.minDimension * 0.08f))
         }
     }
 }
