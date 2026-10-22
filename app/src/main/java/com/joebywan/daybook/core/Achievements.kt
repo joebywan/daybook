@@ -78,17 +78,12 @@ fun earnedAchievements(
     history: List<Completion>, today: LocalDate, puzzleIds: List<String> = registryIds(),
 ): List<Achievement> = ACHIEVEMENTS.filter { it.earned(history, today, puzzleIds) }
 
-/** Earned once [solve] is recorded. */
-fun earnedAfter(
-    history: List<Completion>, solve: Completion, today: LocalDate, puzzleIds: List<String> = registryIds(),
-): List<Achievement> = earnedAchievements(history + solve, today, puzzleIds)
-
 /** What [solve] earns: true after it, false before. History that already satisfied one never re-fires it. */
 fun newlyEarned(
     history: List<Completion>, solve: Completion, today: LocalDate, puzzleIds: List<String> = registryIds(),
 ): List<Achievement> {
     val before = earnedAchievements(history, today, puzzleIds).map { it.id }.toSet()
-    return earnedAfter(history, solve, today, puzzleIds).filter { it.id !in before }
+    return earnedAchievements(history + solve, today, puzzleIds).filter { it.id !in before }
 }
 
 /**
