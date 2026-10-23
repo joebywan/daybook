@@ -60,8 +60,6 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Achievements follow-ups.** No fanfare yet (the solve chime plays; a distinct short tone would need a second
   sample path in both platform players). The two
   registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
-- [ ] **Levels.** A third mode beside Daily and Random: numbered packs of five boards that open one after another, so
-  boards after the dailies have something to tick off (a player's feedback, 2026-10-22). Spec: `docs/LEVELS_SPEC.md`. *L.*
 - [ ] **Move feel: boards left out.** `ui/MoveFeel.kt` (settle and unit glow) is on every grid board but these: Mate (the
   reply already lands in a second beat with the last move marked), Pointers (its slide), Pipes (its turn), Snap (the line follows
   the finger square by square), Sets (a pick, not a placement), Tower (submitting clears the row being built, so a settle would

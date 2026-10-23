@@ -437,6 +437,25 @@ A move's feel (the changed squares settle, a unit finished by the rules glows on
 `rememberMoveFeel`, read in the draw phase; it fires only on `LocalMoveCount` (raised by `push`, so never on load,
 undo, restart or the walkthrough). A new board passes its cells and units to it rather than animating its own.
 
+## Levels
+
+The third home mode, `Daily · Levels · Random`: numbered levels of five boards from five puzzles; finish all five and the next opens.
+Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `SeedHash.level`, `LevelSolve` / `LevelProgress` and
+`openLevel` / `recordLevelSolve` in `data/ProgressStore.kt`; the screens are `ui/home/LevelsScreen.kt`, `LaunchMode.LEVELS`,
+`Route.Levels` / `Route.Play(level)` in `ui/DaybookApp.kt` and `levelNextOptions` in `ui/play/NextSteps.kt`.
+
+- **`Levels.POOL` is append-only and a plan is `(level, poolSize)` alone.** An opened level stores the pool size it was opened with,
+  so adding a puzzle never changes a level someone has started; `LevelsTest` pins the plans, and the web parity check diffs a year of them.
+- **A level board's seed and tier come from its level's stored plan**, never from the route or the full pool, so the play route waits
+  for `levelProgress` to load; open a level through `playLevel` (it calls `openLevel` first).
+- **Everything about progress is derived** (`LevelProgress.of`): the current level, done levels, "Level N done" on home. Nothing pops up.
+- A level solve is recorded twice: `recordLevelSolve` (a replay records nothing new) and a practice `Completion` (`day = null`), so the
+  streak never counts levels and totals and best times do. No "New game" on a level board; a solved one is cleared, so reopening replays it.
+- **The play screen is keyed on its board** (`key(puzzle.id, seed)` in `DaybookApp`): "Next in level" goes straight from one
+  puzzle to another, and without the key `PlayScreen`'s produced board was the last puzzle's state for a frame (a crash on the emulator).
+- `RouteSaver` fields are only ever added at the end: a route saved before `level` existed still reads (`LevelsUiTest`).
+- In Levels mode the tier row stays laid out, invisible, under the level strip, so the mode row cannot move when the mode changes.
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
