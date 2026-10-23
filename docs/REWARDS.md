@@ -77,9 +77,13 @@ history already satisfies one sees it earned in the list and is never told, so t
 Owner's design (Figma "Daybook-achieve-draft"): a full-screen overlay on the solved board. A BANNER at the top
 ("Congratulations!" or the streak title between two drawn party poppers, `PartyPopper` in `FinishExtras.kt`, then the time
 and one personal line), the next-step BUTTONS in a box at the bottom, and the CENTRE left open so the board shows through.
+- **Full show or light flourish** (`Praise.full`, decided in `finishPraise`, tested in `FinishPraiseTest`): the full
+  confetti for the first daily solve of today, an Expert solve, a personal record, a streak milestone (7, 30, 100) or an
+  earned achievement; any other solve gets a light flourish, 14 pieces for 1.2 s. A frame with no verdict (the render
+  hook) is full. The banner and poppers are the same either way.
 - **Confetti** (`Confetti`): 70 pieces on a Canvas over the whole screen, ~2 s, once per finish (`confettiPlayed` is
-  `rememberSaveable`, so a rotation does not replay it), takes no input. There is no reduced-motion setting in the app,
-  so none is honoured; the Sound switch governs the chime only. No emoji: the web build has no emoji font.
+  `rememberSaveable`, so a rotation does not replay it), takes no input. Not drawn at all under the system's reduced motion
+  (`LocalReducedMotion`, below); the Sound switch governs the chime only. No emoji: the web build has no emoji font.
 - **Centre** (`ResultsBlock`), only when the solve earned achievements; otherwise empty (no silhouette, no block). One
   achievement at a time: badge (`AchievementBadge`, 72dp, 44dp under 640dp tall), title, description. With several: "1 of 3",
   dots and "Tap to see next achievement"; one tap on the block shows the next and it **wraps** after the last.
@@ -114,7 +118,7 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   home tile, while unsolved, gets a thin gold ring, a frame of twinkling gold sparkles (`ui/home/FeaturedMark.kt`; one infinite
   transition read only in the draw phase) and "Try me!" tilted across the thumbnail with a halo, content description
   "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved or
-  started. The pick does not move its tile. Nothing is stored.
+  started, and under reduced motion the sparkles are drawn still. The pick does not move its tile. Nothing is stored.
 - **In progress.** A tile whose board at the grid's tier and mode (today's daily; in Random, the tier's current random board)
   has a saved game that is unsolved and has a move in it says "In progress", tilted with the same halo as "Try me!" but in the
   scheme's moss on its surface (`InProgressLabel`). That is exactly the game `PlayScreen` keeps: a restart, or only a selection,
@@ -134,6 +138,31 @@ would rather let people rearrange than hide.
   up and down buttons; the first move stores the current order as the player's own (`puzzle_order` in the launch file, ids
   joined by commas; empty means most played). On load, unknown ids drop out and puzzles added later join at the end
   (`PuzzleOrder.arranged`). "Reset to most played" clears it. Pinned by `HomeOrderTest`.
+
+## Reduced motion and haptics (`ui/Motion.kt`, the platform seam)
+
+- **Reduced motion** follows the system: Android's "Remove animations" (animator duration scale 0), the web's
+  `prefers-reduced-motion: reduce`. Both are watched, so a change applies at once. `rememberReducedMotion` is read once
+  in `DaybookApp` and handed down as `LocalReducedMotion`. Under it: no confetti; the Today's-pick sparkles drawn still (no
+  infinite transition runs); the hint glow steady at full strength (`rememberHintPulse`, which every board uses); Pointers'
+  arrow simply goes and a bump flashes red without the shake; Sand has no pour stream and no refusal shake (the refused tube's red tint, shown always, is held 400 ms
+  instead of fading), and a lifted tube rises at once; a Pipes tile shows its new turn; the hint popover jumps rather than slides. Fades (the finished frame's
+  fade-in) and the loading spinner stay: they are not motion across the screen. A new decorative animation should read
+  `LocalReducedMotion` too. Also off under it: the move feel below, and the 200 ms fade between screens (`DaybookApp`'s
+  `Crossfade`; screens cut).
+- **Move feel** (`ui/MoveFeel.kt`, `rememberMoveFeel`): the squares a move changed are drawn 8% large and ease back over
+  120 ms; a unit the move finished by the rules (a Sudoku row, column, box or cage; an Inequality line; a Regions region; a
+  Kings row, column or region; a Tents or Mambo line; a Nonogram or Tally line, beside their green clue; a LITS region with its
+  piece; a Dominoes region keeping its rule; a full Sand tube; a found Word Wheel word; an Atoms atom with all its bonds)
+  has a soft band of the puzzle's accent run along it once (400 ms, at most 35%). Only a move fires it (`LocalMoveCount`,
+  raised by `PlayScreen.push`): a board loaded, restarted, undone into a finished unit or shown in the walkthrough stays
+  quiet. Draw phase only; nothing moves or resizes. Boards left out: `docs/TODO.md`.
+- **Haptics** (`rememberHaptics`, `LocalHaptics`): `tick` when a push changes the board (the same test as the play log's
+  move: a selection or a typed letter is silent), `bump` for a Pointers bump or a wrong Sets pick, `success` on a solve
+  beside the chime (the solving move does not tick as well). Android uses `performHapticFeedback` (CLOCK_TICK; REJECT and
+  CONFIRM from Android 11, LONG_PRESS and VIRTUAL_KEY before), which honours the system's touch-feedback setting; the web
+  uses `navigator.vibrate` (8 ms, 50 ms, a 20-60-40 pattern), which iOS lacks. The walkthrough does not buzz. The
+  Settings switch "Vibration" (`LaunchPreferences.vibrate`, key `vibrate`, default on) turns it all off.
 
 ## Claim to keep honest
 

@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,9 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,9 +49,13 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.ui.rememberHintPulse
 import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -933,17 +930,17 @@ object Kings : PuzzleType {
         // A glow that breathes is findable at a glance on a 9x9 board; a static outline is not much
         // louder than the gaps between squares. Only runs while something glows, and is read in
         // the draw phase, so it repaints the outlines without recomposing the board every frame.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         val palette = remember(s.region) { regionPalette(s.size, s.region) }
+        // Rows, columns and regions: one finished holds exactly one king, clashing with nothing.
+        val units = remember(s.region) {
+            lineUnits(s.size, s.size) + s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() }
+        }
+        val settled = s.conflicts()
+        val feel = rememberMoveFeel(s.marks, units) { u ->
+            val kings = units[u].filter { s.marks[it] == Mark.KING }
+            kings.size == 1 && kings[0] !in settled
+        }
 
         // Keyed on the board as well as the tap: a board that moved underneath a held tap restarts
         // this, and [held] is null the second time round, so the stale mark is quietly dropped.
@@ -1095,6 +1092,7 @@ object Kings : PuzzleType {
                             Modifier
                                 .padding(start = cell * c, top = cell * r)
                                 .size(cell)
+                                .moveFeel(feel, i, Color(accent))
                                 .padding(1.dp)
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(

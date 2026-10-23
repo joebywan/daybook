@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -15,9 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,6 +22,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -50,6 +44,8 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.jvmHashSetOrder
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 @Serializable
 data class LitsState(
@@ -1337,6 +1333,11 @@ object Lits : PuzzleType {
         // a drag that is the preview, so letters and crosses follow the finger.
         val letters = remember(shown.shaded) { shown.letters() }
         val impossible = remember(shown.shaded) { shown.impossible() }
+        // A region is finished when its four shaded squares make a piece (the letters, which read the rules).
+        val units = remember(s.region) { s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() } }
+        val handed = remember(s.shaded) { s.letters() }
+        val feel = rememberMoveFeel(s.shaded, units) { u -> units[u].count { s.shaded[it] } == 4 && units[u].all { !s.shaded[it] || handed[it] != null } }
+        val accentColour = Color(accent)
 
         // What a hint or the walkthrough is pointing at. Everything it does not name is dimmed, so
         // the named squares can be found at a glance; [BoardHighlight.strong] squares get a
@@ -1345,16 +1346,7 @@ object Lits : PuzzleType {
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         val dim = scheme.background
         // Read only inside the draw lambda, so the pulse repaints the outlines without recomposing.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
@@ -1428,15 +1420,17 @@ object Lits : PuzzleType {
                     val c = i % s.width
                     val at = Offset(c * stepPx, r * stepPx)
                     val piece = letters[i]
-                    drawRect(
-                        color = when {
-                            !shown.shaded[i] -> scheme.surfaceVariant
-                            piece == null -> inProgress
-                            else -> colourOf(piece)
-                        },
-                        topLeft = at,
-                        size = Size(stepPx, stepPx),
-                    )
+                    feelSquare(feel, i, at, Size(stepPx, stepPx), accentColour) {
+                        drawRect(
+                            color = when {
+                                !shown.shaded[i] -> scheme.surfaceVariant
+                                piece == null -> inProgress
+                                else -> colourOf(piece)
+                            },
+                            topLeft = at,
+                            size = Size(stepPx, stepPx),
+                        )
+                    }
                     drawRect(
                         color = scheme.background.copy(alpha = 0.35f),
                         topLeft = at,

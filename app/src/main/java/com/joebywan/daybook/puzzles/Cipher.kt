@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,9 +53,12 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * A Cipher sum in play. [words] (the addends, then the total) and [solution] are fixed for the board;
@@ -361,16 +358,7 @@ object Cipher : PuzzleType {
         val ink = BoardHues.ink(hueB, dark)
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // A broken rule shows after a pause and goes at once when mended; held here, not in the state (undo).
         val live = remember(s.digits) { CipherLogic.conflicts(sum, s.digits) }
@@ -383,6 +371,8 @@ object Cipher : PuzzleType {
             shown = live
         }
         val redColumn = shown.column?.let { sum.columnTiles(it) } ?: emptySet()
+        // A digit set on a letter settles on every tile of that letter. No units: a column is judged with its carry.
+        val feel = rememberMoveFeel(s.digits)
 
         BoxWithConstraints(
             Modifier
@@ -427,6 +417,7 @@ object Cipher : PuzzleType {
                     tileModifier = { r, c, l ->
                         val look = highlight.look(sum.tile(r, c))
                         Modifier
+                            .moveFeel(feel, l, Color(accent))
                             .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
                             .ring(look, glow, pulse, corner = 8f)
                             .then(if (sum.tile(r, c) in redColumn) Modifier.border(2.dp, scheme.error, RoundedCornerShape(8.dp)) else Modifier)

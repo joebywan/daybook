@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,8 +50,12 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * An Inequality square in play. [signs] and [solution] are fixed for the board; [cells] holds 0 for
@@ -343,15 +341,13 @@ object Inequality : PuzzleType {
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        // A row or column is finished when it holds 1..n and every sign inside it is true.
+        val units = remember(n) { lineUnits(n, n) }
+        val feel = rememberMoveFeel(s.cells, units) { u ->
+            val line = units[u]
+            line.map { s.cells[it] }.toSet() == (1..n).toSet() &&
+                broken.none { s.signs[it].lo in line && s.signs[it].hi in line }
         }
 
         // Sized from both axes (CLAUDE.md): the grid leaves room for the digit pad under it.
@@ -381,6 +377,7 @@ object Inequality : PuzzleType {
                             Modifier
                                 .padding(start = slot * (i % n) + (slot - cell) / 2, top = slot * (i / n) + (slot - cell) / 2)
                                 .size(cell)
+                                .moveFeel(feel, i, Color(accent))
                                 .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
                                 .ring(look, glow, pulse, corner = 8f)
                                 .clip(RoundedCornerShape(8.dp))

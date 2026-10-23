@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,7 +52,10 @@ import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.coroutines.delay
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * Lexicon: Mastermind for words.
@@ -356,16 +353,7 @@ object Lexicon : PuzzleType {
         LaunchedEffect(s.current, s.guesses.size) { notice = null }
 
         // Breathes only while something glows, as on Kings.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         fun press(action: LexiconKeyAction) {
             if (!playable) return
@@ -415,6 +403,8 @@ object Lexicon : PuzzleType {
                 // Sized from both axes (CLAUDE.md): the grid is the width, or the height left once the
                 // keyboard has its room, whichever binds. It never changes size, so a hint opening or a
                 // solve cannot move it.
+                // A guessed row settles as its marks land. No units: the one word is the solve.
+                val feel = rememberMoveFeel(List(s.maxGuesses * s.length) { s.guesses.getOrNull(it / s.length)?.get(it % s.length) })
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.length, maxHeight / s.maxGuesses, MAX_CELL * scale).coerceAtLeast(0.dp)
                     Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses)) {
@@ -426,7 +416,7 @@ object Lexicon : PuzzleType {
                                     val letter = guess?.get(slot) ?: if (typing) s.current.getOrNull(slot) else null
                                     val mark = guess?.let { s.marks(it)[slot] }
                                     val look = highlight.look(LexiconTeacher.tile(s.length, row, slot), dims = tilesNamed)
-                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent)
+                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent, Modifier.moveFeel(feel, row * s.length + slot, Color.Unspecified))
                                 }
                             }
                         }
@@ -500,12 +490,14 @@ object Lexicon : PuzzleType {
         glow: Color,
         pulse: State<Float>,
         absent: Color,
+        modifier: Modifier = Modifier,
     ) {
         val scheme = MaterialTheme.colorScheme
         val shape = RoundedCornerShape(6.dp)
         Box(
             Modifier
                 .size(cell)
+                .then(modifier)
                 .padding(2.dp)
                 .ring(look, glow, pulse)
                 .dimmed(look)
