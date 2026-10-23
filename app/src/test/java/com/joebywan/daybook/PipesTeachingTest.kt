@@ -381,7 +381,7 @@ class PipesTeachingTest {
                 }
                 s = s.rotate(cell)
                 assertEquals(if (k == order.lastIndex) TutorialStep.DONE else TutorialStep.PROGRESS, steps(s))
-                assertFalse(cell in frame.glow!!(s).strong)
+                assertFalse(cell in frame.glow(s).strong)
             }
             assertEquals(s.cells, (frames[3].state as PipesState).cells)
         }
