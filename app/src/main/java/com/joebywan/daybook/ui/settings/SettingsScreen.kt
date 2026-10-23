@@ -20,6 +20,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
@@ -45,7 +46,7 @@ fun SettingsScreen(
     vibrate: Boolean,
     onVibrate: (Boolean) -> Unit,
     customOrder: Boolean,
-    onArrange: () -> Unit,
+    onResetOrder: () -> Unit,
     appearance: Appearance,
     onAppearance: (Appearance) -> Unit,
     onBack: () -> Unit,
@@ -100,7 +101,7 @@ fun SettingsScreen(
                 )
             }
             item { AppearanceChoice(appearance, onAppearance) }
-            item { PuzzleOrderRow(customOrder, onArrange) }
+            item { PuzzleOrderRow(customOrder, onResetOrder) }
             if (rateLink != null) item { RateRow(rateLink) }
             item { Credits() }
         }
@@ -181,25 +182,39 @@ private fun Credits() {
     }
 }
 
-/** The home grid's order: says which it is, and opens [ArrangeScreen], where it is changed. */
+/** The home grid's order: says which it is and how to change it (on the grid itself), and resets a player's own. */
 @Composable
-private fun PuzzleOrderRow(customOrder: Boolean, onArrange: () -> Unit) {
+private fun PuzzleOrderRow(customOrder: Boolean, onReset: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    Column(
+    Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(scheme.surface)
-            .clickable(onClickLabel = "Arrange puzzles", onClick = onArrange)
             .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Puzzle order", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-        Text(
-            if (customOrder) "Your own order. Tap to rearrange or reset."
-            else "Most played first, over the last two months. Tap to arrange your own.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant,
-        )
+        Column(Modifier.weight(1f)) {
+            Text("Puzzle order", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+            Text(
+                if (customOrder) "Your own order. Puzzles added later join at the end."
+                else "Most played first, over the last two months. Press and hold a puzzle on the home screen to move it.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+            )
+        }
+        if (customOrder) {
+            Text(
+                "Reset to most played",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = scheme.primary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable(onClick = onReset)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            )
+        }
     }
 }
 

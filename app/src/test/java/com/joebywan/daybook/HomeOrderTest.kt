@@ -45,6 +45,16 @@ class HomeOrderTest {
         assertEquals(ids, PuzzleOrder.arranged(emptyList(), ids))
     }
 
+    @Test
+    fun `a drop moves one puzzle and the stored order reads back the same`() {
+        assertEquals(listOf("d", "a", "b", "c"), PuzzleOrder.moved(ids, 3, 0))
+        assertEquals(listOf("b", "c", "a", "d"), PuzzleOrder.moved(ids, 0, 2))
+        assertEquals(ids, PuzzleOrder.moved(ids, 1, 1))
+        val dropped = PuzzleOrder.moved(listOf("c", "a", "b", "d"), 2, 0)
+        assertEquals(listOf("b", "c", "a", "d"), PuzzleOrder.arranged(dropped, ids))
+        assertEquals("a new puzzle still joins at the end", listOf("b", "c", "a", "d", "e"), PuzzleOrder.arranged(dropped, ids + "e"))
+    }
+
     private class MemoryStore : KeyValueStore {
         val sets = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
         override fun stringSet(key: String): Flow<Set<String>> = sets.map { it[key].orEmpty() }

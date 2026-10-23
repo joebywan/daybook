@@ -1,6 +1,14 @@
 package com.joebywan.daybook.ui.home
 
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateOffsetAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,6 +43,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,7 +57,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -62,11 +87,15 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.LevelProgress
+import com.joebywan.daybook.data.PuzzleOrder
 import com.joebywan.daybook.data.Stats
+import com.joebywan.daybook.ui.LocalHaptics
+import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.stats.MedalIcon
 import com.joebywan.daybook.platform.GetTheAppCard
 import com.joebywan.daybook.platform.formatDate
 import kotlinx.datetime.LocalDate
+import kotlin.math.roundToInt
 
 /** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
 private const val HEADER_DATE = "EEEE d MMMM"
@@ -74,7 +103,8 @@ private const val HEADER_DATE = "EEEE d MMMM"
 /**
  * The grid was first sized so every puzzle fitted one phone screen; with more than twenty it scrolls, so the order does
  * the work instead. By default the most played sit at the top (`PuzzleOrder.mostPlayed`, read once a day so a solve never
- * moves a tile under the player's finger), and a player can set their own order (`ArrangeScreen`). Nothing is hidden:
+ * moves a tile under the player's finger), and a player can set their own order by pressing and holding a tile and dragging
+ * it ([PuzzleGrid]). Nothing is hidden:
  * anything else is a scroll away. A phone in portrait has three columns; a wider window (a tablet, a phone on its side)
  * takes a column per [MinTileWidth], up to [MAX_COLUMNS]. A short wide window (a phone on its side) takes more columns,
  * down to [MinShortTileWidth], until two rows fit under the header: see [homeColumns].
@@ -136,7 +166,8 @@ fun HomeScreen(
     onSettings: () -> Unit,
     puzzles: List<PuzzleType>,
     inProgress: () -> Set<String>,
-    onArrange: () -> Unit,
+    customOrder: Boolean,
+    onOrder: (List<String>) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val doneToday = remember(completions, today) {
@@ -151,6 +182,9 @@ fun HomeScreen(
     var headerHeight by remember { mutableStateOf(0) }
     var optionsHeight by remember { mutableStateOf(0) }
     val density = LocalDensity.current
+    val list = rememberLazyListState()
+    // Where the grid shows, in root pixels: from the pinned rows' foot to the list's. Plain fields, read by a drag only.
+    val window = remember { GridWindow() }
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -164,7 +198,8 @@ fun HomeScreen(
         // halfway down the grid can change either without scrolling back. The grid is sized to fit without
         // scrolling, but a short screen or a large font scale can still overflow it.
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().onGloballyPositioned { window.bottom = it.boundsInRoot().bottom },
+            state = list,
             contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = TopPadding, bottom = 18.dp),
         ) {
             item {
@@ -183,7 +218,8 @@ fun HomeScreen(
                 // Opaque, so the tiles scrolling under it do not show through.
                 Column(
                     Modifier.fillMaxWidth().background(scheme.background).padding(vertical = if (short) 8.dp else 14.dp)
-                        .onSizeChanged { optionsHeight = it.height },
+                        .onSizeChanged { optionsHeight = it.height }
+                        .onGloballyPositioned { window.top = it.boundsInRoot().bottom },
                 ) {
                     LaunchOptions(difficulty, onDifficulty, mode, onMode, levelStrip = { LevelStrip(levels, onLevels) }, sideBySide = short)
                 }
@@ -203,22 +239,21 @@ fun HomeScreen(
                     pick = PuzzleRegistry.featured(today.toEpochDays()).id,
                     height = gridHeight,
                     onLaunch = onLaunch,
+                    onOrder = onOrder,
+                    scroll = { list.scrollBy(it) },
+                    window = window,
                 )
             }
-            // Only where the order applies; a level's tiles keep their draw order.
-            if (mode != LaunchMode.LEVELS) item {
-                Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        "Arrange puzzles",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = scheme.primary,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .clickable(onClick = onArrange)
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                    )
-                }
+            // Under the grid, so it moves nothing above it; gone once the player has an order of their own. Only where
+            // the order applies: a level's tiles keep their draw order.
+            if (mode != LaunchMode.LEVELS && !customOrder) item {
+                Text(
+                    "Press and hold a puzzle to move it.",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
+                )
             }
             item { GetTheAppCard() }
         }
@@ -353,10 +388,33 @@ private fun StreakBadge(streak: Streak) {
     }
 }
 
+/** The part of the list the grid shows through, in root pixels: under the pinned rows, above the list's foot. */
+private class GridWindow(var top: Float = 0f, var bottom: Float = Float.MAX_VALUE)
+
+/** A tile being dragged: the puzzle, where on it the finger took hold, and the finger, in the grid's pixels. */
+private class Drag(val id: String, val grab: Offset, finger: Offset) {
+    var finger by mutableStateOf(finger)
+}
+
+/** A tile's layout id: which puzzle it is, and its place in cells (column, row), animated as the others make room. */
+private class Cell(val id: String, val at: () -> Offset)
+
+/** The band at each edge where a drag scrolls the list, and the most it scrolls in a frame. */
+private val ScrollEdge = 64.dp
+private val ScrollStep = 14.dp
+
+/** How long a tile takes to make room for a dragged one, and to lift. */
+private const val MOVE_MS = 150
+
 /**
  * Laid out by hand rather than with a lazy grid. A couple of dozen tiles never justify recycling, and a lazy
  * grid demands a height of its own — it cannot sit in a scrolling column, which is what lets this
  * grid take exactly the room it needs and scroll only when it does not fit.
+ *
+ * Press and hold a tile to lift it, then drag: the others slide to show where it will land, the list scrolls while the
+ * finger is near the pinned rows or the foot, and the drop is one [onOrder] (the first makes the order the player's own).
+ * Only a long press starts a drag, so a tap still opens a puzzle and a swipe still scrolls. One layout with a keyed child
+ * per puzzle, so a tile keeps its animation as it changes rows. The drag is `remember` state; nothing is stored until it drops.
  */
 @Composable
 private fun PuzzleGrid(
@@ -367,16 +425,159 @@ private fun PuzzleGrid(
     pick: String,
     height: Dp,
     onLaunch: (String) -> Unit,
+    onOrder: (List<String>) -> Unit,
+    scroll: suspend (Float) -> Float,
+    window: GridWindow,
 ) {
-    TileGrid(puzzles.size, height) { i, previewSize, modifier ->
-        val puzzle = puzzles[i]
-        val solved = (puzzle.id to difficulty) in doneToday
-        PuzzleTile(puzzle, solved, isPick = puzzle.id == pick, inProgress, previewSize, { onLaunch(puzzle.id) }, modifier) { accent ->
-            TierDots(
-                accent = accent,
-                selected = difficulty,
-                cleared = { tier -> (puzzle.id to tier) in doneToday },
-            )
+    val haptics = LocalHaptics.current
+    val still = LocalReducedMotion.current
+    val moveSpec: AnimationSpec<Offset> = if (still) snap() else tween(MOVE_MS)
+    val liftSpec: AnimationSpec<Float> = if (still) snap() else tween(MOVE_MS)
+    val ids = puzzles.map { it.id }
+    val byId = puzzles.associateBy { it.id }
+    var drag by remember { mutableStateOf<Drag?>(null) }
+    var tileHeight by remember { mutableIntStateOf(0) }
+    val grid = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    BoxWithConstraints {
+        val density = LocalDensity.current
+        val columns = homeColumns(maxWidth, height)
+        val previewSize = previewSize(tileWidth(maxWidth, columns))
+        val tileW = with(density) { tileWidth(maxWidth, columns).roundToPx() }
+        val gap = with(density) { TileGap.roundToPx() }
+        val gridW = with(density) { maxWidth.roundToPx() }
+        val rows = (ids.size + columns - 1) / columns
+
+        // The lifted tile's corner: under the finger, kept inside the grid and out from under the pinned rows.
+        fun corner(d: Drag): Offset {
+            val top = grid[0]?.localToRoot(Offset.Zero)?.y ?: 0f
+            val p = d.finger - d.grab
+            val lowest = (rows * (tileHeight + gap) - gap - tileHeight).toFloat()
+            val y = p.y.coerceIn(window.top - top, maxOf(window.top - top, window.bottom - top - tileHeight))
+            return Offset(p.x.coerceIn(0f, (gridW - tileW).toFloat()), y.coerceIn(0f, maxOf(0f, lowest)))
+        }
+        // Where the lifted tile would land: the cell under its centre.
+        val landing by remember(columns, tileW, tileHeight, ids) {
+            derivedStateOf {
+                drag?.let { d ->
+                    val c = corner(d) + Offset(tileW / 2f, tileHeight / 2f)
+                    val col = (c.x / (tileW + gap)).toInt().coerceIn(0, columns - 1)
+                    val row = (c.y / (tileHeight + gap)).toInt().coerceIn(0, rows - 1)
+                    (row * columns + col).coerceAtMost(ids.lastIndex)
+                }
+            }
+        }
+        val d = drag
+        val shown = if (d == null) ids else PuzzleOrder.moved(ids, ids.indexOf(d.id), landing ?: ids.indexOf(d.id))
+
+        LaunchedEffect(d != null) {
+            // Scrolls while the finger is in an edge band, faster the deeper it goes. The finger keeps its place on the
+            // screen, so in the grid it moves by what scrolled.
+            val edge = with(density) { ScrollEdge.toPx() }
+            val step = with(density) { ScrollStep.toPx() }
+            while (true) {
+                withFrameNanos { }
+                val held = drag ?: break
+                val y = grid[0]?.localToRoot(held.finger)?.y ?: continue
+                val depth = when {
+                    y < window.top + edge -> (y - window.top - edge) / edge
+                    y > window.bottom - edge -> (y - window.bottom + edge) / edge
+                    else -> 0f
+                }.coerceIn(-1f, 1f)
+                if (depth != 0f) held.finger += Offset(0f, scroll(depth * step))
+            }
+        }
+
+        Layout(
+            content = {
+                shown.forEachIndexed { slot, id ->
+                    key(id) {
+                        val at by animateOffsetAsState(
+                            Offset((slot % columns).toFloat(), (slot / columns).toFloat()), moveSpec, label = "tile",
+                        )
+                        val lift by animateFloatAsState(if (d?.id == id) 1f else 0f, liftSpec, label = "lift")
+                        val index = ids.indexOf(id)
+                        PuzzleTile(
+                            byId.getValue(id), (id to difficulty) in doneToday, isPick = id == pick, inProgress, previewSize,
+                            // A long press held still and let go is not a tap: the click lands before the drag ends.
+                            onClick = { if (drag == null) onLaunch(id) },
+                            modifier = Modifier
+                                .layoutId(Cell(id) { at })
+                                .graphicsLayer {
+                                    scaleX = 1f + 0.06f * lift
+                                    scaleY = 1f + 0.06f * lift
+                                    shadowElevation = 10.dp.toPx() * lift
+                                    shape = RoundedCornerShape(18.dp)
+                                }
+                                // The drag's twin for a screen reader, which cannot press and drag.
+                                .semantics {
+                                    customActions = listOfNotNull(
+                                        if (index > 0) CustomAccessibilityAction("Move earlier") {
+                                            onOrder(PuzzleOrder.moved(ids, index, index - 1)); true
+                                        } else null,
+                                        if (index < ids.lastIndex) CustomAccessibilityAction("Move later") {
+                                            onOrder(PuzzleOrder.moved(ids, index, index + 1)); true
+                                        } else null,
+                                    )
+                                },
+                        ) { accent ->
+                            TierDots(
+                                accent = accent,
+                                selected = difficulty,
+                                cleared = { tier -> (id to tier) in doneToday },
+                            )
+                        }
+                    }
+                }
+            },
+            modifier = Modifier
+                .onGloballyPositioned { grid[0] = it }
+                .pointerInput(ids, columns, tileW, tileHeight) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { p ->
+                            val col = (p.x / (tileW + gap)).toInt()
+                            val row = (p.y / (tileHeight + gap)).toInt()
+                            val slot = row * columns + col
+                            val origin = Offset((col * (tileW + gap)).toFloat(), (row * (tileHeight + gap)).toFloat())
+                            if (col < columns && slot in ids.indices && p.x - origin.x < tileW && p.y - origin.y < tileHeight) {
+                                drag = Drag(ids[slot], p - origin, p)
+                                haptics.tick()
+                            }
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            drag?.finger = change.position
+                        },
+                        onDragEnd = {
+                            val held = drag
+                            val to = landing
+                            drag = null
+                            if (held != null) {
+                                val from = ids.indexOf(held.id)
+                                if (to != null && to != from) onOrder(PuzzleOrder.moved(ids, from, to))
+                                haptics.tick()
+                            }
+                        },
+                        onDragCancel = { drag = null },
+                    )
+                },
+        ) { measurables, constraints ->
+            // Every tile as tall as the tallest, which only matters once a large font scale wraps a name.
+            val h = measurables.maxOfOrNull { it.maxIntrinsicHeight(tileW) } ?: 0
+            if (h != tileHeight) tileHeight = h
+            val placeables = measurables.map { it.measure(Constraints.fixed(tileW, h)) }
+            layout(constraints.maxWidth, maxOf(0, rows * (h + gap) - gap)) {
+                placeables.forEachIndexed { i, p ->
+                    val cell = measurables[i].layoutId as Cell
+                    val held = drag
+                    if (held?.id == cell.id) {
+                        val c = corner(held)
+                        p.place(c.x.roundToInt(), c.y.roundToInt(), zIndex = 1f)
+                    } else {
+                        val at = cell.at()
+                        p.place((at.x * (tileW + gap)).roundToInt(), (at.y * (h + gap)).roundToInt())
+                    }
+                }
+            }
         }
     }
 }

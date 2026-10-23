@@ -388,4 +388,8 @@ object PuzzleOrder {
      */
     fun arranged(stored: List<String>, ids: List<String>): List<String> =
         stored.filter { it in ids }.distinct() + ids.filterNot { it in stored }
+
+    /** [order] with the puzzle at [from] taken out and put back at [to]: one drop on the home grid. */
+    fun moved(order: List<String>, from: Int, to: Int): List<String> =
+        order.toMutableList().apply { add(to, removeAt(from)) }
 }

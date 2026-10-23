@@ -48,7 +48,6 @@ import com.joebywan.daybook.ui.play.levelNextOptions
 import com.joebywan.daybook.ui.play.nextOptions
 import com.joebywan.daybook.ui.play.shareCard
 import com.joebywan.daybook.ui.play.tiersDoneOn
-import com.joebywan.daybook.ui.settings.ArrangeScreen
 import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.AchievementsScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
@@ -75,8 +74,6 @@ sealed interface Route {
     data object Settings : Route
     /** [fromHome]: back returns to where it was opened from. */
     data class Achievements(val fromHome: Boolean = false) : Route
-    /** [fromHome]: back returns to where it was opened from (Home's link, or Settings). */
-    data class Arrange(val fromHome: Boolean = false) : Route
     /** [day]: the day last played from it, which the list opens at. */
     data class Archive(val puzzleId: String, val day: LocalDate? = null) : Route
     /** The levels list; [level] shows that level's five boards instead. */
@@ -100,7 +97,6 @@ internal fun backFrom(r: Route): Route = when {
     r is Route.Achievements && !r.fromHome -> Route.Stats
     r is Route.Play && r.fromArchive -> Route.Archive(r.puzzleId, r.day)
     r is Route.Levels && r.level != null -> Route.Levels()
-    r is Route.Arrange && !r.fromHome -> Route.Settings
     else -> Route.Home
 }
 
@@ -114,7 +110,6 @@ internal fun encodeRoute(r: Route): String =
         Route.Stats -> "stats"
         Route.Settings -> "settings"
         is Route.Achievements -> "achievements|${r.fromHome}"
-        is Route.Arrange -> "arrange|${r.fromHome}"
         is Route.Archive -> "archive|${r.puzzleId}|${r.day ?: ""}"
         is Route.Levels -> "levels|${r.level ?: ""}"
         is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}|${r.fromArchive}|${r.level ?: ""}"
@@ -126,7 +121,6 @@ internal fun decodeRoute(text: String): Route {
         "stats" -> Route.Stats
         "settings" -> Route.Settings
         "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
-        "arrange" -> Route.Arrange(f.getOrNull(1) == "true")
         // The fields after the first few came later: a string saved before them still decodes.
         "archive" -> Route.Archive(f[1], f.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse))
         "levels" -> Route.Levels(f.getOrNull(1)?.toIntOrNull())
@@ -138,6 +132,7 @@ internal fun decodeRoute(text: String): Route {
             fromArchive = f.getOrNull(5) == "true",
             level = f.getOrNull(6)?.toIntOrNull(),
         )
+        // Anything else, such as "arrange|..." from the Arrange screen that the drag on the grid replaced, goes home.
         else -> Route.Home
     }
 }
@@ -328,17 +323,10 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                 onSettings = { route = Route.Settings },
                 puzzles = puzzles,
                 inProgress = { inProgress.value },
-                onArrange = { route = Route.Arrange(fromHome = true) },
+                customOrder = customOrder.isNotEmpty(),
+                onOrder = ::setOrder,
             )
         }
-
-        is Route.Arrange -> ArrangeScreen(
-            puzzles = puzzles,
-            custom = customOrder.isNotEmpty(),
-            onOrder = ::setOrder,
-            onReset = { setOrder(emptyList()) },
-            onBack = { route = backFrom(current) },
-        )
 
         Route.Stats -> StatsScreen(
             today = today,
@@ -372,7 +360,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             appearance = appearance,
             onAppearance = onAppearance,
             customOrder = customOrder.isNotEmpty(),
-            onArrange = { route = Route.Arrange() },
+            onResetOrder = { setOrder(emptyList()) },
             onBack = { route = Route.Home },
         )
 
