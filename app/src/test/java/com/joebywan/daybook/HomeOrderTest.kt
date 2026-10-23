@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.ProgressStore
@@ -26,10 +27,34 @@ class HomeOrderTest {
         Completion(id, Difficulty.STANDARD, daysAgo?.let { LocalDate.fromEpochDays(today.toEpochDays() - it) }, 60, 0)
 
     @Test
-    fun `most played first, ties and the unplayed in registry order`() {
+    fun `most played first, ties and the unplayed in the order given`() {
         val all = listOf(solve("c", 1), solve("c", 2), solve("b", 3), solve("d", 4))
         assertEquals(listOf("c", "b", "d", "a"), PuzzleOrder.mostPlayed(all, today, ids))
         assertEquals("nothing played keeps the registry", ids, PuzzleOrder.mostPlayed(emptyList(), today, ids))
+    }
+
+    @Test
+    fun `every registered puzzle has exactly one place in the gentlest order`() {
+        val ranked = PuzzleOrder.GENTLEST
+        assertEquals("no puzzle twice", ranked.distinct(), ranked)
+        assertEquals(PuzzleRegistry.all.map { it.id }.sorted(), ranked.sorted())
+    }
+
+    @Test
+    fun `a fresh install's second row opens with Sudoku and Lexicon`() {
+        val first = PuzzleOrder.mostPlayed(emptyList(), today, PuzzleOrder.gentlest(PuzzleRegistry.all.map { it.id }))
+        assertEquals(listOf("sudoku", "words"), first.subList(3, 5))
+        assertEquals("pointers", first.first())
+    }
+
+    @Test
+    fun `a new player meets the gentlest first, and the unplayed keep that order after`() {
+        val registry = listOf("chess", "sudoku", "pipes", "kings", "pointers", "new")
+        val gentle = PuzzleOrder.gentlest(registry)
+        assertEquals("the table's order, unranked last", listOf("pointers", "pipes", "sudoku", "kings", "chess", "new"), gentle)
+        assertEquals(gentle, PuzzleOrder.mostPlayed(emptyList(), today, gentle))
+        assertEquals(listOf("chess", "kings", "pointers", "pipes", "sudoku", "new"),
+            PuzzleOrder.mostPlayed(listOf(solve("chess", 1), solve("chess", 2), solve("kings", 1)), today, gentle))
     }
 
     @Test
@@ -79,5 +104,18 @@ class HomeOrderTest {
             setOf("played"),
             store.inProgress(setOf("played", "solved", "untouched", "missing")).first(),
         )
+    }
+
+    @Test
+    fun `in progress lists the most recently saved first`() = runBlocking {
+        val board = Sudoku.generate(1L, Difficulty.STANDARD) as SudokuState
+        val moved = board.withCell(board.givens.indexOfFirst { !it }, 4)
+        val store = ProgressStore(MemoryStore())
+        for (key in listOf("first", "second", "third")) {
+            store.saveGame(key, SavedGame(moved))
+            Thread.sleep(5)
+        }
+        store.saveGame("first", SavedGame(moved))
+        assertEquals(listOf("first", "third", "second"), store.inProgress(setOf("first", "second", "third")).first().toList())
     }
 }

@@ -92,6 +92,8 @@ shot() { adb exec-out screencap -p > "$DIR/$1.png"; }
 back() { adb shell am start -S -n $PKG/.MainActivity >/dev/null; sleep 4; }
 
 adb shell am start -n $PKG/.MainActivity >/dev/null
+# A clean install opens on the welcome (ui/home/Welcome.kt); Start leaves it for good.
+tap Start
 # A cold CI emulator can take a while to draw; the date text doubles as the check that the pin took.
 for _ in $(seq 20); do
   adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Wednesday 7 October" && break
