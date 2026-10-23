@@ -5,7 +5,9 @@ import com.joebywan.daybook.core.Difficulty.EXPERT
 import com.joebywan.daybook.core.Difficulty.HARD
 import com.joebywan.daybook.core.Difficulty.STANDARD
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.ui.play.NextKind
 import com.joebywan.daybook.ui.play.NextOption
+import com.joebywan.daybook.ui.play.mainOption
 import com.joebywan.daybook.ui.play.nextOptions
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import kotlinx.datetime.LocalDate
@@ -164,5 +166,13 @@ class NextStepsTest {
             listOf("Random>random:HARD", "Harder Daily>daily:EXPERT", "Done>home"),
             render(nextOptions(true, HARD, tiersDoneOn(all, "mosaic", past))),
         )
+    }
+
+    @Test
+    fun `the filled button is going on with a level, else Done`() {
+        val level = listOf(NextOption("Next in level 3", NextKind.LEVEL, STANDARD), NextOption("Home", NextKind.DONE, null))
+        assertEquals("Next in level 3", mainOption(level)?.label)
+        assertEquals("Done", mainOption(nextOptions(daily = true, tier = HARD, doneTiers = emptySet()))?.label)
+        assertEquals("Done", mainOption(nextOptions(daily = false, tier = HARD, doneTiers = emptySet()))?.label)
     }
 }

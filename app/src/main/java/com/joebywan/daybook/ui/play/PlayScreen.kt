@@ -837,11 +837,12 @@ private fun FinishedFrame(
                 .shadow(6.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
                 .background(scheme.surface).then(hide).padding(10.dp),
         ) {
+            val main = mainOption(options)
             options.chunked(2).forEachIndexed { row, pair ->
                 if (row > 0) Spacer(Modifier.height(6.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     pair.forEach { option ->
-                        NextTile(option, accent, Modifier.weight(1f)) { onOption(option) }
+                        NextTile(option, option == main, accent, Modifier.weight(1f)) { onOption(option) }
                     }
                 }
             }
@@ -879,29 +880,30 @@ private fun ResultsPill(accent: Color, next: NextOption?, done: NextOption, onSh
                 .background(scheme.surface).background(accent.copy(alpha = 0.22f)).clickable(onClick = onShow),
             contentAlignment = Alignment.Center,
         ) { Text("Show results", style = MaterialTheme.typography.titleSmall, color = scheme.onSurface) }
-        listOfNotNull(next, done).forEach {
-            NextTile(it, accent, Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(scheme.surface)) { onOption(it) }
+        val shown = listOfNotNull(next, done)
+        val main = mainOption(shown)
+        shown.forEach {
+            NextTile(it, it == main, accent, Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(scheme.surface)) { onOption(it) }
         }
     }
 }
 
 @Composable
-private fun NextTile(option: NextOption, accent: Color, modifier: Modifier, onClick: () -> Unit) {
+private fun NextTile(option: NextOption, main: Boolean, accent: Color, modifier: Modifier, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    val done = option.kind == NextKind.DONE
     Column(
         modifier
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (done) scheme.primary else accent.copy(alpha = 0.22f))
+            .background(if (main) scheme.primary else accent.copy(alpha = 0.22f))
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(option.label, style = MaterialTheme.typography.titleSmall, color = if (done) scheme.onPrimary else scheme.onSurface, maxLines = 1)
+        Text(option.label, style = MaterialTheme.typography.titleSmall, color = if (main) scheme.onPrimary else scheme.onSurface, maxLines = 1)
         (option.note ?: option.difficulty?.label)?.let {
-            Text(it, style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, maxLines = 1)
+            Text(it, style = MaterialTheme.typography.labelMedium, color = if (main) scheme.onPrimary.copy(alpha = 0.8f) else scheme.onSurfaceVariant, maxLines = 1)
         }
     }
 }
