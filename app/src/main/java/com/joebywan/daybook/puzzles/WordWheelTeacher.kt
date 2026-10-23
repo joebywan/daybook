@@ -96,7 +96,7 @@ internal object WordWheelTeacher {
                 explanation = explanation,
                 focus = cells.toSet(),
                 cited = known,
-                targets = cells.toSet() + letters(wheel, word),
+                targets = cells.toSet(),
             )
         }
         return null
@@ -127,7 +127,7 @@ internal object WordWheelTeacher {
                 "The one here is clued ${clueFor(slot.word)}.",
             focus = cells.toSet(),
             cited = cells.filter { shown[it] != null }.toSet(),
-            targets = cells.toSet() + letters(s.wheel, slot.word),
+            targets = cells.toSet(),
         )
     }
 
