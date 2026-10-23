@@ -82,6 +82,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -610,6 +611,8 @@ private fun PlayBoard(
                         Text("•  $rule", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
                         Spacer(Modifier.height(6.dp))
                     }
+                    // A wide window is the desktop, where the keys are most likely used and least likely guessed.
+                    KeyboardHelpLine(puzzle, MaterialTheme.typography.bodySmall, scheme.onSurfaceVariant)
                 }
             }
         }
@@ -938,7 +941,11 @@ private fun ToolButton(icon: ImageVector, label: String, modifier: Modifier, onC
 
 /** The "Keyboard" line of a rules dialog: the board's keys, then the play screen's. Nothing for a board with none. */
 @Composable
-internal fun KeyboardHelpLine(puzzle: PuzzleType) {
+internal fun KeyboardHelpLine(
+    puzzle: PuzzleType,
+    style: TextStyle = MaterialTheme.typography.bodyMedium,
+    color: Color = Color.Unspecified,
+) {
     if (puzzle.keyboardHelp.isEmpty()) return
     Text(
         "Keyboard: " + puzzle.keyboardHelp.joinToString(" ") +
@@ -946,6 +953,7 @@ internal fun KeyboardHelpLine(puzzle: PuzzleType) {
                 "Ctrl+Z undoes".takeIf { puzzle.offersUndo },
                 "H asks for a hint, Esc closes it".takeIf { puzzle.offersHints },
             ).joinToString(", ", prefix = " ").let { if (it.isBlank()) "" else "$it." },
-        style = MaterialTheme.typography.bodyMedium,
+        style = style,
+        color = color,
     )
 }

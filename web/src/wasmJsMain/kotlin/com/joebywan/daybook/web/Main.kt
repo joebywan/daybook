@@ -40,6 +40,24 @@ private fun nudgeFirstFrame(): Unit = js("""(() => {
     window.addEventListener('pageshow', nudge);
 })()""")
 
+/**
+ * Gives Compose's canvas the page's keyboard focus on load, so a board opened by a link or a refresh
+ * takes keys without a click first (until then focus is on `<body>` and every key is lost). The canvas
+ * sits in a shadow root, out of reach of a plain selector, and may not exist yet on the first frame of a
+ * loaded machine (one try missed 4 boards in 21), so it is retried each frame for up to five seconds.
+ * Left alone if something else already has focus.
+ */
+private fun focusCanvas(): Unit = js("""(() => {
+    const until = Date.now() + 5000;
+    const tryFocus = () => {
+        if (document.activeElement && document.activeElement !== document.body) return;
+        const canvas = [...document.querySelectorAll('#app *')].find(e => e.shadowRoot)?.shadowRoot.querySelector('canvas');
+        if (canvas) canvas.focus();
+        if (document.activeElement === document.body && Date.now() < until) requestAnimationFrame(tryFocus);
+    };
+    requestAnimationFrame(tryFocus);
+})()""")
+
 /** A calendar date the way the app's `LocalDate` would print it, for the parity dump. */
 private data class Day(val year: Int, val month: Int, val day: Int) {
     val epochDay: Long get() = SeedHash.epochDay(year, month, day)
@@ -167,4 +185,5 @@ fun main() {
     }
     removeLoadingNote()
     nudgeFirstFrame()
+    focusCanvas()
 }
