@@ -18,6 +18,12 @@ mkdir -p "metadata/$PKG"
 cp "$HERE/tools/fdroid/$PKG.yml" metadata/
 # The same listing text and images the official F-Droid build reads straight from the repo.
 cp -r "$HERE/fastlane/metadata/android/en-US" "metadata/$PKG/"
+# "What's new" is changelogs/<versionCode>.txt to F-Droid. The note is default.txt, rewritten each release, so it is
+# filed under the newest APK's version code only (the code is the release's run number, unknown until it is built).
+AAPT2="$(ls -1 "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/build-tools/*/aapt2 | sort -V | tail -1)"
+CODE="$("$AAPT2" dump badging "$(ls repo/*.apk | sort -V | tail -1)" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")"
+NOTES="metadata/$PKG/en-US/changelogs"
+if [ -f "$NOTES/default.txt" ] && [ -n "$CODE" ]; then mv "$NOTES/default.txt" "$NOTES/$CODE.txt"; fi
 
 install -m 600 /dev/null config.yml
 cat > config.yml <<CFG
