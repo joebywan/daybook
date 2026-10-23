@@ -59,8 +59,6 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Achievements follow-ups.** No fanfare yet (the solve chime plays; a distinct short tone would need a second
   sample path in both platform players). The two
   registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
-- [ ] **Levels.** A third mode beside Daily and Random: numbered packs of five boards that open one after another, so
-  boards after the dailies have something to tick off (a player's feedback, 2026-10-22). Spec: `docs/LEVELS_SPEC.md`. *L.*
 - [ ] **Puzzle of the week.** A larger board once a week (e.g. Sundays), from the same `hash(date, puzzle, tier)` scheme so it
   stays offline and free; most generators already scale by size. The owner wants it argued with worked examples per puzzle that fit a
   phone screen first: Nonogram Expert is already as big as a phone allows. Decide which puzzles take part (only those whose larger
@@ -158,7 +156,15 @@ below have a famous branded version; use the descriptive name).
   `generate(seed, difficulty)` contract does not carry. Only if repeats bother anyone.
 
 - [ ] **Dominoes: recapture the home screenshot.** Dominoes is the twenty-fifth tile, opening a ninth row on a phone;
-  `docs/screenshots/home.png` (and the store screenshots) were not recaptured with it.
+  `docs/screenshots/home.png` (and the store screenshots) were not recaptured with it. The "Arrange puzzles" link under the
+  grid is new as well; a clean install shows registry order (nothing played), so the shot's order is unchanged.
+- [ ] **Web: a late home-grid value can reach a tile stale.** The "In progress" set, passed down as a plain `Set` and landing in
+  the first frames, reached `PuzzleTile` stale in about half of Chromium loads (DaybookApp had the new set; the tile recomposed
+  with the old one; WebKit and Android never showed it). It is now a state read in the tile (`inProgress: () -> Set<String>`),
+  6 of 6 loads right. Root cause not found (the grid sits in `BoxWithConstraints` inside a `LazyColumn` item); other values
+  that arrive late (`doneToday` from completions) go the same way and may be worth a check. *M.*
+- [ ] **Arrange puzzles: drag to reorder.** `ArrangeScreen` has up and down buttons only (accessible, but 24 taps to move the
+  last puzzle to the top). A long-press drag, or a "move to top" button, would help a long list. *S.*
 - [ ] **Recapture home screenshots after the UX PRs.** The badge now says "Day one awaits" on a clean install, not "0 day
   streak", and more home changes are landing; recapture every `1-home.png` and `docs/screenshots/home.png` once they are in
   (`tools/screenshots/capture.sh`). *S.*
