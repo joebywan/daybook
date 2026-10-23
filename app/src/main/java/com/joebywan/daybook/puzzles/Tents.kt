@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -18,9 +13,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -60,11 +53,16 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.reportHighlight
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.TimeSource
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * Tents. The board is one canvas: a row of column counts across the top, a column of row counts down the
@@ -226,6 +224,8 @@ object Tents : PuzzleType {
         scheme: ColorScheme,
         hues: Pair<Float, Float>,
         overlay: Overlay,
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val n = s.size
         val dark = BoardHues.isDark(scheme)
@@ -246,12 +246,14 @@ object Tents : PuzzleType {
             val i = r * n + c
             val x = gx + c * u
             val y = gy + r * u
-            when {
-                s.trees[i] -> drawTree(x, y, u, treeInk, scheme.onSurface)
-                s.marks[i] == TentsLogic.TENT -> drawTent(x, y, u, if (i in overlay.badTents) scheme.error else tentInk, scheme.surface)
-                seen[i] == TentsLogic.GRASS -> {
-                    drawRect(grassFill, Offset(x, y), Size(u, u))
-                    drawGrass(x, y, u, treeInk)
+            feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
+                when {
+                    s.trees[i] -> drawTree(x, y, u, treeInk, scheme.onSurface)
+                    s.marks[i] == TentsLogic.TENT -> drawTent(x, y, u, if (i in overlay.badTents) scheme.error else tentInk, scheme.surface)
+                    seen[i] == TentsLogic.GRASS -> {
+                        drawRect(grassFill, Offset(x, y), Size(u, u))
+                        drawGrass(x, y, u, treeInk)
+                    }
                 }
             }
         }
@@ -388,16 +390,7 @@ object Tents : PuzzleType {
         val density = LocalDensity.current
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         val hues = remember(s.solution) { BoardHues.pair(s.solution.hashCode()) }
 
         // Wrong now, and still wrong a second on: touching tents, a row or column with too many.
@@ -411,6 +404,15 @@ object Tents : PuzzleType {
         LaunchedEffect(s.marks) {
             delay(SETTLE_MILLIS)
             settled = bad
+        }
+
+        // A row or column is finished when it has its count of tents, none touching another.
+        val units = remember(n) { lineUnits(n, n) }
+        val touching = base.touching()
+        val feel = rememberMoveFeel(base.marks, units) { u ->
+            val line = units[u]
+            line.count { base.marks[it] == TentsLogic.TENT } == (if (u < n) base.rowCounts[u] else base.colCounts[u - n]) &&
+                line.none { it in touching }
         }
 
         // The keyboard cursor: transient, so not in the state.
@@ -443,7 +445,7 @@ object Tents : PuzzleType {
                             .reduceOrNull { a, b -> Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom)) }
                     },
             ) {
-                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, hues, overlay) }
+                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, hues, overlay, feel, Color(accent)) }
                 // Taps are read over the grid alone; the counts beside it are not part of the play area.
                 Box(
                     Modifier

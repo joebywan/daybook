@@ -3,10 +3,6 @@ package com.joebywan.daybook.puzzles
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -24,9 +20,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +48,8 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
+import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -366,21 +362,14 @@ object Pointers : PuzzleType {
         val dark = BoardHues.isDark(scheme)
         val hues = remember(s.arrows) { colouring(s) }
         val highlight = LocalBoardHighlight.current
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "glow").animateFloat(
-                initialValue = 0.35f,
-                targetValue = 0.8f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "glow-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty(), 0.35f, 0.8f)
         // Animations are transient: they live here, in a scope that outlives the state that started them.
         val scope = rememberCoroutineScope()
         val slides = remember(s.arrows) { mutableStateListOf<Slide>() }
         var bump by remember(s.arrows) { mutableStateOf<Bump?>(null) }
         var cursor by remember(s.arrows) { mutableStateOf<Int?>(null) }
+        // Reduced motion: a cleared arrow simply goes and a bump flashes without the shake.
+        val still = LocalReducedMotion.current
         val live = interactive && !s.solved && !s.failed
 
         fun tapAt(cell: Int) {
@@ -393,7 +382,7 @@ object Pointers : PuzzleType {
                     b.progress.animateTo(1f, tween(BUMP_MS, easing = LinearEasing))
                     if (bump === b) bump = null
                 }
-            } else {
+            } else if (!still) {
                 val slide = Slide(i, Animatable(0f))
                 slides += slide
                 scope.launch {
@@ -476,7 +465,7 @@ object Pointers : PuzzleType {
                         if (i in highlight.strong) drawArrow(s.arrows[i], s.width, unit, scheme.onBackground.copy(alpha = pulse.value * 0.5f), width = 0.6f, head = false)
                         var shift = 0f
                         if (b != null && (i == b.arrow || i == b.blocker)) colour = lerp(colour, scheme.error, flash)
-                        if (b != null && i == b.arrow) {
+                        if (b != null && i == b.arrow && !still) {
                             val t = b.progress.value
                             shift = 0.3f * sin(PI.toFloat() * t) + 0.06f * sin(6 * PI.toFloat() * t) * (1 - t)
                         }

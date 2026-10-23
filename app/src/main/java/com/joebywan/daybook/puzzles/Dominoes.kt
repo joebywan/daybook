@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -19,9 +14,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,12 +51,17 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.ceil
+import com.joebywan.daybook.ui.GLOW_ALPHA
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
+import androidx.compose.ui.graphics.drawscope.scale
 
 /**
  * Dominoes (`docs/DOMINO_SPEC.md`): an irregular board, some of it cut into coloured regions that each
@@ -538,6 +536,8 @@ object Dominoes : PuzzleType {
         hues: IntArray,
         labels: Map<Int, TextLayoutResult>,
         overlay: Overlay = Overlay(),
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val u = fit.unit
         val w = s.width
@@ -570,7 +570,11 @@ object Dominoes : PuzzleType {
 
         // Laid dominoes, then the region outlines in the gaps around them.
         val pips = DominoLogic.pipsOf(s)
-        for (d in s.tray.indices) s.placed[d]?.let { drawLaid(s, fit, d, it, paint) }
+        for (d in s.tray.indices) s.placed[d]?.let { p ->
+            scale(feel.scale(p.first), (rect(p.first).center + rect(p.second).center) / 2f) { drawLaid(s, fit, d, p, paint) }
+        }
+        // A region that has just kept its rule glows once, square by square.
+        for (i in 0 until n) feel.glow(i).takeIf { it > 0f }?.let { drawRect(accent.copy(alpha = GLOW_ALPHA * it), rect(i).topLeft, rect(i).size) }
         val edgeW = u * 0.065f
         val inset = u * 0.04f
         for (i in 0 until n) {
@@ -772,16 +776,7 @@ object Dominoes : PuzzleType {
 
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // Green at once when a covered region keeps its rule; red only once it has stayed broken for a second.
         val holds = BooleanArray(s.rules.size) { DominoLogic.regionHolds(s, it) }
@@ -792,6 +787,8 @@ object Dominoes : PuzzleType {
             settled = brokenNow
         }
         val broken = BooleanArray(s.rules.size) { brokenNow[it] && settled.getOrElse(it) { false } }
+        // A laid domino settles; a region it completes by its rule glows once.
+        val feel = rememberMoveFeel(DominoLogic.pipsOf(s).toList(), s.layout.regionSquares) { holds[it] }
 
         BoxWithConstraints(
             Modifier
@@ -835,6 +832,7 @@ object Dominoes : PuzzleType {
                             pulse = pulse.value,
                             select = Color(accent),
                         ),
+                        feel, Color(accent),
                     )
                 }
                 // The tray is what the player reaches for to make a hinted move: keep the popover off it.

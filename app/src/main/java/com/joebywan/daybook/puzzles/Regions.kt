@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,8 +51,11 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * A Regions board in play. [region] (the region id of each square) and [solution] are fixed for the
@@ -382,17 +379,14 @@ object Regions : PuzzleType {
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         val digits = layout.digits
+        // A region is finished when it holds 1..its size, none of them touching an equal digit.
+        val units = remember(s.region) { s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() } }
+        val feel = rememberMoveFeel(s.cells, units) { u ->
+            val r = units[u]
+            r.map { s.cells[it] }.toSet() == (1..r.size).toSet() && r.none { it in conflicts }
+        }
 
         // Sized from both axes (CLAUDE.md): the grid leaves room for the digit pad under it.
         BoxWithConstraints(
@@ -429,6 +423,7 @@ object Regions : PuzzleType {
                             Modifier
                                 .padding(start = slot * (i % n), top = slot * (i / n))
                                 .size(slot)
+                                .moveFeel(feel, i, Color(accent))
                                 .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
                                 .ring(look, glow, pulse, corner = 2f)
                                 .background(fill)

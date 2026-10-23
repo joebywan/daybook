@@ -105,6 +105,14 @@ class LaunchPreferences(private val store: KeyValueStore) {
         store.putString(KEY_SOUND, if (play) "on" else "off")
     }
 
+    /** Whether a move, a bump and a solve buzz. On unless the player turned it off. */
+    val vibrate: Flow<Boolean> = store.string(KEY_VIBRATE).map { it != "off" }
+
+    suspend fun setVibrate(on: Boolean) {
+        store.putString(KEY_VIBRATE, if (on) "on" else "off")
+    }
+
+
     /**
      * The player's own order of the home grid, as puzzle ids; empty (the default) means most played first. Read through
      * `PuzzleOrder.arranged`, so an id from a removed puzzle drops out and a new puzzle joins at the end.
@@ -117,6 +125,7 @@ class LaunchPreferences(private val store: KeyValueStore) {
     }
 
     private companion object {
+        const val KEY_VIBRATE = "vibrate"
         const val KEY_ORDER = "puzzle_order"
         const val KEY_SOUND = "play_sound"
         const val KEY_DIFFICULTY = "difficulty"

@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
@@ -483,16 +478,7 @@ object Tower : PuzzleType {
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         // Breathes only while something glows, as on Kings.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // A phone's width at most: on a tablet or a wide window the rows would otherwise stretch across the whole box.
         Column(

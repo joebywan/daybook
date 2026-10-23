@@ -2,10 +2,6 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -17,8 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +43,8 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -533,16 +529,7 @@ object Pipes : PuzzleType {
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         // Breathes, as Kings' does, so a glowing tile is findable at a glance on an 8x11 board. Only
         // runs while something glows, and is read in the draw phase.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // One angle per tile, held outside the state so a rotation can be shown turning while the
         // board itself has already moved on. Only the grid shape resets them.
@@ -553,6 +540,8 @@ object Pipes : PuzzleType {
         // next tap on any *other* tile, leaving the first frozen at a slant. Only the same tile's
         // own next turn (snapTo, below) may interrupt a spin, and it carries the angle on.
         val spinScope = rememberCoroutineScope()
+        // Reduced motion: a tile simply shows its new turn.
+        val still = LocalReducedMotion.current
 
         LaunchedEffect(s.cells) {
             val before = shown.toList()
@@ -565,6 +554,7 @@ object Pipes : PuzzleType {
                 // An undo turns the other way. Anything else — a restored board, a new puzzle —
                 // is not a turn at all and should simply appear.
                 val wound = when {
+                    still -> 0f
                     rotateCw(before[i]) == s.cells[i] -> -QUARTER
                     rotateCw(s.cells[i]) == before[i] -> QUARTER
                     else -> 0f

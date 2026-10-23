@@ -395,11 +395,13 @@ object Cages : PuzzleType {
             val seen = BooleanArray(s.sums.size)
             s.cageOf.indices.filter { i -> !seen[s.cageOf[i]].also { seen[s.cageOf[i]] = true } }.toSet()
         }
+        val units = remember(s.cageOf) { SUDOKU_UNITS + CageLogic.cageCells(s.cageOf) }
         SudokuGridBoard(
             s = s.grid,
             conflicts = s.conflicts(),
             hueSeed = seed,
             interactive = interactive,
+            accent = Color(accent),
             onSelect = { onState(s.select(it)) },
             onEnter = { cell, digit, notesMode ->
                 val next = s.enter(cell, digit, notesMode)
@@ -407,6 +409,17 @@ object Cages : PuzzleType {
             },
             onKey = { action, notesMode -> s.applyKey(action, notesMode)?.let(onState) },
             topBand = { if (it in labelled) LABEL_BAND else 0f },
+            // The rows, columns and boxes, then the cages: a cage is finished when it is full, repeats nothing and makes its total.
+            units = units,
+            complete = { u ->
+                if (u < SUDOKU_UNITS.size) {
+                    s.cells.holdsOneToNine(units[u])
+                } else {
+                    val cage = units[u]
+                    cage.all { s.cells[it] != 0 } && cage.map { s.cells[it] }.toSet().size == cage.size &&
+                        cage.sumOf { s.cells[it] } == s.sums[u - SUDOKU_UNITS.size]
+                }
+            },
             overlay = { cell -> CageOverlay(s, cell, BoardHues.ink(hueA, dark), scheme.onSurface.copy(alpha = 0.85f), measurer) },
         )
     }

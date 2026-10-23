@@ -549,6 +549,7 @@ object Sudoku : PuzzleType {
             conflicts = s.conflicts(),
             hueSeed = s.solution.hashCode(),
             interactive = interactive,
+            accent = Color(accent),
             onSelect = { onState(s.select(it)) },
             onEnter = { cell, digit, notesMode ->
                 // The keys are dimmed and inert where a note cannot go, so a refusal here is never silent.
