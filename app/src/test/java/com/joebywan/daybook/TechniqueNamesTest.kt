@@ -3,7 +3,9 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.TECHNIQUE_NAME_MAX
+import com.joebywan.daybook.core.praisedTechniquesOf
 import com.joebywan.daybook.core.techniqueNamesOf
+import com.joebywan.daybook.core.techniqueToPraise
 import com.joebywan.daybook.puzzles.AtomsTeacher
 import com.joebywan.daybook.puzzles.CageTeacher
 import com.joebywan.daybook.puzzles.ChessTeacher
@@ -61,6 +63,14 @@ class TechniqueNamesTest {
             }
         }
         assertTrue(techniqueNamesOf("snap").isEmpty())
+    }
+
+    /** Every puzzle with a real technique has something to praise; Target's steps are moves, not skills. */
+    @Test fun everyTeacherButTargetHasAPraisedTechnique() {
+        for (id in teachers.keys - "target") assertTrue("$id: nothing praised", praisedTechniquesOf(id).isNotEmpty())
+        assertTrue(praisedTechniquesOf("target").isEmpty())
+        assertEquals(null, techniqueToPraise("words", listOf("best-guess", "opener")))
+        assertEquals("a letter pinned to its slot", techniqueToPraise("words", listOf("pinned-letter", "best-guess")))
     }
 
     /** The no-hint line is a claim about the board, so it must match what the generator built the tier to need. */

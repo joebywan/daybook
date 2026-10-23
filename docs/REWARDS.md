@@ -51,9 +51,12 @@ The rule is told once, under the stats calendar: "Play on 5 of any 7 days to kee
   characters (`TechniqueNamesTest` fails for a technique without one; mistakes and fallbacks have none). Two honest sources:
   - **A hint solve:** the techniques of the hints the player opened. `SavedGame.taught` records the opened deduction's
     technique beside each counted hint (mistakes left out; defaulted, so old saves load; `PlayLog`'s characters are
-    unchanged). The one most worth naming (each puzzle's list is ordered so: the ladder, simplest first, with steps that only
-    point at a word or guess put first) gives "You learned a digit's only place in a box." Only unnamed ones: the
-    generic hint line.
+    unchanged). The hardest of them (each puzzle's list follows its ladder, simplest first) gives "You learned a digit's
+    only place in a box." Only praised techniques count: steps that are not a skill the player now has (`NOT_PRAISED`:
+    Mosaic's last fill and fill within the limit, Sets' continued and fresh sets, Tower's and Lexicon's opener, submit,
+    guess and last code or word, Target's steps, Word Wheel's clue, Sand's finishing pour) keep a name but are skipped, and
+    a solve whose hints showed only those gets the generic hint line. Every teacher but Target has something praised
+    (`TechniqueNamesTest`).
   - **A no-hint solve** claims nothing the player did, only what the board needed: "This board needed the ways a line can
     make its target: solved without help.", in the puzzle note's place. From `PuzzleType.neededTechnique`, which only three
     puzzles answer, because only their generators already measure it exactly and cheaply: Tally (`TallyLogic.depth`: the ways

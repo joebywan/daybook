@@ -10,6 +10,7 @@ const val TECHNIQUE_NAME_MAX = 40
  * Each puzzle's list is in the order praise prefers, the last the most worth naming: the teacher's ladder, simplest
  * first, with steps that only point at a word or a guess (Lexicon's, Tower's, Word Wheel's clue, Mosaic's fill within
  * the limit) moved to the front. `TechniqueNamesTest` fails for a teacher's technique without a name.
+ * Steps in [NOT_PRAISED] keep their name but are never praised.
  */
 private val NAMES: Map<String, Map<String, String>> = mapOf(
     "sudoku" to linkedMapOf(
@@ -38,10 +39,10 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "what-if" to "a what-if",
     ),
     "pipes" to linkedMapOf(
-        "border" to "no pipe pointing off the edge",
-        "set-neighbour" to "an opening that must meet its neighbour",
+        "border" to "the edge rule",
+        "set-neighbour" to "matching a set neighbour's opening",
         "whichever-way" to "a tile forced whichever way it turns",
-        "no-loop" to "a joint that would close a loop",
+        "no-loop" to "avoiding a closed loop",
     ),
     "shikaku" to linkedMapOf(
         "only-fits" to "a number with one rectangle that fits",
@@ -53,13 +54,13 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "keeps-in-limit" to "a fill that stays within the limit",
         "finish" to "the fill that finishes the board",
         "count" to "counting fills against colours",
-        "biggest-swallow" to "the fill that swallows the most",
+        "biggest-swallow" to "filling to swallow the most areas",
         "centre" to "growing from the centre",
     ),
     "sets" to linkedMapOf(
         "continue" to "building on a pick",
         "fresh" to "a set of unused cards",
-        "reuse" to "a set through a used card",
+        "reuse" to "that a used card still counts",
     ),
     "atoms" to linkedMapOf(
         "one-neighbour" to "an atom with one neighbour left",
@@ -73,9 +74,9 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
     "lits" to linkedMapOf(
         "whole-region" to "a region of exactly four squares",
         "overlap" to "where every shape overlaps",
-        "avoid-2x2" to "a shape that would fill a 2x2",
-        "letter-clash" to "matching letters that can't touch",
-        "neighbour" to "a shape that blocks its neighbour",
+        "avoid-2x2" to "avoiding a 2x2 block",
+        "letter-clash" to "keeping matching letters apart",
+        "neighbour" to "a shape that would block a neighbour",
         "what-if" to "a what-if",
     ),
     "tower" to linkedMapOf(
@@ -83,9 +84,9 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "submit" to "a guess ready to try",
         "consistent-guess" to "a guess that fits every score",
         "only-code-left" to "the only code left",
-        "one-change" to "two guesses one slot apart",
+        "one-change" to "comparing guesses one slot apart",
         "only-colour-left" to "the only colour left for a slot",
-        "pips-accounted" to "pips already accounted for",
+        "pips-accounted" to "accounting for every pip",
         "what-if" to "a what-if",
     ),
     "words" to linkedMapOf(
@@ -114,10 +115,10 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "quiet-key" to "a quiet key move",
     ),
     "tents" to linkedMapOf(
-        "no-tree" to "a square with no tree beside it",
+        "no-tree" to "grass where no tree is beside it",
         "line-done" to "a line with all its tents",
         "line-full" to "a line with just room for its tents",
-        "touch" to "the squares around a tent",
+        "touch" to "grass around a tent",
         "one-spot" to "a tree with one spot left",
         "shared" to "a square touching all a tree's spots",
         "served" to "a square whose trees all have tents",
@@ -177,9 +178,27 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
     ),
 )
 
+/**
+ * Steps that are not a skill the player now has: "You learned <name>." would not make sense of them. They point at a word,
+ * a guess, a set or a move rather than teach a way of seeing one, so a solve whose hints showed only these keeps the
+ * generic hint line.
+ */
+private val NOT_PRAISED: Map<String, Set<String>> = mapOf(
+    "mosaic" to setOf("keeps-in-limit", "finish"),
+    "sets" to setOf("continue", "fresh"),
+    "tower" to setOf("opener", "submit", "consistent-guess", "only-code-left"),
+    "words" to setOf("opener", "submit", "best-guess", "only-word-left"),
+    "target" to setOf("step", "finish"),
+    "wordwheel" to setOf("clue"),
+    "sand" to setOf("finish"),
+)
+
+/** The techniques of [puzzleId] that praise may name. */
+fun praisedTechniquesOf(puzzleId: String): Set<String> = techniqueNamesOf(puzzleId).keys - NOT_PRAISED[puzzleId].orEmpty()
+
 /** [puzzleId]'s technique names in praise order; empty for a puzzle without a teacher. */
 fun techniqueNamesOf(puzzleId: String): Map<String, String> = NAMES[puzzleId].orEmpty()
 
 /** The name of the one of [ids] most worth naming, or null when none has a name (only mistakes, say). */
 fun techniqueToPraise(puzzleId: String, ids: Collection<String>): String? =
-    techniqueNamesOf(puzzleId).entries.lastOrNull { it.key in ids }?.value
+    techniqueNamesOf(puzzleId).entries.lastOrNull { it.key in ids && it.key in praisedTechniquesOf(puzzleId) }?.value
