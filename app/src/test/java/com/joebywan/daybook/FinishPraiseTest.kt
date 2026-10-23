@@ -82,13 +82,13 @@ class FinishPraiseTest {
 
     @Test fun aHintSolveNamesTheMostWorthNamingTechniqueItShowed() {
         val solve = c(null, 100, hints = 2, id = "tally")
-        assertEquals("You learned a what-if on this one.", line(solve, listOf("what-if", "too-big")))
-        assertEquals("You learned a number too big for its line on this one.", line(solve, listOf("too-big")))
+        assertEquals("You learned a what-if.", line(solve, listOf("what-if", "too-big")))
+        assertEquals("You learned a number too big for its line.", line(solve, listOf("too-big")))
         // Only unnamed ones (a fallback, a technique from another build): the generic line, never a count.
         assertTrue(line(solve, listOf("fallback")).startsWith("Hints are how a move sticks"))
         assertTrue(line(solve).startsWith("Hints are how a move sticks"))
         // What the board needed is never claimed for a hint solve.
-        assertEquals("You learned a number too big for its line on this one.", line(solve, listOf("too-big"), needed = "what-if"))
+        assertEquals("You learned a number too big for its line.", line(solve, listOf("too-big"), needed = "what-if"))
     }
 
     @Test fun aNoHintSolveSaysWhatTheBoardNeededInTheNotesPlace() {

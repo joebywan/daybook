@@ -117,7 +117,7 @@ fun finishPraise(
  * the puzzle's simplest step, because it is true of the board whatever the player did; it never claims the player used it.
  */
 fun techniqueLine(puzzleId: String, hints: Int, taught: List<String>, needed: String?): String? {
-    if (hints > 0) return techniqueToPraise(puzzleId, taught)?.let { "You learned $it on this one." }
+    if (hints > 0) return techniqueToPraise(puzzleId, taught)?.let { "You learned $it." }
     val names = techniqueNamesOf(puzzleId)
     if (needed == null || needed == names.keys.firstOrNull()) return null
     return names[needed]?.let { "This board needed $it: solved without help." }

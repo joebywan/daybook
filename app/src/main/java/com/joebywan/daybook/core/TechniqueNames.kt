@@ -1,6 +1,6 @@
 package com.joebywan.daybook.core
 
-/** Longest technique name, so "You learned <name> on this one." stays two lines on a phone. */
+/** Longest technique name, so "You learned <name>." stays within two lines on a phone. */
 const val TECHNIQUE_NAME_MAX = 40
 
 /**
@@ -51,10 +51,10 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
     ),
     "mosaic" to linkedMapOf(
         "keeps-in-limit" to "a fill that stays within the limit",
-        "centre" to "growing from the centre",
-        "biggest-swallow" to "the fill that swallows the most",
-        "count" to "counting fills against colours",
         "finish" to "the fill that finishes the board",
+        "count" to "counting fills against colours",
+        "biggest-swallow" to "the fill that swallows the most",
+        "centre" to "growing from the centre",
     ),
     "sets" to linkedMapOf(
         "continue" to "building on a pick",
