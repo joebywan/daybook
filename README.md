@@ -267,7 +267,6 @@ How both work: [`docs/fdroid/README.md`](docs/fdroid/README.md).
 
 Daybook is live on Google Play. Every release builds and attaches a signed `.aab` alongside the `.apk`, and
 `.github/workflows/publish-play.yml` uploads that bundle to the **production** track and rolls it out to everyone (Google reviews it first).
-The closed testing track (`alpha`) is still there for a manual run.
 It authenticates with the `PLAY_SERVICE_ACCOUNT_JSON` secret; without it the workflow logs a notice and does nothing.
 
 `release.yml` calls it directly as a reusable workflow rather than letting it wait on the
@@ -299,26 +298,21 @@ Google's copy comes from, and the choice is effectively permanent:
    ads (none). [`PRIVACY.md`](PRIVACY.md) is written for this — its rendered GitHub URL works as
    the policy link, and the data safety answers are all "no data collected", which is true: the app
    declares no `INTERNET` permission.
-4. **Upload one bundle by hand** to the closed testing track (done 2026-10-02). Play will not accept API uploads for an app
+4. **Upload one bundle by hand** (done 2026-10-02). Play will not accept API uploads for an app
    that has never had a release created in the console.
 5. **Make a service account:** Google Cloud Console → IAM → Service Accounts → create → create a
    JSON key. Then Play Console → Users and permissions → invite that service account's email →
    grant *View app information*, *Release to testing tracks* and *Release to production*.
 6. **Add the JSON** as the `PLAY_SERVICE_ACCOUNT_JSON` repository secret.
 
-7. **Production needs a closed test first** (personal developer accounts created after 13 Nov 2023
-   only): create a closed-testing track, get at least 12 testers opted in, keep them opted in for 14
-   continuous days (dropping below 12 restarts the clock), then apply for production access in the
-   Console's Dashboard. Done: production access was granted in October 2026, and the workflow's
-   default track moved to `production`. Testers join by a link or a Google Group, and need a Google account. Upload a
-   release to the closed track by `workflow_dispatch` on the publish workflow with `track: alpha`
-   (the Console's "closed testing" track is `alpha` to the API unless a custom track is made).
+7. **Production needs a closed test first** for personal developer accounts (12 testers for 14 days). Done: production
+   access was granted in October 2026, and the workflow's default track moved to `production`.
 
 Listing text, graphics and every declaration's answer are prepared in
 [`docs/play/LISTING.md`](docs/play/LISTING.md).
 
 From then on it is automatic. `workflow_dispatch` on that workflow also lets you push an existing
-release to `alpha`, `beta` or `production` by hand.
+release to any track by hand.
 
 ### A note on the bundle check
 
