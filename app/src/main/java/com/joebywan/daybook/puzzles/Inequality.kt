@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,12 +46,17 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * An Inequality square in play. [signs] and [solution] are fixed for the board; [cells] holds 0 for
@@ -179,7 +178,18 @@ object Inequality : PuzzleType {
     override val tutorial: List<TutorialFrame> by lazy {
         val start = tutorialBoard()
         val placed = mapOf(0 to 1)
+        val done = tutorialBoard(placed)
         val signAt = 16 // n*n + index 0 in TUTORIAL_SIGNS
+        val place = TutorialPath(
+            { it is InequalityState && it.cells == start.cells && it.selected == 0 },
+            { it is InequalityState && it.cells == done.cells },
+        )
+        val clash = TutorialPath(
+            { it is InequalityState && it.cells == done.cells && it.selected == TUTORIAL_WRONG },
+            { it is InequalityState && it.cells == tutorialBoard(placed + (TUTORIAL_WRONG to 1)).cells },
+            // Back where it started, but by way of the 1: only a move counted since says so.
+            { it is InequalityState && it.cells == done.cells && it.moves > 0 },
+        )
         listOf(
             TutorialFrame(
                 state = start,
@@ -193,27 +203,30 @@ object Inequality : PuzzleType {
             ),
             TutorialFrame(
                 state = start,
-                caption = "These four squares hold only 1s and 2s, and rows and columns alone can't say which goes where. Tap the top-left one.",
-                highlight = BoardHighlight(strong = setOf(0), soft = setOf(1, 4, 5)),
-                accepts = { next -> next is InequalityState && next.cells == start.cells && next.selected == 0 },
-                retry = "Tap the glowing square.",
-                done = "Selected.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(selected = 0),
-                caption = "It's the smaller of the pair, so it can't be the 2. Tap 1 below.",
-                highlight = BoardHighlight(strong = setOf(0, InequalityTeacher.pad(1)), soft = setOf(signAt, 1)),
-                accepts = { next -> next is InequalityState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 1 in the row of digits below.",
+                caption = "These four squares hold only 1s and 2s, and rows and columns can't say which goes where. " +
+                    "The sign can: the top-left one is smaller. Tap it, then 1 below.",
+                glow = { s ->
+                    val strong = if (place.stage(s) < 0) 0 else InequalityTeacher.pad(1)
+                    BoardHighlight(strong = setOf(strong), soft = setOf(signAt, 1, 4, 5))
+                },
+                steps = place.steps,
+                retry = "Tap the glowing square, then the 1.",
                 done = "The sign settled the rest of that corner.",
             ),
             TutorialFrame(
-                state = tutorialBoard(placed + (TUTORIAL_WRONG to 1), selected = TUTORIAL_WRONG),
-                caption = "A digit that breaks a rule turns red: this 1 repeats the 1 in its column. It's selected, so tap 1 again to clear it.",
-                highlight = BoardHighlight(strong = setOf(TUTORIAL_WRONG, InequalityTeacher.pad(1)), soft = setOf(10), warning = true),
-                accepts = { next -> next is InequalityState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 1 in the row of digits below.",
-                done = "Cleared.",
+                state = tutorialBoard(placed, selected = 0),
+                caption = "A digit that breaks a rule turns red. Put a 1 in the glowing square: column 3 already " +
+                    "has one. Then tap 1 again to clear it.",
+                glow = { s ->
+                    when (clash.stage(s)) {
+                        -1 -> BoardHighlight(strong = setOf(TUTORIAL_WRONG), soft = setOf(10))
+                        0 -> BoardHighlight(strong = setOf(InequalityTeacher.pad(1)), soft = setOf(10))
+                        else -> BoardHighlight(strong = setOf(TUTORIAL_WRONG, InequalityTeacher.pad(1)), soft = setOf(10), warning = true)
+                    }
+                },
+                steps = clash.steps,
+                retry = "Tap the glowing square, then the 1, then the 1 again.",
+                done = "Cleared. Tapping the digit again takes it out.",
             ),
             TutorialFrame(
                 state = tutorialBoard(placed, selected = TUTORIAL_WRONG),
@@ -343,15 +356,13 @@ object Inequality : PuzzleType {
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        // A row or column is finished when it holds 1..n and every sign inside it is true.
+        val units = remember(n) { lineUnits(n, n) }
+        val feel = rememberMoveFeel(s.cells, units) { u ->
+            val line = units[u]
+            line.map { s.cells[it] }.toSet() == (1..n).toSet() &&
+                broken.none { s.signs[it].lo in line && s.signs[it].hi in line }
         }
 
         // Sized from both axes (CLAUDE.md): the grid leaves room for the digit pad under it.
@@ -381,6 +392,7 @@ object Inequality : PuzzleType {
                             Modifier
                                 .padding(start = slot * (i % n) + (slot - cell) / 2, top = slot * (i / n) + (slot - cell) / 2)
                                 .size(cell)
+                                .moveFeel(feel, i, Color(accent))
                                 .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
                                 .ring(look, glow, pulse, corner = 8f)
                                 .clip(RoundedCornerShape(8.dp))

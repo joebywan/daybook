@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -43,6 +44,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.SolveTone
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.Haptics
 import com.joebywan.daybook.ui.theme.withFamily
 import com.joebywan.daybook.web.Backup
 import com.joebywan.daybook.web.WebStores
@@ -177,7 +179,7 @@ fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
 fun BackButton(onBack: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Box(
-        Modifier.padding(start = 6.dp).size(44.dp).clip(CircleShape).clickable(onClick = onBack),
+        Modifier.padding(start = 6.dp).size(48.dp).clip(CircleShape).clickable(onClick = onBack),
         contentAlignment = Alignment.Center,
     ) {
         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = scheme.onSurfaceVariant)
@@ -311,6 +313,7 @@ private fun BackupButton(label: String, modifier: Modifier, onClick: () -> Unit)
             .clip(RoundedCornerShape(10.dp))
             .background(scheme.surfaceVariant)
             .clickable(onClick = onClick)
+            .heightIn(min = 48.dp)
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -520,4 +523,34 @@ fun rememberSharer(): (String) -> String? = remember {
     { text ->
         if (canShare()) { shareNatively(text); null } else { copyToClipboard(text); "Copied" }
     }
+}
+
+private fun prefersReducedMotion(): Boolean = js("window.matchMedia('(prefers-reduced-motion: reduce)').matches")
+
+private fun onReducedMotionChange(handler: (Boolean) -> Unit): Unit =
+    js("window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (e) => handler(e.matches))")
+
+/**
+ * Whether the browser asks for less motion (`prefers-reduced-motion`, which follows the system setting), watched
+ * so a change takes effect at once. Called once, at the root, so the one listener is never removed.
+ */
+@Composable
+fun rememberReducedMotion(): Boolean {
+    var reduced by remember { mutableStateOf(prefersReducedMotion()) }
+    LaunchedEffect(Unit) { onReducedMotionChange { reduced = it } }
+    return reduced
+}
+
+/** Settings text under the Vibration switch: what else keeps it still on this platform. */
+const val VIBRATION_NOTE: String = "Only where the browser can vibrate: Chrome on Android can, iPhone and iPad cannot."
+
+// `navigator.vibrate` is missing on iOS and may refuse before the first tap; either way nothing happens.
+private fun vibrate(ms: Int): Unit = js("navigator.vibrate && navigator.vibrate(ms)")
+
+private fun vibratePattern(): Unit = js("navigator.vibrate && navigator.vibrate([20, 60, 40])")
+
+/** The game's buzzes, if [enabled], through `navigator.vibrate`: short, since a phone's motor is loud. */
+@Composable
+fun rememberHaptics(enabled: Boolean): Haptics = remember(enabled) {
+    if (!enabled) Haptics.None else Haptics(tick = { vibrate(8) }, bump = { vibrate(50) }, success = { vibratePattern() })
 }

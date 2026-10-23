@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Block
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
@@ -329,20 +330,21 @@ class ShikakuTeachingTest {
     @Test
     fun `each walkthrough move is the one the hints would give there`() {
         val frames = Shikaku.tutorial
+        val top = Shikaku.TUTORIAL_TOP_SIX
+        // The board each move is made on, and the rectangle the hints would draw there.
         val expect = listOf(
-            1 to ShikakuTeacher.ONLY_FITS,
-            3 to ShikakuTeacher.ONLY_REACHES,
-            4 to ShikakuTeacher.ONLY_REACHES,
-            5 to ShikakuTeacher.COMMON_CELLS,
+            frames[1].state to (ShikakuTeacher.ONLY_FITS to top),
+            frames[3].state to (ShikakuTeacher.ONLY_REACHES to Shikaku.TUTORIAL_FOUR),
+            (frames[3].state as ShikakuState).place(Shikaku.TUTORIAL_FOUR) to (ShikakuTeacher.ONLY_REACHES to Shikaku.TUTORIAL_THREE),
+            frames[4].state to (ShikakuTeacher.COMMON_CELLS to Shikaku.TUTORIAL_LOW_SIX),
         )
-        val placed = listOf(Shikaku.TUTORIAL_TOP_SIX, Shikaku.TUTORIAL_FOUR, Shikaku.TUTORIAL_THREE, Shikaku.TUTORIAL_LOW_SIX)
-        expect.forEachIndexed { k, (frame, technique) ->
-            val step = ShikakuTeacher.teach(frames[frame].state as ShikakuState)!!
-            assertEquals("frame ${frame + 1}", technique, step.technique)
-            assertEquals("frame ${frame + 1}", placed[k], step.place)
+        for ((k, e) in expect.withIndex()) {
+            val step = ShikakuTeacher.teach(e.first as ShikakuState)!!
+            assertEquals("move ${k + 1}", e.second.first, step.technique)
+            assertEquals("move ${k + 1}", e.second.second, step.place)
         }
-        // The wrong 4 is a mistake the hints would name for the same reason the caption gives.
-        val m = ShikakuTeacher.teach(frames[2].state as ShikakuState)!!
+        // The wrong 4 the player draws is a mistake the hints would name for the reason the caption gives.
+        val m = ShikakuTeacher.teach((frames[2].state as ShikakuState).place(Shikaku.TUTORIAL_WRONG_FOUR))!!
         assertEquals(ShikakuTeacher.MISTAKE, m.technique)
         assertEquals(Shikaku.TUTORIAL_WRONG_FOUR, m.remove)
         assertTrue("should cite the corner: ${m.explanation}", 0 in m.cited && "no number can reach" in m.explanation)
@@ -351,34 +353,53 @@ class ShikakuTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Shikaku.tutorial
-        assertEquals(7, frames.size)
+        assertEquals(6, frames.size)
         fun board(i: Int) = frames[i].state as ShikakuState
+        // The tap the board makes: the rectangle under the finger comes off, one move.
+        fun ShikakuState.tap(r: Int, c: Int) = copy(blocks = blocks - blockAt(r, c)!!, moves = moves + 1)
 
-        assertNull("frame 1 should be Next-only", frames[0].accepts)
+        assertNull("frame 1 should be Next-only", frames[0].judge)
         assertTrue(board(0).solved)
 
         // A drag: the board places the rectangle between the two corners.
         val draw = frames[1].accepts!!
         assertTrue(draw(board(1).place(Shikaku.TUTORIAL_TOP_SIX)))
         assertFalse("a rectangle elsewhere", draw(board(1).place(Shikaku.TUTORIAL_THREE)))
-        assertEquals(board(2).blocks - Shikaku.TUTORIAL_WRONG_FOUR, board(1).place(Shikaku.TUTORIAL_TOP_SIX).blocks)
+        assertEquals(board(2).blocks, board(1).place(Shikaku.TUTORIAL_TOP_SIX).blocks)
 
-        // A tap: the rectangle under the finger comes off.
-        val remove = frames[2].accepts!!
+        // The player draws the wrong 4 (the glow turns red), then taps it away: one frame.
+        val wrong = frames[2].steps!!
         val s2 = board(2)
-        assertTrue(remove(s2.copy(blocks = s2.blocks - s2.blockAt(1, 1)!!)))
-        assertFalse("the right rectangle removed instead", remove(s2.copy(blocks = s2.blocks - s2.blockAt(0, 3)!!)))
-        assertEquals(board(3).blocks, s2.blocks - Shikaku.TUTORIAL_WRONG_FOUR)
+        assertEquals(TutorialStep.REJECT, wrong(s2))
+        assertEquals(TutorialStep.REJECT, wrong(s2.place(Shikaku.TUTORIAL_FOUR)))
+        val drawn = s2.place(Shikaku.TUTORIAL_WRONG_FOUR)
+        assertEquals(TutorialStep.PROGRESS, wrong(drawn))
+        assertFalse(frames[2].glow!!(s2).warning)
+        assertTrue(frames[2].glow!!(drawn).warning)
+        assertEquals(TutorialStep.REJECT, wrong(drawn.tap(0, 3)))
+        val removed = drawn.tap(1, 1)
+        assertEquals(TutorialStep.DONE, wrong(removed))
+        assertEquals(board(3).blocks, removed.blocks)
 
-        for ((i, block) in listOf(3 to Shikaku.TUTORIAL_FOUR, 4 to Shikaku.TUTORIAL_THREE, 5 to Shikaku.TUTORIAL_LOW_SIX)) {
-            val accepts = frames[i].accepts!!
-            val next = board(i).place(block)
-            assertTrue("frame ${i + 1}", accepts(next))
-            assertFalse("frame ${i + 1}: the last 6 instead", accepts(board(i).place(Shikaku.TUTORIAL_MID_SIX)))
-            assertEquals("frame ${i + 2} follows from frame ${i + 1}", board(i + 1).blocks.toSet(), next.blocks.toSet())
-        }
+        // The 4, then the 3, in one frame: the glow moves from the corner to the square below it.
+        val pair = frames[3].steps!!
+        val s3 = board(3)
+        assertEquals(setOf(0), frames[3].glow!!(s3).strong)
+        assertEquals(TutorialStep.REJECT, pair(s3.place(Shikaku.TUTORIAL_THREE)))
+        val four = s3.place(Shikaku.TUTORIAL_FOUR)
+        assertEquals(TutorialStep.PROGRESS, pair(four))
+        assertEquals(setOf(10), frames[3].glow!!(four).strong)
+        assertEquals(TutorialStep.REJECT, pair(four.place(Shikaku.TUTORIAL_MID_SIX)))
+        val both = four.place(Shikaku.TUTORIAL_THREE)
+        assertEquals(TutorialStep.DONE, pair(both))
+        assertEquals(board(4).blocks.toSet(), both.blocks.toSet())
 
-        assertTrue(frames[6].freePlay)
-        assertTrue(board(6).place(Shikaku.TUTORIAL_MID_SIX).solved)
+        val low = frames[4].accepts!!
+        assertTrue(low(board(4).place(Shikaku.TUTORIAL_LOW_SIX)))
+        assertFalse("the last 6 instead", low(board(4).place(Shikaku.TUTORIAL_MID_SIX)))
+        assertEquals(board(5).blocks.toSet(), board(4).place(Shikaku.TUTORIAL_LOW_SIX).blocks.toSet())
+
+        assertTrue(frames[5].freePlay)
+        assertTrue(board(5).place(Shikaku.TUTORIAL_MID_SIX).solved)
     }
 }

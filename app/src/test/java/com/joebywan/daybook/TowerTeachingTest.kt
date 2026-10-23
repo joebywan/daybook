@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Feedback
 import com.joebywan.daybook.puzzles.Tower
 import com.joebywan.daybook.puzzles.TowerState
@@ -353,7 +354,7 @@ class TowerTeachingTest {
 
     @Test
     fun `the walkthrough's scores allow exactly one code, and it is the stored one`() {
-        val s = frameBoard(6)
+        val s = frameBoard(4)
         assertEquals(3, s.guesses.size)
         assertEquals(listOf(Tower.TUTORIAL_CODE), alive(s))
         // Before guess 3 there is more than one, so guess 3 is doing the work the frames say it does.
@@ -365,36 +366,34 @@ class TowerTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real controls, and rejects a wrong one`() {
         val frames = Tower.tutorial
-        assertEquals(7, frames.size)
-        listOf(0, 1, 4).forEach { assertEquals("frame ${it + 1} should be Next-only", null, frames[it].accepts) }
+        assertEquals(5, frames.size)
+        assertEquals("Next-only frames", listOf(0, 1), frames.indices.filter { frames[it].judge == null && !frames[it].freePlay })
 
-        // 3: gold swatch, then slot 1 — the board emits one withPeg.
-        val change = frames[2].accepts!!
-        assertTrue(change(frameBoard(2).withPeg(0, 1)))
-        assertFalse("blue is selected by default; tapping without choosing gold", change(frameBoard(2).withPeg(0, 0)))
-        assertFalse("gold in the wrong slot", change(frameBoard(2).withPeg(1, 1)))
-        assertEquals(frameBoard(3).current, frameBoard(2).withPeg(0, 1).current)
+        // 3: gold swatch, then slot 1 (the board emits one withPeg), then Submit.
+        val change = frames[2].judge!!
+        val changed = frameBoard(2).withPeg(0, 1)
+        assertEquals(TutorialStep.PROGRESS, change(changed))
+        assertEquals("blue is selected by default: tapping without choosing gold changes nothing", frameBoard(2).current, frameBoard(2).withPeg(0, 0).current)
+        assertEquals("blue elsewhere", TutorialStep.REJECT, change(frameBoard(2).withPeg(2, 0)))
+        assertEquals("gold in the wrong slot", TutorialStep.REJECT, change(frameBoard(2).withPeg(1, 1)))
+        assertEquals("submitting guess 2 again", TutorialStep.REJECT, change(frameBoard(2).submit()))
+        assertEquals("taken back", TutorialStep.PROGRESS, change(changed.withPeg(0, 0)))
+        assertEquals(setOf(TowerTeacher.SUBMIT_BUTTON), frames[2].glow!!(changed).strong)
+        assertEquals(TutorialStep.DONE, change(changed.submit()))
+        assertEquals(frameBoard(3).guesses, changed.submit().guesses)
+        assertEquals(Feedback(2, 0), frameBoard(3).score(frameBoard(3).guesses[2]))
 
-        // 4: Submit.
-        val submit = frames[3].accepts!!
-        assertTrue(submit(frameBoard(3).submit()))
-        assertFalse("changing a peg instead", submit(frameBoard(3).withPeg(2, 2)))
-        assertEquals(frameBoard(4).guesses, frameBoard(3).submit().guesses)
-        assertEquals(Feedback(2, 0), frameBoard(4).score(frameBoard(4).guesses[2]))
+        // 4: brown swatch, then slot 1; the claim checked: every code the scores allow has brown in slot 1.
+        assertTrue(alive(frameBoard(3)).all { it[0] == 2 })
+        val brown = frames[3].accepts!!
+        assertTrue(brown(frameBoard(3).withPeg(0, 2)))
+        assertFalse(brown(frameBoard(3).withPeg(0, 1)))
+        assertFalse(brown(frameBoard(3).withPeg(1, 2)))
+        assertEquals(frameBoard(4).current, frameBoard(3).withPeg(0, 2).current)
 
-        // 6: brown swatch, then slot 1.
-        val green = frames[5].accepts!!
-        assertTrue(green(frameBoard(5).withPeg(0, 2)))
-        assertFalse(green(frameBoard(5).withPeg(0, 1)))
-        assertFalse(green(frameBoard(5).withPeg(1, 2)))
-        assertEquals(frameBoard(6).current, frameBoard(5).withPeg(0, 2).current)
-
-        // Frame 5's claim, checked: every code the scores allow has brown in slot 1.
-        assertTrue(alive(frameBoard(4)).all { it[0] == 2 })
-
-        // 7: free play, finishable by hints without the fallback, and the hints are the named facts.
-        assertTrue(frames[6].freePlay)
-        var s = frameBoard(6)
+        // 5: free play, finishable by hints without the fallback, and the hints are the named facts.
+        assertTrue(frames[4].freePlay)
+        var s = frameBoard(4)
         val techniques = mutableListOf<String>()
         while (!s.solved) {
             val d = Tower.teach(s)

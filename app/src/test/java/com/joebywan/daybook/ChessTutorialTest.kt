@@ -34,10 +34,10 @@ class ChessTutorialTest {
         ChessTutorial.BACK_RANK to 1, ChessTutorial.LADDER to 2, ChessTutorial.PROMOTION to 1, ChessTutorial.FREE to 2,
     )
 
-    @Test fun `the walkthrough has nine frames and the explanatory ones take no move`() {
-        assertEquals(9, frames.size)
-        listOf(0, 2, 3, 4).forEach { assertNull("frame ${it + 1} is Next-only", frames[it].accepts) }
-        listOf(1, 5, 6, 7).forEach { assertTrue("frame ${it + 1} takes a move", frames[it].accepts != null) }
+    @Test fun `the walkthrough has seven frames and only the first takes no move`() {
+        assertEquals(7, frames.size)
+        assertNull("frame 1 is Next-only", frames[0].accepts)
+        listOf(1, 2, 3, 4, 5).forEach { assertTrue("frame ${it + 1} takes a move", frames[it].accepts != null) }
         assertTrue(frames.last().freePlay)
         assertEquals(1, frames.count { it.freePlay })
         frames.forEach { assertTrue("caption too long: ${it.caption}", it.caption.length <= 170) }
@@ -52,43 +52,46 @@ class ChessTutorialTest {
         assertFalse("another rook move", rook(st(1).play("a1a7")))
         assertFalse("a king move", rook(st(1).play("e1e2")))
         assertFalse("no move", rook(st(1)))
-        assertFalse("a different position", rook((st(5)).play("a1a8")))
-        assertEquals("frame 3 continues from frame 2's move", st(2), st(1).play("a1a8"))
+        assertFalse("a different position", rook((st(3)).play("a1a8")))
 
-        // 6: the king move that is the key; the non-key rook move is refused.
-        val king = frames[5].accepts!!
-        assertTrue(king(st(5).play("a5b6")))
-        assertFalse("the tempting Rd7", king(st(5).play("d1d7")))
-        assertFalse("a king move elsewhere", king(st(5).play("a5b5")))
-        assertFalse("a different king move", king(st(5).play("a5a6")))
-        assertEquals("frame 7 continues from frame 6's move", st(6), st(5).play("a5b6"))
+        // 3: the player makes the mistake, Rd7, and nothing else.
+        val wrong = frames[2].accepts!!
+        assertTrue(wrong(st(2).play("d1d7")))
+        assertFalse("the key", wrong(st(2).play("a5b6")))
+        assertFalse("rook to d8", wrong(st(2).play("d1d8")))
 
-        // 7: the rook mate, after the derived reply (the state holds only the player's moves).
-        val mate = frames[6].accepts!!
-        assertTrue(mate(st(6).play("d1d8")))
-        assertFalse("rook to d7", mate(st(6).play("d1d7")))
-        assertFalse("rook to the wrong square on the file", mate(st(6).play("d1d6")))
-        assertFalse("not the rook", mate(st(6).play("b6a6")))
-        assertFalse("only one move played", mate(st(6)))
+        // 4: the king move that is the key; the non-key rook move is refused.
+        val king = frames[3].accepts!!
+        assertTrue(king(st(3).play("a5b6")))
+        assertFalse("the tempting Rd7", king(st(3).play("d1d7")))
+        assertFalse("a king move elsewhere", king(st(3).play("a5b5")))
+        assertFalse("a different king move", king(st(3).play("a5a6")))
+        assertEquals("frame 5 continues from frame 4's move", st(4), st(3).play("a5b6"))
 
-        // 8: promotion is one state, and only the queen.
-        val promo = frames[7].accepts!!
-        assertTrue(promo(st(7).play("h7h8q")))
-        assertFalse("rook", promo(st(7).play("h7h8r")))
-        assertFalse("knight", promo(st(7).play("h7h8n")))
-        assertFalse("king step", promo(st(7).play("f5f6")))
+        // 5: the rook mate, after the derived reply (the state holds only the player's moves).
+        val mate = frames[4].accepts!!
+        assertTrue(mate(st(4).play("d1d8")))
+        assertFalse("rook to d7", mate(st(4).play("d1d7")))
+        assertFalse("rook to the wrong square on the file", mate(st(4).play("d1d6")))
+        assertFalse("not the rook", mate(st(4).play("b6a6")))
+        assertFalse("only one move played", mate(st(4)))
+
+        // 6: promotion is one state, and only the queen.
+        val promo = frames[5].accepts!!
+        assertTrue(promo(st(5).play("h7h8q")))
+        assertFalse("rook", promo(st(5).play("h7h8r")))
+        assertFalse("knight", promo(st(5).play("h7h8n")))
+        assertFalse("king step", promo(st(5).play("f5f6")))
     }
 
-    @Test fun `each frame's board is the previous frame's result, except where a new position starts or Undo shows`() {
-        // Same position continues: 1->2 (start), 2->3 (the move), 4->6 (Undo returns to the start), 6->7, 7->8 differ.
+    @Test fun `each frame's board is the previous frame's result, except where a new position starts or the mistake is taken back`() {
         assertEquals(st(0), st(1))
-        assertEquals(ChessTutorial.LADDER, st(3).start)
-        assertEquals("the mistake is one move from the same start", st(3).copy(played = listOf("d1d7"), moves = 1), st(4))
-        assertEquals("Undo goes back to the start", st(3), st(5))
-        assertEquals(st(5).play("a5b6"), st(6))
-        assertEquals(ChessTutorial.PROMOTION, st(7).start)
-        assertEquals(ChessTutorial.FREE, st(8).start)
-        assertTrue(st(8).played.isEmpty())
+        assertEquals(ChessTutorial.LADDER, st(2).start)
+        assertEquals("after the mistake, back to the same start", st(2), st(3))
+        assertEquals(st(3).play("a5b6"), st(4))
+        assertEquals(ChessTutorial.PROMOTION, st(5).start)
+        assertEquals(ChessTutorial.FREE, st(6).start)
+        assertTrue(st(6).played.isEmpty())
         // Every state's move list is playable from its start.
         frames.forEach { f ->
             val s = f.state as ChessState
@@ -133,7 +136,7 @@ class ChessTutorialTest {
 
     @Test fun `every caption claim is true of its board`() {
         val back = pos(ChessTutorial.BACK_RANK)
-        // Frames 1-3.
+        // Frames 1-2.
         assertEquals(-6, back.pieceAt(sq("g8")))
         listOf("f7", "g7", "h7").forEach { assertEquals(-1, back.pieceAt(sq(it))) }
         assertEquals(4, back.pieceAt(sq("a1")))
@@ -148,20 +151,21 @@ class ChessTutorialTest {
         assertEquals(6, ladder.pieceAt(sq("a5")))
         listOf("a7", "b7", "b8").forEach { assertTrue(it, ChessRules.attackers(ladder, sq(it), true).isEmpty()) }
 
-        // Frame 5: Rd7 forces Kb8 and then there is no forced mate in 1.
+        // Frame 3: Rd7 forces Kb8, then there is no forced mate in 1, and the hint calls Rd7 a mistake.
         val rd7 = ChessRules.play(ladder, ChessRules.parseUci(ladder, "d1d7")!!)
         assertEquals("Rd7", ChessRules.san(ladder, ChessRules.parseUci(ladder, "d1d7")!!))
         assertEquals(listOf("a8b8"), ChessRules.legalMoves(rd7).map(ChessRules::uci))
         val afterKb8 = ChessRules.play(rd7, ChessRules.parseUci(rd7, "a8b8")!!)
         assertNull("no forced mate left", attack(afterKb8, 1))
+        assertTrue("the hint flags Rd7", ChessTeacher.teach(st(2).play("d1d7"))!!.mistake)
 
-        // Frame 6: Kb6 guards a7 and b7 and leaves exactly Kb8.
+        // Frame 4: Kb6 guards a7 and b7 and leaves exactly Kb8.
         val kb6 = ChessRules.play(ladder, ChessRules.parseUci(ladder, "a5b6")!!)
         assertEquals("Kb6", ChessRules.san(ladder, ChessRules.parseUci(ladder, "a5b6")!!))
         assertTrue(listOf("a7", "b7").all { ChessRules.attackers(kb6, sq(it), true).isNotEmpty() })
         assertEquals(listOf("a8b8"), ChessRules.legalMoves(kb6).map(ChessRules::uci))
 
-        // Frame 7: after Kb8, Rd8# with a7 b7 c7 held by the king and a8 c8 by the rook.
+        // Frame 5: after Kb8, Rd8# with a7 b7 c7 held by the king and a8 c8 by the rook.
         val kb8 = ChessRules.play(kb6, ChessRules.parseUci(kb6, "a8b8")!!)
         assertEquals("Rd8#", ChessRules.san(kb8, ChessRules.parseUci(kb8, "d1d8")!!))
         val rd8 = ChessRules.play(kb8, ChessRules.parseUci(kb8, "d1d8")!!)
@@ -169,7 +173,7 @@ class ChessTutorialTest {
         assertTrue(listOf("a7", "b7", "c7", "c8").all { ChessRules.attackers(rd8, sq(it), true).isNotEmpty() })
         assertEquals("a8 is behind the king on the rook's rank", sq("d8") / 8, sq("a8") / 8)
 
-        // Frame 8: h8=R+ is legal, is not mate, and the king escapes to g7; the queen mates.
+        // Frame 6: h8=R+ is legal, is not mate, and the king escapes to g7; the queen mates.
         val pr = pos(ChessTutorial.PROMOTION)
         assertEquals(1, pr.pieceAt(sq("h7")))
         assertEquals("h8=Q#", ChessRules.san(pr, ChessRules.parseUci(pr, "h7h8q")!!))
@@ -178,14 +182,14 @@ class ChessTutorialTest {
         assertTrue("Kg7 escapes the rook", ChessRules.legalMoves(asRook).map(ChessRules::uci).contains("h6g7"))
         val asQueen = ChessRules.play(pr, ChessRules.parseUci(pr, "h7h8q")!!)
         assertTrue(listOf("g7", "h7", "g5", "g6").all { ChessRules.attackers(asQueen, sq(it), true).isNotEmpty() })
-        assertEquals(105, frames[7].highlight.soft.single { it >= 100 })
+        assertEquals(105, frames[5].highlight.soft.single { it >= 100 })
         // Highlight squares are on the board.
         frames.forEach { f -> (f.highlight.strong + f.highlight.soft).forEach { assertTrue(it in 0..63 || it == 105) } }
     }
 
     @Test fun `the last frame is free play and hints alone finish it, with no fallback and no mistake`() {
         assertTrue(frames.last().freePlay)
-        var s = st(8)
+        var s = st(6)
         var steps = 0
         while (!s.solved) {
             val d = ChessTeacher.teach(s)!!

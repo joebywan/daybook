@@ -54,6 +54,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.LocalReducedMotion
 import kotlinx.coroutines.delay
 
 /**
@@ -407,9 +408,10 @@ fun HintPopover(
 
     val y = remember { Animatable(0f) }
     var placed by remember { mutableStateOf(false) }
+    val still = LocalReducedMotion.current
     LaunchedEffect(target, natural > 0f) {
         if (natural <= 0f) return@LaunchedEffect
-        if (!placed) {
+        if (!placed || still) {
             y.snapTo(target)
             placed = true
         } else {

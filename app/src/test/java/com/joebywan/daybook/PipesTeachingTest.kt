@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.PipesState
 import com.joebywan.daybook.puzzles.PipesTeacher
@@ -346,6 +347,43 @@ class PipesTeachingTest {
             assertFalse("frame $k: accepted two taps", accepts(intended.rotate(target)))
             assertEquals("frame $k: next frame starts from a different board",
                 intended.cells, (frames[k + 1].state as PipesState).cells)
+        }
+    }
+
+    @Test
+    fun `the border frame takes one tap on each of its three tiles, in any order, and nothing else`() {
+        val frames = Pipes.tutorial
+        assertEquals(5, frames.size)
+        assertEquals(listOf(true, true, false, false, false), frames.map { it.judge == null && !it.freePlay })
+        val frame = frames[2]
+        val steps = frame.steps!!
+        val base = frame.state as PipesState
+        val border = frame.glow!!(base).strong
+        assertEquals(3, border.size)
+        // The claims: one straight on an edge, one bend in a corner, one T on an edge, each a single
+        // turn from its answer.
+        val corners = setOf(0, 2, 6, 8)
+        assertEquals(1, border.count { it in corners })
+        for (cell in border) assertEquals(Pipes.TUTORIAL_SOLUTION[cell], base.rotate(cell).cells[cell])
+        assertEquals("the start, as after a straight turned back", TutorialStep.PROGRESS, steps(base))
+        for (order in listOf(border.toList(), border.toList().reversed())) {
+            var s = base
+            for ((k, cell) in order.withIndex()) {
+                for (other in base.cells.indices) {
+                    if (other in border && s.cells[other] != Pipes.TUTORIAL_SOLUTION[other]) continue
+                    val stray = s.rotate(other)
+                    if (stray.cells == s.cells) continue
+                    // Turning a tile past its way, or one outside the three, is refused (or, for a
+                    // straight turned back to where it started, harmless progress).
+                    if (stray.cells == base.cells) continue
+                    if (other in border && stray.cells[other] == base.cells[other]) continue
+                    assertEquals("tap on $other", TutorialStep.REJECT, steps(stray))
+                }
+                s = s.rotate(cell)
+                assertEquals(if (k == order.lastIndex) TutorialStep.DONE else TutorialStep.PROGRESS, steps(s))
+                assertFalse(cell in frame.glow!!(s).strong)
+            }
+            assertEquals(s.cells, (frames[3].state as PipesState).cells)
         }
     }
 

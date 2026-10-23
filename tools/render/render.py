@@ -311,6 +311,7 @@ def build_parser():
                     help="show the finished frame over each board with N (0-3) earned achievements (?finish=N)")
     ap.add_argument("--togo", action="store_true", help="with --finish: add the 'only X to go' line")
     ap.add_argument("--share", action="store_true", help="with --finish: open the share preview over the frame")
+    ap.add_argument("--reduced-motion", action="store_true", help="emulate prefers-reduced-motion: reduce")
     ap.add_argument("--home", action="store_true", help="screenshot the home grid instead of a puzzle")
     ap.add_argument("--query", default="", metavar="Q",
                     help="more of the page query, e.g. \"mode=levels\", \"screen=levels&level=2\" or \"level=3\" (WebApp.kt)")
@@ -382,6 +383,7 @@ def main(argv=None) -> int:
                             has_touch=True, color_scheme=scheme, locale="en-US",
                             service_workers="block",  # a cached shell would hide a rebuilt dist
                             user_agent=args.user_agent,
+                            reduced_motion="reduce" if args.reduced_motion else "no-preference",
                         )
                         if seed:
                             ctx.add_init_script(

@@ -3,13 +3,13 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.CipherLogic
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
 import com.joebywan.daybook.puzzles.CipherState
 import com.joebywan.daybook.puzzles.CipherSum
 import com.joebywan.daybook.puzzles.CipherTeacher
-import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.WordList
 import com.joebywan.daybook.puzzles.enter
 import org.junit.Assert.assertEquals
@@ -172,34 +172,46 @@ class CipherTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Cipher.tutorial
-        assertEquals(7, frames.size)
-        assertEquals(listOf(true, false, false, false, false, false, false), frames.map { it.accepts == null && !it.freePlay })
-        // Letters G O T U.
+        assertEquals(5, frames.size)
+        assertEquals(listOf(true, false, false, false, false), frames.map { it.judge == null && !it.freePlay })
+        // Letters G O T U. Each move is one frame: pick the letter (the digit glows next), then the digit.
         val b0 = Cipher.tutorialBoard()
-        fun ok(i: Int, s: PuzzleState) = assertTrue("frame $i", frames[i].accepts!!(s))
-        fun no(i: Int, s: PuzzleState) = assertFalse("frame $i", frames[i].accepts!!(s))
-        // Frame 1: pick O.
-        ok(1, b0.select(1)); no(1, b0.select(2)); no(1, b0.select(1).withDigit(1, 1))
-        // Frame 2: O = 1, with the pad.
-        val o = frames[2].state as CipherState
-        assertEquals(b0.select(1), o)
-        ok(2, o.enter(1, 1)); no(2, o.enter(1, 2)); no(2, o)
-        // Frame 3: pick T.
-        val one = o.enter(1, 1)
-        assertEquals(one.digits, (frames[3].state as CipherState).digits)
-        ok(3, one.select(2)); no(3, one.select(0)); no(3, one.select(2).enter(2, 2))
-        // Frame 4: T = 2.
-        val t = frames[4].state as CipherState
-        assertEquals(one.digits to 2, t.digits to t.selected)
-        ok(4, t.enter(2, 2)); no(4, t.enter(2, 3))
-        // Frame 5: the planted U = 1 clashes with O, and tapping 1 again clears it.
-        val clash = frames[5].state as CipherState
-        assertEquals(setOf(1, 3), CipherLogic.conflicts(clash.sum, clash.digits).letters)
-        ok(5, clash.enter(3, 1)); no(5, clash); no(5, clash.enter(3, 0))
-        // Frame 6 is free play from T = 2, and hints alone finish it with no fallback and no mistake.
-        assertTrue(frames[6].freePlay)
-        var now = frames[6].state as CipherState
-        assertEquals(t.enter(2, 2).digits, now.digits)
+        val o = frames[1].steps!!
+        assertEquals(TutorialStep.REJECT, o(b0))
+        val pickO = b0.select(1)
+        assertEquals(TutorialStep.PROGRESS, o(pickO))
+        assertEquals(setOf(CipherLogic.pad(1)), frames[1].glow!!(pickO).strong)
+        assertEquals(TutorialStep.REJECT, o(b0.select(2)))
+        assertEquals(TutorialStep.REJECT, o(pickO.enter(1, 2)))
+        val one = pickO.enter(1, 1)
+        assertEquals(TutorialStep.DONE, o(one))
+        // Frame 3: T = 2.
+        val t = frames[2].steps!!
+        assertEquals(one.digits, (frames[2].state as CipherState).digits)
+        val pickT = one.select(2)
+        assertEquals(TutorialStep.PROGRESS, t(pickT))
+        assertEquals(TutorialStep.REJECT, t(one.select(0)))
+        assertEquals(TutorialStep.REJECT, t(pickT.enter(2, 3)))
+        val two = pickT.enter(2, 2)
+        assertEquals(TutorialStep.DONE, t(two))
+        // Frame 4: the player gives U the 1 (it and O turn red), then taps 1 again to clear it.
+        val clash = frames[3].steps!!
+        val c0 = frames[3].state as CipherState
+        assertEquals(two.digits, c0.digits)
+        assertEquals(TutorialStep.REJECT, clash(c0))
+        val pickU = c0.select(3)
+        assertEquals(TutorialStep.PROGRESS, clash(pickU))
+        assertEquals(TutorialStep.REJECT, clash(pickU.enter(3, 0)))
+        val u1 = pickU.enter(3, 1)
+        assertEquals(TutorialStep.PROGRESS, clash(u1))
+        assertTrue(frames[3].glow!!(u1).warning)
+        assertEquals(setOf(1, 3), CipherLogic.conflicts(u1.sum, u1.digits).letters)
+        assertTrue(Cipher.teach(u1)!!.mistake)
+        assertEquals(TutorialStep.DONE, clash(u1.enter(3, 1)))
+        // Frame 5 is free play from T = 2, and hints alone finish it with no fallback and no mistake.
+        assertTrue(frames[4].freePlay)
+        var now = frames[4].state as CipherState
+        assertEquals(two.digits, now.digits)
         while (!now.solved) {
             val d = Cipher.teach(now)!!
             assertFalse(d.fallback); assertFalse(d.mistake)
@@ -207,8 +219,11 @@ class CipherTeachingTest {
         }
         assertEquals(Cipher.TUTORIAL_SOLUTION, now.digits)
         for (f in frames) assertTrue("caption ${f.caption.length}", f.caption.length <= 170)
-        // The captions' claims: O is the total's extra letter, O + O makes T in the units.
+        // The captions' claims: O is the total's extra letter, O + O makes T in the units, and the tens
+        // column (two digits and a carry of at most 1) makes at most 9 + 9 + 1 = 19, so it carries 1.
         val sum = CipherSum(Cipher.TUTORIAL_WORDS)
         assertEquals(1, sum.columnTotal[2]); assertEquals(listOf(1, 1), sum.columnAddends[0]); assertEquals(2, sum.columnTotal[0])
+        assertEquals(2, sum.columnAddends[1].size)
+        assertEquals(3, sum.columnTotal.size)
     }
 }

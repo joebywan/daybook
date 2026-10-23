@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,9 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,12 +62,16 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * Word Wheel: a wheel of five to seven letters and a small crossword of empty slots. Spell words by swiping across the
@@ -163,32 +160,32 @@ object WordWheel : PuzzleType {
             ),
             TutorialFrame(
                 state = s0,
-                caption = "Swipe across B, R, A, I and N without lifting, then let go. (Or tap the letters in turn, then tap the word.)",
+                caption = "Swipe across B, R, A, I and N without lifting, then let go.",
                 highlight = BoardHighlight(strong = wheelOf("brain"), soft = slot(0)),
                 accepts = only(listOf("brain"), emptyList()),
-                retry = "Spell B, R, A, I, N, in that order.",
+                retry = "Swipe across the glowing letters in order: B, R, A, I, N.",
                 done = "BRAIN fills its slot.",
             ),
             TutorialFrame(
                 state = s1,
-                caption = "Crossing letters help. This four-letter slot has R third, and the only word the wheel spells " +
-                    "like that is BARN. Spell it.",
+                caption = "Crossing letters help: this four-letter slot has R third, and BARN is the only word the wheel " +
+                    "spells like that. This time tap B, A, R and N, then tap the word.",
                 highlight = BoardHighlight(strong = slot(1), soft = wheelOf("barn")),
                 accepts = only(listOf("brain", "barn"), emptyList()),
-                retry = "Spell B, A, R, N.",
-                done = "BARN.",
+                retry = "Tap the glowing letters in order: B, A, R, N. Then tap the word.",
+                done = "BARN. Swipe or tap, whichever you like.",
             ),
             TutorialFrame(
                 state = s2,
                 caption = "A real word the grid does not hold is a bonus word: counted, never needed. Spell BAN.",
                 highlight = BoardHighlight(strong = wheelOf("ban")),
                 accepts = only(listOf("brain", "barn"), listOf("ban")),
-                retry = "Spell B, A, N.",
+                retry = "Spell the glowing letters: B, A, N.",
                 done = "BAN is a bonus word.",
             ),
             TutorialFrame(
                 state = s3,
-                caption = "Your turn: fill the last slot. Stuck? A hint gives you its clue.",
+                caption = "Your turn: fill the last slot. Stuck? Hint gives you its clue.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
             ),
@@ -260,16 +257,10 @@ object WordWheel : PuzzleType {
         val playable = interactive && !s.solved
         val measurer = rememberTextMeasurer()
 
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        // A found word's squares settle, and the glow runs along it.
+        val units = remember(s.wheel) { s.slots.map { it.cells(s.width).toIntArray() } }
+        val feel = rememberMoveFeel(s.shown().toList(), units) { s.slots[it].word in s.found }
 
         // The word being spelled (wheel positions) and the finger, transient: never PuzzleState, so a refused word costs nothing.
         var picked by remember(s.wheel) { mutableStateOf(listOf<Int>()) }
@@ -348,7 +339,7 @@ object WordWheel : PuzzleType {
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.width, maxHeight / s.height, MAX_CELL).coerceAtLeast(0.dp)
                     Canvas(Modifier.size(cell * s.width, cell * s.height).highlightGrid(s.width, s.height)) {
-                        drawGrid(s, cell.toPx(), highlight, glow, pulse.value, hueB, dark, measurer)
+                        drawGrid(s, cell.toPx(), highlight, glow, pulse.value, hueB, dark, measurer, feel, Color(accent))
                     }
                 }
 
@@ -491,6 +482,8 @@ object WordWheel : PuzzleType {
         hueB: Float,
         dark: Boolean,
         measurer: TextMeasurer,
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val used = s.used()
         val shown = s.shown()
@@ -507,12 +500,14 @@ object WordWheel : PuzzleType {
             val soft = !strong && i in highlight.soft
             val alpha = if (anyLit && !strong && !soft) 0.3f else 1f
             val letter = shown[i]
-            if (letter != null) {
-                drawRoundRect(fill.copy(alpha = alpha), topLeft, box, corner)
-                val layout = measurer.measure(letter.uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (cell * 0.5f / density).sp, fontWeight = FontWeight.Bold))
-                drawText(layout, topLeft = Offset(topLeft.x + (box.width - layout.size.width) / 2f, topLeft.y + (box.height - layout.size.height) / 2f))
-            } else {
-                drawRoundRect(BoardHues.ink(hueB, dark).copy(alpha = 0.55f * alpha), topLeft, box, corner, style = Stroke(cell * 0.05f))
+            feelSquare(feel, i, topLeft, box, accent) {
+                if (letter != null) {
+                    drawRoundRect(fill.copy(alpha = alpha), topLeft, box, corner)
+                    val layout = measurer.measure(letter.uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (cell * 0.5f / density).sp, fontWeight = FontWeight.Bold))
+                    drawText(layout, topLeft = Offset(topLeft.x + (box.width - layout.size.width) / 2f, topLeft.y + (box.height - layout.size.height) / 2f))
+                } else {
+                    drawRoundRect(BoardHues.ink(hueB, dark).copy(alpha = 0.55f * alpha), topLeft, box, corner, style = Stroke(cell * 0.05f))
+                }
             }
             if (strong || soft) {
                 val w = if (strong) cell * 0.08f else cell * 0.05f

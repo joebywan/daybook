@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,14 +48,18 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * A Cipher sum in play. [words] (the addends, then the total) and [solution] are fixed for the board;
@@ -183,9 +181,20 @@ object Cipher : PuzzleType {
         val all = (0 until 4).flatMap { sum.tilesOf(it) }.toSet()
         val one = mapOf(O to 1)
         val two = one + (T to 2)
-        fun only(placed: Map<Int, Int>) = { next: PuzzleState ->
-            next is CipherState && next.digits == tutorialBoard(placed).digits
-        }
+        fun digits(placed: Map<Int, Int>) = tutorialBoard(placed).digits
+        /** Select [letter], then give it [digit]: one frame, the tiles glowing until the letter is selected. */
+        fun place(before: Map<Int, Int>, letter: Int, digit: Int) = TutorialPath(
+            { it is CipherState && it.digits == digits(before) && it.selected == letter },
+            { it is CipherState && it.digits == digits(before + (letter to digit)) },
+        )
+        val o = place(emptyMap(), O, 1)
+        val t = place(one, T, 2)
+        val clash = TutorialPath(
+            { it is CipherState && it.digits == digits(two) && it.selected == U },
+            { it is CipherState && it.digits == digits(two + (U to 1)) },
+            // Back where it started, but by way of the 1: only a move counted since says so.
+            { it is CipherState && it.digits == digits(two) && it.moves > 0 },
+        )
         listOf(
             TutorialFrame(
                 state = tutorialBoard(),
@@ -194,43 +203,41 @@ object Cipher : PuzzleType {
             ),
             TutorialFrame(
                 state = tutorialBoard(),
-                caption = "OUT is longer than TO and GO, so its O is what the tens column carries. Two digits make at most 18, so O is 1. Tap an O.",
-                highlight = BoardHighlight(strong = sum.tilesOf(O)),
-                accepts = { next -> next is CipherState && next.digits == tutorialBoard().digits && next.selected == O },
-                retry = "Tap one of the glowing O tiles.",
-                done = "O is selected everywhere it appears.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(selected = O),
-                caption = "Now tap 1 below.",
-                highlight = BoardHighlight(strong = setOf(CipherLogic.pad(1)), soft = sum.tilesOf(O)),
-                accepts = only(one),
-                retry = "Tap the 1 in the row of digits.",
+                caption = "OUT is longer than TO and GO, so its O is what the tens column carries. Two digits and a carry " +
+                    "make at most 19, so O is 1. Tap an O, then 1 below.",
+                glow = { s ->
+                    if (o.stage(s) < 0) BoardHighlight(strong = sum.tilesOf(O))
+                    else BoardHighlight(strong = setOf(CipherLogic.pad(1)), soft = sum.tilesOf(O))
+                },
+                steps = o.steps,
+                retry = "Tap a glowing O, then the 1.",
                 done = "Every O shows 1.",
             ),
             TutorialFrame(
                 state = tutorialBoard(one, selected = O),
-                caption = "The units column: O + O is 1 + 1, which makes 2, so T is 2. Tap a T.",
-                highlight = BoardHighlight(strong = sum.columnTiles(0)),
-                accepts = { next -> next is CipherState && next.digits == tutorialBoard(one).digits && next.selected == T },
-                retry = "Tap a T tile.",
-                done = "T is selected.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(one, selected = T),
-                caption = "Tap 2.",
-                highlight = BoardHighlight(strong = setOf(CipherLogic.pad(2)), soft = sum.tilesOf(T)),
-                accepts = only(two),
-                retry = "Tap the 2 in the row of digits.",
+                caption = "The units column: O + O is 1 + 1, which makes 2, so T is 2. Tap a T, then 2.",
+                glow = { s ->
+                    if (t.stage(s) < 0) BoardHighlight(strong = sum.tilesOf(T), soft = sum.columnTiles(0))
+                    else BoardHighlight(strong = setOf(CipherLogic.pad(2)), soft = sum.tilesOf(T))
+                },
+                steps = t.steps,
+                retry = "Tap a glowing T, then the 2.",
                 done = "T is 2.",
             ),
             TutorialFrame(
-                state = tutorialBoard(two + (U to 1), selected = U),
-                caption = "A clash turns red: U and O can't both be 1. U is selected, so tap 1 again to clear it.",
-                highlight = BoardHighlight(strong = sum.tilesOf(U) + CipherLogic.pad(1), soft = sum.tilesOf(O), warning = true),
-                accepts = only(two),
-                retry = "Tap the 1 in the row of digits.",
-                done = "Cleared.",
+                state = tutorialBoard(two, selected = T),
+                caption = "A digit that breaks a rule turns red. Give U the 1 that O already has: tap a U, then 1. " +
+                    "Then tap 1 again to clear it.",
+                glow = { s ->
+                    when (clash.stage(s)) {
+                        -1 -> BoardHighlight(strong = sum.tilesOf(U), soft = sum.tilesOf(O))
+                        0 -> BoardHighlight(strong = setOf(CipherLogic.pad(1)), soft = sum.tilesOf(O))
+                        else -> BoardHighlight(strong = sum.tilesOf(U) + CipherLogic.pad(1), soft = sum.tilesOf(O), warning = true)
+                    }
+                },
+                steps = clash.steps,
+                retry = "Tap a glowing U, then the 1, then the 1 again.",
+                done = "Cleared. Tapping the digit again takes it out.",
             ),
             TutorialFrame(
                 state = tutorialBoard(two, selected = U),
@@ -361,16 +368,7 @@ object Cipher : PuzzleType {
         val ink = BoardHues.ink(hueB, dark)
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // A broken rule shows after a pause and goes at once when mended; held here, not in the state (undo).
         val live = remember(s.digits) { CipherLogic.conflicts(sum, s.digits) }
@@ -383,6 +381,8 @@ object Cipher : PuzzleType {
             shown = live
         }
         val redColumn = shown.column?.let { sum.columnTiles(it) } ?: emptySet()
+        // A digit set on a letter settles on every tile of that letter. No units: a column is judged with its carry.
+        val feel = rememberMoveFeel(s.digits)
 
         BoxWithConstraints(
             Modifier
@@ -427,6 +427,7 @@ object Cipher : PuzzleType {
                     tileModifier = { r, c, l ->
                         val look = highlight.look(sum.tile(r, c))
                         Modifier
+                            .moveFeel(feel, l, Color(accent))
                             .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
                             .ring(look, glow, pulse, corner = 8f)
                             .then(if (sum.tile(r, c) in redColumn) Modifier.border(2.dp, scheme.error, RoundedCornerShape(8.dp)) else Modifier)

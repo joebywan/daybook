@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Nonogram
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.NonogramState
@@ -37,47 +38,46 @@ class NonogramTutorialTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Nonogram.tutorial
-        assertEquals(6, frames.size)
+        assertEquals(5, frames.size)
         fun board(i: Int) = frames[i].state as NonogramState
 
         // The first frame only explains; the last is free play.
-        assertNull(frames[0].accepts)
-        assertTrue(frames[5].freePlay)
+        assertNull(frames[0].judge)
+        assertTrue(frames[4].freePlay)
         assertTrue(board(0).solved)
 
-        // 2: one sweep along row 2.
+        // 2: one sweep along row 2 and one along row 3, in either order.
         val row2 = (5..9).toList()
-        val sweepRow2 = frames[1].accepts!!
-        val afterRow2 = board(1).sweep(row2, fill, clean)
-        assertTrue(sweepRow2(afterRow2))
-        assertFalse("four of the five squares", sweepRow2(board(1).sweep(row2.take(4), fill, clean)))
-        assertFalse("a single tap", sweepRow2(board(1).tap(5, fill)))
-        assertFalse("the wrong row", sweepRow2(board(1).sweep((10..14).toList(), fill, clean)))
-        assertFalse("crosses instead of fills", sweepRow2(board(1).sweep(row2, cross, clean)))
-        assertEquals("frame 3 continues from frame 2's move", board(2).cells, afterRow2.cells)
-
-        // 3: the same along row 3.
         val row3 = (10..14).toList()
-        val afterRow3 = board(2).sweep(row3, fill, clean)
-        assertTrue(frames[2].accepts!!(afterRow3))
-        assertFalse(frames[2].accepts!!(board(2).sweep(row3.drop(1), fill, clean)))
-        assertEquals(board(3).cells, afterRow3.cells)
+        val sweep = frames[1].judge!!
+        for ((first, second) in listOf(row2 to row3, row3 to row2)) {
+            val one = board(1).sweep(first, fill, clean)
+            assertEquals(TutorialStep.PROGRESS, sweep(one))
+            assertEquals("the glow moves on to the other row", second.toSet(), frames[1].glow!!(one).strong.filter { it < 25 }.toSet())
+            assertEquals(TutorialStep.REJECT, sweep(one.sweep(second.take(4), fill, clean)))
+            assertEquals(TutorialStep.DONE, sweep(one.sweep(second, fill, clean)))
+        }
+        assertEquals("four of the five squares", TutorialStep.REJECT, sweep(board(1).sweep(row2.take(4), fill, clean)))
+        assertEquals("a single tap", TutorialStep.REJECT, sweep(board(1).tap(5, fill)))
+        assertEquals("the wrong row", TutorialStep.REJECT, sweep(board(1).sweep((15..19).toList(), fill, clean)))
+        assertEquals("crosses instead of fills", TutorialStep.REJECT, sweep(board(1).sweep(row2, cross, clean)))
+        assertEquals("frame 3 continues from frame 2's move", board(2).cells, board(1).sweep(row2, fill, clean).sweep(row3, fill, clean).cells)
 
-        // 4: one tap on the middle of row 4.
-        val tap = frames[3].accepts!!
-        val afterTap = board(3).tap(17, fill)
+        // 3: one tap on the middle of row 4.
+        val tap = frames[2].accepts!!
+        val afterTap = board(2).tap(17, fill)
         assertTrue(tap(afterTap))
-        assertFalse("a tap beside it", tap(board(3).tap(16, fill)))
-        assertFalse("a cross instead of a fill", tap(board(3).tap(17, cross)))
-        assertEquals(board(4).cells, afterTap.cells)
+        assertFalse("a tap beside it", tap(board(2).tap(16, fill)))
+        assertFalse("a cross instead of a fill", tap(board(2).tap(17, cross)))
+        assertEquals(board(3).cells, afterTap.cells)
 
-        // 5: one cross at the bottom of column 1.
-        val crossTap = frames[4].accepts!!
-        val afterCross = board(4).tap(20, cross)
+        // 4: one cross at the bottom of column 1.
+        val crossTap = frames[3].accepts!!
+        val afterCross = board(3).tap(20, cross)
         assertTrue(crossTap(afterCross))
-        assertFalse("a fill instead of a cross", crossTap(board(4).tap(20, fill)))
-        assertFalse("a cross elsewhere in the column", crossTap(board(4).tap(15, cross)))
-        assertEquals(board(5).cells, afterCross.cells)
+        assertFalse("a fill instead of a cross", crossTap(board(3).tap(20, fill)))
+        assertFalse("a cross elsewhere in the column", crossTap(board(3).tap(15, cross)))
+        assertEquals(board(4).cells, afterCross.cells)
 
         // Each move is a mark the picture agrees with, and no frame offers one that is a mistake.
         frames.forEach { f -> assertNull(NonogramTeacher.teach(f.state as NonogramState)?.takeIf { it.technique == NonogramTeacher.MISTAKE }) }
@@ -92,8 +92,8 @@ class NonogramTutorialTest {
         assertEquals(listOf(5), clues[2])
         assertEquals(listOf(3), clues[3])
         assertEquals(listOf(2), NonogramLogic.colClues(frames[0].state as NonogramState)[0])
-        // Frame 5's board already shows column 1's 2 in rows 2 and 3.
-        val s = frames[4].state as NonogramState
+        // Frame 4's board already shows column 1's 2 in rows 2 and 3.
+        val s = frames[3].state as NonogramState
         assertEquals(listOf(fill, fill), listOf(s.cells[5], s.cells[10]))
         frames.forEach { assertTrue("caption too long (${it.caption.length}): ${it.caption}", it.caption.length <= 170) }
     }

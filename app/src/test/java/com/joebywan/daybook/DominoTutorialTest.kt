@@ -10,6 +10,7 @@ import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Placement
 import com.joebywan.daybook.puzzles.RuleKind
 import com.joebywan.daybook.puzzles.dragSquares
+import com.joebywan.daybook.puzzles.flipAt
 import com.joebywan.daybook.puzzles.tapSquare
 import com.joebywan.daybook.puzzles.tapTray
 import org.junit.Assert.assertEquals
@@ -55,49 +56,59 @@ class DominoTutorialTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Dominoes.tutorial
-        assertEquals(6, frames.size)
+        assertEquals(7, frames.size)
         fun board(i: Int) = frames[i].state as DominoState
         assertNull(frames[0].accepts)
         assertTrue(board(0).solved)
-        assertTrue(frames[5].freePlay)
-        (1..4).forEach { assertNotNull("frame $it is played", frames[it].accepts) }
+        assertTrue(frames[6].freePlay)
+        (1..5).forEach { assertNotNull("frame $it is played", frames[it].accepts) }
 
-        // 1: the double 6 down the left, either square first, or by a drag.
+        // 1: the double 6 down the left, either square first.
         val six = frames[1].accepts!!
         val afterSix = play(board(1), tray + 3, 0, 4)
         assertTrue(six(afterSix))
         assertTrue("the other square first", six(play(board(1), tray + 3, 4, 0)))
-        assertTrue("a drag", six(board(1).dragSquares(DominoPick(3), 0, 4).board!!))
         assertFalse("not selecting it lays the first in the tray", six(play(board(1), 0, 4)))
         assertFalse("the wrong squares", six(play(board(1), tray + 3, 1, 5)))
         assertEquals("frame 2 continues from frame 1's move", norm(afterSix, afterSix.placed), norm(board(2), board(2).placed))
 
-        // 2: the 5-2 turned so its 2 leads, or laid from the lower square first.
-        val five = frames[2].accepts!!
-        val afterFive = play(board(2), tray + 2, tray + 2, 1, 5)
-        assertTrue(five(afterFive))
-        assertTrue("the lower square first, unturned", five(play(board(2), tray + 2, 5, 1)))
-        assertFalse("unturned, the 5 lands on the 2", five(play(board(2), tray + 2, 1, 5)))
-        assertEquals(afterFive.placed, board(3).placed)
+        // 2: the 5-2 laid unturned from the 2 square: its 5 lands there, the player's own mistake.
+        val backwards = frames[2].accepts!!
+        val afterBackwards = play(board(2), tray + 2, 1, 5)
+        assertTrue(backwards(afterBackwards))
+        assertFalse("turned first, it is right, which this frame is not about", backwards(play(board(2), tray + 2, tray + 2, 1, 5)))
+        assertEquals("the 5 is on the 2 square", 5, DominoLogic.pipsOf(afterBackwards)[1])
+        assertTrue("and it is a mistake", DominoTeacher.teach(afterBackwards)!!.mistake)
+        assertEquals(afterBackwards.placed, board(3).placed)
 
-        // 3: the 1-0 along the bottom, its 1 on the = square.
-        val one = frames[3].accepts!!
-        val afterOne = play(board(3), tray + 0, 6, 7)
+        // 3: a double tap or long press (both flipAt) turns it round where it lies; a single tap lifts it instead.
+        val turn = frames[3].accepts!!
+        val turned = board(3).flipAt(DominoPick(), 5).board!!
+        assertTrue(turn(turned))
+        assertTrue("on either square", turn(board(3).flipAt(DominoPick(), 1).board!!))
+        assertFalse("a single tap lifts it", turn(board(3).tapSquare(DominoPick(), 1).board!!))
+        assertEquals(2, DominoLogic.pipsOf(turned)[1])
+        assertEquals(turned.placed, board(4).placed)
+
+        // 4: the 1-0 along the bottom by a drag, its 1 on the = square.
+        val one = frames[4].accepts!!
+        val afterOne = board(4).dragSquares(board(4).tapTray(DominoPick(), 0).pick, 6, 7).board!!
         assertTrue(one(afterOne))
-        assertFalse("the wrong way round", one(play(board(3), tray + 0, 7, 6)))
-        assertFalse("the wrong domino", one(play(board(3), tray + 1, 6, 7)))
-        assertEquals(afterOne.placed, board(4).placed)
+        assertTrue("by taps too", one(play(board(4), tray + 0, 6, 7)))
+        assertFalse("dragged the wrong way", one(board(4).dragSquares(DominoPick(0), 7, 6).board!!))
+        assertFalse("the wrong domino", one(play(board(4), tray + 1, 6, 7)))
+        assertEquals(afterOne.placed, board(5).placed)
 
-        // 4: a tap on the 5-2 lifts it, and puts it in hand.
-        val lift = frames[4].accepts!!
-        val m = board(4).tapSquare(DominoPick(), 5)
+        // 5: a tap on the 5-2 lifts it, and puts it in hand.
+        val lift = frames[5].accepts!!
+        val m = board(5).tapSquare(DominoPick(), 5)
         assertTrue(lift(m.board!!))
         assertEquals(2, m.pick.selected)
-        assertFalse("lifting the 1-0 instead", lift(board(4).tapSquare(DominoPick(), 6).board!!))
-        assertEquals(m.board.placed, board(5).placed)
+        assertFalse("lifting the 1-0 instead", lift(board(5).tapSquare(DominoPick(), 6).board!!))
+        assertEquals(m.board.placed, board(6).placed)
 
-        // No frame's board holds a mistake.
-        frames.forEach { f -> assertFalse(DominoTeacher.teach(f.state as DominoState)?.mistake ?: false) }
+        // No frame's board holds a mistake but the one the player made on purpose.
+        frames.forEachIndexed { i, f -> if (i != 3) assertFalse(DominoTeacher.teach(f.state as DominoState)?.mistake ?: false) }
     }
 
     @Test

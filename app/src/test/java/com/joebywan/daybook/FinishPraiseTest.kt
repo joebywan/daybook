@@ -108,4 +108,17 @@ class FinishPraiseTest {
         assertEquals("1 more day to your 7-day streak.", p.toGo)
         assertNull(run(listOf(c(null)), c(null)).toGo)
     }
+
+    @Test fun onlyTheMomentsGetTheFullShow() {
+        // Today's daily is done, and Expert has been played before, so nothing below earns a first.
+        val h = days(0, 1, 2) + c(null, 50) + c(d(3), 50, tier = Difficulty.EXPERT)
+        val ordinary = run(h, c(null, 120))
+        assertTrue(ordinary.achievements.isEmpty())
+        assertFalse(ordinary.full)
+        assertTrue(run(days(1, 2), c(today, 120)).full)                     // the first daily of today
+        assertTrue(run(h, c(null, 120, tier = Difficulty.EXPERT)).full)      // Expert
+        assertTrue(run(h, c(null, 40)).full)                                 // a personal record
+        assertTrue(run(days(1, 2, 3, 4, 5, 6), c(today)).full)               // a streak milestone
+        assertTrue(run(emptyList(), c(null)).full)                           // an achievement (a first solve)
+    }
 }
