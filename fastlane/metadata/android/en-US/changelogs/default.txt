@@ -1,0 +1,3 @@
+- Press and hold a puzzle on the home screen to move it, so your favourites come first.
+- "Continue" at the top of the home screen takes you back to the board you left.
+- A short welcome for new players, with the easiest puzzles to pick up first.

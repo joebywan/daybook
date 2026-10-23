@@ -29,8 +29,8 @@ import com.joebywan.daybook.puzzles.WordWheel
 /**
  * The one place the app learns which puzzles exist.
  *
- * Adding a genre is a one-line change here plus its file in `puzzles/`. Order is the order shown
- * on the home screen.
+ * Adding a genre is a one-line change here plus its file in `puzzles/` (and its place in `PuzzleOrder.GENTLEST`, the
+ * home grid's first order).
  */
 object PuzzleRegistry {
 

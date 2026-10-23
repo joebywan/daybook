@@ -49,10 +49,10 @@ internal fun Welcome(onStart: () -> Unit) {
         Modifier.fillMaxSize().background(scheme.background).windowInsetsPadding(WindowInsets.safeDrawing),
         contentAlignment = Alignment.TopCenter,
     ) {
-        Column(Modifier.widthIn(max = 560.dp).fillMaxSize()) {
-            // Only the words scroll; Start stays at the foot, so a short screen never hides the way out.
+        Column(Modifier.widthIn(max = 560.dp).fillMaxSize(), verticalArrangement = Arrangement.Center) {
+            // Centred together on a tall screen; on a short one only the words scroll, so Start is never hidden.
             Column(
-                Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
+                Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -68,8 +68,8 @@ internal fun Welcome(onStart: () -> Unit) {
                 )
                 Pointer(
                     { Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFE8A317), modifier = icon) },
-                    "Today's pick wears a gold ring and says Try me! Every puzzle has a short walkthrough to start you off, " +
-                        "under How to play.",
+                    "Today's pick wears a gold ring and says “Try me!” Every puzzle has a short walkthrough to start you off, " +
+                        "under “How to play”.",
                 )
                 Pointer(
                     { Icon(Icons.Default.CalendarToday, null, tint = scheme.secondary, modifier = icon) },

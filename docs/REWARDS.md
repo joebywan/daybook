@@ -131,9 +131,13 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
 The grid scrolls (more than twenty puzzles), so the order decides what is on the first screen. Nothing is hidden; the owner
 would rather let people rearrange than hide.
 
-- **Most played first** (the default): solves per puzzle, dailies of the last 60 days plus every practice game (they carry no
-  day); ties and never-played puzzles keep registry order. The solves are read once per app start and day, not live, so
-  coming home from a solve never moves a tile under the player's finger.
+- **Gentlest first, then most played** (the default): solves per puzzle, dailies of the last 60 days plus every practice game
+  (they carry no day); ties and never-played puzzles keep `PuzzleOrder.GENTLEST`, the owner's one table of how quickly a
+  newcomer gets going on Standard (see it, do it: Pointers, Pipes, Snap; then Sudoku, Lexicon, Sand; familiar: Word Wheel,
+  Target, Nonogram; quick to learn: Kings, Mambo, Mosaic, Sets, Tower, Inequality, Tents, Regions, Tally; takes a bit: Shikaku,
+  Atoms, LITS, Mate, Cage Sudoku, Cipher, Dominoes). So a new player's grid is that table, and Sudoku and Lexicon open the
+  second row of a three-column phone (`HomeOrderTest` pins it); a puzzle missing from it goes last. The solves are read once
+  per app start and day, not live, so coming home from a solve never moves a tile under the player's finger.
 - **My own order**: press and hold a tile on the home grid, then drag it (the owner's call, replacing #231's Arrange screen
   of up and down buttons). The tile lifts (a 6% scale and a shadow, a haptic tick) and follows the finger, the others slide
   out of its way in 150 ms (at once under reduced motion), the list scrolls while the finger is within 64dp of the pinned
@@ -142,10 +146,30 @@ would rather let people rearrange than hide.
   (`puzzle_order` in the launch file, ids joined by commas; empty means most played). Only a long press starts it, so a tap
   still opens a puzzle and a swipe still scrolls; a press held still and let go does nothing. The drag is `remember` state
   until it drops. A screen reader gets "Move earlier" and "Move later" on every tile instead. On load, unknown ids drop out
-  and puzzles added later join at the end (`PuzzleOrder.arranged`). Until an order is stored, a line under the grid says
-  "Press and hold a puzzle to move it."; Settings' "Puzzle order" row says the same, or, once there is one, "Your own
+  and puzzles added later join at the end (`PuzzleOrder.arranged`). Until an order is stored, and once three different
+  puzzles have been solved (the welcome says it first), a line under the grid says "Press and hold a puzzle to move it.";
+  Settings' "Puzzle order" row says the same, or, once there is one, "Your own
   order" with "Reset to most played", which clears it. Pinned by `HomeOrderTest`; an "arrange|..." route saved by the old
   screen opens Home (`RouteTest`).
+
+## Welcome (`ui/home/Welcome.kt`)
+
+One calm screen shown in place of the grid, once, to a new player: one line on what Daybook is (new boards every day, free,
+no ads, no account, offline), then four pointers with small icons: today's pick and the walkthrough under "How to play";
+Daily / Levels / Random and the three tiers; the archive, stats and achievements buttons; press and hold to move a puzzle.
+One button, Start. No question, no pages, nothing drawn over the grid (the owner's call). `LaunchPreferences.needsWelcome`:
+only when the launch file has no `welcomed` key and `ProgressStore.hasPlayed()` is false (the timer default's rule); a
+player who has played is marked welcomed on the spot, so an existing player never sees it. Start writes `welcomed`. Home
+draws nothing until the answer is known, so neither the grid nor the welcome flashes. `render.py --home` on clean storage
+shows it; `tools/screenshots/capture.sh` taps Start.
+
+## Continue (`ContinueRow` in `ui/home/HomeScreen.kt`)
+
+When a board the grid would open (the tier and mode shown; in Levels, the current level's) has a game in progress, a slim row
+under the pinned rows says "Continue Kings · Hard" beside the puzzle's motif and opens it: the most recently saved
+(`ProgressStore.inProgress` lists newest first). Its room is taken only while it shows. It follows the store until the first
+touch on that visit (the board just left is saved as Play fades out, so it can land a moment after Home appears), then holds
+until Home is entered again or the tier or mode changes, so it never appears or goes under a finger.
 
 ## Reduced motion and haptics (`ui/Motion.kt`, the platform seam)
 

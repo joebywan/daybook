@@ -65,6 +65,19 @@ class LaunchPreferencesTest {
     }
 
     @Test
+    fun theWelcomeIsForANewPlayerOnceAndNeverForOneWhoHasPlayed() = runBlocking {
+        val returning = MemoryStore()
+        assertEquals(false, LaunchPreferences(returning).needsWelcome { true })
+        assertEquals("marked, so losing every save later cannot bring it back", false, LaunchPreferences(returning).needsWelcome { false })
+
+        val fresh = LaunchPreferences(MemoryStore())
+        assertEquals(true, fresh.needsWelcome { false })
+        assertEquals("not marked until Start", true, fresh.needsWelcome { false })
+        fresh.setWelcomed()
+        assertEquals(false, fresh.needsWelcome { false })
+    }
+
+    @Test
     fun appearanceFollowsTheSystemUntilChosenAndAnUnknownValueFallsBack() = runBlocking {
         val store = MemoryStore()
         val prefs = LaunchPreferences(store)
