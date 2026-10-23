@@ -415,7 +415,7 @@ hashed into every seed: never rename it.
   answer; `DominoOracle` (reading order, no pruning) is the independent check. A year per tier never reaches `lastResort`, so hints
   never fall back on a daily board. **`solved` checks the rules**; a mistake is a domino off the stored answer (squares or way
   round), sound because the answer is unique. Every hint ends in a placement.
-- **Input: tap model, no drag from the tray** (height is scarce). Tap a tray domino to pick it up, again to turn it; tap a square, then
+- **Input: tap model, and a drag from the tray is a swipe** (height is scarce, so the tray never shows an upright domino and nothing rotates by tap): the domino follows the finger onto a square, then the move into a neighbour sets the way it lies. Tap a tray domino to pick it up, again to turn it; tap a square, then
   a neighbour: its leading half (the larger one, unturned, as the tray draws it and the hints name it) goes on the first. A drag
   square to neighbour is the two taps. A tap on a laid domino lifts it into the hand (after the 300 ms double-tap window); a double
   tap or long press turns it in place. The pick, the first square, the drag and the cursor are `remember` state (`DominoPick`), never

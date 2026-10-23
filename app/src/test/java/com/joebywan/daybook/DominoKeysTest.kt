@@ -10,6 +10,7 @@ import com.joebywan.daybook.puzzles.applyKey
 import com.joebywan.daybook.puzzles.dominoKeyAction
 import com.joebywan.daybook.puzzles.dragSquares
 import com.joebywan.daybook.puzzles.flipAt
+import com.joebywan.daybook.puzzles.grabTray
 import com.joebywan.daybook.puzzles.tapSquare
 import com.joebywan.daybook.puzzles.tapTray
 import org.junit.Assert.assertEquals
@@ -81,6 +82,19 @@ class DominoKeysTest {
         val flipped = laid.flipAt(DominoPick(), 1)
         assertEquals(Placement(5, 1), flipped.board!!.placed[2])
         assertNull("nothing to turn on an empty square", laid.flipAt(DominoPick(), 0).board)
+    }
+
+    @Test
+    fun `a drag from the tray takes that domino, keeps its turn, and lays it the way the swipe went`() {
+        assertEquals(DominoPick(2), s.grabTray(DominoPick(), 2))
+        assertEquals(DominoPick(2), s.grabTray(DominoPick(1, flipped = true), 2))
+        assertEquals("a turn already given stays", DominoPick(2, flipped = true), s.grabTray(DominoPick(2, flipped = true), 2))
+        // Swiping right from square 1 lays the 5 on 1; swiping left from 2 to 1 lays it on 2.
+        assertEquals(Placement(2, 1), s.dragSquares(s.grabTray(DominoPick(), 2)!!, 1, 2).board!!.placed[2])
+        assertEquals(Placement(1, 2), s.dragSquares(s.grabTray(DominoPick(), 2)!!, 2, 1).board!!.placed[2])
+        val laid = s.dragSquares(DominoPick(2), 1, 5).board!!
+        assertNull("an empty slot has nothing to grab", laid.grabTray(DominoPick(), 2))
+        assertNull(s.grabTray(DominoPick(), 9))
     }
 
     @Test
