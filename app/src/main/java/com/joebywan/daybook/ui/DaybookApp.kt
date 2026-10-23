@@ -54,6 +54,7 @@ import com.joebywan.daybook.ui.stats.StatsScreen
 import com.joebywan.daybook.ui.theme.Appearance
 import com.joebywan.daybook.ui.theme.DaybookTheme
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import androidx.compose.animation.Crossfade
@@ -378,6 +379,10 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             completions = completions,
             onPlay = { day, difficulty ->
                 route = Route.Play(current.puzzleId, difficulty, day, fromArchive = true)
+            },
+            inProgress = { day ->
+                val keys = Difficulty.entries.associateBy { savedGameKey(current.puzzleId, it, DailySeed.seedFor(day, current.puzzleId, it)) }
+                store.inProgress(keys.keys).map { saved -> saved.mapNotNullTo(HashSet(), keys::get) }
             },
             openAt = current.day,
             onBack = { route = Route.Home },
