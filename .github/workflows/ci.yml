@@ -2,6 +2,10 @@ name: CI
 
 on:
   pull_request:
+  # main's merge queue tests each queued pull request merged onto main and whatever is queued ahead of it;
+  # `build` and `web-parity` must pass there too. That commit is the one main moves to, so release.yml's
+  # tested-tree check below finds it and does not test the same tree again.
+  merge_group:
   workflow_dispatch:
 
 concurrency:
@@ -120,7 +124,7 @@ jobs:
       - name: Could this change a board or the web build?
         id: paths
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: |
           base="${BASE:-$(git merge-base origin/main HEAD)}"
           if git diff --name-only "$base" HEAD | grep -qE '^(app/src/main/|app/src/test/java/com/joebywan/daybook/WebParityDumpTest\.kt$|web/|tools/web-parity/|\.github/actions/web-parity/|\.github/workflows/ci\.yml$|gradle/|gradle\.properties$)|\.gradle\.kts$'; then

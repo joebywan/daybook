@@ -586,13 +586,14 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 ## Git and releases
 
 - **Standing instruction: finish the job.** When the work is done and the local tests are green, push
-  the branch, open the PR and merge it once CI's `build` and `web-parity` are green, without asking first. The owner
+  the branch, open the PR and put it in the merge queue with `gh pr merge <n> --auto --merge`, without asking first. The owner
   has authorised this for good and is tired of repeating it. Only stop and ask if CI fails in a way
   you cannot fix, or the change touches something under "Settled — do not reopen".
 - Never commit to `main`. Branch, PR, merge — I do the merging, not the owner. This is now enforced: a
   repository ruleset ("Protect main", set up 2026-10-02) requires a pull request, requires the CI
-  checks named `build` and `web-parity` to pass on a branch that is up to date with `main` (added
-  2026-10-23, after two pull requests each green alone broke `main` together), and blocks force-pushes and deletion. The repo owner's account can
+  checks named `build` and `web-parity` to pass, and merges through a merge queue (2026-10-23, after two pull
+  requests each green alone broke `main` together): the queue runs `ci.yml` (`merge_group`) on each PR merged onto
+  `main` and those ahead of it, so nobody updates branches by hand. It blocks force-pushes and deletion. The repo owner's account can
   bypass on pull requests only.
 - **Docs-only changes do not need CI, and the owner has said so outright** ("it doesn't impact tests,
   and it doesn't impact the app, why burn the compute time?"). A PR that touches only documentation
