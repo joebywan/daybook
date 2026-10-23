@@ -3,10 +3,11 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
-import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.RegionsState
 import com.joebywan.daybook.puzzles.RegionsTeacher
+import com.joebywan.daybook.puzzles.enter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -158,26 +159,40 @@ class RegionsTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Regions.tutorial
-        assertEquals(6, frames.size)
-        assertEquals(listOf(true, true, false, false, false, false), frames.map { it.accepts == null && !it.freePlay })
+        assertEquals(5, frames.size)
+        assertEquals(listOf(true, true, false, false, false), frames.map { it.judge == null && !it.freePlay })
         val b0 = Regions.tutorialBoard()
         val first = Regions.TUTORIAL_FIRST
+        // Frame 3: tap square 9 (the 1 glows next), then 1; another square or digit is refused.
+        val place = frames[2].steps!!
+        assertEquals(TutorialStep.REJECT, place(b0))
         val selected = b0.select(first)
-        val placed = selected.withCell(first, 1)
-        fun ok(i: Int, s: PuzzleState) = assertTrue("frame $i", frames[i].accepts!!(s))
-        fun no(i: Int, s: PuzzleState) = assertFalse("frame $i", frames[i].accepts!!(s))
-        // Frame 2: select square 9; selecting another, or placing, is refused.
-        ok(2, selected); no(2, b0.select(8)); no(2, b0.select(first).withCell(first, 1))
-        // Frame 3: the 1 in square 9 (the only digit its neighbours leave).
-        assertEquals(selected, frames[3].state)
-        ok(3, placed); no(3, selected.withCell(first, 2)); no(3, selected)
-        // Frame 4: clear the wrong 1.
-        val wrong = frames[4].state as RegionsState
+        assertEquals(TutorialStep.PROGRESS, place(selected))
+        assertEquals(setOf(RegionsTeacher.pad(1)), frames[2].glow!!(selected).strong)
+        assertEquals(TutorialStep.REJECT, place(b0.select(8)))
+        assertEquals(TutorialStep.REJECT, place(selected.enter(first, 2)))
+        val placed = selected.enter(first, 1)
+        assertEquals(TutorialStep.DONE, place(placed))
+        // Frame 4: the player puts a 1 beside it (red, a mistake), then taps 1 again to clear it.
+        val clash = frames[3].steps!!
+        val glow = frames[3].glow!!
+        val start = frames[3].state as RegionsState
+        assertEquals(placed.cells, start.cells)
+        assertEquals(TutorialStep.REJECT, clash(start))
+        assertEquals(setOf(Regions.TUTORIAL_WRONG), glow(start).strong)
+        val picked = start.select(Regions.TUTORIAL_WRONG)
+        assertEquals(TutorialStep.PROGRESS, clash(picked))
+        assertEquals(TutorialStep.REJECT, clash(picked.enter(Regions.TUTORIAL_WRONG, 2)))
+        val wrong = picked.enter(Regions.TUTORIAL_WRONG, 1)
+        assertEquals(TutorialStep.PROGRESS, clash(wrong))
+        assertTrue(glow(wrong).warning)
         assertEquals(setOf(8, 9), wrong.conflicts())
-        ok(4, wrong.withCell(Regions.TUTORIAL_WRONG, 0)); no(4, wrong)
+        assertTrue(first in b0.layout.around[Regions.TUTORIAL_WRONG])
+        assertTrue(Regions.teach(wrong)!!.mistake)
+        assertEquals(TutorialStep.DONE, clash(wrong.enter(Regions.TUTORIAL_WRONG, 1)))
         // Frame 5 is free play, and hints alone finish it with no fallback and no mistake.
-        assertTrue(frames[5].freePlay)
-        var now = frames[5].state as RegionsState
+        assertTrue(frames[4].freePlay)
+        var now = frames[4].state as RegionsState
         assertEquals(Regions.tutorialBoard(mapOf(first to 1)).cells, now.cells)
         while (!now.solved) {
             val d = Regions.teach(now)!!

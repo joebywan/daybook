@@ -15,7 +15,7 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
   compile untouched. Strong cells get the outline; everything else dims.
 - `tutorial: List<TutorialFrame>` — played by `TutorialRunner` on the puzzle's real `Board`. A frame's
   `accepts` (one emitted state is the move) or `steps` (`TutorialStep.REJECT` / `PROGRESS` / `DONE`, for a
-  move of several states: Lexicon's BOAT then Enter, Sudoku's cell then digit) gates the move; a refused
+  move of several states: Lexicon's BOAT then Enter, Sudoku's square then digit, the digit-pad puzzles' clash made and cleared) gates the move; a refused
   state is dropped and the progress so far stays. The "your turn" frame shows Hint only when the puzzle
   offers hints. Writing them: `docs/PUZZLE_STANDARDS.md` section 8, with the style rules.
 - **A finished walkthrough move moves on by itself** (owner's request: Next after a move only confirmed what the

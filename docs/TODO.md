@@ -15,11 +15,13 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **Walkthroughs: rewrite to the style rules.** The runner now advances by itself and takes multi-state moves
-  (`docs/PUZZLE_STANDARDS.md` section 8). Lexicon, Sets, Snap, Tower, Nonogram, Mate, Target, Word Wheel, Tally, Sand,
-  Pointers and Dominoes are rewritten; the grid and digit-pad puzzles (Sudoku, Inequality, Regions, Cages, Cipher, Kings,
-  Tents, Mambo, Pipes, Shikaku, Mosaic, LITS, Atoms) are on `claude/walkthroughs-grid`. Not walked through, because neither emits a
-  state a frame could ask for: Word Wheel's Shuffle (a labelled button) and Sand's refused pour (it shakes). *S.*
+- [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
+  section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
+  button) and Sand's refused pour (it shakes and tints). *S.*
+- [ ] **Web: a touch right after a mouse gesture may be dropped.** Driving the walkthroughs in Playwright (Chromium and
+  WebKit), the first touch tap after a mouse drag or click did nothing (Shikaku's remove, LITS's 2x2, Atoms' gap); the
+  same taps by mouse, and by touch on the Android emulator, work. Probably the harness mixing pointer types, but a
+  touchscreen laptop mixes them too: check on real hardware before closing. *S.*
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
   text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it

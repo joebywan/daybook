@@ -46,6 +46,7 @@ import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.jvmHashSetOrder
@@ -1191,18 +1192,15 @@ object Lits : PuzzleType {
         val middle = top + TUTORIAL_MIDDLE
         val bumped = middle + TUTORIAL_BUMP
         val leftT = setOf(10, 15, 16, 20)
+        // Square 7 shaded, filling a 2x2 with the L, then cleared: back to the board it started on, so
+        // only a move counted since tells the two apart.
+        val block = TutorialPath(exactly(top + 7), { exactly(top)(it) && it.moves > 0 })
         listOf(
             TutorialFrame(
                 state = solved,
                 caption = "Shade four squares in every region so they make an L, I, T or S. The " +
                     "thick lines are the walls. Here's a finished board; the glowing T is one region's.",
                 highlight = BoardHighlight(strong = leftT, soft = setOf(11, 21)),
-            ),
-            TutorialFrame(
-                state = solved,
-                caption = "Shading never fills a 2x2 square. Three squares of this block are shaded, " +
-                    "so the glowing one has to stay empty.",
-                highlight = BoardHighlight(strong = setOf(7), soft = setOf(2, 3, 8)),
             ),
             TutorialFrame(
                 state = solved,
@@ -1220,12 +1218,16 @@ object Lits : PuzzleType {
                 done = "Shaded. A finished shape wears its letter.",
             ),
             TutorialFrame(
-                state = tutorialBoard(top + 7),
-                caption = "Suppose you'd shaded the glowing square too: it fills a 2x2 with the L. " +
-                    "Tap a shaded square to clear it.",
-                highlight = BoardHighlight(strong = setOf(7), soft = setOf(2, 3, 8)),
-                accepts = exactly(top),
-                retry = "Tap the glowing square once.",
+                state = tutorialBoard(top),
+                caption = "Shading never fills a 2x2 square. Tap the glowing square to shade it: with the L " +
+                    "it fills a 2x2. Then tap it again to clear it.",
+                // The board draws no red for a 2x2, so the glow turns red when the square is shaded.
+                glow = { s ->
+                    if (block.stage(s) == 0) BoardHighlight(strong = setOf(2, 3, 7, 8), warning = true)
+                    else BoardHighlight(strong = setOf(7), soft = setOf(2, 3, 8))
+                },
+                steps = block.steps,
+                retry = "Tap the glowing square, then tap it again.",
                 done = "Cleared. A drag that starts on a shaded square clears too.",
             ),
             TutorialFrame(

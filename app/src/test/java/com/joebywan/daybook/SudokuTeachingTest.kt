@@ -6,6 +6,7 @@ import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.SudokuState
 import com.joebywan.daybook.puzzles.SudokuTeacher
+import com.joebywan.daybook.puzzles.enter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -346,18 +347,35 @@ class SudokuTeachingTest {
         assertEquals(TutorialStep.REJECT, move(selected.withCell(first, 5)))
         assertEquals(6, Sudoku.TUTORIAL_SOLUTION[first])
         assertEquals(TutorialStep.DONE, move(selected.withCell(first, 6)))
-        assertEquals(at(3).cells, selected.withCell(first, 6).cells)
+        assertEquals(at(2).cells, selected.withCell(first, 6).cells)
 
-        // 3: the wrong 9 is red, is a mistake, and tapping 9 again clears it.
-        val clear = frames[2].accepts!!
-        val wrong = at(2).selected!!
-        assertEquals(9, at(2).cells[wrong])
-        assertTrue(wrong in at(2).conflicts())
-        assertTrue(Sudoku.teach(at(2))!!.mistake)
-        assertTrue("the Board's toggle", clear(at(2).withCell(wrong, if (at(2).cells[wrong] == 9) 0 else 9)))
-        assertFalse("selecting elsewhere", clear(at(2).select(0)))
-        assertTrue(frames[2].highlight.soft.all { at(2).cells[it] == 9 })
-        assertEquals(2, frames[2].highlight.soft.size)
+        // 3: the player makes the clash. Tap the glowing square, then 9 (it is red and a mistake),
+        // then 9 again, which the pad reads as clearing it; the glow turns red when the 9 lands.
+        val clash = frames[2].steps!!
+        val glow = frames[2].glow!!
+        assertEquals(TutorialStep.REJECT, clash(at(2)))
+        val wrong = glow(at(2)).strong.single()
+        assertEquals(0, at(2).cells[wrong])
+        val picked = at(2).select(wrong)
+        assertEquals(TutorialStep.PROGRESS, clash(picked))
+        assertEquals(setOf(SudokuTeacher.pad(9)), glow(picked).strong)
+        assertEquals(TutorialStep.REJECT, clash(picked.enter(wrong, 5, notesMode = false)))
+        assertEquals(TutorialStep.REJECT, clash(at(2).select(0)))
+        val nine = picked.enter(wrong, 9, notesMode = false)
+        assertEquals(TutorialStep.PROGRESS, clash(nine))
+        assertTrue(glow(nine).warning)
+        assertTrue(wrong in nine.conflicts())
+        assertTrue(Sudoku.teach(nine)!!.mistake)
+        // The claim: the 9s it clashes with are one in its column and one in its box (not its row).
+        val soft = glow(nine).soft
+        assertEquals(2, soft.size)
+        assertTrue(soft.all { nine.cells[it] == 9 && it in nine.conflicts() })
+        assertTrue(soft.any { it % 9 == wrong % 9 })
+        assertTrue(soft.any { it % 9 != wrong % 9 && it / 9 != wrong / 9 })
+        assertTrue(soft.none { it / 9 == wrong / 9 })
+        val cleared = nine.enter(wrong, 9, notesMode = false)
+        assertEquals(TutorialStep.DONE, clash(cleared))
+        assertEquals(at(3).cells, cleared.cells)
 
         // 4: pencilling a note is SudokuNotesTest's. 5: free play, finishable by hints without the
         // fallback or a mistake, from a board that carries the note the last frame asked for.

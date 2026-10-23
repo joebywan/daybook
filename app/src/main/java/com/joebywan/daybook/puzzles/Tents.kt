@@ -55,6 +55,7 @@ import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.movedCursor
@@ -127,24 +128,22 @@ object Tents : PuzzleType {
         )
     }
 
-    /** Accepts exactly [base] with [cell] made a tent, as a double tap makes it (grass around it). */
-    private fun onlyTent(base: TentsState, cell: Int): (PuzzleState) -> Boolean = { next ->
-        next is TentsState && next.marks == base.withTent(cell).marks
-    }
-
     override val tutorial: List<TutorialFrame> by lazy {
         val n = TUTORIAL_N
         val rowClue0 = n * n
         val solved = tutorialBoard(tents = setOf(1, 3, 10, 17))
         val empty = tutorialBoard()
-        val one = empty.withTent(1)
-        val two = one.withTent(3)
+        val grass = empty.tapped(0)
+        val pair = setOf(1, 3)
+        val two = grass.withTent(1).withTent(3)
+        val bottom = (20 until 25).toSet()
+        val swept = two.grassed(bottom)
         listOf(
             TutorialFrame(
                 state = solved,
-                caption = "Every tree gets one tent, right beside it: above, below, left or right. " +
-                    "Tents and trees pair off one to one.",
-                highlight = BoardHighlight(strong = setOf(2), soft = setOf(1)),
+                caption = "Every tree gets one tent, right beside it: above, below, left or right. The number " +
+                    "beside a row or column is how many tents it holds.",
+                highlight = BoardHighlight(strong = setOf(2, rowClue0), soft = setOf(1, 3)),
             ),
             TutorialFrame(
                 state = solved,
@@ -153,36 +152,45 @@ object Tents : PuzzleType {
                 highlight = BoardHighlight(strong = setOf(17), soft = setOf(11, 12, 13, 16, 18, 21, 22, 23)),
             ),
             TutorialFrame(
-                state = solved,
-                caption = "The number beside a row or column is how many tents it holds. The top row holds two.",
-                highlight = BoardHighlight(strong = setOf(rowClue0), soft = (0 until n).toSet()),
-            ),
-            TutorialFrame(
                 state = empty,
+                caption = "The glowing corner has no tree beside it, so no tent can go there. Tap it to " +
+                    "mark it grass.",
+                highlight = BoardHighlight(strong = setOf(0), soft = setOf(1, 5)),
+                accepts = { next -> next is TentsState && next.marks == grass.marks },
+                retry = "Tap the glowing square once.",
+                done = "Grass. That square can never hold a tent.",
+            ),
+            TutorialFrame(
+                state = grass,
                 caption = "The top row needs two tents, and only two of its squares sit beside a tree, " +
-                    "so both are tents. Double-tap the glowing square to place one.",
-                highlight = BoardHighlight(strong = setOf(1), soft = setOf(rowClue0, 3)),
-                accepts = onlyTent(empty, 1),
-                retry = "Double-tap the glowing square.",
-                done = "A tent.",
-            ),
-            TutorialFrame(
-                state = one,
-                caption = "The other square in that row is a tent too. Double-tap it.",
-                highlight = BoardHighlight(strong = setOf(3), soft = setOf(rowClue0)),
-                accepts = onlyTent(one, 3),
-                retry = "Double-tap the glowing square.",
-                done = "Two tents, and the count is met.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(tents = setOf(1, 3), grass = setOf(0, 4, 5, 6, 7, 9)),
-                caption = "A single tap marks grass: a note that no tent can go there, and it sprouts around every tent you place. " +
-                    "Squares touching a tent, and squares with no tree beside them, are grass. " +
-                    "Grass is only for you; it never counts against you.",
-                highlight = BoardHighlight(soft = setOf(0, 4, 5, 6, 7, 9)),
+                    "so both are tents. Double-tap each glowing square to place one.",
+                // Each square glows until it holds its tent.
+                glow = { s ->
+                    BoardHighlight(strong = pair.filter { (s as TentsState).marks[it] != TentsLogic.TENT }.toSet(), soft = setOf(rowClue0))
+                },
+                // Either order; taking one back on the way is fine too.
+                steps = { next ->
+                    when {
+                        next !is TentsState -> TutorialStep.REJECT
+                        next.marks == two.marks -> TutorialStep.DONE
+                        next.marks in pair.map { grass.withTent(it).marks } + listOf(grass.marks) -> TutorialStep.PROGRESS
+                        else -> TutorialStep.REJECT
+                    }
+                },
+                retry = "Double-tap the glowing square: two quick taps.",
+                done = "Two tents, and grass sprouts around them.",
             ),
             TutorialFrame(
                 state = two,
+                caption = "The bottom row holds no tents. Drag along the glowing squares to mark them all " +
+                    "grass in one sweep.",
+                highlight = BoardHighlight(strong = bottom, soft = setOf(rowClue0 + 4)),
+                accepts = { next -> next is TentsState && next.marks == swept.marks },
+                retry = "Drag along all five glowing squares in one sweep.",
+                done = "Swept: one drag marks a whole run.",
+            ),
+            TutorialFrame(
+                state = swept,
                 caption = "Your turn: finish the board. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
