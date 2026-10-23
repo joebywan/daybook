@@ -94,6 +94,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
@@ -152,7 +153,7 @@ fun PlayScreen(
     restore: suspend () -> SavedGame?,
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
-    praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String) -> Praise,
+    praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String, taught: List<String>) -> Praise,
     options: List<NextOption>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
@@ -241,7 +242,7 @@ private fun PlayBoard(
     restore: suspend () -> SavedGame?,
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
-    praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String) -> Praise,
+    praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String, taught: List<String>) -> Praise,
     options: List<NextOption>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
@@ -362,7 +363,7 @@ private fun PlayBoard(
         if (state.solved && !recorded) {
             recorded = true
             // Asked before onSolved: the history must not yet contain this solve.
-            praise = praiseFor(seconds, game.hints, game.state, game.log)
+            praise = praiseFor(seconds, game.hints, game.state, game.log, game.taught)
             onSolved(seconds, game.hints)
             haptics.success()
         }
@@ -408,9 +409,10 @@ private fun PlayBoard(
         }
     }
 
-    // One logged hint per counted hint, exactly where the count goes up.
-    fun countHint() {
-        game = game.copy(hints = game.hints + 1, log = game.log + PlayLog.HINT)
+    // One logged hint per counted hint, exactly where the count goes up; a deduction's technique beside it, for the praise.
+    fun countHint(opened: Deduction? = null) {
+        val taught = if (opened == null || opened.mistake) game.taught else game.taught + opened.technique
+        game = game.copy(hints = game.hints + 1, log = game.log + PlayLog.HINT, taught = taught)
     }
 
     WatchHint(hintSession, puzzle, state)

@@ -21,7 +21,8 @@ import kotlinx.datetime.LocalDate
  * that puzzle's daily board at that difficulty instead of the home grid.
  *
  * For the render harness: `?mode=levels` (or `random`) opens home in that mode, `?screen=levels` the levels
- * list, `&level=N` with it that level's boards, and `?puzzle=<id>&level=N` that board of level N.
+ * list, `&level=N` with it that level's boards, and `?puzzle=<id>&level=N` that board of level N;
+ * `?screen=archive&puzzle=<id>` that puzzle's archive, with `&day=` that day selected.
  */
 @Composable
 fun DaybookWebApp(dateParam: String?, tierParam: String?, puzzleParam: String?, params: Map<String, String> = emptyMap()) {
@@ -34,6 +35,8 @@ fun DaybookWebApp(dateParam: String?, tierParam: String?, puzzleParam: String?, 
         val level = params["level"]?.toIntOrNull()?.takeIf { it >= 1 }
         when {
             params["screen"] == "levels" -> Route.Levels(level)
+            params["screen"] == "archive" && puzzleParam != null ->
+                Route.Archive(puzzleParam, params["day"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() })
             else -> puzzleParam?.let(PuzzleRegistry::byId)?.let {
                 if (level != null) Route.Play(it.id, tier, null, level = level) else Route.Play(it.id, tier, currentDate())
             } ?: Route.Home

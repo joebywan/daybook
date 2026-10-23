@@ -144,6 +144,12 @@ data class SavedGame(
      * that leaves the history shorter than one has taken that restart back. Defaulted: an older save loads with none.
      */
     val restarts: List<Int> = emptyList(),
+    /**
+     * The technique (`Deduction.technique`) of every counted hint that opened a deduction, mistakes left out, in order:
+     * what the finished frame names (`techniqueLine`). Kept out of [log], whose characters the share card reads.
+     * Defaulted: an older save loads with none.
+     */
+    val taught: List<String> = emptyList(),
 ) {
     /**
      * Keeps only the tail of the undo stack. Every entry is a whole board, so a Sudoku Expert game

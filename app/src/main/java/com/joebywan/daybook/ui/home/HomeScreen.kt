@@ -737,7 +737,7 @@ internal fun HomeTile(
  * labelled pills is exactly the weight that made the old cards unscannable.
  */
 @Composable
-private fun TierDots(accent: Color, selected: Difficulty, cleared: (Difficulty) -> Boolean) {
+internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty) -> Boolean) {
     val scheme = MaterialTheme.colorScheme
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),

@@ -105,6 +105,14 @@ interface PuzzleType {
     fun teach(state: PuzzleState): Deduction? = null
 
     /**
+     * The hardest technique (a teacher's id, `core/TechniqueNames.kt`) this board's hint ladder needs from an empty start,
+     * or null. Only where the generator already measures it, so it is cheap and exact: the finished frame says "this
+     * board needed X" from it, which must be true of the board whatever the player did. [state] may be solved; only the
+     * board is read, never the player's marks.
+     */
+    fun neededTechnique(state: PuzzleState): String? = null
+
+    /**
      * A walkthrough played on this puzzle's own [Board], or empty for none. The "How to play"
      * button opens it when present, and a first-time player is offered it once.
      */

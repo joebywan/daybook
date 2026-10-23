@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.forgivenDays
 import kotlinx.datetime.DatePeriod
@@ -53,44 +55,15 @@ fun StreakCalendar(played: Set<LocalDate>, today: LocalDate, modifier: Modifier 
     Column(
         modifier.clip(RoundedCornerShape(16.dp)).background(scheme.surface).padding(14.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Arrow("‹", month > firstMonth) { shown = month.minus(DatePeriod(months = 1)).toEpochDays() }
-            Text(
-                month.month.name.lowercase().replaceFirstChar { it.uppercase() } + " " + month.year,
-                style = MaterialTheme.typography.titleMedium,
-                color = scheme.onSurface,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f),
-            )
-            Arrow("›", month < thisMonth) { shown = month.plus(DatePeriod(months = 1)).toEpochDays() }
-        }
+        MonthBar(
+            month,
+            back = month > firstMonth,
+            forward = month < thisMonth,
+            onBack = { shown = month.minus(DatePeriod(months = 1)).toEpochDays() },
+            onForward = { shown = month.plus(DatePeriod(months = 1)).toEpochDays() },
+        )
         Spacer(Modifier.height(6.dp))
-        Row {
-            "MTWTFSS".forEach {
-                Text(
-                    it.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        val lead = month.dayOfWeek.ordinal // Monday = 0
-        val length = month.plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1)).day
-        val weeks = (lead + length + 6) / 7
-        for (w in 0 until weeks) {
-            Row {
-                for (c in 0 until 7) {
-                    val n = w * 7 + c - lead + 1
-                    if (n < 1 || n > length) {
-                        Spacer(Modifier.weight(1f).aspectRatio(1f))
-                    } else {
-                        DayCell(LocalDate(month.year, month.month, n), played, forgiven, today, Modifier.weight(1f))
-                    }
-                }
-            }
-        }
+        MonthGrid(month) { day, m -> DayCell(day, played, forgiven, today, m) }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(10.dp).clip(CircleShape).background(scheme.primary))
@@ -150,4 +123,58 @@ private fun Arrow(glyph: String, enabled: Boolean, onClick: () -> Unit) {
     )
 }
 
-private fun LocalDate.firstOfMonth() = LocalDate(year, month, 1)
+/** The month's name and year between a back and a forward arrow; an arrow past the bounds is dim and does nothing. */
+@Composable
+internal fun MonthBar(month: LocalDate, back: Boolean, forward: Boolean, onBack: () -> Unit, onForward: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Arrow("‹", back, onBack)
+        Text(
+            month.month.name.lowercase().replaceFirstChar { it.uppercase() } + " " + month.year,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f),
+        )
+        Arrow("›", forward, onForward)
+    }
+}
+
+/**
+ * A Monday-first month: the weekday letters, then a row per week with [day] drawn for each date of [month],
+ * handed the modifier that sizes its square. Squares share the width when [cell] is null (the stats calendar);
+ * a caller sizing from both axes passes [cell]. [weeks] reserves at least that many rows, so what sits under
+ * the grid does not move from month to month.
+ */
+@Composable
+internal fun MonthGrid(
+    month: LocalDate,
+    cell: Dp? = null,
+    weeks: Int = 0,
+    day: @Composable (LocalDate, Modifier) -> Unit,
+) {
+    val lead = month.dayOfWeek.ordinal // Monday = 0
+    val length = month.plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1)).day
+    Column(if (cell == null) Modifier.fillMaxWidth() else Modifier) {
+        for (w in -1 until maxOf((lead + length + 6) / 7, weeks)) {
+            Row {
+                for (c in 0 until 7) {
+                    val square = if (cell == null) Modifier.weight(1f) else Modifier.width(cell)
+                    val n = w * 7 + c - lead + 1
+                    when {
+                        w < 0 -> Text(
+                            "MTWTFSS"[c].toString(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = square,
+                        )
+                        n < 1 || n > length -> Spacer(square.aspectRatio(1f))
+                        else -> day(LocalDate(month.year, month.month, n), square)
+                    }
+                }
+            }
+        }
+    }
+}
+
+internal fun LocalDate.firstOfMonth() = LocalDate(year, month, 1)

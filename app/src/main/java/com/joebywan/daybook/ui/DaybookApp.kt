@@ -56,6 +56,7 @@ import com.joebywan.daybook.ui.stats.StatsScreen
 import com.joebywan.daybook.ui.theme.Appearance
 import com.joebywan.daybook.ui.theme.DaybookTheme
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import androidx.compose.animation.Crossfade
@@ -387,6 +388,10 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             onPlay = { day, difficulty ->
                 route = Route.Play(current.puzzleId, difficulty, day, fromArchive = true)
             },
+            inProgress = { day ->
+                val keys = Difficulty.entries.associateBy { savedGameKey(current.puzzleId, it, DailySeed.seedFor(day, current.puzzleId, it)) }
+                store.inProgress(keys.keys).map { saved -> saved.mapNotNullTo(HashSet(), keys::get) }
+            },
             openAt = current.day,
             onBack = { route = Route.Home },
         )
@@ -462,11 +467,13 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                             )
                         }
                     },
-                    praiseFor = { seconds, hints, state, log ->
+                    praiseFor = { seconds, hints, state, log, taught ->
                         val solve = Completion(puzzle.id, difficulty, current.day, seconds, hints)
                         // The streak is told only for today's own daily: an archive day, a level or a random board does not extend it.
                         val streak = if (current.day == today) Stats.streak(completions + solve, today).current else 0
-                        val praise = finishPraise(completions, solve, today, puzzle.displayName)
+                        // Asked of the board only when no hint was opened: a hint solve names what the hints showed.
+                        val needed = if (hints == 0) puzzle.neededTechnique(state) else null
+                        val praise = finishPraise(completions, solve, today, puzzle.displayName, taught, needed)
                         praise.copy(
                             title = if (level != null && levelFinishedBy(levels, level, puzzle.id)) "Level $level done" else praise.title,
                             share = shareCard(

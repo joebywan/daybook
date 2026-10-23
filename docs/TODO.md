@@ -18,7 +18,9 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Touch targets left under 48dp.** Fixed in the UX pass: Home header buttons (48dp targets round 36dp circles), the
   play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
   Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)
-  and the calendar's day cells (sized from width, ~40dp at 360). *S each.*
+  and the calendar's day cells (sized from width, ~40dp at 360). The archive calendar's day cells size from both axes and
+  are as large as the box allows: ~44dp at 375x537 and ~41dp on a phone on its side (844x390), where six weeks must fit
+  under the title; dropping the "N days, all unlocked" line when the box is short would buy them about 5dp. *S each.*
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
