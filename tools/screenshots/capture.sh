@@ -18,7 +18,9 @@ adb root >/dev/null || true; sleep 2; adb wait-for-device; until [ "$(adb shell 
 adb shell settings put global auto_time 0
 adb shell settings put global auto_time_zone 0
 adb shell setprop persist.sys.timezone UTC
-adb shell date 092412002026.00 >/dev/null     # MMDDhhmmYYYY.ss: Thu 24 Sep 2026, noon
+adb shell date 100712002026.00 >/dev/null     # MMDDhhmmYYYY.ss: Wed 7 Oct 2026, noon
+# Today's pick is epoch day mod the puzzle count (PuzzleRegistry.featured): with 25 puzzles this day it is Snap, on the
+# first screen. Adding a puzzle moves it, so re-pick the date then (day % count == 8 keeps it on Snap).
 adb shell settings put global hide_error_dialogs 1   # a slow CI emulator ANRs the launcher after the clock jump
 sleep 10
 adb shell wm size 1080x1920
@@ -92,10 +94,10 @@ back() { adb shell am start -S -n $PKG/.MainActivity >/dev/null; sleep 4; }
 adb shell am start -n $PKG/.MainActivity >/dev/null
 # A cold CI emulator can take a while to draw; the date text doubles as the check that the pin took.
 for _ in $(seq 20); do
-  adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Thursday 24 September" && break
+  adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Wednesday 7 October" && break
   sleep 2
 done
-adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Thursday 24 September" || {
+adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Wednesday 7 October" || {
   echo "date pin failed; device date: $(adb shell date)" >&2
   adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -o 'text="[^"]\+"' | head -20 >&2
   exit 1
