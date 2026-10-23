@@ -43,6 +43,8 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.SolveTone
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.settings.GITHUB_URL
+import com.joebywan.daybook.ui.settings.RateLink
 import com.joebywan.daybook.ui.theme.withFamily
 import com.joebywan.daybook.web.Backup
 import com.joebywan.daybook.web.WebStores
@@ -520,4 +522,16 @@ fun rememberSharer(): (String) -> String? = remember {
     { text ->
         if (canShare()) { shareNatively(text); null } else { copyToClipboard(text); "Copied" }
     }
+}
+
+private fun openInNewTab(url: String): Unit = js("window.open(url, '_blank', 'noopener')")
+
+/** The web has no store to rate in, so the link is a star on GitHub, in a new tab so the game stays open. */
+@Composable
+fun rememberRateLink(): RateLink? = remember {
+    RateLink(
+        title = "Star Daybook on GitHub",
+        detail = "Daybook is open source. If it has earned it, a star on GitHub helps other puzzlers find it.",
+        open = { openInNewTab(GITHUB_URL) },
+    )
 }

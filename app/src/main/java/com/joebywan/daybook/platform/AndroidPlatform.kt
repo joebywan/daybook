@@ -1,12 +1,15 @@
 package com.joebywan.daybook.platform
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
@@ -26,6 +29,8 @@ import com.joebywan.daybook.data.DataStoreKeyValueStore
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.preferencesFile
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.settings.GITHUB_URL
+import com.joebywan.daybook.ui.settings.RateLink
 import com.joebywan.daybook.ui.theme.withFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -221,5 +226,53 @@ fun rememberSharer(): (String) -> String? {
             context.startActivity(Intent.createChooser(send, null))
             null
         }
+    }
+}
+
+/**
+ * Play installs rate on Play (the store app, or its web page when the store app is missing). Anything else,
+ * F-Droid or a downloaded APK, has no store that takes ratings, so the link is a star on GitHub instead.
+ */
+@Composable
+fun rememberRateLink(): RateLink? {
+    val context = LocalContext.current
+    return remember(context) {
+        if (installerOf(context) == "com.android.vending") {
+            val id = context.packageName
+            RateLink(
+                title = "Rate Daybook",
+                detail = "If Daybook has earned it, a rating on Google Play helps other puzzlers find it.",
+                open = {
+                    openUri(context, "market://details?id=$id", fallback = "https://play.google.com/store/apps/details?id=$id")
+                },
+            )
+        } else {
+            RateLink(
+                title = "Star Daybook on GitHub",
+                detail = "Daybook is open source. If it has earned it, a star on GitHub helps other puzzlers find it.",
+                open = { openUri(context, GITHUB_URL) },
+            )
+        }
+    }
+}
+
+private fun installerOf(context: Context): String? = try {
+    val packages = context.packageManager
+    if (Build.VERSION.SDK_INT >= 30) {
+        packages.getInstallSourceInfo(context.packageName).installingPackageName
+    } else {
+        @Suppress("DEPRECATION")
+        packages.getInstallerPackageName(context.packageName)
+    }
+} catch (_: Exception) {
+    null
+}
+
+/** Opens [uri] in whatever app handles it, else [fallback]; with neither (no store app, no browser) the tap does nothing. */
+private fun openUri(context: Context, uri: String, fallback: String? = null) {
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (_: ActivityNotFoundException) {
+        if (fallback != null) openUri(context, fallback)
     }
 }
