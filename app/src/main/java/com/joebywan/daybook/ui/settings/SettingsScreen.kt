@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.SOLVE_SOUND_NOTE
+import com.joebywan.daybook.platform.VIBRATION_NOTE
 import com.joebywan.daybook.platform.rememberRateLink
 import com.joebywan.daybook.ui.home.SegmentedControl
 import com.joebywan.daybook.ui.theme.Appearance
@@ -41,6 +42,8 @@ fun SettingsScreen(
     onShowTimer: (Boolean) -> Unit,
     playSound: Boolean,
     onPlaySound: (Boolean) -> Unit,
+    vibrate: Boolean,
+    onVibrate: (Boolean) -> Unit,
     customOrder: Boolean,
     onArrange: () -> Unit,
     appearance: Appearance,
@@ -85,6 +88,15 @@ fun SettingsScreen(
                     detail = "A short, soft chime when you solve a puzzle. $SOLVE_SOUND_NOTE",
                     checked = playSound,
                     onChecked = onPlaySound,
+                )
+            }
+            item {
+                SettingSwitch(
+                    title = "Vibration",
+                    detail = "A light tap when a move lands, a firmer one when a bump costs a life, and a short buzz " +
+                        "when you solve. $VIBRATION_NOTE",
+                    checked = vibrate,
+                    onChecked = onVibrate,
                 )
             }
             item { AppearanceChoice(appearance, onAppearance) }

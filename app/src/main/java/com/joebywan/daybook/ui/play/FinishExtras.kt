@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.stats.AchievementBadge
 import kotlin.math.sin
 import kotlin.random.Random
@@ -55,20 +56,25 @@ private class Piece(val x: Float, val delay: Float, val speed: Float, val sway: 
 /**
  * About two seconds of confetti falling over the whole screen, drawn on a Canvas. It takes no input, so taps
  * pass through to what is beneath. Plays once: [played] (the caller's saved flag) stops a rotation replaying it.
+ * Not [full] (an ordinary solve, [Praise.full]): a light flourish instead, a fifth of the pieces for a little over a second.
  */
 @Composable
-fun Confetti(played: Boolean, onPlayed: () -> Unit) {
+fun Confetti(played: Boolean, full: Boolean, onPlayed: () -> Unit) {
+    // Reduced motion: no confetti at all.
+    if (LocalReducedMotion.current) return
     val t = remember { Animatable(if (played) 1f else 0f) }
-    val pieces = remember {
+    val pieces = remember(full) {
         val r = Random(2026)
-        List(70) {
+        List(if (full) 70 else 14) {
             Piece(r.nextFloat(), r.nextFloat() * 0.35f, 0.7f + r.nextFloat() * 0.5f, r.nextFloat() * 24f + 6f,
                 r.nextFloat() * 720f - 360f, CONFETTI[r.nextInt(CONFETTI.size)], 5f + r.nextFloat() * 5f, 8f + r.nextFloat() * 6f)
         }
     }
-    LaunchedEffect(Unit) {
+    // Keyed on [full]: the praise that decides it lands a frame after the solve, and the show starts over with it.
+    LaunchedEffect(full) {
         if (!played) {
-            t.animateTo(1f, tween(2000, easing = LinearEasing))
+            t.snapTo(0f)
+            t.animateTo(1f, tween(if (full) 2000 else 1200, easing = LinearEasing))
             onPlayed()
         }
     }

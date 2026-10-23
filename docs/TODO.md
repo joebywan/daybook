@@ -15,6 +15,10 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **Touch targets left under 48dp.** Fixed in the UX pass: Home header buttons (48dp targets round 36dp circles), the
+  play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
+  Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)
+  and the calendar's day cells (sized from width, ~40dp at 360). *S each.*
 - [ ] **Walkthroughs: rewrite to the style rules.** The runner now advances by itself and takes multi-state moves
   (`docs/PUZZLE_STANDARDS.md` section 8); only Lexicon's BOAT and Sudoku's cell-then-digit were converted. The other 23 still
   split one idea over several frames (Inequality, Regions, Cages, Cipher select then digit), teach gestures only in captions,
@@ -62,6 +66,12 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Achievements follow-ups.** No fanfare yet (the solve chime plays; a distinct short tone would need a second
   sample path in both platform players). The two
   registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
+- [ ] **Move feel: boards left out.** `ui/MoveFeel.kt` (settle and unit glow) is on every grid board but these: Mate (the
+  reply already lands in a second beat with the last move marked), Pointers (its slide), Pipes (its turn), Snap (the line follows
+  the finger square by square), Sets (a pick, not a placement), Tower (submitting clears the row being built, so a settle would
+  pop empty pegs; the new guess row could settle instead). No unit glow on Cipher (a column is judged with its carry), Mosaic,
+  Target, Lexicon, Shikaku (no unit short of the solve, or a rectangle is itself the move). Home: the solved tick could pop in
+  on the way back from a solve (not built). *S each.*
 - [ ] **Puzzle of the week.** A larger board once a week (e.g. Sundays), from the same `hash(date, puzzle, tier)` scheme so it
   stays offline and free; most generators already scale by size. The owner wants it argued with worked examples per puzzle that fit a
   phone screen first: Nonogram Expert is already as big as a phone allows. Decide which puzzles take part (only those whose larger
@@ -104,6 +114,10 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   2025.09 -> 2026.09, lifecycle, activity, navigation, datastore, core-ktx) and kotlinx-serialization 1.11
   are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
   17 too); Gradle 9 would run on newer, so moving the JDK is its own change (`renovate.json` holds it at 17).
+- [ ] **`compileSdk` 36 -> 37 before `core-ktx` 1.19.** `androidx.core:core-ktx` 1.19.1 requires `compileSdk` 37
+  (`checkDebugAarMetadata` fails, and CI then stops on the SDK preview licence), so Renovate's PR (#185) was closed rather than
+  merged. Move `compileSdk` to 37 on its own (it does not change `targetSdk` or runtime behaviour, but needs SDK 37 in CI), then
+  let Renovate offer the update again. *S.*
 - [ ] **Web icons are pinned at `material-icons-extended` 1.7.3** (`gradle/libs.versions.toml`, the last
   published; move to Material Symbols vector resources eventually). The deprecated `compose.*` accessors and
   `getting` in `web/build.gradle.kts` are gone. *S.*

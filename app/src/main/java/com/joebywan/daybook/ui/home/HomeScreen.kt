@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -46,7 +47,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -268,16 +268,14 @@ private fun Header(
                 StreakBadge(streak)
                 Spacer(Modifier.width(10.dp))
             }
-            HeaderButton(Icons.Default.History, "Archive", onArchive)
-            Spacer(Modifier.width(6.dp))
-            HeaderButton(Icons.Default.InsertChart, "Statistics", onStats)
-            Spacer(Modifier.width(6.dp))
-            Box(
-                Modifier.size(HeaderButtonSize).clip(CircleShape).background(scheme.surface).clickable(onClick = onAchievements),
-                contentAlignment = Alignment.Center,
-            ) { MedalIcon(Modifier.size(22.dp), scheme.onSurfaceVariant, "Achievements") }
-            Spacer(Modifier.width(6.dp))
-            HeaderButton(Icons.Default.Settings, "Settings", onSettings)
+            // Each button's touch target is 48dp (Material's minimum) around its 36dp circle; neighbours overlap by
+            // the 6dp between circles, and the offset puts the last circle back at the margin, so the title keeps its room at 360dp.
+            Row(Modifier.offset(x = HeaderTouchInset), horizontalArrangement = Arrangement.spacedBy(-HeaderTouchInset)) {
+                HeaderButton("Archive", onArchive) { Icon(Icons.Default.History, it, tint = scheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
+                HeaderButton("Statistics", onStats) { Icon(Icons.Default.InsertChart, it, tint = scheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
+                HeaderButton("Achievements", onAchievements) { MedalIcon(Modifier.size(22.dp), scheme.onSurfaceVariant, it) }
+                HeaderButton("Settings", onSettings) { Icon(Icons.Default.Settings, it, tint = scheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
+            }
         }
         if (!compact) Row(
             Modifier.fillMaxWidth().padding(top = 2.dp),
@@ -304,18 +302,23 @@ private fun HeaderDate(today: LocalDate, oneLine: Boolean, modifier: Modifier) {
 /** Four of them share the header with the title, so each is a little under the 40dp the three used to be. */
 private val HeaderButtonSize = 36.dp
 
+/** The touch target's margin round the circle: (48 - 36) / 2. */
+private val HeaderTouchInset = 6.dp
+
 @Composable
-private fun HeaderButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun HeaderButton(label: String, onClick: () -> Unit, icon: @Composable (label: String) -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Box(
         Modifier
-            .size(HeaderButtonSize)
+            .size(HeaderButtonSize + HeaderTouchInset * 2)
             .clip(CircleShape)
-            .background(scheme.surface)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, label, tint = scheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+        Box(
+            Modifier.size(HeaderButtonSize).clip(CircleShape).background(scheme.surface),
+            contentAlignment = Alignment.Center,
+        ) { icon(label) }
     }
 }
 

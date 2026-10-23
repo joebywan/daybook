@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,7 +47,10 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * Target: six numbers and a target; combine two tiles with + - x / (whole numbers only) and the answer is a new tile.
@@ -239,20 +236,13 @@ object Target : PuzzleType {
         val (hueA, hueB) = hues
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // The move being built is transient: it starts over whenever the board changes (a finished operation, undo, a hint).
         var entry by remember(s.slots) { mutableStateOf(TargetEntry()) }
         var note by remember(s.slots) { mutableStateOf<String?>(null) }
+        // An operation's answer settles into its tile. No units: there is one target, and reaching it is the solve.
+        val feel = rememberMoveFeel(s.slots)
         fun go(step: TargetStep) {
             entry = step.entry
             note = step.note
@@ -326,6 +316,7 @@ object Target : PuzzleType {
                             Box(
                                 Modifier
                                     .size(u * 1.1f, u * 0.95f)
+                                    .moveFeel(feel, slot, Color.Unspecified)
                                     .highlightAnchor(slot)
                                     .ring(l, glow, pulse, corner)
                                     .dimmed(l)
