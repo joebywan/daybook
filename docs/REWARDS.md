@@ -185,7 +185,7 @@ would rather let people rearrange than hide.
   (`LocalBoardArrives`, from a `rememberSaveable` flag, so not on a rotation, an undo, a restart or coming back from the
   walkthrough). Draw phase only; nothing moves or resizes. Boards left out: `docs/TODO.md`.
 - **Home acknowledges the solve.** Back on Home after a solve, that tile's tick pops in (0 to 115% to 100%, 250 ms) and its
-  tint fills with it, once: `DaybookApp` hands the puzzle id to Home as `LocalJustSolved` (never stored) and clears it when
+  tint fills with it, once, starting when the 200 ms fade into Home has finished: `DaybookApp` hands the puzzle id to Home as `LocalJustSolved` (never stored) and clears it when
   Home goes away. Under reduced motion the tick and tint are simply there.
 - **Haptics** (`rememberHaptics`, `LocalHaptics`): `tick` when a push changes the board (the same test as the play log's
   move: a selection or a typed letter is silent), `bump` for a Pointers bump or a wrong Sets pick, `success` on a solve

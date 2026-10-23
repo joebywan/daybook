@@ -5,6 +5,7 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.keyframes
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.draw.drawBehind
+import kotlinx.coroutines.delay
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateOffsetAsState
 import androidx.compose.animation.core.snap
@@ -663,6 +664,7 @@ val LocalJustSolved = compositionLocalOf<String?> { null }
 
 /** How long the tick of a tile [LocalJustSolved] names takes to pop in (to 115% and back), its tint filling with it. */
 private const val POP_MS = 250
+private const val POP_DELAY_MS = 200L
 
 /**
  * The shape every home tile shares: a motif with the solved tick in its corner, a name, a footer line. [justSolved]
@@ -685,7 +687,11 @@ internal fun HomeTile(
     // Keyed on [solved]: the record of the solve can land a moment after Home first draws.
     val pop = remember(solved) { Animatable(if (justSolved && !still) 0f else 1f) }
     LaunchedEffect(pop) {
-        if (pop.value < 1f) pop.animateTo(1f, keyframes { durationMillis = POP_MS; 1.15f at POP_MS * 2 / 3 })
+        if (pop.value < 1f) {
+            // After the fade into Home (DaybookApp's 200 ms crossfade), or it plays half hidden.
+            delay(POP_DELAY_MS)
+            pop.animateTo(1f, keyframes { durationMillis = POP_MS; 1.15f at POP_MS * 2 / 3 })
+        }
     }
     Column(
         modifier
