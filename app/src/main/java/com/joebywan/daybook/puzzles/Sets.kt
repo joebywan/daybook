@@ -54,6 +54,7 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
@@ -447,96 +448,69 @@ object Sets : PuzzleType {
     internal val TUTORIAL_SET = listOf(1, 3, 5)
     internal val TUTORIAL_NEAR_MISS = listOf(1, 2, 3)
 
-    /** Three cards showing every value of one trait, for the frames that introduce the traits one at a time. */
-    internal val TUTORIAL_SHAPES = listOf(0, 1, 4)
-    internal val TUTORIAL_COLOURS = listOf(0, 3, 2)
-    internal val TUTORIAL_SHADINGS = listOf(1, 2, 4)
-    internal val TUTORIAL_NUMBERS = listOf(0, 1, 3)
-
     private fun tutorialBoard(selected: List<Int> = emptyList(), found: List<List<Int>> = emptyList()) =
         SetsState(TUTORIAL_CARDS, target = 2, found = found, selected = selected)
 
-    /**
-     * Accepts exactly the board with [selected] picked and [found] claimed. A pick is a tap per
-     * card, and the runner applies one accepted state per frame, so each tap is its own frame.
-     */
+    /** Accepts exactly the board with [selected] picked and [found] claimed. */
     private fun only(selected: List<Int>, found: List<List<Int>> = emptyList()): (PuzzleState) -> Boolean = { next ->
         next is SetsState && next.selected == selected && next.found == found && !next.lastWrong
     }
+
+    /**
+     * The taps of the pick-and-let-go frame, one per move from a fresh board: the first card of the
+     * set, a slip (card 2, in no set), the slip let go, and the second card of the set.
+     */
+    internal val TUTORIAL_PICKS: List<Int> by lazy { listOf(TUTORIAL_SET[0], 2, 2, TUTORIAL_SET[1]) }
 
     override val tutorial: List<TutorialFrame> by lazy {
         val fresh = tutorialBoard()
         val claimed = tutorialBoard(found = listOf(TUTORIAL_SET))
         val (a, b, c) = TUTORIAL_SET
         val cards = TUTORIAL_CARDS
+        val near = TUTORIAL_NEAR_MISS.map { cards[it] }
+        // Each tap of TUTORIAL_PICKS, in order, and the selection it leaves.
+        val picks = TUTORIAL_PICKS.runningFold(fresh) { s, card -> tap(s, card) }.drop(1)
         listOf(
             TutorialFrame(
                 state = fresh,
-                caption = "Every card has four traits. Shape: oval, diamond or rectangle. " +
-                    "The glowing cards show all three.",
-                highlight = BoardHighlight(strong = TUTORIAL_SHAPES.toSet()),
+                caption = "Every card has four traits: shape (oval, diamond, rectangle), colour (amber, teal, violet), " +
+                    "shading (solid, striped, outlined) and number (one, two or three).",
             ),
             TutorialFrame(
                 state = fresh,
-                caption = "Colour: amber, teal or violet.",
-                highlight = BoardHighlight(strong = TUTORIAL_COLOURS.toSet()),
-            ),
-            TutorialFrame(
-                state = fresh,
-                caption = "Shading: solid, striped or outlined.",
-                highlight = BoardHighlight(strong = TUTORIAL_SHADINGS.toSet()),
-            ),
-            TutorialFrame(
-                state = fresh,
-                caption = "Number: one, two or three symbols.",
-                highlight = BoardHighlight(strong = TUTORIAL_NUMBERS.toSet()),
-            ),
-            TutorialFrame(
-                state = fresh,
-                caption = "Here is the rule. Three cards are a set when, on every one of the four traits, " +
-                    "they are all the same or all different. Two alike and one odd is not a set.",
-            ),
-            TutorialFrame(
-                state = fresh,
-                caption = "These three are a set. Shape: all ovals, all the same. Colour: amber, teal, violet, " +
-                    "all different. Shading: solid, striped, outlined, all different. Number: one, two, three, all different.",
+                caption = "Three cards are a set when each trait is all the same or all different. The glowing three " +
+                    "are all ovals, and differ in colour, shading and number.",
                 highlight = BoardHighlight(strong = TUTORIAL_SET.toSet()),
             ),
             TutorialFrame(
                 state = fresh,
-                caption = "These three are not: " +
-                    SetsTeacher.notASet(TUTORIAL_NEAR_MISS.map { cards[it] }).replaceFirstChar { it.lowercaseChar() },
+                caption = "Two alike and one odd is not a set. Tap the three glowing cards to see.",
                 highlight = BoardHighlight(strong = TUTORIAL_NEAR_MISS.toSet(), warning = true),
+                // Any order; the board clears the pick and flags it once the third card is in.
+                steps = { next ->
+                    when {
+                        next !is SetsState || next.found.isNotEmpty() -> TutorialStep.REJECT
+                        next.lastWrong && next.lastPick.sorted() == TUTORIAL_NEAR_MISS -> TutorialStep.DONE
+                        !next.lastWrong && TUTORIAL_NEAR_MISS.containsAll(next.selected) -> TutorialStep.PROGRESS
+                        else -> TutorialStep.REJECT
+                    }
+                },
+                retry = "Tap the glowing cards.",
+                done = "Not a set: ${SetsTeacher.whyBroken(near, SetsTeacher.brokenTraits(near).single())}.",
             ),
             TutorialFrame(
                 state = fresh,
-                caption = "Tap a card to pick it. Pick the glowing card, the three striped violet ovals.",
-                highlight = BoardHighlight(strong = setOf(2)),
-                accepts = only(listOf(2)),
-                retry = "Tap the glowing card.",
-                done = "Picked: a picked card gets a bold outline.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(selected = listOf(2)),
-                caption = "Picked the wrong card? Tap it again to let it go.",
-                highlight = BoardHighlight(strong = setOf(2)),
-                accepts = only(emptyList()),
-                retry = "Tap the glowing card again.",
-                done = "Let go.",
-            ),
-            TutorialFrame(
-                state = fresh,
-                caption = "Now build a set, one tap per card. Pick the ${SetsTeacher.describe(cards[a])}.",
-                highlight = BoardHighlight(strong = setOf(a)),
-                accepts = only(listOf(a)),
-                retry = "Tap the glowing card.",
-                done = "Picked.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(selected = listOf(a)),
-                caption = "And the ${SetsTeacher.describe(cards[b])}.",
-                highlight = BoardHighlight(strong = setOf(b), soft = setOf(a)),
-                accepts = only(listOf(a, b)),
+                caption = "Tap a card to pick it, and tap it again to let it go. Follow the glow: pick two cards, " +
+                    "let one go, then pick another.",
+                glow = { s -> BoardHighlight(strong = setOfNotNull(TUTORIAL_PICKS.getOrNull((s as SetsState).moves))) },
+                steps = { next ->
+                    val i = (next as? SetsState)?.moves?.minus(1)
+                    when {
+                        i == null || i !in picks.indices || next != picks[i] -> TutorialStep.REJECT
+                        i == picks.lastIndex -> TutorialStep.DONE
+                        else -> TutorialStep.PROGRESS
+                    }
+                },
                 retry = "Tap the glowing card.",
                 done = "Any two cards point to exactly one third.",
             ),
@@ -550,13 +524,8 @@ object Sets : PuzzleType {
             ),
             TutorialFrame(
                 state = claimed,
-                caption = "Cards are never used up: a tinted card can go in another set. " +
-                    "Tap a found set in the strip to light up its cards.",
-                highlight = BoardHighlight(strong = setOf(c)),
-            ),
-            TutorialFrame(
-                state = claimed,
-                caption = "Your turn: one set left, and it uses a tinted card. Stuck? Hint shows you how to find it.",
+                caption = "Your turn: one set left, and it uses a tinted card: cards are never used up. " +
+                    "Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
             ),

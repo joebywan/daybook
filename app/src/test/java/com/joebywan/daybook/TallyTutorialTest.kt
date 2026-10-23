@@ -32,11 +32,11 @@ class TallyTutorialTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Tally.tutorial
-        assertEquals(5, frames.size)
+        assertEquals(6, frames.size)
         fun board(i: Int) = frames[i].state as TallyState
 
         assertNull(frames[0].accepts)
-        assertTrue(frames[4].freePlay)
+        assertTrue(frames[5].freePlay)
         assertTrue(board(0).solved)
 
         // 2: one tap removes the 9 in row 1.
@@ -55,16 +55,29 @@ class TallyTutorialTest {
         assertFalse("too far", sweep(board(2).sweep(listOf(7, 11, 15), remove, clean)))
         assertEquals(board(3).marks, afterSweep.marks)
 
-        // 4: Keep, then tap the 5.
-        val circle = frames[3].accepts!!
-        val afterKeep = board(3).tap(5, keep)
-        assertTrue(circle(afterKeep))
-        assertFalse("removing it instead", circle(board(3).tap(5, remove)))
-        assertFalse("circling its neighbour", circle(board(3).tap(4, keep)))
-        assertEquals(board(4).marks, afterKeep.marks)
+        // 4: the player removes the 5, which is the mistake.
+        val slip = frames[3].accepts!!
+        val afterSlip = board(3).tap(5, remove)
+        assertTrue(slip(afterSlip))
+        assertFalse("circling it instead", slip(board(3).tap(5, keep)))
+        assertFalse("its neighbour", slip(board(3).tap(4, remove)))
+        assertEquals(board(4).marks, afterSlip.marks)
+        assertEquals("the hint calls it a mistake", TallyTeacher.MISTAKE, TallyTeacher.teach(afterSlip)!!.technique)
+        assertTrue("row 2 turns red", TallyLogic.lineImpossible(afterSlip, 1, TallyLogic.rowTargets(afterSlip)[1]))
+        assertTrue("and column 2", TallyLogic.lineImpossible(afterSlip, 4 + 1, TallyLogic.colTargets(afterSlip)[1]))
 
-        // No frame's board holds a mistake.
-        frames.forEach { f -> assertNull(TallyTeacher.teach(f.state as TallyState)?.takeIf { it.technique == TallyTeacher.MISTAKE }) }
+        // 5: Keep, then tap the 5: the removed 5 becomes a circle in one tap.
+        val circle = frames[4].accepts!!
+        val afterKeep = board(4).tap(5, keep)
+        assertTrue(circle(afterKeep))
+        assertFalse("taking the mark off only", circle(board(4).tap(5, remove)))
+        assertFalse("circling its neighbour", circle(board(4).tap(4, keep)))
+        assertEquals(board(5).marks, afterKeep.marks)
+
+        // No frame's board holds a mistake but the one the player made.
+        frames.forEachIndexed { i, f ->
+            if (i != 4) assertNull(TallyTeacher.teach(f.state as TallyState)?.takeIf { it.technique == TallyTeacher.MISTAKE })
+        }
     }
 
     @Test
@@ -77,11 +90,12 @@ class TallyTutorialTest {
         assertEquals("row 1 keeps 1 + 6", "1010", s0.keep.take(4))
         assertEquals(3, cols[3])
         assertEquals(listOf(9, 9), listOf(s0.digitAt(7), s0.digitAt(11)))
-        // Frame 4: row 2 left adds to 10, 4 over its 6, and only the 5 is bigger than 4.
+        // Frame 4: row 2 left adds to 10, 4 over its 6; without the 5, 4 + 1 is all that can stay.
         val s3 = Tally.tutorial[3].state as TallyState
         assertEquals(6, rows[1])
         assertEquals(10, TallyLogic.leftIn(s3, 1))
         assertEquals(listOf(5), (4..7).filter { s3.marks[it] == clean && s3.digitAt(it) > 4 }.map { s3.digitAt(it) })
+        assertEquals(listOf(4, 1), listOf(4, 6).map { s3.digitAt(it) })
         Tally.tutorial.forEach { assertTrue("caption too long (${it.caption.length}): ${it.caption}", it.caption.length <= 170) }
     }
 

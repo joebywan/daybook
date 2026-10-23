@@ -58,6 +58,7 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.ui.rememberHintPulse
@@ -145,8 +146,8 @@ object Nonogram : PuzzleType {
             .joinToString(""))
         val empty = tutorialBoard()
         val row2 = (5..9).toList()
-        val afterRow2 = marked(empty, row2.associateWith { NonogramLogic.FILLED })
-        val afterRow3 = marked(afterRow2, (10..14).associateWith { NonogramLogic.FILLED })
+        val row3 = (10..14).toList()
+        val afterRow3 = marked(empty, (row2 + row3).associateWith { NonogramLogic.FILLED })
         val afterMiddle = marked(afterRow3, mapOf(17 to NonogramLogic.FILLED))
         val afterCross = marked(afterMiddle, mapOf(20 to NonogramLogic.CROSSED))
         listOf(
@@ -158,20 +159,24 @@ object Nonogram : PuzzleType {
             ),
             TutorialFrame(
                 state = empty,
-                caption = "Row 2 reads 5, and the row is five squares wide, so every square is filled. " +
-                    "Drag along it to fill the whole row in one sweep.",
-                highlight = BoardHighlight(strong = row2.toSet() + rowIndex(1)),
-                accepts = only(empty, row2.associateWith { NonogramLogic.FILLED }),
-                retry = "Drag along the whole glowing row, left to right, in one sweep.",
-                done = "Filled. A row whose numbers use all its width has nowhere to move.",
-            ),
-            TutorialFrame(
-                state = afterRow2,
-                caption = "Row 3 reads 5 too. Sweep it the same way.",
-                highlight = BoardHighlight(strong = (10..14).toSet() + rowIndex(2)),
-                accepts = only(afterRow2, (10..14).associateWith { NonogramLogic.FILLED }),
+                caption = "Rows 2 and 3 read 5, and the board is five squares wide, so every square in them is " +
+                    "filled. Drag along each row to fill it in one sweep.",
+                // The rows still to sweep glow.
+                glow = { b ->
+                    val cells = (b as NonogramState).cells
+                    BoardHighlight(strong = listOf(row2, row3).filter { r -> r.any { cells[it] != NonogramLogic.FILLED } }
+                        .flatMap { r -> r + rowIndex(r.first() / TUTORIAL_N) }.toSet())
+                },
+                steps = { next ->
+                    when {
+                        only(empty, (row2 + row3).associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.DONE
+                        only(empty, row2.associateWith { NonogramLogic.FILLED })(next) ||
+                            only(empty, row3.associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.PROGRESS
+                        else -> TutorialStep.REJECT
+                    }
+                },
                 retry = "Drag along the whole glowing row in one sweep.",
-                done = "Two rows down.",
+                done = "Filled. A run as wide as its row has nowhere to move.",
             ),
             TutorialFrame(
                 state = afterRow3,
@@ -193,7 +198,7 @@ object Nonogram : PuzzleType {
             ),
             TutorialFrame(
                 state = afterCross,
-                caption = "Your turn: finish the picture. Stuck? Hint shows you which row or column to look at, and why.",
+                caption = "Your turn: finish the picture. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. Every board works out one line at a time.",
             ),

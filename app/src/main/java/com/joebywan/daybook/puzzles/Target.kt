@@ -91,7 +91,7 @@ object Target : PuzzleType {
 
     // ---- walkthrough --------------------------------------------------------------------------
 
-    /** 25 x 4 = 100, 3 x 2 = 6, 100 + 6 = 106; the 7 and the 1 are spare. Proved to need three steps by a test. */
+    /** 25 x 4 = 100, then 100 + 3 x 2 (or 100 + 7 - 1) = 106. Proved to need three steps by a test. */
     internal fun tutorialBoard(): TargetState = TargetState(listOf(25, 4, 3, 2, 7, 1), 106, 3)
 
     /** Accepts a board whose tiles are exactly those of [expected], however the player ordered the two. */
@@ -102,46 +102,24 @@ object Target : PuzzleType {
     override val tutorial: List<TutorialFrame> by lazy {
         val s0 = tutorialBoard()
         val s1 = s0.combine(0, TargetOp.Mul, 1)!!
-        val s2 = s1.combine(2, TargetOp.Mul, 3)!!
-        val s3 = s2.combine(0, TargetOp.Add, 2)!!
         listOf(
             TutorialFrame(
                 state = s0,
-                caption = "Reach the target, 106, using these six numbers. Combine two of them and the answer becomes a new tile.",
-                highlight = BoardHighlight(strong = setOf(TARGET), soft = (0..5).toSet()),
-            ),
-            TutorialFrame(
-                state = s0,
-                caption = "Use + − × ÷. Answers must be whole numbers above zero, so 7 ÷ 2 is not allowed, and neither is 5 − 5.",
-                highlight = BoardHighlight(soft = (0..3).map { OP0 + it }.toSet()),
+                caption = "Reach 106 from these six numbers. Combine two with + − × ÷ and the answer is a new tile. " +
+                    "It must be a whole number above zero: no 7 ÷ 2, no 5 − 5.",
+                highlight = BoardHighlight(strong = setOf(TARGET), soft = (0..3).map { OP0 + it }.toSet()),
             ),
             TutorialFrame(
                 state = s0,
                 caption = "25 × 4 makes 100. Tap 25, tap ×, then tap 4.",
                 highlight = BoardHighlight(strong = setOf(0, 1, OP0 + TargetOp.Mul.ordinal)),
                 accepts = makes(s1),
-                retry = "Tap 25, then ×, then 4.",
+                retry = "Tap the glowing 25, then ×, then 4.",
                 done = "100 is a new tile, and 25 and 4 are used up.",
             ),
             TutorialFrame(
                 state = s1,
-                caption = "3 × 2 makes 6. Tap 3, tap ×, then tap 2.",
-                highlight = BoardHighlight(strong = setOf(2, 3, OP0 + TargetOp.Mul.ordinal)),
-                accepts = makes(s2),
-                retry = "Tap 3, then ×, then 2.",
-                done = "6.",
-            ),
-            TutorialFrame(
-                state = s2,
-                caption = "100 + 6 is the target. Tap 100, tap +, then tap 6.",
-                highlight = BoardHighlight(strong = setOf(0, 2, OP0 + TargetOp.Add.ordinal)),
-                accepts = makes(s3),
-                retry = "Tap 100, then +, then 6.",
-                done = "106. Three steps, and the 7 and the 1 were never needed.",
-            ),
-            TutorialFrame(
-                state = s1,
-                caption = "Your turn: reach 106 from here, any way you like. Stuck? Hint shows a way.",
+                caption = "Your turn: make 106 from here. You need not use every number. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
             ),

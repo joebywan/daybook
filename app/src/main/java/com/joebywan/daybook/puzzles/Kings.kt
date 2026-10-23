@@ -718,13 +718,7 @@ object Kings : PuzzleType {
                 highlight = BoardHighlight(strong = setOf(0), soft = setOf(1)),
                 accepts = only(cornerLeft, mapOf(0 to Mark.KING)),
                 retry = "Double-tap the glowing square: two quick taps.",
-                done = "Crowned.",
-            ),
-            TutorialFrame(
-                state = crowned,
-                caption = "A king rules out its row, its column, its colour and the squares around " +
-                    "it. The board crosses those off for you.",
-                highlight = BoardHighlight(strong = setOf(0), soft = crowned.eliminated()),
+                done = "Crowned. The board crosses off every square it rules out.",
             ),
             TutorialFrame(
                 state = crowned,
@@ -733,7 +727,7 @@ object Kings : PuzzleType {
                 highlight = BoardHighlight(strong = setOf(12, 17, 22), soft = secondCells),
                 accepts = only(crowned, mapOf(12 to Mark.BLOCKED, 17 to Mark.BLOCKED, 22 to Mark.BLOCKED)),
                 retry = "Drag along all three glowing squares in one sweep.",
-                done = "Swept.",
+                done = "Swept: one drag marks a whole run.",
             ),
             TutorialFrame(
                 state = swept,

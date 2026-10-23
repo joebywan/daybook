@@ -54,6 +54,7 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.ui.rememberHintPulse
 import kotlin.math.PI
 import kotlin.math.cos
@@ -607,9 +608,10 @@ object Mambo : PuzzleType {
         val start = tutorialBoard()
         val capped = tutorialBoard(2 to Sym.MOON)
         val linked = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON)
-        val passing = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON, 22 to Sym.MOON)
         val filled = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON, 22 to Sym.SUN)
         val counted = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON, 22 to Sym.SUN, 32 to Sym.MOON)
+        // The sun is two taps, by way of a moon that makes three in a row: one frame.
+        val sun = TutorialPath(only(linked, 22, Sym.MOON), only(linked, 22, Sym.SUN))
         listOf(
             TutorialFrame(
                 state = solved,
@@ -643,20 +645,15 @@ object Mambo : PuzzleType {
             ),
             TutorialFrame(
                 state = linked,
-                caption = "In row 4, the gap between two moons must be a sun. A tap goes moon, then " +
-                    "sun, then empty, so start with one tap.",
-                highlight = BoardHighlight(strong = setOf(22), soft = setOf(21, 23)),
-                accepts = only(linked, 22, Sym.MOON),
-                retry = "Tap the glowing square once.",
-                done = "That's three moons together, for now.",
-            ),
-            TutorialFrame(
-                state = passing,
-                caption = "Three moons together breaks the rules, so after a moment the board rings " +
-                    "them in red. Tap again to make it a sun.",
-                highlight = BoardHighlight(strong = setOf(22), soft = setOf(21, 23)),
-                accepts = only(passing, 22, Sym.SUN),
-                retry = "Tap the glowing square once more.",
+                caption = "In row 4, the gap between two moons must be a sun. A tap goes moon, then sun, then " +
+                    "empty: tap once and three moons ring red, then tap again for the sun.",
+                // The moons glow red once the passing moon makes three of them.
+                glow = { s ->
+                    if (sun.stage(s) < 0) BoardHighlight(strong = setOf(22), soft = setOf(21, 23))
+                    else BoardHighlight(strong = setOf(22), soft = setOf(21, 23), warning = true)
+                },
+                steps = sun.steps,
+                retry = "Tap the glowing square once, then once more.",
                 done = "A sun, and the red ring goes.",
             ),
             TutorialFrame(

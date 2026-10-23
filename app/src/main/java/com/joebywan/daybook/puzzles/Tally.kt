@@ -138,6 +138,7 @@ object Tally : PuzzleType {
         val empty = tutorialBoard()
         val afterNine = marked(empty, mapOf(1 to TallyLogic.REMOVED))
         val afterSweep = marked(afterNine, mapOf(7 to TallyLogic.REMOVED, 11 to TallyLogic.REMOVED))
+        val afterSlip = marked(afterSweep, mapOf(5 to TallyLogic.REMOVED))
         val afterKeep = marked(afterSweep, mapOf(5 to TallyLogic.KEPT))
         listOf(
             TutorialFrame(
@@ -159,21 +160,28 @@ object Tally : PuzzleType {
                 caption = "Column 4 needs 3, so both of its 9s go. Drag down across the two of them to remove both in one sweep.",
                 highlight = BoardHighlight(strong = setOf(7, 11, col(3)), soft = setOf(3, 15)),
                 accepts = only(afterNine, mapOf(7 to TallyLogic.REMOVED, 11 to TallyLogic.REMOVED)),
-                retry = "Drag from one glowing 9 to the other in one sweep.",
+                retry = "Drag along the glowing 9s in one sweep.",
                 done = "Both gone. A sweep marks a run of squares along one row or column.",
             ),
             TutorialFrame(
                 state = afterSweep,
-                caption = "Row 2 now adds up to 10, 4 over its 6. Removing the 5 would take away too much, so it stays. " +
-                    "Choose Keep, then tap the 5.",
+                caption = "Row 2 now adds up to 10, 4 over its 6. Remove its 5 and see what happens.",
                 highlight = BoardHighlight(strong = setOf(5, row(1)), soft = setOf(4, 6)),
+                accepts = only(afterSweep, mapOf(5 to TallyLogic.REMOVED)),
+                retry = "Tap the glowing 5 once.",
+                done = "Too much: 4 + 1 can never make 6, so row 2 turns red, and column 2 with it.",
+            ),
+            TutorialFrame(
+                state = afterSlip,
+                caption = "So the 5 stays. Choose Keep under the board, then tap the 5 to circle it.",
+                highlight = BoardHighlight(strong = setOf(5, row(1))),
                 accepts = only(afterSweep, mapOf(5 to TallyLogic.KEPT)),
-                retry = "Switch to Keep under the board, then tap the glowing 5.",
-                done = "Circled. A circle is a note that you are sure; it counts like any number left in.",
+                retry = "Choose Keep under the board, then tap the glowing 5.",
+                done = "Circled: a note that you are sure. It counts like any number left in.",
             ),
             TutorialFrame(
                 state = afterKeep,
-                caption = "Your turn: make every row and column add up. Stuck? Hint shows you which line to look at, and why.",
+                caption = "Your turn: make every row and column add up. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. Every board works out one line at a time.",
             ),

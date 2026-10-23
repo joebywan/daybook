@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.puzzles.Card
 import com.joebywan.daybook.puzzles.Sets
@@ -272,30 +273,21 @@ class SetsTeachingTest {
     }
 
     /**
-     * The owner's ask for the walkthrough: the four traits one at a time (each on three cards that
-     * show all three of its values), then the rule stated outright, then an example, then the
-     * near miss, and only then the guided taps.
+     * The walkthrough names the four traits and all their values in one frame, then states the rule
+     * on a real set, before any tap.
      */
     @Test
-    fun `the walkthrough introduces each trait, then states the rule, before any tap`() {
+    fun `the walkthrough names every trait value, then states the rule, before any tap`() {
         val frames = Sets.tutorial
-        val cards = Sets.TUTORIAL_CARDS
-        val intros = listOf(
-            Sets.TUTORIAL_SHAPES to { c: Card -> c.shape },
-            Sets.TUTORIAL_COLOURS to { c: Card -> c.colour },
-            Sets.TUTORIAL_SHADINGS to { c: Card -> c.shading },
-            Sets.TUTORIAL_NUMBERS to { c: Card -> c.count },
-        )
-        intros.forEachIndexed { i, (shown, trait) ->
-            assertEquals("frame ${i + 1} glows its three cards", shown.toSet(), frames[i].highlight.strong)
-            assertEquals("frame ${i + 1} shows all three values", setOf(0, 1, 2), shown.map { trait(cards[it]) }.toSet())
-            assertNull(frames[i].accepts)
-        }
-        assertTrue(frames[4].caption, frames[4].caption.contains("all the same or all different"))
-        assertTrue(frames[4].highlight.isEmpty)
-        assertEquals(Sets.TUTORIAL_SET.toSet(), frames[5].highlight.strong)
-        assertTrue(frames[6].highlight.warning)
-        assertTrue("no tap before frame 8", frames.take(7).all { it.accepts == null })
+        val names = listOf("oval", "diamond", "rectangle", "amber", "teal", "violet", "solid", "striped", "outlined", "one", "two", "three")
+        for (n in names) assertTrue(n, n in frames[0].caption)
+        assertTrue(frames[1].caption, frames[1].caption.contains("all the same or all different"))
+        assertEquals(Sets.TUTORIAL_SET.toSet(), frames[1].highlight.strong)
+        // The second frame's claim: the set is all ovals and differs in everything else.
+        val set = Sets.TUTORIAL_SET.map { Sets.TUTORIAL_CARDS[it] }
+        assertEquals(1, set.map { it.shape }.distinct().size)
+        for (t in listOf<(Card) -> Int>({ it.colour }, { it.shading }, { it.count })) assertEquals(3, set.map(t).distinct().size)
+        assertTrue("no tap before frame 3", frames.take(2).all { it.judge == null })
     }
 
     // ---- mistakes -------------------------------------------------------------------------------
@@ -375,33 +367,48 @@ class SetsTeachingTest {
     }
 
     @Test
-    fun `each walkthrough frame accepts its tap and rejects a wrong one`() {
+    fun `each walkthrough frame accepts its taps, made by the real gestures, and rejects a wrong one`() {
         val frames = Sets.tutorial
-        assertEquals(14, frames.size)
+        assertEquals(6, frames.size)
         fun board(i: Int) = frames[i].state as SetsState
-        listOf(0, 1, 2, 3, 4, 5, 6, 12).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].accepts) }
+        assertEquals("Next-only frames", listOf(0, 1), frames.indices.filter { frames[it].judge == null && !frames[it].freePlay })
 
-        // Each gesture frame: the intended tap is accepted and lands on the next frame's board;
-        // a tap on another card is not.
-        val gestures = listOf(7 to 2, 8 to 2, 9 to 1, 10 to 3, 11 to 5)
-        for ((f, card) in gestures) {
-            val accepts = frames[f].accepts!!
-            val next = Sets.tap(board(f), card)
-            assertTrue("frame ${f + 1}: tap on $card rejected", accepts(next))
-            assertEquals("frame ${f + 1} does not lead to frame ${f + 2}", board(f + 1).selected, next.selected)
-            assertEquals(board(f + 1).found, next.found)
-            for (other in board(f).cards.indices) {
-                if (other == card) continue
-                assertFalse("frame ${f + 1}: tap on $other accepted", accepts(Sets.tap(board(f), other)))
+        // 3: the near miss, picked by the player in any order, is flagged as not a set.
+        val near = frames[2].judge!!
+        for (order in listOf(Sets.TUTORIAL_NEAR_MISS, Sets.TUTORIAL_NEAR_MISS.reversed())) {
+            var s = board(2)
+            for ((k, card) in order.withIndex()) {
+                assertEquals(TutorialStep.REJECT, near(Sets.tap(s, 0)))
+                s = Sets.tap(s, card)
+                assertEquals("pick ${k + 1}", if (k == 2) TutorialStep.DONE else TutorialStep.PROGRESS, near(s))
             }
+            assertTrue(s.lastWrong)
         }
-        // The pick frames name the card they glow; the last one walks to the card without glowing it.
-        assertTrue(frames[11].highlight.strong.isEmpty())
-        assertTrue(frames[11].caption.startsWith(SetsTeacher.walkToThird(board(11).cards[1], board(11).cards[3])))
+        assertTrue(frames[2].done, frames[2].done.startsWith("Not a set: two are striped and one is solid"))
 
-        // 14: free play, finished by hints alone, through the used card.
-        assertTrue(frames[13].freePlay)
-        var s = board(13)
+        // 4: pick, slip, let go, pick: each tap glows, and any other tap is refused.
+        val picks = frames[3].judge!!
+        var s = board(3)
+        for ((k, card) in Sets.TUTORIAL_PICKS.withIndex()) {
+            assertEquals(setOf(card), frames[3].glow!!(s).strong)
+            for (other in s.cards.indices) if (other != card) assertEquals("tap $k on $other", TutorialStep.REJECT, picks(Sets.tap(s, other)))
+            s = Sets.tap(s, card)
+            assertEquals(if (k == Sets.TUTORIAL_PICKS.lastIndex) TutorialStep.DONE else TutorialStep.PROGRESS, picks(s))
+        }
+        assertEquals(board(4).selected, s.selected)
+        assertTrue("the slip is let go", 2 !in s.selected && s.found.isEmpty())
+
+        // 5: the walk to the third card, which claims the set.
+        val third = frames[4].accepts!!
+        assertTrue(frames[4].highlight.strong.isEmpty())
+        assertTrue(frames[4].caption.startsWith(SetsTeacher.walkToThird(board(4).cards[1], board(4).cards[3])))
+        assertTrue(third(Sets.tap(board(4), 5)))
+        for (other in listOf(0, 2, 4)) assertFalse("third on $other", third(Sets.tap(board(4), other)))
+        assertEquals(board(5).found, Sets.tap(board(4), 5).found)
+
+        // 6: free play, finished by hints alone, through the used card.
+        assertTrue(frames[5].freePlay)
+        s = board(5)
         val first = SetsTeacher.teach(s)!!
         assertEquals(SetsTeacher.REUSE, first.technique)
         while (!s.solved) s = Sets.teach(s)!!.apply(s) as SetsState

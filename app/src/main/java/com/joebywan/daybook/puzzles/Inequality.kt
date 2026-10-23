@@ -46,6 +46,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
@@ -177,7 +178,18 @@ object Inequality : PuzzleType {
     override val tutorial: List<TutorialFrame> by lazy {
         val start = tutorialBoard()
         val placed = mapOf(0 to 1)
+        val done = tutorialBoard(placed)
         val signAt = 16 // n*n + index 0 in TUTORIAL_SIGNS
+        val place = TutorialPath(
+            { it is InequalityState && it.cells == start.cells && it.selected == 0 },
+            { it is InequalityState && it.cells == done.cells },
+        )
+        val clash = TutorialPath(
+            { it is InequalityState && it.cells == done.cells && it.selected == TUTORIAL_WRONG },
+            { it is InequalityState && it.cells == tutorialBoard(placed + (TUTORIAL_WRONG to 1)).cells },
+            // Back where it started, but by way of the 1: only a move counted since says so.
+            { it is InequalityState && it.cells == done.cells && it.moves > 0 },
+        )
         listOf(
             TutorialFrame(
                 state = start,
@@ -191,27 +203,30 @@ object Inequality : PuzzleType {
             ),
             TutorialFrame(
                 state = start,
-                caption = "These four squares hold only 1s and 2s, and rows and columns alone can't say which goes where. Tap the top-left one.",
-                highlight = BoardHighlight(strong = setOf(0), soft = setOf(1, 4, 5)),
-                accepts = { next -> next is InequalityState && next.cells == start.cells && next.selected == 0 },
-                retry = "Tap the glowing square.",
-                done = "Selected.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(selected = 0),
-                caption = "It's the smaller of the pair, so it can't be the 2. Tap 1 below.",
-                highlight = BoardHighlight(strong = setOf(0, InequalityTeacher.pad(1)), soft = setOf(signAt, 1)),
-                accepts = { next -> next is InequalityState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 1 in the row of digits below.",
+                caption = "These four squares hold only 1s and 2s, and rows and columns can't say which goes where. " +
+                    "The sign can: the top-left one is smaller. Tap it, then 1 below.",
+                glow = { s ->
+                    val strong = if (place.stage(s) < 0) 0 else InequalityTeacher.pad(1)
+                    BoardHighlight(strong = setOf(strong), soft = setOf(signAt, 1, 4, 5))
+                },
+                steps = place.steps,
+                retry = "Tap the glowing square, then the 1.",
                 done = "The sign settled the rest of that corner.",
             ),
             TutorialFrame(
-                state = tutorialBoard(placed + (TUTORIAL_WRONG to 1), selected = TUTORIAL_WRONG),
-                caption = "A digit that breaks a rule turns red: this 1 repeats the 1 in its column. It's selected, so tap 1 again to clear it.",
-                highlight = BoardHighlight(strong = setOf(TUTORIAL_WRONG, InequalityTeacher.pad(1)), soft = setOf(10), warning = true),
-                accepts = { next -> next is InequalityState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 1 in the row of digits below.",
-                done = "Cleared.",
+                state = tutorialBoard(placed, selected = 0),
+                caption = "A digit that breaks a rule turns red. Put a 1 in the glowing square: column 3 already " +
+                    "has one. Then tap 1 again to clear it.",
+                glow = { s ->
+                    when (clash.stage(s)) {
+                        -1 -> BoardHighlight(strong = setOf(TUTORIAL_WRONG), soft = setOf(10))
+                        0 -> BoardHighlight(strong = setOf(InequalityTeacher.pad(1)), soft = setOf(10))
+                        else -> BoardHighlight(strong = setOf(TUTORIAL_WRONG, InequalityTeacher.pad(1)), soft = setOf(10), warning = true)
+                    }
+                },
+                steps = clash.steps,
+                retry = "Tap the glowing square, then the 1, then the 1 again.",
+                done = "Cleared. Tapping the digit again takes it out.",
             ),
             TutorialFrame(
                 state = tutorialBoard(placed, selected = TUTORIAL_WRONG),

@@ -36,6 +36,7 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.serialization.Serializable
 
@@ -529,11 +530,24 @@ object Snap : PuzzleType {
     }
 
     /**
+     * A wrong turn the player makes and then takes back, in one frame: [line] extended by any start of
+     * [detour] is progress, and [line] again, once the line has moved, is the move. The line handed in
+     * unchanged (a drag starting on its end) is progress too.
+     */
+    private fun outAndBack(line: List<Int>, detour: List<Int>): (PuzzleState) -> TutorialStep = { next ->
+        when {
+            next !is SnapState -> TutorialStep.REJECT
+            next.path == line -> if (next.moves > 0) TutorialStep.DONE else TutorialStep.PROGRESS
+            (1..detour.size).any { next.path == line + detour.take(it) } -> TutorialStep.PROGRESS
+            else -> TutorialStep.REJECT
+        }
+    }
+
+    /**
      * Every gesture the board has, each on a move whose reason the caption gives: start on 1, lift
      * and carry on from the end, cut the line back by starting on a square of it, and drag back
-     * along it. Each gesture frame wants exactly one emitted state, because the runner applies only
-     * the states a frame accepts. The two mistake boards are the line as the frame before left it
-     * plus a wrong turn, so the story stays one line.
+     * along it. The two mistakes are made by the player, a wrong turn off the line the frame before
+     * left, and taken back in the same frame, so the story stays one line.
      */
     override val tutorial: List<TutorialFrame> by lazy {
         val corner = 0
@@ -580,12 +594,16 @@ object Snap : PuzzleType {
                 done = "Numbers come in order, never early.",
             ),
             TutorialFrame(
-                state = tutorialBoard(answerTo(4) + listOf(9, 10)),
-                caption = "Say you dashed for 2. Now the bottom corner has one way in: a dead end, " +
-                    "but the line must end on 4. Start a drag on the glowing square to cut back to it.",
-                highlight = BoardHighlight(strong = setOf(8), soft = setOf(12)),
-                accepts = line(answerTo(4)),
-                retry = "Start a drag on the glowing square of the line.",
+                state = tutorialBoard(answerTo(4)),
+                caption = "Try dashing for 2: drag right two squares. The bottom corner is left one way in, a " +
+                    "dead end, and the line must end on 4. Then start a drag on the glowing square to cut back.",
+                glow = { b ->
+                    val path = (b as SnapState).path
+                    if (path.size >= 6) BoardHighlight(strong = setOf(8), soft = setOf(12), warning = true)
+                    else BoardHighlight(strong = setOf(9, 10) - path.toSet())
+                },
+                steps = outAndBack(answerTo(4), listOf(9, 10)),
+                retry = "Drag along the glowing squares, then cut back.",
                 done = "Everything after it is gone.",
             ),
             TutorialFrame(
@@ -598,12 +616,15 @@ object Snap : PuzzleType {
                 done = "The corner's safe.",
             ),
             TutorialFrame(
-                state = tutorialBoard(answerTo(6) + 14),
-                caption = "This line reached 3 before 2. Drag from 3 back along the line, one " +
-                    "square, to rub that step out.",
-                highlight = BoardHighlight(strong = setOf(14), soft = setOf(13), warning = true),
-                accepts = line(answerTo(6)),
-                retry = "Drag from 3 back one square along the line.",
+                state = tutorialBoard(answerTo(6)),
+                caption = "Say you went for 3 first: drag right onto it. 2 has to come before it, so drag " +
+                    "back one square along the line to rub that step out.",
+                glow = { b ->
+                    if ((b as SnapState).path.last() == 14) BoardHighlight(strong = setOf(13), soft = setOf(14), warning = true)
+                    else BoardHighlight(strong = setOf(14))
+                },
+                steps = outAndBack(answerTo(6), listOf(14)),
+                retry = "Drag onto the glowing 3, then back one square.",
                 done = "Rubbed out. Only 2 is left to go to.",
             ),
             TutorialFrame(

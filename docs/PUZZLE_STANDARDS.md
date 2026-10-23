@@ -394,7 +394,7 @@ Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.
   as Play); on a move frame its place is kept but empty. Back lands on the previous frame's start state.
 
 **Writing the frames** (`TutorialFrame`, `core/Teaching.kt`; reference: `Kings.tutorial` in `puzzles/Kings.kt`,
-7 frames, and its `only(base, changes)` helper):
+6 frames, and its `only(base, changes)` helper):
 
 1. Hand-build a tiny board (4x4 to 5x5; `Kings.TUTORIAL_REGIONS`/`TUTORIAL_SOLUTION`/`tutorialBoard`). It has
    **exactly one answer** and that answer is the stored one; a test enumerates it independently.
@@ -413,7 +413,10 @@ Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.
    `PROGRESS` too, and the frame's own start state must never be `DONE` (`TutorialFramesTest`). Give it
    `glow: (PuzzleState) -> BoardHighlight` when the glow should walk with the progress. Worked examples:
    `Lexicon.tutorial` (type BOAT, then Enter: each letter's key glows in turn) and `Sudoku.tutorial` (tap the
-   cell, then the 6). Gestures whose in-between state is `remember` (Target, Sand, Mate's two-tap move) are a
+   square, then the 6). For a move whose states come in a fixed order, `TutorialPath(stage1, stage2, ...)` builds
+   `steps` from one test per state (a state stands at the last stage it passes) and its `stage(s)` tells `glow` where
+   the player has got to. A mistake the player makes and then takes back ends on the frame's start board, so its last
+   stage also asks `moves > 0` (Sudoku's clash, Shikaku's stranding 4, LITS's 2x2, Atoms' cut-off double). Gestures whose in-between state is `remember` (Target, Sand, Mate's two-tap move) are a
    single emitted state already and need nothing.
 6. **Finish with a free-play frame** (`freePlay = true`): every move applies, hints are available (when the puzzle
    offers them) and the frame ends when the board is solved. The test must prove hints alone finish it with no

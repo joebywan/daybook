@@ -46,6 +46,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
@@ -216,7 +217,18 @@ object Regions : PuzzleType {
     override val tutorial: List<TutorialFrame> by lazy {
         val start = tutorialBoard()
         val placed = mapOf(TUTORIAL_FIRST to 1)
+        val done = tutorialBoard(placed)
         val touching = start.layout.around[2].toSet()
+        val place = TutorialPath(
+            { it is RegionsState && it.cells == start.cells && it.selected == TUTORIAL_FIRST },
+            { it is RegionsState && it.cells == done.cells },
+        )
+        val clash = TutorialPath(
+            { it is RegionsState && it.cells == done.cells && it.selected == TUTORIAL_WRONG },
+            { it is RegionsState && it.cells == tutorialBoard(placed + (TUTORIAL_WRONG to 1)).cells },
+            // Back where it started, but by way of the 1: only a move counted since says so.
+            { it is RegionsState && it.cells == done.cells && it.moves > 0 },
+        )
         listOf(
             TutorialFrame(
                 state = start,
@@ -230,27 +242,30 @@ object Regions : PuzzleType {
             ),
             TutorialFrame(
                 state = start,
-                caption = "Look at this square: it touches a 2, a 3 and a 4, so none of those can go here. Tap it.",
-                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST), soft = setOf(4, 10, 14)),
-                accepts = { next -> next is RegionsState && next.cells == start.cells && next.selected == TUTORIAL_FIRST },
-                retry = "Tap the glowing square.",
-                done = "Selected.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(selected = TUTORIAL_FIRST),
-                caption = "Its region needs 1 to 4, and 2, 3 and 4 are out. That leaves 1. Tap 1 below.",
-                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST, RegionsTeacher.pad(1)), soft = setOf(4, 10, 14)),
-                accepts = { next -> next is RegionsState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 1 in the row of digits below.",
+                caption = "This square touches a 2, a 3 and a 4, so none of those can go here, and its region " +
+                    "needs 1 to 4. That leaves 1. Tap the square, then 1 below.",
+                glow = { s ->
+                    val strong = if (place.stage(s) < 0) TUTORIAL_FIRST else RegionsTeacher.pad(1)
+                    BoardHighlight(strong = setOf(strong), soft = setOf(4, 10, 14))
+                },
+                steps = place.steps,
+                retry = "Tap the glowing square, then the 1.",
                 done = "Touching digits settled it.",
             ),
             TutorialFrame(
-                state = tutorialBoard(placed + (TUTORIAL_WRONG to 1), selected = TUTORIAL_WRONG),
-                caption = "A digit that breaks a rule turns red: this 1 touches the other 1. It's selected, so tap 1 again to clear it.",
-                highlight = BoardHighlight(strong = setOf(TUTORIAL_WRONG, RegionsTeacher.pad(1)), soft = setOf(TUTORIAL_FIRST), warning = true),
-                accepts = { next -> next is RegionsState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 1 in the row of digits below.",
-                done = "Cleared.",
+                state = tutorialBoard(placed, selected = TUTORIAL_FIRST),
+                caption = "A digit that breaks a rule turns red. Put a 1 in the glowing square: it touches the " +
+                    "other 1. Then tap 1 again to clear it.",
+                glow = { s ->
+                    when (clash.stage(s)) {
+                        -1 -> BoardHighlight(strong = setOf(TUTORIAL_WRONG), soft = setOf(TUTORIAL_FIRST))
+                        0 -> BoardHighlight(strong = setOf(RegionsTeacher.pad(1)), soft = setOf(TUTORIAL_FIRST))
+                        else -> BoardHighlight(strong = setOf(TUTORIAL_WRONG, RegionsTeacher.pad(1)), soft = setOf(TUTORIAL_FIRST), warning = true)
+                    }
+                },
+                steps = clash.steps,
+                retry = "Tap the glowing square, then the 1, then the 1 again.",
+                done = "Cleared. Tapping the digit again takes it out.",
             ),
             TutorialFrame(
                 state = tutorialBoard(placed, selected = TUTORIAL_WRONG),

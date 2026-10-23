@@ -34,6 +34,7 @@ import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
@@ -190,7 +191,17 @@ object Cages : PuzzleType {
         val firstCage = cage[start.cageOf[TUTORIAL_FIRST]].toSet()
         val wrongCage = cage[start.cageOf[TUTORIAL_WRONG]].toSet()
         val placed = mapOf(TUTORIAL_FIRST to 4)
-        val wrong = tutorialBoard(placed + (TUTORIAL_WRONG to 5), selected = TUTORIAL_WRONG)
+        val done = tutorialBoard(placed)
+        val place = TutorialPath(
+            { it is CageState && it.cells == start.cells && it.grid.selected == TUTORIAL_FIRST },
+            { it is CageState && it.cells == done.cells },
+        )
+        val clash = TutorialPath(
+            { it is CageState && it.cells == done.cells && it.grid.selected == TUTORIAL_WRONG },
+            { it is CageState && it.cells == tutorialBoard(placed + (TUTORIAL_WRONG to 5)).cells },
+            // Back where it started, but by way of the 5: only a move counted since says so.
+            { it is CageState && it.cells == done.cells && it.moves > 0 },
+        )
         listOf(
             TutorialFrame(
                 state = start,
@@ -200,32 +211,30 @@ object Cages : PuzzleType {
             ),
             TutorialFrame(
                 state = start,
-                caption = "This cage totals 11 and already holds a 7. Tap the empty square to select it.",
-                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST), soft = firstCage),
-                accepts = { next -> next is CageState && next.cells == start.cells && next.grid.selected == TUTORIAL_FIRST },
-                retry = "Tap the glowing square.",
-                done = "Selected.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(selected = TUTORIAL_FIRST),
-                caption = "11 take away 7 leaves 4. Tap 4 below.",
-                highlight = BoardHighlight(strong = setOf(TUTORIAL_FIRST, SudokuTeacher.pad(4)), soft = firstCage),
-                accepts = { next -> next is CageState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 4 in the row of digits below.",
+                caption = "This cage totals 11 and already holds a 7, and 11 take away 7 leaves 4. Tap the " +
+                    "empty square, then 4 below.",
+                glow = { s ->
+                    val strong = if (place.stage(s) < 0) TUTORIAL_FIRST else SudokuTeacher.pad(4)
+                    BoardHighlight(strong = setOf(strong), soft = firstCage)
+                },
+                steps = place.steps,
+                retry = "Tap the glowing square, then the 4.",
                 done = "That cage is complete.",
             ),
             TutorialFrame(
-                state = wrong,
-                caption = "A mistake turns red. This cage totals 11 but 5 + 2 is only 7, and the 5 repeats in " +
-                    "its column. It's selected, so tap 5 again to clear it.",
-                highlight = BoardHighlight(
-                    strong = setOf(TUTORIAL_WRONG, SudokuTeacher.pad(5)),
-                    soft = wrongCage,
-                    warning = true,
-                ),
-                accepts = { next -> next is CageState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 5 in the row of digits below.",
-                done = "Cleared.",
+                state = tutorialBoard(placed, selected = TUTORIAL_FIRST),
+                caption = "A digit that breaks a rule turns red. Put a 5 in the glowing square: 5 + 2 is only 7, " +
+                    "not 11, and its column has a 5. Then tap 5 again to clear it.",
+                glow = { s ->
+                    when (clash.stage(s)) {
+                        -1 -> BoardHighlight(strong = setOf(TUTORIAL_WRONG), soft = wrongCage)
+                        0 -> BoardHighlight(strong = setOf(SudokuTeacher.pad(5)), soft = wrongCage)
+                        else -> BoardHighlight(strong = setOf(TUTORIAL_WRONG, SudokuTeacher.pad(5)), soft = wrongCage, warning = true)
+                    }
+                },
+                steps = clash.steps,
+                retry = "Tap the glowing square, then the 5, then the 5 again.",
+                done = "Cleared. Tapping the digit again takes it out.",
             ),
             TutorialFrame(
                 state = tutorialBoard(placed, selected = TUTORIAL_WRONG),
@@ -236,10 +245,10 @@ object Cages : PuzzleType {
                     soft = wrongCage,
                 ),
                 accepts = { next ->
-                    next is CageState && next.cells == tutorialBoard(placed).cells &&
+                    next is CageState && next.cells == done.cells &&
                         next.grid.notes == tutorialBoard(placed, noted = mapOf(TUTORIAL_WRONG to TUTORIAL_NOTED)).grid.notes
                 },
-                retry = "Tap the pencil first so it lights up, then the 9.",
+                retry = "Tap the glowing pencil, then the 9.",
                 done = "Penciled. Tap the pencil again to go back to placing digits.",
             ),
             TutorialFrame(

@@ -51,6 +51,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.ui.LocalReducedMotion
@@ -540,41 +541,36 @@ object Sand : PuzzleType {
         listOf(
             TutorialFrame(
                 state = s0,
-                caption = "Sort the sand so every tube holds one colour. Each colour has its own symbol, too.",
+                caption = "Sort the sand so each tube holds one colour (each has a symbol too). A pour moves the top colour, " +
+                    "as much as fits, onto the same colour or into an empty tube.",
                 highlight = BoardHighlight(soft = (0 until 5).toSet()),
-            ),
-            TutorialFrame(
-                state = s0,
-                caption = "A pour moves the colour on top, as much as fits, onto the same colour or into an empty tube.",
-                highlight = BoardHighlight(strong = setOf(4)),
             ),
             TutorialFrame(
                 state = s0,
                 caption = "Tubes 1 and 2 both have cream on top. Tap tube 1 to lift it, then tap tube 2 to pour.",
                 highlight = BoardHighlight(strong = setOf(0, 1)),
                 accepts = makes(s1),
-                retry = "Tap tube 1, then tube 2.",
+                retry = "Tap the glowing tube 1, then tube 2.",
                 done = "The cream went onto the cream.",
             ),
             TutorialFrame(
                 state = s1,
-                caption = "Tube 3's two brown sit on a cream. Lift tube 3 and pour them into the empty tube 5.",
+                caption = "Tube 3's two brown sit on a cream. Pour them into the empty tube 5, then pour tube 2's two cream onto tube 3.",
                 highlight = BoardHighlight(strong = setOf(2, 4)),
-                accepts = makes(s2),
-                retry = "Tap tube 3, then tube 5.",
-                done = "That freed the cream underneath.",
-            ),
-            TutorialFrame(
-                state = s2,
-                caption = "Pour tube 2's two cream onto tube 3 to fill it with one colour.",
-                highlight = BoardHighlight(strong = setOf(1, 2)),
-                accepts = makes(s3),
-                retry = "Tap tube 2, then tube 3.",
+                steps = { next ->
+                    when ((next as? SandState)?.tubes) {
+                        s2.tubes -> TutorialStep.PROGRESS
+                        s3.tubes -> TutorialStep.DONE
+                        else -> TutorialStep.REJECT
+                    }
+                },
+                glow = { now -> BoardHighlight(strong = if ((now as? SandState)?.tubes == s2.tubes) setOf(1, 2) else setOf(2, 4)) },
+                retry = "Tap the glowing tubes, the one to pour from first.",
                 done = "Tube 3 is all cream: finished.",
             ),
             TutorialFrame(
                 state = s3,
-                caption = "Your turn: sort the rest. Stuck? Hint shows a pour.",
+                caption = "Your turn: sort the rest. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Sorted. That's all there is to it.",
             ),

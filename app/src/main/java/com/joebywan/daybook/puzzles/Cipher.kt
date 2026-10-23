@@ -48,6 +48,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
@@ -180,9 +181,20 @@ object Cipher : PuzzleType {
         val all = (0 until 4).flatMap { sum.tilesOf(it) }.toSet()
         val one = mapOf(O to 1)
         val two = one + (T to 2)
-        fun only(placed: Map<Int, Int>) = { next: PuzzleState ->
-            next is CipherState && next.digits == tutorialBoard(placed).digits
-        }
+        fun digits(placed: Map<Int, Int>) = tutorialBoard(placed).digits
+        /** Select [letter], then give it [digit]: one frame, the tiles glowing until the letter is selected. */
+        fun place(before: Map<Int, Int>, letter: Int, digit: Int) = TutorialPath(
+            { it is CipherState && it.digits == digits(before) && it.selected == letter },
+            { it is CipherState && it.digits == digits(before + (letter to digit)) },
+        )
+        val o = place(emptyMap(), O, 1)
+        val t = place(one, T, 2)
+        val clash = TutorialPath(
+            { it is CipherState && it.digits == digits(two) && it.selected == U },
+            { it is CipherState && it.digits == digits(two + (U to 1)) },
+            // Back where it started, but by way of the 1: only a move counted since says so.
+            { it is CipherState && it.digits == digits(two) && it.moves > 0 },
+        )
         listOf(
             TutorialFrame(
                 state = tutorialBoard(),
@@ -191,43 +203,41 @@ object Cipher : PuzzleType {
             ),
             TutorialFrame(
                 state = tutorialBoard(),
-                caption = "OUT is longer than TO and GO, so its O is what the tens column carries. Two digits make at most 18, so O is 1. Tap an O.",
-                highlight = BoardHighlight(strong = sum.tilesOf(O)),
-                accepts = { next -> next is CipherState && next.digits == tutorialBoard().digits && next.selected == O },
-                retry = "Tap one of the glowing O tiles.",
-                done = "O is selected everywhere it appears.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(selected = O),
-                caption = "Now tap 1 below.",
-                highlight = BoardHighlight(strong = setOf(CipherLogic.pad(1)), soft = sum.tilesOf(O)),
-                accepts = only(one),
-                retry = "Tap the 1 in the row of digits.",
+                caption = "OUT is longer than TO and GO, so its O is what the tens column carries. Two digits and a carry " +
+                    "make at most 19, so O is 1. Tap an O, then 1 below.",
+                glow = { s ->
+                    if (o.stage(s) < 0) BoardHighlight(strong = sum.tilesOf(O))
+                    else BoardHighlight(strong = setOf(CipherLogic.pad(1)), soft = sum.tilesOf(O))
+                },
+                steps = o.steps,
+                retry = "Tap a glowing O, then the 1.",
                 done = "Every O shows 1.",
             ),
             TutorialFrame(
                 state = tutorialBoard(one, selected = O),
-                caption = "The units column: O + O is 1 + 1, which makes 2, so T is 2. Tap a T.",
-                highlight = BoardHighlight(strong = sum.columnTiles(0)),
-                accepts = { next -> next is CipherState && next.digits == tutorialBoard(one).digits && next.selected == T },
-                retry = "Tap a T tile.",
-                done = "T is selected.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(one, selected = T),
-                caption = "Tap 2.",
-                highlight = BoardHighlight(strong = setOf(CipherLogic.pad(2)), soft = sum.tilesOf(T)),
-                accepts = only(two),
-                retry = "Tap the 2 in the row of digits.",
+                caption = "The units column: O + O is 1 + 1, which makes 2, so T is 2. Tap a T, then 2.",
+                glow = { s ->
+                    if (t.stage(s) < 0) BoardHighlight(strong = sum.tilesOf(T), soft = sum.columnTiles(0))
+                    else BoardHighlight(strong = setOf(CipherLogic.pad(2)), soft = sum.tilesOf(T))
+                },
+                steps = t.steps,
+                retry = "Tap a glowing T, then the 2.",
                 done = "T is 2.",
             ),
             TutorialFrame(
-                state = tutorialBoard(two + (U to 1), selected = U),
-                caption = "A clash turns red: U and O can't both be 1. U is selected, so tap 1 again to clear it.",
-                highlight = BoardHighlight(strong = sum.tilesOf(U) + CipherLogic.pad(1), soft = sum.tilesOf(O), warning = true),
-                accepts = only(two),
-                retry = "Tap the 1 in the row of digits.",
-                done = "Cleared.",
+                state = tutorialBoard(two, selected = T),
+                caption = "A digit that breaks a rule turns red. Give U the 1 that O already has: tap a U, then 1. " +
+                    "Then tap 1 again to clear it.",
+                glow = { s ->
+                    when (clash.stage(s)) {
+                        -1 -> BoardHighlight(strong = sum.tilesOf(U), soft = sum.tilesOf(O))
+                        0 -> BoardHighlight(strong = setOf(CipherLogic.pad(1)), soft = sum.tilesOf(O))
+                        else -> BoardHighlight(strong = sum.tilesOf(U) + CipherLogic.pad(1), soft = sum.tilesOf(O), warning = true)
+                    }
+                },
+                steps = clash.steps,
+                retry = "Tap a glowing U, then the 1, then the 1 again.",
+                done = "Cleared. Tapping the digit again takes it out.",
             ),
             TutorialFrame(
                 state = tutorialBoard(two, selected = U),

@@ -19,10 +19,13 @@ from a measurement or review, so you can check it is still true.
   play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
   Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)
   and the calendar's day cells (sized from width, ~40dp at 360). *S each.*
-- [ ] **Walkthroughs: rewrite to the style rules.** The runner now advances by itself and takes multi-state moves
-  (`docs/PUZZLE_STANDARDS.md` section 8); only Lexicon's BOAT and Sudoku's cell-then-digit were converted. The other 23 still
-  split one idea over several frames (Inequality, Regions, Cages, Cipher select then digit), teach gestures only in captions,
-  and carry claims the rules contradict (Lexicon frame 4: "no guess can tell COAT, GOAT and MOAT apart", but CLOG does). *M.*
+- [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
+  section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
+  button) and Sand's refused pour (it shakes and tints). *S.*
+- [ ] **Web: a touch right after a mouse gesture may be dropped.** Driving the walkthroughs in Playwright (Chromium and
+  WebKit), the first touch tap after a mouse drag or click did nothing (Shikaku's remove, LITS's 2x2, Atoms' gap); the
+  same taps by mouse, and by touch on the Android emulator, work. Probably the harness mixing pointer types, but a
+  touchscreen laptop mixes them too: check on real hardware before closing. *S.*
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
   text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it

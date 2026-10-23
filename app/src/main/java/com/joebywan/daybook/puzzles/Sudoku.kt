@@ -66,7 +66,7 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
-import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
@@ -392,9 +392,19 @@ object Sudoku : PuzzleType {
         val row1 = (0 until 9).toSet()
         val start = tutorialBoard()
         val placed = mapOf(TUTORIAL_FIRST to 6)
-        val wrong = tutorialBoard(placed + (TUTORIAL_WRONG to 9), selected = TUTORIAL_WRONG)
-        // The 9s the wrong one clashes with: one in its column, one in its box.
-        val clashes = peers(TUTORIAL_WRONG).filter { wrong.cells[it] == 9 }.toSet()
+        val done = tutorialBoard(placed)
+        // The 9s a 9 in the wrong cell clashes with: one in its column, one in its box.
+        val clashes = peers(TUTORIAL_WRONG).filter { done.cells[it] == 9 }.toSet()
+        val place = TutorialPath(
+            { it is SudokuState && it.cells == start.cells && it.selected == TUTORIAL_FIRST },
+            { it is SudokuState && it.cells == done.cells },
+        )
+        val clash = TutorialPath(
+            { it is SudokuState && it.cells == done.cells && it.selected == TUTORIAL_WRONG },
+            { it is SudokuState && it.cells == tutorialBoard(placed + (TUTORIAL_WRONG to 9)).cells },
+            // Back where it started, but by way of the 9: only a move counted since says so.
+            { it is SudokuState && it.cells == done.cells && it.moves > 0 },
+        )
         listOf(
             TutorialFrame(
                 state = start,
@@ -404,55 +414,50 @@ object Sudoku : PuzzleType {
             ),
             TutorialFrame(
                 state = start,
-                caption = "Row 1 has one empty cell left, and it holds every digit but 6. Tap the cell, " +
+                caption = "Row 1 has one empty square left, and it holds every digit but 6. Tap the square, " +
                     "then 6 below.",
-                // The cell glows until it is selected, then the 6.
+                // The square glows until it is selected, then the 6.
                 glow = { s ->
-                    val strong = if ((s as SudokuState).selected == TUTORIAL_FIRST) SudokuTeacher.pad(6) else TUTORIAL_FIRST
+                    val strong = if (place.stage(s) < 0) TUTORIAL_FIRST else SudokuTeacher.pad(6)
                     BoardHighlight(strong = setOf(strong), soft = row1)
                 },
-                steps = { next ->
-                    when {
-                        next !is SudokuState -> TutorialStep.REJECT
-                        next.cells == tutorialBoard(placed).cells -> TutorialStep.DONE
-                        next.cells == start.cells && next.selected == TUTORIAL_FIRST -> TutorialStep.PROGRESS
-                        else -> TutorialStep.REJECT
-                    }
-                },
-                retry = "Tap the glowing cell in row 1, then the 6.",
+                steps = place.steps,
+                retry = "Tap the glowing square in row 1, then the 6.",
                 done = "Row 1 is complete.",
             ),
             TutorialFrame(
-                state = wrong,
-                caption = "A digit that clashes turns red: this 9 shares a column and a box with a 9. " +
-                    "It's selected, so tap 9 again to clear it.",
-                highlight = BoardHighlight(
-                    strong = setOf(TUTORIAL_WRONG, SudokuTeacher.pad(9)),
-                    soft = clashes,
-                    warning = true,
-                ),
-                accepts = { next -> next is SudokuState && next.cells == tutorialBoard(placed).cells },
-                retry = "Tap the 9 in the row of digits below.",
-                done = "Cleared.",
+                state = tutorialBoard(placed, selected = TUTORIAL_FIRST),
+                caption = "A digit that breaks a rule turns red. Put a 9 in the glowing square: it shares a " +
+                    "column and a box with a 9. Then tap 9 again to clear it.",
+                glow = { s ->
+                    when (clash.stage(s)) {
+                        -1 -> BoardHighlight(strong = setOf(TUTORIAL_WRONG), soft = clashes)
+                        0 -> BoardHighlight(strong = setOf(SudokuTeacher.pad(9)), soft = clashes)
+                        else -> BoardHighlight(strong = setOf(TUTORIAL_WRONG, SudokuTeacher.pad(9)), soft = clashes, warning = true)
+                    }
+                },
+                steps = clash.steps,
+                retry = "Tap the glowing square, then the 9, then the 9 again.",
+                done = "Cleared. Tapping the digit again takes it out.",
             ),
             TutorialFrame(
                 state = tutorialBoard(placed, selected = TUTORIAL_WRONG),
-                caption = "Not sure of a digit? Tap the pencil, then a digit, to jot it small in the cell " +
+                caption = "Not sure of a digit? Tap the pencil, then a digit, to jot it small in the square " +
                     "instead of placing it. Pencil a 5 here.",
                 highlight = BoardHighlight(
                     strong = setOf(TUTORIAL_WRONG, SudokuTeacher.NOTES_KEY, SudokuTeacher.pad(TUTORIAL_NOTED)),
                 ),
                 accepts = { next ->
-                    next is SudokuState && next.cells == tutorialBoard(placed).cells &&
+                    next is SudokuState && next.cells == done.cells &&
                         next.notes == tutorialBoard(placed, noted = mapOf(TUTORIAL_WRONG to TUTORIAL_NOTED)).notes
                 },
-                retry = "Tap the pencil first so it lights up, then the 5.",
+                retry = "Tap the glowing pencil, then the 5.",
                 done = "Penciled. Tap the pencil again to go back to placing digits.",
             ),
             TutorialFrame(
                 state = tutorialBoard(placed, selected = TUTORIAL_WRONG, noted = mapOf(TUTORIAL_WRONG to TUTORIAL_NOTED)),
                 caption = "Your turn: finish the board. Stuck? Hint shows you why. Placing a digit " +
-                    "clears the cell's notes.",
+                    "clears the square's notes.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
             ),

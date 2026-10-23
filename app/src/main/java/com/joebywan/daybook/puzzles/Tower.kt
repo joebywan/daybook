@@ -55,6 +55,7 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import kotlinx.serialization.Serializable
 
 /** Score for one submitted guess. */
@@ -334,34 +335,31 @@ object Tower : PuzzleType {
             ),
             TutorialFrame(
                 state = tutorialBoard(2, copied),
-                caption = "Your row copies guess 2. Change only slot 1, and the new score tells you about " +
-                    "that slot alone. Tap gold, then the glowing slot.",
-                highlight = BoardHighlight(strong = setOf(sw + 1, c + 0), soft = row(1)),
-                accepts = only(2, changed),
-                retry = "Tap gold below first, then the glowing slot.",
-                done = "Now your row differs from guess 2 in slot 1 only.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(2, changed),
-                caption = "A full row can be scored. Tap Submit.",
-                highlight = BoardHighlight(strong = setOf(TowerTeacher.SUBMIT_BUTTON)),
-                accepts = only(3, List(TUTORIAL_SLOTS) { -1 }),
-                retry = "Tap Submit, at the end of your row.",
+                caption = "Your row copies guess 2. Change only slot 1 and score it, and the new score tells you " +
+                    "about that slot alone. Tap gold, then the glowing slot, then Submit.",
+                // Gold and slot 1 glow until the peg is in, then Submit.
+                glow = { b ->
+                    if ((b as TowerState).current == changed) BoardHighlight(strong = setOf(TowerTeacher.SUBMIT_BUTTON))
+                    else BoardHighlight(strong = setOf(sw + 1, c + 0), soft = row(1))
+                },
+                steps = { next ->
+                    when {
+                        only(3, List(TUTORIAL_SLOTS) { -1 })(next) -> TutorialStep.DONE
+                        only(2, changed)(next) || only(2, copied)(next) -> TutorialStep.PROGRESS
+                        else -> TutorialStep.REJECT
+                    }
+                },
+                retry = "Tap gold below first, then the glowing slot, then Submit.",
                 done = "Scored: two filled pips again.",
             ),
             TutorialFrame(
                 state = tutorialBoard(3),
                 caption = "Guesses 2 and 3 differ only in slot 1 and scored the same, so slot 1 is neither " +
-                    "blue nor gold. Teal is out, so slot 1 is brown.",
+                    "blue nor gold. Teal is out, so it's brown. Tap brown, then slot 1.",
                 highlight = BoardHighlight(
-                    strong = setOf(TowerTeacher.peg(TUTORIAL_SLOTS, 1, 0), TowerTeacher.peg(TUTORIAL_SLOTS, 2, 0)),
-                    soft = setOf(p + 1, p + 2),
+                    strong = setOf(sw + 2, c + 0),
+                    soft = setOf(TowerTeacher.peg(TUTORIAL_SLOTS, 1, 0), TowerTeacher.peg(TUTORIAL_SLOTS, 2, 0)),
                 ),
-            ),
-            TutorialFrame(
-                state = tutorialBoard(3),
-                caption = "Build your next guess on what you know. Tap brown, then slot 1.",
-                highlight = BoardHighlight(strong = setOf(sw + 2, c + 0)),
                 accepts = only(3, brown),
                 retry = "Tap brown below first, then the glowing slot.",
                 done = "Slot 1 is brown.",
