@@ -46,7 +46,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -436,7 +435,8 @@ private fun PuzzleGrid(
     val ids = puzzles.map { it.id }
     val byId = puzzles.associateBy { it.id }
     var drag by remember { mutableStateOf<Drag?>(null) }
-    var tileHeight by remember { mutableIntStateOf(0) }
+    // Each row's height, from the last layout: a row is as tall as its tallest tile.
+    var rowHeights by remember { mutableStateOf(IntArray(0)) }
     val grid = remember { arrayOfNulls<LayoutCoordinates>(1) }
     BoxWithConstraints {
         val density = LocalDensity.current
@@ -446,22 +446,25 @@ private fun PuzzleGrid(
         val gap = with(density) { TileGap.roundToPx() }
         val gridW = with(density) { maxWidth.roundToPx() }
         val rows = (ids.size + columns - 1) / columns
+        fun top(row: Int) = (0 until row).sumOf { rowHeights.getOrElse(it) { 0 } + gap }
+        fun rowAt(y: Float) = (0 until rows).lastOrNull { top(it) <= y } ?: 0
 
         // The lifted tile's corner: under the finger, kept inside the grid and out from under the pinned rows.
         fun corner(d: Drag): Offset {
             val top = grid[0]?.localToRoot(Offset.Zero)?.y ?: 0f
             val p = d.finger - d.grab
-            val lowest = (rows * (tileHeight + gap) - gap - tileHeight).toFloat()
+            val tileHeight = rowHeights.getOrElse(ids.indexOf(d.id) / columns) { 0 }
+            val lowest = (top(rows - 1) + rowHeights.getOrElse(rows - 1) { 0 } - tileHeight).toFloat()
             val y = p.y.coerceIn(window.top - top, maxOf(window.top - top, window.bottom - top - tileHeight))
             return Offset(p.x.coerceIn(0f, (gridW - tileW).toFloat()), y.coerceIn(0f, maxOf(0f, lowest)))
         }
         // Where the lifted tile would land: the cell under its centre.
-        val landing by remember(columns, tileW, tileHeight, ids) {
+        val landing by remember(columns, tileW, rowHeights, ids) {
             derivedStateOf {
                 drag?.let { d ->
-                    val c = corner(d) + Offset(tileW / 2f, tileHeight / 2f)
+                    val c = corner(d) + Offset(tileW / 2f, rowHeights.getOrElse(ids.indexOf(d.id) / columns) { 0 } / 2f)
                     val col = (c.x / (tileW + gap)).toInt().coerceIn(0, columns - 1)
-                    val row = (c.y / (tileHeight + gap)).toInt().coerceIn(0, rows - 1)
+                    val row = rowAt(c.y)
                     (row * columns + col).coerceAtMost(ids.lastIndex)
                 }
             }
@@ -531,14 +534,14 @@ private fun PuzzleGrid(
             },
             modifier = Modifier
                 .onGloballyPositioned { grid[0] = it }
-                .pointerInput(ids, columns, tileW, tileHeight) {
+                .pointerInput(ids, columns, tileW, rowHeights) {
                     detectDragGesturesAfterLongPress(
                         onDragStart = { p ->
                             val col = (p.x / (tileW + gap)).toInt()
-                            val row = (p.y / (tileHeight + gap)).toInt()
+                            val row = rowAt(p.y)
                             val slot = row * columns + col
-                            val origin = Offset((col * (tileW + gap)).toFloat(), (row * (tileHeight + gap)).toFloat())
-                            if (col < columns && slot in ids.indices && p.x - origin.x < tileW && p.y - origin.y < tileHeight) {
+                            val origin = Offset((col * (tileW + gap)).toFloat(), top(row).toFloat())
+                            if (col < columns && slot in ids.indices && p.x - origin.x < tileW && p.y - origin.y < rowHeights.getOrElse(row) { 0 }) {
                                 drag = Drag(ids[slot], p - origin, p)
                                 haptics.tick()
                             }
@@ -561,11 +564,14 @@ private fun PuzzleGrid(
                     )
                 },
         ) { measurables, constraints ->
-            // Every tile as tall as the tallest, which only matters once a large font scale wraps a name.
-            val h = measurables.maxOfOrNull { it.maxIntrinsicHeight(tileW) } ?: 0
-            if (h != tileHeight) tileHeight = h
-            val placeables = measurables.map { it.measure(Constraints.fixed(tileW, h)) }
-            layout(constraints.maxWidth, maxOf(0, rows * (h + gap) - gap)) {
+            // Every tile in a row as tall as the tallest, which only matters once a name wraps. Child i is in slot i.
+            val heights = IntArray(rows) { r ->
+                (r * columns until minOf((r + 1) * columns, measurables.size)).maxOfOrNull { measurables[it].maxIntrinsicHeight(tileW) } ?: 0
+            }
+            if (!heights.contentEquals(rowHeights)) rowHeights = heights
+            val tops = IntArray(rows).also { for (r in 1 until rows) it[r] = it[r - 1] + heights[r - 1] + gap }
+            val placeables = measurables.mapIndexed { i, m -> m.measure(Constraints.fixed(tileW, heights[i / columns])) }
+            layout(constraints.maxWidth, if (rows == 0) 0 else tops.last() + heights.last()) {
                 placeables.forEachIndexed { i, p ->
                     val cell = measurables[i].layoutId as Cell
                     val held = drag
@@ -573,8 +579,11 @@ private fun PuzzleGrid(
                         val c = corner(held)
                         p.place(c.x.roundToInt(), c.y.roundToInt(), zIndex = 1f)
                     } else {
+                        // Between rows while it slides: part of the way from one row's top to the next.
                         val at = cell.at()
-                        p.place((at.x * (tileW + gap)).roundToInt(), (at.y * (h + gap)).roundToInt())
+                        val r = at.y.toInt().coerceIn(0, rows - 1)
+                        val y = tops[r] + (at.y - r) * (tops[minOf(r + 1, rows - 1)] - tops[r])
+                        p.place((at.x * (tileW + gap)).roundToInt(), y.roundToInt())
                     }
                 }
             }
