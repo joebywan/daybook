@@ -13,7 +13,7 @@ recipe. Where the two disagree on a point not listed here, the standards win.
 | Rules | Below. No timer pressure beyond the usual clock, no move limit, no lives. |
 | Answer | **Exactly one placement** (which domino on which two squares, which half where), proved exhaustively. `solved` still checks the rules, never the stored answer. |
 | Tray | Dominoes are **distinct**, drawn from the double-six set (28 dominoes, pips 0..6). "The tray has one double six" is a deduction the player may use. |
-| Input | **Tap model, no drag from the tray** (height is scarce at 375x537, and a drag is many states). Below. One placement = one state = one undo; lifting a domino is one state. |
+| Input | **Tap model, plus a drag from the tray that is a swipe** (the swipe sets the way the domino lies, so the tray never shows an upright domino: height is scarce at 375x537). Below. One placement = one state = one undo; lifting a domino is one state. |
 | Bad judgements allowed | Any placement on two empty neighbouring squares is accepted, even one that breaks a rule. Rule breaks are shown (debounced), never refused. |
 
 ## Rules
@@ -197,7 +197,7 @@ From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes
   375x537 and 390x844, phone landscape and tablet. The side-panel layout (`PlayLayout`) applies as for every board.
 - **Input:** tap a tray domino to select it (tap again to flip which half leads; the tray shows it as it will go).
   Tap an empty square, then an empty neighbour: the domino is laid with its leading half on the first square
-  (one state). A drag from a square to its neighbour does the same as the two taps. Tapping a non-neighbour moves the
+  (one state). A drag from a square to its neighbour does the same as the two taps. A drag from a tray slot (`grabTray`) carries that domino under the finger, leading half under it, and lays it across the last two free neighbouring squares the finger crossed, the leading half on the earlier one (so the swipe direction is the way it lies); let go off the board, or over a laid domino, and nothing is laid. Tapping a non-neighbour moves the
   first square there. Tap a placed domino to lift it back to its slot and select it (one state). Long-press or double-tap
   on a placed domino flips it in place (one state). No domino selected and a square tapped: select the first tray
   domino still in the tray. Gestures read the board through a cell updated on every emit (Tents' pattern; Snap's lesson).
@@ -213,7 +213,7 @@ From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes
 - **Preview:** a fixed motif (a few squares, two regions with badges, two dominoes with pips). Never calls `generate`.
 - **Walkthrough:** a hand-built tiny board (3-4 dominoes): select and lay a domino; a one-square SUM; an EQUAL region;
   lift and re-lay; a free-play frame the hints finish. As built: the player lays the 5-2 unturned, so its 5 lands on the
-  2 (their own mistake), turns it round where it lies (double tap or long press), and lays the 1-0 by a drag.
+  2 (their own mistake), turns it round where it lies (double tap or long press), and drags the 1-0 from the tray onto the = square and on to the right.
 - **Share card:** the standard grid for the play log; nothing board-specific unless it reads better.
 
 ## Tests (section 10 of the standards, plus)

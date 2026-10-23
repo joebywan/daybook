@@ -88,8 +88,8 @@ object Dominoes : PuzzleType {
         "Each coloured region has a rule. A number is the total of its pips; < and > bound the total.",
         "= means every square of the region shows the same; a crossed-out = means no two match.",
         "Squares outside a region have no rule, and a domino may cross from one region into another.",
-        "Tap a domino in the tray (again to turn it round), then two neighbouring squares, or drag from one to the other. " +
-            "Its first half goes on the first square.",
+        "Drag a domino from the tray onto a square and on into its neighbour: the way you swipe is the way it lies. " +
+            "Or tap it (again to turn it round), then two neighbouring squares. Its first half goes on the first square.",
         "Tap a laid domino to lift it; double-tap or long-press it to turn it round. Every board has one answer, found without guessing.",
     )
 
@@ -209,10 +209,10 @@ object Dominoes : PuzzleType {
             ),
             TutorialFrame(
                 state = five,
-                caption = "= wants its squares the same: only 1 is on both dominoes left, and < 2 takes the 0. Tap the 1-0, then drag from the = square to the right.",
+                caption = "= wants its squares the same: only 1 is on both dominoes left, and < 2 takes the 0. Drag the 1-0 from the tray onto the = square, then on to the right.",
                 highlight = BoardHighlight(strong = setOf(6, 7, tray + 0), soft = setOf(2, rule + 2, rule + 3)),
                 accepts = only(one),
-                retry = "Tap the glowing 1-0, then drag from the glowing = square to its right.",
+                retry = "Drag the glowing 1-0 onto the glowing = square, then on into the square to its right.",
                 done = "Both = squares will show 1, and 0 is under 2.",
             ),
             TutorialFrame(
@@ -528,6 +528,8 @@ object Dominoes : PuzzleType {
     private class Overlay(
         val pick: DominoPick = DominoPick(),
         val ghost: Pair<Int, Int>? = null,
+        /** The finger, while a domino is carried from the tray and has not yet found two squares. */
+        val carry: Offset? = null,
         val cursor: Int? = null,
         val holds: BooleanArray? = null,
         val broken: BooleanArray? = null,
@@ -718,6 +720,16 @@ object Dominoes : PuzzleType {
                 }
             }
         }
+
+        // A domino carried from the tray, its leading half under the finger, until the ghost shows where it would lie.
+        val at = overlay.carry
+        val held = pick.selected
+        if (at != null && overlay.ghost == null && held != null) {
+            val dom = s.tray[held]
+            val lead = if (pick.flipped) dom.a else dom.b
+            val other = if (pick.flipped) dom.b else dom.a
+            drawDomino(Rect(Offset(at.x - u / 2, at.y - u / 2), Size(2 * u, u)), lead, other, true, paint, alpha = 0.85f)
+        }
     }
 
     /** Where on the canvas the highlight is, for the hint popover. */
@@ -756,6 +768,7 @@ object Dominoes : PuzzleType {
         // board's: the play screen pushes an undo entry for every state it is handed.
         var pick by remember(s.open, s.tray) { mutableStateOf(DominoPick()) }
         var ghost by remember(s.open, s.tray) { mutableStateOf<Pair<Int, Int>?>(null) }
+        var carry by remember(s.open, s.tray) { mutableStateOf<Offset?>(null) }
         var cursor by remember(s.open, s.tray) { mutableStateOf<Int?>(null) }
 
         // Gestures read the board as of the last thing they emitted or were handed (Snap's and Tents' lesson),
@@ -833,6 +846,7 @@ object Dominoes : PuzzleType {
                         Overlay(
                             pick = shownPick,
                             ghost = ghost,
+                            carry = carry,
                             cursor = cursor.takeIf { interactive },
                             holds = holds,
                             broken = broken,
@@ -902,18 +916,39 @@ object Dominoes : PuzzleType {
                         .pointerInput(interactive) {
                             if (!interactive) return@pointerInput
                             var from = -1
+                            var fromTray = false
+                            fun free(b: DominoState, q: Int) = q >= 0 && b.open[q] && DominoLogic.dominoAt(b, q) < 0
                             // The overload that hands over the *down* (the web's touch slop is wide).
                             detectDragGestures(
                                 orientationLock = null,
                                 onDragStart = { down, _, _ ->
                                     settlePending()
                                     val b = latest.v
+                                    // From the tray: the domino follows the finger until it settles on a square and
+                                    // moves into a neighbour, which sets the way it lies (as a drag on the board does).
+                                    val grabbed = b.grabTray(pick, fitNow.slotAt(down.position))
+                                    fromTray = grabbed != null
+                                    if (grabbed != null) {
+                                        pick = grabbed
+                                        carry = down.position
+                                    }
                                     val q = fitNow.squareAt(down.position, b.width)
-                                    from = if (q >= 0 && b.open[q] && DominoLogic.dominoAt(b, q) < 0) q else -1
+                                    from = if (!fromTray && free(b, q)) q else -1
                                     ghost = null
                                 },
                                 onDrag = { change, _ ->
-                                    if (from >= 0) {
+                                    if (fromTray) {
+                                        change.consume()
+                                        carry = change.position
+                                        val b = latest.v
+                                        // It lies across the last two free squares the finger crossed, leading half on
+                                        // the earlier one; off the board, or over a laid domino, it is carried again.
+                                        val q = fitNow.squareAt(change.position, b.width)
+                                        if (q != from) {
+                                            ghost = if (from >= 0 && free(b, q) && DominoLogic.adjacent(b.width, from, q)) from to q else null
+                                            from = if (free(b, q)) q else -1
+                                        }
+                                    } else if (from >= 0) {
                                         change.consume()
                                         val b = latest.v
                                         val centre = fitNow.square(from % b.width, from / b.width).center
@@ -931,11 +966,13 @@ object Dominoes : PuzzleType {
                                 onDragEnd = {
                                     val g = ghost
                                     ghost = null
+                                    carry = null
                                     if (g != null) go(latest.v.dragSquares(pick, g.first, g.second))
                                     from = -1
                                 },
                                 onDragCancel = {
                                     ghost = null
+                                    carry = null
                                     from = -1
                                 },
                             )

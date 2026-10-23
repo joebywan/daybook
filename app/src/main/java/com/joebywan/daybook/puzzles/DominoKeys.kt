@@ -41,6 +41,13 @@ fun DominoState.tapTray(pick: DominoPick, k: Int): DominoMove {
     return DominoMove(DominoPick(k, false, p.first))
 }
 
+/** A drag starting on tray slot [k]: that domino in hand, keeping its turn if it was already there; null for an empty slot. */
+fun DominoState.grabTray(pick: DominoPick, k: Int): DominoPick? {
+    if (k !in tray.indices || placed[k] != null) return null
+    val p = pick.on(this)
+    return DominoPick(k, p.selected == k && p.flipped)
+}
+
 /**
  * A tap on square [q]. On a laid domino: lift it back to its slot and into the hand. On an empty
  * square: the first square, or, beside the first, lay the domino in hand (the first in the tray when
