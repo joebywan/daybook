@@ -41,6 +41,7 @@ import com.joebywan.daybook.ui.home.HomeScreen
 import com.joebywan.daybook.ui.home.LaunchMode
 import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.home.LevelsScreen
+import com.joebywan.daybook.ui.home.Welcome
 import com.joebywan.daybook.ui.play.NextKind
 import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.play.finishPraise
@@ -192,6 +193,9 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     // Same reasoning as the difficulty: a flip of the switch shows at once, not after the store answers.
     val storedShowTimer by launchPrefs.showTimer.collectAsState(initial = false)
     LaunchedEffect(Unit) { launchPrefs.settleShowTimer { store.hasPlayed() } }
+    // Null until known, so a returning player never sees a frame of the welcome and a new one never sees the grid first.
+    var welcome by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) { welcome = launchPrefs.needsWelcome { store.hasPlayed() } }
     var pickedShowTimer by remember { mutableStateOf<Boolean?>(null) }
     val showTimer = pickedShowTimer ?: storedShowTimer
     val storedPlaySound by launchPrefs.playSound.collectAsState(initial = true)
@@ -228,7 +232,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
 
     // The grid's order (PuzzleOrder). The solves are read once a day, not collected: a tile must not move under the
     // player's finger because the game they just left was solved. An empty stored order means most played first.
-    val ids = remember { PuzzleRegistry.all.map { it.id } }
+    val ids = remember { PuzzleOrder.gentlest(PuzzleRegistry.all.map { it.id }) }
     val playedBasis by produceState<List<Completion>?>(null, today) { value = store.completions.first() }
     val mostPlayed = remember(playedBasis, today) { PuzzleOrder.mostPlayed(playedBasis.orEmpty(), today, ids) }
     val storedOrder by launchPrefs.puzzleOrder.collectAsState(initial = emptyList())
@@ -271,7 +275,13 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     // On the page colour: fading two screens over the bare window would dim the middle of the fade.
     Crossfade(route, Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), animationSpec = if (reducedMotion) snap() else tween(ROUTE_FADE_MS), label = "route") { current ->
     when (current) {
-        Route.Home -> {
+        Route.Home -> when (welcome) {
+            null -> Unit
+            true -> Welcome(onStart = {
+                welcome = false
+                scope.launch { launchPrefs.setWelcomed() }
+            })
+            false -> {
             // Nothing on Android. On the web, today's boards are generated while the grid is being
             // read, so the tap that opens one does not have to wait for it; see the platform seam.
             LaunchedEffect(today, difficulty) { prepareBoards(today, difficulty) }
@@ -295,6 +305,14 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             // Handed down as a state read in the tile itself: passed as a plain set it reached the tile stale on the web
             // about half the time when it landed during the first frames (the pick kept "Try me!" over its saved game).
             val inProgress = remember { derivedStateOf { savesInProgress.mapNotNull(tileKeys::get).toSet() } }
+            // The most recently saved of them, for the "Continue" row; a key's second field is its tier (savedGameKey).
+            val resume = remember {
+                derivedStateOf {
+                    savesInProgress.firstNotNullOfOrNull { key ->
+                        PuzzleRegistry.byId(tileKeys[key] ?: return@firstNotNullOfOrNull null)?.let { it to Difficulty.fromKey(key.split('|')[1]) }
+                    }
+                }
+            }
             HomeScreen(
                 today = today,
                 completions = completions,
@@ -325,7 +343,9 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                 inProgress = { inProgress.value },
                 customOrder = customOrder.isNotEmpty(),
                 onOrder = ::setOrder,
+                resume = { resume.value },
             )
+            }
         }
 
         Route.Stats -> StatsScreen(
