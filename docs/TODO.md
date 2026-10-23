@@ -56,8 +56,6 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Achievements follow-ups.** No fanfare yet (the solve chime plays; a distinct short tone would need a second
   sample path in both platform players). The two
   registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
-- [ ] **Levels.** A third mode beside Daily and Random: numbered packs of five boards that open one after another, so
-  boards after the dailies have something to tick off (a player's feedback, 2026-10-22). Spec: `docs/LEVELS_SPEC.md`. *L.*
 - [ ] **Puzzle of the week.** A larger board once a week (e.g. Sundays), from the same `hash(date, puzzle, tier)` scheme so it
   stays offline and free; most generators already scale by size. The owner wants it argued with worked examples per puzzle that fit a
   phone screen first: Nonogram Expert is already as big as a phone allows. Decide which puzzles take part (only those whose larger
