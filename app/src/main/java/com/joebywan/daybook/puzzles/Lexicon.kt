@@ -422,7 +422,7 @@ object Lexicon : PuzzleType {
                                     val letter = guess?.get(slot) ?: if (typing) s.current.getOrNull(slot) else null
                                     val mark = guess?.let { s.marks(it)[slot] }
                                     val look = highlight.look(LexiconTeacher.tile(s.length, row, slot), dims = tilesNamed)
-                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent, Modifier.moveFeel(feel, row * s.length + slot, Color.Unspecified))
+                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent, Modifier.moveFeel(feel, row * s.length + slot, Color(accent)))
                                 }
                             }
                         }

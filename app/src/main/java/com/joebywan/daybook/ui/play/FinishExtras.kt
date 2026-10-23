@@ -2,6 +2,10 @@ package com.joebywan.daybook.ui.play
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -43,6 +47,9 @@ import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.stats.AchievementBadge
 import kotlin.math.sin
 import kotlin.random.Random
+
+/** The angle (degrees about the vertical) an earned badge flips in from. */
+private const val FLIP_FROM = 90f
 
 /** Render-harness hook (`?finish=` on the web build): when set, the finished frame shows over any board with this praise. */
 var finishPreview: Praise? = null
@@ -122,12 +129,18 @@ fun PartyPopper(modifier: Modifier = Modifier) {
  * The optional centre of the finished frame, only when this solve earned achievements: one at a time (a tap on
  * the block shows the next, wrapping round after the last), each with its badge, name and description, then the
  * "only X to go" line. Nothing otherwise (the to-go line then sits in the banner). [badge] is the badge size (smaller on a short screen).
+ * A badge flips into view when the frame first shows ([celebrate]) and as each next one is tapped to; under reduced
+ * motion it is simply there.
  */
 @Composable
-fun ResultsBlock(praise: Praise, accent: Color, badge: Dp = 84.dp) {
+fun ResultsBlock(praise: Praise, accent: Color, badge: Dp = 84.dp, celebrate: Boolean = false) {
     val scheme = MaterialTheme.colorScheme
     val items = praise.achievements
     var index by rememberSaveable { mutableIntStateOf(0) }
+    var tapped by remember { mutableStateOf(false) }
+    val still = LocalReducedMotion.current
+    val flip = remember(index) { Animatable(if (!still && (celebrate || tapped)) FLIP_FROM else 0f) }
+    LaunchedEffect(index) { flip.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow)) }
     if (items.isEmpty()) return
     Column(
         Modifier.fillMaxWidth(),
@@ -137,11 +150,14 @@ fun ResultsBlock(praise: Praise, accent: Color, badge: Dp = 84.dp) {
             val a = items[index % items.size]
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                    .then(if (items.size > 1) Modifier.clickable { index = (index + 1) % items.size } else Modifier),
+                    .then(if (items.size > 1) Modifier.clickable { tapped = true; index = (index + 1) % items.size } else Modifier),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(Modifier.height(6.dp))
-                AchievementBadge(a.id, true, Modifier.size(badge))
+                AchievementBadge(a.id, true, Modifier.size(badge).graphicsLayer {
+                    rotationY = flip.value
+                    cameraDistance = 12f * density
+                })
                 Spacer(Modifier.height(8.dp))
                 Text(a.title, style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(a.description, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 2, textAlign = TextAlign.Center)

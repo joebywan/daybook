@@ -1,6 +1,11 @@
 package com.joebywan.daybook.ui.home
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.keyframes
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.draw.drawBehind
+import kotlinx.coroutines.delay
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateOffsetAsState
 import androidx.compose.animation.core.snap
@@ -684,6 +689,7 @@ internal fun PuzzleTile(
         name = puzzle.displayName,
         accent = accent,
         solved = solved,
+        justSolved = solved && LocalJustSolved.current == puzzle.id,
         onClick = onClick,
         // Today's pick (unsolved): gold ring and sparkles, drawn inside the tile, so nothing moves.
         modifier = modifier,
@@ -697,7 +703,20 @@ internal fun PuzzleTile(
     )
 }
 
-/** The shape every home tile shares: a motif with the solved tick in its corner, a name, a footer line. */
+/**
+ * The puzzle whose board was solved on the visit to the play screen just left, handed to Home by `DaybookApp` and never
+ * stored: its tile's tick pops in and its tint fills, once (null otherwise).
+ */
+val LocalJustSolved = compositionLocalOf<String?> { null }
+
+/** How long the tick of a tile [LocalJustSolved] names takes to pop in (to 115% and back), its tint filling with it. */
+private const val POP_MS = 250
+private const val POP_DELAY_MS = 200L
+
+/**
+ * The shape every home tile shares: a motif with the solved tick in its corner, a name, a footer line. [justSolved]
+ * (the solve just made) pops the tick in and fills the tint; under reduced motion they are simply there.
+ */
 @Composable
 internal fun HomeTile(
     name: String,
@@ -706,14 +725,29 @@ internal fun HomeTile(
     onClick: () -> Unit,
     modifier: Modifier,
     frame: Modifier = Modifier,
+    justSolved: Boolean = false,
     motif: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit,
     footer: @Composable () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val still = LocalReducedMotion.current
+    // Keyed on [solved]: the record of the solve can land a moment after Home first draws.
+    val pop = remember(solved) { Animatable(if (justSolved && !still) 0f else 1f) }
+    LaunchedEffect(pop) {
+        if (pop.value < 1f) {
+            // After the fade into Home (DaybookApp's 200 ms crossfade), or it plays half hidden.
+            delay(POP_DELAY_MS)
+            pop.animateTo(1f, keyframes { durationMillis = POP_MS; 1.15f at POP_MS * 2 / 3 })
+        }
+    }
     Column(
         modifier
             .clip(RoundedCornerShape(18.dp))
-            .background(if (solved) accent.copy(alpha = 0.20f) else scheme.surface)
+            .drawBehind {
+                val t = if (solved) pop.value.coerceAtMost(1f) else 0f
+                if (t < 1f) drawRect(scheme.surface.copy(alpha = 1f - t))
+                if (t > 0f) drawRect(accent.copy(alpha = 0.20f * t))
+            }
             .then(frame)
             .clickable(onClick = onClick)
             .padding(TilePadding),
@@ -723,7 +757,7 @@ internal fun HomeTile(
             motif()
             if (solved) {
                 Box(
-                    Modifier.size(16.dp).clip(CircleShape).background(scheme.surface),
+                    Modifier.size(16.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value }.clip(CircleShape).background(scheme.surface),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Default.Check, "Solved", tint = accent, modifier = Modifier.size(11.dp))

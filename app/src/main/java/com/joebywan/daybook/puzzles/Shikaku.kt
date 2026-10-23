@@ -649,7 +649,7 @@ object Shikaku : PuzzleType {
                             Modifier
                                 .padding(start = cell * c, top = cell * r)
                                 .size(cell)
-                                .moveFeel(feel, i, Color.Unspecified)
+                                .moveFeel(feel, i, Color(accent))
                                 .padding(0.7.dp)
                                 .clip(RoundedCornerShape(3.dp))
                                 .background(owner?.fill(dark) ?: scheme.surfaceVariant),
