@@ -71,6 +71,13 @@ fun nextOptions(daily: Boolean, tier: Difficulty, doneTiers: Set<Difficulty>): L
 }
 
 /**
+ * The button the finished frame fills in: going on with the level when there is one, since that is what a level asks for;
+ * otherwise "Done"/"Home", which is the safe default on a daily or random board.
+ */
+fun mainOption(options: List<NextOption>): NextOption? =
+    options.firstOrNull { it.kind == NextKind.LEVEL } ?: options.firstOrNull { it.kind == NextKind.DONE }
+
+/**
  * The buttons for a solved board of [level]: [plan] is its boards, [solved] the puzzles solved in it, and
  * [justSolved] the board just finished (the store records it a moment after the win). "Next in level N" names
  * the first unsolved board in plan order; once all five are solved it becomes the level to go on with: the one
