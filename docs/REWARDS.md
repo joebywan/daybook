@@ -39,9 +39,16 @@ The rule is told once, under the stats calendar: "Play on 5 of any 7 days to kee
 
 `finishPraise(history, solve, today, puzzleName): Praise(title, big, lines)` is pure and tested (`FinishPraiseTest`);
 `PlayScreen` asks for it once, before `onSolved` records the solve, so `history` never contains it. Never stored.
-- **Title** replaces "Congratulations!" only for the first daily solve of *today's* date (archive days and practice
-  get none): "N day streak" (bigger and bold at 7/30/100), "Day one", or "Welcome back" after a lapse. When yesterday
-  was missed and the run goes on, the line is "You're back, and your streak is still going."
+- **Title.** The first daily solve of *today's* date (archive days and practice get none) announces the streak: "N day
+  streak" (bigger and bold at 7/30/100), "Day one", or "Welcome back" after a lapse. When yesterday was missed and the run
+  goes on, the line is "You're back, and your streak is still going." Any other solve gets a short hand-written title
+  (`finishTitle`), rarest first: the first solve of that puzzle ever "First one done.", a record at the tier "A new
+  best.", an Expert solve "Expert, cracked.", then a pool: no hints "All your own work." / "Worked it out." / "Clear
+  thinking.", with hints "Nicely done." / "Well solved." / "Lovely work." / "There it is." / "Neatly done." / "That's
+  the one.". The pool line is picked by a hash of the day, puzzle id and tier written out in the code (never `Random`,
+  never `String.hashCode`), so a solve always reads the same and a rotation cannot change it. Every title is at most
+  `TITLE_MAX` (18) characters, which fits the banner between its poppers at 360dp. "Congratulations!" is left only for a
+  frame nobody judged (a reopened solved board). A level's fifth board says "Level N done".
 - **One line** beneath, in priority order: fastest at this tier (strictly faster than a non-empty tier history; a tie is
   not a record), perseverance (>= 10 min, or >= 2x the tier's median with 5+ solves and >= 4 min), "Faster than N%
   of your own solves" (5+ solves, N rounded down, shown from 75), hints (praise, never a count: the technique ids in
@@ -81,6 +88,13 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
   confetti for the first daily solve of today, an Expert solve, a personal record, a streak milestone (7, 30, 100) or an
   earned achievement; any other solve gets a light flourish, 14 pieces for 1.2 s. A frame with no verdict (the render
   hook) is full. The banner and poppers are the same either way.
+- **The solving move** runs one wave of the board's accent across every square in reading order (350 ms, `SOLVE_WAVE_MS` in
+  `ui/MoveFeel.kt`), and the frame and the confetti wait that long before they show. Not when the board was already solved
+  when it opened, and not under reduced motion (then the frame shows at once).
+- **Milestones move** the first time the frame shows (as the confetti plays, so not on a rotation or once it has finished):
+  an extended streak counts up in the title, from 1 to its new length over 600 ms, drawn over the final title's own box so the
+  banner does not change width; at 7/30/100 the title stamps in from 130% with a small spring settle; an earned badge flips in
+  about its vertical axis (as does each next badge tapped to). Under reduced motion: the final values at once.
 - **Confetti** (`Confetti`): 70 pieces on a Canvas over the whole screen, ~2 s, once per finish (`confettiPlayed` is
   `rememberSaveable`, so a rotation does not replay it), takes no input. Not drawn at all under the system's reduced motion
   (`LocalReducedMotion`, below); the Sound switch governs the chime only. No emoji: the web build has no emoji font.
@@ -164,7 +178,15 @@ would rather let people rearrange than hide.
   piece; a Dominoes region keeping its rule; a full Sand tube; a found Word Wheel word; an Atoms atom with all its bonds)
   has a soft band of the puzzle's accent run along it once (400 ms, at most 35%). Only a move fires it (`LocalMoveCount`,
   raised by `PlayScreen.push`): a board loaded, restarted, undone into a finished unit or shown in the walkthrough stays
-  quiet. Draw phase only; nothing moves or resizes. Boards left out: `docs/TODO.md`.
+  quiet. An Undo (`LocalUndoCount`, raised by `PlayScreen.undo` when it takes something back) dips the squares it changed to
+  92% and eases them back over the same 120 ms: the reverse of the settle (what was taken back is already gone, so it is the
+  square that dips, not the old mark that shrinks). The move that solves (`LocalSolveCount`) runs the solve wave above. A
+  board's squares fade in, staggered in reading order, over 250 ms when it first shows on the play screen
+  (`LocalBoardArrives`, from a `rememberSaveable` flag, so not on a rotation, an undo, a restart or coming back from the
+  walkthrough). Draw phase only; nothing moves or resizes. Boards left out: `docs/TODO.md`.
+- **Home acknowledges the solve.** Back on Home after a solve, that tile's tick pops in (0 to 115% to 100%, 250 ms) and its
+  tint fills with it, once: `DaybookApp` hands the puzzle id to Home as `LocalJustSolved` (never stored) and clears it when
+  Home goes away. Under reduced motion the tick and tint are simply there.
 - **Haptics** (`rememberHaptics`, `LocalHaptics`): `tick` when a push changes the board (the same test as the play log's
   move: a selection or a typed letter is silent), `bump` for a Pointers bump or a wrong Sets pick, `success` on a solve
   beside the chime (the solving move does not tick as well). Android uses `performHapticFeedback` (CLOCK_TICK; REJECT and
