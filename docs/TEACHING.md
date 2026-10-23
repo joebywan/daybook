@@ -27,6 +27,9 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the
   panel confirms and clears when `isReached` sees it. Only an explicit "Show me" applies it. **One
   hint is counted per deduction opened**; explaining and Show me are free.
+- **Working it out rings the chime** (owner's request): when the player makes a hint's move themselves, the confirm plays
+  the solve chime (`WatchHint`'s `onReached`, the play screen's and free play's `LocalChime`), muted by the Sound switch.
+  "Show me" clears without confirming, so it never rings, and a move that solves the board has only the solve's own chime.
 - The panel is a **popover over the play screen** (`HintPopover`), not a slot in its column, so the
   board's box is the whole of the space between header and toolbar and never changes size: not when
   a hint opens, not for the first-visit offer, not on solve. (A reserved slot did the opposite: a

@@ -111,7 +111,7 @@ fun TutorialRunner(
     }
 
     if (frame.freePlay) {
-        WatchHint(hints, puzzle, board)
+        WatchHint(hints, puzzle, board, onReached = chime)
         LaunchedEffect(board.solved) {
             if (board.solved) {
                 hints.clear()

@@ -239,9 +239,12 @@ fun rememberHintSession(key: Any?): HintSession =
  *   text and glow for a different square they never asked about would be more surprising than one
  *   that steps aside. No new hint is opened or charged; the next tap of Hint reasons afresh.
  * - After a rotation, the hint that was open is rebuilt from the board, at the stage it had.
+ *
+ * [onReached] runs when the player makes the hint's move themselves (the chime, as a reward for working it out). "Show me"
+ * clears the hint without confirming, so it never rings; nor does a move that solves the board, which has its own chime.
  */
 @Composable
-fun WatchHint(session: HintSession, puzzle: PuzzleType, state: PuzzleState) {
+fun WatchHint(session: HintSession, puzzle: PuzzleType, state: PuzzleState, onReached: () -> Unit = {}) {
     val board by rememberUpdatedState(state)
     LaunchedEffect(session.restoring) {
         if (session.restoring == null) return@LaunchedEffect
@@ -259,6 +262,7 @@ fun WatchHint(session: HintSession, puzzle: PuzzleType, state: PuzzleState) {
                 return@LaunchedEffect
             }
             session.confirm()
+            if (!state.solved) onReached()
         }
         delay(CONFIRM_MS)
         session.clear()
