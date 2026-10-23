@@ -62,7 +62,7 @@ import kotlinx.datetime.plus
 private const val DAY_DATE = "EEE d MMM yyyy"
 
 /** The tier buttons' row: a label and a reserved second line ("in progress"), so picking a day never moves anything. */
-private val TIER_ROW = 56.dp
+private val TIER_ROW = 60.dp
 /** The selected day's date line above the tier buttons. */
 private val DATE_LINE = 28.dp
 /** The month bar (its arrows are 48 dp touch targets) and the weekday letters. */
@@ -249,7 +249,7 @@ private fun DayCell(
     }
 }
 
-/** The selected day and its three tiers, each 56 dp tall; before a day is picked, a prompt in the same room. */
+/** The selected day and its three tiers, each 60 dp tall; before a day is picked, a prompt in the same room. */
 @Composable
 private fun TierPanel(
     day: LocalDate?,
@@ -273,15 +273,14 @@ private fun TierPanel(
             if (day != null) Difficulty.entries.forEach { difficulty ->
                 val isSolved = solved(difficulty)
                 val ink = if (isSolved) accent else scheme.onSurfaceVariant
-                Column(
+                Box(
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(10.dp))
                         .background(if (isSolved) accent.copy(alpha = 0.22f) else scheme.surfaceVariant)
                         .clickable { onPlay(difficulty) },
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    contentAlignment = Alignment.Center,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isSolved) {
@@ -290,12 +289,15 @@ private fun TierPanel(
                         }
                         Text(difficulty.label, style = MaterialTheme.typography.labelLarge, color = ink)
                     }
-                    // Always laid out, so a save appearing never moves the label.
-                    Text(
-                        if (!isSolved && difficulty in started) "in progress" else "",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = ink,
-                    )
+                    // Under the centred label, in room kept for it, so a save appearing never moves the label.
+                    if (!isSolved && difficulty in started) {
+                        Text(
+                            "in progress",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ink,
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp),
+                        )
+                    }
                 }
             }
         }
