@@ -228,18 +228,6 @@ class MosaicOptimumTest {
     private fun replay(board: MosaicState, line: List<MosaicMove>): MosaicState =
         line.fold(board) { acc, move -> acc.flood(move.cell, move.colour) }
 
-    /** One cell out of each area on the board. */
-    private fun areaCells(board: MosaicState): List<Int> {
-        val seen = BooleanArray(board.cells.size)
-        val out = mutableListOf<Int>()
-        for (cell in board.cells.indices) {
-            if (seen[cell]) continue
-            out += cell
-            for (member in board.area(cell)) seen[member] = true
-        }
-        return out
-    }
-
     /**
      * Every fill the player could make: each area, each colour but the one it already wears.
      *
@@ -317,4 +305,16 @@ class MosaicOptimumTest {
         /** Wide enough for an Expert refutation, small enough that a runaway test still ends. */
         const val BUDGET = 4_000_000
     }
+}
+
+/** One cell out of each area on the board (also used by `MosaicFloodTest`). */
+internal fun areaCells(board: MosaicState): List<Int> {
+    val seen = BooleanArray(board.cells.size)
+    val out = mutableListOf<Int>()
+    for (cell in board.cells.indices) {
+        if (seen[cell]) continue
+        out += cell
+        for (member in board.area(cell)) seen[member] = true
+    }
+    return out
 }

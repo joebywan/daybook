@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.core.arrowStep
+import com.joebywan.daybook.core.stepCursor
 
 /** What a physical key asks of a Sudoku board. No state, no focus: that is [sudokuKeyAction]'s whole job. */
 sealed interface SudokuKeyAction {
@@ -26,11 +28,7 @@ fun sudokuKeyAction(key: Key): SudokuKeyAction? = when (key) {
     Key.Eight, Key.NumPad8 -> SudokuKeyAction.Digit(8)
     Key.Nine, Key.NumPad9 -> SudokuKeyAction.Digit(9)
     Key.Zero, Key.NumPad0, Key.Backspace, Key.Delete -> SudokuKeyAction.Clear
-    Key.DirectionUp -> SudokuKeyAction.Move(-1, 0)
-    Key.DirectionDown -> SudokuKeyAction.Move(1, 0)
-    Key.DirectionLeft -> SudokuKeyAction.Move(0, -1)
-    Key.DirectionRight -> SudokuKeyAction.Move(0, 1)
-    else -> null
+    else -> arrowStep(key)?.let { (r, c) -> SudokuKeyAction.Move(r, c) }
 }
 
 /**
@@ -58,9 +56,7 @@ fun SudokuState.applyKey(action: SudokuKeyAction, notesMode: Boolean): SudokuSta
     val next = when (action) {
         is SudokuKeyAction.Move -> {
             if (at == null) return select(0)
-            val row = (at / 9 + action.dRow).coerceIn(0, 8)
-            val col = (at % 9 + action.dCol).coerceIn(0, 8)
-            select(row * 9 + col)
+            select(stepCursor(at, action.dRow, action.dCol, 9, 9))
         }
         is SudokuKeyAction.Digit -> if (at == null) this else enter(at, action.digit, notesMode)
         SudokuKeyAction.Clear -> if (at == null) this else clearCell(at)

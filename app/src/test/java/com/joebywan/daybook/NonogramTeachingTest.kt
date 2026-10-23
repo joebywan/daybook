@@ -46,26 +46,6 @@ class NonogramTeachingTest {
             else if (s.solution[it] == '1') NonogramLogic.FILLED else NonogramLogic.CROSSED
         }))
 
-    /** What every layout of [clue] consistent with [marks] agrees on, by trying all 2^n lines. */
-    private fun bruteForced(clue: List<Int>, marks: IntArray): IntArray? {
-        val n = marks.size
-        val fits = (0 until (1 shl n)).filter { mask ->
-            val line = List(n) { mask shr it and 1 == 1 }
-            NonogramOracle.runsOf(line) == clue && (0 until n).all {
-                marks[it] == NonogramLogic.UNKNOWN || (marks[it] == NonogramLogic.FILL) == line[it]
-            }
-        }
-        if (fits.isEmpty()) return null
-        return IntArray(n) { x ->
-            if (marks[x] != NonogramLogic.UNKNOWN) NonogramLogic.UNKNOWN
-            else when {
-                fits.all { it shr x and 1 == 1 } -> NonogramLogic.FILL
-                fits.none { it shr x and 1 == 1 } -> NonogramLogic.CROSS
-                else -> NonogramLogic.UNKNOWN
-            }
-        }
-    }
-
     // ---- soundness on real boards ---------------------------------------------------------------
 
     @Test
@@ -227,7 +207,7 @@ class NonogramTeachingTest {
                 val marks = IntArray(at.size) {
                     when (s.cells[at[it]]) { '#' -> NonogramLogic.FILL; 'x' -> NonogramLogic.CROSS; else -> NonogramLogic.UNKNOWN }
                 }
-                val want = bruteForced(clue, marks)!!
+                val want = NonogramOracle.bruteForced(clue, marks)!!
                 val wantFills = at.filterIndexed { x, _ -> want[x] == NonogramLogic.FILL }
                 val wantCrosses = at.filterIndexed { x, _ -> want[x] == NonogramLogic.CROSS }
                 when (step.technique) {
