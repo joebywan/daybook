@@ -56,6 +56,12 @@ from a measurement or review, so you can check it is still true.
   operations still on the board at the finish (not only those that build the target); both are simple readings the owner may
   want changed (`ui/play/ShareCard.kt`).
 
+- [ ] **Rate link: check on a phone.** Settings ends with a row that opens Google Play's page for a Play install, or
+  GitHub for any other install and on the web (`ui/settings/RateRow.kt`, `rememberRateLink` in both platform files). It was
+  compiled by CI only. Check a Play install opens the Play Store app, and a sideloaded or F-Droid install opens GitHub in
+  the browser. A one-time nudge on the finish frame (say after the tenth solve) would bring more ratings than a settings
+  row, but the finish frame is settled UX, so that is the owner's call. *S.*
+
 ## Rewards
 
 Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) 5 (calendar) and 6 (daily variety) are done; the rest are separate PRs.

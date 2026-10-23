@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.SOLVE_SOUND_NOTE
 import com.joebywan.daybook.platform.VIBRATION_NOTE
+import com.joebywan.daybook.platform.rememberRateLink
 import com.joebywan.daybook.ui.home.SegmentedControl
 import com.joebywan.daybook.ui.theme.Appearance
 
@@ -50,6 +51,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val rateLink = rememberRateLink()
 
     Column(
         Modifier
@@ -99,6 +101,7 @@ fun SettingsScreen(
             }
             item { AppearanceChoice(appearance, onAppearance) }
             item { PuzzleOrderRow(customOrder, onArrange) }
+            if (rateLink != null) item { RateRow(rateLink) }
             item { Credits() }
         }
     }

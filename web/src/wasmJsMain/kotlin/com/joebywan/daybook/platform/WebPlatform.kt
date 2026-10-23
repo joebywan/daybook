@@ -45,6 +45,8 @@ import com.joebywan.daybook.core.SolveTone
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.Haptics
+import com.joebywan.daybook.ui.settings.GITHUB_URL
+import com.joebywan.daybook.ui.settings.RateLink
 import com.joebywan.daybook.ui.theme.withFamily
 import com.joebywan.daybook.web.Backup
 import com.joebywan.daybook.web.WebStores
@@ -553,4 +555,17 @@ private fun vibratePattern(): Unit = js("navigator.vibrate && navigator.vibrate(
 @Composable
 fun rememberHaptics(enabled: Boolean): Haptics = remember(enabled) {
     if (!enabled) Haptics.None else Haptics(tick = { vibrate(8) }, bump = { vibrate(50) }, success = { vibratePattern() })
+}
+
+/** The web has no store to rate in, so the link is a star on GitHub. */
+@Composable
+fun rememberRateLink(): RateLink? {
+    val uri = LocalUriHandler.current
+    return remember(uri) {
+        RateLink(
+            title = "Star Daybook on GitHub",
+            detail = "Daybook is open source. If it has earned it, a star on GitHub helps other puzzlers find it.",
+            open = { uri.openUri(GITHUB_URL) },
+        )
+    }
 }
