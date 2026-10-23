@@ -621,6 +621,11 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   a commit or a remote. No `Co-Authored-By: Claude` trailer.
 - Push to `main` builds a signed APK and publishes a GitHub Release automatically. It runs the unit tests again unless
   `ci.yml` already passed the identical source tree (its `tested-tree-<sha>` artifact); a different tree is always tested.
+- **Versions are `<version.txt>.<run number>`, so 1.x.y.** The last number is the CI run and rises on its own: fixes,
+  tuning and docs leave `version.txt` alone. **A change that adds a feature a player would notice (a new puzzle, a new
+  kind of help or setting) bumps the middle number in `version.txt` in the same PR** (`1.0` to `1.1`). The first number
+  moves only when the owner says so. `versionCode` is the run number whatever the name says, so Play and F-Droid never
+  depend on the bump; it went unbumped at `0.1` for 150 releases before this rule was written down.
 - **That release now reaches Google Play automatically, so a merge to `main` ships.** After the GitHub
   Release is made, `release.yml` calls `publish-play.yml`, which uploads the signed `.aab` and rolls it
   out to everyone on the `production` track (full rollout, not staged: nobody would raise a staged
