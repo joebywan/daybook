@@ -155,7 +155,7 @@ would rather let people rearrange than hide.
 ## Welcome (`ui/home/Welcome.kt`)
 
 One calm screen shown in place of the grid, once, to a new player: one line on what Daybook is (new boards every day, free,
-no ads, no account, offline), then four pointers with small icons: today's pick and the walkthrough under "How to play";
+no ads, no account, offline), then four pointers with small icons: today's pick and the one-minute walkthrough under "How to play";
 Daily / Levels / Random and the three tiers; the archive, stats and achievements buttons; press and hold to move a puzzle.
 One button, Start. No question, no pages, nothing drawn over the grid (the owner's call). `LaunchPreferences.needsWelcome`:
 only when the launch file has no `welcomed` key and `ProgressStore.hasPlayed()` is false (the timer default's rule); a
