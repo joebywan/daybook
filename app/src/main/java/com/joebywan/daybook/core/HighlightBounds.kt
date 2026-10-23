@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.toSize
 
 /**
  * Where on screen the current [BoardHighlight] is, so the hint popover can stay off it.
@@ -36,9 +37,7 @@ class HighlightBounds {
 
     /** The union of everything reported, in window coordinates, or null when nothing is. */
     val rect: Rect?
-        get() = parts.values.reduceOrNull { a, b ->
-            Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom))
-        }
+        get() = parts.values.reduceOrNull(Rect::union)
 
     private val keep = mutableStateMapOf<Any, Rect>()
 
@@ -53,6 +52,10 @@ class HighlightBounds {
         if (rect == null) parts.remove(key) else if (parts[key] != rect) parts[key] = rect
     }
 }
+
+/** The smallest rectangle holding both. */
+infix fun Rect.union(other: Rect): Rect =
+    Rect(minOf(left, other.left), minOf(top, other.top), maxOf(right, other.right), maxOf(bottom, other.bottom))
 
 /** Null where nothing is listening (the walkthrough), in which case boards report nothing. */
 val LocalHighlightBounds = staticCompositionLocalOf<HighlightBounds?> { null }
@@ -91,7 +94,7 @@ fun Modifier.highlightGrid(cols: Int, rows: Int): Modifier = reportHighlight { s
     for (i in highlight.strong + highlight.soft) {
         if (i < 0 || i >= cols * rows) continue
         val cell = Rect(Offset((i % cols) * w, (i / cols) * h), Offset((i % cols + 1) * w, (i / cols + 1) * h))
-        out = out?.let { Rect(minOf(it.left, cell.left), minOf(it.top, cell.top), maxOf(it.right, cell.right), maxOf(it.bottom, cell.bottom)) } ?: cell
+        out = out?.union(cell) ?: cell
     }
     out
 }
@@ -111,6 +114,6 @@ fun Modifier.keepClear(): Modifier = composed {
     val key = remember { Any() }
     DisposableEffect(sink) { onDispose { sink.setKeepClear(key, null) } }
     this.onGloballyPositioned {
-        if (it.isAttached) sink.setKeepClear(key, Rect(it.positionInWindow(), Offset(it.positionInWindow().x + it.size.width, it.positionInWindow().y + it.size.height)))
+        if (it.isAttached) sink.setKeepClear(key, Rect(it.positionInWindow(), it.size.toSize()))
     }
 }

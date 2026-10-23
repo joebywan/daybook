@@ -163,17 +163,8 @@ class KingsRulesTest {
         }
     }
 
-    /**
-     * A 5x5 board with room to break one rule at a time. The regions cut across rows and columns,
-     * so a check that stood a row in for the region would still fail here.
-     */
-    private val regions = listOf(
-        0, 0, 1, 1, 1,
-        0, 0, 1, 1, 1,
-        2, 2, 2, 3, 3,
-        2, 4, 4, 3, 3,
-        4, 4, 4, 3, 3,
-    )
+    /** A 5x5 board with room to break one rule at a time ([KINGS_CROSS_REGIONS]). */
+    private val regions = KINGS_CROSS_REGIONS
 
     private fun board(kings: Set<Int>) = KingsState(
         size = 5,

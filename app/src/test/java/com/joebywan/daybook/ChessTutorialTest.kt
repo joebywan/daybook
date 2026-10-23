@@ -1,5 +1,6 @@
 package com.joebywan.daybook
 
+import com.joebywan.daybook.ChessNaiveMate.attack
 import com.joebywan.daybook.puzzles.ChessPosition
 import com.joebywan.daybook.puzzles.ChessRules
 import com.joebywan.daybook.puzzles.ChessState
@@ -13,7 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The Mate walkthrough: gestures, captions, and an independent proof (its own plain minimax, nothing from
+ * The Mate walkthrough: gestures, captions, and an independent proof ([ChessNaiveMate], nothing from
  * `forcedMate`) that every walkthrough position has one forced mate, every defence to it is mated, and a walk
  * that always plays the proved key finishes without a mistake.
  */
@@ -25,32 +26,9 @@ class ChessTutorialTest {
     private fun uci(p: ChessPosition, san: String) =
         ChessRules.legalMoves(p).first { ChessRules.san(p, it) == san }.let(ChessRules::uci)
 
-    // ---- independent minimax (shortest forced mate, attacker moves; stalemate is not mate) ----
-
-    private fun attack(p: ChessPosition, d: Int): Int? {
-        var best: Int? = null
-        for (m in ChessRules.legalMoves(p)) {
-            val v = afterAttack(ChessRules.play(p, m), d)
-            if (v != null && (best == null || v < best)) best = v
-        }
-        return best
-    }
-
-    private fun afterAttack(c: ChessPosition, d: Int): Int? {
-        val replies = ChessRules.legalMoves(c)
-        if (replies.isEmpty()) return if (ChessRules.inCheck(c)) 1 else null
-        if (d <= 1) return null
-        var worst = 0
-        for (r in replies) worst = maxOf(worst, attack(ChessRules.play(c, r), d - 1) ?: return null)
-        return worst + 1
-    }
-
     /** Every first move (as UCI) that mates in exactly [n], or empty when [n] is not the shortest. */
-    private fun keys(p: ChessPosition, n: Int): List<String> {
-        val v = ChessRules.legalMoves(p).map { it to afterAttack(ChessRules.play(p, it), n) }
-        if (v.mapNotNull { it.second }.minOrNull() != n) return emptyList()
-        return v.filter { it.second == n }.map { ChessRules.uci(it.first) }
-    }
+    private fun keys(p: ChessPosition, n: Int): List<String> =
+        ChessNaiveMate.naive(p, n)?.takeIf { it.inMoves == n }?.keys ?: emptyList()
 
     private val positions = listOf(
         ChessTutorial.BACK_RANK to 1, ChessTutorial.LADDER to 2, ChessTutorial.PROMOTION to 1, ChessTutorial.FREE to 2,

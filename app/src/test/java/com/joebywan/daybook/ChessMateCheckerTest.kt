@@ -1,5 +1,6 @@
 package com.joebywan.daybook
 
+import com.joebywan.daybook.ChessNaiveMate.naive
 import com.joebywan.daybook.puzzles.ChessPosition
 import com.joebywan.daybook.puzzles.ChessRules
 import org.junit.Assert.assertEquals
@@ -7,44 +8,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * An independent mate-in-N checker: plain full-width minimax. No move ordering, no "only checks can mate" shortcut,
+ * An independent mate-in-N checker: plain full-width minimax ([ChessNaiveMate]). No move ordering, no "only checks can mate" shortcut,
  * no early exit, no node budget; it computes the exact shortest forced mate (in the attacker's moves) of every
  * first move and takes the minimum. It shares only the perft-verified move generator with the prover, so the
  * two cannot share a blind spot in the search (ordering, pruning, depth bookkeeping, key lists).
  */
 class ChessMateCheckerTest {
     private fun pos(fen: String) = ChessPosition.fromFen(fen)
-
-    /** Shortest mate length (attacker moves, at most [d]) when the attacker moves, or null. */
-    private fun attack(p: ChessPosition, d: Int): Int? {
-        var best: Int? = null
-        for (m in ChessRules.legalMoves(p)) {
-            val v = afterAttack(ChessRules.play(p, m), d)
-            if (v != null && (best == null || v < best)) best = v
-        }
-        return best
-    }
-
-    /** The defender is to move after an attacker move that already used one of the [d] moves. */
-    private fun afterAttack(c: ChessPosition, d: Int): Int? {
-        val replies = ChessRules.legalMoves(c)
-        if (replies.isEmpty()) return if (ChessRules.inCheck(c)) 1 else null // stalemate is not mate
-        if (d <= 1) return null
-        var worst: Int? = 0
-        for (r in replies) {
-            val v = attack(ChessRules.play(c, r), d - 1)
-            worst = if (v == null || worst == null) null else maxOf(worst, v)
-        }
-        return worst?.plus(1)
-    }
-
-    private class Naive(val inMoves: Int, val keys: List<String>)
-
-    private fun naive(p: ChessPosition, n: Int): Naive? {
-        val vals = ChessRules.legalMoves(p).map { it to afterAttack(ChessRules.play(p, it), n) }
-        val shortest = vals.mapNotNull { it.second }.minOrNull() ?: return null
-        return Naive(shortest, vals.filter { it.second == shortest }.map { ChessRules.uci(it.first) })
-    }
 
     private fun agree(fen: String, n: Int, expectN: Int?) {
         val p = pos(fen)

@@ -4,7 +4,7 @@ Moved out of CLAUDE.md. Read before touching `web/`, the platform seam, or anyth
 
 
 The whole app — all puzzles, home, play, archive, stats, walkthroughs, saves — in a
-browser, via Compose Multiplatform 1.12.1 on Kotlin/Wasm (`wasmJs`) with the repo's Kotlin 2.4.20.
+browser, via Compose Multiplatform on Kotlin/Wasm (`wasmJs`) with the repo's Kotlin (versions in `gradle/libs.versions.toml`).
 Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for WasmGC.
 
 ### How it is put together
@@ -80,7 +80,7 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   arrow would fall back (the system font on Android, the bundled arrows on the web). A new non-Latin-1
   character in a string needs the web fonts re-cut; check any non-ASCII glyph by rendering it. Board glyphs
   drawn with their own `TextStyle` (Sudoku, Snap, Nonogram, ...) name no family and are still the default font.
-- The Material icons: `compose.materialIconsExtended` costs 4.5 KB of wasm (<1 KB gzipped) over the
+- The Material icons: JetBrains' `material-icons-extended` (`libs.jb.compose.material.icons.extended`) costs 4.5 KB of wasm (<1 KB gzipped) over the
   core set, because Kotlin/Wasm drops every unreferenced icon.
 
 ### Building, serving, testing
@@ -103,9 +103,9 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
 - **Parity:** `DAYBOOK_PARITY_DUMP=<file> ./gradlew :app:testDebugUnitTest --tests
   '*WebParityDumpTest*'` writes the JVM's year in the same order; strip `RANGE ` from the page's
   lines and the files must be identical. The same file, taken before and after a change, is how
-  Android boards are proved unchanged. `WebParityTest`, `LitsWebParityTest`,
-  `MosaicAtomsWebParityTest`, `WebParityShikakuSnapSudokuTest` and
-  `WebParityMamboPipesSetsTowerTest` pin a few boards per puzzle outright. For LITS alone,
+  Android boards are proved unchanged. `WebParityTest` (Kings, and the shared `PARITY_DATES`),
+  `MosaicAtomsWebParityTest`, `WebParityShikakuSnapSudokuTest`, `WebParityMamboPipesSetsTowerTest` and one
+  `<Puzzle>WebParityTest` for each later puzzle pin a few boards per puzzle outright. For LITS alone,
   `DAYBOOK_LITS_DUMP=<file>` (`DAYBOOK_LITS_DAYS`, default 730) runs `LitsYearDumpTest`: the same
   lines over two years plus per-board JVM times in `<file>.times`.
 
@@ -117,7 +117,7 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   (12,045 boards) takes 30 s in Chromium and 40 s in WebKit on a 32-core machine, 36 s and 49 s pinned
   to 4 cores, so there is no short-range variant. `WebParityDumpTest` takes `DAYBOOK_PARITY_DAYS`
   (default 365) for a quicker local look. CI wires it as the composite action
-  `.github/actions/web-parity`, used twice: by the `web-parity` job in `ci.yml` (a required check beside `build`; it always runs, and passes at once when the change touches nothing that could alter a board: app/src/main, web/, Gradle files, the parity tools or ci.yml) and by `pages.yml`, between building the dist and uploading it, so a divergence that got past review stops the deploy. Renovate's dispatched CI runs post a `web-parity` commit status as they do `build`. The dump test must be run with
+  `.github/actions/web-parity`, used twice: by the `web-parity` job in `ci.yml` (a required check beside `build`; it always runs, and passes at once when the change touches nothing that could alter a board: app/src/main, web/, Gradle files, the parity tools, `WebParityDumpTest` or ci.yml) and by `pages.yml`, between building the dist and uploading it, so a divergence that got past review stops the deploy. Renovate's dispatched CI runs post a `web-parity` commit status as they do `build`. The dump test must be run with
   `--rerun` (the env var is not a Gradle input; a cached test would write no file). Playwright's own
   console errors are not failures (headless WebKit complains about WebGL); a `pageerror`, a crash or
   no `DUMP DONE` is.

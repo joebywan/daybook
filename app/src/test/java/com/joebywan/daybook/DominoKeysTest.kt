@@ -52,7 +52,7 @@ class DominoKeysTest {
         assertEquals(1, first.pick.first)
         val laid = s.tapSquare(first.pick, 5)
         assertEquals(Placement(5, 1), laid.board!!.placed[2])
-        assertEquals(s.moves + 1, laid.board!!.moves)
+        assertEquals(s.moves + 1, laid.board.moves)
         assertEquals(DominoPick(), laid.pick)
         // Turned, the 2 leads.
         val laid2 = s.tapSquare(s.tapSquare(turned.pick, 1).pick, 5)
@@ -77,7 +77,7 @@ class DominoKeysTest {
         val lifted = laid.tapSquare(DominoPick(), 5)
         assertNull(lifted.board!!.placed[2])
         assertEquals(DominoPick(2), lifted.pick)
-        assertEquals(laid.moves + 1, lifted.board!!.moves)
+        assertEquals(laid.moves + 1, lifted.board.moves)
         val flipped = laid.flipAt(DominoPick(), 1)
         assertEquals(Placement(5, 1), flipped.board!!.placed[2])
         assertNull("nothing to turn on an empty square", laid.flipAt(DominoPick(), 0).board)

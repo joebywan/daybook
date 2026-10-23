@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.arrowStep
+import com.joebywan.daybook.core.stepCursor
 
 /** What a physical key asks of an Inequality board. No state, no focus. */
 sealed interface InequalityKeyAction {
@@ -39,10 +40,7 @@ fun InequalityState.enter(cell: Int, digit: Int): InequalityState =
 fun InequalityState.applyKey(action: InequalityKeyAction): InequalityState? {
     val at = selected
     val next = when (action) {
-        is InequalityKeyAction.Move -> {
-            if (at == null) return select(0)
-            select((at / size + action.dRow).coerceIn(0, size - 1) * size + (at % size + action.dCol).coerceIn(0, size - 1))
-        }
+        is InequalityKeyAction.Move -> if (at == null) return select(0) else select(stepCursor(at, action.dRow, action.dCol, size, size))
         is InequalityKeyAction.Digit -> if (at == null) this else enter(at, action.digit)
         InequalityKeyAction.Clear -> if (at == null) this else withCell(at, 0)
     }

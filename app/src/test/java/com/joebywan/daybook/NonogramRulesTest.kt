@@ -80,26 +80,6 @@ class NonogramRulesTest {
 
     // ---- the line solver ----------------------------------------------------------------------
 
-    /** What every layout of [clue] consistent with [marks] agrees on, by trying all 2^n lines. */
-    private fun bruteForced(clue: List<Int>, marks: IntArray): IntArray? {
-        val n = marks.size
-        val fits = (0 until (1 shl n)).filter { mask ->
-            val line = List(n) { mask shr it and 1 == 1 }
-            NonogramOracle.runsOf(line) == clue && (0 until n).all {
-                marks[it] == NonogramLogic.UNKNOWN || (marks[it] == NonogramLogic.FILL) == line[it]
-            }
-        }
-        if (fits.isEmpty()) return null
-        return IntArray(n) { x ->
-            if (marks[x] != NonogramLogic.UNKNOWN) NonogramLogic.UNKNOWN
-            else when {
-                fits.all { it shr x and 1 == 1 } -> NonogramLogic.FILL
-                fits.none { it shr x and 1 == 1 } -> NonogramLogic.CROSS
-                else -> NonogramLogic.UNKNOWN
-            }
-        }
-    }
-
     @Test
     fun `the line solver agrees with brute force on every clue of a short line under random marks`() {
         val rng = com.joebywan.daybook.core.Rng(77)
@@ -119,7 +99,7 @@ class NonogramRulesTest {
                         }
                     }
                     if (rng.nextInt(10) == 0) marks[rng.nextInt(n)] = if (rng.nextBoolean()) NonogramLogic.FILL else NonogramLogic.CROSS
-                    val want = bruteForced(clue, marks)
+                    val want = NonogramOracle.bruteForced(clue, marks)
                     val got = NonogramLogic.forced(clue, marks)
                     if (want == null) assertNull("clue $clue marks ${marks.toList()}", got)
                     else assertEquals("clue $clue marks ${marks.toList()}", want.toList(), got!!.toList())
