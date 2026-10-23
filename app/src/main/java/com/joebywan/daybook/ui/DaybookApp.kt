@@ -354,6 +354,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                 resume = { resume.value },
             )
             }
+            }
         }
 
         Route.Stats -> StatsScreen(
