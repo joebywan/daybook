@@ -311,11 +311,13 @@ class ProgressStore(private val store: KeyValueStore) {
      * Which of [keys] hold a game in progress: saved, unsolved and with a move made, the one kind of unsolved game
      * `PlayScreen` keeps (a restart, or only a selection, clears the save). Only the saves named are decoded in full; the
      * rest are read as far as their key. Re-emits whenever a game is saved, so a board saved on the way out still shows.
+     * The most recently saved first (the home screen's "Continue" row is the first).
      */
     fun inProgress(keys: Set<String>): Flow<Set<String>> = store.stringSet(KEY_SAVED).map { raw ->
         raw.filter { r -> runCatching { SavedJson.decodeFromString<StoredKey>(r).key }.getOrNull() in keys }
             .mapNotNull(StoredGame::decode)
             .filter { !it.game.state.solved && it.game.state.moves > 0 }
+            .sortedByDescending { it.savedAt }
             .mapTo(mutableSetOf()) { it.key }
     }
 
@@ -378,9 +380,27 @@ object PuzzleOrder {
     const val WINDOW_DAYS = 60
 
     /**
+     * The order a new player meets the puzzles in, gentlest first: the owner's judgement (October 2026) of how quickly a
+     * newcomer gets going on Standard. Move a puzzle by moving its id. Sudoku and Lexicon open the second row of a
+     * three-column phone grid (places 3 and 4), so the first screen shows something familiar at once (`HomeOrderTest`).
+     */
+    val GENTLEST: List<String> = listOf(
+        "pointers", "pipes", "snap", // See it, do it: one gesture, and the rules are visible on the board.
+        "sudoku", "words", "sand", // Familiar, or (Sand) see it, do it.
+        "wordwheel", "target", "nonogram", // Familiar: most players know them from elsewhere.
+        "kings", "mambo", "mosaic", "sets", "tower", "inequality", "tents", "regions", "tally", // Quick to learn: few rules, instant feedback.
+        "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", // Takes a bit: more rules, or a longer chain of reasoning.
+    )
+
+    /** [ids] in [GENTLEST]'s order; an id it does not name (a puzzle added since) goes last, in [ids]' order. */
+    fun gentlest(ids: List<String>): List<String> =
+        ids.sortedBy { id -> GENTLEST.indexOf(id).takeIf { it >= 0 } ?: GENTLEST.size }
+
+    /**
      * [ids] with the most solved first: dailies of the last [WINDOW_DAYS] days, plus every practice game (they carry no
-     * day). The sort is stable, so ties and puzzles never played keep [ids]' order. The caller reads [all] once a day
-     * rather than live, so a solve never moves a tile under the player's finger on the way back home.
+     * day). The sort is stable, so ties and puzzles never played keep [ids]' order (the caller passes [gentlest], so a
+     * new player's grid is that order). The caller reads [all] once a day rather than live, so a solve never moves a tile
+     * under the player's finger on the way back home.
      */
     fun mostPlayed(all: List<Completion>, today: LocalDate, ids: List<String>): List<String> {
         val from = today.toEpochDays() - WINDOW_DAYS

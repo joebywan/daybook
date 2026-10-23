@@ -6,6 +6,8 @@ import androidx.compose.animation.core.animateOffsetAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,6 +37,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.InsertChart
@@ -52,12 +55,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -94,6 +99,7 @@ import com.joebywan.daybook.ui.stats.MedalIcon
 import com.joebywan.daybook.platform.GetTheAppCard
 import com.joebywan.daybook.platform.formatDate
 import kotlinx.datetime.LocalDate
+import kotlinx.coroutines.flow.takeWhile
 import kotlin.math.roundToInt
 
 /** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
@@ -101,7 +107,7 @@ private const val HEADER_DATE = "EEEE d MMMM"
 
 /**
  * The grid was first sized so every puzzle fitted one phone screen; with more than twenty it scrolls, so the order does
- * the work instead. By default the most played sit at the top (`PuzzleOrder.mostPlayed`, read once a day so a solve never
+ * the work instead. By default the most played sit at the top, the rest gentlest first (`PuzzleOrder`, read once a day so a solve never
  * moves a tile under the player's finger), and a player can set their own order by pressing and holding a tile and dragging
  * it ([PuzzleGrid]). Nothing is hidden:
  * anything else is a scroll away. A phone in portrait has three columns; a wider window (a tablet, a phone on its side)
@@ -167,6 +173,7 @@ fun HomeScreen(
     inProgress: () -> Set<String>,
     customOrder: Boolean,
     onOrder: (List<String>) -> Unit,
+    resume: () -> Pair<PuzzleType, Difficulty>?,
 ) {
     val scheme = MaterialTheme.colorScheme
     val doneToday = remember(completions, today) {
@@ -184,6 +191,13 @@ fun HomeScreen(
     val list = rememberLazyListState()
     // Where the grid shows, in root pixels: from the pinned rows' foot to the list's. Plain fields, read by a drag only.
     val window = remember { GridWindow() }
+    // The "Continue" row follows the store only until the first touch on this visit (or after a tier or mode change):
+    // the board just left is saved as Play fades out, so it may land a moment late, but never under a finger.
+    var touched by remember(mode, difficulty) { mutableStateOf(false) }
+    var resumeShown by remember { mutableStateOf<Pair<PuzzleType, Difficulty>?>(null) }
+    LaunchedEffect(mode, difficulty) {
+        snapshotFlow { touched to resume() }.takeWhile { !it.first }.collect { resumeShown = it.second }
+    }
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -197,7 +211,10 @@ fun HomeScreen(
         // halfway down the grid can change either without scrolling back. The grid is sized to fit without
         // scrolling, but a short screen or a large font scale can still overflow it.
         LazyColumn(
-            Modifier.fillMaxSize().onGloballyPositioned { window.bottom = it.boundsInRoot().bottom },
+            Modifier.fillMaxSize().onGloballyPositioned { window.bottom = it.boundsInRoot().bottom }
+                .pointerInput(mode, difficulty) {
+                    awaitEachGesture { awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial); touched = true }
+                },
             state = list,
             contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = TopPadding, bottom = 18.dp),
         ) {
@@ -223,6 +240,7 @@ fun HomeScreen(
                     LaunchOptions(difficulty, onDifficulty, mode, onMode, levelStrip = { LevelStrip(levels, onLevels) }, sideBySide = short)
                 }
             }
+            resumeShown?.let { (puzzle, tier) -> item { ContinueRow(puzzle, tier, onClick = { onLaunch(puzzle.id) }) } }
             if (mode == LaunchMode.LEVELS) item {
                 // The level's draw order, not the arranged one: a level is a set the player is given, in the order dealt.
                 LevelGrid(levels, levels.current, onPlay = onLaunch, onAllLevels = onLevels, height = gridHeight, inProgress = inProgress)
@@ -244,8 +262,9 @@ fun HomeScreen(
                 )
             }
             // Under the grid, so it moves nothing above it; gone once the player has an order of their own. Only where
-            // the order applies: a level's tiles keep their draw order.
-            if (mode != LaunchMode.LEVELS && !customOrder) item {
+            // the order applies: a level's tiles keep their draw order. Not until three different puzzles are solved: the
+            // welcome has said it already, and a first visit has enough to read.
+            if (mode != LaunchMode.LEVELS && !customOrder && completions.distinctBy { it.puzzleId }.size >= 3) item {
                 Text(
                     "Press and hold a puzzle to move it.",
                     style = MaterialTheme.typography.labelLarge,
@@ -270,6 +289,34 @@ fun HomeScreen(
 }
 
 private val TopPadding = 14.dp
+
+/** The game in progress saved last at this tier and mode, as one slim row over the grid: a tap opens it. */
+@Composable
+private fun ContinueRow(puzzle: PuzzleType, tier: Difficulty, onClick: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(bottom = TileGap)
+            .clip(RoundedCornerShape(14.dp))
+            .background(scheme.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        puzzle.Preview(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
+        Spacer(Modifier.width(12.dp))
+        Text(
+            "Continue ${puzzle.displayName} · ${tier.label}",
+            style = MaterialTheme.typography.titleMedium,
+            color = scheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color(puzzle.accent), modifier = Modifier.size(20.dp))
+    }
+}
 
 @Composable
 private fun Header(

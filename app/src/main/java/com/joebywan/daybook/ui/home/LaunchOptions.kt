@@ -124,7 +124,23 @@ class LaunchPreferences(private val store: KeyValueStore) {
         store.putString(KEY_ORDER, ids.joinToString(","))
     }
 
+    /**
+     * Whether to show the welcome (`ui/home/Welcome.kt`): only to a player who has not seen it and has not [hasPlayed].
+     * A player who has is marked as welcomed on the spot, so the answer cannot change for them later.
+     */
+    suspend fun needsWelcome(hasPlayed: suspend () -> Boolean): Boolean {
+        if (store.string(KEY_WELCOMED).first() != null) return false
+        if (!hasPlayed()) return true
+        setWelcomed()
+        return false
+    }
+
+    suspend fun setWelcomed() {
+        store.putString(KEY_WELCOMED, "yes")
+    }
+
     private companion object {
+        const val KEY_WELCOMED = "welcomed"
         const val KEY_VIBRATE = "vibrate"
         const val KEY_ORDER = "puzzle_order"
         const val KEY_SOUND = "play_sound"

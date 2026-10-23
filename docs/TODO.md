@@ -106,6 +106,12 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Infrastructure
 
+- [ ] **Play's "What's new" is not sent.** `fastlane/metadata/android/en-US/changelogs/default.txt` exists, but
+  `r0adkll/upload-google-play` ignores fastlane changelogs: it wants `whatsNewDirectory:` pointing at a folder of
+  `whatsnew-<locale>` files (`whatsnew-en-US`, 500 characters at most) in `publish-play.yml`. F-Droid reads
+  `changelogs/<versionCode>.txt`; whether fdroidserver also takes `default.txt` is unverified. The file has to be
+  rewritten per release or it goes stale.
+
 - [ ] **Verify Renovate's CI workaround on the first real Monday run.** Renovate runs daily and
   `tools/dispatch-ci-for-renovate.sh` dispatches `ci.yml` on `renovate/*` branches, where it posts a
   `build` commit status (README, "Dependency updates"). Proven on a throwaway PR with a stand-in

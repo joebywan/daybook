@@ -19,7 +19,7 @@ build*.
 
 A puzzle is done when all of these are true:
 
-1. `PuzzleType` object in `puzzles/<Name>.kt`, `@Serializable` state in the same package, one line in `PuzzleRegistry.all`.
+1. `PuzzleType` object in `puzzles/<Name>.kt`, `@Serializable` state in the same package, one line in `PuzzleRegistry.all`, and its place in `PuzzleOrder.GENTLEST` (`data/ProgressStore.kt`: the order a new player meets the puzzles in; `HomeOrderTest` fails without it).
 2. Three tiers (Standard / Hard / Expert) that differ in size or clue density, never in spare slack.
 3. `generate(seed, difficulty)` is pure, deterministic, and ships only boards it has proved (one answer, or the
    deliberate several-answer policy of section 4). Any fallback is named, reachable on a measured fraction of
@@ -57,7 +57,7 @@ A puzzle is done when all of these are true:
 state: `PlayScreen` never reads it. Pointers, having no undo, draws its own Try again, one state that restores the
 board and its lives).
 
-Registry line: `core/PuzzleRegistry.kt` `all` is the home-grid order. `featured(epochDay)` rotates over it.
+Registry line: `core/PuzzleRegistry.kt` `all` is the archive picker's order; the home grid starts from `PuzzleOrder.GENTLEST`. `featured(epochDay)` rotates over it.
 The home grid is three columns (`ui/home/HomeScreen.kt` `COLUMNS`, with a comment that four rows of tiles is what one
 phone screenful holds); adding a puzzle that starts a new row, or changing the tile size, means checking that screen again.
 
@@ -585,7 +585,7 @@ In order. `X` is the new puzzle's name. Do this on a branch, never `main`.
    (`Mambo.violationsOf`). Provide state mutators that return one new state per gesture.
 3. **Generator:** `generate` via `generateVerified(...) ?: lastResort(...)`, `Rng(seed + attempt)`, a proof
    with a sealed or enum verdict, a documented fallback. Run the section 5 grep.
-4. **`PuzzleRegistry.all`:** add `X` (home order).
+4. **`PuzzleRegistry.all`:** add `X`, and give it a place in `PuzzleOrder.GENTLEST` (the home grid's first order).
 5. **Build the board:** `Board` with the section 6 rules; a `highlightGrid`/`highlightAnchor`/`reportHighlight`
    report; `keepClear` on any control the player uses for a hinted move.
 6. **`Preview`:** a fixed motif of the real glyphs. Render it at true size, both themes.
