@@ -92,9 +92,11 @@ internal object TargetTeacher {
                     val rest = slots.filterIndexed { k, v -> v > 0 && k != a && k != b } + r
                     val left = if (r == target) 0 else TargetLogic.steps(rest, target)
                     if (left != here - 1) continue
-                    val hi = maxOf(slots[a], slots[b])
-                    val lo = minOf(slots[a], slots[b])
-                    val cand = Move(a, b, op, r, if (op == TargetOp.Sub || op == TargetOp.Div) hi else slots[a], if (op == TargetOp.Sub || op == TargetOp.Div) lo else slots[b], rest.sorted(), left)
+                    // - and / read bigger first.
+                    val ordered = op == TargetOp.Sub || op == TargetOp.Div
+                    val l = if (ordered) maxOf(slots[a], slots[b]) else slots[a]
+                    val rt = if (ordered) minOf(slots[a], slots[b]) else slots[b]
+                    val cand = Move(a, b, op, r, l, rt, rest.sorted(), left)
                     val cur = best
                     if (cur == null || closer(cand, cur, target)) best = cand
                 }

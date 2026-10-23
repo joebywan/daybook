@@ -1,17 +1,29 @@
 package com.joebywan.daybook.platform
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.database.ContentObserver
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.net.Uri
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.Font
@@ -26,6 +38,9 @@ import com.joebywan.daybook.data.DataStoreKeyValueStore
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.preferencesFile
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.Haptics
+import com.joebywan.daybook.ui.settings.GITHUB_URL
+import com.joebywan.daybook.ui.settings.RateLink
 import com.joebywan.daybook.ui.theme.withFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -221,5 +236,97 @@ fun rememberSharer(): (String) -> String? {
             context.startActivity(Intent.createChooser(send, null))
             null
         }
+    }
+}
+
+/**
+ * Whether the system asks for less motion: "Remove animations" in accessibility settings, which sets the
+ * animator duration scale to 0. Watched, so flipping it while the app is open takes effect at once.
+ */
+@Composable
+fun rememberReducedMotion(): Boolean {
+    val context = LocalContext.current.applicationContext
+    fun read() = Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    var reduced by remember { mutableStateOf(read()) }
+    DisposableEffect(context) {
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                reduced = read()
+            }
+        }
+        context.contentResolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, observer)
+        onDispose { context.contentResolver.unregisterContentObserver(observer) }
+    }
+    return reduced
+}
+
+/** Settings text under the Vibration switch: what else keeps it still on this platform. */
+const val VIBRATION_NOTE: String = "It also follows your phone's touch vibration setting."
+
+/**
+ * The game's buzzes, if [enabled], through `View.performHapticFeedback`, which honours the system's touch
+ * feedback setting. The clearer reject and confirm effects need Android 11; older phones get a long press and
+ * a key tap instead.
+ */
+@Composable
+fun rememberHaptics(enabled: Boolean): Haptics {
+    val view = LocalView.current
+    return remember(enabled, view) {
+        if (!enabled) Haptics.None else {
+            val modern = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+            Haptics(
+                tick = { view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK) },
+                bump = { view.performHapticFeedback(if (modern) HapticFeedbackConstants.REJECT else HapticFeedbackConstants.LONG_PRESS) },
+                success = { view.performHapticFeedback(if (modern) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY) },
+            )
+        }
+    }
+}
+
+/**
+ * Play installs rate on Play (the store app, or its web page when the store app is missing). Anything else,
+ * F-Droid or a downloaded APK, has no store that takes ratings, so the link is a star on GitHub instead.
+ */
+@Composable
+fun rememberRateLink(): RateLink? {
+    val context = LocalContext.current
+    return remember(context) {
+        if (installerOf(context) == "com.android.vending") {
+            val id = context.packageName
+            RateLink(
+                title = "Rate Daybook",
+                detail = "If Daybook has earned it, a rating on Google Play helps other puzzlers find it.",
+                open = {
+                    openUri(context, "market://details?id=$id", fallback = "https://play.google.com/store/apps/details?id=$id")
+                },
+            )
+        } else {
+            RateLink(
+                title = "Star Daybook on GitHub",
+                detail = "Daybook is open source. If it has earned it, a star on GitHub helps other puzzlers find it.",
+                open = { openUri(context, GITHUB_URL) },
+            )
+        }
+    }
+}
+
+private fun installerOf(context: Context): String? = try {
+    val packages = context.packageManager
+    if (Build.VERSION.SDK_INT >= 30) {
+        packages.getInstallSourceInfo(context.packageName).installingPackageName
+    } else {
+        @Suppress("DEPRECATION")
+        packages.getInstallerPackageName(context.packageName)
+    }
+} catch (_: Exception) {
+    null
+}
+
+/** Opens [uri] in whatever app handles it, else [fallback]; with neither (no store app, no browser) the tap does nothing. */
+private fun openUri(context: Context, uri: String, fallback: String? = null) {
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (_: ActivityNotFoundException) {
+        if (fallback != null) openUri(context, fallback)
     }
 }

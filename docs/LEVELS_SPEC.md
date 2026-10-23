@@ -1,8 +1,8 @@
 # Levels — spec
 
 A third way to play beside Daily and Random: numbered levels, each a fixed set of five boards from different puzzles.
-Finish all five and the next level opens. Part 1 (the plan, the seeds, storage, tests) is built: see "As built"
-below. The screens are not yet; the rest of this file is the plan.
+Finish all five and the next level opens. Built: see the two "As built" sections below for where the build differs from
+the plan that makes up the rest of this file.
 
 **Why.** A player's feedback (2026-10-22): they finish the dailies, but lose interest in Random because nothing on the
 home screen ticks off. Levels give the boards after the dailies something to tick off and a place in a sequence, without
@@ -193,9 +193,32 @@ differs from the plan above:
 - **Parity:** `WebParityDumpTest` appends levels 1..N under the pseudo-puzzle `levels` (`ParityFingerprint.levelLines`), the
   page prints them for `?dump&range=N&puzzle=levels`, and `tools/web-parity/check.py` diffs it as one more page.
 
+## As built (part 2, the screens)
+
+`ui/home/LevelsScreen.kt` (the level strip, the level grid, the list, the pure `levelNote` / `solvedCount`),
+`LaunchMode.LEVELS`, `Route.Levels(level)` and `Route.Play(level)` in `ui/DaybookApp.kt` (`encodeRoute` / `decodeRoute`,
+`playLevel`, `levelFinishedBy`), `levelNextOptions` in `ui/play/NextSteps.kt`, and `shareCard(level = n)`. Test:
+`LevelsUiTest`. Where it differs from the plan above (all four accepted by the owner's coordinator, 2026-10-23):
+
+- **The tier row is kept, invisible, and the level strip is drawn over it** ("Level 14", "3 of 5", a bar; tapping it opens the
+  list), so the strip has the tier row's exact height and the mode row never moves when the mode changes, stacked or side by
+  side. The tier summary is one line above the grid.
+- **"Level 13 done" shares that one line with the summary** ("Level 13 done · Mostly Hard, one Expert") rather than having a
+  line of its own. It is derived: shown while the level before is done and this one has no solve, gone at the first solve.
+- **The list is newest first throughout:** the next level, locked ("Finish 14 to open"), at the top, then the current one with
+  Play, then the finished ones (five dots, total time). Tapping the current or a finished level shows its five boards.
+- **"Level 15" on the finish frame starts that level's first board** rather than going home. On a replay of an old level the
+  button is the level the player is on, not the one after the replayed level.
+- **A solved level board is cleared like a practice board**, so opening it again (from home or the list) is a fresh replay;
+  it records a practice `Completion` but nothing new for the level.
+- **Home's arranged order (#231) does not apply to a level:** its five tiles keep the order they were dealt, and "Arrange
+  puzzles" is hidden in Levels mode. The "In progress" label does apply: a level board with a saved game says so, as a daily does.
+- `PlayScreen` now takes the finish frame's `options` from its caller (daily, random or level) instead of `otherTiersDone`.
+- Back from a level board goes home, where the mode is still Levels; back from one level's boards goes to the list.
+- Web render hooks: `?mode=levels`, `?screen=levels[&level=N]`, `?puzzle=<id>&level=N`, and `&leveldone` with `?finish=`;
+  `tools/render/render.py --query` passes them.
+
 ## Open questions for the owner
 
-- Does finishing a level earn an achievement (level 10, 50, 100)? It would be cheap, as the achievements are derived.
-  Default: not in the first build.
-- Hints are free everywhere else. Should a level show its hint count, as the share card does? Default: yes, on the card,
-  never as a penalty.
+Both defaults were taken: no achievements for levels in the first build, and a level's share card shows its hints as every
+other card does, never as a penalty.

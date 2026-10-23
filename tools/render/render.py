@@ -311,7 +311,10 @@ def build_parser():
                     help="show the finished frame over each board with N (0-3) earned achievements (?finish=N)")
     ap.add_argument("--togo", action="store_true", help="with --finish: add the 'only X to go' line")
     ap.add_argument("--share", action="store_true", help="with --finish: open the share preview over the frame")
+    ap.add_argument("--reduced-motion", action="store_true", help="emulate prefers-reduced-motion: reduce")
     ap.add_argument("--home", action="store_true", help="screenshot the home grid instead of a puzzle")
+    ap.add_argument("--query", default="", metavar="Q",
+                    help="more of the page query, e.g. \"mode=levels\", \"screen=levels&level=2\" or \"level=3\" (WebApp.kt)")
     ap.add_argument("--dist", type=Path, default=DEFAULT_DIST, help=f"built web distribution (default: {DEFAULT_DIST})")
     ap.add_argument("-o", "--out", type=Path, default=DEFAULT_OUT, help=f"output directory (default: {DEFAULT_OUT})")
     ap.add_argument("--measure", action="store_true",
@@ -380,6 +383,7 @@ def main(argv=None) -> int:
                             has_touch=True, color_scheme=scheme, locale="en-US",
                             service_workers="block",  # a cached shell would hide a rebuilt dist
                             user_agent=args.user_agent,
+                            reduced_motion="reduce" if args.reduced_motion else "no-preference",
                         )
                         if seed:
                             ctx.add_init_script(
@@ -419,6 +423,8 @@ def shoot(ctx, base_url, args, puzzle, tier, w, h, tag) -> list[str]:
     query = f"?date={args.date}&tier={tier}" + ("" if args.home else f"&puzzle={puzzle}")
     if args.finish is not None:
         query += f"&finish={args.finish}" + ("&togo" if args.togo else "") + ("&share" if args.share else "")
+    if args.query:
+        query += "&" + args.query
     try:
         page.goto(base_url + query, wait_until="load", timeout=int(args.timeout * 1000))
         png, settled = settle(page, args.timeout)

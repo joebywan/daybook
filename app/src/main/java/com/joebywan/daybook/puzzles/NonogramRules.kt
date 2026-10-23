@@ -47,8 +47,7 @@ data class NonogramState(
      * A tap with the fill or cross pen: that mark, or a clean square if it already has it. Tapping
      * the other pen's mark replaces it, so a player never has to rub out to change their mind.
      */
-    fun tap(index: Int, pen: Char): NonogramState =
-        paint(listOf(index), if (cells[index] == pen) NonogramLogic.UNMARKED else pen)
+    fun tap(index: Int, pen: Char): NonogramState = paint(listOf(index), sweepMark(index, pen))
 
     /** What a sweep that starts on [index] with [pen] lays down: the pen's mark, or erasing if it is already there. */
     fun sweepMark(index: Int, pen: Char): Char = if (cells[index] == pen) NonogramLogic.UNMARKED else pen

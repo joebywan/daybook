@@ -201,8 +201,8 @@ internal object WordWheelLogic {
         return if (s == root) s.drop(1) + s.first() else s
     }
 
-    /** A placement being considered: [crossings] squares already hold its letters. */
-    private class Place(val row: Int, val col: Int, val across: Boolean, val crossings: Int)
+    /** A placement being considered (one of those with the most crossings). */
+    private class Place(val row: Int, val col: Int, val across: Boolean)
 
     /**
      * Lays [root] and as many of its grid words as the tier asks for, or null when it cannot. Squares live in a probe-only
@@ -290,7 +290,7 @@ internal object WordWheelLogic {
                                 best = n
                                 options.clear()
                             }
-                            if (n == best) options += Place(r, c, a, n)
+                            if (n == best) options += Place(r, c, a)
                         }
                     }
                 }

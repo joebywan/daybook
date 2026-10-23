@@ -132,6 +132,10 @@ internal object TentsTeacher {
     private fun nextFact(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, st: IntArray): Step? {
         fun free(i: Int) = !trees[i] && st[i] == 0
         val treeIdx = trees.indices.filter { trees[it] }
+        /** The squares beside tree [t] its tent could still go on. */
+        fun choices(t: Int) = TentsLogic.orth(n, t).filter { !trees[it] && st[it] != GRASS }
+        /** A tent on [c] beside only one tree, so that tree's. */
+        fun owned(c: Int) = !trees[c] && st[c] == TENT && TentsLogic.orth(n, c).count { trees[it] } == 1
 
         // 1. No tree beside it.
         val bare = st.indices.filter { free(it) && TentsLogic.orth(n, it).none { j -> trees[j] } }
@@ -177,7 +181,7 @@ internal object TentsTeacher {
 
         // 4. A tree with one square left.
         for (t in treeIdx) {
-            val choices = TentsLogic.orth(n, t).filter { !trees[it] && st[it] != GRASS }
+            val choices = choices(t)
             if (choices.size == 1 && st[choices[0]] == 0) return Step(
                 ONE_SPOT, TENT, choices.toSet(), setOf(t, choices[0]), setOf(t),
                 "Look at this tree.",
@@ -187,7 +191,7 @@ internal object TentsTeacher {
 
         // 5. A square that would touch every choice of a tree.
         for (t in treeIdx) {
-            val choices = TentsLogic.orth(n, t).filter { !trees[it] && st[it] != GRASS }
+            val choices = choices(t)
             if (choices.isEmpty()) continue
             val xs = st.indices.filter { x -> free(x) && x !in choices && choices.all { it in TentsLogic.around(n, x) } }
             if (xs.isNotEmpty()) return Step(
@@ -198,14 +202,12 @@ internal object TentsTeacher {
         }
 
         // 6. Every tree beside it already has its tent.
-        val served = treeIdx.filter { t ->
-            TentsLogic.orth(n, t).any { c -> !trees[c] && st[c] == TENT && TentsLogic.orth(n, c).count { trees[it] } == 1 }
-        }.toSet()
+        val served = treeIdx.filter { t -> TentsLogic.orth(n, t).any { owned(it) } }.toSet()
         for (x in st.indices) {
             if (!free(x)) continue
             val near = TentsLogic.orth(n, x).filter { trees[it] }
             if (near.isNotEmpty() && near.all { it in served }) {
-                val owners = near.flatMap { t -> TentsLogic.orth(n, t).filter { c -> !trees[c] && st[c] == TENT && TentsLogic.orth(n, c).count { trees[it] } == 1 } }
+                val owners = near.flatMap { t -> TentsLogic.orth(n, t).filter { owned(it) } }
                 return Step(
                     SERVED, GRASS, setOf(x), setOf(x) + near, near.toSet() + owners,
                     "Does a tree beside this square still need a tent?",

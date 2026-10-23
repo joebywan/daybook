@@ -1,6 +1,7 @@
 package com.joebywan.daybook.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,6 +26,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.SOLVE_SOUND_NOTE
+import com.joebywan.daybook.platform.VIBRATION_NOTE
+import com.joebywan.daybook.platform.rememberRateLink
 import com.joebywan.daybook.ui.home.SegmentedControl
 import com.joebywan.daybook.ui.theme.Appearance
 
@@ -39,11 +42,16 @@ fun SettingsScreen(
     onShowTimer: (Boolean) -> Unit,
     playSound: Boolean,
     onPlaySound: (Boolean) -> Unit,
+    vibrate: Boolean,
+    onVibrate: (Boolean) -> Unit,
+    customOrder: Boolean,
+    onArrange: () -> Unit,
     appearance: Appearance,
     onAppearance: (Appearance) -> Unit,
     onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val rateLink = rememberRateLink()
 
     Column(
         Modifier
@@ -82,7 +90,18 @@ fun SettingsScreen(
                     onChecked = onPlaySound,
                 )
             }
+            item {
+                SettingSwitch(
+                    title = "Vibration",
+                    detail = "A light tap when a move lands, a firmer one when a bump costs a life, and a short buzz " +
+                        "when you solve. $VIBRATION_NOTE",
+                    checked = vibrate,
+                    onChecked = onVibrate,
+                )
+            }
             item { AppearanceChoice(appearance, onAppearance) }
+            item { PuzzleOrderRow(customOrder, onArrange) }
+            if (rateLink != null) item { RateRow(rateLink) }
             item { Credits() }
         }
     }
@@ -156,6 +175,28 @@ private fun Credits() {
         Text(
             "Fredoka, Copyright 2016 The Fredoka Project Authors, used under the SIL Open Font " +
                 "License 1.1.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** The home grid's order: says which it is, and opens [ArrangeScreen], where it is changed. */
+@Composable
+private fun PuzzleOrderRow(customOrder: Boolean, onArrange: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.surface)
+            .clickable(onClickLabel = "Arrange puzzles", onClick = onArrange)
+            .padding(14.dp),
+    ) {
+        Text("Puzzle order", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+        Text(
+            if (customOrder) "Your own order. Tap to rearrange or reset."
+            else "Most played first, over the last two months. Tap to arrange your own.",
             style = MaterialTheme.typography.bodyMedium,
             color = scheme.onSurfaceVariant,
         )

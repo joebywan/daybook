@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,9 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +36,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -62,6 +56,8 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** One fill: the cell tapped, and the colour poured into the area it belongs to. */
 data class MosaicMove(val cell: Int, val colour: Int)
@@ -926,14 +922,9 @@ object Mosaic : PuzzleType {
         listOf(
             TutorialFrame(
                 state = start,
-                caption = "Touching cells of one colour make an area, outlined in black. " +
-                    "Turn the whole board one colour.",
+                caption = "Touching cells of one colour make an area, outlined in black. Turn the whole board " +
+                    "one colour. The line above counts your fills against the fewest this board needs: here 3.",
                 highlight = BoardHighlight(strong = tealArea),
-            ),
-            TutorialFrame(
-                state = start,
-                caption = "The line above the board counts your fills. The limit is the fewest fills " +
-                    "this board can be done in: here 3, with none to spare.",
             ),
             TutorialFrame(
                 state = start,
@@ -941,7 +932,7 @@ object Mosaic : PuzzleType {
                     "area it touches: three at once, more than any other fill can.",
                 highlight = BoardHighlight(strong = start.area(c1).toSet(), soft = amberNeighbours(start, c1)),
                 accepts = pour(start, c1, k1),
-                retry = "Pick amber from the swatches, then tap the glowing area.",
+                retry = "Pick amber below, then tap the glowing area.",
                 done = "Four areas became one. The bigger it grows, the more each fill takes.",
             ),
             TutorialFrame(
@@ -950,7 +941,7 @@ object Mosaic : PuzzleType {
                     "patch, so both fills must. Amber is down to one patch: pour teal into it.",
                 highlight = BoardHighlight(strong = second.area(c2).toSet()),
                 accepts = pour(second, c2, k2),
-                retry = "Pick teal, then tap the big amber area.",
+                retry = "Pick teal below, then tap the glowing area.",
                 done = "Amber is gone. Two colours, one fill.",
             ),
             TutorialFrame(
@@ -959,12 +950,12 @@ object Mosaic : PuzzleType {
                     "Pour violet into teal to finish.",
                 highlight = BoardHighlight(strong = third.area(c3).toSet()),
                 accepts = pour(third, c3, k3),
-                retry = "Pick violet, then tap the teal area.",
+                retry = "Pick violet below, then tap the glowing area.",
                 done = "One colour, three fills: the least it could take.",
             ),
             TutorialFrame(
                 state = MosaicState(6, 6, 3, 4, PRACTICE_CELLS),
-                caption = "Your turn: 4 fills, none spare. Out of fills or stuck? Hint shows you why.",
+                caption = "Your turn: one colour in 4 fills, none spare. Stuck, or out of fills? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. That's all there is to it.",
             ),
@@ -1077,16 +1068,7 @@ object Mosaic : PuzzleType {
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         // A rim that breathes is findable at a glance; a still one is not much louder than the
         // seams. Only runs while something glows, and is read in the draw phase.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // The keyboard cursor (see MosaicKeys): transient, so not in the state.
         var cursor by remember(s.colours, s.width, s.height) { mutableStateOf<Int?>(null) }
@@ -1122,6 +1104,8 @@ object Mosaic : PuzzleType {
                 // the width alone would run it off the bottom of the screen.
                 val step = minOf(maxWidth / s.width, maxHeight / s.height)
                 val stepPx = with(LocalDensity.current) { step.toPx() }
+                // The area a fill recoloured settles. No units: the only one is the whole board, which is the solve.
+                val feel = rememberMoveFeel(s.cells)
 
                 Canvas(
                     Modifier
@@ -1145,11 +1129,13 @@ object Mosaic : PuzzleType {
                     for (cell in s.cells.indices) {
                         val r = cell / s.width
                         val c = cell % s.width
-                        drawRect(
-                            color = palette[s.cells[cell]],
-                            topLeft = Offset(c * stepPx, r * stepPx),
-                            size = Size(stepPx, stepPx),
-                        )
+                        feelSquare(feel, cell, Offset(c * stepPx, r * stepPx), Size(stepPx, stepPx), Color.Unspecified) {
+                            drawRect(
+                                color = palette[s.cells[cell]],
+                                topLeft = Offset(c * stepPx, r * stepPx),
+                                size = Size(stepPx, stepPx),
+                            )
+                        }
                     }
 
                     // Colour is never the only signal: one digit per area, in its first cell, the same

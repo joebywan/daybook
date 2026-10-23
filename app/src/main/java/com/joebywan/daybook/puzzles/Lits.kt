@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -15,9 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,6 +22,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -46,10 +40,13 @@ import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.jvmHashSetOrder
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 @Serializable
 data class LitsState(
@@ -1191,18 +1188,15 @@ object Lits : PuzzleType {
         val middle = top + TUTORIAL_MIDDLE
         val bumped = middle + TUTORIAL_BUMP
         val leftT = setOf(10, 15, 16, 20)
+        // Square 7 shaded, filling a 2x2 with the L, then cleared: back to the board it started on, so
+        // only a move counted since tells the two apart.
+        val block = TutorialPath(exactly(top + 7), { exactly(top)(it) && it.moves > 0 })
         listOf(
             TutorialFrame(
                 state = solved,
                 caption = "Shade four squares in every region so they make an L, I, T or S. The " +
                     "thick lines are the walls. Here's a finished board; the glowing T is one region's.",
                 highlight = BoardHighlight(strong = leftT, soft = setOf(11, 21)),
-            ),
-            TutorialFrame(
-                state = solved,
-                caption = "Shading never fills a 2x2 square. Three squares of this block are shaded, " +
-                    "so the glowing one has to stay empty.",
-                highlight = BoardHighlight(strong = setOf(7), soft = setOf(2, 3, 8)),
             ),
             TutorialFrame(
                 state = solved,
@@ -1220,12 +1214,16 @@ object Lits : PuzzleType {
                 done = "Shaded. A finished shape wears its letter.",
             ),
             TutorialFrame(
-                state = tutorialBoard(top + 7),
-                caption = "Suppose you'd shaded the glowing square too: it fills a 2x2 with the L. " +
-                    "Tap a shaded square to clear it.",
-                highlight = BoardHighlight(strong = setOf(7), soft = setOf(2, 3, 8)),
-                accepts = exactly(top),
-                retry = "Tap the glowing square once.",
+                state = tutorialBoard(top),
+                caption = "Shading never fills a 2x2 square. Tap the glowing square to shade it: with the L " +
+                    "it fills a 2x2. Then tap it again to clear it.",
+                // The board draws no red for a 2x2, so the glow turns red when the square is shaded.
+                glow = { s ->
+                    if (block.stage(s) == 0) BoardHighlight(strong = setOf(2, 3, 7, 8), warning = true)
+                    else BoardHighlight(strong = setOf(7), soft = setOf(2, 3, 8))
+                },
+                steps = block.steps,
+                retry = "Tap the glowing square, then tap it again.",
                 done = "Cleared. A drag that starts on a shaded square clears too.",
             ),
             TutorialFrame(
@@ -1337,6 +1335,11 @@ object Lits : PuzzleType {
         // a drag that is the preview, so letters and crosses follow the finger.
         val letters = remember(shown.shaded) { shown.letters() }
         val impossible = remember(shown.shaded) { shown.impossible() }
+        // A region is finished when its four shaded squares make a piece (the letters, which read the rules).
+        val units = remember(s.region) { s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() } }
+        val handed = remember(s.shaded) { s.letters() }
+        val feel = rememberMoveFeel(s.shaded, units) { u -> units[u].count { s.shaded[it] } == 4 && units[u].all { !s.shaded[it] || handed[it] != null } }
+        val accentColour = Color(accent)
 
         // What a hint or the walkthrough is pointing at. Everything it does not name is dimmed, so
         // the named squares can be found at a glance; [BoardHighlight.strong] squares get a
@@ -1345,16 +1348,7 @@ object Lits : PuzzleType {
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         val dim = scheme.background
         // Read only inside the draw lambda, so the pulse repaints the outlines without recomposing.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
@@ -1428,15 +1422,17 @@ object Lits : PuzzleType {
                     val c = i % s.width
                     val at = Offset(c * stepPx, r * stepPx)
                     val piece = letters[i]
-                    drawRect(
-                        color = when {
-                            !shown.shaded[i] -> scheme.surfaceVariant
-                            piece == null -> inProgress
-                            else -> colourOf(piece)
-                        },
-                        topLeft = at,
-                        size = Size(stepPx, stepPx),
-                    )
+                    feelSquare(feel, i, at, Size(stepPx, stepPx), accentColour) {
+                        drawRect(
+                            color = when {
+                                !shown.shaded[i] -> scheme.surfaceVariant
+                                piece == null -> inProgress
+                                else -> colourOf(piece)
+                            },
+                            topLeft = at,
+                            size = Size(stepPx, stepPx),
+                        )
+                    }
                     drawRect(
                         color = scheme.background.copy(alpha = 0.35f),
                         topLeft = at,

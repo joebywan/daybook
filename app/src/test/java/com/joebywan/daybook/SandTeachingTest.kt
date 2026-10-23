@@ -3,6 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.SandLogic
 import com.joebywan.daybook.puzzles.SandState
@@ -232,40 +233,44 @@ class SandTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Sand.tutorial
-        assertEquals(6, frames.size)
-        assertTrue(frames[0].accepts == null && frames[1].accepts == null)
-        assertTrue(frames[5].freePlay)
+        assertEquals(4, frames.size)
+        assertTrue(frames[0].accepts == null && frames[0].steps == null)
+        assertTrue(frames[3].freePlay)
 
         fun ok(frame: Int, a: Int, b: Int) = frames[frame].accepts!!(gesture(frames[frame].state as SandState, a, b))
 
-        assertTrue(ok(2, 0, 1))
-        assertFalse("the reverse is refused, so nothing is made", ok(2, 1, 0))
-        assertFalse("into the empty tube instead", ok(2, 0, 4))
-        assertFalse("nothing made", frames[2].accepts!!(frames[2].state))
+        assertTrue(ok(1, 0, 1))
+        assertFalse("the reverse is refused, so nothing is made", ok(1, 1, 0))
+        assertFalse("into the empty tube instead", ok(1, 0, 4))
+        assertFalse("nothing made", frames[1].accepts!!(frames[1].state))
 
-        assertTrue(ok(3, 2, 4))
-        assertFalse("another tube into the spare", ok(3, 3, 4))
-        assertFalse(ok(3, 0, 4))
-
-        assertTrue(ok(4, 1, 2))
-        assertFalse(ok(4, 1, 4))
+        // Frame 3 takes two pours: the brown into the spare, then the cream onto tube 3.
+        val two = frames[2].steps!!
+        val start = frames[2].state as SandState
+        val half = gesture(start, 2, 4)
+        assertEquals(TutorialStep.PROGRESS, two(half))
+        assertEquals(TutorialStep.DONE, two(gesture(half, 1, 2)))
+        assertEquals("another tube into the spare", TutorialStep.REJECT, two(gesture(start, 3, 4)))
+        assertEquals(TutorialStep.REJECT, two(gesture(start, 0, 4)))
+        assertEquals("another pour instead", TutorialStep.REJECT, two(gesture(half, 0, 3)))
+        assertEquals("the glow walks to the second pour", setOf(1, 2), frames[2].glow!!(half).strong)
 
         // Each frame's board is the previous frame's result.
-        assertEquals(frames[2].state, frames[1].state)
-        assertEquals(gesture(frames[2].state as SandState, 0, 1), frames[3].state)
-        assertEquals(gesture(frames[3].state as SandState, 2, 4), frames[4].state)
-        assertEquals(gesture(frames[4].state as SandState, 1, 2), frames[5].state)
+        assertEquals(frames[1].state, frames[0].state)
+        assertEquals(gesture(frames[1].state as SandState, 0, 1), frames[2].state)
+        assertEquals(gesture(half, 1, 2), frames[3].state)
 
         // The captions' claims about the board: cream on top of tubes 1 and 2; two brown on tube 3 over a cream; tube 3 then all cream.
         val cream = Sand.colourNames.indexOf("cream")
         val brown = Sand.colourNames.indexOf("brown")
-        val s0 = frames[2].state as SandState
+        val s0 = frames[1].state as SandState
         assertEquals(cream, s0.tubes[0].last())
         assertEquals(cream, s0.tubes[1].last())
-        val s1 = frames[3].state as SandState
+        val s1 = frames[2].state as SandState
         assertEquals(listOf(cream, brown, brown), s1.tubes[2])
         assertTrue(s1.tubes[4].isEmpty())
-        val s3 = frames[5].state as SandState
+        assertEquals(listOf(cream, cream), s1.tubes[1].takeLast(2))
+        val s3 = frames[3].state as SandState
         assertEquals(listOf(cream, cream, cream), s3.tubes[2])
         assertTrue(frames.all { it.caption.length <= 170 })
         // A small board: three colours of three, five tubes.

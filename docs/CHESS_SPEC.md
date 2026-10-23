@@ -143,8 +143,8 @@ The hint flow is the shared one (tap 1 nudge, tap 2 explain, player moves, panel
   glyphs (the web's font is subset), no copied piece set (licences). Colour is never the only signal: white and
   black pieces differ in fill *and* outline, and both read on both light and dark themes. Square colours from
   `MaterialTheme.colorScheme`, a small accent for the last opponent move and the selected piece's legal squares.
-- The board reports its highlight with `highlightGrid(8, 8)` plus `highlightAnchor(100 + kind)` for the picker, and
-  `keepClear()` over the picker. When a hint is open, the board dims as for the other puzzles.
+- The board reports its highlight with `reportHighlight` (not `highlightGrid`: the board flips for Black, so a square's
+  place on screen is not `row * 8 + col`) plus `highlightAnchor(100 + kind)` for the picker, and `keepClear()` over the picker. When a hint is open, the board dims as for the other puzzles.
 - Keyboard (web / hardware): not in v1. `keyboardHelp` empty. (A "type the move in SAN" box is a later item.)
 - Orientation: the player's side at the bottom, always. Rank/file labels drawn small on the edge squares.
 - `Preview`: a fixed, legal crop (for example a back-rank mate pattern: a few pieces), real piece shapes, never
@@ -155,8 +155,8 @@ The hint flow is the shared one (tap 1 nudge, tap 2 explain, player moves, panel
 Hand-built tiny positions, each with a unique forced mate, proved by the independent checker in tests. About 7 frames:
 (1) read the goal on a solved mate-in-1 (back rank) with a `BoardHighlight`; (2) make the move by the real
 tap-tap gestures (one frame per emitted state: the move is one state, selection is not); (3) a mate-in-2 where the
-reply is shown and the player sees why the first move had to be the one it was; (4) the promotion picker; (5) the
-caption on a mistake (Undo); (6) free play on a mate-in-2 the hints can finish with no fallback and no mistake.
+reply is shown and the player sees why the first move had to be the one it was; (4) the promotion picker; (5) a
+mistake the player makes (Rd7, after which Black's Kb8 leaves no mate; the hint flags it in a game); (6) free play on a mate-in-2 the hints can finish with no fallback and no mistake.
 Captions at most 170 characters. Teach with the position's own squares and pieces.
 
 ## Tests
@@ -179,7 +179,7 @@ Independent of the code they check (CLAUDE.md "Tests"):
   (`start` + `mateIn`); parity pin test over three dates x three tiers; `PuzzleNotesTest` entry; teacher soundness,
   text fit (200 / 70), tutorial per section 8 of the standards.
 
-## Work split (what each agent owns; the files must not overlap)
+## Work split (what each agent owned; done, kept for the record)
 
 **Phase 1, in parallel**
 - **A, engine**: `ChessRules.kt`, `ChessPosition`, `ChessRulesTest`, `ChessMateCheckerTest` (naive checker),
@@ -201,5 +201,5 @@ Independent of the code they check (CLAUDE.md "Tests"):
 ## Out of scope
 
 Playing against a computer, a full game, opening or endgame training, ratings, mate-pattern classification, move
-input by typing, "mate in 5+", board flipping. Accessibility stays deferred (CLAUDE.md "Settled"); do not make it
-worse (tap-tap input uses `clickable` squares, not raw pointer input, so it is the first board with real click actions).
+input by typing, "mate in 5+", a board-flip control. Screen readers are not a goal (CLAUDE.md "Settled"); tap-tap input
+uses `clickable` squares, not raw pointer input.

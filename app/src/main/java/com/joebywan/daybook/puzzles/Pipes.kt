@@ -2,10 +2,6 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -17,8 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +42,9 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -291,9 +288,9 @@ object Pipes : PuzzleType {
      *
      * Hand-built so that the tiles the frames teach are settled by the border alone — the straight
      * on the left edge, the corner bend, the T on the top edge — and then by a neighbour: the end in
-     * the bottom corner that the straight now points into. Each starts exactly one tap short, so a
-     * frame's one move is one tap (a rejected tap is not applied, so a two-tap move could never
-     * land). PipesTeachingTest proves the board has exactly one answer and that hints alone finish
+     * the bottom corner that the straight now points into. Each starts exactly one tap short, so each
+     * tile the walkthrough asks for is one tap (a tap past its answer is refused, and a tile could
+     * never come back round). PipesTeachingTest proves the board has exactly one answer and that hints alone finish
      * it from the "your turn" frame, with no mistake and no fallback.
      */
     internal val TUTORIAL_SOLUTION = listOf(
@@ -331,8 +328,8 @@ object Pipes : PuzzleType {
     override val tutorial: List<TutorialFrame> by lazy {
         val solved = tutorialBoard(TUTORIAL_SOLUTION)
         val start = tutorialAfter()
-        val straight = tutorialAfter(3)
-        val corner = tutorialAfter(3, 0)
+        // The three tiles the border alone settles: the straight, the corner bend and the T.
+        val border = setOf(3, 0, 1)
         val tee = tutorialAfter(3, 0, 1)
         val end = tutorialAfter(3, 0, 1, 6)
         listOf(
@@ -349,30 +346,22 @@ object Pipes : PuzzleType {
             ),
             TutorialFrame(
                 state = start,
-                caption = "No pipe can point off the board, so a straight against the border has to " +
-                    "run along it. Tap the glowing tile to turn it a quarter.",
-                highlight = BoardHighlight(strong = setOf(3)),
-                accepts = only(start, 3),
+                caption = "No pipe may point off the board: an edge straight runs along it, a corner bend faces " +
+                    "in, a T's flat side faces out. A tap turns a tile clockwise. Tap each glowing tile.",
+                // Each tile glows until it faces its one way.
+                glow = { s -> BoardHighlight(strong = border.filter { (s as PipesState).cells[it] != TUTORIAL_SOLUTION[it] }.toSet()) },
+                // Any order, one tap each; a tile turned past its way is refused.
+                steps = { next ->
+                    when {
+                        next !is PipesState -> TutorialStep.REJECT
+                        next.cells == tee.cells -> TutorialStep.DONE
+                        next.cells.indices.all { i -> next.cells[i] == start.cells[i] || (i in border && next.cells[i] == TUTORIAL_SOLUTION[i]) } ->
+                            TutorialStep.PROGRESS
+                        else -> TutorialStep.REJECT
+                    }
+                },
                 retry = "Tap the glowing tile once.",
-                done = "Now it runs along the edge, the only way it fits.",
-            ),
-            TutorialFrame(
-                state = straight,
-                caption = "In a corner, a bend can't point off either edge, so it can only face into " +
-                    "the board. Each tap turns a tile clockwise. Tap it.",
-                highlight = BoardHighlight(strong = setOf(0)),
-                accepts = only(straight, 0),
-                retry = "Tap the glowing tile once.",
-                done = "Four taps take a tile all the way round.",
-            ),
-            TutorialFrame(
-                state = corner,
-                caption = "A T can't point off the board either, so its flat side has to face the " +
-                    "border. Tap it.",
-                highlight = BoardHighlight(strong = setOf(1)),
-                accepts = only(corner, 1),
-                retry = "Tap the glowing tile once.",
-                done = "Flat side to the border.",
+                done = "Each fits the border the only way it can.",
             ),
             TutorialFrame(
                 state = tee,
@@ -540,16 +529,7 @@ object Pipes : PuzzleType {
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         // Breathes, as Kings' does, so a glowing tile is findable at a glance on an 8x11 board. Only
         // runs while something glows, and is read in the draw phase.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // One angle per tile, held outside the state so a rotation can be shown turning while the
         // board itself has already moved on. Only the grid shape resets them.
@@ -560,6 +540,8 @@ object Pipes : PuzzleType {
         // next tap on any *other* tile, leaving the first frozen at a slant. Only the same tile's
         // own next turn (snapTo, below) may interrupt a spin, and it carries the angle on.
         val spinScope = rememberCoroutineScope()
+        // Reduced motion: a tile simply shows its new turn.
+        val still = LocalReducedMotion.current
 
         LaunchedEffect(s.cells) {
             val before = shown.toList()
@@ -572,6 +554,7 @@ object Pipes : PuzzleType {
                 // An undo turns the other way. Anything else — a restored board, a new puzzle —
                 // is not a turn at all and should simply appear.
                 val wound = when {
+                    still -> 0f
                     rotateCw(before[i]) == s.cells[i] -> -QUARTER
                     rotateCw(s.cells[i]) == before[i] -> QUARTER
                     else -> 0f

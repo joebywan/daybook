@@ -200,7 +200,7 @@ From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes
   (one state). A drag from a square to its neighbour does the same as the two taps. Tapping a non-neighbour moves the
   first square there. Tap a placed domino to lift it back to its slot and select it (one state). Long-press or double-tap
   on a placed domino flips it in place (one state). No domino selected and a square tapped: select the first tray
-  domino still in the tray. Gestures read the board through `rememberUpdatedState` (Snap's lesson).
+  domino still in the tray. Gestures read the board through a cell updated on every emit (Tents' pattern; Snap's lesson).
 - **Keys** (`DominoKeys.kt`, pure and tested like `SudokuKeys`): arrows move a cursor over squares; `[`/`]` or Tab
   cycle the tray selection; `F` or Space flips; Enter marks the first square, Enter on a neighbour lays it;
   Backspace/Delete lifts the domino under the cursor.
@@ -212,7 +212,8 @@ From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes
   holds, red (`scheme.error`, solid) when `ruleBroken`. Never moves the board.
 - **Preview:** a fixed motif (a few squares, two regions with badges, two dominoes with pips). Never calls `generate`.
 - **Walkthrough:** a hand-built tiny board (3-4 dominoes): select and lay a domino; a one-square SUM; an EQUAL region;
-  lift and re-lay; a free-play frame the hints finish.
+  lift and re-lay; a free-play frame the hints finish. As built: the player lays the 5-2 unturned, so its 5 lands on the
+  2 (their own mistake), turns it round where it lies (double tap or long press), and lays the 1-0 by a drag.
 - **Share card:** the standard grid for the play log; nothing board-specific unless it reads better.
 
 ## Tests (section 10 of the standards, plus)

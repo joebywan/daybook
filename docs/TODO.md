@@ -15,10 +15,17 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
-- [ ] **Walkthroughs: rewrite to the style rules.** The runner now advances by itself and takes multi-state moves
-  (`docs/PUZZLE_STANDARDS.md` section 8); only Lexicon's BOAT and Sudoku's cell-then-digit were converted. The other 23 still
-  split one idea over several frames (Inequality, Regions, Cages, Cipher select then digit), teach gestures only in captions,
-  and carry claims the rules contradict (Lexicon frame 4: "no guess can tell COAT, GOAT and MOAT apart", but CLOG does). *M.*
+- [ ] **Touch targets left under 48dp.** Fixed in the UX pass: Home header buttons (48dp targets round 36dp circles), the
+  play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
+  Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)
+  and the calendar's day cells (sized from width, ~40dp at 360). *S each.*
+- [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
+  section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
+  button) and Sand's refused pour (it shakes and tints). *S.*
+- [ ] **Web: a touch right after a mouse gesture may be dropped.** Driving the walkthroughs in Playwright (Chromium and
+  WebKit), the first touch tap after a mouse drag or click did nothing (Shikaku's remove, LITS's 2x2, Atoms' gap); the
+  same taps by mouse, and by touch on the Android emulator, work. Probably the harness mixing pointer types, but a
+  touchscreen laptop mixes them too: check on real hardware before closing. *S.*
 - [ ] **Fredoka: board glyphs, decide.** Canvas-drawn numerals (Sudoku, Snap, Nonogram, Atoms, Mosaic, ...) are drawn with
   a bare `TextStyle` that names no family, yet on both builds they already render in Fredoka (digit shapes match the UI
   text; seen in the 2026-10 recapture, Android and Chromium). Recommendation: leave them, and if one needs pinning, do it
@@ -49,6 +56,12 @@ from a measurement or review, so you can check it is still true.
   operations still on the board at the finish (not only those that build the target); both are simple readings the owner may
   want changed (`ui/play/ShareCard.kt`).
 
+- [ ] **Rate link: check on a phone.** Settings ends with a row that opens Google Play's page for a Play install, or
+  GitHub for any other install and on the web (`ui/settings/RateRow.kt`, `rememberRateLink` in both platform files). It was
+  compiled by CI only. Check a Play install opens the Play Store app, and a sideloaded or F-Droid install opens GitHub in
+  the browser. A one-time nudge on the finish frame (say after the tenth solve) would bring more ratings than a settings
+  row, but the finish frame is settled UX, so that is the owner's call. *S.*
+
 ## Rewards
 
 Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) 5 (calendar) and 6 (daily variety) are done; the rest are separate PRs.
@@ -56,8 +69,12 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 - [ ] **Achievements follow-ups.** No fanfare yet (the solve chime plays; a distinct short tone would need a second
   sample path in both platform players). The two
   registry-wide achievements (one of each, clean sweep) read unearned again when a puzzle is added.
-- [ ] **Levels.** A third mode beside Daily and Random: numbered packs of five boards that open one after another, so
-  boards after the dailies have something to tick off (a player's feedback, 2026-10-22). Spec: `docs/LEVELS_SPEC.md`. *L.*
+- [ ] **Move feel: boards left out.** `ui/MoveFeel.kt` (settle and unit glow) is on every grid board but these: Mate (the
+  reply already lands in a second beat with the last move marked), Pointers (its slide), Pipes (its turn), Snap (the line follows
+  the finger square by square), Sets (a pick, not a placement), Tower (submitting clears the row being built, so a settle would
+  pop empty pegs; the new guess row could settle instead). No unit glow on Cipher (a column is judged with its carry), Mosaic,
+  Target, Lexicon, Shikaku (no unit short of the solve, or a rectangle is itself the move). Home: the solved tick could pop in
+  on the way back from a solve (not built). *S each.*
 - [ ] **Puzzle of the week.** A larger board once a week (e.g. Sundays), from the same `hash(date, puzzle, tier)` scheme so it
   stays offline and free; most generators already scale by size. The owner wants it argued with worked examples per puzzle that fit a
   phone screen first: Nonogram Expert is already as big as a phone allows. Decide which puzzles take part (only those whose larger
@@ -100,6 +117,10 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   2025.09 -> 2026.09, lifecycle, activity, navigation, datastore, core-ktx) and kotlinx-serialization 1.11
   are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
   17 too); Gradle 9 would run on newer, so moving the JDK is its own change (`renovate.json` holds it at 17).
+- [ ] **`compileSdk` 36 -> 37 before `core-ktx` 1.19.** `androidx.core:core-ktx` 1.19.1 requires `compileSdk` 37
+  (`checkDebugAarMetadata` fails, and CI then stops on the SDK preview licence), so Renovate's PR (#185) was closed rather than
+  merged. Move `compileSdk` to 37 on its own (it does not change `targetSdk` or runtime behaviour, but needs SDK 37 in CI), then
+  let Renovate offer the update again. *S.*
 - [ ] **Web icons are pinned at `material-icons-extended` 1.7.3** (`gradle/libs.versions.toml`, the last
   published; move to Material Symbols vector resources eventually). The deprecated `compose.*` accessors and
   `getting` in `web/build.gradle.kts` are gone. *S.*
@@ -159,7 +180,15 @@ below have a famous branded version; use the descriptive name).
   `generate(seed, difficulty)` contract does not carry. Only if repeats bother anyone.
 
 - [ ] **Dominoes: recapture the home screenshot.** Dominoes is the twenty-fifth tile, opening a ninth row on a phone;
-  `docs/screenshots/home.png` (and the store screenshots) were not recaptured with it.
+  `docs/screenshots/home.png` (and the store screenshots) were not recaptured with it. The "Arrange puzzles" link under the
+  grid is new as well; a clean install shows registry order (nothing played), so the shot's order is unchanged.
+- [ ] **Web: a late home-grid value can reach a tile stale.** The "In progress" set, passed down as a plain `Set` and landing in
+  the first frames, reached `PuzzleTile` stale in about half of Chromium loads (DaybookApp had the new set; the tile recomposed
+  with the old one; WebKit and Android never showed it). It is now a state read in the tile (`inProgress: () -> Set<String>`),
+  6 of 6 loads right. Root cause not found (the grid sits in `BoxWithConstraints` inside a `LazyColumn` item); other values
+  that arrive late (`doneToday` from completions) go the same way and may be worth a check. *M.*
+- [ ] **Arrange puzzles: drag to reorder.** `ArrangeScreen` has up and down buttons only (accessible, but 24 taps to move the
+  last puzzle to the top). A long-press drag, or a "move to top" button, would help a long list. *S.*
 - [ ] **Recapture home screenshots after the UX PRs.** The badge now says "Day one awaits" on a clean install, not "0 day
   streak", and more home changes are landing; recapture every `1-home.png` and `docs/screenshots/home.png` once they are in
   (`tools/screenshots/capture.sh`). *S.*

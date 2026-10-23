@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
  *
  * [onKey] gets a key that is not part of a chord and says whether the board uses it (true consumes it,
  * even when the key changes nothing). `repeat` is true for the auto-repeat of a held key: act on it
- * only for arrows (see [isArrow]). Shift+key reaches [onKey] only when [shift] is set.
+ * only for arrows (see [arrowStep]). Shift+key reaches [onKey] only when [shift] is set.
  *
  * Keys are paced one per recomposition. Every board works its move out from the state it was last
  * composed with, so a second key before the next frame acted on the stale board and the first was lost:
@@ -152,9 +152,6 @@ fun movedCursor(cursor: Int?, key: Key, rows: Int, cols: Int): Int? {
     val (dr, dc) = arrowStep(key) ?: return null
     return if (cursor == null) 0 else stepCursor(cursor, dr, dc, rows, cols)
 }
-
-/** True for the four arrows: the keys worth acting on while held. */
-fun isArrow(key: Key): Boolean = arrowStep(key) != null
 
 /** [at] moved by one arrow step on a [rows] x [cols] grid, clamped at the edges and never wrapping. */
 fun stepCursor(at: Int, dRow: Int, dCol: Int, rows: Int, cols: Int): Int =

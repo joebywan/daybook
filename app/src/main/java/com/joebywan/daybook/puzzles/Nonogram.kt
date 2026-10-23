@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,10 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -65,8 +58,14 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** Each board draws its filled squares as a diagonal blend of two colours; the pair is the board's own. */
 private val PALETTES = listOf(
@@ -147,8 +146,8 @@ object Nonogram : PuzzleType {
             .joinToString(""))
         val empty = tutorialBoard()
         val row2 = (5..9).toList()
-        val afterRow2 = marked(empty, row2.associateWith { NonogramLogic.FILLED })
-        val afterRow3 = marked(afterRow2, (10..14).associateWith { NonogramLogic.FILLED })
+        val row3 = (10..14).toList()
+        val afterRow3 = marked(empty, (row2 + row3).associateWith { NonogramLogic.FILLED })
         val afterMiddle = marked(afterRow3, mapOf(17 to NonogramLogic.FILLED))
         val afterCross = marked(afterMiddle, mapOf(20 to NonogramLogic.CROSSED))
         listOf(
@@ -160,20 +159,24 @@ object Nonogram : PuzzleType {
             ),
             TutorialFrame(
                 state = empty,
-                caption = "Row 2 reads 5, and the row is five squares wide, so every square is filled. " +
-                    "Drag along it to fill the whole row in one sweep.",
-                highlight = BoardHighlight(strong = row2.toSet() + rowIndex(1)),
-                accepts = only(empty, row2.associateWith { NonogramLogic.FILLED }),
-                retry = "Drag along the whole glowing row, left to right, in one sweep.",
-                done = "Filled. A row whose numbers use all its width has nowhere to move.",
-            ),
-            TutorialFrame(
-                state = afterRow2,
-                caption = "Row 3 reads 5 too. Sweep it the same way.",
-                highlight = BoardHighlight(strong = (10..14).toSet() + rowIndex(2)),
-                accepts = only(afterRow2, (10..14).associateWith { NonogramLogic.FILLED }),
+                caption = "Rows 2 and 3 read 5, and the board is five squares wide, so every square in them is " +
+                    "filled. Drag along each row to fill it in one sweep.",
+                // The rows still to sweep glow.
+                glow = { b ->
+                    val cells = (b as NonogramState).cells
+                    BoardHighlight(strong = listOf(row2, row3).filter { r -> r.any { cells[it] != NonogramLogic.FILLED } }
+                        .flatMap { r -> r + rowIndex(r.first() / TUTORIAL_N) }.toSet())
+                },
+                steps = { next ->
+                    when {
+                        only(empty, (row2 + row3).associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.DONE
+                        only(empty, row2.associateWith { NonogramLogic.FILLED })(next) ||
+                            only(empty, row3.associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.PROGRESS
+                        else -> TutorialStep.REJECT
+                    }
+                },
                 retry = "Drag along the whole glowing row in one sweep.",
-                done = "Two rows down.",
+                done = "Filled. A run as wide as its row has nowhere to move.",
             ),
             TutorialFrame(
                 state = afterRow3,
@@ -195,7 +198,7 @@ object Nonogram : PuzzleType {
             ),
             TutorialFrame(
                 state = afterCross,
-                caption = "Your turn: finish the picture. Stuck? Hint shows you which row or column to look at, and why.",
+                caption = "Your turn: finish the picture. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. Every board works out one line at a time.",
             ),
@@ -303,6 +306,8 @@ object Nonogram : PuzzleType {
         rowBad: BooleanArray = BooleanArray(s.height),
         colBad: BooleanArray = BooleanArray(s.width),
         overlay: Overlay = Overlay(),
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val u = g.u
         val highlight = overlay.highlight
@@ -317,16 +322,18 @@ object Nonogram : PuzzleType {
                 val x = g.gridX + c * u
                 val y = g.gridY + r * u
                 drawRect(scheme.surface, Offset(x, y), Size(u, u))
-                when (s.cells[r * s.width + c]) {
-                    NonogramLogic.FILLED -> drawRoundRect(
-                        lerp(palette.first, palette.second, (r + c).toFloat() / (s.width + s.height - 2).coerceAtLeast(1)), Offset(x + u * 0.07f, y + u * 0.07f), Size(u * 0.86f, u * 0.86f), CornerRadius(u * 0.14f),
-                    )
-                    NonogramLogic.CROSSED -> {
-                        val a = u * 0.30f
-                        val stroke = maxOf(u * 0.09f, 1.2f)
-                        val ink = scheme.onSurfaceVariant.copy(alpha = 0.8f)
-                        drawLine(ink, Offset(x + a, y + a), Offset(x + u - a, y + u - a), stroke, StrokeCap.Round)
-                        drawLine(ink, Offset(x + u - a, y + a), Offset(x + a, y + u - a), stroke, StrokeCap.Round)
+                feelSquare(feel, r * s.width + c, Offset(x, y), Size(u, u), accent) {
+                    when (s.cells[r * s.width + c]) {
+                        NonogramLogic.FILLED -> drawRoundRect(
+                            lerp(palette.first, palette.second, (r + c).toFloat() / (s.width + s.height - 2).coerceAtLeast(1)), Offset(x + u * 0.07f, y + u * 0.07f), Size(u * 0.86f, u * 0.86f), CornerRadius(u * 0.14f),
+                        )
+                        NonogramLogic.CROSSED -> {
+                            val a = u * 0.30f
+                            val stroke = maxOf(u * 0.09f, 1.2f)
+                            val ink = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            drawLine(ink, Offset(x + a, y + a), Offset(x + u - a, y + u - a), stroke, StrokeCap.Round)
+                            drawLine(ink, Offset(x + u - a, y + a), Offset(x + a, y + u - a), stroke, StrokeCap.Round)
+                        }
                     }
                 }
             }
@@ -485,16 +492,7 @@ object Nonogram : PuzzleType {
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         // A rim that breathes is findable at a glance on a 15x15 board. Only runs while something
         // glows, and is read in the draw phase.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         Column(
             Modifier
@@ -527,6 +525,12 @@ object Nonogram : PuzzleType {
                 val shown = sweep?.let { w -> s.sweep(sweptCells(w, s.width), w.mark, w.startedOn) } ?: s
                 val (rowDone, colDone) = linesDone(shown, rows, cols)
                 val palette = remember(s.solution) { paletteFor(s) }
+                // Lines finished by their clues, on the board as handed (not the sweep still under the finger).
+                val units = remember(s.solution) { lineUnits(s.width, s.height) }
+                val done = linesDone(s, rows, cols)
+                val feel = rememberMoveFeel(s.cells.toList(), units) { u ->
+                    if (u < s.height) done.first[u] else done.second[u - s.height]
+                }
 
                 // A line must stay impossible for a second, and be so now, before it turns red.
                 // The next change cancels the wait and starts it over.
@@ -549,7 +553,7 @@ object Nonogram : PuzzleType {
                     Canvas(Modifier.fillMaxSize()) {
                         drawBoard(
                             shown, g, rowText, colText, rowDone, colDone, scheme, palette, rowBad, colBad,
-                            Overlay(highlight, glow, pulse.value),
+                            Overlay(highlight, glow, pulse.value), feel, Color(accent),
                         )
                     }
                     // Taps and sweeps are read over the grid alone, in its own coordinates; the

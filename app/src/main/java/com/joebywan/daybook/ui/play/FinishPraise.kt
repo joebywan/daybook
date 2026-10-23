@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.play
 
+import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.nearestToGo
 import com.joebywan.daybook.core.newlyEarned
 import com.joebywan.daybook.core.puzzleNote
@@ -22,13 +23,18 @@ data class Praise(
     val toGo: String? = null,
     /** What the Share button previews and sends ([shareCard]); null hides the button (a reopened solved board). */
     val share: ShareCard? = null,
+    /**
+     * The full show (all the confetti) rather than a light flourish: the first daily solve of today, an Expert solve, a
+     * personal record, a streak milestone or an earned achievement. True by default, so a frame nobody judged stays loud.
+     */
+    val full: Boolean = true,
 )
 
 /** What the frame shows for one achievement. */
 data class EarnedAchievement(val id: String, val title: String, val description: String)
 
 /** Streak lengths that get the loud treatment. */
-val STREAK_MILESTONES = setOf(7, 30, 100)
+private val STREAK_MILESTONES = setOf(7, 30, 100)
 
 private const val MIN_SAMPLES = 5      // own solves at the tier before a percentile or "long" is meaningful
 private const val PERCENT_FLOOR = 75   // "faster than N%" shown only from here up
@@ -54,7 +60,8 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
     val lines = mutableListOf<String>()
 
     val day = solve.day
-    if (day != null && day == today && history.none { it.day == today }) {
+    val firstToday = day != null && day == today && history.none { it.day == today }
+    if (firstToday) {
         val before = Stats.streak(history, today)
         val after = Stats.streak(history + solve, today)
         val n = after.current
@@ -73,9 +80,8 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
     val tier = history.filter { it.puzzleId == solve.puzzleId && it.difficulty == solve.difficulty }
     val s = solve.seconds
     val personal = mutableListOf<String>()
-    if (tier.isNotEmpty() && s < tier.minOf { it.seconds }) {
-        personal += "Your fastest ${solve.difficulty.label} $puzzleName yet."
-    }
+    val record = tier.isNotEmpty() && s < tier.minOf { it.seconds }
+    if (record) personal += "Your fastest ${solve.difficulty.label} $puzzleName yet."
     val sorted = tier.map { it.seconds }.sorted()
     val long = s >= LONG_SECONDS || (sorted.size >= MIN_SAMPLES && s >= LONG_FLOOR && s >= 2 * sorted[sorted.size / 2])
     if (long) personal += "That one fought back, and you stuck with it."
@@ -89,7 +95,8 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
     // One line beneath the title (or beneath "Congratulations!"): praise is loud, not long.
     val earned = newlyEarned(history, solve, today).map { EarnedAchievement(it.id, it.title, it.description) }
     val near = nearestToGo(history, solve, today)
-    return Praise(title, big, (lines + personal).take(1), earned, near?.text)
+    val full = firstToday || solve.difficulty == Difficulty.EXPERT || record || big || earned.isNotEmpty()
+    return Praise(title, big, (lines + personal).take(1), earned, near?.text, full = full)
 }
 
 /** Where a shared result points: the web build, which anyone can open without installing anything. */

@@ -428,6 +428,34 @@ hashed into every seed: never rename it.
   (Fredoka has no `≠`); green when the region is covered and keeps its rule, solid `scheme.error` once it cannot (1 s settle).
   Highlight indices: squares `row * width + col`, tray slot `DominoTeacher.TRAY + k`, badge `DominoTeacher.RULE + r`.
 
+## Motion and haptics
+
+The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s
+`rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
+Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
+A move's feel (the changed squares settle, a unit finished by the rules glows once) is `ui/MoveFeel.kt`'s
+`rememberMoveFeel`, read in the draw phase; it fires only on `LocalMoveCount` (raised by `push`, so never on load,
+undo, restart or the walkthrough). A new board passes its cells and units to it rather than animating its own.
+
+## Levels
+
+The third home mode, `Daily · Levels · Random`: numbered levels of five boards from five puzzles; finish all five and the next opens.
+Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `SeedHash.level`, `LevelSolve` / `LevelProgress` and
+`openLevel` / `recordLevelSolve` in `data/ProgressStore.kt`; the screens are `ui/home/LevelsScreen.kt`, `LaunchMode.LEVELS`,
+`Route.Levels` / `Route.Play(level)` in `ui/DaybookApp.kt` and `levelNextOptions` in `ui/play/NextSteps.kt`.
+
+- **`Levels.POOL` is append-only and a plan is `(level, poolSize)` alone.** An opened level stores the pool size it was opened with,
+  so adding a puzzle never changes a level someone has started; `LevelsTest` pins the plans, and the web parity check diffs a year of them.
+- **A level board's seed and tier come from its level's stored plan**, never from the route or the full pool, so the play route waits
+  for `levelProgress` to load; open a level through `playLevel` (it calls `openLevel` first).
+- **Everything about progress is derived** (`LevelProgress.of`): the current level, done levels, "Level N done" on home. Nothing pops up.
+- A level solve is recorded twice: `recordLevelSolve` (a replay records nothing new) and a practice `Completion` (`day = null`), so the
+  streak never counts levels and totals and best times do. No "New game" on a level board; a solved one is cleared, so reopening replays it.
+- **The play screen is keyed on its board** (`key(puzzle.id, seed)` in `DaybookApp`): "Next in level" goes straight from one
+  puzzle to another, and without the key `PlayScreen`'s produced board was the last puzzle's state for a frame (a crash on the emulator).
+- `RouteSaver` fields are only ever added at the end: a route saved before `level` existed still reads (`LevelsUiTest`).
+- In Levels mode the tier row stays laid out, invisible, under the level strip, so the mode row cannot move when the mode changes.
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
@@ -572,8 +600,10 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   you cannot fix, or the change touches something under "Settled — do not reopen".
 - Never commit to `main`. Branch, PR, merge — I do the merging, not the owner. This is now enforced: a
   repository ruleset ("Protect main", set up 2026-10-02) requires a pull request, requires the CI
-  checks named `build` and `web-parity` to pass on a branch that is up to date with `main` (added
-  2026-10-23, after two pull requests each green alone broke `main` together), and blocks force-pushes and deletion. The repo owner's account can
+  checks named `build` and `web-parity` to pass, and blocks force-pushes and deletion. Branches need not be up to
+  date with `main`: that rule (tried 2026-10-23) stalled every open PR behind each merge, and a merge queue needs an
+  organisation-owned repo. Two PRs green alone can still break `main` together; `release.yml` tests any tree CI did not
+  pass, so that stops the release rather than shipping. The repo owner's account can
   bypass on pull requests only.
 - **Docs-only changes do not need CI, and the owner has said so outright** ("it doesn't impact tests,
   and it doesn't impact the app, why burn the compute time?"). A PR that touches only documentation
@@ -635,7 +665,8 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   connectivity rule to the win check to make uniqueness easier. `LitsUniquenessTest` asserts it
   with the independent `LitsOracle`; `FallbackTest` walks a year per tier through `generateVerified`.
 - Screen readers are not a goal: these are visual puzzles a blind player could not play however the boards were
-  exposed (the owner, 2026-10-22). Text size, colour-only signals and reduced motion were offered and left too.
+  exposed (the owner, 2026-10-22). Text size and colour-only signals were offered and left;
+  reduced motion (following the system setting) was added at the owner's request, 2026-10-23.
 - **Any orientation, any window size** (the owner reversed the old portrait lock in October 2026: Android 16 ignores
   the lock on large screens anyway, and Play flags it). Do not bring the lock back. A wide window puts the play screen's
   board beside a 360dp side panel (title, clock, the hint as a panel rather than a popover, toolbar at its foot, and the

@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.LitsTeacher
@@ -365,62 +366,75 @@ class LitsTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Lits.tutorial
-        assertEquals(8, frames.size)
+        assertEquals(7, frames.size)
         fun board(i: Int) = frames[i].state as LitsState
         val top = Lits.TUTORIAL_TOP
         val middle = top + Lits.TUTORIAL_MIDDLE
 
-        listOf(0, 1, 2).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].accepts) }
+        listOf(0, 1).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].judge) }
 
         // What the explanatory frames point at is true of the solved board.
         val letters = board(0).letters()
         assertTrue(listOf(10, 15, 16, 20).all { letters[it] == Lits.Piece.T })
         assertTrue(top.all { letters[it] == Lits.Piece.L } && Lits.TUTORIAL_MIDDLE.all { letters[it] == Lits.Piece.L })
-        assertTrue("frame 2's block has three shaded", listOf(2, 3, 8).all { board(1).shaded[it] } && !board(1).shaded[7])
 
-        // 4: one drag through the top region; a single tap is refused.
-        val drag = frames[3].accepts!!
-        assertTrue(drag(board(3).paint(top, true)))
-        assertFalse("one tap of the four", drag(board(3).toggle(1)))
-        assertFalse("a drag through five", drag(board(3).paint(top + 7, true)))
+        // 3: one drag through the top region; a single tap is refused.
+        val drag = frames[2].accepts!!
+        assertTrue(drag(board(2).paint(top, true)))
+        assertFalse("one tap of the four", drag(board(2).toggle(1)))
+        assertFalse("a drag through five", drag(board(2).paint(top + 7, true)))
         assertEquals(4, Lits.TUTORIAL_REGIONS.count { it == Lits.TUTORIAL_REGIONS[1] })
+        assertEquals(top, shadedOf(board(3)))
 
-        // 5: a tap on the stray square clears it.
-        val clear = frames[4].accepts!!
-        assertTrue(clear(board(4).toggle(7)))
-        assertFalse("clearing the L instead", clear(board(4).toggle(2)))
-        assertEquals(shadedOf(board(5)), shadedOf(board(4).toggle(7)))
+        // 4: the player shades square 7 (it fills a 2x2 with the L: the glow turns red, and the hints
+        // call it a mistake), then taps it again to clear it.
+        val block = frames[3].steps!!
+        val glow = frames[3].glow!!
+        assertEquals(TutorialStep.REJECT, block(board(3)))
+        assertEquals(TutorialStep.REJECT, block(board(3).toggle(12)))
+        val stray = board(3).toggle(7)
+        assertEquals(TutorialStep.PROGRESS, block(stray))
+        assertFalse(glow(board(3)).warning)
+        assertTrue(glow(stray).warning)
+        assertTrue("it fills a 2x2", listOf(2, 3, 7, 8).all { stray.shaded[it] })
+        assertTrue(Lits.teach(stray)!!.mistake)
+        assertEquals(TutorialStep.REJECT, block(stray.toggle(2)))
+        val cleared = stray.toggle(7)
+        assertEquals(TutorialStep.DONE, block(cleared))
+        assertEquals(shadedOf(board(4)), shadedOf(cleared))
+        // Its done line: a drag that starts on a shaded square clears.
+        assertEquals(top, shadedOf(stray.paint(listOf(7), !stray.shaded[7])))
 
-        // 6: the middle region's four uncrossed squares, in one drag.
-        val crossed = board(5).impossible()
-        assertTrue("frame 6's soft squares are crossed", setOf(0, 5, 6, 7).all { it in crossed })
-        val middleOpen = board(5).region.indices.filter {
-            board(5).region[it] == board(5).region[12] && it !in crossed
+        // 5: the middle region's four uncrossed squares, in one drag.
+        val crossed = board(4).impossible()
+        assertTrue("frame 5's soft squares are crossed", setOf(0, 5, 6, 7).all { it in crossed })
+        val middleOpen = board(4).region.indices.filter {
+            board(4).region[it] == board(4).region[12] && it !in crossed
         }.toSet()
         assertEquals(Lits.TUTORIAL_MIDDLE, middleOpen)
-        val drag2 = frames[5].accepts!!
-        assertTrue(drag2(board(5).paint(Lits.TUTORIAL_MIDDLE, true)))
-        assertFalse("one of the four", drag2(board(5).toggle(12)))
-        assertEquals(middle, shadedOf(board(6)))
+        val drag2 = frames[4].accepts!!
+        assertTrue(drag2(board(4).paint(Lits.TUTORIAL_MIDDLE, true)))
+        assertFalse("one of the four", drag2(board(4).toggle(12)))
+        assertEquals(middle, shadedOf(board(5)))
 
-        // 7: the T's bump. The two squares that would make an L are crossed, and the region has
+        // 6: the T's bump. The two squares that would make an L are crossed, and the region has
         // exactly the T left.
-        val crossed7 = board(6).impossible()
-        assertTrue(11 in crossed7 && 21 in crossed7)
-        val leftOpen = board(6).region.indices.filter { board(6).region[it] == board(6).region[10] && it !in crossed7 }.toSet()
+        val crossed6 = board(5).impossible()
+        assertTrue(11 in crossed6 && 21 in crossed6)
+        val leftOpen = board(5).region.indices.filter { board(5).region[it] == board(5).region[10] && it !in crossed6 }.toSet()
         assertEquals(setOf(10, 15, 16, 20), leftOpen)
-        val tap = frames[6].accepts!!
-        assertTrue(tap(board(6).toggle(Lits.TUTORIAL_BUMP)))
-        assertFalse("a crossed square", tap(board(6).toggle(11)))
-        assertFalse("a tap elsewhere", tap(board(6).toggle(10)))
-        assertEquals(middle + Lits.TUTORIAL_BUMP, shadedOf(board(7)))
+        val tap = frames[5].accepts!!
+        assertTrue(tap(board(5).toggle(Lits.TUTORIAL_BUMP)))
+        assertFalse("a crossed square", tap(board(5).toggle(11)))
+        assertFalse("a tap elsewhere", tap(board(5).toggle(10)))
+        assertEquals(middle + Lits.TUTORIAL_BUMP, shadedOf(board(6)))
 
         // Every move the frames ask for is part of the answer.
         assertTrue((middle + Lits.TUTORIAL_BUMP).all { it in Lits.TUTORIAL_SOLUTION })
 
-        // 8: free play, finishable by hints alone, with no fallback and no mistakes.
-        assertTrue(frames[7].freePlay)
-        var s = board(7)
+        // 7: free play, finishable by hints alone, with no fallback and no mistakes.
+        assertTrue(frames[6].freePlay)
+        var s = board(6)
         while (!s.solved) {
             val d = Lits.teach(s)!!
             assertFalse("the last frame should not need the fallback", d.fallback)

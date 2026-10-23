@@ -3,10 +3,11 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.InequalityState
 import com.joebywan.daybook.puzzles.InequalityTeacher
-import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.puzzles.enter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -107,7 +108,7 @@ class InequalityTeachingTest {
         var longest = 0
         for (d in Difficulty.entries) for (day in 0 until 365) {
             val s = board(day, d)
-            var now: InequalityState = s
+            val now: InequalityState = s
             // Plant a mistake at the start so those texts are measured too.
             val at = s.cells.indices.first { s.cells[it] == 0 }
             for (state in listOf(now, now.withCell(at, s.solution[at] % s.size + 1))) {
@@ -138,25 +139,43 @@ class InequalityTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Inequality.tutorial
-        assertEquals(6, frames.size)
-        assertEquals(listOf(true, true, false, false, false, false), frames.map { it.accepts == null && !it.freePlay })
+        assertEquals(5, frames.size)
+        assertEquals(listOf(true, true, false, false, false), frames.map { it.judge == null && !it.freePlay })
         val b0 = Inequality.tutorialBoard()
+        // Frame 3: tap the top-left square (the 1 glows next), then 1; another square, or the 2 (the
+        // wrong end of the sign), is refused.
+        val place = frames[2].steps!!
+        assertEquals(TutorialStep.REJECT, place(b0))
         val selected = b0.select(0)
-        val placed = selected.withCell(0, 1)
-        // Frame 2: select the top-left square; selecting another, or placing, is refused.
-        fun ok(i: Int, s: PuzzleState) = assertTrue("frame $i", frames[i].accepts!!(s))
-        fun no(i: Int, s: PuzzleState) = assertFalse("frame $i", frames[i].accepts!!(s))
-        ok(2, selected); no(2, b0.select(1)); no(2, b0.select(0).withCell(0, 1))
-        // Frame 3: the 1 in square 0 (the 2 is the wrong end of the sign).
-        assertEquals(selected, frames[3].state)
-        ok(3, placed); no(3, selected.withCell(0, 2)); no(3, selected)
-        // Frame 4: clear the wrong 1.
-        val wrong = frames[4].state as InequalityState
+        assertEquals(TutorialStep.PROGRESS, place(selected))
+        assertEquals(setOf(InequalityTeacher.pad(1)), frames[2].glow!!(selected).strong)
+        assertEquals(TutorialStep.REJECT, place(b0.select(1)))
+        assertEquals(TutorialStep.REJECT, place(selected.enter(0, 2)))
+        val placed = selected.enter(0, 1)
+        assertEquals(TutorialStep.DONE, place(placed))
+        // Its claim: those four squares hold only 1s and 2s, and without the sign both ways fit.
+        assertTrue(listOf(0, 1, 4, 5).all { Inequality.TUTORIAL_SOLUTION[it] in 1..2 })
+        // Frame 4: the player puts a 1 under the 1 in column 3 (red, a mistake), then taps 1 again.
+        val clash = frames[3].steps!!
+        val glow = frames[3].glow!!
+        val start = frames[3].state as InequalityState
+        assertEquals(placed.cells, start.cells)
+        assertEquals(TutorialStep.REJECT, clash(start))
+        val wrongAt = glow(start).strong.single()
+        val picked = start.select(wrongAt)
+        assertEquals(TutorialStep.PROGRESS, clash(picked))
+        assertEquals(TutorialStep.REJECT, clash(picked.enter(wrongAt, 2)))
+        val wrong = picked.enter(wrongAt, 1)
+        assertEquals(TutorialStep.PROGRESS, clash(wrong))
+        assertTrue(glow(wrong).warning)
         assertEquals(setOf(10, 14), wrong.conflicts())
-        ok(4, wrong.withCell(14, 0)); no(4, wrong)
+        assertEquals(2, wrongAt % 4) // column 3, counting from 1
+        assertTrue(Inequality.teach(wrong)!!.mistake)
+        val cleared = wrong.enter(wrongAt, 1)
+        assertEquals(TutorialStep.DONE, clash(cleared))
         // Frame 5 is free play, and hints alone finish it with no fallback and no mistake.
-        assertTrue(frames[5].freePlay)
-        var now = frames[5].state as InequalityState
+        assertTrue(frames[4].freePlay)
+        var now = frames[4].state as InequalityState
         assertEquals(Inequality.tutorialBoard(mapOf(0 to 1)).cells, now.cells)
         while (!now.solved) {
             val d = Inequality.teach(now)!!

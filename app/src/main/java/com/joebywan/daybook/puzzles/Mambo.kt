@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,9 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,11 +54,16 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
+import com.joebywan.daybook.ui.rememberHintPulse
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** Empty, or one of the two symbols. */
 @Serializable
@@ -610,9 +608,10 @@ object Mambo : PuzzleType {
         val start = tutorialBoard()
         val capped = tutorialBoard(2 to Sym.MOON)
         val linked = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON)
-        val passing = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON, 22 to Sym.MOON)
         val filled = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON, 22 to Sym.SUN)
         val counted = tutorialBoard(2 to Sym.MOON, 7 to Sym.MOON, 22 to Sym.SUN, 32 to Sym.MOON)
+        // The sun is two taps, by way of a moon that makes three in a row: one frame.
+        val sun = TutorialPath(only(linked, 22, Sym.MOON), only(linked, 22, Sym.SUN))
         listOf(
             TutorialFrame(
                 state = solved,
@@ -646,20 +645,15 @@ object Mambo : PuzzleType {
             ),
             TutorialFrame(
                 state = linked,
-                caption = "In row 4, the gap between two moons must be a sun. A tap goes moon, then " +
-                    "sun, then empty, so start with one tap.",
-                highlight = BoardHighlight(strong = setOf(22), soft = setOf(21, 23)),
-                accepts = only(linked, 22, Sym.MOON),
-                retry = "Tap the glowing square once.",
-                done = "That's three moons together, for now.",
-            ),
-            TutorialFrame(
-                state = passing,
-                caption = "Three moons together breaks the rules, so after a moment the board rings " +
-                    "them in red. Tap again to make it a sun.",
-                highlight = BoardHighlight(strong = setOf(22), soft = setOf(21, 23)),
-                accepts = only(passing, 22, Sym.SUN),
-                retry = "Tap the glowing square once more.",
+                caption = "In row 4, the gap between two moons must be a sun. A tap goes moon, then sun, then " +
+                    "empty: tap once and three moons ring red, then tap again for the sun.",
+                // The moons glow red once the passing moon makes three of them.
+                glow = { s ->
+                    if (sun.stage(s) < 0) BoardHighlight(strong = setOf(22), soft = setOf(21, 23))
+                    else BoardHighlight(strong = setOf(22), soft = setOf(21, 23), warning = true)
+                },
+                steps = sun.steps,
+                retry = "Tap the glowing square once, then once more.",
                 done = "A sun, and the red ring goes.",
             ),
             TutorialFrame(
@@ -1004,17 +998,14 @@ object Mambo : PuzzleType {
         // A glow that breathes is findable at a glance on a 10x10 board; a static ring is not much
         // louder than the violation rings. Only runs while something glows, and is read in the draw
         // phase, so it repaints the rings without recomposing the board every frame.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         fun named(i: Int) = highlight.isEmpty || i in highlight.strong || i in highlight.soft
+        // A row or column is finished when it is full and breaks no rule that lies inside it.
+        val units = remember(s.size) { lineUnits(s.size, s.size) }
+        val feel = rememberMoveFeel(s.cells, units) { u ->
+            val line = units[u]
+            line.none { s.cells[it] == Sym.NONE } && live.none { v -> v.cells.all { it in line } }
+        }
         // The keyboard cursor (see MamboKeys): transient, so not in the state.
         var cursor by remember(s.givens, s.links) { mutableStateOf<Int?>(null) }
 
@@ -1087,6 +1078,7 @@ object Mambo : PuzzleType {
                                 modifier = Modifier
                                     .padding(start = cell * c, top = cell * r)
                                     .size(cell)
+                                    .moveFeel(feel, i, Color(accent))
                                     .padding(cell * 0.06f),
                             )
                         }

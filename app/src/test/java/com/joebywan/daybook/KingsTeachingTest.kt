@@ -381,11 +381,11 @@ class KingsTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Kings.tutorial
-        assertEquals(7, frames.size)
+        assertEquals(6, frames.size)
         fun board(i: Int) = frames[i].state as KingsState
 
         // Explanatory frames take no move.
-        listOf(0, 1, 4).forEach { assertEquals("frame ${it + 1} should be Next-only", null, frames[it].accepts) }
+        listOf(0, 1).forEach { assertEquals("frame ${it + 1} should be Next-only", null, frames[it].accepts) }
 
         // 3: a single tap on r0c1.
         val tap = frames[2].accepts!!
@@ -400,22 +400,26 @@ class KingsTeachingTest {
         assertFalse("a single tap", crown(board(3).toggleMark(0)))
         assertFalse("a crown elsewhere", crown(board(3).toggleKing(7)))
         assertEquals(board(4).marks, board(3).toggleKing(0).marks)
+        // Its done line: the board crosses off what the king rules out (its row, column, colour and
+        // neighbours), drawn from the marks alone.
+        val crowned = board(3).toggleKing(0)
+        assertTrue(setOf(1, 2, 3, 4, 5, 6, 10, 15, 20).all { it in crowned.eliminated() })
 
-        // 6: one sweep down column 3.
-        val sweep = frames[5].accepts!!
-        assertTrue(sweep(board(5).paint(listOf(12, 17, 22), Mark.BLOCKED)))
-        assertFalse("one square of the three", sweep(board(5).toggleMark(12)))
-        assertFalse("a sweep through region 1", sweep(board(5).paint(listOf(7, 12, 17, 22), Mark.BLOCKED)))
-        assertEquals(board(6).marks, board(5).paint(listOf(12, 17, 22), Mark.BLOCKED).marks)
+        // 5: one sweep down column 3.
+        val sweep = frames[4].accepts!!
+        assertTrue(sweep(board(4).paint(listOf(12, 17, 22), Mark.BLOCKED)))
+        assertFalse("one square of the three", sweep(board(4).toggleMark(12)))
+        assertFalse("a sweep through region 1", sweep(board(4).paint(listOf(7, 12, 17, 22), Mark.BLOCKED)))
+        assertEquals(board(5).marks, board(4).paint(listOf(12, 17, 22), Mark.BLOCKED).marks)
 
         // Each explained move is actually true on its board.
         assertTrue(1 !in Kings.TUTORIAL_SOLUTION)
         assertEquals("region 0 has one open square in frame 4", setOf(0), openCells(board(3)).filter { Kings.TUTORIAL_REGIONS[it] == 0 }.toSet())
         assertTrue(listOf(12, 17, 22).none { it in Kings.TUTORIAL_SOLUTION })
 
-        // 7: free play, finishable by hints without the fallback.
-        assertTrue(frames[6].freePlay)
-        var s = board(6)
+        // 6: free play, finishable by hints without the fallback.
+        assertTrue(frames[5].freePlay)
+        var s = board(5)
         while (!s.solved) {
             val d = Kings.teach(s)!!
             assertFalse("the last frame should not need the fallback", d.fallback)

@@ -60,6 +60,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -101,7 +102,10 @@ import com.joebywan.daybook.platform.formatClock
 import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.generateBoard
 import com.joebywan.daybook.platform.readyBoard
+import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.LocalHaptics
+import com.joebywan.daybook.ui.LocalMoveCount
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
@@ -139,13 +143,15 @@ fun PlayScreen(
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
     praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String) -> Praise,
-    otherTiersDone: Set<Difficulty>,
+    options: List<NextOption>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
     onNewGame: (() -> Unit)? = null,
     tutorialOffered: Boolean? = null,
     onTutorialOffered: () -> Unit = {},
     showTimer: Boolean = true,
+    /** The level this board belongs to, if any: the subtitle says so where a daily shows its date. */
+    level: Int? = null,
 ) {
     // The harder boards take hundreds of milliseconds to generate, which would freeze the frame if
     // it happened during composition. Android runs it off the main thread; the web has only one
@@ -161,8 +167,8 @@ fun PlayScreen(
         DealingBoard(puzzle)
     } else {
         PlayBoard(
-            puzzle, difficulty, day, ready, restore, persist, onSolved, praiseFor, otherTiersDone, onNext, onBack,
-            onNewGame, tutorialOffered, onTutorialOffered, showTimer,
+            puzzle, difficulty, day, ready, restore, persist, onSolved, praiseFor, options, onNext, onBack,
+            onNewGame, tutorialOffered, onTutorialOffered, showTimer, level,
         )
     }
 }
@@ -226,13 +232,14 @@ private fun PlayBoard(
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
     praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String) -> Praise,
-    otherTiersDone: Set<Difficulty>,
+    options: List<NextOption>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
     onNewGame: (() -> Unit)?,
     tutorialOffered: Boolean?,
     onTutorialOffered: () -> Unit,
     showTimer: Boolean,
+    level: Int?,
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -240,6 +247,7 @@ private fun PlayBoard(
     var game by rememberSaveable(initial, stateSaver = SavedGameSaver) { mutableStateOf(pristine) }
     // Saved alongside the game: without it, rotating a finished board would record the win twice.
     var recorded by rememberSaveable(initial) { mutableStateOf(false) }
+    val haptics = LocalHaptics.current
     // Transient: a reopened solved board shows the plain frame.
     var praise by remember { mutableStateOf(finishPreview ?: Praise()) }
     // Finished-frame state: hidden to inspect the board, and confetti played once. Never PuzzleState.
@@ -346,13 +354,28 @@ private fun PlayBoard(
             // Asked before onSolved: the history must not yet contain this solve.
             praise = praiseFor(seconds, game.hints, game.state, game.log)
             onSolved(seconds, game.hints)
+            haptics.success()
         }
     }
+
+    // Counts moves for the boards' move feel (LocalMoveCount); not saved, so a rotation or a reopened board plays nothing.
+    var pushes by remember { mutableIntStateOf(0) }
 
     // Reads through `game` rather than the unpacked locals so that two taps landing in the same
     // frame stack up properly instead of pushing the same board twice.
     fun push(next: PuzzleState) {
-        game = game.copy(state = next, history = game.history + game.state, log = game.log + PlayLog.step(puzzle, game.state, next))
+        val prev = game.state
+        pushes++
+        val step = PlayLog.step(puzzle, prev, next)
+        game = game.copy(state = next, history = game.history + prev, log = game.log + step)
+        // A buzz for a move that lands (not a selection or a typed letter), a firmer one for a bump; a solve gets
+        // its own, with the chime, so the move that solves stays quiet here.
+        when {
+            next.solved -> Unit
+            step == PlayLog.WRONG.toString() ||
+                (next is PointersState && prev is PointersState && next.bumps.size > prev.bumps.size) -> haptics.bump()
+            step.isNotEmpty() -> haptics.tick()
+        }
     }
 
     // One logged hint per counted hint, exactly where the count goes up.
@@ -478,7 +501,7 @@ private fun PlayBoard(
                     buildString {
                         append(difficulty.label)
                         append(" · ")
-                        append(day?.let { formatDate(it, PLAY_DATE) } ?: "Random")
+                        append(level?.let { "Level $it" } ?: day?.let { formatDate(it, PLAY_DATE) } ?: "Random")
                     },
                     style = MaterialTheme.typography.labelLarge,
                     color = scheme.onSurfaceVariant,
@@ -530,6 +553,7 @@ private fun PlayBoard(
             CompositionLocalProvider(
                 LocalBoardHighlight provides hintSession.highlight,
                 LocalHighlightBounds provides highlightBounds,
+                LocalMoveCount provides pushes,
             ) {
                 puzzle.Board(
                     state = state,
@@ -601,9 +625,6 @@ private fun PlayBoard(
     // The finish: a compact frame docked over the play screen. An overlay, so the board keeps
     // exactly the box it had; the toolbar above stays laid out (hidden) for the same reason.
     if (finished) {
-        val options = remember(day, difficulty, otherTiersDone) {
-            nextOptions(daily = day != null, tier = difficulty, doneTiers = otherTiersDone)
-        }
         val accent = Color(puzzle.accent)
         // Tapping anywhere but a button hides the frame so the solved board can be looked at; the pill
         // brings it back. The scrim only exists while the frame is up, and a hidden frame covers nothing.
@@ -640,7 +661,7 @@ private fun PlayBoard(
                     .padding(bottom = 10.dp),
             )
         }
-        Confetti(played = confettiPlayed, onPlayed = { confettiPlayed = true })
+        Confetti(played = confettiPlayed, full = praise.full, onPlayed = { confettiPlayed = true })
     }
 
     if (hintSession.active && !state.solved && !wide) {
@@ -819,11 +840,12 @@ private fun FinishedFrame(
                 .shadow(6.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
                 .background(scheme.surface).then(hide).padding(10.dp),
         ) {
+            val main = mainOption(options)
             options.chunked(2).forEachIndexed { row, pair ->
                 if (row > 0) Spacer(Modifier.height(6.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     pair.forEach { option ->
-                        NextTile(option, accent, Modifier.weight(1f)) { onOption(option) }
+                        NextTile(option, option == main, accent, Modifier.weight(1f)) { onOption(option) }
                     }
                 }
             }
@@ -861,29 +883,30 @@ private fun ResultsPill(accent: Color, next: NextOption?, done: NextOption, onSh
                 .background(scheme.surface).background(accent.copy(alpha = 0.22f)).clickable(onClick = onShow),
             contentAlignment = Alignment.Center,
         ) { Text("Show results", style = MaterialTheme.typography.titleSmall, color = scheme.onSurface) }
-        listOfNotNull(next, done).forEach {
-            NextTile(it, accent, Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(scheme.surface)) { onOption(it) }
+        val shown = listOfNotNull(next, done)
+        val main = mainOption(shown)
+        shown.forEach {
+            NextTile(it, it == main, accent, Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(scheme.surface)) { onOption(it) }
         }
     }
 }
 
 @Composable
-private fun NextTile(option: NextOption, accent: Color, modifier: Modifier, onClick: () -> Unit) {
+private fun NextTile(option: NextOption, main: Boolean, accent: Color, modifier: Modifier, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    val done = option.kind == NextKind.DONE
     Column(
         modifier
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (done) scheme.primary else accent.copy(alpha = 0.22f))
+            .background(if (main) scheme.primary else accent.copy(alpha = 0.22f))
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(option.label, style = MaterialTheme.typography.titleSmall, color = if (done) scheme.onPrimary else scheme.onSurface, maxLines = 1)
-        option.difficulty?.let {
-            Text(it.label, style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, maxLines = 1)
+        Text(option.label, style = MaterialTheme.typography.titleSmall, color = if (main) scheme.onPrimary else scheme.onSurface, maxLines = 1)
+        (option.note ?: option.difficulty?.label)?.let {
+            Text(it, style = MaterialTheme.typography.labelMedium, color = if (main) scheme.onPrimary.copy(alpha = 0.8f) else scheme.onSurfaceVariant, maxLines = 1)
         }
     }
 }
@@ -892,7 +915,7 @@ private fun NextTile(option: NextOption, accent: Color, modifier: Modifier, onCl
 private fun IconCircle(icon: ImageVector, label: String, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Box(
-        Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick),
+        Modifier.size(48.dp).clip(CircleShape).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, label, tint = scheme.onSurfaceVariant)

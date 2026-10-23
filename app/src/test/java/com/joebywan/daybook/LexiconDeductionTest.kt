@@ -5,8 +5,10 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.LexiconKeyAction
+import com.joebywan.daybook.puzzles.LexiconRules
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.LexiconTeacher
+import com.joebywan.daybook.puzzles.WordList
 import com.joebywan.daybook.puzzles.lexiconKeyAction
 import androidx.compose.ui.input.key.Key
 import org.junit.Assert.assertEquals
@@ -82,36 +84,55 @@ class LexiconDeductionTest {
     @Test
     fun `the walkthrough is playable frame by frame and ends in a board the hints can finish`() {
         val frames = Lexicon.tutorial
-        assertTrue(frames.size >= 5)
+        assertEquals(5, frames.size)
+        assertEquals("Next-only frames", listOf(0, 1), frames.indices.filter { frames[it].judge == null && !frames[it].freePlay })
+        val moves = ArrayDeque(Lexicon.TUTORIAL_GUESSES.drop(1))
         var board: LexiconState? = null
         for (frame in frames) {
             val start = frame.state as LexiconState
+            board?.let { assertEquals("each frame starts where the last ended", it.copy(moves = 0), start) }
             val judge = frame.judge
+            board = start
             if (judge != null) {
-                // BOAT typed a letter at a time is progress, each letter's key glowing in turn, and
+                // The word typed a letter at a time is progress, each letter's key glowing in turn, and
                 // scoring it is the move; a stray letter at any point is refused.
+                val word = moves.removeFirst()
                 var s = start
-                for (c in "boat") {
+                for (c in word) {
                     assertEquals(setOf(LexiconTeacher.key(c)), frame.glow!!(s).strong)
                     assertEquals(TutorialStep.REJECT, judge(s.withLetter('z')))
                     s = s.withLetter(c)
                     assertEquals(TutorialStep.PROGRESS, judge(s))
                 }
                 assertEquals(setOf(LexiconTeacher.ENTER), frame.glow!!(s).strong)
-                assertEquals("Backspace", TutorialStep.PROGRESS, judge(s.copy(current = "boa")))
+                assertEquals("Backspace", TutorialStep.PROGRESS, judge(s.withoutLetter()))
                 assertEquals(TutorialStep.DONE, judge(s.submit()))
+                board = s.submit()
             }
-            board = start
         }
+        assertTrue(moves.isEmpty())
         val last = frames.last()
         assertTrue(last.freePlay)
-        // The free-play board is two guesses in; hints finish it.
+        // The free-play board is three guesses in; hints finish it.
         var s = board!!
         repeat(8) {
             if (!s.open) return@repeat
             s = (Lexicon.teach(s)!!.apply(s) as LexiconState).submit()
         }
         assertTrue(s.solved)
+    }
+
+    @Test
+    fun `the walkthrough's claims hold - OAT leaves three answers, and CLOG, which cannot win, tells them apart`() {
+        fun left(guesses: List<String>) = WordList.answers(4).filter { w ->
+            LexiconRules.consistent(w, guesses, guesses.map { LexiconRules.mark(it, Lexicon.TUTORIAL_ANSWER) })
+        }
+        val (tape, boat, clog) = Lexicon.TUTORIAL_GUESSES
+        assertEquals(listOf("coat", "goat", "moat"), left(listOf(tape, boat)))
+        assertTrue(WordList.isWord(clog))
+        // Each of the three marks CLOG differently, so one guess settles it whichever is the word.
+        assertEquals(3, listOf("coat", "goat", "moat").map { LexiconRules.mark(clog, it) }.toSet().size)
+        assertEquals(listOf("coat"), left(listOf(tape, boat, clog)))
     }
 
     @Test

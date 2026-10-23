@@ -314,12 +314,7 @@ internal object LexiconTeacher {
         var i = 0
         while (i < pool.size) {
             val word = pool[i]
-            // A probe-only hash container: only its size and largest value are read, never its order.
-            val counts = HashMap<Int, Int>()
-            for (f in fits) {
-                val code = LexiconRules.markCode(word, f)
-                counts[code] = (counts[code] ?: 0) + 1
-            }
+            val counts = outcomes(word, fits)
             val worst = counts.values.max()
             val spread = counts.size
             if (worst < bestWorst || (worst == bestWorst && spread > bestSpread)) {
@@ -333,13 +328,16 @@ internal object LexiconTeacher {
     }
 
     /** The most words of [fits] that [word] could leave, over every mark it might draw. */
-    fun worstCase(word: String, fits: List<String>): Int {
+    fun worstCase(word: String, fits: List<String>): Int = outcomes(word, fits).values.max()
+
+    /** How many of [fits] draw each mark code for [word]. A probe-only hash container: read for its size and values, never its order. */
+    private fun outcomes(word: String, fits: List<String>): Map<Int, Int> {
         val counts = HashMap<Int, Int>()
         for (f in fits) {
             val code = LexiconRules.markCode(word, f)
             counts[code] = (counts[code] ?: 0) + 1
         }
-        return counts.values.max()
+        return counts
     }
 
     // ---- wording ----------------------------------------------------------------------------------
