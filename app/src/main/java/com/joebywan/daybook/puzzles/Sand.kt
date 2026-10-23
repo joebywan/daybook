@@ -373,7 +373,7 @@ object Sand : PuzzleType {
         val still = LocalReducedMotion.current
         // A tube finished by the rules (full, one colour) is ringed in the accent once. No settle: the pour is its own landing.
         val units = remember(s.tubes.size) { List(s.tubes.size) { intArrayOf(it) } }
-        val feel = rememberMoveFeel(emptyList(), units) { s.tubes[it].size == s.height && s.tubes[it].distinct().size == 1 }
+        val feel = rememberMoveFeel(s.tubes, units) { s.tubes[it].size == s.height && s.tubes[it].distinct().size == 1 }
 
         fun go(step: SandStep) {
             lifted = step.lifted

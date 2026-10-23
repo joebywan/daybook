@@ -39,6 +39,8 @@ import com.joebywan.daybook.ui.tutorial.LocalChime
 import com.joebywan.daybook.ui.archive.ArchiveScreen
 import com.joebywan.daybook.ui.home.HomeScreen
 import com.joebywan.daybook.ui.home.LaunchMode
+import com.joebywan.daybook.ui.home.LocalJustSolved
+import androidx.compose.runtime.DisposableEffect
 import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.home.LevelsScreen
 import com.joebywan.daybook.ui.play.NextKind
@@ -177,6 +179,8 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     // (the game, the open hint, the walkthrough) unreachable.
     var route by rememberSaveable(stateSaver = RouteSaver) { mutableStateOf(startAt) }
     var today by remember { mutableStateOf(currentDate()) }
+    // The puzzle just solved, for its home tile's tick to pop in on the way back (LocalJustSolved). Never stored.
+    var justSolved by remember { mutableStateOf<String?>(null) }
 
     // The home grid's two selectors live here, not on the home screen: navigating into a puzzle
     // destroys that screen, and a difficulty that reset after every game would be worse than the
@@ -295,6 +299,9 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             // Handed down as a state read in the tile itself: passed as a plain set it reached the tile stale on the web
             // about half the time when it landed during the first frames (the pick kept "Try me!" over its saved game).
             val inProgress = remember { derivedStateOf { savesInProgress.mapNotNull(tileKeys::get).toSet() } }
+            // The tick pop is for the first Home after the solve only.
+            DisposableEffect(Unit) { onDispose { justSolved = null } }
+            CompositionLocalProvider(LocalJustSolved provides justSolved) {
             HomeScreen(
                 today = today,
                 completions = completions,
@@ -326,6 +333,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                 customOrder = customOrder.isNotEmpty(),
                 onOrder = ::setOrder,
             )
+            }
         }
 
         Route.Stats -> StatsScreen(
@@ -439,6 +447,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                         // PlayScreen calls this once per solve (its `recorded` flag survives
                         // recreation), so the chime cannot repeat on a rotation.
                         playSolveSound()
+                        justSolved = puzzle.id
                         scope.launch {
                             // A level solve is also a practice solve (day = null), for totals and best times.
                             if (level != null) store.recordLevelSolve(LevelSolve(level, puzzle.id, seconds, hints))

@@ -9,9 +9,8 @@ import com.joebywan.daybook.data.Stats
 import kotlinx.datetime.LocalDate
 
 /**
- * What the finished frame says besides "Congratulations!" (`docs/REWARDS.md`). [title] replaces the
- * congratulation when there is a streak to announce; [big] makes it louder (7, 30, 100 days);
- * [lines] is at most one, so the frame stays calm.
+ * What the finished frame says (`docs/REWARDS.md`). [title] is the banner's headline (null: "Congratulations!", for a
+ * frame nobody judged); [big] makes it louder (7, 30, 100 days); [lines] is at most one, so the frame stays calm.
  */
 data class Praise(
     val title: String? = null,
@@ -28,6 +27,8 @@ data class Praise(
      * personal record, a streak milestone or an earned achievement. True by default, so a frame nobody judged stays loud.
      */
     val full: Boolean = true,
+    /** The streak this solve extended, when [title] is "N day streak": the frame counts up to it. 0 otherwise. */
+    val streak: Int = 0,
 )
 
 /** What the frame shows for one achievement. */
@@ -57,6 +58,7 @@ private const val LONG_FLOOR = 240     // ...or twice the tier's median, but nev
 fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate, puzzleName: String): Praise {
     var title: String? = null
     var big = false
+    var streak = 0
     val lines = mutableListOf<String>()
 
     val day = solve.day
@@ -71,6 +73,7 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
             n == 1 -> { title = "Day one"; lines += "Your streak starts today." }
             else -> {
                 title = "$n day streak"
+                streak = n
                 big = n in STREAK_MILESTONES
                 if (savedByWindow) lines += "You're back, and your streak is still going."
             }
@@ -96,7 +99,37 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
     val earned = newlyEarned(history, solve, today).map { EarnedAchievement(it.id, it.title, it.description) }
     val near = nearestToGo(history, solve, today)
     val full = firstToday || solve.difficulty == Difficulty.EXPERT || record || big || earned.isNotEmpty()
-    return Praise(title, big, (lines + personal).take(1), earned, near?.text, full = full)
+    val firstOfPuzzle = history.none { it.puzzleId == solve.puzzleId }
+    val heading = title ?: finishTitle(solve, today, firstOfPuzzle, record)
+    return Praise(heading, big, (lines + personal).take(1), earned, near?.text, full = full, streak = streak)
+}
+
+/** The longest title, in characters: what fits the banner between its two poppers at 360dp in headlineSmall. */
+const val TITLE_MAX = 18
+
+/** Hand-written titles for a solve with nothing rarer to say: unaided ones, and the rest. */
+internal val TITLES_UNAIDED = listOf("All your own work.", "Worked it out.", "Clear thinking.")
+internal val TITLES_PLAIN = listOf("Nicely done.", "Well solved.", "Lovely work.", "There it is.", "Neatly done.", "That's the one.")
+internal const val TITLE_FIRST = "First one done."
+internal const val TITLE_RECORD = "A new best."
+internal const val TITLE_EXPERT = "Expert, cracked."
+
+/**
+ * The title when there is no streak to tell, rarest first: the first solve of this puzzle ever, a personal record at the
+ * tier, an Expert solve, then a pool (unaided, or not). The pool line is picked by the day, puzzle and tier, never at
+ * random, so the same solve always reads the same and a rotation cannot change it.
+ */
+internal fun finishTitle(solve: Completion, today: LocalDate, firstOfPuzzle: Boolean, record: Boolean): String = when {
+    firstOfPuzzle -> TITLE_FIRST
+    record -> TITLE_RECORD
+    solve.difficulty == Difficulty.EXPERT -> TITLE_EXPERT
+    else -> {
+        val pool = if (solve.hints == 0) TITLES_UNAIDED else TITLES_PLAIN
+        // Written out rather than String.hashCode, so the JVM and the web are sure to pick alike.
+        var h = 0
+        for (ch in "${(solve.day ?: today).toEpochDays()}|${solve.puzzleId}|${solve.difficulty.name}") h = h * 31 + ch.code
+        pool[(h % pool.size + pool.size) % pool.size]
+    }
 }
 
 /** Where a shared result points: the web build, which anyone can open without installing anything. */

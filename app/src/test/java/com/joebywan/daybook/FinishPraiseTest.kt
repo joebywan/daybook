@@ -3,6 +3,12 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.puzzleNote
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.ui.play.TITLES_PLAIN
+import com.joebywan.daybook.ui.play.TITLES_UNAIDED
+import com.joebywan.daybook.ui.play.TITLE_EXPERT
+import com.joebywan.daybook.ui.play.TITLE_FIRST
+import com.joebywan.daybook.ui.play.TITLE_MAX
+import com.joebywan.daybook.ui.play.TITLE_RECORD
 import com.joebywan.daybook.ui.play.finishPraise
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
@@ -28,7 +34,7 @@ class FinishPraiseTest {
     @Test fun streakExtendsOnFirstSolveOfTheDayOnly() {
         val h = days(1, 2, 3)
         assertEquals("4 day streak", run(h, c(today)).title)
-        assertNull(run(h + c(today), c(today)).title)
+        assertTrue(run(h + c(today), c(today)).title in TITLES_UNAIDED)   // a tie with today's first is no record
     }
 
     @Test fun milestonesAreLoud() {
@@ -49,8 +55,10 @@ class FinishPraiseTest {
     }
 
     @Test fun practiceAndArchiveDaysGetNoStreakLine() {
-        assertNull(run(days(1, 2), c(null)).title)
-        assertNull(run(days(1, 2), c(d(3))).title)
+        assertEquals(TITLE_RECORD, run(days(1, 2), c(null)).title)
+        assertEquals(TITLE_RECORD, run(days(1, 2), c(d(3))).title)
+        assertEquals(0, run(days(1, 2), c(null)).streak)
+        assertEquals(3, run(days(1, 2), c(today)).streak)
     }
 
     @Test fun fastestNeedsHistoryAndBeatsStrictly() {
@@ -120,5 +128,31 @@ class FinishPraiseTest {
         assertTrue(run(h, c(null, 40)).full)                                 // a personal record
         assertTrue(run(days(1, 2, 3, 4, 5, 6), c(today)).full)               // a streak milestone
         assertTrue(run(emptyList(), c(null)).full)                           // an achievement (a first solve)
+    }
+
+    @Test fun titlesGoRarestFirstAndStreaksOutrankThem() {
+        val h = listOf(c(d(5), 100), c(d(6), 90, tier = Difficulty.EXPERT))
+        assertEquals("Day one", run(emptyList(), c(today)).title)                          // a streak outranks a first
+        assertEquals(TITLE_FIRST, run(emptyList(), c(null)).title)
+        assertEquals(TITLE_FIRST, run(listOf(c(d(1), id = "kings")), c(null, tier = Difficulty.EXPERT)).title)
+        assertEquals(TITLE_RECORD, run(h, c(null, 50, tier = Difficulty.EXPERT)).title)    // a record outranks Expert
+        assertEquals(TITLE_EXPERT, run(h, c(null, 95, tier = Difficulty.EXPERT)).title)
+        assertTrue(run(h, c(null, 120)).title in TITLES_UNAIDED)
+        assertTrue(run(h, c(null, 120, hints = 2)).title in TITLES_PLAIN)
+    }
+
+    @Test fun poolTitlesAreDeterministicAndVary() {
+        val h = listOf(c(d(5), 100))
+        // Past days only: today's first daily would be a streak title.
+        val once = (1..40).map { run(h, c(d(it), 120)).title }
+        assertEquals(once, (1..40).map { run(h, c(d(it), 120)).title })
+        assertEquals(TITLES_UNAIDED.toSet(), once.toSet())
+        assertEquals(TITLES_PLAIN.toSet(), (1..80).map { run(h, c(d(it), 120, hints = 1)).title }.toSet())
+    }
+
+    @Test fun everyTitleFitsTheBanner() {
+        val all = TITLES_UNAIDED + TITLES_PLAIN + listOf(TITLE_FIRST, TITLE_RECORD, TITLE_EXPERT, "Welcome back", "Day one", "100 day streak")
+        all.forEach { assertTrue("$it is too long", it.length <= TITLE_MAX) }
+        assertEquals(all.size, all.toSet().size)
     }
 }

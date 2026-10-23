@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui
 
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -12,8 +13,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.isSpecified
 import kotlin.math.abs
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -26,47 +30,93 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
  */
 val LocalMoveCount = compositionLocalOf { 0 }
 
+/** How many times Undo has taken something back this visit (`PlayScreen.undo`): the squares it changed dip and return. */
+val LocalUndoCount = compositionLocalOf { 0 }
+
+/** How many moves this visit have solved the board (`PlayScreen.push`): the solve wave plays when it goes up. */
+val LocalSolveCount = compositionLocalOf { 0 }
+
+/**
+ * Whether a board composed now is arriving: true on the play screen until the board has been shown once (saved, so
+ * a rotation is not an arrival), false in the walkthrough and anywhere else. Its squares then fade in.
+ */
+val LocalBoardArrives = compositionLocalOf { false }
+
 private const val SETTLE_MS = 120
 private const val SWEEP_MS = 400
+private const val ARRIVE_MS = 250
 private const val SETTLE_SCALE = 0.08f
 /** The sweep's half width, as a share of the unit it runs along. */
 private const val SWEEP_WIDTH = 0.35f
+/** The share of the arrival one square's own fade takes; the rest staggers the squares in reading order. */
+private const val ARRIVE_EACH = 0.4f
+
+/** The solve wave's length; the play screen holds the finished frame back by as much. */
+const val SOLVE_WAVE_MS = 350
 
 /**
- * The feel of a move: the squares it changed settle (drawn 8% large, easing back over 120 ms), and a unit it
- * finished (a row, a box, a cage, a line, a tube) has a soft glow run along it once (400 ms). Read [scale] and
- * [glow] in the draw phase only, so a running animation repaints the board without recomposing it. Nothing here
- * is state of the game; nothing changes size or position.
+ * The feel of a move: the squares it changed settle (drawn 8% large, easing back over 120 ms; an undo dips them 8%
+ * small instead), a unit it finished (a row, a box, a cage, a line, a tube) has a soft glow run along it once
+ * (400 ms), the move that solves the board runs one wave of the same glow across every square in reading order
+ * (350 ms), and a board arriving fades its squares in, in reading order (250 ms). Read [scale], [glow] and [alpha]
+ * in the draw phase only, so a running animation repaints the board without recomposing it. Nothing here is state
+ * of the game; nothing changes size or position.
  */
 @Stable
 class MoveFeel internal constructor() {
     internal var settle by mutableFloatStateOf(1f)
     internal var sweep by mutableFloatStateOf(1f)
+    internal var wave by mutableFloatStateOf(1f)
+    internal var arrive by mutableFloatStateOf(1f)
     internal var settleRun = 0
     internal var sweepRun = 0
+    internal var waveRun = 0
+    internal var arriveRun = 0
     private var tick = -1
+    private var undos = 0
+    private var solves = 0
+    private var shrink = false
     private var cells: List<Any?> = emptyList()
     private var done = BooleanArray(0)
     private var changed: Set<Int> = emptySet()
     // Square -> its place along the swept unit, 0 at the start and 1 at the end.
     private var swept: Map<Int, Float> = emptyMap()
 
-    /** The scale to draw square [i] at: 1 unless the last move changed it. */
-    fun scale(i: Int): Float = if (settle < 1f && i in changed) 1f + SETTLE_SCALE * (1f - settle) else 1f
+    /** The scale to draw square [i] at: 1 unless the last move or undo changed it. */
+    fun scale(i: Int): Float =
+        if (settle < 1f && i in changed) 1f + (if (shrink) -SETTLE_SCALE else SETTLE_SCALE) * (1f - settle) else 1f
 
-    /** How strongly square [i] glows, 0 to 1: 0 unless a unit holding it has just been finished. */
+    /** How strongly square [i] glows, 0 to 1: 0 unless a unit holding it has just been finished, or the board solved. */
     fun glow(i: Int): Float {
-        if (sweep >= 1f) return 0f
-        val at = swept[i] ?: return 0f
-        return sweepGlow(sweep, at)
+        var g = 0f
+        if (sweep < 1f) swept[i]?.let { g = sweepGlow(sweep, it) }
+        if (wave < 1f) g = maxOf(g, sweepGlow(wave, place(i)))
+        return g
     }
 
-    internal fun observe(tick: Int, cells: List<Any?>, units: List<IntArray>, done: BooleanArray, still: Boolean) {
-        val moved = this.tick >= 0 && tick != this.tick && !still
-        if (moved && this.cells.size == cells.size) {
+    /** How opaque square [i] is drawn: 1 unless the board is arriving and its turn has not fully come. */
+    fun alpha(i: Int): Float =
+        if (arrive >= 1f) 1f else ((arrive - place(i) * (1f - ARRIVE_EACH)) / ARRIVE_EACH).coerceIn(0f, 1f)
+
+    // Square i's place in reading order, 0 to 1.
+    private fun place(i: Int): Float = if (cells.size <= 1) 0.5f else (i.toFloat() / (cells.size - 1)).coerceIn(0f, 1f)
+
+    internal fun observe(
+        tick: Int, cells: List<Any?>, units: List<IntArray>, done: BooleanArray, still: Boolean,
+        undos: Int = 0, solves: Int = 0, arrives: Boolean = false,
+    ) {
+        val first = this.tick < 0
+        if (first && arrives && !still) {
+            arrive = 0f
+            arriveRun++
+        }
+        val moved = !first && tick != this.tick && !still
+        val undone = !first && undos != this.undos && !still
+        if ((moved || undone) && this.cells.size == cells.size) {
             val diff = cells.indices.filterTo(HashSet()) { cells[it] != this.cells[it] }
             if (diff.isNotEmpty()) {
                 changed = diff
+                shrink = !moved
                 settle = 0f
                 settleRun++
             }
@@ -88,7 +138,13 @@ class MoveFeel internal constructor() {
                 sweepRun++
             }
         }
+        if (!first && solves != this.solves && !still) {
+            wave = 0f
+            waveRun++
+        }
         this.tick = tick
+        this.undos = undos
+        this.solves = solves
         this.cells = cells
         this.done = done
     }
@@ -109,11 +165,11 @@ internal fun sweepGlow(t: Float, at: Float): Float {
 }
 
 /**
- * The move feel for a board whose squares are [cells] (one value per square, whatever the board stores: compared
- * with `==` to find what a move changed) and whose units are [units] (each the squares of one, in the order the
- * glow should run), [complete] saying whether a unit is finished **by the rules**, never by the stored answer.
- * Only a move fires anything: a board loaded, restarted or undone into a finished unit stays quiet. Under reduced
- * motion nothing plays.
+ * The move feel for a board whose squares are [cells] (one value per square, in reading order, whatever the board
+ * stores: compared with `==` to find what a move changed) and whose units are [units] (each the squares of one, in the
+ * order the glow should run), [complete] saying whether a unit is finished **by the rules**, never by the stored answer.
+ * Only a move fires the settle and the glow: a board loaded, restarted or undone into a finished unit stays quiet. Under
+ * reduced motion nothing plays.
  */
 @Composable
 fun rememberMoveFeel(
@@ -122,22 +178,35 @@ fun rememberMoveFeel(
     complete: (Int) -> Boolean = { false },
 ): MoveFeel {
     val feel = remember { MoveFeel() }
-    feel.observe(LocalMoveCount.current, cells, units, BooleanArray(units.size) { complete(it) }, LocalReducedMotion.current)
+    feel.observe(
+        LocalMoveCount.current, cells, units, BooleanArray(units.size) { complete(it) }, LocalReducedMotion.current,
+        LocalUndoCount.current, LocalSolveCount.current, LocalBoardArrives.current,
+    )
     LaunchedEffect(feel.settleRun) {
         if (feel.settleRun > 0) animate(0f, 1f, animationSpec = tween(SETTLE_MS)) { v, _ -> feel.settle = v }
     }
     LaunchedEffect(feel.sweepRun) {
         if (feel.sweepRun > 0) animate(0f, 1f, animationSpec = tween(SWEEP_MS)) { v, _ -> feel.sweep = v }
     }
+    LaunchedEffect(feel.waveRun) {
+        if (feel.waveRun > 0) animate(0f, 1f, animationSpec = tween(SOLVE_WAVE_MS, easing = LinearEasing)) { v, _ -> feel.wave = v }
+    }
+    LaunchedEffect(feel.arriveRun) {
+        if (feel.arriveRun > 0) animate(0f, 1f, animationSpec = tween(ARRIVE_MS, easing = LinearEasing)) { v, _ -> feel.arrive = v }
+    }
     return feel
 }
 
-/** For a board built of one composable per square: square [i] settles, and glows in [glow] (at most 35%). */
+/** For a board built of one composable per square: square [i] arrives, settles, and glows in [glow] (at most 35%). */
 fun Modifier.moveFeel(feel: MoveFeel, i: Int, glow: Color): Modifier = drawWithContent {
+    val a = feel.alpha(i)
+    if (a <= 0f) return@drawWithContent
+    if (a < 1f) drawContext.canvas.saveLayer(Rect(Offset.Zero, size), Paint().apply { alpha = a })
     val s = feel.scale(i)
     if (s == 1f) drawContent() else scale(s) { this@drawWithContent.drawContent() }
     val g = feel.glow(i)
-    if (g > 0f) drawRect(glow.copy(alpha = GLOW_ALPHA * g))
+    if (g > 0f && glow.isSpecified) drawRect(glow.copy(alpha = GLOW_ALPHA * g))
+    if (a < 1f) drawContext.canvas.restore()
 }
 
 /** The strongest a finished unit's glow is drawn: a wash, never a fill. */
@@ -148,12 +217,17 @@ fun lineUnits(w: Int, h: Int): List<IntArray> =
     List(h) { r -> IntArray(w) { r * w + it } } + List(w) { c -> IntArray(h) { it * w + c } }
 
 /**
- * For a board drawn on one canvas: [draw] square [i] at its settle scale about the middle of the square at
- * [topLeft] and [size], then its glow in [glow] over it.
+ * For a board drawn on one canvas: [draw] square [i] at its arrival's opacity and its settle scale about the middle of
+ * the square at [topLeft] and [size], then its glow in [glow] over it.
  */
 inline fun DrawScope.feelSquare(feel: MoveFeel, i: Int, topLeft: Offset, size: Size, glow: Color, draw: DrawScope.() -> Unit) {
+    val a = feel.alpha(i)
+    if (a <= 0f) return
+    // A little past the square, for a mark drawn over its edge.
+    if (a < 1f) drawContext.canvas.saveLayer(Rect(topLeft, size).inflate(size.minDimension / 4), Paint().apply { alpha = a })
     val s = feel.scale(i)
     if (s == 1f) draw() else scale(s, Offset(topLeft.x + size.width / 2, topLeft.y + size.height / 2)) { draw() }
     val g = feel.glow(i)
-    if (g > 0f) drawRect(glow.copy(alpha = GLOW_ALPHA * g), topLeft, size)
+    if (g > 0f && glow.isSpecified) drawRect(glow.copy(alpha = GLOW_ALPHA * g), topLeft, size)
+    if (a < 1f) drawContext.canvas.restore()
 }

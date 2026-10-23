@@ -42,6 +42,51 @@ class MoveFeelTest {
         assertTrue((0..2).all { still.glow(it) == 0f })
     }
 
+    @Test fun anUndoDipsWhatItTookBack() {
+        val f = MoveFeel().apply {
+            observe(1, listOf(1, 2, 0), row, BooleanArray(1), false)
+            observe(1, listOf(1, 0, 0), row, BooleanArray(1), false, undos = 1)
+        }
+        assertTrue(f.scale(1) < 1f)
+        assertEquals(1f, f.scale(0))
+    }
+
+    @Test fun theSolvingMoveWavesAcrossEverySquare() {
+        val f = MoveFeel().apply {
+            observe(1, listOf(1, 2, 0), row, full(listOf(1, 2, 0)), false)
+            observe(2, listOf(1, 2, 3), row, full(listOf(1, 2, 3)), false, solves = 1)
+        }
+        f.sweep = 1f
+        for (i in 0..2) assertTrue((1..99).maxOf { f.wave = it / 100f; f.glow(i) } > 0.9f)
+        f.wave = 1f
+        assertTrue((0..2).all { f.glow(it) == 0f })
+        // A board loaded already solved, or under reduced motion, has no wave.
+        val loaded = MoveFeel().apply { observe(0, listOf(1, 2, 3), row, BooleanArray(1) { true }, false, solves = 0) }
+        assertEquals(1f, loaded.wave)
+        val still = MoveFeel().apply {
+            observe(1, listOf(1, 2, 0), row, BooleanArray(1), true)
+            observe(2, listOf(1, 2, 3), row, BooleanArray(1) { true }, true, solves = 1)
+        }
+        assertEquals(1f, still.wave)
+    }
+
+    @Test fun anArrivingBoardFadesInInReadingOrder() {
+        val f = MoveFeel().apply { observe(0, listOf(1, 2, 3), row, BooleanArray(1), false, arrives = true) }
+        assertTrue((0..2).all { f.alpha(it) == 0f })
+        f.arrive = 0.5f
+        assertTrue(f.alpha(0) > f.alpha(1) && f.alpha(1) > f.alpha(2))
+        f.arrive = 1f
+        assertTrue((0..2).all { f.alpha(it) == 1f })
+        // Only the first board seen arrives; never under reduced motion.
+        val later = MoveFeel().apply {
+            observe(0, listOf(1, 2, 3), row, BooleanArray(1), false)
+            observe(0, listOf(1, 2, 3), row, BooleanArray(1), false, arrives = true)
+        }
+        assertEquals(1f, later.alpha(2))
+        val still = MoveFeel().apply { observe(0, listOf(1, 2, 3), row, BooleanArray(1), true, arrives = true) }
+        assertEquals(1f, still.alpha(2))
+    }
+
     @Test fun theSweepLightsEverySquareOnceAndNoneAtTheEnds() {
         for (at in listOf(0f, 0.25f, 0.5f, 1f)) {
             assertEquals(0f, sweepGlow(0f, at))

@@ -1129,7 +1129,7 @@ object Mosaic : PuzzleType {
                     for (cell in s.cells.indices) {
                         val r = cell / s.width
                         val c = cell % s.width
-                        feelSquare(feel, cell, Offset(c * stepPx, r * stepPx), Size(stepPx, stepPx), Color.Unspecified) {
+                        feelSquare(feel, cell, Offset(c * stepPx, r * stepPx), Size(stepPx, stepPx), Color(accent)) {
                             drawRect(
                                 color = palette[s.cells[cell]],
                                 topLeft = Offset(c * stepPx, r * stepPx),

@@ -294,7 +294,7 @@ object Target : PuzzleType {
                             Box(
                                 Modifier
                                     .size(u * 1.1f, u * 0.95f)
-                                    .moveFeel(feel, slot, Color.Unspecified)
+                                    .moveFeel(feel, slot, Color(accent))
                                     .highlightAnchor(slot)
                                     .ring(l, glow, pulse, corner)
                                     .dimmed(l)

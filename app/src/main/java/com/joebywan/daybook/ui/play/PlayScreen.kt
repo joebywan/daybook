@@ -2,7 +2,12 @@ package com.joebywan.daybook.ui.play
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
@@ -105,7 +110,12 @@ import com.joebywan.daybook.platform.readyBoard
 import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.LocalHaptics
+import com.joebywan.daybook.ui.LocalBoardArrives
 import com.joebywan.daybook.ui.LocalMoveCount
+import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.LocalSolveCount
+import com.joebywan.daybook.ui.LocalUndoCount
+import com.joebywan.daybook.ui.SOLVE_WAVE_MS
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
@@ -358,14 +368,34 @@ private fun PlayBoard(
         }
     }
 
-    // Counts moves for the boards' move feel (LocalMoveCount); not saved, so a rotation or a reopened board plays nothing.
+    // Counts moves, undos and solving moves for the boards' move feel (LocalMoveCount and its neighbours); not saved, so a
+    // rotation or a reopened board plays nothing.
     var pushes by remember { mutableIntStateOf(0) }
+    var undos by remember { mutableIntStateOf(0) }
+    var solves by remember { mutableIntStateOf(0) }
+    // Saved: the board's squares fade in when it first shows, not again on a rotation.
+    var arrived by rememberSaveable(initial) { mutableStateOf(false) }
+    LaunchedEffect(initial) {
+        withFrameNanos { }
+        arrived = true
+    }
+    // The finished frame waits for the solve wave to cross the board, when a move solved it here; saved, so a rotation
+    // shows it at once.
+    val still = LocalReducedMotion.current
+    var revealed by rememberSaveable(initial) { mutableStateOf(false) }
+    LaunchedEffect(finished) {
+        if (finished && !revealed) {
+            if (solves > 0 && !still) delay(SOLVE_WAVE_MS.toLong())
+            revealed = true
+        }
+    }
 
     // Reads through `game` rather than the unpacked locals so that two taps landing in the same
     // frame stack up properly instead of pushing the same board twice.
     fun push(next: PuzzleState) {
         val prev = game.state
         pushes++
+        if (next.solved && !prev.solved) solves++
         val step = PlayLog.step(puzzle, prev, next)
         game = game.copy(state = next, history = game.history + prev, log = game.log + step)
         // A buzz for a move that lands (not a selection or a typed letter), a firmer one for a bump; a solve gets
@@ -425,6 +455,7 @@ private fun PlayBoard(
                 else -> ""
             }
             game = game.copy(state = it.state, history = it.history, restarts = restarts, log = game.log + back)
+            undos++
         }
     }
 
@@ -554,6 +585,9 @@ private fun PlayBoard(
                 LocalBoardHighlight provides hintSession.highlight,
                 LocalHighlightBounds provides highlightBounds,
                 LocalMoveCount provides pushes,
+                LocalUndoCount provides undos,
+                LocalSolveCount provides solves,
+                LocalBoardArrives provides !arrived,
             ) {
                 puzzle.Board(
                     state = state,
@@ -624,7 +658,7 @@ private fun PlayBoard(
 
     // The finish: a compact frame docked over the play screen. An overlay, so the board keeps
     // exactly the box it had; the toolbar above stays laid out (hidden) for the same reason.
-    if (finished) {
+    if (finished && revealed) {
         val accent = Color(puzzle.accent)
         // Tapping anywhere but a button hides the frame so the solved board can be looked at; the pill
         // brings it back. The scrim only exists while the frame is up, and a hidden frame covers nothing.
@@ -643,6 +677,8 @@ private fun PlayBoard(
                 seconds = seconds,
                 hints = game.hints,
                 praise = praise,
+                // The milestones animate the first time the frame shows, as the confetti plays: once per finish.
+                celebrate = !confettiPlayed && !still,
                 accent = accent,
                 options = options,
                 onOption = onNext,
@@ -722,6 +758,10 @@ private fun PlayBoard(
     }
 }
 
+/** How long an extended streak takes to count up in the finished frame, and the scale a milestone's title stamps in from. */
+private const val COUNT_MS = 600
+private const val STAMP_FROM = 1.3f
+
 /** The side panel's width in a wide window: the title, clock, hint and three tool buttons, with the walkthrough offer on one line. */
 private val SidePanel = 360.dp
 
@@ -782,12 +822,23 @@ private fun FinishedFrame(
     seconds: Int,
     hints: Int,
     praise: Praise,
+    celebrate: Boolean,
     accent: Color,
     options: List<NextOption>,
     onOption: (NextOption) -> Unit,
     onHide: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    // [celebrate]: an extended streak counts up to its new length, a milestone's title stamps in (from 130%, settling with
+    // a small bounce). Otherwise, and under reduced motion, the final values at once. Drawn over the final title's own
+    // box, so the banner never changes size while it runs.
+    val count = remember(praise.streak) { Animatable(if (celebrate && praise.streak > 1) 1f else praise.streak.toFloat()) }
+    val stamp = remember(praise.big) { Animatable(if (celebrate && praise.big) STAMP_FROM else 1f) }
+    LaunchedEffect(praise.streak) { count.animateTo(praise.streak.toFloat(), tween(COUNT_MS, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(praise.big) { stamp.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow)) }
+    val title = praise.title ?: "Congratulations!"
+    val shown = count.value.toInt()
+    val counting = praise.streak > 0 && shown < praise.streak
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val badge = if (maxHeight < 640.dp) 44.dp else 72.dp
         val hide = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onHide)
@@ -800,14 +851,13 @@ private fun FinishedFrame(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PartyPopper(Modifier.size(36.dp))
-                Text(
-                    praise.title ?: "Congratulations!",
-                    style = if (praise.big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall,
-                    color = accent,
-                    fontWeight = if (praise.big) FontWeight.Bold else null,
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
+                val style = if (praise.big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall
+                val weight = if (praise.big) FontWeight.Bold else null
+                Box(Modifier.weight(1f, fill = false).graphicsLayer { scaleX = stamp.value; scaleY = stamp.value }, contentAlignment = Alignment.Center) {
+                    Text(title, style = style, color = accent, fontWeight = weight, maxLines = 1,
+                        modifier = if (counting) Modifier.alpha(0f) else Modifier)
+                    if (counting) Text(title.replaceFirst("${praise.streak}", "$shown"), style = style, color = accent, fontWeight = weight, maxLines = 1)
+                }
                 PartyPopper(Modifier.size(36.dp).graphicsLayer(scaleX = -1f))
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -833,7 +883,7 @@ private fun FinishedFrame(
                 Modifier.align(Alignment.Center).padding(horizontal = 32.dp).widthIn(max = 340.dp).fillMaxWidth()
                     .shadow(6.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
                     .background(scheme.surface).padding(horizontal = 12.dp, vertical = 10.dp),
-            ) { ResultsBlock(praise, accent, badge) }
+            ) { ResultsBlock(praise, accent, badge, celebrate) }
         }
         Column(
             Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp).widthIn(max = 380.dp).fillMaxWidth()
