@@ -1,11 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -22,9 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +40,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -54,15 +51,20 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
+import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.sin
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** One pour made: [count] layers from tube [from] onto tube [to]. Enough to take it back exactly ([SandState.withoutFrom]). */
 @Serializable
@@ -207,6 +209,9 @@ object Sand : PuzzleType {
             }
         }
     }
+
+    /** How long a refused pour's tint lasts. */
+    private const val REFUSAL_MS = 400
 
     /** Geometry of one tube, in units of its width: the body's height for [h] layers. */
     private const val LAYER = 0.72f
@@ -353,16 +358,7 @@ object Sand : PuzzleType {
         val highlight = LocalBoardHighlight.current
         val accentColour = Color(accent)
         val glowColour = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // Transient: the lifted tube starts over whenever the board changes (a pour, undo, a hint).
         var lifted by remember(s.tubes) { mutableStateOf<Int?>(null) }
@@ -371,12 +367,28 @@ object Sand : PuzzleType {
         var shaking by remember { mutableIntStateOf(-1) }
         val stream = remember { Animatable(1f) }
         var pouring by remember { mutableStateOf<PourAnim?>(null) }
+        // A refused pour tints the tube it was refused by, fading over 400 ms (alongside the shake).
+        val refusal = remember { Animatable(0f) }
+        // Reduced motion: no shake and no stream; the tint is held, then cleared; a lifted tube still rises, at once.
+        val still = LocalReducedMotion.current
+        // A tube finished by the rules (full, one colour) is ringed in the accent once. No settle: the pour is its own landing.
+        val units = remember(s.tubes.size) { List(s.tubes.size) { intArrayOf(it) } }
+        val feel = rememberMoveFeel(emptyList(), units) { s.tubes[it].size == s.height && s.tubes[it].distinct().size == 1 }
 
         fun go(step: SandStep) {
             lifted = step.lifted
             step.refused?.let { b ->
                 shaking = b
                 scope.launch {
+                    refusal.snapTo(1f)
+                    if (still) {
+                        delay(REFUSAL_MS.toLong())
+                        refusal.snapTo(0f)
+                    } else {
+                        refusal.animateTo(0f, tween(REFUSAL_MS, easing = LinearEasing))
+                    }
+                }
+                if (!still) scope.launch {
                     shake.snapTo(0f)
                     for (x in listOf(1f, -1f, 0.6f, -0.6f, 0f)) shake.animateTo(x, tween(45))
                 }
@@ -385,7 +397,7 @@ object Sand : PuzzleType {
                 val moved = next.tubes.indices.first { next.tubes[it].size > s.tubes[it].size }
                 val from = s.tubes.indices.first { next.tubes[it].size < s.tubes[it].size }
                 pouring = PourAnim(from, moved, next.tubes[moved].last())
-                scope.launch {
+                if (!still) scope.launch {
                     stream.snapTo(0f)
                     stream.animateTo(1f, tween(260))
                 }
@@ -433,7 +445,7 @@ object Sand : PuzzleType {
                     val strong = i in highlight.strong
                     val soft = !strong && i in highlight.soft
                     val dim = !highlight.isEmpty && !strong && !soft
-                    val up by animateFloatAsState(if (lifted == i) 1f else 0f, tween(120), label = "lift")
+                    val up by animateFloatAsState(if (lifted == i) 1f else 0f, if (still) snap() else tween(120), label = "lift")
                     val t = s.tubes[i]
                     Box(
                         Modifier
@@ -452,13 +464,15 @@ object Sand : PuzzleType {
                             ) { go(s.tap(lifted, i)) }
                             .drawBehind {
                                 val w = u.toPx()
+                                val refused = if (shaking == i) refusal.value else 0f
                                 val look = Look(
-                                    outline = if (lifted == i) accentColour else scheme.outline,
+                                    outline = lerp(if (lifted == i) accentColour else scheme.outline, scheme.error, refused),
                                     outlineWidth = if (lifted == i) 2.5.dp.toPx() else 1.5.dp.toPx(),
-                                    inside = scheme.surface,
+                                    inside = lerp(scheme.surface, scheme.error, 0.22f * refused),
                                     glow = when {
                                         strong -> glowColour.copy(alpha = pulse.value)
                                         soft -> glowColour.copy(alpha = 0.5f)
+                                        feel.glow(i) > 0f -> accentColour.copy(alpha = feel.glow(i))
                                         else -> null
                                     },
                                     glowWidth = if (strong) 3.dp.toPx() else 2.dp.toPx(),
@@ -527,41 +541,36 @@ object Sand : PuzzleType {
         listOf(
             TutorialFrame(
                 state = s0,
-                caption = "Sort the sand so every tube holds one colour. Each colour has its own symbol, too.",
+                caption = "Sort the sand so each tube holds one colour (each has a symbol too). A pour moves the top colour, " +
+                    "as much as fits, onto the same colour or into an empty tube.",
                 highlight = BoardHighlight(soft = (0 until 5).toSet()),
-            ),
-            TutorialFrame(
-                state = s0,
-                caption = "A pour moves the colour on top, as much as fits, onto the same colour or into an empty tube.",
-                highlight = BoardHighlight(strong = setOf(4)),
             ),
             TutorialFrame(
                 state = s0,
                 caption = "Tubes 1 and 2 both have cream on top. Tap tube 1 to lift it, then tap tube 2 to pour.",
                 highlight = BoardHighlight(strong = setOf(0, 1)),
                 accepts = makes(s1),
-                retry = "Tap tube 1, then tube 2.",
+                retry = "Tap the glowing tube 1, then tube 2.",
                 done = "The cream went onto the cream.",
             ),
             TutorialFrame(
                 state = s1,
-                caption = "Tube 3's two brown sit on a cream. Lift tube 3 and pour them into the empty tube 5.",
+                caption = "Tube 3's two brown sit on a cream. Pour them into the empty tube 5, then pour tube 2's two cream onto tube 3.",
                 highlight = BoardHighlight(strong = setOf(2, 4)),
-                accepts = makes(s2),
-                retry = "Tap tube 3, then tube 5.",
-                done = "That freed the cream underneath.",
-            ),
-            TutorialFrame(
-                state = s2,
-                caption = "Pour tube 2's two cream onto tube 3 to fill it with one colour.",
-                highlight = BoardHighlight(strong = setOf(1, 2)),
-                accepts = makes(s3),
-                retry = "Tap tube 2, then tube 3.",
+                steps = { next ->
+                    when ((next as? SandState)?.tubes) {
+                        s2.tubes -> TutorialStep.PROGRESS
+                        s3.tubes -> TutorialStep.DONE
+                        else -> TutorialStep.REJECT
+                    }
+                },
+                glow = { now -> BoardHighlight(strong = if ((now as? SandState)?.tubes == s2.tubes) setOf(1, 2) else setOf(2, 4)) },
+                retry = "Tap the glowing tubes, the one to pour from first.",
                 done = "Tube 3 is all cream: finished.",
             ),
             TutorialFrame(
                 state = s3,
-                caption = "Your turn: sort the rest. Stuck? Hint shows a pour.",
+                caption = "Your turn: sort the rest. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Sorted. That's all there is to it.",
             ),

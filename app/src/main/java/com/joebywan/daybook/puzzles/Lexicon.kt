@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,7 +52,10 @@ import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.coroutines.delay
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
  * Lexicon: Mastermind for words.
@@ -147,14 +144,17 @@ object Lexicon : PuzzleType {
      *
      * ```
      * guess 1  tape   yellow yellow grey grey   -> t and a are in it, not there; p and e are out
-     * guess 2  boat   grey green green green    -> made in the walkthrough, a letter at a time
+     * guess 2  boat   grey green green green    -> made in the walkthrough: COAT, GOAT or MOAT
+     * guess 3  clog   green grey yellow grey    -> made in the walkthrough: it can't be the answer,
+     *                                              but C and G tell the three apart
      * ```
      *
-     * After guess 2 the word is ?OAT: COAT, GOAT or MOAT fit, and no guess can tell all three apart,
-     * which is the lesson of four-letter words. The free-play frame hands that board to the hints.
+     * Guessing COAT, GOAT and MOAT in turn could take three guesses; one guess that cannot win settles
+     * it, which is the lesson of four-letter words (`LexiconBalanceTest`). The free-play frame hands
+     * the board after CLOG to the hints.
      */
     internal const val TUTORIAL_ANSWER = "coat"
-    internal val TUTORIAL_GUESSES = listOf("tape", "boat")
+    internal val TUTORIAL_GUESSES = listOf("tape", "boat", "clog")
 
     private fun tutorialBoard(guesses: Int, current: String = "") = LexiconState(
         length = 4,
@@ -165,17 +165,26 @@ object Lexicon : PuzzleType {
     )
 
     /**
-     * Guess 2 typed a letter at a time and then scored, in one frame: any start of BOAT is progress
-     * (a Backspace included), BOAT scored is the move, and anything else is refused.
+     * Guess [n] typed a letter at a time and then scored, in one frame: any start of the word is
+     * progress (a Backspace included), the word scored is the move, and anything else is refused.
      */
-    private val typeBoat: (PuzzleState) -> TutorialStep = { next ->
-        val word = TUTORIAL_GUESSES[1]
+    private fun typeGuess(n: Int): (PuzzleState) -> TutorialStep = { next ->
+        val word = TUTORIAL_GUESSES[n]
         when {
             next !is LexiconState -> TutorialStep.REJECT
-            next.guesses == TUTORIAL_GUESSES && next.current.isEmpty() -> TutorialStep.DONE
-            next.guesses == TUTORIAL_GUESSES.take(1) && word.startsWith(next.current) -> TutorialStep.PROGRESS
+            next.guesses == TUTORIAL_GUESSES.take(n + 1) && next.current.isEmpty() -> TutorialStep.DONE
+            next.guesses == TUTORIAL_GUESSES.take(n) && word.startsWith(next.current) -> TutorialStep.PROGRESS
             else -> TutorialStep.REJECT
         }
+    }
+
+    /** The next key to tap glows: the next letter of guess [n], then Enter. */
+    private fun keyGlow(n: Int): (PuzzleState) -> BoardHighlight = { s ->
+        val typed = (s as LexiconState).current
+        val word = TUTORIAL_GUESSES[n]
+        BoardHighlight(
+            strong = setOf(if (typed.length < word.length) LexiconTeacher.key(word[typed.length]) else LexiconTeacher.ENTER),
+        )
     }
 
     override val tutorial: List<TutorialFrame> by lazy {
@@ -197,29 +206,23 @@ object Lexicon : PuzzleType {
                 state = tutorialBoard(1),
                 caption = "Use what you know: T and A are in the word, so move them. BOAT puts them in new " +
                     "places. Type BOAT on the keyboard, then tap Enter to score it.",
-                // The next key to tap glows: the next letter of BOAT, then Enter.
-                glow = { s ->
-                    val typed = (s as LexiconState).current
-                    val word = TUTORIAL_GUESSES[1]
-                    BoardHighlight(
-                        strong = setOf(
-                            if (typed.length < word.length) LexiconTeacher.key(word[typed.length]) else LexiconTeacher.ENTER,
-                        ),
-                    )
-                },
-                steps = typeBoat,
+                glow = keyGlow(1),
+                steps = typeGuess(1),
                 retry = "Tap the glowing key.",
-                done = "Scored.",
+                done = "Scored: the word ends in OAT.",
             ),
             TutorialFrame(
                 state = tutorialBoard(2),
-                caption = "O, A and T are green and B is grey, so the word ends in OAT. COAT, GOAT and MOAT " +
-                    "all fit, and no guess can tell all three apart. The keys keep score too.",
-                highlight = BoardHighlight(strong = tiles(1, 1, 2, 3), soft = tiles(1, 0)),
+                caption = "COAT, GOAT or MOAT: guess them in turn and it could take three. CLOG can't be the " +
+                    "word, but its C and G tell all three apart. Type CLOG and score it.",
+                glow = keyGlow(2),
+                steps = typeGuess(2),
+                retry = "Tap the glowing key.",
+                done = "C is green and G grey: only COAT is left.",
             ),
             TutorialFrame(
-                state = tutorialBoard(2),
-                caption = "Your turn: find the word. Stuck? Hint shows you how to narrow it down.",
+                state = tutorialBoard(3),
+                caption = "Your turn: find the word. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Found it. That's all there is to it.",
             ),
@@ -356,16 +359,7 @@ object Lexicon : PuzzleType {
         LaunchedEffect(s.current, s.guesses.size) { notice = null }
 
         // Breathes only while something glows, as on Kings.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         fun press(action: LexiconKeyAction) {
             if (!playable) return
@@ -415,6 +409,8 @@ object Lexicon : PuzzleType {
                 // Sized from both axes (CLAUDE.md): the grid is the width, or the height left once the
                 // keyboard has its room, whichever binds. It never changes size, so a hint opening or a
                 // solve cannot move it.
+                // A guessed row settles as its marks land. No units: the one word is the solve.
+                val feel = rememberMoveFeel(List(s.maxGuesses * s.length) { s.guesses.getOrNull(it / s.length)?.get(it % s.length) })
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.length, maxHeight / s.maxGuesses, MAX_CELL * scale).coerceAtLeast(0.dp)
                     Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses)) {
@@ -426,7 +422,7 @@ object Lexicon : PuzzleType {
                                     val letter = guess?.get(slot) ?: if (typing) s.current.getOrNull(slot) else null
                                     val mark = guess?.let { s.marks(it)[slot] }
                                     val look = highlight.look(LexiconTeacher.tile(s.length, row, slot), dims = tilesNamed)
-                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent)
+                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent, Modifier.moveFeel(feel, row * s.length + slot, Color.Unspecified))
                                 }
                             }
                         }
@@ -500,12 +496,14 @@ object Lexicon : PuzzleType {
         glow: Color,
         pulse: State<Float>,
         absent: Color,
+        modifier: Modifier = Modifier,
     ) {
         val scheme = MaterialTheme.colorScheme
         val shape = RoundedCornerShape(6.dp)
         Box(
             Modifier
                 .size(cell)
+                .then(modifier)
                 .padding(2.dp)
                 .ring(look, glow, pulse)
                 .dimmed(look)

@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -15,9 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,7 +35,12 @@ import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.TutorialPath
+import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.GLOW_ALPHA
+import com.joebywan.daybook.ui.rememberMoveFeel
+import androidx.compose.ui.graphics.drawscope.scale
 
 /** An atom sits on a lattice point and needs exactly [bonds] bond-ends. */
 @Serializable
@@ -435,7 +433,7 @@ object Atoms : PuzzleType {
      *
      * Hand-built so the moves the frames teach are moves the board needs, in order: the top 2 has one
      * neighbour, so it takes a double bond (drag, then tap); a double between the bottom two 2s would
-     * close them off (so it is shown, and cleared); that leaves the bottom-right 2 needing a bond
+     * close them off (so the player makes it, and clears it); that leaves the bottom-right 2 needing a bond
      * upward. The ring C–R–Q–P could otherwise go three ways, and only the all-single one keeps the
      * molecule in one piece — AtomsTeachingTest proves the answer is unique.
      */
@@ -471,6 +469,15 @@ object Atoms : PuzzleType {
         val n = TUTORIAL_ATOMS.size
         fun line(p: Int) = AtomsTeacher.pairCell(n, p)
         val solved = tutorialBoard(*TUTORIAL_SOLUTION.toIntArray())
+        // A bond, by drag (or tap), then the tap that doubles it.
+        val double = TutorialPath(only(1, 0, 0, 0, 0, 0), only(2, 0, 0, 0, 0, 0))
+        // The bottom 2s: one bond, a double that cuts them off, then none again, which is the board the
+        // frame started on, so only a move counted since tells the two apart.
+        val cut = TutorialPath(
+            only(2, 0, 0, 0, 0, 1),
+            only(2, 0, 0, 0, 0, 2),
+            { only(2, 0, 0, 0, 0, 0)(it) && it.moves > 0 },
+        )
         listOf(
             TutorialFrame(
                 state = solved,
@@ -486,28 +493,28 @@ object Atoms : PuzzleType {
             ),
             TutorialFrame(
                 state = tutorialBoard(),
-                caption = "This 2 has only one neighbour, the 3 below, so both its bonds go there. " +
-                    "Drag from the 2 down to the 3 to lay the first.",
-                highlight = BoardHighlight(strong = setOf(0), soft = setOf(1, line(0))),
-                accepts = only(1, 0, 0, 0, 0, 0),
-                retry = "Drag from the glowing 2 down to the 3.",
-                done = "Bonded.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(1, 0, 0, 0, 0, 0),
-                caption = "It needs two. Tap the bond itself to make it a double.",
-                highlight = BoardHighlight(strong = setOf(line(0)), soft = setOf(0, 1)),
-                accepts = only(2, 0, 0, 0, 0, 0),
-                retry = "Tap once on the glowing bond.",
+                caption = "This 2 has only one neighbour, the 3 below, so both its bonds go there. Drag from " +
+                    "the 2 down to the 3 to lay one, then tap the bond to make it a double.",
+                // The 2 glows until the first bond is down, then the bond.
+                glow = { s ->
+                    if (double.stage(s) < 0) BoardHighlight(strong = setOf(0), soft = setOf(1, line(0)))
+                    else BoardHighlight(strong = setOf(line(0)), soft = setOf(0, 1))
+                },
+                steps = double.steps,
+                retry = "Drag from the glowing 2 down to the 3, then tap the bond.",
                 done = "Doubled. A full atom turns blue.",
             ),
             TutorialFrame(
-                state = tutorialBoard(2, 0, 0, 0, 0, 2),
-                caption = "A double bond here would fill both 2s and cut them off from the rest of the " +
-                    "molecule, so it can't be right. Tap it once to clear it.",
-                highlight = BoardHighlight(strong = setOf(line(5)), soft = setOf(4, 5)),
-                accepts = only(2, 0, 0, 0, 0, 0),
-                retry = "Tap once on the glowing double bond.",
+                state = tutorialBoard(2, 0, 0, 0, 0, 0),
+                caption = "Tap the glowing gap twice for a double bond: it fills both 2s and cuts them off from " +
+                    "the rest of the molecule, so it can't be right. Tap once more to clear it.",
+                // The board draws no red for a molecule cut off, so the glow turns red on the double.
+                glow = { s ->
+                    if (cut.stage(s) == 1) BoardHighlight(strong = setOf(line(5), 4, 5), warning = true)
+                    else BoardHighlight(strong = setOf(line(5)), soft = setOf(4, 5))
+                },
+                steps = cut.steps,
+                retry = "Tap the glowing gap: once, twice, then once more.",
                 done = "Cleared. A tap goes none, one, two, and back to none.",
             ),
             TutorialFrame(
@@ -654,16 +661,7 @@ object Atoms : PuzzleType {
         // A glow that breathes is findable at a glance on an Expert board; a static ring is not much
         // louder than the atoms themselves. Only runs while something glows, and is read in the
         // draw phase, so it repaints without recomposing the board every frame.
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         // Highlight cells: atom a is cell a, line p is cell atoms.size + p (AtomsTeacher.pairCell).
         fun named(cell: Int) = highlight.isEmpty || cell in highlight.strong || cell in highlight.soft
 
@@ -673,6 +671,9 @@ object Atoms : PuzzleType {
         // it: a new state tears the gesture detector below down, and cancelling a coroutine is not
         // guaranteed to run onDragCancel, so nothing else is certain to retire a stale preview.
         var dragFrom by remember(s) { mutableStateOf<Int?>(null) }
+        // An atom whose bonds a move changed settles; one that the move gave its full count glows once.
+        val units = remember(s.atoms) { List(s.atoms.size) { intArrayOf(it) } }
+        val feel = rememberMoveFeel(List(s.atoms.size) { s.degree(it) }, units) { s.degree(it) == s.atoms[it].bonds }
         var dragAt by remember(s) { mutableStateOf<Offset?>(null) }
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
@@ -828,48 +829,53 @@ object Atoms : PuzzleType {
                     val c = centre(atom)
                     val complete = s.degree(index) == atom.bonds
                     val fade = if (named(index)) 1f else 0.28f
-                    drawCircle(color = scheme.background, radius = radius, center = c)
-                    drawCircle(
-                        color = when {
-                            index in overloaded -> scheme.error
-                            complete -> Color(accent)
-                            else -> scheme.onBackground
-                        }.copy(alpha = fade),
-                        radius = radius,
-                        center = c,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.05f),
-                    )
-                    // The named atoms get a ring outside their own: strong pulses, soft is quiet.
-                    if (index in highlight.strong) {
+                    scale(feel.scale(index), c) {
+                        drawCircle(color = scheme.background, radius = radius, center = c)
+                        // An atom that has just got its last bond glows once, inside its ring.
+                        val lit = feel.glow(index)
+                        if (lit > 0f) drawCircle(Color(accent).copy(alpha = GLOW_ALPHA * lit), radius, c)
                         drawCircle(
-                            color = glow.copy(alpha = pulse.value),
-                            radius = radius + stepPx * 0.09f,
+                            color = when {
+                                index in overloaded -> scheme.error
+                                complete -> Color(accent)
+                                else -> scheme.onBackground
+                            }.copy(alpha = fade),
+                            radius = radius,
                             center = c,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.07f),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.05f),
                         )
-                    } else if (index in highlight.soft) {
-                        drawCircle(
-                            color = glow.copy(alpha = 0.5f),
-                            radius = radius + stepPx * 0.07f,
-                            center = c,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.03f),
+                        // The named atoms get a ring outside their own: strong pulses, soft is quiet.
+                        if (index in highlight.strong) {
+                            drawCircle(
+                                color = glow.copy(alpha = pulse.value),
+                                radius = radius + stepPx * 0.09f,
+                                center = c,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.07f),
+                            )
+                        } else if (index in highlight.soft) {
+                            drawCircle(
+                                color = glow.copy(alpha = 0.5f),
+                                radius = radius + stepPx * 0.07f,
+                                center = c,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.03f),
+                            )
+                        }
+                        val layout = measurer.measure(
+                            atom.bonds.toString(),
+                            TextStyle(
+                                color = (if (complete) Color(accent) else scheme.onBackground).copy(alpha = fade),
+                                fontSize = (step.value * 0.34f).sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                        )
+                        drawText(
+                            layout,
+                            topLeft = Offset(
+                                c.x - layout.size.width / 2f,
+                                c.y - layout.size.height / 2f,
+                            ),
                         )
                     }
-                    val layout = measurer.measure(
-                        atom.bonds.toString(),
-                        TextStyle(
-                            color = (if (complete) Color(accent) else scheme.onBackground).copy(alpha = fade),
-                            fontSize = (step.value * 0.34f).sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                    )
-                    drawText(
-                        layout,
-                        topLeft = Offset(
-                            c.x - layout.size.width / 2f,
-                            c.y - layout.size.height / 2f,
-                        ),
-                    )
                 }
             }
         }

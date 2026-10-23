@@ -1,10 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,9 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -66,8 +59,13 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.rememberMoveFeel
 
 /** How long a line must stay impossible before its target turns red, so a sweep passing through is not shouted at. */
 private const val SETTLE_MILLIS = 1000L
@@ -140,6 +138,7 @@ object Tally : PuzzleType {
         val empty = tutorialBoard()
         val afterNine = marked(empty, mapOf(1 to TallyLogic.REMOVED))
         val afterSweep = marked(afterNine, mapOf(7 to TallyLogic.REMOVED, 11 to TallyLogic.REMOVED))
+        val afterSlip = marked(afterSweep, mapOf(5 to TallyLogic.REMOVED))
         val afterKeep = marked(afterSweep, mapOf(5 to TallyLogic.KEPT))
         listOf(
             TutorialFrame(
@@ -161,21 +160,28 @@ object Tally : PuzzleType {
                 caption = "Column 4 needs 3, so both of its 9s go. Drag down across the two of them to remove both in one sweep.",
                 highlight = BoardHighlight(strong = setOf(7, 11, col(3)), soft = setOf(3, 15)),
                 accepts = only(afterNine, mapOf(7 to TallyLogic.REMOVED, 11 to TallyLogic.REMOVED)),
-                retry = "Drag from one glowing 9 to the other in one sweep.",
+                retry = "Drag along the glowing 9s in one sweep.",
                 done = "Both gone. A sweep marks a run of squares along one row or column.",
             ),
             TutorialFrame(
                 state = afterSweep,
-                caption = "Row 2 now adds up to 10, 4 over its 6. Removing the 5 would take away too much, so it stays. " +
-                    "Choose Keep, then tap the 5.",
+                caption = "Row 2 now adds up to 10, 4 over its 6. Remove its 5 and see what happens.",
                 highlight = BoardHighlight(strong = setOf(5, row(1)), soft = setOf(4, 6)),
+                accepts = only(afterSweep, mapOf(5 to TallyLogic.REMOVED)),
+                retry = "Tap the glowing 5 once.",
+                done = "Too much: 4 + 1 can never make 6, so row 2 turns red, and column 2 with it.",
+            ),
+            TutorialFrame(
+                state = afterSlip,
+                caption = "So the 5 stays. Choose Keep under the board, then tap the 5 to circle it.",
+                highlight = BoardHighlight(strong = setOf(5, row(1))),
                 accepts = only(afterSweep, mapOf(5 to TallyLogic.KEPT)),
-                retry = "Switch to Keep under the board, then tap the glowing 5.",
-                done = "Circled. A circle is a note that you are sure; it counts like any number left in.",
+                retry = "Choose Keep under the board, then tap the glowing 5.",
+                done = "Circled: a note that you are sure. It counts like any number left in.",
             ),
             TutorialFrame(
                 state = afterKeep,
-                caption = "Your turn: make every row and column add up. Stuck? Hint shows you which line to look at, and why.",
+                caption = "Your turn: make every row and column add up. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved. Every board works out one line at a time.",
             ),
@@ -260,6 +266,8 @@ object Tally : PuzzleType {
         bad: BooleanArray,
         scheme: ColorScheme,
         overlay: Overlay = Overlay(),
+        feel: MoveFeel = MoveFeel.Still,
+        accent: Color = Color.Unspecified,
     ) {
         val n = s.size
         val highlight = overlay.highlight
@@ -279,20 +287,22 @@ object Tally : PuzzleType {
             drawRect(scheme.surface, Offset(x, y), Size(u, u))
             val layout = texts.digits[s.digitAt(i)]
             val at = Offset(x + (u - layout.size.width) / 2f, y + (u - layout.size.height) / 2f)
-            when (s.marks[i]) {
-                TallyLogic.REMOVED -> {
-                    drawText(layout, scheme.onSurface.copy(alpha = 0.22f), at)
-                    val a = u * 0.28f
-                    drawLine(
-                        scheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        Offset(x + a, y + u - a), Offset(x + u - a, y + a), maxOf(u * 0.05f, 1f), StrokeCap.Round,
-                    )
+            feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
+                when (s.marks[i]) {
+                    TallyLogic.REMOVED -> {
+                        drawText(layout, scheme.onSurface.copy(alpha = 0.22f), at)
+                        val a = u * 0.28f
+                        drawLine(
+                            scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            Offset(x + a, y + u - a), Offset(x + u - a, y + a), maxOf(u * 0.05f, 1f), StrokeCap.Round,
+                        )
+                    }
+                    TallyLogic.KEPT -> {
+                        drawText(layout, scheme.onSurface, at)
+                        drawCircle(circle, u * 0.34f, Offset(x + u / 2f, y + u / 2f), style = Stroke(maxOf(u * 0.07f, 1.5f)))
+                    }
+                    else -> drawText(layout, scheme.onSurface, at)
                 }
-                TallyLogic.KEPT -> {
-                    drawText(layout, scheme.onSurface, at)
-                    drawCircle(circle, u * 0.34f, Offset(x + u / 2f, y + u / 2f), style = Stroke(maxOf(u * 0.07f, 1.5f)))
-                }
-                else -> drawText(layout, scheme.onSurface, at)
             }
         }
 
@@ -407,16 +417,7 @@ object Tally : PuzzleType {
 
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse: State<Float> = if (highlight.strong.isEmpty()) {
-            remember { mutableFloatStateOf(1f) }
-        } else {
-            rememberInfiniteTransition(label = "hint").animateFloat(
-                initialValue = 0.45f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                label = "hint-pulse",
-            )
-        }
+        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         Column(
             Modifier
@@ -444,6 +445,10 @@ object Tally : PuzzleType {
 
                 val shown = sweep?.let { w -> s.sweep(sweptCells(w, n), w.mark, w.startedOn) } ?: s
                 val done = linesDone(shown, targets)
+                // Lines that add up, on the board as handed (not the sweep still under the finger).
+                val units = remember(n) { lineUnits(n, n) }
+                val handed = linesDone(s, targets)
+                val feel = rememberMoveFeel(s.marks.toList(), units) { handed[it] }
 
                 // A line must stay impossible for a second, and be so now, before it turns red.
                 val impossible = linesImpossible(shown, targets)
@@ -462,7 +467,7 @@ object Tally : PuzzleType {
 
                 Box(Modifier.size((unitsAcross(n) * unitPx).asDp(density), (unitsDown(n) * unitPx).asDp(density))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(shown, unitPx, texts, done, bad, scheme, Overlay(highlight, glow, pulse.value))
+                        drawBoard(shown, unitPx, texts, done, bad, scheme, Overlay(highlight, glow, pulse.value), feel, Color(accent))
                     }
                     // Taps and sweeps are read over the grid alone; the targets are not part of the play area.
                     Box(

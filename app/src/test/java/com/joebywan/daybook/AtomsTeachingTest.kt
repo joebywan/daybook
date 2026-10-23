@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Atom
 import com.joebywan.daybook.puzzles.Atoms
 import com.joebywan.daybook.puzzles.AtomsState
@@ -443,44 +444,57 @@ class AtomsTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
         val frames = Atoms.tutorial
-        assertEquals(7, frames.size)
+        assertEquals(6, frames.size)
         fun board(i: Int) = frames[i].state as AtomsState
 
-        listOf(0, 1).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].accepts) }
+        listOf(0, 1).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].judge) }
         assertTrue(board(0).solved)
 
-        // 3: a drag from the top 2 lays the first bond (a tap would too, and is fine).
-        val drag = frames[2].accepts!!
-        assertTrue(drag(board(2).link(0)!!))
-        assertTrue(drag(board(2).cycle(0)))
-        assertFalse("a bond elsewhere", drag(board(2).link(1)!!))
-        assertEquals(board(3).counts, board(2).link(0)!!.counts)
+        // 3: a drag from the top 2 lays the first bond (a tap would too, and is fine), and a tap on
+        // the bond doubles it; the glow moves from the 2 to the bond.
+        val double = frames[2].steps!!
+        val glow = frames[2].glow!!
+        assertEquals(setOf(0), glow(board(2)).strong)
+        val one = board(2).link(0)!!
+        assertEquals(TutorialStep.PROGRESS, double(one))
+        assertEquals(TutorialStep.PROGRESS, double(board(2).cycle(0)))
+        assertEquals(TutorialStep.REJECT, double(board(2).link(1)!!))
+        assertEquals(TutorialStep.REJECT, double(one.cycle(1)))
+        assertNull("a drag cannot double a bond", one.link(0))
+        assertEquals(setOf(AtomsTeacher.pairCell(Atoms.TUTORIAL_ATOMS.size, 0)), glow(one).strong)
+        val two = one.cycle(0)
+        assertEquals(TutorialStep.DONE, double(two))
+        assertEquals(board(3).counts, two.counts)
 
-        // 4: a tap on the bond doubles it.
-        val double = frames[3].accepts!!
-        assertTrue(double(board(3).cycle(0)))
-        assertNull("a drag cannot double a bond", board(3).link(0))
-        assertFalse("a tap elsewhere", double(board(3).cycle(1)))
-        assertEquals(board(4).counts.take(5), board(3).cycle(0).counts.take(5))
+        // 4: the player taps the bottom 2s' gap to a double (the glow turns red, the hints call it a
+        // mistake: both 2s full and cut off), then once more to clear it.
+        val cut = frames[3].steps!!
+        val glow4 = frames[3].glow!!
+        assertEquals(TutorialStep.REJECT, cut(board(3)))
+        assertEquals(TutorialStep.REJECT, cut(board(3).cycle(4)))
+        val single = board(3).cycle(5)
+        assertEquals(TutorialStep.PROGRESS, cut(single))
+        assertFalse(glow4(single).warning)
+        val doubled = single.cycle(5)
+        assertEquals(TutorialStep.PROGRESS, cut(doubled))
+        assertTrue(glow4(doubled).warning)
+        assertTrue("the double really is a mistake", Atoms.teach(doubled)!!.mistake)
+        assertEquals(TutorialStep.REJECT, cut(doubled.cycle(4)))
+        val cleared = doubled.cycle(5)
+        assertEquals(TutorialStep.DONE, cut(cleared))
+        assertEquals(board(4).counts, cleared.counts)
 
-        // 5: a tap on the wrong double clears it.
-        val clear = frames[4].accepts!!
-        assertTrue(clear(board(4).cycle(5)))
-        assertFalse("a tap elsewhere", clear(board(4).cycle(4)))
-        assertEquals(board(5).counts, board(4).cycle(5).counts)
-        assertTrue("frame 5's double really is a mistake", Atoms.teach(board(4))!!.mistake)
-
-        // 6: a tap in the gap above the corner 2.
-        val gap = frames[5].accepts!!
-        assertTrue(gap(board(5).cycle(4)))
-        assertFalse("the closed-off pair again", gap(board(5).cycle(5)))
-        assertEquals(board(6).counts, board(5).cycle(4).counts)
+        // 5: a tap in the gap above the corner 2.
+        val gap = frames[4].accepts!!
+        assertTrue(gap(board(4).cycle(4)))
+        assertFalse("the closed-off pair again", gap(board(4).cycle(5)))
+        assertEquals(board(5).counts, board(4).cycle(4).counts)
         // The claim, re-checked by enumeration: every answer has a bond on line 4.
         assertTrue(allSolutions(Atoms.TUTORIAL_ATOMS, Atoms.TUTORIAL_PAIRS).all { it[4] >= 1 })
 
-        // 7: free play, finishable by hints without the fallback.
-        assertTrue(frames[6].freePlay)
-        var s = board(6)
+        // 6: free play, finishable by hints without the fallback.
+        assertTrue(frames[5].freePlay)
+        var s = board(5)
         while (!s.solved) {
             val d = Atoms.teach(s)!!
             assertFalse("the last frame should not need the fallback", d.fallback)

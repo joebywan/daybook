@@ -3,12 +3,14 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.CageLogic
 import com.joebywan.daybook.puzzles.CageState
 import com.joebywan.daybook.puzzles.CageTeacher
 import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.SudokuState
+import com.joebywan.daybook.puzzles.SudokuTeacher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -199,8 +201,8 @@ class CageTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move and rejects a near miss`() {
         val frames = Cages.tutorial
-        assertEquals(6, frames.size)
-        assertEquals(listOf(false, true, true, true, true, false), frames.map { it.accepts != null })
+        assertEquals(5, frames.size)
+        assertEquals(listOf(false, true, true, true, false), frames.map { it.judge != null })
         assertTrue(frames.last().freePlay)
 
         val first = Cages.TUTORIAL_FIRST
@@ -217,30 +219,40 @@ class CageTeachingTest {
         assertEquals(2, b.cells[cageWrong.first { it != wrong }])
         assertEquals(9, b.grid.solution[wrong])
 
-        // 1: select the first gap.
-        assertTrue(frames[1].accepts!!(b.select(first)))
-        assertFalse(frames[1].accepts!!(b.select(wrong)))
-        assertFalse(frames[1].accepts!!(b))
-        // 2: place the 4 (and not another digit).
-        val chosen = Cages.tutorialBoard(selected = first)
-        assertEquals(chosen, frames[2].state)
-        assertTrue(frames[2].accepts!!(chosen.withCell(first, 4)))
-        assertFalse(frames[2].accepts!!(chosen.withCell(first, 5)))
-        // 3: the wrong 5 turns its cage red; clearing it is the move.
-        val shown = frames[3].state as CageState
-        assertEquals(5, shown.cells[wrong])
+        // 1: tap the first gap (the 4 glows next), then the 4; another square or digit is refused.
+        val place = frames[1].steps!!
+        assertEquals(TutorialStep.REJECT, place(b))
+        val chosen = b.select(first)
+        assertEquals(TutorialStep.PROGRESS, place(chosen))
+        assertEquals(setOf(SudokuTeacher.pad(4)), frames[1].glow!!(chosen).strong)
+        assertEquals(TutorialStep.REJECT, place(b.select(wrong)))
+        assertEquals(TutorialStep.REJECT, place(chosen.enter(first, 5, notesMode = false)))
+        val placed = chosen.enter(first, 4, notesMode = false)
+        assertEquals(TutorialStep.DONE, place(placed))
+        // 2: the player puts the 5 in (its cage red, and a repeat in its column), then taps 5 again.
+        val clash = frames[2].steps!!
+        val start = frames[2].state as CageState
+        assertEquals(placed.cells, start.cells)
+        assertEquals(TutorialStep.REJECT, clash(start))
+        val picked = start.select(wrong)
+        assertEquals(TutorialStep.PROGRESS, clash(picked))
+        assertEquals(TutorialStep.REJECT, clash(picked.enter(wrong, 9, notesMode = false)))
+        val shown = picked.enter(wrong, 5, notesMode = false)
+        assertEquals(TutorialStep.PROGRESS, clash(shown))
+        assertTrue(frames[2].glow!!(shown).warning)
         assertTrue("the cage is shown wrong", CageLogic.cageConflicts(shown.cells, shown.cageOf, shown.sums).containsAll(cageWrong.toList()))
-        assertTrue("and the 5 repeats in its column", wrong in shown.grid.conflicts())
-        assertTrue(frames[3].accepts!!(shown.withCell(wrong, 0)))
-        assertFalse(frames[3].accepts!!(shown.withCell(wrong, 9)))
-        // 4: pencil the 9.
-        val cleared = frames[4].state as CageState
+        assertTrue("and the 5 repeats in its column", (0 until 9).any { it * 9 + wrong % 9 != wrong && shown.cells[it * 9 + wrong % 9] == 5 })
+        assertTrue(wrong in shown.grid.conflicts())
+        assertEquals(TutorialStep.DONE, clash(shown.enter(wrong, 5, notesMode = false)))
+        // 3: pencil the 9.
+        val cleared = frames[3].state as CageState
         assertEquals(0, cleared.cells[wrong])
-        assertTrue(frames[4].accepts!!(cleared.toggleNote(wrong, 9)))
-        assertFalse(frames[4].accepts!!(cleared.toggleNote(wrong, 8)))
-        assertFalse(frames[4].accepts!!(cleared.withCell(wrong, 9)))
+        assertTrue(frames[3].accepts!!(cleared.toggleNote(wrong, 9)))
+        assertFalse(frames[3].accepts!!(cleared.toggleNote(wrong, 8)))
+        assertFalse(frames[3].accepts!!(cleared.withCell(wrong, 9)))
         // Each frame's board is the previous one's result.
-        assertEquals(Cages.tutorialBoard(mapOf(first to 4), selected = wrong), frames[4].state)
+        assertEquals(Cages.tutorialBoard(mapOf(first to 4), selected = wrong), frames[3].state)
+        assertEquals(cleared.toggleNote(wrong, 9).grid.notes, (frames[4].state as CageState).grid.notes)
         for (f in frames) assertTrue(f.caption.length <= 170)
     }
 

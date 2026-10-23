@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Link
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.MamboState
@@ -315,33 +316,45 @@ class MamboTeachingTest {
     @Test
     fun `each walkthrough frame accepts its move, made by real taps, and rejects a wrong one`() {
         val frames = Mambo.tutorial
-        assertEquals(8, frames.size)
+        assertEquals(7, frames.size)
         fun board(i: Int) = frames[i].state as MamboState
-        listOf(0, 1).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].accepts) }
+        listOf(0, 1).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].judge) }
         assertTrue(board(0).solved)
 
-        // Each interactive frame: the tap it asks for, the board the next frame starts from, and a
+        // Each one-tap frame: the tap it asks for, the board the next frame starts from, and a
         // tap somewhere else that it must turn down.
-        for ((frame, cell) in listOf(2 to 2, 3 to 7, 4 to 22, 5 to 22, 6 to 32)) {
+        for ((frame, cell) in listOf(2 to 2, 3 to 7, 5 to 32)) {
             val accepts = frames[frame].accepts!!
             val tapped = board(frame).tap(cell)
             assertTrue("frame ${frame + 1} should accept a tap on $cell", accepts(tapped))
             assertEquals("frame ${frame + 2} should start where frame ${frame + 1} ends", board(frame + 1).cells, tapped.cells)
             val elsewhere = board(frame).cells.indices.first { it != cell && !board(frame).givens[it] }
             assertFalse("frame ${frame + 1} should turn down a tap on $elsewhere", accepts(board(frame).tap(elsewhere)))
-            assertTrue(frames[frame].caption.length <= MamboTeacher.MAX_EXPLANATION)
         }
+        frames.forEach { assertTrue(it.caption.length <= MamboTeacher.MAX_EXPLANATION) }
+
+        // 5: two taps on square 22, by way of a moon that makes three (the glow turns red), then the sun.
+        val sun = frames[4].steps!!
+        val moon = board(4).tap(22)
+        assertEquals(TutorialStep.PROGRESS, sun(moon))
+        assertFalse(frames[4].glow!!(board(4)).warning)
+        assertTrue(frames[4].glow!!(moon).warning)
+        assertTrue("the passing moon really is three together", moon.violations().isNotEmpty())
+        assertEquals(TutorialStep.REJECT, sun(board(4).tap(23)))
+        assertEquals(TutorialStep.REJECT, sun(moon.tap(23)))
+        val done = moon.tap(22)
+        assertEquals(TutorialStep.DONE, sun(done))
+        assertEquals(board(5).cells, done.cells)
 
         // The claims the captions make, checked by the teacher's own rules and by enumeration.
         val answers = allSolutions(6, board(2).cells, board(2).links)
         assertEquals(Sym.MOON, answers.single()[2])
-        assertTrue("frame 6's passing moon really is three together", board(5).violations().isNotEmpty())
-        assertTrue("frame 7's board breaks nothing", board(6).violations().isEmpty())
-        assertEquals(3, listOf(2, 8, 14, 20, 26).count { board(6).cells[it] == Sym.SUN })
+        assertTrue("frame 6's board breaks nothing", board(5).violations().isEmpty())
+        assertEquals(3, listOf(2, 8, 14, 20, 26).count { board(5).cells[it] == Sym.SUN })
 
-        // 8: free play, finishable by hints without the fallback.
-        assertTrue(frames[7].freePlay)
-        var s = board(7)
+        // 7: free play, finishable by hints without the fallback.
+        assertTrue(frames[6].freePlay)
+        var s = board(6)
         while (!s.solved) {
             val d = Mambo.teach(s)!!
             assertFalse("the last frame should not need the fallback", d.fallback)

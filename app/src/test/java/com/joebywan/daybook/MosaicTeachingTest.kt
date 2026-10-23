@@ -403,12 +403,15 @@ class MosaicTeachingTest {
     @Test
     fun `each walkthrough frame accepts its fill, from any cell of the area, and rejects a wrong one`() {
         val frames = Mosaic.tutorial
-        assertEquals(6, frames.size)
+        assertEquals(5, frames.size)
         fun board(i: Int) = frames[i].state as MosaicState
-        listOf(0, 1).forEach { assertNull("frame ${it + 1} should be Next-only", frames[it].accepts) }
+        assertNull("frame 1 should be Next-only", frames[0].accepts)
+        // Its claim: the limit is the fewest fills this board needs.
+        assertEquals(3, board(0).limit)
+        assertEquals(3, Mosaic.solve(board(0))!!.size)
 
         for ((offset, fill) in Mosaic.TUTORIAL_FILLS.withIndex()) {
-            val i = offset + 2
+            val i = offset + 1
             val b = board(i)
             val accepts = frames[i].accepts!!
             val (cell, colour) = fill
@@ -422,10 +425,10 @@ class MosaicTeachingTest {
             val otherArea = areaCells(b).first { it !in b.area(cell) }
             val otherColour = (0 until b.colours).first { it != b.cells[otherArea] }
             assertFalse("frame ${i + 1}: another area", accepts(b.flood(otherArea, otherColour)))
-            if (i + 1 < 5) assertEquals("frame ${i + 2} continues from frame ${i + 1}", board(i + 1).cells, b.flood(cell, colour).cells)
+            if (i + 1 < 4) assertEquals("frame ${i + 2} continues from frame ${i + 1}", board(i + 1).cells, b.flood(cell, colour).cells)
             assertTrue("frame ${i + 1}'s glow misses the area to tap", frames[i].highlight.strong.containsAll(b.area(cell).toList()))
         }
-        assertTrue("the last taught fill finishes the board", board(4).flood(Mosaic.TUTORIAL_FILLS[2].first, Mosaic.TUTORIAL_FILLS[2].second).solved)
+        assertTrue("the last taught fill finishes the board", board(3).flood(Mosaic.TUTORIAL_FILLS[2].first, Mosaic.TUTORIAL_FILLS[2].second).solved)
     }
 
     @Test

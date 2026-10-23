@@ -31,7 +31,9 @@ import com.joebywan.daybook.platform.currentDate
 import com.joebywan.daybook.platform.formatClock
 import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.prepareBoards
+import com.joebywan.daybook.platform.rememberHaptics
 import com.joebywan.daybook.platform.rememberKeyValueStore
+import com.joebywan.daybook.platform.rememberReducedMotion
 import com.joebywan.daybook.platform.rememberSolveSoundPlayer
 import com.joebywan.daybook.ui.tutorial.LocalChime
 import com.joebywan.daybook.ui.archive.ArchiveScreen
@@ -55,6 +57,13 @@ import com.joebywan.daybook.ui.theme.DaybookTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
 
 /** A shared daily's date: day and month, as the owner's share example has it. */
 private const val SHARE_DATE = "d MMM"
@@ -195,6 +204,11 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     val playSound = pickedPlaySound ?: storedPlaySound
     // Armed while the switch is on (the web wakes its audio on the first taps); a no-op when off.
     val playSolveSound = rememberSolveSoundPlayer(playSound)
+    val storedVibrate by launchPrefs.vibrate.collectAsState(initial = true)
+    var pickedVibrate by remember { mutableStateOf<Boolean?>(null) }
+    val vibrate = pickedVibrate ?: storedVibrate
+    val haptics = rememberHaptics(vibrate)
+    val reducedMotion = rememberReducedMotion()
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
     // back to Daily, because that is what the app is for.
     var mode by rememberSaveable { mutableStateOf(startMode) }
@@ -256,7 +270,12 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
     PlatformBackHandler(enabled = route != Route.Home) { route = backFrom(route) }
 
-    when (val current = route) {
+    CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics) {
+    // A short fade between screens (none under reduced motion). Each route is its own keyed content, so a screen's
+    // rememberSaveable state is kept across a rotation as before; the screen going out stays composed for the fade.
+    // On the page colour: fading two screens over the bare window would dim the middle of the fade.
+    Crossfade(route, Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), animationSpec = if (reducedMotion) snap() else tween(ROUTE_FADE_MS), label = "route") { current ->
+    when (current) {
         Route.Home -> {
             // Nothing on Android. On the web, today's boards are generated while the grid is being
             // read, so the tap that opens one does not have to wait for it; see the platform seam.
@@ -344,6 +363,11 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             onPlaySound = { play ->
                 pickedPlaySound = play
                 scope.launch { launchPrefs.setPlaySound(play) }
+            },
+            vibrate = vibrate,
+            onVibrate = { on ->
+                pickedVibrate = on
+                scope.launch { launchPrefs.setVibrate(on) }
             },
             appearance = appearance,
             onAppearance = onAppearance,
@@ -479,7 +503,11 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             // Otherwise a level board waits the moment it takes the store to say how its level was opened.
         }
     }
+    }
+    }
 }
+
+private const val ROUTE_FADE_MS = 200
 
 /** Whether solving [puzzleId] is what finishes [level]: it was not done before, and is with this board. */
 internal fun levelFinishedBy(progress: LevelProgress, level: Int, puzzleId: String): Boolean {
