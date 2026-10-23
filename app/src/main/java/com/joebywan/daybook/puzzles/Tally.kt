@@ -105,6 +105,13 @@ object Tally : PuzzleType {
     internal fun generateVerified(seed: Long, difficulty: Difficulty): TallyState? =
         TallyLogic.generateVerified(seed, difficulty)
 
+    /** The ways of a line or a what-if, as the tier demands ([TallyLogic.depth]); null for the shortcuts alone. */
+    override fun neededTechnique(state: PuzzleState): String? = when (TallyLogic.depth(state as TallyState)) {
+        TallyLogic.WAYS -> TallyTeacher.WAYS
+        TallyLogic.WHAT_IF -> TallyTeacher.WHAT_IF
+        else -> null
+    }
+
     // ---- the walkthrough ----------------------------------------------------------------------
 
     /**

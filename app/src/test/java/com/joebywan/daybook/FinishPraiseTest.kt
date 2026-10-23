@@ -77,6 +77,31 @@ class FinishPraiseTest {
         assertEquals(listOf(puzzleNote("nonogram", today.toEpochDays())), run(earlier, c(null, 100, hints = 0)).lines)
     }
 
+    private fun line(solve: Completion, taught: List<String> = emptyList(), needed: String? = null, history: List<Completion> = earlier) =
+        finishPraise(history, solve, today, "Tally", taught, needed).lines.single()
+
+    @Test fun aHintSolveNamesTheMostWorthNamingTechniqueItShowed() {
+        val solve = c(null, 100, hints = 2, id = "tally")
+        assertEquals("You learned a what-if on this one.", line(solve, listOf("what-if", "too-big")))
+        assertEquals("You learned a number too big for its line on this one.", line(solve, listOf("too-big")))
+        // Only unnamed ones (a fallback, a technique from another build): the generic line, never a count.
+        assertTrue(line(solve, listOf("fallback")).startsWith("Hints are how a move sticks"))
+        assertTrue(line(solve).startsWith("Hints are how a move sticks"))
+        // What the board needed is never claimed for a hint solve.
+        assertEquals("You learned a number too big for its line on this one.", line(solve, listOf("too-big"), needed = "what-if"))
+    }
+
+    @Test fun aNoHintSolveSaysWhatTheBoardNeededInTheNotesPlace() {
+        val solve = c(null, 100, hints = 0, id = "tally")
+        assertEquals("This board needed a what-if: solved without help.", line(solve, needed = "what-if"))
+        // The puzzle's simplest step, or nothing known: the note, as before.
+        assertEquals(puzzleNote("tally", today.toEpochDays()), line(solve, needed = "line-done"))
+        assertEquals(puzzleNote("tally", today.toEpochDays()), line(solve))
+        // A record still outranks it.
+        val record = finishPraise(listOf(c(null, 500, id = "tally")), solve, today, "Tally", needed = "what-if").lines.single()
+        assertTrue(record, record.startsWith("Your fastest"))
+    }
+
     @Test fun longSolvesGetPerseverance() {
         assertEquals("That one fought back, and you stuck with it.", run(earlier, c(null, 700)).lines.first())
         val h = (1..5).map { c(null, 200) }
