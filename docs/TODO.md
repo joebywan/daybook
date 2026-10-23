@@ -180,8 +180,6 @@ below have a famous branded version; use the descriptive name).
   with the old one; WebKit and Android never showed it). It is now a state read in the tile (`inProgress: () -> Set<String>`),
   6 of 6 loads right. Root cause not found (the grid sits in `BoxWithConstraints` inside a `LazyColumn` item); other values
   that arrive late (`doneToday` from completions) go the same way and may be worth a check. *M.*
-- [ ] **Arrange puzzles: drag to reorder.** `ArrangeScreen` has up and down buttons only (accessible, but 24 taps to move the
-  last puzzle to the top). A long-press drag, or a "move to top" button, would help a long list. *S.*
 
 - [ ] **Target: web hint cost.** The first hint costs 18 ms median, 30 ms p95 on a desktop JVM (Expert, six tiles); the wasm and phone figures were
   not measured (a board generated in the browser at 375x537 and a hint both ran without trouble).
