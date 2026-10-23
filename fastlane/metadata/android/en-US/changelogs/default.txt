@@ -1,3 +1,7 @@
-- Press and hold a puzzle on the home screen to move it, so your favourites come first.
+- Press and hold a puzzle on the home screen to move it.
+- New players get a short welcome, with the easiest puzzles first.
 - "Continue" at the top of the home screen takes you back to the board you left.
-- A short welcome for new players, with the easiest puzzles to pick up first.
+- A hint chimes when you work out its move yourself.
+- Calmer finishes every day, with the full show kept for the big moments.
+- The archive is now a calendar.
+- The praise after a solve names what you worked out.

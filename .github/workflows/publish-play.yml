@@ -69,6 +69,15 @@ jobs:
           ls -la play
           test -n "$(ls -1 play/*.aab 2>/dev/null)" || { echo "::error::no .aab on release $TAG"; exit 1; }
 
+      # Play's "What's new" for this release: the one copy of the text is the F-Droid changelog, rewritten each release.
+      # The action wants a folder of whatsnew-<locale> files; Play takes at most 500 characters, so a longer note fails here.
+      - name: Release notes
+        run: |
+          mkdir -p whatsnew
+          cp fastlane/metadata/android/en-US/changelogs/default.txt whatsnew/whatsnew-en-US
+          n=$(python3 -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read().strip()))' whatsnew/whatsnew-en-US)
+          test "$n" -le 500 || { echo "::error::changelogs/default.txt is $n characters; Play allows 500."; exit 1; }
+
       - name: Upload to Play
         uses: r0adkll/upload-google-play@v1
         with:
@@ -77,3 +86,4 @@ jobs:
           releaseFiles: play/*.aab
           track: ${{ inputs.track || 'production' }}
           status: completed
+          whatsNewDirectory: whatsnew

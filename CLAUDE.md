@@ -645,6 +645,10 @@ assertion loose enough to survive the bug is the same thing wearing a number.
     That is the debug build; `release.yml` runs the same saves through the signed, R8-minified APK on an emulator
     before publishing (`tools/save-check/check.py`, `.github/actions/save-check`), and a lost or changed save blocks
     the release. Run it locally on any APK, or on a published one with Actions > "Release save check".
+- **"What's new" is `fastlane/metadata/android/en-US/changelogs/default.txt`, and every release shows it**: Play gets it
+  through `publish-play.yml` (`whatsNewDirectory`; over 500 characters fails the upload), our F-Droid repo files it under the
+  newest APK's version code (`tools/fdroid/build-repo.sh`). Rewrite it in the PR that changes what players see, or the next
+  release repeats old news. f-droid.org does not read it (it wants `changelogs/<versionCode>.txt` in the tagged commit).
 - **A merge to `main` also reaches our own F-Droid repo** (`publish-fdroid.yml`, same APK and key as the GitHub
   Release; `docs/fdroid/README.md`). The listing text and images are `fastlane/metadata/`, the one copy for both stores: a
   merge that changes the text pushes it to Play (`play-listing.yml`), so edit it there, never in Play Console. The code is AGPL-3.0-or-later (`LICENSE`, chosen by the owner); f-droid.org's entry is live (https://f-droid.org/packages/com.joebywan.daybook/).
