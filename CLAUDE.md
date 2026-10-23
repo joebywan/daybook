@@ -629,7 +629,7 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 - **That release now reaches Google Play automatically, so a merge to `main` ships.** After the GitHub
   Release is made, `release.yml` calls `publish-play.yml`, which uploads the signed `.aab` and rolls it
   out to everyone on the `production` track (full rollout, not staged: nobody would raise a staged
-  percentage by hand). The closed test that earned production access ran on `alpha` ("Closed testing - Alpha").
+  percentage by hand).
   The version code is the workflow run number, so it rises on its own. Google reviews every update
   before testers or users see it, so "released" means uploaded and in review, not live. The upload
   authenticates with the `PLAY_SERVICE_ACCOUNT_JSON` secret, a service account allowed to release to
