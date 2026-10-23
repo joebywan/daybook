@@ -36,6 +36,7 @@ python tools/render/render.py                                # every puzzle x 4 
 python tools/render/render.py -p pipes -p sudoku -s 375x537 -b webkit --scheme dark
 python tools/render/render.py -p mosaic -t expert -s 390x664 --measure
 python tools/render/render.py --home                         # the home grid
+python tools/render/render.py --home --query "screen=archive&puzzle=kings&day=2026-06-01"   # an archive, a day selected
 python tools/render/render.py --list                         # puzzle ids, from PuzzleRegistry
 ```
 

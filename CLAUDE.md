@@ -507,7 +507,8 @@ Restart is undoable (except in Pointers, which has no Undo): it pushes the clear
 an Undo that crosses one logs `u` and `PlayLog.played` hands the restarted moves back.
 
 **Back goes where the screen was opened from** (`backFrom` in `ui/DaybookApp.kt`): an archive game returns to its archive at that
-day, for system back, the web's back, the BackButton and the finish frame's Done alike. Route strings only gain fields at the end,
+day, for system back, the web's back, the BackButton and the finish frame's Done alike (`Route.Archive.day` is the selected day;
+the archive is a month calendar, `ui/archive/ArchiveScreen.kt`, opening on that day's month). Route strings only gain fields at the end,
 read with `getOrNull`, so a route saved by an older build still decodes (`RouteTest`).
 
 **Feedback must not move the board.** Mambo's caption shifted it ~45dp when an error appeared,
