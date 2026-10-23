@@ -107,12 +107,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Infrastructure
 
-- [ ] **f-droid.org shows no "What's new".** It reads `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`
-  from the tagged commit, and the version code is the release run's number, unknown until the run starts, while
-  nothing may push to `main`. Options: a `prebuild` in the fdroiddata entry copying `default.txt` to `$$VERCODE$$.txt`
-  (unverified that fdroidserver reads the listing after prebuild), or ask on the fdroiddata MR. Play and our own repo
-  already get it (CLAUDE.md, Git and releases).
-
 - [ ] **Verify Renovate's CI workaround on the first real Monday run.** Renovate runs daily and
   `tools/dispatch-ci-for-renovate.sh` dispatches `ci.yml` on `renovate/*` branches, where it posts a
   `build` commit status (README, "Dependency updates"). Proven on a throwaway PR with a stand-in

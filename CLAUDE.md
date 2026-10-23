@@ -651,7 +651,9 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 - **"What's new" is `fastlane/metadata/android/en-US/changelogs/default.txt`, and every release shows it**: Play gets it
   through `publish-play.yml` (`whatsNewDirectory`; over 500 characters fails the upload), our F-Droid repo files it under the
   newest APK's version code (`tools/fdroid/build-repo.sh`). Rewrite it in the PR that changes what players see, or the next
-  release repeats old news. f-droid.org does not read it (it wants `changelogs/<versionCode>.txt` in the tagged commit).
+  release repeats old news. The GitHub Release carries it too (`release.yml`, above the generated notes), which is what
+  f-droid.org shows: its entry's `Changelog:` link is the Releases page (f-droid.org does not read the file itself; it wants
+  `changelogs/<versionCode>.txt` in the tagged commit, a number not known until the release runs).
 - **A merge to `main` also reaches our own F-Droid repo** (`publish-fdroid.yml`, same APK and key as the GitHub
   Release; `docs/fdroid/README.md`). The listing text and images are `fastlane/metadata/`, the one copy for both stores: a
   merge that changes the text pushes it to Play (`play-listing.yml`), so edit it there, never in Play Console. The code is AGPL-3.0-or-later (`LICENSE`, chosen by the owner); f-droid.org's entry is live (https://f-droid.org/packages/com.joebywan.daybook/).

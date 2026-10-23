@@ -129,6 +129,8 @@ jobs:
       # --target: without it the tag lands on the branch head when the release is created, which is a
       # later commit whenever another merge arrived while this run was queued. The APK would then not
       # match its tag's source, and F-Droid's reproducible-build check (docs/fdroid/README.md) fails.
+      # The notes are "What's new" (the same text Play shows) above GitHub's generated list of PRs; the Releases page is
+      # also the Changelog link in the f-droid.org entry, so this is how F-Droid users see it.
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -138,6 +140,7 @@ jobs:
             "${{ steps.artifact.outputs.aab }}" \
             --title "Daybook ${{ steps.version.outputs.name }}" \
             --target "$GITHUB_SHA" \
+            --notes "$(cat fastlane/metadata/android/en-US/changelogs/default.txt)" \
             --generate-notes
 
       - name: Clean up the key
