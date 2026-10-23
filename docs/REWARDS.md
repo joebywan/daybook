@@ -126,7 +126,7 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   only as far as its key and decodes in full just the boards the tiles would open; it follows the store, so a game saved on the
   way out of the play screen shows at once.
 
-## Puzzle order (`PuzzleOrder` in `data/ProgressStore.kt`, `ui/settings/ArrangeScreen.kt`)
+## Puzzle order (`PuzzleOrder` in `data/ProgressStore.kt`, `PuzzleGrid` in `ui/home/HomeScreen.kt`)
 
 The grid scrolls (more than twenty puzzles), so the order decides what is on the first screen. Nothing is hidden; the owner
 would rather let people rearrange than hide.
@@ -134,10 +134,18 @@ would rather let people rearrange than hide.
 - **Most played first** (the default): solves per puzzle, dailies of the last 60 days plus every practice game (they carry no
   day); ties and never-played puzzles keep registry order. The solves are read once per app start and day, not live, so
   coming home from a solve never moves a tile under the player's finger.
-- **My own order**: "Arrange puzzles" (from Settings' "Puzzle order" row, or the link under the grid) lists every puzzle with
-  up and down buttons; the first move stores the current order as the player's own (`puzzle_order` in the launch file, ids
-  joined by commas; empty means most played). On load, unknown ids drop out and puzzles added later join at the end
-  (`PuzzleOrder.arranged`). "Reset to most played" clears it. Pinned by `HomeOrderTest`.
+- **My own order**: press and hold a tile on the home grid, then drag it (the owner's call, replacing #231's Arrange screen
+  of up and down buttons). The tile lifts (a 6% scale and a shadow, a haptic tick) and follows the finger, the others slide
+  out of its way in 150 ms (at once under reduced motion), the list scrolls while the finger is within 64dp of the pinned
+  tier rows or the screen's foot, and the lifted tile is kept out from under the pinned rows, so nothing lands where it
+  cannot be seen. The drop ticks again and is one write: the first one stores the whole current order as the player's own
+  (`puzzle_order` in the launch file, ids joined by commas; empty means most played). Only a long press starts it, so a tap
+  still opens a puzzle and a swipe still scrolls; a press held still and let go does nothing. The drag is `remember` state
+  until it drops. A screen reader gets "Move earlier" and "Move later" on every tile instead. On load, unknown ids drop out
+  and puzzles added later join at the end (`PuzzleOrder.arranged`). Until an order is stored, a line under the grid says
+  "Press and hold a puzzle to move it."; Settings' "Puzzle order" row says the same, or, once there is one, "Your own
+  order" with "Reset to most played", which clears it. Pinned by `HomeOrderTest`; an "arrange|..." route saved by the old
+  screen opens Home (`RouteTest`).
 
 ## Reduced motion and haptics (`ui/Motion.kt`, the platform seam)
 
