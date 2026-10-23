@@ -138,13 +138,15 @@ fun PlayScreen(
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
     praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String) -> Praise,
-    otherTiersDone: Set<Difficulty>,
+    options: List<NextOption>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
     onNewGame: (() -> Unit)? = null,
     tutorialOffered: Boolean? = null,
     onTutorialOffered: () -> Unit = {},
     showTimer: Boolean = true,
+    /** The level this board belongs to, if any: the subtitle says so where a daily shows its date. */
+    level: Int? = null,
 ) {
     // The harder boards take hundreds of milliseconds to generate, which would freeze the frame if
     // it happened during composition. Android runs it off the main thread; the web has only one
@@ -160,8 +162,8 @@ fun PlayScreen(
         DealingBoard(puzzle)
     } else {
         PlayBoard(
-            puzzle, difficulty, day, ready, restore, persist, onSolved, praiseFor, otherTiersDone, onNext, onBack,
-            onNewGame, tutorialOffered, onTutorialOffered, showTimer,
+            puzzle, difficulty, day, ready, restore, persist, onSolved, praiseFor, options, onNext, onBack,
+            onNewGame, tutorialOffered, onTutorialOffered, showTimer, level,
         )
     }
 }
@@ -225,13 +227,14 @@ private fun PlayBoard(
     persist: suspend (SavedGame?) -> Unit,
     onSolved: (seconds: Int, hints: Int) -> Unit,
     praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String) -> Praise,
-    otherTiersDone: Set<Difficulty>,
+    options: List<NextOption>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
     onNewGame: (() -> Unit)?,
     tutorialOffered: Boolean?,
     onTutorialOffered: () -> Unit,
     showTimer: Boolean,
+    level: Int?,
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -477,7 +480,7 @@ private fun PlayBoard(
                     buildString {
                         append(difficulty.label)
                         append(" · ")
-                        append(day?.let { formatDate(it, PLAY_DATE) } ?: "Random")
+                        append(level?.let { "Level $it" } ?: day?.let { formatDate(it, PLAY_DATE) } ?: "Random")
                     },
                     style = MaterialTheme.typography.labelLarge,
                     color = scheme.onSurfaceVariant,
@@ -598,9 +601,6 @@ private fun PlayBoard(
     // The finish: a compact frame docked over the play screen. An overlay, so the board keeps
     // exactly the box it had; the toolbar above stays laid out (hidden) for the same reason.
     if (finished) {
-        val options = remember(day, difficulty, otherTiersDone) {
-            nextOptions(daily = day != null, tier = difficulty, doneTiers = otherTiersDone)
-        }
         val accent = Color(puzzle.accent)
         // Tapping anywhere but a button hides the frame so the solved board can be looked at; the pill
         // brings it back. The scrim only exists while the frame is up, and a hidden frame covers nothing.
@@ -879,8 +879,8 @@ private fun NextTile(option: NextOption, accent: Color, modifier: Modifier, onCl
         verticalArrangement = Arrangement.Center,
     ) {
         Text(option.label, style = MaterialTheme.typography.titleSmall, color = if (done) scheme.onPrimary else scheme.onSurface, maxLines = 1)
-        option.difficulty?.let {
-            Text(it.label, style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, maxLines = 1)
+        (option.note ?: option.difficulty?.label)?.let {
+            Text(it, style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant, maxLines = 1)
         }
     }
 }

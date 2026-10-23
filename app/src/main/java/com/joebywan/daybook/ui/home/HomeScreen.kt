@@ -61,6 +61,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.data.LevelProgress
 import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.ui.stats.MedalIcon
 import com.joebywan.daybook.platform.GetTheAppCard
@@ -71,13 +72,12 @@ import kotlinx.datetime.LocalDate
 private const val HEADER_DATE = "EEEE d MMMM"
 
 /**
- * Twelve puzzles at three columns is four rows (fifteen is five full ones), and four rows of tiles plus a header and the
- * launch options is what fits a phone in one screenful. That is the entire reason this screen is
- * a grid: choosing a puzzle should never involve scrolling to find it. The thirteenth puzzle opens
- * a fifth row; the sixteenth to eighteenth, Tents, Regions and Cage Sudoku, make a sixth, three-tile row, and the nineteenth to
- * twenty-first, Target, Cipher and Word Wheel, a seventh, and the twenty-second to twenty-fourth, Tally, Sand and Pointers, an eighth; the twenty-fifth, Dominoes, opens a ninth. All scroll into view. A wider window (a tablet, a phone on its side) takes a column per
- * [MinTileWidth], up to [MAX_COLUMNS]; a phone in portrait is always under four and keeps its three. A short wide window
- * (a phone on its side) takes more columns, down to [MinShortTileWidth], until two rows fit under the header: see [homeColumns].
+ * The grid was first sized so every puzzle fitted one phone screen; with more than twenty it scrolls, so the order does
+ * the work instead. By default the most played sit at the top (`PuzzleOrder.mostPlayed`, read once a day so a solve never
+ * moves a tile under the player's finger), and a player can set their own order (`ArrangeScreen`). Nothing is hidden:
+ * anything else is a scroll away. A phone in portrait has three columns; a wider window (a tablet, a phone on its side)
+ * takes a column per [MinTileWidth], up to [MAX_COLUMNS]. A short wide window (a phone on its side) takes more columns,
+ * down to [MinShortTileWidth], until two rows fit under the header: see [homeColumns].
  */
 private const val COLUMNS = 3
 private const val MAX_COLUMNS = 7
@@ -128,10 +128,15 @@ fun HomeScreen(
     mode: LaunchMode,
     onMode: (LaunchMode) -> Unit,
     onLaunch: (String) -> Unit,
+    levels: LevelProgress,
+    onLevels: () -> Unit,
     onArchive: (String) -> Unit,
     onStats: () -> Unit,
     onAchievements: () -> Unit,
     onSettings: () -> Unit,
+    puzzles: List<PuzzleType>,
+    inProgress: () -> Set<String>,
+    onArrange: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val doneToday = remember(completions, today) {
@@ -180,11 +185,16 @@ fun HomeScreen(
                     Modifier.fillMaxWidth().background(scheme.background).padding(vertical = if (short) 8.dp else 14.dp)
                         .onSizeChanged { optionsHeight = it.height },
                 ) {
-                    LaunchOptions(difficulty, onDifficulty, mode, onMode, sideBySide = short)
+                    LaunchOptions(difficulty, onDifficulty, mode, onMode, levelStrip = { LevelStrip(levels, onLevels) }, sideBySide = short)
                 }
             }
-            item {
+            if (mode == LaunchMode.LEVELS) item {
+                // The level's draw order, not the arranged one: a level is a set the player is given, in the order dealt.
+                LevelGrid(levels, levels.current, onPlay = onLaunch, onAllLevels = onLevels, height = gridHeight, inProgress = inProgress)
+            } else item {
                 PuzzleGrid(
+                    puzzles = puzzles,
+                    inProgress = inProgress,
                     difficulty = difficulty,
                     // Random boards are freshly seeded on every tap, so "solved today" says nothing
                     // about the game a tile is about to start. The tiles keep their marks-shaped space
@@ -194,6 +204,21 @@ fun HomeScreen(
                     height = gridHeight,
                     onLaunch = onLaunch,
                 )
+            }
+            // Only where the order applies; a level's tiles keep their draw order.
+            if (mode != LaunchMode.LEVELS) item {
+                Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Arrange puzzles",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = scheme.primary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable(onClick = onArrange)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                }
             }
             item { GetTheAppCard() }
         }
@@ -326,80 +351,116 @@ private fun StreakBadge(streak: Streak) {
 }
 
 /**
- * Laid out by hand rather than with a lazy grid. Eleven tiles never justify recycling, and a lazy
+ * Laid out by hand rather than with a lazy grid. A couple of dozen tiles never justify recycling, and a lazy
  * grid demands a height of its own — it cannot sit in a scrolling column, which is what lets this
  * grid take exactly the room it needs and scroll only when it does not fit.
  */
 @Composable
 private fun PuzzleGrid(
+    puzzles: List<PuzzleType>,
+    inProgress: () -> Set<String>,
     difficulty: Difficulty,
     doneToday: Set<Pair<String, Difficulty>>,
     pick: String,
     height: Dp,
     onLaunch: (String) -> Unit,
 ) {
+    TileGrid(puzzles.size, height) { i, previewSize, modifier ->
+        val puzzle = puzzles[i]
+        val solved = (puzzle.id to difficulty) in doneToday
+        PuzzleTile(puzzle, solved, isPick = puzzle.id == pick, inProgress, previewSize, { onLaunch(puzzle.id) }, modifier) { accent ->
+            TierDots(
+                accent = accent,
+                selected = difficulty,
+                cleared = { tier -> (puzzle.id to tier) in doneToday },
+            )
+        }
+    }
+}
+
+/** [count] tiles in rows of [homeColumns] for a grid with [height] below the header; [tile] draws tile `i` at the motif size given. */
+@Composable
+internal fun TileGrid(count: Int, height: Dp, tile: @Composable (index: Int, previewSize: Dp, modifier: Modifier) -> Unit) {
     BoxWithConstraints {
         val columns = homeColumns(maxWidth, height)
         val previewSize = previewSize(tileWidth(maxWidth, columns))
         Column(verticalArrangement = Arrangement.spacedBy(TileGap)) {
-            PuzzleRegistry.all.chunked(columns).forEach { rowPuzzles ->
+            (0 until count).chunked(columns).forEach { row ->
                 Row(
                     // The last row is short. Intrinsic height keeps every tile in a row as tall as
                     // the tallest, which only matters once a large font scale wraps a name.
                     Modifier.height(IntrinsicSize.Max),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {
-                    rowPuzzles.forEach { puzzle ->
-                        PuzzleTile(
-                            puzzle = puzzle,
-                            difficulty = difficulty,
-                            doneToday = doneToday,
-                            isPick = puzzle.id == pick,
-                            previewSize = previewSize,
-                            onLaunch = onLaunch,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                        )
-                    }
+                    row.forEach { i -> tile(i, previewSize, Modifier.weight(1f).fillMaxHeight()) }
                     // Keeps the two tiles of the last row the same width as the three above them.
-                    repeat(columns - rowPuzzles.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
     }
 }
 
+/**
+ * A puzzle's motif and name, ticked when [solved]; [footer] is the line under the name (in the puzzle's accent).
+ * [inProgress] is read here, in the tile, so a save that lands during the first frames is never shown stale.
+ */
 @Composable
-private fun PuzzleTile(
+internal fun PuzzleTile(
     puzzle: PuzzleType,
-    difficulty: Difficulty,
-    doneToday: Set<Pair<String, Difficulty>>,
+    solved: Boolean,
     isPick: Boolean,
+    inProgress: () -> Set<String>,
     previewSize: Dp,
-    onLaunch: (String) -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier,
+    footer: @Composable (accent: Color) -> Unit,
+) {
+    val accent = Color(puzzle.accent)
+    // A started pick shows "In progress" alone: the invitation has been taken up, and two labels cannot share a thumbnail.
+    val started = puzzle.id in inProgress()
+    val marked = isPick && !solved && !started
+    HomeTile(
+        name = puzzle.displayName,
+        accent = accent,
+        solved = solved,
+        onClick = onClick,
+        // Today's pick (unsolved): gold ring and sparkles, drawn inside the tile, so nothing moves.
+        modifier = modifier,
+        frame = if (marked) Modifier.sparkleFrame() else Modifier,
+        motif = {
+            puzzle.Preview(Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)))
+            if (marked) TryMeLabel(previewSize, Modifier.align(Alignment.Center))
+            if (started) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
+        },
+        footer = { footer(accent) },
+    )
+}
+
+/** The shape every home tile shares: a motif with the solved tick in its corner, a name, a footer line. */
+@Composable
+internal fun HomeTile(
+    name: String,
+    accent: Color,
+    solved: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    frame: Modifier = Modifier,
+    motif: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit,
+    footer: @Composable () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val accent = Color(puzzle.accent)
-    val solved = (puzzle.id to difficulty) in doneToday
-    val marked = isPick && !solved
-
     Column(
         modifier
             .clip(RoundedCornerShape(18.dp))
             .background(if (solved) accent.copy(alpha = 0.20f) else scheme.surface)
-            // Today's pick (unsolved): gold ring and sparkles, drawn inside the tile, so nothing moves.
-            .then(if (marked) Modifier.sparkleFrame() else Modifier)
-            .clickable(onClick = { onLaunch(puzzle.id) })
+            .then(frame)
+            .clickable(onClick = onClick)
             .padding(TilePadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(contentAlignment = Alignment.TopEnd) {
-            puzzle.Preview(
-                Modifier
-                    .size(previewSize)
-                    .clip(RoundedCornerShape(10.dp))
-            )
-            if (marked) TryMeLabel(previewSize, Modifier.align(Alignment.Center))
+            motif()
             if (solved) {
                 Box(
                     Modifier.size(16.dp).clip(CircleShape).background(scheme.surface),
@@ -411,7 +472,7 @@ private fun PuzzleTile(
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            puzzle.displayName,
+            name,
             style = MaterialTheme.typography.titleMedium,
             color = if (solved) accent else scheme.onSurface,
             textAlign = TextAlign.Center,
@@ -419,11 +480,7 @@ private fun PuzzleTile(
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(3.dp))
-        TierDots(
-            accent = accent,
-            selected = difficulty,
-            cleared = { tier -> (puzzle.id to tier) in doneToday },
-        )
+        footer()
     }
 }
 

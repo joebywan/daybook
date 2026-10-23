@@ -1,6 +1,8 @@
 package com.joebywan.daybook.ui.play
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LevelBoard
+import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
 import kotlinx.datetime.LocalDate
 
@@ -12,12 +14,25 @@ enum class NextKind {
     /** The same date's board at [NextOption.difficulty] (a past date's board on an archive day). */
     DAILY,
 
+    /** A board of level [NextOption.level]: [NextOption.puzzleId], or its first unsolved board when that is null. */
+    LEVEL,
+
     /** Back to Home. */
     DONE,
 }
 
-/** One button on the finished-puzzle frame. [difficulty] is null only for [NextKind.DONE]. */
-data class NextOption(val label: String, val kind: NextKind, val difficulty: Difficulty?)
+/**
+ * One button on the finished-puzzle frame. [difficulty] is null for [NextKind.DONE] and for a whole next level;
+ * [note] is the button's second line in place of the tier.
+ */
+data class NextOption(
+    val label: String,
+    val kind: NextKind,
+    val difficulty: Difficulty?,
+    val puzzleId: String? = null,
+    val level: Int? = null,
+    val note: String? = null,
+)
 
 /**
  * The buttons offered once a puzzle is solved, as a pure function of what was just played and what
@@ -53,6 +68,25 @@ fun nextOptions(daily: Boolean, tier: Difficulty, doneTiers: Set<Difficulty>): L
             add(NextOption("Done", NextKind.DONE, null))
         }
     }
+}
+
+/**
+ * The buttons for a solved board of [level]: [plan] is its boards, [solved] the puzzles solved in it, and
+ * [justSolved] the board just finished (the store records it a moment after the win). "Next in level N" names
+ * the first unsolved board in plan order; once all five are solved it becomes the level to go on with: the one
+ * after, or [current] when this was a replay of a level finished long ago. Then "Home".
+ */
+fun levelNextOptions(level: Int, plan: List<LevelBoard>, solved: Set<String>, justSolved: String, current: Int): List<NextOption> {
+    val done = solved + justSolved
+    val next = plan.firstOrNull { it.puzzleId !in done && PuzzleRegistry.byId(it.puzzleId) != null }
+    val go = if (next != null) {
+        val name = PuzzleRegistry.byId(next.puzzleId)?.displayName ?: next.puzzleId
+        NextOption("Next in level $level", NextKind.LEVEL, next.difficulty, next.puzzleId, level, "$name · ${next.difficulty.label}")
+    } else {
+        val to = maxOf(level + 1, current)
+        NextOption("Level $to", NextKind.LEVEL, null, null, to)
+    }
+    return listOf(go, NextOption("Home", NextKind.DONE, null))
 }
 
 /**
