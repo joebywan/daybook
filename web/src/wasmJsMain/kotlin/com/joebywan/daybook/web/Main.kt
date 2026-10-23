@@ -153,7 +153,8 @@ fun main() {
             EarnedAchievement("solves100", "Hundred solves", "Solve 100 puzzles."),
         )
         finishPreview = Praise(
-            title = if (n > 0) "7 day streak" else null, big = n > 0, lines = listOf("No hints needed."),
+            // `&level=N` previews a level board's frame; `&leveldone` the one its fifth board shows.
+            title = if (n > 0) "7 day streak" else if ("leveldone" in params) "Level ${params["level"]} done" else null, big = n > 0, lines = listOf("No hints needed."),
             achievements = all.take(n), toGo = if ("togo" in params) "Only Hard on Kings left for all done today!" else null,
             share = sampleShare(params["puzzle"], tier),
         )
@@ -162,7 +163,7 @@ fun main() {
     }
 
     ComposeViewport(viewportContainerId = "app") {
-        DaybookWebApp(params["date"], params["tier"], params["puzzle"])
+        DaybookWebApp(params["date"], params["tier"], params["puzzle"], params)
     }
     removeLoadingNote()
     nudgeFirstFrame()

@@ -61,6 +61,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.data.LevelProgress
 import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.ui.stats.MedalIcon
 import com.joebywan.daybook.platform.GetTheAppCard
@@ -127,6 +128,8 @@ fun HomeScreen(
     mode: LaunchMode,
     onMode: (LaunchMode) -> Unit,
     onLaunch: (String) -> Unit,
+    levels: LevelProgress,
+    onLevels: () -> Unit,
     onArchive: (String) -> Unit,
     onStats: () -> Unit,
     onAchievements: () -> Unit,
@@ -182,10 +185,13 @@ fun HomeScreen(
                     Modifier.fillMaxWidth().background(scheme.background).padding(vertical = if (short) 8.dp else 14.dp)
                         .onSizeChanged { optionsHeight = it.height },
                 ) {
-                    LaunchOptions(difficulty, onDifficulty, mode, onMode, sideBySide = short)
+                    LaunchOptions(difficulty, onDifficulty, mode, onMode, levelStrip = { LevelStrip(levels, onLevels) }, sideBySide = short)
                 }
             }
-            item {
+            if (mode == LaunchMode.LEVELS) item {
+                // The level's draw order, not the arranged one: a level is a set the player is given, in the order dealt.
+                LevelGrid(levels, levels.current, onPlay = onLaunch, onAllLevels = onLevels, height = gridHeight, inProgress = inProgress)
+            } else item {
                 PuzzleGrid(
                     puzzles = puzzles,
                     inProgress = inProgress,
@@ -199,7 +205,8 @@ fun HomeScreen(
                     onLaunch = onLaunch,
                 )
             }
-            item {
+            // Only where the order applies; a level's tiles keep their draw order.
+            if (mode != LaunchMode.LEVELS) item {
                 Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
                     Text(
                         "Arrange puzzles",
@@ -358,73 +365,102 @@ private fun PuzzleGrid(
     height: Dp,
     onLaunch: (String) -> Unit,
 ) {
+    TileGrid(puzzles.size, height) { i, previewSize, modifier ->
+        val puzzle = puzzles[i]
+        val solved = (puzzle.id to difficulty) in doneToday
+        PuzzleTile(puzzle, solved, isPick = puzzle.id == pick, inProgress, previewSize, { onLaunch(puzzle.id) }, modifier) { accent ->
+            TierDots(
+                accent = accent,
+                selected = difficulty,
+                cleared = { tier -> (puzzle.id to tier) in doneToday },
+            )
+        }
+    }
+}
+
+/** [count] tiles in rows of [homeColumns] for a grid with [height] below the header; [tile] draws tile `i` at the motif size given. */
+@Composable
+internal fun TileGrid(count: Int, height: Dp, tile: @Composable (index: Int, previewSize: Dp, modifier: Modifier) -> Unit) {
     BoxWithConstraints {
         val columns = homeColumns(maxWidth, height)
         val previewSize = previewSize(tileWidth(maxWidth, columns))
         Column(verticalArrangement = Arrangement.spacedBy(TileGap)) {
-            puzzles.chunked(columns).forEach { rowPuzzles ->
+            (0 until count).chunked(columns).forEach { row ->
                 Row(
                     // The last row is short. Intrinsic height keeps every tile in a row as tall as
                     // the tallest, which only matters once a large font scale wraps a name.
                     Modifier.height(IntrinsicSize.Max),
                     horizontalArrangement = Arrangement.spacedBy(TileGap),
                 ) {
-                    rowPuzzles.forEach { puzzle ->
-                        PuzzleTile(
-                            puzzle = puzzle,
-                            difficulty = difficulty,
-                            doneToday = doneToday,
-                            isPick = puzzle.id == pick,
-                            inProgress = inProgress,
-                            previewSize = previewSize,
-                            onLaunch = onLaunch,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                        )
-                    }
+                    row.forEach { i -> tile(i, previewSize, Modifier.weight(1f).fillMaxHeight()) }
                     // Keeps the two tiles of the last row the same width as the three above them.
-                    repeat(columns - rowPuzzles.size) { Spacer(Modifier.weight(1f)) }
+                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
     }
 }
 
+/**
+ * A puzzle's motif and name, ticked when [solved]; [footer] is the line under the name (in the puzzle's accent).
+ * [inProgress] is read here, in the tile, so a save that lands during the first frames is never shown stale.
+ */
 @Composable
-private fun PuzzleTile(
+internal fun PuzzleTile(
     puzzle: PuzzleType,
-    difficulty: Difficulty,
-    doneToday: Set<Pair<String, Difficulty>>,
+    solved: Boolean,
     isPick: Boolean,
     inProgress: () -> Set<String>,
     previewSize: Dp,
-    onLaunch: (String) -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier,
+    footer: @Composable (accent: Color) -> Unit,
 ) {
-    val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
-    val solved = (puzzle.id to difficulty) in doneToday
     // A started pick shows "In progress" alone: the invitation has been taken up, and two labels cannot share a thumbnail.
     val started = puzzle.id in inProgress()
     val marked = isPick && !solved && !started
+    HomeTile(
+        name = puzzle.displayName,
+        accent = accent,
+        solved = solved,
+        onClick = onClick,
+        // Today's pick (unsolved): gold ring and sparkles, drawn inside the tile, so nothing moves.
+        modifier = modifier,
+        frame = if (marked) Modifier.sparkleFrame() else Modifier,
+        motif = {
+            puzzle.Preview(Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)))
+            if (marked) TryMeLabel(previewSize, Modifier.align(Alignment.Center))
+            if (started) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
+        },
+        footer = { footer(accent) },
+    )
+}
 
+/** The shape every home tile shares: a motif with the solved tick in its corner, a name, a footer line. */
+@Composable
+internal fun HomeTile(
+    name: String,
+    accent: Color,
+    solved: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    frame: Modifier = Modifier,
+    motif: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit,
+    footer: @Composable () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
     Column(
         modifier
             .clip(RoundedCornerShape(18.dp))
             .background(if (solved) accent.copy(alpha = 0.20f) else scheme.surface)
-            // Today's pick (unsolved): gold ring and sparkles, drawn inside the tile, so nothing moves.
-            .then(if (marked) Modifier.sparkleFrame() else Modifier)
-            .clickable(onClick = { onLaunch(puzzle.id) })
+            .then(frame)
+            .clickable(onClick = onClick)
             .padding(TilePadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(contentAlignment = Alignment.TopEnd) {
-            puzzle.Preview(
-                Modifier
-                    .size(previewSize)
-                    .clip(RoundedCornerShape(10.dp))
-            )
-            if (marked) TryMeLabel(previewSize, Modifier.align(Alignment.Center))
-            if (started) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
+            motif()
             if (solved) {
                 Box(
                     Modifier.size(16.dp).clip(CircleShape).background(scheme.surface),
@@ -436,7 +472,7 @@ private fun PuzzleTile(
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            puzzle.displayName,
+            name,
             style = MaterialTheme.typography.titleMedium,
             color = if (solved) accent else scheme.onSurface,
             textAlign = TextAlign.Center,
@@ -444,11 +480,7 @@ private fun PuzzleTile(
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(3.dp))
-        TierDots(
-            accent = accent,
-            selected = difficulty,
-            cleared = { tier -> (puzzle.id to tier) in doneToday },
-        )
+        footer()
     }
 }
 
