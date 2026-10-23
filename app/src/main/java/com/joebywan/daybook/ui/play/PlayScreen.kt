@@ -109,6 +109,7 @@ import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
+import com.joebywan.daybook.ui.tutorial.LocalChime
 import com.joebywan.daybook.ui.tutorial.TutorialRunner
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -382,7 +383,7 @@ private fun PlayBoard(
         game = game.copy(hints = game.hints + 1, log = game.log + PlayLog.HINT)
     }
 
-    WatchHint(hintSession, puzzle, state)
+    WatchHint(hintSession, puzzle, state, onReached = LocalChime.current)
     LaunchedEffect(state.solved) { if (state.solved) hintSession.clear() }
 
     /**
