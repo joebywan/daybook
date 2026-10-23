@@ -600,8 +600,10 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   you cannot fix, or the change touches something under "Settled — do not reopen".
 - Never commit to `main`. Branch, PR, merge — I do the merging, not the owner. This is now enforced: a
   repository ruleset ("Protect main", set up 2026-10-02) requires a pull request, requires the CI
-  checks named `build` and `web-parity` to pass on a branch that is up to date with `main` (added
-  2026-10-23, after two pull requests each green alone broke `main` together), and blocks force-pushes and deletion. The repo owner's account can
+  checks named `build` and `web-parity` to pass, and blocks force-pushes and deletion. Branches need not be up to
+  date with `main`: that rule (tried 2026-10-23) stalled every open PR behind each merge, and a merge queue needs an
+  organisation-owned repo. Two PRs green alone can still break `main` together; `release.yml` tests any tree CI did not
+  pass, so that stops the release rather than shipping. The repo owner's account can
   bypass on pull requests only.
 - **Docs-only changes do not need CI, and the owner has said so outright** ("it doesn't impact tests,
   and it doesn't impact the app, why burn the compute time?"). A PR that touches only documentation
