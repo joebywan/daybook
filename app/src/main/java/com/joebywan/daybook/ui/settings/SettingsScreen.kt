@@ -1,6 +1,7 @@
 package com.joebywan.daybook.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -42,6 +43,8 @@ fun SettingsScreen(
     onPlaySound: (Boolean) -> Unit,
     vibrate: Boolean,
     onVibrate: (Boolean) -> Unit,
+    customOrder: Boolean,
+    onArrange: () -> Unit,
     appearance: Appearance,
     onAppearance: (Appearance) -> Unit,
     onBack: () -> Unit,
@@ -95,6 +98,7 @@ fun SettingsScreen(
                 )
             }
             item { AppearanceChoice(appearance, onAppearance) }
+            item { PuzzleOrderRow(customOrder, onArrange) }
             item { Credits() }
         }
     }
@@ -168,6 +172,28 @@ private fun Credits() {
         Text(
             "Fredoka, Copyright 2016 The Fredoka Project Authors, used under the SIL Open Font " +
                 "License 1.1.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** The home grid's order: says which it is, and opens [ArrangeScreen], where it is changed. */
+@Composable
+private fun PuzzleOrderRow(customOrder: Boolean, onArrange: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.surface)
+            .clickable(onClickLabel = "Arrange puzzles", onClick = onArrange)
+            .padding(14.dp),
+    ) {
+        Text("Puzzle order", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+        Text(
+            if (customOrder) "Your own order. Tap to rearrange or reset."
+            else "Most played first, over the last two months. Tap to arrange your own.",
             style = MaterialTheme.typography.bodyMedium,
             color = scheme.onSurfaceVariant,
         )
