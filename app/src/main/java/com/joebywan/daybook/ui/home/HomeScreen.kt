@@ -107,7 +107,7 @@ private const val HEADER_DATE = "EEEE d MMMM"
 
 /**
  * The grid was first sized so every puzzle fitted one phone screen; with more than twenty it scrolls, so the order does
- * the work instead. By default the most played sit at the top (`PuzzleOrder.mostPlayed`, read once a day so a solve never
+ * the work instead. By default the most played sit at the top, the rest gentlest first (`PuzzleOrder`, read once a day so a solve never
  * moves a tile under the player's finger), and a player can set their own order by pressing and holding a tile and dragging
  * it ([PuzzleGrid]). Nothing is hidden:
  * anything else is a scroll away. A phone in portrait has three columns; a wider window (a tablet, a phone on its side)
