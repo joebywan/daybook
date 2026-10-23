@@ -126,6 +126,10 @@ object Cipher : PuzzleType {
     internal fun generateVerified(seed: Long, difficulty: Difficulty): CipherState? =
         CipherLogic.generateVerified(seed, difficulty)
 
+    /** The hardest step of the ladder's walk from an empty board, the measure the tiers are cut by. */
+    override fun neededTechnique(state: PuzzleState): String? =
+        CipherTeacher.walk((state as CipherState).sum)?.maxByOrNull { CipherTeacher.TECHNIQUES.indexOf(it.technique) }?.technique
+
     override fun withoutSelection(state: PuzzleState): PuzzleState =
         (state as CipherState).let { if (it.selected == null) it else it.copy(selected = null) }
 

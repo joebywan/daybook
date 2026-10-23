@@ -44,8 +44,26 @@ The rule is told once, under the stats calendar: "Play on 5 of any 7 days to kee
   was missed and the run goes on, the line is "You're back, and your streak is still going."
 - **One line** beneath, in priority order: fastest at this tier (strictly faster than a non-empty tier history; a tie is
   not a record), perseverance (>= 10 min, or >= 2x the tier's median with 5+ solves and >= 4 min), "Faster than N%
-  of your own solves" (5+ solves, N rounded down, shown from 75), hints (praise, never a count: the technique ids in
-  `Deduction` are test identifiers, not prose, so the wording is generic), "No hints needed."
+  of your own solves" (5+ solves, N rounded down, shown from 75), then the technique line (`techniqueLine`, below), else
+  hints ("Hints are how a move sticks. Look for that one next time.", never a count), else the puzzle note, else "No hints needed."
+- **The technique line names the method**, because praise that names what was done beats generic praise. Names are
+  `core/TechniqueNames.kt`: a short noun phrase for every teacher's technique, in the hints' own words, at most 40
+  characters (`TechniqueNamesTest` fails for a technique without one; mistakes and fallbacks have none). Two honest sources:
+  - **A hint solve:** the techniques of the hints the player opened. `SavedGame.taught` records the opened deduction's
+    technique beside each counted hint (mistakes left out; defaulted, so old saves load; `PlayLog`'s characters are
+    unchanged). The hardest of them (each puzzle's list follows its ladder, simplest first) gives "You learned a digit's
+    only place in a box." Only praised techniques count: steps that are not a skill the player now has (`NOT_PRAISED`:
+    Mosaic's last fill and fill within the limit, Sets' continued and fresh sets, Tower's and Lexicon's opener, submit,
+    guess and last code or word, Target's steps, Word Wheel's clue, Sand's finishing pour) keep a name but are skipped, and
+    a solve whose hints showed only those gets the generic hint line. Every teacher but Target has something praised
+    (`TechniqueNamesTest`).
+  - **A no-hint solve** claims nothing the player did, only what the board needed: "This board needed the ways a line can
+    make its target: solved without help.", in the puzzle note's place. From `PuzzleType.neededTechnique`, which only three
+    puzzles answer, because only their generators already measure it exactly and cheaply: Tally (`TallyLogic.depth`: the ways
+    of a line on Hard, a what-if on Expert), Cipher (the hardest step of `CipherTeacher.walk`, which is how its tiers are cut)
+    and Dominoes (`DominoTeacher.solveLevel`: region values, counting, a what-if by tier). Not shown when it is the puzzle's
+    simplest step. The rest keep the note: their boards are proved by a ladder or a search, but nothing measures the hardest
+    step a board needs without walking the whole teacher (Cage's tiers, for one, only make the 45 rule likely, not certain).
 - No new sound: the existing solve chime plays, muted by the existing setting. A milestone fanfare is not done.
 
 ## Achievements (`core/Achievements.kt`, `ui/stats/AchievementsScreen.kt`)
@@ -98,7 +116,8 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
   banner) hides the frame; a floating row at the same spot takes its place: "Show results", the first non-Done
   next step, and Done. The hidden state (`resultsHidden`) is `rememberSaveable`, never `PuzzleState`; the board is not
   resized or moved either way, and the confetti is not interactive.
-- Render it: `render.py --finish N [--togo]` (docs/WEB_BUILD.md).
+- Render it: `render.py --finish N [--togo]` (docs/WEB_BUILD.md); with `-p ID`, `--query taught=TECHNIQUE` shows a hint
+  solve's technique line and `--query needed` a no-hint one (of the seed-1 board).
 
 ## Calendar (`ui/stats/StreakCalendar.kt`)
 
@@ -112,7 +131,7 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
 
 - **Note.** A short hand-checked technique tip per puzzle id, picked by `puzzleNote(id, epochDay)` (pure: the day plus the id
   walks the list). It sits last in `finishPraise`, in place of the bare "No hints needed.", so it only shows on a no-hint
-  solve that earned no achievement, record or percentile line; a solve with hints keeps its hint line. At most 64 characters.
+  solve that earned no achievement, record, percentile or board-needed line; a solve with hints keeps its hint line. At most 64 characters.
   Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
 - **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added. Its
   home tile, while unsolved, gets a thin gold ring, a frame of twinkling gold sparkles (`ui/home/FeaturedMark.kt`; one infinite

@@ -147,7 +147,7 @@ class HintSession internal constructor(restoring: HintStage? = null) {
     suspend fun tap(
         puzzle: PuzzleType,
         state: PuzzleState,
-        onOpened: () -> Unit,
+        onOpened: (Deduction) -> Unit,
         onApply: (PuzzleState) -> Unit,
     ): Boolean {
         if (thinking) return true
@@ -162,7 +162,7 @@ class HintSession internal constructor(restoring: HintStage? = null) {
                 }
                 next ?: return false
                 open(next, state)
-                onOpened()
+                onOpened(next)
             }
             stage == HintStage.NUDGE -> explain()
             else -> showMe(state, onApply)

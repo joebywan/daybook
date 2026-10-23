@@ -135,3 +135,5 @@ Adopting it, or changing a teacher — the lessons so far:
 - **Teachers only learn facts they can explain.** Tower drops a fact whose sentence would not fit,
   so no later step can lean on something the player was never shown.
 - Keep teacher files free of `java.*`: the web compiles them automatically.
+- **A new technique needs a name** in `core/TechniqueNames.kt`, in the words its hint uses: the finished frame names it
+  ("You learned the 45 rule.", `docs/REWARDS.md`), and `TechniqueNamesTest` fails without one.

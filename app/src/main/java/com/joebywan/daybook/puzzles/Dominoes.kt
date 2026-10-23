@@ -99,6 +99,15 @@ object Dominoes : PuzzleType {
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = DominoLogic.generate(seed, difficulty)
 
+    /** The deepest level the generator's ladder needs, each tier exactly one; null below region values. */
+    override fun neededTechnique(state: PuzzleState): String? =
+        when (DominoTeacher.solveLevel((state as DominoState).layout, DominoTeacher.LEVEL_WHAT_IF)) {
+            DominoTeacher.LEVEL_WHAT_IF -> DominoTeacher.WHAT_IF
+            DominoTeacher.LEVEL_COUNTING -> DominoTeacher.COUNTING
+            DominoTeacher.LEVEL_REGION_VALUE -> DominoTeacher.REGION_VALUE
+            else -> null
+        }
+
     // ---- teaching -------------------------------------------------------------------------------
 
     /** A mistake to lift or a domino to lay; see [DominoTeacher]. */

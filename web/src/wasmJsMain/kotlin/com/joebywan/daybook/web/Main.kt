@@ -12,6 +12,7 @@ import com.joebywan.daybook.ui.play.Praise
 import com.joebywan.daybook.ui.play.finishPreview
 import com.joebywan.daybook.ui.play.shareCard
 import com.joebywan.daybook.ui.play.sharePreviewOpen
+import com.joebywan.daybook.ui.play.techniqueLine
 import com.joebywan.daybook.puzzles.LexiconState
 import kotlin.time.TimeSource
 
@@ -148,6 +149,17 @@ private fun dump(params: Map<String, String>, today: Day, tier: Difficulty) {
     println("DUMP DONE")
 }
 
+/**
+ * The praise line for the render harness: `&taught=ID` a hint solve that opened that technique, `&needed` a no-hint solve
+ * of the puzzle's seed-1 board at the tier (what `neededTechnique` says it needed), else "No hints needed.".
+ */
+private fun sampleLine(params: Map<String, String>, tier: Difficulty): String {
+    val p = params["puzzle"]?.let(PuzzleRegistry::byId) ?: return "No hints needed."
+    val taught = params["taught"]
+    val needed = if ("needed" in params) p.neededTechnique(p.generate(1L, tier)) else null
+    return techniqueLine(p.id, if (taught != null) 1 else 0, listOfNotNull(taught), needed) ?: "No hints needed."
+}
+
 /** A share card for the render harness: three Lexicon guesses after a hint, or 23 logged moves with undos and a hint. */
 private fun sampleShare(id: String?, tier: Difficulty) = (id?.let(PuzzleRegistry::byId) ?: PuzzleRegistry.all.first()).let { p ->
     val words = p.id == "words"
@@ -163,7 +175,8 @@ fun main() {
     val tier = params["tier"]?.let { Difficulty.fromKey(it.uppercase()) } ?: Difficulty.STANDARD
     println("daybook: date=$day epochDay=${day.epochDay}")
     if ("dump" in params) dump(params, day, tier)
-    // Render harness: `?finish=N` (0-3 achievements) shows the finished frame over the board; `&togo` adds the to-go line.
+    // Render harness: `?finish=N` (0-3 achievements) shows the finished frame over the board; `&togo` adds the to-go line;
+    // `&taught=ID` or `&needed` shows the technique line (sampleLine).
     params["finish"]?.toIntOrNull()?.let { n ->
         val all = listOf(
             EarnedAchievement("streak7", "A full week", "Play on 7 days in one streak."),
@@ -172,7 +185,7 @@ fun main() {
         )
         finishPreview = Praise(
             // `&level=N` previews a level board's frame; `&leveldone` the one its fifth board shows.
-            title = if (n > 0) "7 day streak" else if ("leveldone" in params) "Level ${params["level"]} done" else null, big = n > 0, lines = listOf("No hints needed."),
+            title = if (n > 0) "7 day streak" else if ("leveldone" in params) "Level ${params["level"]} done" else null, big = n > 0, lines = listOf(sampleLine(params, tier)),
             achievements = all.take(n), toGo = if ("togo" in params) "Only Hard on Kings left for all done today!" else null,
             share = sampleShare(params["puzzle"], tier),
         )

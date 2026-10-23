@@ -4,6 +4,8 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.nearestToGo
 import com.joebywan.daybook.core.newlyEarned
 import com.joebywan.daybook.core.puzzleNote
+import com.joebywan.daybook.core.techniqueNamesOf
+import com.joebywan.daybook.core.techniqueToPraise
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
 import kotlinx.datetime.LocalDate
@@ -52,9 +54,18 @@ private const val LONG_FLOOR = 240     // ...or twice the tier's median, but nev
  * and the run goes on; a fresh start after a lapse says welcome back.
  *
  * Personal lines, in priority order, fastest at this tier; perseverance;
- * faster than N% of own solves; hints (praise, never a count); no hints.
+ * faster than N% of own solves; hints (praise, never a count); no hints ([techniqueLine] for the last two).
+ *
+ * [taught] is the technique of every hint opened on this board; [needed] is [com.joebywan.daybook.core.PuzzleType.neededTechnique].
  */
-fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate, puzzleName: String): Praise {
+fun finishPraise(
+    history: List<Completion>,
+    solve: Completion,
+    today: LocalDate,
+    puzzleName: String,
+    taught: List<String> = emptyList(),
+    needed: String? = null,
+): Praise {
     var title: String? = null
     var big = false
     val lines = mutableListOf<String>()
@@ -89,7 +100,8 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
         val pct = 100 * sorted.count { it > s } / sorted.size
         if (pct >= PERCENT_FLOOR) personal += "Faster than $pct% of your own ${solve.difficulty.label} solves."
     }
-    personal += if (solve.hints > 0) "Hints are how a move sticks. Look for that one next time." else puzzleNote(solve.puzzleId, today.toEpochDays()) ?: "No hints needed."
+    personal += techniqueLine(solve.puzzleId, solve.hints, taught, needed)
+        ?: if (solve.hints > 0) "Hints are how a move sticks. Look for that one next time." else puzzleNote(solve.puzzleId, today.toEpochDays()) ?: "No hints needed."
     // Lowest priority: a no-hint solve with no record gets a technique note in place of the bare "No hints needed."
 
     // One line beneath the title (or beneath "Congratulations!"): praise is loud, not long.
@@ -97,6 +109,18 @@ fun finishPraise(history: List<Completion>, solve: Completion, today: LocalDate,
     val near = nearestToGo(history, solve, today)
     val full = firstToday || solve.difficulty == Difficulty.EXPERT || record || big || earned.isNotEmpty()
     return Praise(title, big, (lines + personal).take(1), earned, near?.text, full = full)
+}
+
+/**
+ * The line that names the method, or null for the generic one. With hints: the most worth naming of the techniques the
+ * hints showed ([taught]), never a count. Without: what the board itself needed ([needed]), only when that is more than
+ * the puzzle's simplest step, because it is true of the board whatever the player did; it never claims the player used it.
+ */
+fun techniqueLine(puzzleId: String, hints: Int, taught: List<String>, needed: String?): String? {
+    if (hints > 0) return techniqueToPraise(puzzleId, taught)?.let { "You learned $it." }
+    val names = techniqueNamesOf(puzzleId)
+    if (needed == null || needed == names.keys.firstOrNull()) return null
+    return names[needed]?.let { "This board needed $it: solved without help." }
 }
 
 /** Where a shared result points: the web build, which anyone can open without installing anything. */
