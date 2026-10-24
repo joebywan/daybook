@@ -243,6 +243,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     val ids = remember { PuzzleOrder.gentlest(PuzzleRegistry.all.map { it.id }) }
     val playedBasis by produceState<List<Completion>?>(null, today) { value = store.completions.first() }
     val mostPlayed = remember(playedBasis, today) { PuzzleOrder.mostPlayed(playedBasis.orEmpty(), today, ids) }
+    val pick = remember(playedBasis, today) { PuzzleOrder.pick(playedBasis.orEmpty(), today) }
     val storedOrder by launchPrefs.puzzleOrder.collectAsState(initial = emptyList())
     var pickedOrder by remember { mutableStateOf<List<String>?>(null) }
     val customOrder = pickedOrder ?: storedOrder
@@ -350,6 +351,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                 onStats = { route = Route.Stats },
                 onAchievements = { route = Route.Achievements(fromHome = true) },
                 onSettings = { route = Route.Settings },
+                pick = pick,
                 puzzles = puzzles,
                 inProgress = { inProgress.value },
                 customOrder = customOrder.isNotEmpty(),

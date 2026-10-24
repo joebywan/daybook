@@ -454,9 +454,29 @@ object PuzzleOrder {
      * under the player's finger on the way back home.
      */
     fun mostPlayed(all: List<Completion>, today: LocalDate, ids: List<String>): List<String> {
-        val from = today.toEpochDays() - WINDOW_DAYS
-        val counts = all.filter { it.day == null || it.day.toEpochDays() >= from }.groupingBy { it.puzzleId }.eachCount()
+        val counts = playCounts(all, today)
         return ids.sortedByDescending { counts[it] ?: 0 }
+    }
+
+    private fun playCounts(all: List<Completion>, today: LocalDate): Map<String, Int> {
+        val from = today.toEpochDays() - WINDOW_DAYS
+        return all.filter { it.day == null || it.day.toEpochDays() >= from }.groupingBy { it.puzzleId }.eachCount()
+    }
+
+    /** How many of the most played puzzles today's pick never lands on. */
+    const val PICK_SKIPS_TOP = 5
+
+    /**
+     * Today's pick ("Try me!"): [PuzzleRegistry.featured]'s rotation, stepped forward past the player's [PICK_SKIPS_TOP]
+     * most played puzzles (by [mostPlayed]'s counts, whatever the grid's order; only puzzles with a counted solve), so it
+     * points at something they play less. A new player gets the plain rotation. Pure: the caller passes the once-a-day basis.
+     */
+    fun pick(all: List<Completion>, today: LocalDate): String {
+        val counts = playCounts(all, today)
+        val ids = PuzzleRegistry.all.map { it.id }
+        val skip = mostPlayed(all, today, gentlest(ids)).filter { (counts[it] ?: 0) > 0 }.take(PICK_SKIPS_TOP).toSet()
+        val start = ids.indexOf(PuzzleRegistry.featured(today.toEpochDays()).id)
+        return ids.indices.map { ids[(start + it) % ids.size] }.firstOrNull { it !in skip } ?: ids[start]
     }
 
     /**
