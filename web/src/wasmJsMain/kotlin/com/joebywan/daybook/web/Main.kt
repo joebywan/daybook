@@ -14,6 +14,7 @@ import com.joebywan.daybook.ui.play.shareCard
 import com.joebywan.daybook.ui.play.sharePreviewOpen
 import com.joebywan.daybook.ui.play.techniqueLine
 import com.joebywan.daybook.puzzles.LexiconState
+import com.joebywan.daybook.puzzles.WordWheelState
 import kotlin.time.TimeSource
 
 /**
@@ -163,7 +164,8 @@ private fun sampleLine(params: Map<String, String>, tier: Difficulty): String {
 /** A share card for the render harness: three Lexicon guesses after a hint, or 23 logged moves with undos and a hint. */
 private fun sampleShare(id: String?, tier: Difficulty) = (id?.let(PuzzleRegistry::byId) ?: PuzzleRegistry.all.first()).let { p ->
     val words = p.id == "words"
-    val state = if (words) LexiconState(5, 6, "crane", listOf("slate", "pride", "crane")) else p.generate(1L, tier)
+    val state = if (words) LexiconState(5, 6, "crane", listOf("slate", "pride", "crane"))
+        else p.generate(1L, tier).let { if (it is WordWheelState) it.copy(bonus = listOf("one", "two", "three")) else it }
     val log = if (words) "mmhm" else "mmmmmmumm" + "m".repeat(9) + "hmmmmm"
     shareCard(p, tier, "22 Oct", "12:04", 6, state, log, hints = 1)
 }
@@ -193,6 +195,8 @@ fun main() {
         // `&share` opens the share preview over the frame.
         sharePreviewOpen = "share" in params
     }
+    // `?screen=stats&share` opens the day's share preview.
+    if (params["screen"] == "stats") sharePreviewOpen = "share" in params
 
     ComposeViewport(viewportContainerId = "app") {
         DaybookWebApp(params["date"], params["tier"], params["puzzle"], params)

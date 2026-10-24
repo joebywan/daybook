@@ -19,9 +19,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.joebywan.daybook.platform.formatDate
+import com.joebywan.daybook.ui.play.SharePreview
+import com.joebywan.daybook.ui.play.dayShareCard
+import com.joebywan.daybook.ui.play.sharePreviewOpen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +89,23 @@ fun StatsScreen(
                     style = MaterialTheme.typography.labelLarge,
                     color = scheme.onSurfaceVariant,
                 )
+            }
+            // Only once a daily is solved today. The title's two lines are taller than the button, so it moves nothing.
+            val card = remember(completions, today) {
+                dayShareCard(
+                    PuzzleRegistry.all.map { it.id }, completions, today, formatDate(today, "d MMM"),
+                    Stats.streak(completions, today).current,
+                )
+            }
+            // Saveable, so turning the device keeps the preview open.
+            var sharing by rememberSaveable { mutableStateOf(sharePreviewOpen) }
+            if (card != null) {
+                TextButton(onClick = { sharing = true }, Modifier.padding(end = 8.dp)) {
+                    Icon(Icons.Default.Share, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Share today")
+                }
+                if (sharing) SharePreview(card) { sharing = false }
             }
         }
 
