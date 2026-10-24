@@ -267,6 +267,12 @@ A sum of words in which each letter stands for one digit: different letters, dif
   then a what-if on two neighbouring columns (never a trial of the whole sum). The generator's ladder is the teacher's. Every step ends in a placement, so there
   are **no candidate notes**: a hint never asks the player to track an elimination it has not turned into a digit. Highlight indices: tile `row * 10 + column`
   (column 0 the units, the total the last row), letter key `100 + letter`, digit key `1000 + d`.
+- **A hint shows its working, not a verdict** (the owner: "Only I = 0 fits both" taught nothing). `CipherWorking.kt` writes it from the placed digits and
+  the carries the step's technique settled: each carry used is said with its reason (a neighbouring column, or "if the tens carried nothing, T would be 6,
+  which L has"), then the column as a sum with every other digit ruled out by name ("at most 1 + 9 + 1 = 11, so I is 0 or 1; T has 1"), else each
+  other digit followed until it breaks. `deduce` picks, of the placements the first productive technique allows, the shortest it can show within
+  `MAX_EXPLANATION` (260, more than other teachers: the popover scrolls beyond its room); the walk keeps `findStep`'s first, so tiers are unchanged. Shown
+  on 91 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
 - State: `words`, `solution`, `digits` (a digit per letter in alphabetical order, -1 for none) and `selected` (in state, as Inequality's; `withoutSelection`).
   The letter key row under the sum shows each letter's digit and selects it; keyboard: a letter key selects it, a digit sets it, Backspace clears, arrows walk the letters.
 ## Pointers (clear the arrows)

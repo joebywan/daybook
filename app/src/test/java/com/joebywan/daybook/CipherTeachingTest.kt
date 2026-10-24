@@ -26,16 +26,22 @@ class CipherTeachingTest {
     private fun board(day: Int, d: Difficulty) =
         Cipher.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Cipher.id, d), d) as CipherState
 
+    private val minShown = mapOf(Difficulty.STANDARD to 0.88, Difficulty.HARD to 0.77, Difficulty.EXPERT to 0.72)
+
     @Test
     fun `coverage - which techniques boards need, per difficulty`() {
         val report = StringBuilder()
         for (d in Difficulty.entries) {
             val counts = sortedMapOf<String, Int>()
             var fallbackBoards = 0
+            var steps = 0
+            var shown = 0
             for (day in 0 until 200) {
                 var s = board(day, d)
                 var fellBack = false
                 while (!s.solved) {
+                    steps++
+                    if (CipherTeacher.teach(s)!!.shown) shown++
                     val step = Cipher.teach(s)!!
                     assertFalse("${s.words} ${step.technique}", step.mistake)
                     counts.merge(step.technique, 1, Int::plus)
@@ -45,9 +51,11 @@ class CipherTeachingTest {
                 assertEquals(s.solution, s.digits)
                 if (fellBack) fallbackBoards++
             }
-            report.appendLine("${d.name}: fallback on $fallbackBoards of 200 boards; steps per board " +
+            report.appendLine("${d.name}: fallback on $fallbackBoards of 200 boards; working shown on %.0f%% of steps; steps per board ".format(100.0 * shown / steps) +
                 counts.map { "${it.key} %.2f".format(it.value / 200.0) })
             assertEquals("${d.name} never falls back", 0, fallbackBoards)
+            // Measured 91 / 80 / 75%: the rest are the all-columns and what-if steps, still given as a summary.
+            assertTrue("${d.name}: working shown on $shown of $steps steps", shown >= steps * minShown.getValue(d))
         }
         File("build/reports").mkdirs()
         File("build/reports/cipher-teaching-coverage.txt").writeText(report.toString())
@@ -156,6 +164,19 @@ class CipherTeachingTest {
         assertEquals(9, step.digit)
         assertTrue(step.explanation, "D + carry is 0 or 10" in step.explanation && "D starts a word" in step.explanation)
         assertTrue(step.explanation, step.explanation.length <= CipherTeacher.MAX_EXPLANATION)
+    }
+
+    @Test
+    fun `a forced carry is worked through, not asserted`() {
+        // The owner's board (24 Oct 2026, Standard): TRIP + RUMP = TIARA with T = 1. "Only I = 0 fits both" left them
+        // asking why not another digit. The thousands must carry, 1 + R + carry is at most 11, and T has the 1.
+        val sum = CipherSum(listOf("trip", "rump", "tiara"))
+        val digits = MutableList(sum.letters.size) { EMPTY }.also { it[sum.letters.indexOf('t')] = 1 }
+        val step = CipherTeacher.deduce(sum, digits)!!
+        assertEquals('i', sum.letters[step.letter])
+        assertEquals(0, step.digit)
+        assertTrue(step.explanation, step.shown)
+        assertTrue(step.explanation, "at most 1 + 9 + 1 = 11" in step.explanation && "T has 1" in step.explanation)
     }
 
     @Test
