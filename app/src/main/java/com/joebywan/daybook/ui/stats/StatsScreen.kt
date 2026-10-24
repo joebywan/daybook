@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.ui.play.SharePreview
@@ -96,7 +97,8 @@ fun StatsScreen(
                     Stats.streak(completions, today).current,
                 )
             }
-            var sharing by remember { mutableStateOf(sharePreviewOpen) }
+            // Saveable, so turning the device keeps the preview open.
+            var sharing by rememberSaveable { mutableStateOf(sharePreviewOpen) }
             if (card != null) {
                 TextButton(onClick = { sharing = true }, Modifier.padding(end = 8.dp)) {
                     Icon(Icons.Default.Share, null, Modifier.size(18.dp))
