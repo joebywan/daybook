@@ -48,7 +48,8 @@ The rule is told once, under the stats calendar: "Play on 5 of any 7 days to kee
   the one.". The pool line is picked by a hash of the day, puzzle id and tier written out in the code (never `Random`,
   never `String.hashCode`), so a solve always reads the same and a rotation cannot change it. Every title is at most
   `TITLE_MAX` (18) characters, which fits the banner between its poppers at 360dp. "Congratulations!" is left only for a
-  frame nobody judged (a reopened solved board). A level's fifth board says "Level N done".
+  frame nobody judged (a reopened solved board, whose frame keeps its Share button: the card is drawn again from the saved
+  board and log when the pill opens it). A level's fifth board says "Level N done".
 - **One line** beneath, in priority order: fastest at this tier (strictly faster than a non-empty tier history; a tie is
   not a record), perseverance (>= 10 min, or >= 2x the tier's median with 5+ solves and >= 4 min), "Faster than N%
   of your own solves" (5+ solves, N rounded down, shown from 75), then the technique line (`techniqueLine`, below), else
@@ -151,7 +152,10 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   home tile, while unsolved, gets a thin gold ring, a frame of twinkling gold sparkles (`ui/home/FeaturedMark.kt`; one infinite
   transition read only in the draw phase) and "Try me!" tilted across the thumbnail with a halo, content description
   "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved or
-  started, and under reduced motion the sparkles are drawn still. The pick does not move its tile. Nothing is stored.
+  started, and under reduced motion the sparkles are drawn still. It is for the day, not the tier: once any tier of the pick
+  is solved today, no tier shows it. If the player's own order puts the pick below the first screen, it is shown in that
+  screen's last square for the day (rows counted from the grid's height, less the Continue row, at one line of name); a drag of another tile
+  stores the pick back at its own place. Nothing is stored.
 - **In progress.** A tile whose board at the grid's tier and mode (today's daily; in Random, the tier's current random board)
   has a saved game that is unsolved and has a move in it says "In progress", tilted with the same halo as "Try me!" but in the
   scheme's moss on its surface (`InProgressLabel`). That is exactly the game `PlayScreen` keeps: a restart, or only a selection,
@@ -227,9 +231,12 @@ until Home is entered again or the tier or mode changes, so it never appears or 
   board's squares fade in, staggered in reading order, over 250 ms when it first shows on the play screen
   (`LocalBoardArrives`, from a `rememberSaveable` flag, so not on a rotation, an undo, a restart or coming back from the
   walkthrough). Draw phase only; nothing moves or resizes. Boards left out: `docs/TODO.md`.
-- **Home acknowledges the solve.** Back on Home after a solve, that tile's tick pops in (0 to 115% to 100%, 250 ms) and its
-  tint fills with it, once, starting when the 200 ms fade into Home has finished: `DaybookApp` hands the puzzle id to Home as `LocalJustSolved` (never stored) and clears it when
-  Home goes away. Under reduced motion the tick and tint are simply there.
+- **Home acknowledges the solve.** Back on Home after a solve of today's daily, the tier dot of the tier just solved pops
+  in (0 to 220% to 100%, 250 ms) and the tile's tint fills with it, once, starting when the 200 ms fade into Home has finished.
+  Home tiles have no corner tick: the dots say which tiers are done. A level tile keeps its tick, which pops (to 115%) the
+  same way. `DaybookApp` hands the puzzle and tier to Home as `LocalJustSolved` (never stored; never for a random or
+  archive solve, which marks no tile) and clears it when Home goes away. Random mode shows the same daily marks as Daily.
+  Under reduced motion the dot, tick and tint are simply there.
 - **Haptics** (`rememberHaptics`, `LocalHaptics`): `tick` when a push changes the board (the same test as the play log's
   move: a selection or a typed letter is silent), `bump` for a Pointers bump or a wrong Sets pick, `success` on a solve
   beside the chime (the solving move does not tick as well). Android uses `performHapticFeedback` (CLOCK_TICK; REJECT and

@@ -22,7 +22,7 @@ data class Praise(
     val achievements: List<EarnedAchievement> = emptyList(),
     /** "Only X to go": at most one line of progress toward a near achievement. */
     val toGo: String? = null,
-    /** What the Share button previews and sends ([shareCard]); null hides the button (a reopened solved board). */
+    /** What the Share button previews and sends ([shareCard]); null hides the button. */
     val share: ShareCard? = null,
     /**
      * The full show (all the confetti) rather than a light flourish: the first daily solve of today, an Expert solve, a

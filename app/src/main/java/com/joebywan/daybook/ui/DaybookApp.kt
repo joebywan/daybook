@@ -181,8 +181,8 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     // (the game, the open hint, the walkthrough) unreachable.
     var route by rememberSaveable(stateSaver = RouteSaver) { mutableStateOf(startAt) }
     var today by remember { mutableStateOf(currentDate()) }
-    // The puzzle just solved, for its home tile's tick to pop in on the way back (LocalJustSolved). Never stored.
-    var justSolved by remember { mutableStateOf<String?>(null) }
+    // The puzzle and tier just solved, for its home tile's mark to pop in on the way back (LocalJustSolved). Never stored.
+    var justSolved by remember { mutableStateOf<Pair<String, Difficulty>?>(null) }
 
     // The home grid's two selectors live here, not on the home screen: navigating into a puzzle
     // destroys that screen, and a difficulty that reset after every game would be worse than the
@@ -472,7 +472,8 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                         // PlayScreen calls this once per solve (its `recorded` flag survives
                         // recreation), so the chime cannot repeat on a rotation.
                         playSolveSound()
-                        justSolved = puzzle.id
+                        // Only a solve that marks a tile: today's daily or a level board, never a random or archive one.
+                        if (current.day == today || level != null) justSolved = puzzle.id to difficulty
                         scope.launch {
                             // A level solve is also a practice solve (day = null), for totals and best times.
                             if (level != null) store.recordLevelSolve(LevelSolve(level, puzzle.id, seconds, hints))
