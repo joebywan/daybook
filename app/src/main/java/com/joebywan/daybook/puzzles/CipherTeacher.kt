@@ -184,16 +184,25 @@ internal object CipherTeacher {
         return carry
     }
 
-    internal class Hit(val technique: String, val letter: Int, val digit: Int, val column: Int)
+    /** [carry]: the carries the technique settled, as [Sight.carry], for [CipherWorking] to show. */
+    internal class Hit(val technique: String, val letter: Int, val digit: Int, val column: Int, val carry: IntArray)
 
-    internal fun findStep(sum: CipherSum, digits: List<Int>): Hit? {
+    internal fun findStep(sum: CipherSum, digits: List<Int>): Hit? = findSteps(sum, digits).firstOrNull()
+
+    /**
+     * Every placement the first technique that finds any can make, in the order [findStep] has always taken them, so
+     * the walk (and every tier) is unchanged; the hint picks among them the one it can explain best.
+     */
+    internal fun findSteps(sum: CipherSum, digits: List<Int>): List<Hit> {
         val base = Sight(sum, digits)
-        if (!base.consistent) return null
+        if (!base.consistent) return emptyList()
+        val hits = mutableListOf<Hit>()
+        fun add(h: Hit) { hits += h }
         val longest = sum.addends.maxOf { it.length }
         // 1. The total is longer than every addend: its first letter is what the column before it carries.
         if (sum.width > longest && sum.maxCarry == 1) {
             val t = sum.columnTotal[sum.width - 1]
-            if (digits[t] == EMPTY && base.cand[t] and 2 != 0) return Hit(LEADING, t, 1, sum.width - 1)
+            if (digits[t] == EMPTY && base.cand[t] and 2 != 0) return listOf(Hit(LEADING, t, 1, sum.width - 1, base.carry))
         }
         // 2. One column on its own, with the carry into it when everything to its right is placed.
         for (c in 0 until sum.width) {
@@ -201,41 +210,45 @@ internal object CipherTeacher {
             knownCarry(sum, digits, c)?.let { s.carry[c] = 1 shl it }
             if (s.revise(c) < 0) continue
             for (l in (sum.columnAddends[c] + sum.columnTotal[c]).distinct()) {
-                if (digits[l] == EMPTY && single(s.cand[l])) return Hit(COLUMN, l, s.cand[l].countTrailingZeroBits(), c)
+                if (digits[l] == EMPTY && single(s.cand[l])) add(Hit(COLUMN, l, s.cand[l].countTrailingZeroBits(), c, s.carry))
             }
         }
+        if (hits.isNotEmpty()) return hits
         // 3. Ten letters use every digit: a digit only one letter can still take.
         if (base.n == 10) {
             for (d in 0..9) {
                 if (digits.contains(d)) continue
                 val holders = (0 until base.n).filter { digits[it] == EMPTY && base.cand[it] and (1 shl d) != 0 }
-                if (holders.size == 1) return Hit(ONLY_LETTER, holders[0], d, -1)
+                if (holders.size == 1) add(Hit(ONLY_LETTER, holders[0], d, -1, base.carry))
             }
         }
+        if (hits.isNotEmpty()) return hits
         // 4. Two neighbouring columns worked together through the carry between them.
         for (c in 0 until sum.width - 1) {
             val s = base.copy()
             knownCarry(sum, digits, c)?.let { s.carry[c] = 1 shl it }
             if (!s.settle(c, c + 1)) continue
             for (l in (sum.columnAddends[c] + sum.columnTotal[c] + sum.columnAddends[c + 1] + sum.columnTotal[c + 1]).distinct()) {
-                if (digits[l] == EMPTY && single(s.cand[l])) return Hit(PAIR, l, s.cand[l].countTrailingZeroBits(), c)
+                if (digits[l] == EMPTY && single(s.cand[l])) add(Hit(PAIR, l, s.cand[l].countTrailingZeroBits(), c, s.carry))
             }
         }
+        if (hits.isNotEmpty()) return hits
         // 5. Every column and every carry worked through together.
         val all = base.copy()
-        if (!all.settle()) return null
+        if (!all.settle()) return emptyList()
         for (l in 0 until base.n) {
-            if (digits[l] == EMPTY && single(all.cand[l])) return Hit(CHAIN, l, all.cand[l].countTrailingZeroBits(), -1)
+            if (digits[l] == EMPTY && single(all.cand[l])) add(Hit(CHAIN, l, all.cand[l].countTrailingZeroBits(), -1, all.carry))
         }
+        if (hits.isNotEmpty()) return hits
         // 6. On top of that, every choice for two neighbouring columns tried at once.
         for (c in 0 until sum.width - 1) {
             val s = all.copy()
             if (s.reviseJoint(c) < 0 || !s.settle()) continue
             for (l in 0 until base.n) {
-                if (digits[l] == EMPTY && single(s.cand[l])) return Hit(WHAT_IF, l, s.cand[l].countTrailingZeroBits(), c)
+                if (digits[l] == EMPTY && single(s.cand[l])) add(Hit(WHAT_IF, l, s.cand[l].countTrailingZeroBits(), c, s.carry))
             }
         }
-        return null
+        return hits
     }
 
     /** Whether the ladder alone finishes [sum] from an empty board: what the generator asks of every board. */
@@ -255,7 +268,7 @@ internal object CipherTeacher {
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ------------------------
 
-    const val MAX_EXPLANATION = 200
+    const val MAX_EXPLANATION = 260
     const val MAX_NUDGE = 70
 
     /** One step: the digit for [letter] ([EMPTY] to take a mistake back), where to look and why. */
@@ -267,6 +280,8 @@ internal object CipherTeacher {
         val cited: Set<Int>,
         val nudge: String,
         val explanation: String,
+        /** False when the explanation is a summary ("only I = 0 fits both") rather than the working itself. */
+        val shown: Boolean = true,
     )
 
     fun teach(s: CipherState): Step? {
@@ -329,8 +344,21 @@ internal object CipherTeacher {
         return if (sum.columnAddends[c].isEmpty()) "the carry into it is $t" else "${parts.joinToString(" + ")} ends in $t"
     }
 
+    /**
+     * The step to hint: of the placements the first productive technique allows, one whose working can be shown in full
+     * and briefly; the first ([findStep]'s) in its summary form when none can.
+     */
     fun deduce(sum: CipherSum, digits: List<Int>): Step? {
-        val hit = findStep(sum, digits) ?: return null
+        val hits = findSteps(sum, digits)
+        if (hits.isEmpty()) return null
+        return hits.asSequence().mapNotNull { hit ->
+            val working = CipherWorking(sum, digits, hit.carry).explain(hit.letter, hit.digit)
+            val step = step(sum, digits, hit, working)
+            step.takeIf { it.shown && it.explanation.length <= MAX_EXPLANATION }
+        }.minByOrNull { it.explanation.length } ?: step(sum, digits, hits[0], null)
+    }
+
+    private fun step(sum: CipherSum, digits: List<Int>, hit: Hit, working: CipherWorking.Working?): Step {
         val l = hit.letter
         val d = hit.digit
         val x = name(sum, l)
@@ -342,7 +370,7 @@ internal object CipherTeacher {
                 "The total's extra first letter, $x, is the carry out of the ${columnName(c - 1)}. Two digits and a carry " +
                     "make at most 19, so $x is 1.",
             )
-            COLUMN -> column(sum, digits, l, d, c)
+            COLUMN -> column(sum, digits, l, d, c, working)
             ONLY_LETTER -> Step(
                 ONLY_LETTER, l, d, sum.tilesOf(l), emptySet(),
                 if (d == 0) "Which letter can be 0?" else "One letter is left.",
@@ -359,30 +387,36 @@ internal object CipherTeacher {
                 if (text.length > MAX_EXPLANATION) {
                     text = "Take the ${PLACES[c]} and ${PLACES[c + 1]} columns together, through the carry between them: only $x = $d lets both add up."
                 }
-                Step(PAIR, l, d, tiles, tiles, "Look at the ${PLACES[c]} and ${PLACES[c + 1]} columns together.", text)
+                val nudge = "Look at the ${PLACES[c]} and ${PLACES[c + 1]} columns together."
+                working?.let { Step(PAIR, l, d, sum.tilesOf(l), cited(sum, it), nudge, it.text) } ?: Step(PAIR, l, d, tiles, tiles, nudge, text, shown = false)
             }
             CHAIN -> {
                 val cols = (0 until sum.width).filter { l in columnLetters(sum, it) }
-                Step(
-                    CHAIN, l, d, sum.tilesOf(l), cols.flatMap { sum.columnTiles(it) }.toSet(),
-                    "Follow the carries through every column.",
+                val nudge = "Follow the carries through every column."
+                working?.let { Step(CHAIN, l, d, sum.tilesOf(l), cited(sum, it), nudge, it.text) } ?: Step(
+                    CHAIN, l, d, sum.tilesOf(l), cols.flatMap { sum.columnTiles(it) }.toSet(), nudge,
                     "Work every column through together, passing each carry on and giving no two letters the same digit. " +
                         "Once each column has ruled out what it can, $x can only be $d.",
+                    shown = false,
                 )
             }
             else -> {
                 val tiles = sum.columnTiles(c) + sum.columnTiles(c + 1)
-                Step(
-                    WHAT_IF, l, d, tiles, tiles,
-                    "Try the choices in the ${PLACES[c]} and ${PLACES[c + 1]} columns.",
+                val nudge = "Try the choices in the ${PLACES[c]} and ${PLACES[c + 1]} columns."
+                working?.let { Step(WHAT_IF, l, d, sum.tilesOf(l), cited(sum, it), nudge, it.text) } ?: Step(
+                    WHAT_IF, l, d, tiles, tiles, nudge,
                     "Try every choice for the ${PLACES[c]} and ${PLACES[c + 1]} columns at once, keeping what the other columns " +
                         "rule out: only the ones with $x = $d make both add up.",
+                    shown = false,
                 )
             }
         }
     }
 
-    private fun column(sum: CipherSum, digits: List<Int>, l: Int, d: Int, c: Int): Step {
+    /** The tiles of the columns a working reads. */
+    private fun cited(sum: CipherSum, w: CipherWorking.Working) = w.columns.flatMap { sum.columnTiles(it) }.toSet()
+
+    private fun column(sum: CipherSum, digits: List<Int>, l: Int, d: Int, c: Int, working: CipherWorking.Working?): Step {
         val x = name(sum, l)
         val tiles = sum.columnTiles(c)
         val carry = if (c == 0) 0 else knownCarry(sum, digits, c)
@@ -419,9 +453,11 @@ internal object CipherTeacher {
                     "$x is 0 (nothing carried) or 9 (1 carried). $why",
             )
         }
+        working?.let { return Step(COLUMN, l, d, sum.tilesOf(l), cited(sum, it), nudge, it.text) }
         return Step(
             COLUMN, l, d, tiles, tiles, nudge,
             "In the ${columnName(c)}, ${columnText(sum, digits, c, carry)}. Of the digits still free, only $x = $d makes that work.",
+            shown = false,
         )
     }
 }
