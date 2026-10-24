@@ -192,6 +192,7 @@ fun HomeScreen(
     // What the header and the pinned rows take, so the grid knows the height left for its tiles (homeColumns).
     var headerHeight by remember { mutableStateOf(0) }
     var optionsHeight by remember { mutableStateOf(0) }
+    var resumeHeight by remember { mutableStateOf(0) }
     val density = LocalDensity.current
     val list = rememberLazyListState()
     // Where the grid shows, in root pixels: from the pinned rows' foot to the list's. Plain fields, read by a drag only.
@@ -245,7 +246,7 @@ fun HomeScreen(
                     LaunchOptions(difficulty, onDifficulty, mode, onMode, levelStrip = { LevelStrip(levels, onLevels) }, sideBySide = short)
                 }
             }
-            resumeShown?.let { (puzzle, tier) -> item { ContinueRow(puzzle, tier, onClick = { onLaunch(puzzle.id) }) } }
+            resumeShown?.let { (puzzle, tier) -> item { ContinueRow(puzzle, tier, Modifier.onSizeChanged { resumeHeight = it.height }) { onLaunch(puzzle.id) } } }
             if (mode == LaunchMode.LEVELS) item {
                 // The level's draw order, not the arranged one: a level is a set the player is given, in the order dealt.
                 LevelGrid(levels, levels.current, onPlay = onLaunch, onAllLevels = onLevels, height = gridHeight, inProgress = inProgress)
@@ -254,12 +255,12 @@ fun HomeScreen(
                     puzzles = puzzles,
                     inProgress = inProgress,
                     difficulty = difficulty,
-                    // Random boards are freshly seeded on every tap, so "solved today" says nothing
-                    // about the game a tile is about to start. The tiles keep their marks-shaped space
-                    // either way, so switching mode never shuffles the grid under a finger.
-                    doneToday = if (mode == LaunchMode.DAILY) doneToday else emptySet(),
+                    // Today's dailies in either mode: a random solve never marks a tile, so Random keeps the daily marks.
+                    doneToday = doneToday,
                     pick = PuzzleRegistry.featured(today.toEpochDays()).id,
                     height = gridHeight,
+                    // The Continue row takes room from the first screen, not from the grid's own sizing.
+                    shownHeight = gridHeight - with(density) { (if (resumeShown != null) resumeHeight else 0).toDp() },
                     onLaunch = onLaunch,
                     onOrder = onOrder,
                     scroll = { list.scrollBy(it) },
@@ -297,10 +298,10 @@ private val TopPadding = 14.dp
 
 /** The game in progress saved last at this tier and mode, as one slim row over the grid: a tap opens it. */
 @Composable
-private fun ContinueRow(puzzle: PuzzleType, tier: Difficulty, onClick: () -> Unit) {
+private fun ContinueRow(puzzle: PuzzleType, tier: Difficulty, modifier: Modifier, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .padding(bottom = TileGap)
             .clip(RoundedCornerShape(14.dp))
@@ -475,6 +476,7 @@ private fun PuzzleGrid(
     doneToday: Set<Pair<String, Difficulty>>,
     pick: String,
     height: Dp,
+    shownHeight: Dp,
     onLaunch: (String) -> Unit,
     onOrder: (List<String>) -> Unit,
     scroll: suspend (Float) -> Float,
@@ -484,8 +486,10 @@ private fun PuzzleGrid(
     val still = LocalReducedMotion.current
     val moveSpec: AnimationSpec<Offset> = if (still) snap() else tween(MOVE_MS)
     val liftSpec: AnimationSpec<Float> = if (still) snap() else tween(MOVE_MS)
-    val ids = puzzles.map { it.id }
     val byId = puzzles.associateBy { it.id }
+    // "Try me!" is for the day, not the tier: gone once any tier of the pick is solved today.
+    val pickDone = Difficulty.entries.any { (pick to it) in doneToday }
+    val justSolved = LocalJustSolved.current
     var drag by remember { mutableStateOf<Drag?>(null) }
     // Each row's height, from the last layout: a row is as tall as its tallest tile.
     var rowHeights by remember { mutableStateOf(IntArray(0)) }
@@ -497,6 +501,17 @@ private fun PuzzleGrid(
         val tileW = with(density) { tileWidth(maxWidth, columns).roundToPx() }
         val gap = with(density) { TileGap.roundToPx() }
         val gridW = with(density) { maxWidth.roundToPx() }
+        // Today's pick sits in the last square of the first screen when the player's order puts it further down: shown
+        // there for the day, never stored. Rows counted at one line of name; a wrapped name can leave it partly below.
+        val stored = puzzles.map { it.id }
+        val rowsShown = ((shownHeight + TileGap) / (previewSize + TileChrome + TileGap)).toInt().coerceAtLeast(1)
+        val pickAt = stored.indexOf(pick)
+        val pickSlot = minOf(rowsShown * columns, stored.size) - 1
+        val ids = if (pickAt > pickSlot) PuzzleOrder.moved(stored, pickAt, pickSlot) else stored
+        // A new order from the shown one; the pick goes back to its own place unless it was the tile moved.
+        fun reorder(order: List<String>, mover: String) = onOrder(
+            if (ids == stored || mover == pick) order else order.minus(pick).let { it.take(pickAt) + pick + it.drop(pickAt) },
+        )
         val rows = (ids.size + columns - 1) / columns
         fun top(row: Int) = (0 until row).sumOf { rowHeights.getOrElse(it) { 0 } + gap }
         fun rowAt(y: Float) = (0 until rows).lastOrNull { top(it) <= y } ?: 0
@@ -552,7 +567,8 @@ private fun PuzzleGrid(
                         val lift by animateFloatAsState(if (d?.id == id) 1f else 0f, liftSpec, label = "lift")
                         val index = ids.indexOf(id)
                         PuzzleTile(
-                            byId.getValue(id), (id to difficulty) in doneToday, isPick = id == pick, inProgress, previewSize,
+                            byId.getValue(id), (id to difficulty) in doneToday, isPick = id == pick && !pickDone, inProgress, previewSize,
+                            cornerTick = false,
                             // A long press held still and let go is not a tap: the click lands before the drag ends.
                             onClick = { if (drag == null) onLaunch(id) },
                             modifier = Modifier
@@ -567,10 +583,10 @@ private fun PuzzleGrid(
                                 .semantics {
                                     customActions = listOfNotNull(
                                         if (index > 0) CustomAccessibilityAction("Move earlier") {
-                                            onOrder(PuzzleOrder.moved(ids, index, index - 1)); true
+                                            reorder(PuzzleOrder.moved(ids, index, index - 1), id); true
                                         } else null,
                                         if (index < ids.lastIndex) CustomAccessibilityAction("Move later") {
-                                            onOrder(PuzzleOrder.moved(ids, index, index + 1)); true
+                                            reorder(PuzzleOrder.moved(ids, index, index + 1), id); true
                                         } else null,
                                     )
                                 },
@@ -579,6 +595,7 @@ private fun PuzzleGrid(
                                 accent = accent,
                                 selected = difficulty,
                                 cleared = { tier -> (id to tier) in doneToday },
+                                popped = justSolved?.takeIf { it.first == id }?.second,
                             )
                         }
                     }
@@ -608,7 +625,7 @@ private fun PuzzleGrid(
                             drag = null
                             if (held != null) {
                                 val from = ids.indexOf(held.id)
-                                if (to != null && to != from) onOrder(PuzzleOrder.moved(ids, from, to))
+                                if (to != null && to != from) reorder(PuzzleOrder.moved(ids, from, to), held.id)
                                 haptics.tick()
                             }
                         },
@@ -679,6 +696,7 @@ internal fun PuzzleTile(
     previewSize: Dp,
     onClick: () -> Unit,
     modifier: Modifier,
+    cornerTick: Boolean = true,
     footer: @Composable (accent: Color) -> Unit,
 ) {
     val accent = Color(puzzle.accent)
@@ -689,7 +707,8 @@ internal fun PuzzleTile(
         name = puzzle.displayName,
         accent = accent,
         solved = solved,
-        justSolved = solved && LocalJustSolved.current == puzzle.id,
+        justSolved = solved && LocalJustSolved.current?.first == puzzle.id,
+        cornerTick = cornerTick,
         onClick = onClick,
         // Today's pick (unsolved): gold ring and sparkles, drawn inside the tile, so nothing moves.
         modifier = modifier,
@@ -704,14 +723,32 @@ internal fun PuzzleTile(
 }
 
 /**
- * The puzzle whose board was solved on the visit to the play screen just left, handed to Home by `DaybookApp` and never
- * stored: its tile's tick pops in and its tint fills, once (null otherwise).
+ * The puzzle and tier whose board was solved on the visit to the play screen just left, handed to Home by `DaybookApp`
+ * and never stored: its tier dot (a level tile's tick) pops in and its tint fills, once (null otherwise).
  */
-val LocalJustSolved = compositionLocalOf<String?> { null }
+val LocalJustSolved = compositionLocalOf<Pair<String, Difficulty>?> { null }
 
-/** How long the tick of a tile [LocalJustSolved] names takes to pop in (to 115% and back), its tint filling with it. */
+/** How long the mark of a tile [LocalJustSolved] names takes to pop in (its tier dot on Home, the corner tick on a level tile), its tint filling with it. */
 private const val POP_MS = 250
 private const val POP_DELAY_MS = 200L
+
+/**
+ * 0 to 1 by way of [peak], once, after the fade into Home, when [play]; 1 at once otherwise or under reduced motion.
+ * Keyed on [solved]: the record of the solve can land a moment after Home first draws.
+ */
+@Composable
+private fun rememberPop(play: Boolean, solved: Boolean, peak: Float): Animatable<Float, *> {
+    val still = LocalReducedMotion.current
+    val pop = remember(solved) { Animatable(if (play && !still) 0f else 1f) }
+    LaunchedEffect(pop) {
+        if (pop.value < 1f) {
+            // After the fade into Home (DaybookApp's 200 ms crossfade), or it plays half hidden.
+            delay(POP_DELAY_MS)
+            pop.animateTo(1f, keyframes { durationMillis = POP_MS; peak at POP_MS * 2 / 3 })
+        }
+    }
+    return pop
+}
 
 /**
  * The shape every home tile shares: a motif with the solved tick in its corner, a name, a footer line. [justSolved]
@@ -726,20 +763,13 @@ internal fun HomeTile(
     modifier: Modifier,
     frame: Modifier = Modifier,
     justSolved: Boolean = false,
+    /** The home grid's tiles say it with their tier dots instead. */
+    cornerTick: Boolean = true,
     motif: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit,
     footer: @Composable () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val still = LocalReducedMotion.current
-    // Keyed on [solved]: the record of the solve can land a moment after Home first draws.
-    val pop = remember(solved) { Animatable(if (justSolved && !still) 0f else 1f) }
-    LaunchedEffect(pop) {
-        if (pop.value < 1f) {
-            // After the fade into Home (DaybookApp's 200 ms crossfade), or it plays half hidden.
-            delay(POP_DELAY_MS)
-            pop.animateTo(1f, keyframes { durationMillis = POP_MS; 1.15f at POP_MS * 2 / 3 })
-        }
-    }
+    val pop = rememberPop(justSolved, solved, 1.15f)
     Column(
         modifier
             .clip(RoundedCornerShape(18.dp))
@@ -755,7 +785,7 @@ internal fun HomeTile(
     ) {
         Box(contentAlignment = Alignment.TopEnd) {
             motif()
-            if (solved) {
+            if (solved && cornerTick) {
                 Box(
                     Modifier.size(16.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value }.clip(CircleShape).background(scheme.surface),
                     contentAlignment = Alignment.Center,
@@ -784,7 +814,7 @@ internal fun HomeTile(
  * labelled pills is exactly the weight that made the old cards unscannable.
  */
 @Composable
-internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty) -> Boolean) {
+internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty) -> Boolean, popped: Difficulty? = null) {
     val scheme = MaterialTheme.colorScheme
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -792,9 +822,12 @@ internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty
     ) {
         Difficulty.entries.forEach { tier ->
             val isSelected = tier == selected
+            // The tier just solved pops in big, to say where the solve went ([LocalJustSolved]).
+            val pop = rememberPop(tier == popped && cleared(tier), cleared(tier), 2.2f)
             Box(
                 Modifier
                     .size(if (isSelected) 7.dp else 5.dp)
+                    .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
                     .clip(CircleShape)
                     .background(
                         when {
