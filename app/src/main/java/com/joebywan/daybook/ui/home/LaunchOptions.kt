@@ -1,5 +1,8 @@
 package com.joebywan.daybook.ui.home
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,10 +15,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
@@ -24,10 +33,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.data.KeyValueStore
+import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.theme.Appearance
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlin.math.abs
 
 /**
  * How a tap on a puzzle tile is meant to start a game.
@@ -227,21 +238,30 @@ internal fun <T> SegmentedControl(
     track: Color = MaterialTheme.colorScheme.surface,
 ) {
     val scheme = MaterialTheme.colorScheme
+    // The selection is one pill that slides to the option taken (or swiped to on Home), the same way for both.
+    val still = LocalReducedMotion.current
+    val at by animateFloatAsState(
+        options.indexOf(selected).toFloat(), if (still) snap() else tween(SLIDE_MS), label = "segment",
+    )
     Row(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(track)
-            .padding(4.dp),
+            .padding(4.dp)
+            .drawBehind {
+                val gap = 4.dp.toPx()
+                val w = (size.width - gap * (options.size - 1)) / options.size
+                drawRoundRect(tone, Offset(at * (w + gap), 0f), Size(w, size.height), CornerRadius(10.dp.toPx()))
+            },
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        options.forEach { option ->
+        options.forEachIndexed { i, option ->
             val isSelected = option == selected
             Box(
                 Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) tone else Color.Transparent)
                     // selectable rather than clickable so a screen reader announces the row as a
                     // set of choices with one taken, not three unrelated buttons.
                     .selectable(selected = isSelected, role = Role.RadioButton) { onSelect(option) }
@@ -252,9 +272,12 @@ internal fun <T> SegmentedControl(
                     label(option),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (isSelected) onTone else scheme.onSurfaceVariant,
+                    // The ink follows the pill across, so a label is never light on the bare track.
+                    color = lerp(scheme.onSurfaceVariant, onTone, (1f - abs(at - i)).coerceIn(0f, 1f)),
                 )
             }
         }
     }
 }
+
+private const val SLIDE_MS = 220
