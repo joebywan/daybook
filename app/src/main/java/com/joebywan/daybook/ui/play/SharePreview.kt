@@ -55,7 +55,7 @@ fun SharePreview(card: ShareCard, onClose: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
                     val widest = card.lines.maxOfOrNull { it.marks.size + if (it.hinted) 2 else 0 } ?: 1
-                    val tail = if (card.lines.any { it.tail.length > 2 }) 120.dp else 24.dp
+                    val tail = if (card.lines.any { it.marks.isNotEmpty() && it.tail.length > 2 }) 120.dp else 24.dp
                     val cell = minOf(24.dp, (maxWidth - tail) / widest.coerceAtLeast(1) - 4.dp)
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         card.lines.forEach { line ->

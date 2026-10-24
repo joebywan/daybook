@@ -21,9 +21,15 @@ import com.joebywan.daybook.puzzles.Tower
 import com.joebywan.daybook.puzzles.TowerState
 import com.joebywan.daybook.ui.play.PlayLog
 import com.joebywan.daybook.ui.play.SHARE_URL
+import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.puzzles.WordWheel
+import com.joebywan.daybook.puzzles.WordWheelState
+import com.joebywan.daybook.ui.play.dayShareCard
 import com.joebywan.daybook.ui.play.shareCard
+import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /** The share text, written out in full for each format, so a change to any of them is seen here first. */
@@ -167,5 +173,47 @@ class ShareCardTest {
         assertEquals("", SavedGame.decode(old)?.log)
         val logged = game.copy(log = "mmhmu")
         assertEquals(logged, SavedGame.decode(logged.encode()))
+    }
+
+    @Test fun `word wheel counts its bonus words, and says nothing of none`() {
+        val s = WordWheel.generate(1L, Difficulty.STANDARD) as WordWheelState
+        val c = card(WordWheel, s.copy(bonus = listOf("one", "two", "three")), "m".repeat(8), tier = Difficulty.STANDARD)
+        assertEquals(
+            "Daybook · Word Wheel · Standard · 22 Oct\n🟩🟩🟩🟩🟩🟩🟩🟩\n12:04 · +3 bonus words · 6 day streak\n" +
+                "🟩 own move  🟨 undone  🟥 hint\n$SHARE_URL",
+            c.text,
+        )
+        assertEquals("12:04 · +1 bonus word · 6 day streak", card(WordWheel, s.copy(bonus = listOf("one")), "m").stats)
+        assertEquals("12:04 · 6 day streak", card(WordWheel, s, "m").stats)
+    }
+
+    private val today = LocalDate(2026, 10, 24)
+    private val ids = List(26) { "p$it" }
+    private fun solved(tier: Difficulty, vararg at: Int, day: LocalDate? = today) = at.map { Completion("p$it", tier, day, 60, 0) }
+
+    @Test fun `the day's card marks every puzzle per tier solved today, two lines a tier`() {
+        val completions = solved(Difficulty.STANDARD, 0, 2, 5, 13, 20, 25) + solved(Difficulty.HARD, 1, 14) +
+            solved(Difficulty.EXPERT, 0) +
+            // Not today's dailies: an archive day's board, a level board; and a second solve of one counts once.
+            solved(Difficulty.EXPERT, 3, day = LocalDate(2026, 10, 23)) + solved(Difficulty.HARD, 4, day = null) +
+            solved(Difficulty.STANDARD, 0)
+        val c = dayShareCard(ids, completions, today, "24 Oct", 12)!!
+        assertEquals(
+            "Daybook · 24 Oct · today's dailies\n" +
+                "Standard 6/26\n🟩⬜🟩⬜⬜🟩⬜⬜⬜⬜⬜⬜⬜\n🟩⬜⬜⬜⬜⬜⬜🟩⬜⬜⬜⬜🟩\n" +
+                "Hard 2/26\n⬜🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜\n⬜🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜\n" +
+                "Expert 1/26\n🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜\n⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜\n" +
+                "9 solved today · 12 day streak\n🟩 solved  ⬜ not yet\n$SHARE_URL",
+            c.text,
+        )
+        assertEquals("20 more at Standard to clear the day.", c.nudge)
+    }
+
+    @Test fun `the day's card leaves out untouched tiers, and is not offered before a solve`() {
+        assertNull(dayShareCard(ids, solved(Difficulty.HARD, 1, day = LocalDate(2026, 10, 23)), today, "24 Oct", 1))
+        val c = dayShareCard(ids, solved(Difficulty.HARD, *IntArray(26) { it }), today, "24 Oct", 1)!!
+        assertEquals(listOf("Hard 26/26"), c.lines.filter { it.marks.isEmpty() }.map { it.tail })
+        assertEquals("26 solved today", c.stats)
+        assertEquals("Every Hard board done. A clean sweep.", c.nudge)
     }
 }
