@@ -260,7 +260,7 @@ private fun PlayBoard(
     // Saved alongside the game: without it, rotating a finished board would record the win twice.
     var recorded by rememberSaveable(initial) { mutableStateOf(false) }
     val haptics = LocalHaptics.current
-    // Transient: a reopened solved board shows the plain frame.
+    // Transient: a reopened solved board shows the plain frame, with its Share card.
     var praise by remember { mutableStateOf(finishPreview ?: Praise()) }
     // Finished-frame state: hidden to inspect the board, and confetti played once. Never PuzzleState.
     var resultsHidden by rememberSaveable(initial) { mutableStateOf(false) }
@@ -693,7 +693,12 @@ private fun PlayBoard(
                 accent = accent,
                 next = options.firstOrNull { it.kind != NextKind.DONE },
                 done = options.last(),
-                onShow = { resultsHidden = false },
+                onShow = {
+                    // A reopened solve's Share card, drawn from the saved board and log when asked for, so the
+                    // streak it reads is from completions that have loaded by then.
+                    if (reopenedSolved) praise = Praise(share = praiseFor(seconds, game.hints, state, game.log, game.taught).share)
+                    resultsHidden = false
+                },
                 onOption = onNext,
                 modifier = Modifier.align(if (wide) Alignment.BottomStart else Alignment.BottomCenter)
                     .windowInsetsPadding(WindowInsets.safeDrawing).then(if (wide) Modifier.width(SidePanel) else Modifier)
