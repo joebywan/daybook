@@ -201,8 +201,9 @@ differs from the plan above:
 `LevelsUiTest`. Where it differs from the plan above (all four accepted by the owner's coordinator, 2026-10-23):
 
 - **The tier row is kept, invisible, and the level strip is drawn over it** ("Level 14", "3 of 5", a bar; tapping it opens the
-  list), so the strip has the tier row's exact height and the mode row never moves when the mode changes, stacked or side by
-  side. The tier summary is one line above the grid.
+  list), so the strip has the tier row's exact height and nothing below it moves when the mode changes, stacked or side by
+  side. Since 2026-10-24 (the owner) the mode row is on top and the tier row (or the strip) beneath it; side by side, mode on
+  the left. The tier summary is one line above the grid.
 - **"Level 13 done" shares that one line with the summary** ("Level 13 done · Mostly Hard, one Expert") rather than having a
   line of its own. It is derived: shown while the level before is done and this one has no solve, gone at the first solve.
 - **The list is newest first throughout:** the next level, locked ("Finish 14 to open"), at the top, then the current one with

@@ -463,7 +463,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 - **The play screen is keyed on its board** (`key(puzzle.id, seed)` in `DaybookApp`): "Next in level" goes straight from one
   puzzle to another, and without the key `PlayScreen`'s produced board was the last puzzle's state for a frame (a crash on the emulator).
 - `RouteSaver` fields are only ever added at the end: a route saved before `level` existed still reads (`LevelsUiTest`).
-- In Levels mode the tier row stays laid out, invisible, under the level strip, so the mode row cannot move when the mode changes.
+- The mode row (Daily · Levels · Random) sits above the tier row. In Levels mode the tier row stays laid out, invisible, under the level strip, so the grid below cannot move when the mode changes.
 
 ## Typography
 
