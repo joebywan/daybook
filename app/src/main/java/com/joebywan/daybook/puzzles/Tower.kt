@@ -139,10 +139,9 @@ object Tower : PuzzleType {
      * The home tile: two scored guess rows, newest on top, as the board stacks them.
      *
      * Four pegs and their pips is the whole of Tower's shape, and two rows is as many as fit at
-     * 80dp while a peg still reads as a peg. The pips go in a 2x2 block rather than the board's
-     * single row: four pips strung out beside four pegs leaves each one about 3dp across, where
-     * filled and hollow become the same grey dot, and the filled/hollow distinction is the only
-     * information a scored row carries.
+     * 80dp while a peg still reads as a peg. The pips go in a 2x2 block, as on the board: four pips
+     * strung out beside four pegs leaves each one about 3dp across, where filled and hollow become
+     * the same grey dot, and the filled/hollow distinction is the only information a scored row carries.
      */
     private val previewGuesses = listOf(
         listOf(2, 0, 3, 1) to Feedback(exact = 2, misplaced = 1),
@@ -650,31 +649,31 @@ object Tower : PuzzleType {
                 ) { PegDigit(colour, 13) }
             }
             Spacer(Modifier.weight(1f))
-            Row(
+            // A grid, not a row: pips strung out beside the pegs read as belonging to the peg above,
+            // and they count matches without saying which. Two rows, read in reading order: 2x2 for four pegs, 3 over 2 for five.
+            val columns = (slots + 1) / 2
+            Column(
                 Modifier
                     .highlightAnchor(TowerTeacher.PIPS + index)
                     .ring(pips, glow, pulse, round = false)
-                    .dimmed(pips)
-                    .width(66.dp),
-                horizontalArrangement = Arrangement.End,
+                    .dimmed(pips),
+                verticalArrangement = Arrangement.Center,
             ) {
-                repeat(feedback.exact) {
-                    Box(
-                        Modifier.padding(1.dp).size(9.dp).clip(CircleShape)
-                            .background(scheme.onSurface)
-                    )
-                }
-                repeat(feedback.misplaced) {
-                    Box(
-                        Modifier.padding(1.dp).size(9.dp).clip(CircleShape)
-                            .border(1.5.dp, scheme.onSurface, CircleShape)
-                    )
-                }
-                repeat(slots - feedback.exact - feedback.misplaced) {
-                    Box(
-                        Modifier.padding(1.dp).size(9.dp).clip(CircleShape)
-                            .background(scheme.surfaceVariant)
-                    )
+                (0 until slots).chunked(columns).forEach { line ->
+                    Row {
+                        line.forEach { pip ->
+                            Box(
+                                Modifier.padding(1.5.dp).size(10.dp).clip(CircleShape).then(
+                                    when {
+                                        pip < feedback.exact -> Modifier.background(scheme.onSurface)
+                                        pip < feedback.exact + feedback.misplaced ->
+                                            Modifier.border(1.5.dp, scheme.onSurface, CircleShape)
+                                        else -> Modifier.background(scheme.surfaceVariant)
+                                    }
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
