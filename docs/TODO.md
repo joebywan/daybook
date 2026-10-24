@@ -107,6 +107,9 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Infrastructure
 
+- [ ] **Recapture `docs/screenshots/home.png`.** Home now puts the Daily · Levels · Random row above the tier row
+  (2026-10-24), and the README's home shot still shows the old order. Needs a phone emulator capture (clean install, date
+  pinned, 540x1200); no phone AVD was set up when the change was made.
 - [ ] **Verify Renovate's CI workaround on the first real Monday run.** Renovate runs daily and
   `tools/dispatch-ci-for-renovate.sh` dispatches `ci.yml` on `renovate/*` branches, where it posts a
   `build` commit status (README, "Dependency updates"). Proven on a throwaway PR with a stand-in

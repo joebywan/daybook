@@ -161,9 +161,10 @@ internal fun timerShown(stored: String?, hasPlayed: Boolean): Boolean = stored?.
  * The two choices that used to live on every card, hoisted above the grid: what difficulty, and
  * whether the tap opens today's puzzle, a level's board or a freshly seeded random board.
  *
- * In Levels mode the level sets the tier, so the tier row is hidden and [levelStrip] is drawn in
- * its place. The row is still laid out underneath (invisible, and it takes no taps), so the strip
- * has exactly its height and the mode row never moves under the finger that switched it.
+ * The mode row comes first and the tier row beneath it. In Levels mode the level sets the tier, so
+ * the tier row is hidden and [levelStrip] is drawn in its place. The row is still laid out underneath
+ * (invisible, and it takes no taps), so the strip has exactly its height and nothing below it moves
+ * when the mode changes.
  */
 @Composable
 fun LaunchOptions(
@@ -178,6 +179,18 @@ fun LaunchOptions(
     val levels = mode == LaunchMode.LEVELS
     // Side by side on a short wide window (a phone on its side), where a second row costs the grid most of a row of tiles.
     val controls = @Composable { half: Modifier ->
+        // A second tone rather than a second green row: two identical-looking controls stacked
+        // read as one four-choice thing, and these are different questions.
+        SegmentedControl(
+            modifier = half,
+            options = LaunchMode.entries,
+            selected = mode,
+            label = { it.label },
+            tone = scheme.secondary,
+            onTone = scheme.onSecondary,
+            verticalPadding = 7.dp,
+            onSelect = onMode,
+        )
         Box(half) {
             SegmentedControl(
                 modifier = if (levels) Modifier.alpha(0f).clearAndSetSemantics { } else Modifier,
@@ -191,18 +204,6 @@ fun LaunchOptions(
             )
             if (levels) Box(Modifier.matchParentSize()) { levelStrip() }
         }
-        // A second tone rather than a second green row: two identical-looking controls stacked
-        // read as one four-choice thing, and these are different questions.
-        SegmentedControl(
-            modifier = half,
-            options = LaunchMode.entries,
-            selected = mode,
-            label = { it.label },
-            tone = scheme.secondary,
-            onTone = scheme.onSecondary,
-            verticalPadding = 7.dp,
-            onSelect = onMode,
-        )
     }
     if (sideBySide) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
