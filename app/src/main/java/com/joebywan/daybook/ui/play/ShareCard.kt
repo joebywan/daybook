@@ -2,6 +2,7 @@ package com.joebywan.daybook.ui.play
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.puzzles.ChessState
 import com.joebywan.daybook.puzzles.LexiconMark
 import com.joebywan.daybook.puzzles.LexiconState
@@ -11,6 +12,8 @@ import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.SetsState
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.TowerState
+import com.joebywan.daybook.puzzles.WordWheelState
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
 /**
@@ -243,9 +246,35 @@ fun shareCard(
         header = if (level != null) "Daybook · Level $level · ${puzzle.displayName} · ${tier.label}$suffix"
             else "Daybook · ${puzzle.displayName} · ${tier.label} · ${date ?: "random board"}$suffix",
         lines = lines,
-        stats = clock + if (streak >= 2) " · $streak day streak" else "",
+        stats = clock +
+            (if (state is WordWheelState && state.bonus.isNotEmpty()) " · +${plural(state.bonus.size, "bonus word")}" else "") +
+            if (streak >= 2) " · $streak day streak" else "",
         key = key,
         nudge = nudge,
         spaced = state is TowerState,
+    )
+}
+
+/**
+ * Today's dailies in one card, null until one is solved. Per tier with a solve: a line "Standard 6/26", then a mark per
+ * puzzle of [ids] (in that order) over two lines, so 26 marks never wrap a messenger's line. [date] is today, formatted.
+ * Spoiler-free: which puzzles are done, never a board.
+ */
+fun dayShareCard(ids: List<String>, completions: List<Completion>, today: LocalDate, date: String, streak: Int): ShareCard? {
+    val done = completions.filter { it.day == today }.map { it.puzzleId to it.difficulty }.toSet()
+    val tiers = Difficulty.entries.map { tier -> tier to ids.count { (it to tier) in done } }.filter { it.second > 0 }
+    if (tiers.isEmpty()) return null
+    val lines = tiers.flatMap { (tier, n) ->
+        listOf(ShareLine(emptyList(), tail = "${tier.label} $n/${ids.size}")) +
+            ids.chunked((ids.size + 1) / 2).map { row -> ShareLine(row.map { if ((it to tier) in done) Mark.GREEN else Mark.WHITE }) }
+    }
+    val (best, most) = tiers.maxBy { it.second }
+    return ShareCard(
+        header = "Daybook · $date · today's dailies",
+        lines = lines,
+        stats = "${tiers.sumOf { it.second }} solved today" + if (streak >= 2) " · $streak day streak" else "",
+        key = listOf(Mark.GREEN to "solved", Mark.WHITE to "not yet"),
+        nudge = if (most == ids.size) "Every ${best.label} board done. A clean sweep."
+            else "${ids.size - most} more at ${best.label} to clear the day.",
     )
 }

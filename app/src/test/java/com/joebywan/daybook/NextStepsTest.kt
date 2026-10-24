@@ -9,6 +9,7 @@ import com.joebywan.daybook.ui.play.NextKind
 import com.joebywan.daybook.ui.play.NextOption
 import com.joebywan.daybook.ui.play.mainOption
 import com.joebywan.daybook.ui.play.nextOptions
+import com.joebywan.daybook.ui.play.pillOption
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
@@ -175,4 +176,23 @@ class NextStepsTest {
         assertEquals("Done", mainOption(nextOptions(daily = true, tier = HARD, doneTiers = emptySet()))?.label)
         assertEquals("Done", mainOption(nextOptions(daily = false, tier = HARD, doneTiers = emptySet()))?.label)
     }
+
+    // ---- the results pill (the only buttons on a solved board reopened) ----
+
+    private fun pill(daily: Boolean, tier: Difficulty, vararg done: Difficulty): String? =
+        pillOption(nextOptions(daily, tier, done.toSet()))?.let { render(listOf(it)).single() }
+
+    @Test fun `a reopened Standard daily offers the next undone tier, not Random`() {
+        assertEquals("Harder Daily>daily:HARD", pill(true, STANDARD, STANDARD))
+        assertEquals("Harder Daily>daily:EXPERT", pill(true, STANDARD, STANDARD, HARD))
+    }
+
+    @Test fun `the pill prefers harder, then easier, then Random`() {
+        assertEquals("Harder Daily>daily:EXPERT", pill(true, HARD, HARD))
+        assertEquals("Easier Daily>daily:STANDARD", pill(true, HARD, HARD, EXPERT))
+        assertEquals("Easier Daily>daily:HARD", pill(true, EXPERT, EXPERT))
+        assertEquals("Random>random:EXPERT", pill(true, EXPERT, STANDARD, HARD, EXPERT))
+    }
+
+    @Test fun `a random board's pill is Another`() = assertEquals("Another>random:HARD", pill(false, HARD))
 }

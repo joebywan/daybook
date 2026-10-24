@@ -691,7 +691,7 @@ private fun PlayBoard(
         if (resultsHidden) {
             ResultsPill(
                 accent = accent,
-                next = options.firstOrNull { it.kind != NextKind.DONE },
+                next = pillOption(options),
                 done = options.last(),
                 onShow = { resultsHidden = false },
                 onOption = onNext,
