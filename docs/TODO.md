@@ -86,6 +86,9 @@ Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 a
 ## Needs a real iPhone
 
 Nothing below can be verified from a desktop browser. The tester has the device.
+- [ ] **Is the first touch on Home dropped?** In headless Chromium, CDP touches reached Compose only after the page had seen one
+  mouse event (a tap still worked, through the emulated click; a drag did not). Check on a real phone browser that the first
+  scroll or tier swipe after loading Home is not ignored.
 - [ ] **Does the first-frame nudge matter?** `nudgeFirstFrame()` in `web/.../Main.kt` exists because headless
   WebKit dropped Compose's first frame until a touch. If real Safari does not need it, remove it.
 - [ ] **Repaint after screen changes.** Headless WebKit did not redraw after a screen change until something
