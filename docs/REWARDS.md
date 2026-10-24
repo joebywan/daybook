@@ -208,6 +208,15 @@ under the pinned rows says "Continue Kings · Hard" beside the puzzle's motif an
 touch on that visit (the board just left is saved as Play fades out, so it can land a moment after Home appears), then holds
 until Home is entered again or the tier or mode changes, so it never appears or goes under a finger.
 
+## Kept share cards (`KeptCard` in `data/ProgressStore.kt`, `ui/stats/StatsScreen.kt`)
+
+Every solve keeps its share card (`share_cards`, one JSON `KeptCard` per entry), so Statistics can share it again: each tier row
+has **Best** and **Last**, always laid out, greyed when nothing is kept. Last is the last *random* board solved at that puzzle and
+tier, always replaced. Best is any board (daily, level or random, as best times count them all), ranked in the owner's order:
+**fewest hints, then fastest, then fewest undos (as the share card counts them), then most bonus words (Word Wheel; 0 elsewhere)**.
+Only a strict win replaces it; a full tie keeps the old card. Bests start from the build that added them, so the first card
+kept is the best until beaten, and Best can be slower than the best time beside it when the faster solve used a hint.
+
 ## Reduced motion and haptics (`ui/Motion.kt`, the platform seam)
 
 - **Reduced motion** follows the system: Android's "Remove animations" (animator duration scale 0), the web's

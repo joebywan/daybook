@@ -19,6 +19,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.data.KeptCard
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.LevelProgress
 import com.joebywan.daybook.data.LevelSolve
@@ -45,6 +46,8 @@ import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.home.LevelsScreen
 import com.joebywan.daybook.ui.home.Welcome
 import com.joebywan.daybook.ui.play.NextKind
+import com.joebywan.daybook.puzzles.WordWheelState
+import com.joebywan.daybook.ui.play.PlayLog
 import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.play.finishPraise
 import com.joebywan.daybook.ui.play.levelNextOptions
@@ -360,6 +363,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
         Route.Stats -> StatsScreen(
             today = today,
             completions = completions,
+            keptCards = store.keptCards.collectAsState(initial = emptyList()).value,
             onAchievements = { route = Route.Achievements() },
             onBack = { route = Route.Home },
         )
@@ -495,12 +499,23 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                         // Asked of the board only when no hint was opened: a hint solve names what the hints showed.
                         val needed = if (hints == 0) puzzle.neededTechnique(state) else null
                         val praise = finishPraise(completions, solve, today, puzzle.displayName, taught, needed)
+                        val card = shareCard(
+                            puzzle, difficulty, current.day?.let { formatDate(it, SHARE_DATE) },
+                            formatClock(seconds), streak, state, log, hints, level,
+                        )
+                        // Kept for the stats screen: a random board's save goes when it is solved, and with it this card.
+                        scope.launch {
+                            val kept = KeptCard(
+                                puzzle.id, difficulty, best = true, seconds, hints, card,
+                                undos = PlayLog.played(log).count { it.undone },
+                                bonus = (state as? WordWheelState)?.bonus?.size ?: 0,
+                            )
+                            store.keepCard(kept)
+                            if (current.day == null && level == null) store.keepCard(kept.copy(best = false))
+                        }
                         praise.copy(
                             title = if (level != null && levelFinishedBy(levels, level, puzzle.id)) "Level $level done" else praise.title,
-                            share = shareCard(
-                                puzzle, difficulty, current.day?.let { formatDate(it, SHARE_DATE) },
-                                formatClock(seconds), streak, state, log, hints, level,
-                            ),
+                            share = card,
                         )
                     },
                     options = options,
