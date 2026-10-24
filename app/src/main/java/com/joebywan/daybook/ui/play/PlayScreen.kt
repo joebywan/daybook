@@ -914,7 +914,8 @@ private fun FinishedFrame(
 /** Opens the share preview ([SharePreview]) for the result's card ([Praise.share]). */
 @Composable
 private fun ShareChip(card: ShareCard, accent: Color) {
-    var open by remember { mutableStateOf(sharePreviewOpen) }
+    // Saveable, so turning the device keeps the preview open.
+    var open by rememberSaveable { mutableStateOf(sharePreviewOpen) }
     Row(
         Modifier.clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.22f))
             .clickable { open = true }
