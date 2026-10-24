@@ -57,9 +57,6 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far (an Undo of the restart hands them back), and Target's "steps" is the
   operations still on the board at the finish (not only those that build the target); both are simple readings the owner may
   want changed (`ui/play/ShareCard.kt`).
-- [ ] **Kept share cards: the best is "fewest hints, then fastest", any board.** Statistics' Best can therefore be a slower solve
-  than the best time beside it, when the faster one used a hint; the owner may prefer time alone. Bests start from the build
-  that added them (older solves kept no card), so the first card kept there is the best until beaten (`data/ProgressStore.kt`, `KeptCards`).
 
 - [ ] **Rate link: check on a phone.** Settings ends with a row that opens Google Play's page for a Play install, or
   GitHub for any other install and on the web (`ui/settings/RateRow.kt`, `rememberRateLink` in both platform files). It was

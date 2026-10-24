@@ -46,6 +46,8 @@ import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.home.LevelsScreen
 import com.joebywan.daybook.ui.home.Welcome
 import com.joebywan.daybook.ui.play.NextKind
+import com.joebywan.daybook.puzzles.WordWheelState
+import com.joebywan.daybook.ui.play.PlayLog
 import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.play.finishPraise
 import com.joebywan.daybook.ui.play.levelNextOptions
@@ -502,7 +504,11 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                         )
                         // Kept for the stats screen: a random board's save goes when it is solved, and with it this card.
                         scope.launch {
-                            val kept = KeptCard(puzzle.id, difficulty, best = true, seconds, hints, card)
+                            val kept = KeptCard(
+                                puzzle.id, difficulty, best = true, seconds, hints, card,
+                                undos = PlayLog.played(log).count { it.undone },
+                                bonus = (state as? WordWheelState)?.bonus?.size ?: 0,
+                            )
                             store.keepCard(kept)
                             if (current.day == null && level == null) store.keepCard(kept.copy(best = false))
                         }

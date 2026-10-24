@@ -47,6 +47,29 @@ class KeptCardsTest {
     }
 
     @Test
+    fun `ties on hints and time go to fewer undos, then to more bonus words`() {
+        val base = kept(true, 100, 0).copy(undos = 2, bonus = 1)
+        fun after(next: KeptCard) = KeptCards.keep(listOf(base), next).slot(true)
+        assertEquals("equal time, fewer undos wins", 1, after(base.copy(undos = 1, card = card("u"))).undos)
+        assertEquals("equal time, more undos loses", 2, after(base.copy(undos = 3)).undos)
+        assertEquals("fewer undos cannot make up for a slower time", 100, after(base.copy(seconds = 101, undos = 0)).seconds)
+        assertEquals("fewer undos cannot make up for a hint", 0, after(base.copy(hints = 1, undos = 0)).hints)
+        assertEquals("equal everything, more bonus words wins", 4, after(base.copy(bonus = 4)).bonus)
+        assertEquals("equal everything, fewer bonus words loses", 1, after(base.copy(bonus = 0)).bonus)
+        assertEquals("more bonus words cannot make up for an undo", 2, after(base.copy(undos = 3, bonus = 9)).undos)
+        assertEquals("a full tie keeps the old card", base.card, after(base.copy(card = card("tie"))).card)
+    }
+
+    @Test
+    fun `a card stored before undos and bonus words loads with both 0`() {
+        val old = """{"puzzleId":"sudoku","difficulty":"STANDARD","best":true,"seconds":60,"hints":0,""" +
+            """"card":{"header":"h","lines":[],"stats":"1:00","key":[],"nudge":"n"}}"""
+        val k = KeptCard.decode(old)!!
+        assertEquals(0, k.undos)
+        assertEquals(0, k.bonus)
+    }
+
+    @Test
     fun `the last card always replaces its slot and leaves the others alone`() {
         var all = KeptCards.keep(emptyList(), kept(true, 30, 0))
         all = KeptCards.keep(all, kept(false, 30, 0))

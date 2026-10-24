@@ -229,7 +229,7 @@ object SavedGames {
 /**
  * A share card kept after its finish frame has gone, so the stats screen can share it again. [best] is the player's best
  * solve of the puzzle and tier (any board: daily, level or random, as [Stats.bestTime] counts them all); otherwise it is
- * the last random board solved there. [seconds] and [hints] are the solve's, for ranking.
+ * the last random board solved there. [seconds], [hints], [undos] and [bonus] are the solve's, for ranking ([beats]).
  */
 @Serializable
 data class KeptCard(
@@ -239,9 +239,17 @@ data class KeptCard(
     val seconds: Int,
     val hints: Int,
     val card: ShareCard,
+    /** Moves taken back, as the share card counts them (`PlayLog.played(log).count { it.undone }`). Defaulted: older cards load. */
+    val undos: Int = 0,
+    /** Word Wheel's bonus words found; 0 for every other puzzle. Defaulted: older cards load. */
+    val bonus: Int = 0,
 ) {
-    /** Fewer hints first, then faster. A tie does not beat, as a tie is not a record ([com.joebywan.daybook.ui.play.finishPraise]). */
-    fun beats(other: KeptCard): Boolean = hints < other.hints || (hints == other.hints && seconds < other.seconds)
+    /**
+     * The owner's order for Best: fewest hints, then fastest, then fewest undos, then most bonus words. Only a strict win
+     * beats; a full tie keeps the card already kept.
+     */
+    fun beats(other: KeptCard): Boolean =
+        compareValuesBy(this, other, { it.hints }, { it.seconds }, { it.undos }, { -it.bonus }) < 0
 
     fun encode(): String = SavedJson.encodeToString(this)
 
