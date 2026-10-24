@@ -22,6 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,11 +36,13 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.earnedAchievements
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.data.KeptCard
 import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.BackupControls
 import com.joebywan.daybook.platform.OFFERS_BACKUP
 import com.joebywan.daybook.platform.formatClock
+import com.joebywan.daybook.ui.play.SharePreview
 import kotlinx.datetime.LocalDate
 
 /**
@@ -47,10 +53,16 @@ import kotlinx.datetime.LocalDate
 fun StatsScreen(
     today: LocalDate,
     completions: List<Completion>,
+    /** Share cards kept after their finish frames ([KeptCard]): a tier's best, and its last random board. */
+    keptCards: List<KeptCard>,
     onAchievements: () -> Unit,
     onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    // Which kept card is open, as "puzzleId|tier|best", so a rotation keeps it open.
+    var open by rememberSaveable { mutableStateOf<String?>(null) }
+    fun keyOf(c: KeptCard) = "${c.puzzleId}|${c.difficulty.name}|${c.best}"
+    keptCards.firstOrNull { keyOf(it) == open }?.let { SharePreview(it.card) { open = null } }
 
     Column(
         Modifier
@@ -133,7 +145,7 @@ fun StatsScreen(
                         val count = completions.count {
                             it.puzzleId == puzzle.id && it.difficulty == difficulty
                         }
-                        Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 difficulty.label,
                                 style = MaterialTheme.typography.bodyMedium,
@@ -151,6 +163,10 @@ fun StatsScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = scheme.onSurfaceVariant,
                             )
+                            // Always laid out, greyed when there is nothing to share, so a card arriving moves nothing.
+                            fun kept(best: Boolean) = keptCards.firstOrNull { it.puzzleId == puzzle.id && it.difficulty == difficulty && it.best == best }
+                            ShareLink("Best", kept(true), Color(puzzle.accent)) { open = keyOf(it) }
+                            ShareLink("Last", kept(false), Color(puzzle.accent)) { open = keyOf(it) }
                         }
                     }
                 }
@@ -177,4 +193,19 @@ private fun Tile(label: String, value: String, modifier: Modifier) {
         Text(value, style = MaterialTheme.typography.displaySmall, color = scheme.onSurface)
         Text(label, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
     }
+}
+
+/** A share link for one kept card: [label] in [accent], or greyed and inert when there is no [kept] card. */
+@Composable
+private fun ShareLink(label: String, kept: KeptCard?, accent: Color, onOpen: (KeptCard) -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Text(
+        label,
+        style = MaterialTheme.typography.labelLarge,
+        color = if (kept != null) accent else scheme.outlineVariant,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(enabled = kept != null) { kept?.let(onOpen) }
+            .padding(start = 10.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+    )
 }

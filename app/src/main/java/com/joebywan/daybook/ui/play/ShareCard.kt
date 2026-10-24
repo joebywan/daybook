@@ -11,6 +11,7 @@ import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.SetsState
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.TowerState
+import kotlinx.serialization.Serializable
 
 /**
  * The play log: what happened in a game, in order, one character per event, kept in [com.joebywan.daybook.data.SavedGame.log]
@@ -92,12 +93,14 @@ enum class Mark(val text: String) {
 }
 
 /** A line of the graphic: [marks], then a red square when a hint came before it ([hinted]), then [tail] as written. */
+@Serializable
 data class ShareLine(val marks: List<Mark>, val hinted: Boolean = false, val tail: String = "") {
     fun text(spaced: Boolean): String =
         marks.joinToString(if (spaced) " " else "") { it.text } + (if (hinted) " " + Mark.RED.text else "") + tail
 }
 
-/** Everything the share preview shows and the text it sends. Pure data. */
+/** Everything the share preview shows and the text it sends. Pure data; serialisable, as the stats screen keeps some ([com.joebywan.daybook.data.KeptCard]). */
+@Serializable
 data class ShareCard(
     val header: String,
     val lines: List<ShareLine>,

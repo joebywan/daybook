@@ -35,6 +35,7 @@ fun DaybookWebApp(dateParam: String?, tierParam: String?, puzzleParam: String?, 
         val level = params["level"]?.toIntOrNull()?.takeIf { it >= 1 }
         when {
             params["screen"] == "levels" -> Route.Levels(level)
+            params["screen"] == "stats" -> Route.Stats
             params["screen"] == "archive" && puzzleParam != null ->
                 Route.Archive(puzzleParam, params["day"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() })
             else -> puzzleParam?.let(PuzzleRegistry::byId)?.let {

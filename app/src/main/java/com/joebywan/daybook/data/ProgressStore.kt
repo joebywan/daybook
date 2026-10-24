@@ -9,6 +9,7 @@ import com.joebywan.daybook.core.streakOf
 import com.joebywan.daybook.platform.currentTimeMillis
 import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.play.ShareCard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -226,6 +227,40 @@ object SavedGames {
 }
 
 /**
+ * A share card kept after its finish frame has gone, so the stats screen can share it again. [best] is the player's best
+ * solve of the puzzle and tier (any board: daily, level or random, as [Stats.bestTime] counts them all); otherwise it is
+ * the last random board solved there. [seconds] and [hints] are the solve's, for ranking.
+ */
+@Serializable
+data class KeptCard(
+    val puzzleId: String,
+    val difficulty: Difficulty,
+    val best: Boolean,
+    val seconds: Int,
+    val hints: Int,
+    val card: ShareCard,
+) {
+    /** Fewer hints first, then faster. A tie does not beat, as a tie is not a record ([com.joebywan.daybook.ui.play.finishPraise]). */
+    fun beats(other: KeptCard): Boolean = hints < other.hints || (hints == other.hints && seconds < other.seconds)
+
+    fun encode(): String = SavedJson.encodeToString(this)
+
+    companion object {
+        fun decode(raw: String): KeptCard? = runCatching { SavedJson.decodeFromString<KeptCard>(raw) }.getOrNull()
+    }
+}
+
+/** Which kept cards survive a write. Pure, so the replace-only-when-beaten rule is testable on its own. */
+object KeptCards {
+    /** One card per puzzle, tier and kind: a last card always replaces its slot, a best only when it [KeptCard.beats] it. */
+    fun keep(all: List<KeptCard>, entry: KeptCard): List<KeptCard> {
+        val same = all.firstOrNull { it.puzzleId == entry.puzzleId && it.difficulty == entry.difficulty && it.best == entry.best }
+        if (same != null && entry.best && !entry.beats(same)) return all
+        return all - setOfNotNull(same) + entry
+    }
+}
+
+/**
  * All saved progress. Local only — there is no account, no sync and no network permission.
  *
  * [store] is the [KeyValueStore.PROGRESS] file: DataStore on Android, `localStorage` on the web.
@@ -327,6 +362,13 @@ class ProgressStore(private val store: KeyValueStore) {
         }
     }
 
+    /** The kept share cards ([KeptCard]): an older store has none. */
+    val keptCards: Flow<List<KeptCard>> = store.stringSet(KEY_CARDS).map { raw -> raw.mapNotNull(KeptCard::decode) }
+
+    suspend fun keepCard(entry: KeptCard) {
+        store.updateStringSet(KEY_CARDS) { raw -> KeptCards.keep(raw.mapNotNull(KeptCard::decode), entry).map(KeptCard::encode).toSet() }
+    }
+
     /**
      * Puzzles whose walkthrough has been offered. The offer is one passive line under the board,
      * shown on a player's first visit and never again — recorded as soon as it is shown, not when
@@ -353,6 +395,7 @@ class ProgressStore(private val store: KeyValueStore) {
         const val KEY_TUTORIALS_OFFERED = "tutorials_offered"
         const val KEY_LEVELS = "levels"
         const val KEY_LEVEL_SOLVES = "level_solves"
+        const val KEY_CARDS = "share_cards"
     }
 }
 
