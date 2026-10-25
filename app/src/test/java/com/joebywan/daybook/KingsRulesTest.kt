@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.KingsState
@@ -10,7 +9,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * The generator's contract, checked against rules written out again from scratch.
@@ -21,10 +19,6 @@ import java.time.LocalDate
  * below are deliberately slow, obvious re-statements of the printed rules.
  */
 class KingsRulesTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), "kings-probe", difficulty)
-    }
 
     // ---- an independent rule checker ------------------------------------------------------
 
@@ -84,7 +78,7 @@ class KingsRulesTest {
         for (difficulty in Difficulty.entries) {
             var illegal = 0
             var ambiguous = 0
-            for (seed in seeds(30, difficulty)) {
+            for (seed in seeds(30, difficulty, "kings-probe")) {
                 val state = Kings.generate(seed, difficulty) as KingsState
                 val n = state.size
 
@@ -146,7 +140,7 @@ class KingsRulesTest {
     @Test
     fun `a legal placement wins, whether or not it is the stored one`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(30, difficulty)) {
+            for (seed in seeds(30, difficulty, "kings-probe")) {
                 val state = Kings.generate(seed, difficulty) as KingsState
                 val found = allSolutions(state.size, state.region).singleOrNull()
                 assertNotNull("kings/${difficulty.name}/$seed has no single answer", found)

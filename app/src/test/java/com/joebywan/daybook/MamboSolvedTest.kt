@@ -78,17 +78,13 @@ class MamboSolvedTest {
         return found
     }
 
-    private fun seeds(tier: Difficulty, count: Int) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), "mambo", tier)
-    }
-
     // ---- the premise: does every generated board have exactly one answer? ----------------------
 
     @Test
     fun `every generated board has exactly one answer`() {
         for (tier in Difficulty.entries) {
             var checked = 0
-            for (seed in seeds(tier, 300)) {
+            for (seed in seeds(300, tier, "mambo")) {
                 val s = Mambo.generate(seed, tier) as MamboState
                 val clues = s.cells
                 assertTrue("$tier/$seed stored answer breaks the rules", legal(s.size, s.solution, s.links))

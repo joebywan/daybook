@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Block
@@ -14,7 +13,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 /**
  * The Shikaku hint solver, checked against an enumerator written out again here on a different
@@ -27,10 +25,6 @@ import java.time.LocalDate
  * standing has it.
  */
 class ShikakuTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String = "shikaku-teach") = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     // ---- independent rules --------------------------------------------------------------------
 
@@ -76,7 +70,7 @@ class ShikakuTeachingTest {
     @Test
     fun `every step on a real board draws a rectangle of the answer`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(40, difficulty)) {
+            for (seed in seeds(40, difficulty, "shikaku-teach")) {
                 var s = Shikaku.generate(seed, difficulty) as ShikakuState
                 var guard = 0
                 while (!s.solved) {

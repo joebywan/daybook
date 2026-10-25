@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.NonogramLogic
@@ -13,7 +12,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 /**
  * The Nonogram hint solver. Soundness is checked two ways, as for Kings: on real boards every step
@@ -22,10 +20,6 @@ import java.time.LocalDate
  * step must hold for every answer the visible marks still allow ([NonogramOracle.answers]).
  */
 class NonogramTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String = "nonogram-teach") = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     private fun make(width: Int, height: Int, picture: String, cells: String = ".".repeat(width * height)) =
         NonogramState(width, height, picture, cells)
@@ -51,7 +45,7 @@ class NonogramTeachingTest {
     @Test
     fun `every step on a real board agrees with the picture and changes something`() {
         var checked = 0
-        for (d in Difficulty.entries) for (seed in seeds(40, d)) {
+        for (d in Difficulty.entries) for (seed in seeds(40, d, "nonogram-teach")) {
             var s = NonogramLogic.generateVerified(seed, d)!!
             while (!s.solved) {
                 val step = NonogramTeacher.teach(s)

@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -17,13 +16,11 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 class CageTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        CageLogic.generateVerified(DailySeed.seedFor(start.plusDays(day.toLong()), Cages.id, d), d)
+        CageLogic.generateVerified(daySeed(day, Cages.id, d), d)
             ?: error("no proved board for day $day ${d.name}")
 
     /** Applies each hint until solved; every step must agree with the (unique) answer and change something. */

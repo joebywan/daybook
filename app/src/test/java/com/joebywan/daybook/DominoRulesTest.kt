@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Domino
@@ -16,7 +15,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * Dominoes' rules, exhaustive count and generator, checked against [DominoOracle] (reading order,
@@ -26,10 +24,6 @@ import java.time.LocalDate
 class DominoRulesTest {
 
     companion object {
-        fun seeds(count: Int, d: Difficulty, salt: String = "dominoes") = (0 until count).map {
-            DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, d)
-        }
-
         fun oracle(s: DominoState, cap: Int = 2, placed: List<Placement?> = List(s.tray.size) { null }) =
             DominoOracle.answers(s.width, s.height, s.open, s.regionOf, s.rules, s.tray, cap, placed)
 
@@ -307,7 +301,7 @@ class DominoRulesTest {
             val kinds = IntArray(RuleKind.entries.size)
             val levels = IntArray(DominoTeacher.LEVEL_WHAT_IF + 1)
             val ms = ArrayList<Double>()
-            for (seed in seeds(365, d)) {
+            for (seed in seeds(365, d, "dominoes")) {
                 val t0 = System.nanoTime()
                 val s = DominoLogic.generateVerified(seed, d)!!
                 ms += (System.nanoTime() - t0) / 1e6

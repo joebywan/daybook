@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
@@ -25,16 +24,12 @@ import java.time.LocalDate
  */
 class LitsRulesTest {
 
-    private fun seeds(difficulty: Difficulty, count: Int) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 7, 1).plusDays(it.toLong()), "lits", difficulty)
-    }
-
     // ---- the win condition is the rules -------------------------------------------------------
 
     @Test
     fun `the stored solution satisfies the rules on every generated board`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(difficulty, 6)) {
+            for (seed in seeds(6, difficulty, "lits", LocalDate.of(2026, 7, 1))) {
                 val state = Lits.generate(seed, difficulty) as LitsState
                 assertTrue(
                     "lits/${difficulty.name}/$seed ships a solution that breaks its own rules",
@@ -51,7 +46,7 @@ class LitsRulesTest {
     @Test
     fun `a generated board does not start solved`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(difficulty, 6)) {
+            for (seed in seeds(6, difficulty, "lits", LocalDate.of(2026, 7, 1))) {
                 val state = Lits.generate(seed, difficulty) as LitsState
                 assertFalse("lits/${difficulty.name}/$seed starts solved", state.solved)
             }
@@ -145,7 +140,7 @@ class LitsRulesTest {
         // Uncapped, about one region in six came out at eight squares or more, up to fourteen:
         // nearly room for two tetrominoes, most of it squares that only ever get crossed off.
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(difficulty, 10)) {
+            for (seed in seeds(10, difficulty, "lits", LocalDate.of(2026, 7, 1))) {
                 val state = Lits.generate(seed, difficulty) as LitsState
                 val largest = state.region.groupingBy { it }.eachCount().values.max()
                 assertTrue("lits/${difficulty.name}/$seed has a $largest-square region", largest <= 7)
@@ -180,7 +175,7 @@ class LitsRulesTest {
     @Test
     fun `every generated board has exactly one solution`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(difficulty, 3)) {
+            for (seed in seeds(3, difficulty, "lits", LocalDate.of(2026, 7, 1))) {
                 val state = Lits.generate(seed, difficulty) as LitsState
                 assertEquals(
                     "lits/${difficulty.name}/$seed does not have exactly one solution",

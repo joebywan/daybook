@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Pipes
@@ -13,7 +12,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * The Pipes hint solver, checked against a brute-force enumerator written out again here.
@@ -28,10 +26,6 @@ import java.time.LocalDate
  * with *several* answers, where a tile it pins is only sound if every answer agrees with it.
  */
 class PipesTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String = "pipes-teach") = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     // ---- independent enumerator -----------------------------------------------------------------
 
@@ -105,7 +99,7 @@ class PipesTeachingTest {
         var boards = 0
         for (difficulty in Difficulty.entries) {
             val count = if (difficulty == Difficulty.EXPERT) 60 else 150
-            for (seed in seeds(count, difficulty)) {
+            for (seed in seeds(count, difficulty, "pipes-teach")) {
                 val s = Pipes.generate(seed, difficulty) as PipesState
                 val answers = allSolutions(s.width, s.height, s.cells, cap = 50)
                 assertTrue("$difficulty/$seed: no answer at all", answers.isNotEmpty())
@@ -293,7 +287,7 @@ class PipesTeachingTest {
 
     @Test
     fun `wet tiles the scramble left wrong are not mistakes, only turned ones`() {
-        val s = Pipes.generate(seeds(1, Difficulty.STANDARD)[0], Difficulty.STANDARD) as PipesState
+        val s = Pipes.generate(seeds(1, Difficulty.STANDARD, "pipes-teach")[0], Difficulty.STANDARD) as PipesState
         val answer = allSolutions(s.width, s.height, s.cells, cap = 1)[0]
         val wet = Pipes.filled(s)
         // The scramble's own wet tiles, untouched, however many moves have been made elsewhere.
@@ -310,7 +304,7 @@ class PipesTeachingTest {
 
     @Test
     fun `a solved board has nothing to teach`() {
-        val s = Pipes.generate(seeds(1, Difficulty.HARD)[0], Difficulty.HARD) as PipesState
+        val s = Pipes.generate(seeds(1, Difficulty.HARD, "pipes-teach")[0], Difficulty.HARD) as PipesState
         val answer = allSolutions(s.width, s.height, s.cells, cap = 1)[0]
         assertNull(Pipes.teach(s.copy(cells = answer, moves = 3)))
     }

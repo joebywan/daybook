@@ -24,10 +24,9 @@ import java.time.LocalDate
  */
 class SandTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
     private fun board(day: Int, d: Difficulty) =
-        Sand.generateVerified(DailySeed.seedFor(start.plusDays(day.toLong()), Sand.id, d), d) ?: error("no board day $day ${d.name}")
+        Sand.generateVerified(daySeed(day, Sand.id, d), d) ?: error("no board day $day ${d.name}")
 
     /** Sortable, proved by a witness that replays under the test's own rules. */
     private fun provedSortable(s: SandState): Boolean {

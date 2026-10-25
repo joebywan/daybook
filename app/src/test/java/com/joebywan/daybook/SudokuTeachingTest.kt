@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Sudoku
@@ -14,7 +13,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 /**
  * The Sudoku hint solver, checked against an enumerator written out again here on a different
@@ -26,10 +24,6 @@ import java.time.LocalDate
  * standing has it there.
  */
 class SudokuTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     // ---- independent rules --------------------------------------------------------------------
 

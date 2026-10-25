@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.data.SavedGame
@@ -16,7 +15,6 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 import kotlin.random.Random
 
 /**
@@ -29,10 +27,6 @@ import kotlin.random.Random
  * is the card it glows, and anything called a mistake really cannot become a new set.
  */
 class SetsTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     // ---- independent rules ----------------------------------------------------------------------
 

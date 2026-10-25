@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.Tents
@@ -9,13 +8,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class TentsRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        Tents.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Tents.id, d), d) as TentsState
+        Tents.generate(daySeed(day, Tents.id, d), d) as TentsState
 
     private fun withTents(s: TentsState, tents: List<Boolean>) =
         s.copy(marks = tents.map { if (it) TentsLogic.TENT else 0 })

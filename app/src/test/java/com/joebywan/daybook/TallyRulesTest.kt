@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.TallyLogic
@@ -11,7 +10,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * Tally's rules, line logic, count and generator, checked against [TallyOracle] (every keep mask of
@@ -19,10 +17,6 @@ import java.time.LocalDate
  * shares anything with the code under test.
  */
 class TallyRulesTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String = "tally") = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     private fun digitsOf(s: TallyState) = List(s.size * s.size) { s.digits[it] - '0' }
 
@@ -42,7 +36,7 @@ class TallyRulesTest {
         val s = TallyState(3, "472" + "935" + "618", "101" + "011" + "110")
         assertEquals(listOf(6, 8, 7), TallyLogic.rowTargets(s))
         assertEquals(listOf(10, 4, 7), TallyLogic.colTargets(s))
-        for (d in Difficulty.entries) for (seed in seeds(30, d)) {
+        for (d in Difficulty.entries) for (seed in seeds(30, d, "tally")) {
             val b = TallyLogic.generateVerified(seed, d)!!
             val (rows, cols) = targetsOf(b)
             assertEquals(rows + cols, TallyLogic.targets(b))

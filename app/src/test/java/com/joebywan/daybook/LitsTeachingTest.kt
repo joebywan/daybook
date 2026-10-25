@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Lits
@@ -13,7 +12,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 /**
  * The LITS hint solver, checked against [LitsOracle] — an exhaustive enumerator written apart from
@@ -28,10 +26,6 @@ import java.time.LocalDate
  * some legal answer leaves empty, so the soundness tests run on loose boards as well.
  */
 class LitsTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     private fun shadedOf(s: LitsState) = s.shaded.indices.filter { s.shaded[it] }.toSet()
 

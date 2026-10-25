@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.TallyLogic
@@ -12,7 +11,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 /**
  * The Tally hint solver. As for Nonogram and Kings: on real boards every step must agree with the
@@ -21,10 +19,6 @@ import java.time.LocalDate
  * the marks still allow ([TallyOracle.answers]).
  */
 class TallyTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String = "tally-teach") = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     /** [s] with [step] laid on, as Show me does. */
     private fun applied(s: TallyState, step: TallyTeacher.Step): TallyState {
@@ -49,7 +43,7 @@ class TallyTeachingTest {
     @Test
     fun `every step on a real board agrees with the answer and changes something`() {
         var checked = 0
-        for (d in Difficulty.entries) for (seed in seeds(40, d)) {
+        for (d in Difficulty.entries) for (seed in seeds(40, d, "tally-teach")) {
             var s = TallyLogic.generateVerified(seed, d)!!
             while (!s.solved) {
                 val step = TallyTeacher.teach(s)

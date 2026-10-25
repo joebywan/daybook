@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -17,14 +16,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 class CipherTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
     private fun board(day: Int, d: Difficulty) =
-        Cipher.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Cipher.id, d), d) as CipherState
+        Cipher.generate(daySeed(day, Cipher.id, d), d) as CipherState
 
     private val minShown = mapOf(Difficulty.STANDARD to 0.88, Difficulty.HARD to 0.77, Difficulty.EXPERT to 0.72)
 

@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.KingsState
@@ -12,7 +11,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 /**
  * The hint solver, checked against rules and a brute-force enumerator written out again here.
@@ -25,10 +23,6 @@ import java.time.LocalDate
  * needs.
  */
 class KingsTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String = "kings-teach") = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     // ---- independent rules --------------------------------------------------------------------
 
@@ -75,7 +69,7 @@ class KingsTeachingTest {
     @Test
     fun `every step on a real board agrees with the answer and changes something open`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(40, difficulty)) {
+            for (seed in seeds(40, difficulty, "kings-teach")) {
                 var s = Kings.generate(seed, difficulty) as KingsState
                 var guard = 0
                 while (!s.solved) {

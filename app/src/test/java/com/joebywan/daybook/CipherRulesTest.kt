@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Cipher
@@ -17,14 +16,12 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 class CipherRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
     private fun board(day: Int, d: Difficulty) =
-        Cipher.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Cipher.id, d), d) as CipherState
+        Cipher.generate(daySeed(day, Cipher.id, d), d) as CipherState
 
     private fun state(words: List<String>, digits: List<Int>) =
         CipherState(words = words, solution = digits, digits = digits)
@@ -170,7 +167,7 @@ class CipherRulesTest {
             val counts = mutableMapOf<String, Int>()
             val times = mutableListOf<Double>()
             for (day in 0 until 365) {
-                val seed = DailySeed.seedFor(start.plusDays(day.toLong()), Cipher.id, d)
+                val seed = daySeed(day, Cipher.id, d)
                 val t0 = System.nanoTime()
                 val s = Cipher.generate(seed, d) as CipherState
                 times += (System.nanoTime() - t0) / 1e6

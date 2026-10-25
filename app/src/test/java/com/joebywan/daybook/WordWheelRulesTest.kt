@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.LexiconWords
 import com.joebywan.daybook.puzzles.WheelEntry
@@ -17,15 +16,13 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.time.LocalDate
 
 class WordWheelRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private val lenient = Json { ignoreUnknownKeys = true }
 
     private fun daily(day: Int, d: Difficulty): WordWheelState? =
-        WordWheel.generateVerified(DailySeed.seedFor(start.plusDays(day.toLong()), WordWheel.id, d), d)
+        WordWheel.generateVerified(daySeed(day, WordWheel.id, d), d)
 
     @Test
     fun `a word fills its own slot, a real word is a bonus, and nothing else changes the board`() {
@@ -140,7 +137,7 @@ class WordWheelRulesTest {
         for (d in Difficulty.entries) {
             val attempts = IntArray(WordWheelLogic.ATTEMPTS + 1)
             for (day in 0 until 365) {
-                val seed = DailySeed.seedFor(start.plusDays(day.toLong()), WordWheel.id, d)
+                val seed = daySeed(day, WordWheel.id, d)
                 // Lay one attempt at a time: the first whose board is the one shipped is the attempt that shipped.
                 val b = WordWheel.generateVerified(seed, d)
                 val used = (1..WordWheelLogic.ATTEMPTS).firstOrNull { n -> b != null && attemptBoard(seed, d, n - 1) == b } ?: 0
