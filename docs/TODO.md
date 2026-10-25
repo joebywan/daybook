@@ -173,7 +173,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
   same `countTilings` proof.
-- [ ] **Target: count the roads** (Expert needs few shortest answers, not only depth 5).
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
 - [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
