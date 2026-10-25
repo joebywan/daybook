@@ -270,10 +270,8 @@ object Mambo : PuzzleType {
      * the stored one. Propagation first, then a guess on the first blank; boards the generator
      * made need no guess at all.
      */
-    internal fun completion(n: Int, clues: List<Sym>, links: List<Link>): List<Sym>? {
-        val grid = clues.toTypedArray()
-        return completeFrom(n, grid, links)
-    }
+    internal fun completion(n: Int, clues: List<Sym>, links: List<Link>): List<Sym>? =
+        completeFrom(n, clues.toTypedArray(), links)
 
     private fun completeFrom(n: Int, grid: Array<Sym>, links: List<Link>): List<Sym>? {
         if (!propagate(n, grid, links)) return null
@@ -1024,14 +1022,7 @@ object Mambo : PuzzleType {
                             detectTapGestures { offset: Offset ->
                                 val i = gridCellAt(offset, cellPx, s.size, s.size)
                                 cursor = i
-                                if (!s.givens[i]) {
-                                    val next = when (s.cells[i]) {
-                                        Sym.NONE -> Sym.MOON
-                                        Sym.MOON -> Sym.SUN
-                                        Sym.SUN -> Sym.NONE
-                                    }
-                                    onState(s.withCell(i, next))
-                                }
+                                s.applyKey(i, MamboKeyAction.Cycle)?.let(onState)
                             }
                         }
                 ) {

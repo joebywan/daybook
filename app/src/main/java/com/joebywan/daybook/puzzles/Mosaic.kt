@@ -202,8 +202,6 @@ object Mosaic : PuzzleType {
         BoardHues.fill(215f, false),
     )
 
-    /** Digit ink for a fill: whichever of ink, white or black reads at 4.5:1. */
-    private fun glyphInk(fill: Color) = BoardHues.onFill(fill)
 
     /**
      * Search nodes before the solver gives up. Generation rejects a board it cannot prove inside
@@ -1110,7 +1108,7 @@ object Mosaic : PuzzleType {
                         val fill = palette[s.cells[cell]]
                         val layout = measurer.measure(
                             (s.cells[cell] + 1).toString(),
-                            TextStyle(color = glyphInk(fill), fontSize = (stepPx * 0.34f).toSp(), fontWeight = FontWeight.Bold),
+                            TextStyle(color = BoardHues.onFill(fill), fontSize = (stepPx * 0.34f).toSp(), fontWeight = FontWeight.Bold),
                         )
                         drawText(
                             layout,
@@ -1197,7 +1195,7 @@ object Mosaic : PuzzleType {
                             (colour + 1).toString(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = glyphInk(palette[colour]),
+                            color = BoardHues.onFill(palette[colour]),
                         )
                     }
                 }

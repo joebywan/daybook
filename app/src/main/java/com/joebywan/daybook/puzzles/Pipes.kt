@@ -244,9 +244,7 @@ object Pipes : PuzzleType {
         val start = s.source
         if (start !in s.cells.indices) return emptySet()
 
-        val seen = BooleanArray(s.cells.size)
         val stack = ArrayDeque<Int>()
-        seen[start] = true
         stack.addLast(start)
         val reached = mutableSetOf(start)
 
@@ -258,9 +256,7 @@ object Pipes : PuzzleType {
 
             fun flowTo(opening: Int, inBounds: Boolean, j: Int) {
                 if (!inBounds || mask and opening == 0) return
-                if (s.cells[j] and opposite(opening) == 0 || seen[j]) return
-                seen[j] = true
-                reached += j
+                if (s.cells[j] and opposite(opening) == 0 || !reached.add(j)) return
                 stack.addLast(j)
             }
 

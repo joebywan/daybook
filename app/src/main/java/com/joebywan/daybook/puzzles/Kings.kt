@@ -106,11 +106,7 @@ data class KingsState(
      * stray finger cost a king, which is the mistake the old three-step cycle made in reverse by
      * charging two taps for every mark.
      */
-    fun toggleMark(index: Int): KingsState = when (marks[index]) {
-        Mark.EMPTY -> withMark(index, Mark.BLOCKED)
-        Mark.BLOCKED -> withMark(index, Mark.EMPTY)
-        Mark.KING -> this
-    }
+    fun toggleMark(index: Int): KingsState = sweepMark(index)?.let { withMark(index, it) } ?: this
 
     /**
      * A double tap: crown the square, or take the crown back.
@@ -283,10 +279,10 @@ object Kings : PuzzleType {
      * pair of *touching* regions look further apart, or, at the same closest pair, the touching
      * pairs further apart in total. A local search, not an exhaustive one: on a year of Expert
      * boards it lifts the median colour-blind distance between neighbours from 11 to about 17.
+     * [n] is at most the colours there are (nine, Expert's size).
      */
     internal fun regionPalette(n: Int, region: List<Int>): IntArray {
         val count = regionColours.size
-        if (n > count) return IntArray(n) { it % count }
         // Touching pairs in a fixed order, from a matrix rather than a hash set, so the result
         // cannot depend on the platform's iteration order.
         val touching = Array(n) { BooleanArray(n) }

@@ -1087,7 +1087,6 @@ object Lits : PuzzleType {
         Piece.S to BoardHues.ink(330f, false),
     )
 
-    private fun colourOf(piece: Piece): Color = palette.getValue(piece)
 
     /**
      * Shaded, but not yet anything: the puzzle's own accent, which is what every shaded square
@@ -1274,7 +1273,7 @@ object Lits : PuzzleType {
                     // otherwise the home grid would advertise a board that no longer exists. The
                     // letter itself is left off: at a 20dp cell the glyph is a smudge, and the tile
                     // has to read as LITS from across a grid, not be read word by word.
-                    color = if (previewShaded[i]) colourOf(Piece.L) else scheme.surfaceVariant,
+                    color = if (previewShaded[i]) palette.getValue(Piece.L) else scheme.surfaceVariant,
                     topLeft = at,
                     size = Size(step, step),
                 )
@@ -1396,7 +1395,7 @@ object Lits : PuzzleType {
                             color = when {
                                 !shown.shaded[i] -> scheme.surfaceVariant
                                 piece == null -> inProgress
-                                else -> colourOf(piece)
+                                else -> palette.getValue(piece)
                             },
                             topLeft = at,
                             size = Size(stepPx, stepPx),
@@ -1413,7 +1412,7 @@ object Lits : PuzzleType {
                     if (piece != null) {
                         // The glyph is the channel a colour-blind player is left with, so its colour is computed
                         // per fill for 4.5:1 (BoardHues.onFill), at full alpha.
-                        val glyph = BoardHues.onFill(colourOf(piece))
+                        val glyph = BoardHues.onFill(palette.getValue(piece))
                         val layout = measurer.measure(
                             piece.name,
                             TextStyle(
