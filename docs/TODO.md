@@ -38,11 +38,7 @@ from a measurement or review, so you can check it is still true.
   which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
-- [ ] **Regions: sparser boards, and README screenshots.** The ladder is three single-digit techniques, so boards carry
-  about 27 / 21 / 19% of squares as givens. A locked-candidate technique (a digit whose every place in a region touches
-  one square rules that square out) would let the generator take more back, but it ends in an elimination, not a
-  placement, and Regions has no pencil marks; it would need a step that explains one elimination and then a placement
-  (Inequality's `SIGN_BOUND` is the model). *M.*
+- [ ] **Regions: README screenshots.** (Its sparser boards came with the locked candidate.) *S.*
 
 - [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
   together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
@@ -169,7 +165,7 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
     or what-if, no fallback.
   - Tents: Hard needs one-spot; Expert needs shared or served (18% of draws).
   - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
-  - Inequality (pairs, sign chains) and Regions (locked candidates): the ladder is too short; the techniques come first.
+  - Inequality (pairs, sign chains): the ladder is too short; the techniques come first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
   same `countTilings` proof.
@@ -178,7 +174,7 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
 - [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
-- [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
+- [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain.
 - [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
   lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
   fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).

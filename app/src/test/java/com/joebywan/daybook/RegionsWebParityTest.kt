@@ -41,8 +41,8 @@ class RegionsWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            1866536695, 1247808727, 545000760, 1728254338, 1052070477, -1050585603,
-            1730090054, -669292744, -1713518653,
+            1866536695, 892481819, 1460396952, 1728254338, 1066320622, -379540389,
+            1730090054, 2097224792, -119656382,
         )
     }
 }

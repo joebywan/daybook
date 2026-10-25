@@ -15,8 +15,10 @@ package com.joebywan.daybook.puzzles
  * 1. [LAST] — a region with one empty square.
  * 2. [ONLY_DIGIT] — a square whose region and touching squares leave one digit.
  * 3. [ONLY_PLACE] — a digit with one square left in its region.
+ * 4. [LOCKED] — a digit a region still needs whose every place touches one square outside it: that square cannot hold
+ *    it. Then that square is left one digit, or its own region's digit one place. One elimination, then a placement.
  *
- * The generator keeps a board only while these finish it ([solvesByLogic]), so a board made here
+ * The generator keeps a board only while these (up to its tier's rung) finish it ([solvesByLogic]), so a board made here
  * never reaches [FALLBACK]; it exists for a board that did not come from the generator and is
  * measured by `RegionsTeachingTest`. Every loop walks squares and regions in index order, so a
  * board gets the same hint on every platform (CLAUDE.md, "Hash iteration order").
@@ -28,10 +30,11 @@ internal object RegionsTeacher {
     const val LAST = "last-square"
     const val ONLY_DIGIT = "only-digit"
     const val ONLY_PLACE = "only-place"
+    const val LOCKED = "locked-candidate"
     const val FALLBACK = "fallback"
     const val MISTAKE = "mistake"
 
-    val TECHNIQUES = listOf(LAST, ONLY_DIGIT, ONLY_PLACE, FALLBACK)
+    val TECHNIQUES = listOf(LAST, ONLY_DIGIT, ONLY_PLACE, LOCKED, FALLBACK)
 
     const val MAX_EXPLANATION = 200
 
@@ -69,9 +72,33 @@ internal object RegionsTeacher {
 
     // ---- finding a step ---------------------------------------------------------------------------
 
-    private class Hit(val technique: String, val cell: Int, val digit: Int, val region: Int)
+    /**
+     * A placement. For [LOCKED]: [struck] the square that loses [lockDigit], [places] where the [region]'s [lockDigit]
+     * can still go, and [byPlace] whether the placement is the only place left in the struck square's region (else the
+     * struck square is left one digit, and [cell] is [struck]).
+     */
+    private class Hit(
+        val technique: String, val cell: Int, val digit: Int, val region: Int,
+        val struck: Int = -1, val lockDigit: Int = 0, val places: List<Int> = emptyList(), val byPlace: Boolean = false,
+    )
 
-    private fun findStep(layout: RegionsLayout, cells: List<Int>): Hit? {
+    /** The rung each technique sits on, in [TECHNIQUES] order: the depth a walk reports. */
+    fun rung(technique: String): Int = TECHNIQUES.indexOf(technique)
+
+    /** The deepest rung any board may use. */
+    val DEEPEST = rung(LOCKED)
+
+    /** The one empty square of [members] whose mask in [m] has [d]; -1 when there are none or several, or one holds [d]. */
+    private fun lonePlace(members: List<Int>, cells: List<Int>, m: IntArray, d: Int): Int {
+        var at = -1
+        for (i in members) {
+            if (cells[i] == d) return -1
+            if (cells[i] == 0 && has(m[i], d)) { if (at >= 0) return -1; at = i }
+        }
+        return at
+    }
+
+    private fun findStep(layout: RegionsLayout, cells: List<Int>, deepest: Int = DEEPEST): Hit? {
         val base = candidates(layout, cells)
         if (cells.indices.any { cells[it] == 0 && base[it] == 0 }) return null
         // 1. The last square of a region.
@@ -93,17 +120,69 @@ internal object RegionsTeacher {
                 if (places.size == 1) return Hit(ONLY_PLACE, places[0], d, r)
             }
         }
+        if (deepest < rung(LOCKED)) return null
+        // 4. A region's digit whose places all touch one square outside it: that square loses the digit.
+        for ((r, members) in layout.members.withIndex()) {
+            for (d in 1..members.size) {
+                if (members.any { cells[it] == d }) continue
+                val places = members.filter { cells[it] == 0 && has(base[it], d) }
+                if (places.size < 2) continue
+                for (x in layout.around[places[0]]) {
+                    if (cells[x] != 0 || layout.region[x] == r || !has(base[x], d)) continue
+                    if (places.any { p -> x !in layout.around[p] }) continue
+                    val left = base[x] and bit(d).inv()
+                    if (single(left)) return Hit(LOCKED, x, left.countTrailingZeroBits(), r, x, d, places)
+                    // Only x changed, so only its own region's d can have come down to one place.
+                    val cut = base.copyOf().also { it[x] = left }
+                    val at = lonePlace(layout.members[layout.region[x]], cells, cut, d)
+                    if (at >= 0) return Hit(LOCKED, at, d, r, x, d, places, byPlace = true)
+                }
+            }
+        }
         return null
     }
 
-    /** Whether the three techniques alone finish this board: what the generator asks of every board it ships. */
-    fun solvesByLogic(layout: RegionsLayout, given: List<Int>): Boolean {
+    /** The deepest rung a walk of the ladder (up to [deepest]) needs to finish this board, the hints' way; null when it cannot. */
+    fun depth(layout: RegionsLayout, given: List<Int>, deepest: Int = DEEPEST): Int? {
         val cells = given.toMutableList()
+        var most = -1
         while (cells.any { it == 0 }) {
-            val hit = findStep(layout, cells) ?: return false
+            val hit = findStep(layout, cells, deepest) ?: return null
             cells[hit.cell] = hit.digit
+            most = maxOf(most, rung(hit.technique))
         }
-        return RegionsLogic.isSolved(layout, cells)
+        return if (RegionsLogic.isSolved(layout, cells)) most else null
+    }
+
+    /** Whether the ladder up to [deepest] finishes this board: what the generator asks of every board it ships. */
+    fun solvesByLogic(layout: RegionsLayout, given: List<Int>, deepest: Int = DEEPEST): Boolean =
+        lockedSteps(layout, given, deepest) != null
+
+    /**
+     * How many [LOCKED] steps the hints' walk needs, found faster: null when the ladder up to [deepest] cannot finish.
+     * The three single rungs come to "a square left one digit, or a digit left one place in its region", and placing a
+     * right digit never takes such a step away, so every order of them stops at the same board: all of a pass are placed
+     * at once, and the walk meets the same stuck boards, where [findStep] takes the same locked step the hints do. That
+     * holds while every digit placed is right, as on a board with one answer made from its own solution.
+     */
+    fun lockedSteps(layout: RegionsLayout, given: List<Int>, deepest: Int = DEEPEST): Int? {
+        val cells = given.toMutableList()
+        var locked = 0
+        while (cells.any { it == 0 }) {
+            val base = candidates(layout, cells)
+            if (cells.indices.any { cells[it] == 0 && base[it] == 0 }) return null
+            var placed = false
+            for (i in cells.indices) if (cells[i] == 0 && single(base[i])) { cells[i] = base[i].countTrailingZeroBits(); placed = true }
+            for (members in layout.members) for (d in 1..members.size) {
+                val at = lonePlace(members, cells, base, d)
+                if (at >= 0) { cells[at] = d; placed = true }
+            }
+            if (placed) continue
+            val hit = findStep(layout, cells, deepest) ?: return null
+            cells[hit.cell] = hit.digit
+            locked++
+        }
+        return if (RegionsLogic.isSolved(layout, cells)) locked else null
     }
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ------------------------
@@ -173,6 +252,18 @@ internal object RegionsTeacher {
                 Step(
                     ONLY_DIGIT, x, d, setOf(x), (inRegion + touching.firstPerDigit(cells)).toSet(),
                     "Which digits can this square still take?", why,
+                )
+            }
+            LOCKED -> {
+                val n = layout.n
+                fun at(i: Int) = "row ${i / n + 1}, column ${i % n + 1}"
+                val why = "This region's ${hit.lockDigit} must go in one of the marked squares. They all touch the square at " +
+                    "${at(hit.struck)}, so it is not a ${hit.lockDigit}."
+                val then = if (hit.byPlace) "That leaves ${at(x)} as its region's only place for a $d."
+                else "That leaves it only $d."
+                Step(
+                    LOCKED, x, d, members.toSet() + hit.struck, hit.places.toSet() + hit.struck + x,
+                    "Where can the ${hit.lockDigit} go in this region?", "$why $then",
                 )
             }
             else -> {

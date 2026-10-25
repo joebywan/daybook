@@ -45,7 +45,7 @@ class TierDepthReportTest {
         Tents to listOf("no-tree", "line-done", "line-full", "touch", "one-spot", "shared", "served"),
         Nonogram to listOf("full-line", "line-finished", "overlap", "line-logic"),
         Lits to listOf("whole-region", "overlap", "avoid-2x2", "letter-clash", "neighbour", "what-if"),
-        Regions to listOf("last-square", "only-digit", "only-place"),
+        Regions to listOf("last-square", "only-digit", "only-place", "locked-candidate"),
     )
 
     private class Walk(

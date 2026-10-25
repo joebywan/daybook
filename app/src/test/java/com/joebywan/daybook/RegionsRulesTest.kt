@@ -100,10 +100,10 @@ class RegionsRulesTest {
                 val layout = RegionsLayout(n, s.region)
                 singles += layout.members.count { it.size == 1 }
                 regions += layout.count
-                // Irredundant: take back any one given and the logic no longer finishes it.
+                // Irredundant: take back any one given and the tier's ladder no longer finishes it.
                 for (i in 0 until n * n) if (s.givens[i]) {
                     val fewer = s.cells.toMutableList().also { it[i] = 0 }
-                    assertFalse("${d.name} day $day given $i is redundant", RegionsTeacher.solvesByLogic(layout, fewer))
+                    assertFalse("${d.name} day $day given $i is redundant", RegionsTeacher.solvesByLogic(layout, fewer, RegionsLogic.specFor(d).deepest))
                 }
             }
             println("%-9s %5.1f/%d        %d/%d".format(d.name, givens / 100, squares, singles, regions))
@@ -120,7 +120,32 @@ class RegionsRulesTest {
                 if (RegionsLogic.generateVerified(seed(day, d), d, attempts = 1) == null) redraw++
             }
             println("%-9s %d".format(d.name, redraw))
-            assertTrue("${d.name} redraws on $redraw of 365 days", redraw <= 365 / 10)
+            // Expert's gate (six locked candidates) redraws a fill on about 14% of days (51 of 2026's), Hard's on 1%.
+            assertTrue("${d.name} redraws on $redraw of 365 days", redraw <= 365 / 5)
+        }
+    }
+
+    @Test
+    fun `the generator's quick walk agrees with the hints' walk`() {
+        // lockedSteps places every single of a pass at once; it must stop where the hints do and take as many locked steps.
+        // Checked on shipped boards and on the boards one given short of them, which mostly stick.
+        val locked = RegionsTeacher.rung(RegionsTeacher.LOCKED)
+        for ((d, days) in listOf(Difficulty.STANDARD to 30, Difficulty.HARD to 15, Difficulty.EXPERT to 6)) for (day in 0 until days) {
+            val s = board(day, d)
+            val layout = RegionsLayout(s.size, s.region)
+            val boards = listOf(s.cells) + s.cells.indices.filter { s.givens[it] }.map { i -> s.cells.toMutableList().also { it[i] = 0 } }
+            for (cells in boards) for (deepest in listOf(RegionsTeacher.rung(RegionsTeacher.ONLY_PLACE), locked)) {
+                // The hints' walk, a step at a time (simplest first, so within the ladder whenever that finishes), counting locked steps.
+                val finished = RegionsTeacher.depth(layout, cells, deepest) != null
+                var now = cells
+                var steps = 0
+                while (finished && now.any { it == 0 }) {
+                    val step = RegionsTeacher.deduce(layout, now)!!
+                    if (step.technique == RegionsTeacher.LOCKED) steps++
+                    now = now.toMutableList().also { it[step.cell] = step.digit }
+                }
+                assertEquals("${d.name} day $day", if (finished) steps else null, RegionsTeacher.lockedSteps(layout, cells, deepest))
+            }
         }
     }
 
