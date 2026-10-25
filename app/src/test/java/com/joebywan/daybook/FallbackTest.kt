@@ -20,6 +20,7 @@ import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Pointers
+import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.Tents
@@ -159,6 +160,10 @@ class FallbackTest {
      */
     @Test
     fun `pointers proves every daily board of a year on every tier`() = assertYearProved(Pointers) { seed, d -> Pointers.generateVerified(seed, d) }
+
+    /** [Mines.generateVerified] returns a board only when the ladder cleared it from its opening needing exactly the tier's step. */
+    @Test
+    fun `mines proves every daily board of a year on every tier`() = assertYearProved(Mines) { seed, d -> Mines.generateVerified(seed, d) }
 
     /** [Regions.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test

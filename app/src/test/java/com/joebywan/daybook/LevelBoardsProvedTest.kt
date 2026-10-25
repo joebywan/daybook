@@ -13,6 +13,7 @@ import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.Pointers
+import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Sets
@@ -52,6 +53,7 @@ class LevelBoardsProvedTest {
         "cages" to Cages::generateVerified,
         "nonogram" to NonogramLogic::generateVerified,
         "dominoes" to DominoLogic::generateVerified,
+        "mines" to Mines::generateVerified,
     )
 
     @Test
