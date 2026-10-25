@@ -40,6 +40,9 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.GLOW_ALPHA
 import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.graphics.drawscope.scale
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.core.union
+import androidx.compose.ui.graphics.drawscope.DrawScope
 
 /** An atom sits on a lattice point and needs exactly [bonds] bond-ends. */
 @Serializable
@@ -584,38 +587,11 @@ object Atoms : PuzzleType {
                 origin.y + (atom.row + 0.5f) * step,
             )
 
-            val lattice = scheme.outline.copy(alpha = 0.55f)
-            for (i in 0 until PREVIEW_SIZE) {
-                val at = (i + 0.5f) * step
-                drawLine(
-                    lattice,
-                    Offset(origin.x + at, origin.y),
-                    Offset(origin.x + at, origin.y + side),
-                    strokeWidth = maxOf(step * 0.010f, 1f),
-                )
-                drawLine(
-                    lattice,
-                    Offset(origin.x, origin.y + at),
-                    Offset(origin.x + side, origin.y + at),
-                    strokeWidth = maxOf(step * 0.010f, 1f),
-                )
-            }
+            drawLattice(PREVIEW_SIZE, step, origin, side, scheme.outline.copy(alpha = 0.55f))
 
             previewBonds.forEach { (a, b, count) ->
-                val from = centre(previewAtoms[a])
-                val to = centre(previewAtoms[b])
                 val horizontal = previewAtoms[a].row == previewAtoms[b].row
-                val shifts = if (count == 1) listOf(0f) else listOf(-step * 0.11f, step * 0.11f)
-                shifts.forEach { shift ->
-                    val dx = if (horizontal) 0f else shift
-                    val dy = if (horizontal) shift else 0f
-                    drawLine(
-                        color = ink,
-                        start = Offset(from.x + dx, from.y + dy),
-                        end = Offset(to.x + dx, to.y + dy),
-                        strokeWidth = stroke,
-                    )
-                }
+                drawBond(centre(previewAtoms[a]), centre(previewAtoms[b]), horizontal, count, step * 0.11f, stroke, ink)
             }
 
             previewAtoms.forEach { atom ->
@@ -668,7 +644,7 @@ object Atoms : PuzzleType {
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
         BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-            val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.size, maxHeight / s.size) else maxWidth / s.size
+            val step = fitStep(s.size, s.size)
             val stepPx = with(LocalDensity.current) { step.toPx() }
             val radius = stepPx * 0.34f
 
@@ -685,9 +661,7 @@ object Atoms : PuzzleType {
                                 androidx.compose.ui.geometry.Offset(atom.col * px, atom.row * px),
                                 androidx.compose.ui.geometry.Offset((atom.col + 1) * px, (atom.row + 1) * px),
                             )
-                            box = box?.let { b ->
-                                androidx.compose.ui.geometry.Rect(minOf(b.left, r.left), minOf(b.top, r.top), maxOf(b.right, r.right), maxOf(b.bottom, r.bottom))
-                            } ?: r
+                            box = box?.union(r) ?: r
                         }
                         for (index in named.strong + named.soft) {
                             if (index in s.atoms.indices) {
@@ -754,13 +728,7 @@ object Atoms : PuzzleType {
                 // The lattice the atoms stand on. Bonds run along these very lines, so the grid is
                 // drawn first and kept to a hairline at low alpha: heavy enough to answer "do these
                 // two line up?", far too faint to be mistaken for a bond.
-                val lattice = scheme.outline.copy(alpha = 0.40f)
-                val hair = maxOf(stepPx * 0.010f, 1f)
-                for (i in 0 until s.size) {
-                    val at = (i + 0.5f) * stepPx
-                    drawLine(lattice, Offset(at, 0f), Offset(at, size.height), strokeWidth = hair)
-                    drawLine(lattice, Offset(0f, at), Offset(size.width, at), strokeWidth = hair)
-                }
+                drawLattice(s.size, stepPx, Offset.Zero, size.height, scheme.outline.copy(alpha = 0.40f))
 
                 // Lines a hint names, drawn as a wide glow along the line whether or not it holds a
                 // bond yet: "this gap" has to be findable before anything is in it.
@@ -781,19 +749,7 @@ object Atoms : PuzzleType {
                     if (count == 0) return@forEachIndexed
                     // Everything a highlight does not name steps back.
                     val ink = Color(accent).copy(alpha = if (named(AtomsTeacher.pairCell(s.atoms.size, index))) 1f else 0.28f)
-                    val from = centre(s.atoms[pair.a])
-                    val to = centre(s.atoms[pair.b])
-                    val offsets = if (count == 1) listOf(0f) else listOf(-stepPx * 0.09f, stepPx * 0.09f)
-                    offsets.forEach { shift ->
-                        val dx = if (pair.horizontal) 0f else shift
-                        val dy = if (pair.horizontal) shift else 0f
-                        drawLine(
-                            color = ink,
-                            start = Offset(from.x + dx, from.y + dy),
-                            end = Offset(to.x + dx, to.y + dy),
-                            strokeWidth = stepPx * 0.055f,
-                        )
-                    }
+                    drawBond(centre(s.atoms[pair.a]), centre(s.atoms[pair.b]), pair.horizontal, count, stepPx * 0.09f, stepPx * 0.055f, ink)
                 }
 
                 // The bond the finger is reaching for, drawn faint under the atoms so the player
@@ -867,6 +823,26 @@ object Atoms : PuzzleType {
                     }
                 }
             }
+        }
+    }
+
+    /** The lattice: a hairline through the middle of each of [n] rows and columns of side [step], [extent] long. */
+    private fun DrawScope.drawLattice(n: Int, step: Float, origin: Offset, extent: Float, colour: Color) {
+        val hair = maxOf(step * 0.010f, 1f)
+        for (i in 0 until n) {
+            val at = (i + 0.5f) * step
+            drawLine(colour, Offset(origin.x + at, origin.y), Offset(origin.x + at, origin.y + extent), strokeWidth = hair)
+            drawLine(colour, Offset(origin.x, origin.y + at), Offset(origin.x + extent, origin.y + at), strokeWidth = hair)
+        }
+    }
+
+    /** A bond of [count] lines from [from] to [to], a double one [gap] either side of the centre line. */
+    private fun DrawScope.drawBond(from: Offset, to: Offset, horizontal: Boolean, count: Int, gap: Float, width: Float, colour: Color) {
+        val shifts = if (count == 1) listOf(0f) else listOf(-gap, gap)
+        shifts.forEach { shift ->
+            val dx = if (horizontal) 0f else shift
+            val dy = if (horizontal) shift else 0f
+            drawLine(colour, Offset(from.x + dx, from.y + dy), Offset(to.x + dx, to.y + dy), strokeWidth = width)
         }
     }
 

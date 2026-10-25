@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -798,13 +799,19 @@ internal fun HomeTile(
             }
         }
         Spacer(Modifier.height(4.dp))
+        // A one-word name shrinks to fit rather than breaking mid-word ("Codebreak / er" at 360dp); two words wrap.
+        val oneWord = ' ' !in name
+        val style = MaterialTheme.typography.titleMedium
         Text(
             name,
-            style = MaterialTheme.typography.titleMedium,
+            style = style,
             color = if (solved) accent else scheme.onSurface,
             textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+            maxLines = if (oneWord) 1 else 2,
+            softWrap = !oneWord,
+            // Clip, not Ellipsis: an ellipsis counts as fitting, so the size would never step down.
+            overflow = if (oneWord) TextOverflow.Clip else TextOverflow.Ellipsis,
+            autoSize = if (oneWord) TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = style.fontSize) else null,
         )
         Spacer(Modifier.height(3.dp))
         footer()
