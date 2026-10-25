@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
+
 /**
  * Dominoes, reasoned the way a person reasons it (`docs/DOMINO_SPEC.md` "Teacher").
  *
@@ -77,11 +80,11 @@ internal object DominoTeacher {
         val cited: Set<Int>,
         val nudge: String,
         val explanation: String,
-        val fallback: Boolean = false,
     ) {
         val targets: Set<Int>
             get() = (placement?.let { setOf(it.first, it.second) } ?: emptySet()) + (TRAY + domino)
         val mistake: Boolean get() = technique == MISTAKE
+        val fallback: Boolean get() = technique == FALLBACK
     }
 
     fun teach(s: DominoState): Step? {
@@ -100,11 +103,12 @@ internal object DominoTeacher {
     fun reached(s: DominoState, step: Step): Boolean {
         val now = s.placed.getOrNull(step.domino)
         val p = step.placement ?: return now == null
-        return now == p || (s.tray[step.domino].isDouble && now == Placement(p.second, p.first))
+        return now != null && same(s.tray[step.domino], now, p)
     }
 
     // ---- mistakes and the fallback ----------------------------------------------------------------
 
+    /** [a] and [b] lay [dom] the same: the same squares the same way round, or either way for a double. */
     private fun same(dom: Domino, a: Placement, b: Placement) =
         a == b || (dom.isDouble && a == Placement(b.second, b.first))
 
@@ -144,7 +148,6 @@ internal object DominoTeacher {
             nudge = "Try the ${words.domino(s.tray[d])}.",
             explanation = "No step I can explain from here, so this is the answer itself: the ${words.domino(s.tray[d])} goes here, " +
                 words.half(s.tray[d], p) + ".",
-            fallback = true,
         )
     }
 
@@ -211,7 +214,7 @@ internal object DominoTeacher {
         when (technique) {
             ONLY_PARTNER -> {
                 nudge = "Look at $where: how many free neighbours has it?"
-                text = { m -> "${words.cap(where)} has one free neighbour, so the two share a domino. " +
+                text = { m -> "${where.cap()} has one free neighbour, so the two share a domino. " +
                     (if (facts.isEmpty()) "Only the $name is left. " else "Only the $name fits ${factList(m)}. ") + so }
             }
             ONLY_PLACE -> {
@@ -226,7 +229,7 @@ internal object DominoTeacher {
                 nudge = "Look at what ${words.regionOrThis(facts)} can be made of."
                 val value = facts.filter { it.kind == DominoLadder.VALUE_KIND }
                 text = { m -> if (value.isEmpty()) "The values the tray can still supply settle the regions around it. That leaves $leaves. $so"
-                    else "${words.cap(words.facts(value.take(m)))} can only be made from what the tray still has. That leaves $leaves. $so" }
+                    else "${words.facts(value.take(m)).cap()} can only be made from what the tray still has. That leaves $leaves. $so" }
             }
             else -> {
                 nudge = "Count the ${words.countValue(facts)} left in the tray."
@@ -235,7 +238,7 @@ internal object DominoTeacher {
                     "That leaves $leaves. $so" }
             }
         }
-        val explanation = fit(listOf(3, 2, 1).map(text) + "${words.cap(words.techniqueName(technique))}. $so")
+        val explanation = fit(listOf(3, 2, 1).map(text) + "${words.techniqueName(technique).cap()}. $so")
         val cited = regionsIn(facts).map { RULE + it }.toSet() + (if (partner >= 0) setOf(q, partner) else emptySet())
         return Step(technique, used, d, p, setOf(p.first, p.second), cited, fitNudge(nudge, "Look at the $name."), explanation)
     }
@@ -290,8 +293,6 @@ internal object DominoTeacher {
             return if (!which) domino(d) else if (d.isDouble) "${domino(d)} going $dir" else "${domino(d)} going $dir, its $here here"
         }
 
-        fun cap(s: String) = s.replaceFirstChar { it.uppercaseChar() }
-
         fun domino(d: Domino) = if (d.isDouble) "double ${d.a}" else "${d.b}-${d.a}"
 
         /** Which half goes where: "its 6 on row 2, column 3" (the larger half), or "across both squares" for a double. */
@@ -325,11 +326,7 @@ internal object DominoTeacher {
 
         fun facts(list: List<DominoLadder.Reason>): String {
             val parts = list.map { fact(it) }
-            return when (parts.size) {
-                0 -> "the rules"
-                1 -> parts[0]
-                else -> parts.dropLast(1).joinToString(", ") + " and " + parts.last()
-            }
+            return if (parts.isEmpty()) "the rules" else listed(parts)
         }
 
         fun regionOrThis(facts: List<DominoLadder.Reason>): String =

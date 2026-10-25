@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
+import com.joebywan.daybook.core.union
 
 /**
  * A Mate puzzle in play: a position and the player's moves so far. Only the player's moves are stored; the
@@ -202,11 +203,6 @@ object Chess : PuzzleType {
 
     // ---- drawing -----------------------------------------------------------------------------
 
-    private val WHITE_FILL = Color(0xFFF6F2E8)
-    private val WHITE_LINE = Color(0xFF1C1B1F)
-    private val BLACK_FILL = Color(0xFF2B2A30)
-    private val BLACK_LINE = Color(0xFFF6F2E8)
-
     /** The two reserved caption lines under the board, so feedback never moves it. */
     private val CAPTION_HEIGHT = 44.dp
     private val CAPTION_GAP = 8.dp
@@ -224,7 +220,7 @@ object Chess : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val (light, dark) = squareColours(scheme)
         Canvas(modifier) {
-            drawChessMotif(size, light, dark, WHITE_FILL, WHITE_LINE, BLACK_FILL, BLACK_LINE)
+            drawChessMotif(size, light, dark)
         }
     }
 
@@ -240,12 +236,6 @@ object Chess : PuzzleType {
     private fun row(sq: Int, whiteBottom: Boolean) = if (whiteBottom) 7 - sq / 8 else sq / 8
     private fun squareAt(col: Int, row: Int, whiteBottom: Boolean) =
         if (whiteBottom) (7 - row) * 8 + col else row * 8 + (7 - col)
-
-    private fun src(m: Int) = m and 63
-    private fun dst(m: Int) = (m shr 6) and 63
-    private fun promo(m: Int) = m shr 12
-
-    private const val PIECE_LETTERS = "PNBRQK"
 
     private fun DrawScope.ring(topLeft: Offset, cell: Float, color: Color, width: Float, corner: Float = 0f) {
         drawRoundRect(
@@ -284,15 +274,15 @@ object Chess : PuzzleType {
         }
 
         val shown = if (settling) replay.beforeReply else replay.position
-        val kingSq = if (ChessRules.inCheck(shown)) (0..63).first { shown.pieceAt(it) == if (shown.whiteToMove) 6 else -6 } else -1
-        val destinations = if (selected >= 0) moves.filter { src(it) == selected }.map { dst(it) } else emptyList()
+        val kingSq = if (ChessRules.inCheck(shown)) ChessRules.kingSq(shown.sq, shown.whiteToMove) else -1
+        val destinations = if (selected >= 0) moves.filter { ChessRules.from(it) == selected }.map { ChessRules.to(it) } else emptyList()
         val lastSquares: Set<Int> = buildSet {
             if (s.played.isEmpty() && s.last.length >= 4) {
                 fun sq(i: Int) = (s.last[i + 1] - '1') * 8 + (s.last[i] - 'a')
                 add(sq(0)); add(sq(2))
             }
-            if (replay.playerMove >= 0) { add(src(replay.playerMove)); add(dst(replay.playerMove)) }
-            if (!settling && replay.reply >= 0) { add(src(replay.reply)); add(dst(replay.reply)) }
+            if (replay.playerMove >= 0) { add(ChessRules.from(replay.playerMove)); add(ChessRules.to(replay.playerMove)) }
+            if (!settling && replay.reply >= 0) { add(ChessRules.from(replay.reply)); add(ChessRules.to(replay.reply)) }
         }
 
         fun commit(m: Int) {
@@ -310,11 +300,11 @@ object Chess : PuzzleType {
             if (settling || pending != null || !interactive) return
             val at = selected
             if (at >= 0) {
-                val candidates = moves.filter { src(it) == at && dst(it) == sq }
+                val candidates = moves.filter { ChessRules.from(it) == at && ChessRules.to(it) == sq }
                 if (candidates.size > 1) { pending = at to sq; return }
                 if (candidates.size == 1) { commit(candidates[0]); return }
             }
-            selected = if (sq != at && moves.any { src(it) == sq }) sq else -1
+            selected = if (sq != at && moves.any { ChessRules.from(it) == sq }) sq else -1
         }
 
         val (light, dark) = squareColours(scheme)
@@ -345,7 +335,7 @@ object Chess : PuzzleType {
                                     Offset(col(i, whiteBottom) * w, row(i, whiteBottom) * w),
                                     Size(w, w),
                                 )
-                                out = out?.let { o -> Rect(minOf(o.left, r.left), minOf(o.top, r.top), maxOf(o.right, r.right), maxOf(o.bottom, r.bottom)) } ?: r
+                                out = out?.union(r) ?: r
                             }
                             out
                         },
@@ -369,9 +359,7 @@ object Chess : PuzzleType {
                             val faded = dims && sq !in highlight.strong && sq !in highlight.soft
                             val k = if (faded) 0.35f else 1f
                             drawChessPiece(
-                                PIECE_LETTERS[abs(v) - 1], at(sq) + Offset(c * 0.04f, c * 0.04f), c * 0.92f,
-                                (if (white) WHITE_FILL else BLACK_FILL).copy(alpha = k),
-                                (if (white) WHITE_LINE else BLACK_LINE).copy(alpha = k),
+                                ChessPosition.LETTERS[abs(v)], at(sq) + Offset(c * 0.04f, c * 0.04f), c * 0.92f, white, k,
                             )
                         }
                         for (sq in destinations) {
@@ -430,14 +418,13 @@ object Chess : PuzzleType {
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(scheme.surface)
                                             .clickable {
-                                                moves.firstOrNull { src(it) == a && dst(it) == b && promo(it) == kind }?.let(::commit)
+                                                moves.firstOrNull { ChessRules.from(it) == a && ChessRules.to(it) == b && ChessRules.promo(it) == kind }?.let(::commit)
                                             },
                                     ) {
                                         Canvas(Modifier.fillMaxSize()) {
                                             val white = whiteBottom
                                             drawChessPiece(
-                                                PIECE_LETTERS[kind - 1], Offset.Zero, size.width,
-                                                if (white) WHITE_FILL else BLACK_FILL, if (white) WHITE_LINE else BLACK_LINE,
+                                                ChessPosition.LETTERS[kind], Offset.Zero, size.width, white,
                                             )
                                             if (look in highlight.strong) ring(Offset.Zero, size.width, glow.copy(alpha = pulse.value), size.width * 0.06f, 10.dp.toPx())
                                         }

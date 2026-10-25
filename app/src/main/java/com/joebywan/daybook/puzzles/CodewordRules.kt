@@ -265,7 +265,9 @@ internal object CodewordLogic {
         return CodewordState(size = entry.size, numbers = numbers, solution = verdict.letters, given = given, letters = letters)
     }
 
-    /** Null when nothing was proved. Pure in (seed, difficulty): only the list's own order reaches the `Rng`. */
+    fun generate(seed: Long, difficulty: Difficulty): CodewordState = generateVerified(seed, difficulty) ?: lastResort(difficulty)
+
+    /** The board when its answer was proved, null otherwise (what `FallbackTest` asserts on). Pure in (seed, difficulty): only the list's own order reaches the `Rng`. */
     fun generateVerified(seed: Long, difficulty: Difficulty): CodewordState? {
         val list = entries(difficulty)
         for (attempt in 0 until ATTEMPTS) {

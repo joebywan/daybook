@@ -2,6 +2,9 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.arrowStep
+import com.joebywan.daybook.core.digitKey
+import com.joebywan.daybook.core.isEraseKey
+import com.joebywan.daybook.core.letterKey
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
 
 /** What a physical key asks of a Cipher board. No state, no focus. */
@@ -19,25 +22,12 @@ sealed interface CipherKeyAction {
     data class Move(val step: Int) : CipherKeyAction
 }
 
-private val LETTER_KEYS = listOf(
-    Key.A, Key.B, Key.C, Key.D, Key.E, Key.F, Key.G, Key.H, Key.I, Key.J, Key.K, Key.L, Key.M,
-    Key.N, Key.O, Key.P, Key.Q, Key.R, Key.S, Key.T, Key.U, Key.V, Key.W, Key.X, Key.Y, Key.Z,
-)
-
-private val DIGIT_KEYS = listOf(
-    Key.Zero to Key.NumPad0, Key.One to Key.NumPad1, Key.Two to Key.NumPad2, Key.Three to Key.NumPad3,
-    Key.Four to Key.NumPad4, Key.Five to Key.NumPad5, Key.Six to Key.NumPad6, Key.Seven to Key.NumPad7,
-    Key.Eight to Key.NumPad8, Key.Nine to Key.NumPad9,
-)
-
 /** The action for [key], or null for a key the board does not use. The caller has ruled out chords. */
 fun cipherKeyAction(key: Key): CipherKeyAction? {
     arrowStep(key)?.let { (r, c) -> return CipherKeyAction.Move(r + c) }
-    if (key == Key.Backspace || key == Key.Delete) return CipherKeyAction.Clear
-    val letter = LETTER_KEYS.indexOf(key)
-    if (letter >= 0) return CipherKeyAction.Letter('a' + letter)
-    val digit = DIGIT_KEYS.indexOfFirst { key == it.first || key == it.second }
-    return if (digit >= 0) CipherKeyAction.Digit(digit) else null
+    if (isEraseKey(key)) return CipherKeyAction.Clear
+    letterKey(key)?.let { return CipherKeyAction.Letter(it) }
+    return digitKey(key)?.let { CipherKeyAction.Digit(it) }
 }
 
 /** What pressing [digit] does to [letter]: gives it the digit, or takes it away if it already has it. */

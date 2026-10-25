@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
+
 /**
  * Pipes, reasoned the way a person reasons it, one tile at a time.
  *
@@ -263,7 +266,7 @@ internal object PipesTeacher {
             val ds = sides[kind]
             if (ds.isEmpty()) continue
             val one = ds.size == 1
-            val tiles = (if (one) "the tile " else "the tiles ") + join(ds.map { towards[it] })
+            val tiles = (if (one) "the tile " else "the tiles ") + listed(ds.map { towards[it] })
             parts += tiles + when (kind) {
                 0 -> if (one) " is set and points into it" else " are set and point into it"
                 1 -> if (one) " is set and doesn't point at it" else " are set and don't point at it"
@@ -289,13 +292,13 @@ internal object PipesTeacher {
                 shape.countOneBits() == 2 && border.size >= 2 ->
                     "In a corner, a bend can't point off either edge, so it can only turn one way."
                 else ->
-                    "It sits against the border on its ${join(border.map { sideName[it] })}, and no " +
+                    "It sits against the border on its ${listed(border.map { sideName[it] })}, and no " +
                         "pipe can point off the board, so it only fits one way round."
             }
             return Reason(text, citedSorted, technique, setNeighbours)
         }
         val all = buildList {
-            if (border.isNotEmpty()) add("its ${join(border.map { sideName[it] })} is against the border")
+            if (border.isNotEmpty()) add("its ${listed(border.map { sideName[it] })} is against the border")
             addAll(parts)
         }
         val reasons = "${clauses(all).cap()}."
@@ -530,17 +533,9 @@ internal object PipesTeacher {
 
     // ---- words -----------------------------------------------------------------------------------
 
-    private fun join(words: List<String>): String = when (words.size) {
-        0 -> ""
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " and " + words.last()
-    }
-
     /** Whole clauses, which may carry their own "and": a semicolon keeps them apart. */
     private fun clauses(parts: List<String>): String = when (parts.size) {
         1 -> parts[0]
         else -> parts.joinToString("; ")
     }
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
 }

@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.has
+import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.puzzles.CodewordLogic.EMPTY
 
 /**
@@ -59,8 +62,8 @@ internal object CodewordTeacher {
 
         constructor(shape: Shape, letters: List<Int>) : this(shape, IntArray(shape.k), Array(shape.runs.size) { IntArray(0) }) {
             var placed = 0
-            for (l in letters) if (l != EMPTY) placed = placed or (1 shl l)
-            for (n in 0 until shape.k) cand[n] = if (letters[n] != EMPTY) 1 shl letters[n] else ALL and placed.inv()
+            for (l in letters) if (l != EMPTY) placed = placed or bit(l)
+            for (n in 0 until shape.k) cand[n] = if (letters[n] != EMPTY) bit(letters[n]) else ALL and placed.inv()
             for (r in shape.runs.indices) {
                 val list = CodewordWords.of(shape.runs[r].size)
                 words[r] = list.letters.indices.filter { list.shapes[it] == shape.shapes[r] }.toIntArray()
@@ -74,7 +77,7 @@ internal object CodewordTeacher {
         private fun filter(r: Int) {
             val run = shape.runs[r]
             val list = CodewordWords.of(run.size)
-            words[r] = words[r].filter { w -> val ls = list.letters[w]; run.indices.all { cand[run[it]] and (1 shl ls[it]) != 0 } }.toIntArray()
+            words[r] = words[r].filter { w -> val ls = list.letters[w]; run.indices.all { has(cand[run[it]], ls[it]) } }.toIntArray()
             if (words[r].isEmpty()) consistent = false
         }
 
@@ -84,7 +87,7 @@ internal object CodewordTeacher {
             val at = run.indexOf(n)
             val list = CodewordWords.of(run.size)
             var m = 0
-            for (w in words[r]) m = m or (1 shl list.letters[w][at])
+            for (w in words[r]) m = m or bit(list.letters[w][at])
             return m
         }
 
@@ -229,12 +232,7 @@ internal object CodewordTeacher {
 
     private fun word(shape: Shape, r: Int, w: Int) = CodewordWords.of(shape.runs[r].size).words[w].uppercase()
 
-    private fun letterList(m: Int): String {
-        val ls = (0 until 26).filter { m and (1 shl it) != 0 }.map { up(it) }
-        return if (ls.size == 1) ls[0] else ls.dropLast(1).joinToString(", ") + " or " + ls.last()
-    }
-
-    private fun wordList(ws: List<String>): String = if (ws.size == 1) ws[0] else ws.dropLast(1).joinToString(", ") + " and " + ws.last()
+    private fun letterList(m: Int): String = listed((0 until 26).filter { has(m, it) }.map { up(it) }, and = "or")
 
     private fun fallback(s: CodewordState): Step? {
         val n = s.letters.indices.firstOrNull { s.letters[it] == EMPTY } ?: return null
@@ -285,7 +283,7 @@ internal object CodewordTeacher {
             )
             RUN_AGREES -> {
                 val ws = hit.words.map { word(shape, r, it) }
-                val text = fit("${wordList(ws)} all fit ${read(shape, letters, r)}, and every one has $l for $x.")
+                val text = fit("${listed(ws)} all fit ${read(shape, letters, r)}, and every one has $l for $x.")
                     ?: "${ws.size} words fit ${read(shape, letters, r)} (${ws.take(3).joinToString(", ")}, ...), and every one has $l for $x."
                 Step(RUN_AGREES, n, hit.letter, runSquares, runSquares, "Look at the words that fit the glowing word.", text)
             }
@@ -293,7 +291,7 @@ internal object CodewordTeacher {
                 val sight = Sight(shape, letters)
                 val parts = shape.runsOf[n].map { "${read(shape, letters, it)} (${letterList(sight.support(it, n))})" }
                 val cited = shape.runsOf[n].flatMap { shape.squares[it].toList() }.toSet()
-                val text = fit("$x is in ${wordList(parts)}. Only $l fits them all, so $x is $l.")
+                val text = fit("$x is in ${listed(parts)}. Only $l fits them all, so $x is $l.")
                     ?: "$x is in ${parts.size} words, and each allows only some letters for it. Only $l fits them all, so $x is $l."
                 Step(CROSSING, n, hit.letter, mine, cited, "Look at every word $x is in.", text)
             }

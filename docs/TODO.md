@@ -21,6 +21,9 @@ from a measurement or review, so you can check it is still true.
   and the calendar's day cells (sized from width, ~40dp at 360). The archive calendar's day cells size from both axes and
   are as large as the box allows: ~44dp at 375x537 and ~41dp on a phone on its side (844x390), where six weeks must fit
   under the title; dropping the "N days, all unlocked" line when the box is short would buy them about 5dp. *S each.*
+- [ ] **Screenshots show the old names.** Snap, Mambo, Tower and Pointers became Trail, Sun & Moon, Codebreaker and Arrows
+  (2026-10-25); `docs/screenshots/home.png` and the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
+  with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
@@ -38,15 +41,11 @@ from a measurement or review, so you can check it is still true.
   which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
-- [ ] **Regions: sparser boards, and README screenshots.** The ladder is three single-digit techniques, so boards carry
-  about 27 / 21 / 19% of squares as givens. A locked-candidate technique (a digit whose every place in a region touches
-  one square rules that square out) would let the generator take more back, but it ends in an elimination, not a
-  placement, and Regions has no pencil marks; it would need a step that explains one elimination and then a placement
-  (Inequality's `SIGN_BOUND` is the model). *M.*
+- [ ] **Regions: README screenshots.** (Its sparser boards came with the locked candidate.) *S.*
+- [ ] **Regions: Expert's fill is slow in the browser.** `randomBoard` is about 85 ms of a 9x9 draw on the JVM, and Expert
+  generation is 187 ms median, 0.8 s p95, 1.7 s worst in Chromium (it was as slow before the depth gate). A cheaper fill
+  (fewer restarts, or growing regions where the fill is already forced) would fix it; it moves every board. *M.*
 
-- [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
-  together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
-  would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
 - [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
@@ -164,19 +163,12 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 
 - [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
-  - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
-    or what-if, no fallback.
-  - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
-  - Inequality (pairs, sign chains) and Regions (locked candidates): the ladder is too short; the techniques come first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
-- [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
-  same `countTilings` proof.
 - [ ] **Screen RETARD and CRIPPLE out of the 6/7-letter grid lists** (`tools/words/exclude.txt`'s own section for those
   lengths). Word Wheel's `GRID_6`/`GRID_7` hold them; Codeword's builder skips them (`CodewordGridsBuildTest.SKIP`) rather
   than change the lists, which would move Word Wheel's boards. Rebuild both puzzles' lists in the same change.
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
-- [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
-  lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Mini crossword (5x5,
+- [ ] **New puzzles, in order:** Pearl loop, Who's Who (a logic grid from templated clues), Mini crossword (5x5,
   fills built offline from the hand-written clues; `test/CrosswordFill.kt`, Codeword's pattern maker and filler, is
   written to be reused). Each gets a spec first (`docs/<NAME>_SPEC.md`).
 
@@ -195,6 +187,22 @@ below have a famous branded version; use the descriptive name).
 
 ### Asked for by the owner
 
+- [ ] **Nonogram: pinch to zoom.** Expert's squares are small: 19.3dp at 390x844, 15.8 at 375x537, 17.3 at 844x390 (web
+  renders, 2026-10-25). A board reshaped to fit was rendered and dropped: 12x18 grew squares to 24dp on a tall phone but
+  shrank them to 13 / 14dp on a short phone and a phone on its side, and it moves every Expert board. Narrower clue slots
+  and a cap of 5 runs a line gained under 1dp. Zoom helps every screen and changes no board. Design agreed with the owner:
+  - Pinch zooms about the fingers (up to about 2.5x); there is no two-finger pan to learn.
+  - Zoomed: one finger taps to mark and drags to pan (past touch slop it is a pan, never a mark). Whole board: as now
+    (tap marks, drag sweeps). The owner mostly taps single squares on Expert, so losing the sweep while zoomed is fine.
+  - A second finger drops a sweep already started (the sweep is `remember` until lift, so nothing reaches undo).
+  - Clues stay pinned: row clues on the left scroll only up and down with the grid, column clues on the top only sideways.
+  - A "fit" button shows in a corner only while zoomed; pinching out also returns to the whole board. No double-tap zoom
+    (every fill tap would wait ~300 ms).
+  - A hint pans to its line, and solving zooms out for the solve wave. The zoom is `remember` state, never saved.
+  - Web: Ctrl+wheel (and trackpad pinch) zooms, a mouse drag pans. Check that the page itself does not zoom, in Chromium
+    and WebKit, and on the emulator.
+  - How-to-play text and walkthrough get a line about zoom. It is a feature a player notices: bump `version.txt`'s middle
+    number and write "What's new". *M.*
 - [ ] **Nonogram and Lexicon: short phone screens on the emulator.** Both were driven on the Android emulator
   (1080x2160 and 1080x2400, 2026-10-03): the Lexicon hint popover over a highlighted row and keys, its nine-frame
   walkthrough, hardware keys, and a Nonogram 5x5 swept by touch drag to the finish frame all work, and a save made on
@@ -239,9 +247,6 @@ and Battleships is close to Tents.
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
   prototype the input before committing. *L.*
-- [ ] **Mines, no guessing.** Minesweeper rules: tap reveals, long-press flags. Ship only boards logic clears from the
-  first reveal (a solver proves it, as the Tents and Tally ladders do); a hint names the deduction ("this 2 already
-  touches two flags, so the rest are safe"). Tiers: size and density. A mine loses the board, as Pointers' lives do. *M.*
 - [ ] **Skyscrapers.** A Latin square with edge clues (how many buildings are visible from that side). Inequality's
   Latin-square rules, generator and prover carry over; only the clue type is new. *S–M.*
 - [ ] **Hitori.** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.
@@ -281,6 +286,11 @@ only spend their time railroaded through a tutorial.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
+- **Mines: chording.** A tap on a number whose flags are met opening its other neighbours, as most versions have. Left out
+  (`docs/MINES_SPEC.md`): with a wrong flag it opens a mine, a life lost to a note. Add it only if the owner wants the speed.
+- **Mines Expert on a short screen.** Eight wide keeps the square at 42-45 dp on a phone, but twelve rows are height-bound in a
+  phone browser with both toolbars (375x537: about 21 px squares; a phone on its side puts the controls beside the board and gets
+  about 31). Shorter Expert boards (8x11) or fewer rows are the lever if a mis-tap there is reported.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),

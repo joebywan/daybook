@@ -1,9 +1,8 @@
 package com.joebywan.daybook
 
 import androidx.compose.ui.input.key.Key
-import com.joebywan.daybook.puzzles.TallyKeyAction
+import com.joebywan.daybook.core.PenKeyAction
 import com.joebywan.daybook.puzzles.TallyState
-import com.joebywan.daybook.puzzles.applyKey
 import com.joebywan.daybook.puzzles.tallyKeyAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -16,11 +15,11 @@ class TallyKeysTest {
 
     @Test
     fun keysMapAndShiftOnlyMovesAndLays() {
-        assertEquals(TallyKeyAction.Pen('x'), tallyKeyAction(Key.X, false))
-        assertEquals(TallyKeyAction.Pen('x'), tallyKeyAction(Key.R, false))
-        assertEquals(TallyKeyAction.Pen('o'), tallyKeyAction(Key.K, false))
-        assertEquals(TallyKeyAction.Pen('o'), tallyKeyAction(Key.O, false))
-        assertEquals(TallyKeyAction.Move(0, 1, true), tallyKeyAction(Key.DirectionRight, true))
+        assertEquals(PenKeyAction.Pen('x'), tallyKeyAction(Key.X, false))
+        assertEquals(PenKeyAction.Pen('x'), tallyKeyAction(Key.R, false))
+        assertEquals(PenKeyAction.Pen('o'), tallyKeyAction(Key.K, false))
+        assertEquals(PenKeyAction.Pen('o'), tallyKeyAction(Key.O, false))
+        assertEquals(PenKeyAction.Move(0, 1, true), tallyKeyAction(Key.DirectionRight, true))
         assertNull(tallyKeyAction(Key.X, true))
         assertNull(tallyKeyAction(Key.Q, false))
     }

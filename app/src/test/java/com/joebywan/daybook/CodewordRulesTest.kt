@@ -174,7 +174,7 @@ class CodewordRulesTest {
             for (day in 0 until 365) {
                 val seed = DailySeed.seedFor(start.plusDays(day.toLong()), Codeword.id, d)
                 val t0 = System.nanoTime()
-                val s = Codeword.generateVerified(seed, d)!!
+                val s = CodewordLogic.generateVerified(seed, d)!!
                 times += System.nanoTime() - t0
                 givens += s.given.size
                 val need = Codeword.neededTechnique(s)

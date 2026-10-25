@@ -21,6 +21,8 @@ import com.joebywan.daybook.puzzles.MamboState
 import com.joebywan.daybook.puzzles.MosaicState
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.RegionsState
+import com.joebywan.daybook.puzzles.LampsLogic
+import com.joebywan.daybook.puzzles.LampsState
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.TargetOp
@@ -31,6 +33,7 @@ import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
 import com.joebywan.daybook.puzzles.PointersState
+import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsState
@@ -125,6 +128,9 @@ class StateSerializationTest {
         is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is RegionsState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is TallyState -> state.tap(0, TallyLogic.REMOVED).tap(1, TallyLogic.KEPT)
+        is LampsState -> state.walls.indexOf(LampsLogic.WHITE).let {
+            state.withMark(it, LampsLogic.LAMP_MARK).withMark(state.walls.indexOf(LampsLogic.WHITE, it + 1), LampsLogic.CROSS)
+        }
         is DominoState -> DominoLogic.flip(DominoLogic.place(DominoLogic.place(state, 0, state.answer[0]), 1, state.answer[1]), 1)
         is TargetState -> state.combine(0, TargetOp.Add, 1)!!
         is WordWheelState -> state.enter(state.slots[1].word)
@@ -141,6 +147,13 @@ class StateSerializationTest {
             val free = state.arrows.indices.first { state.blocker(it) < 0 }
             val stuck = state.arrows.indices.first { state.blocker(it) >= 0 }
             state.tap(state.arrows[free][0])!!.tap(state.arrows[stuck][0])!!
+        }
+        // A flag, a reveal and a mine hit, so the marks and the lives must survive.
+        is MinesState -> {
+            val hidden = state.marks.indices.filter { state.marks[it] == '.' }
+            val mine = hidden.first { state.isMine(it) }
+            val safe = hidden.first { !state.isMine(it) }
+            state.flag(hidden.first { it != mine && it != safe })!!.reveal(safe)!!.reveal(mine)!!
         }
         is SetsState -> state.copy(
             found = listOf(Sets.allSets(state.cards).first()),

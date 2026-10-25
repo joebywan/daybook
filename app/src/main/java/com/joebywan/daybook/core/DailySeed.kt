@@ -19,8 +19,4 @@ object DailySeed {
 
     fun seedFor(date: LocalDate, puzzleId: String, difficulty: Difficulty): Long =
         SeedHash.daily(date.toEpochDays(), puzzleId, difficulty)
-
-    /** Random games use a fresh seed each time; callers pass a counter or nanotime. */
-    fun randomSeed(puzzleId: String, difficulty: Difficulty, nonce: Long): Long =
-        SeedHash.random(puzzleId, difficulty, nonce)
 }

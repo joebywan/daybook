@@ -161,11 +161,23 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Follow a blocked arrow's line to find what to clear first.",
         "An arrow on the edge pointing outwards is always free.",
     ),
+    "mines" to listOf(
+        "A number with all its mines found: the rest around it are safe.",
+        "Two numbers sharing squares: compare what each still needs.",
+        "Near the end, count the mines left against the hidden squares.",
+        "A flag keeps its square from being revealed by mistake.",
+    ),
     "dominoes" to listOf(
         "A square with one free neighbour must pair with it.",
         "A one-square region tells you that square's pips outright.",
         "The tray holds one of each domino: count what is left.",
         "A big total over two squares needs big halves on both.",
+    ),
+    "lamps" to listOf(
+        "A 4, or a 3 against the edge, fills every square beside it.",
+        "A square boxed in by walls has to light itself.",
+        "No lamp where it would light both of a 1's last two squares.",
+        "Crosses help: a crossed square can still be lit from afar.",
     ),
 )
 

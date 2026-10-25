@@ -17,23 +17,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -51,11 +41,13 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.puzzles.CodewordLogic.EMPTY
 import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberSettled
+import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
-import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 
 /**
@@ -95,16 +87,13 @@ private val MAX_SQUARE = 52.dp
 /** Letters a row on the letter keys: A to M, then N to Z. */
 private const val LETTERS_A_ROW = 13
 
-/** How long a broken rule waits before it shows, so passing through one is not shouted at (CLAUDE.md). */
-private const val SETTLE_MILLIS = 1000L
-
 /** Codeword: a filled crossword with a number for every letter. */
 object Codeword : PuzzleType {
 
     override val id = "codeword"
     override val displayName = "Codeword"
     override val tagline = "Each number is a letter. Crack the grid."
-    override val accent = 0xFF3C28BD
+    override val accent = 0xFF65E7E7
     override val rules = listOf(
         "Every number stands for one letter, the same letter wherever it appears. Different numbers are different letters.",
         "Every word across and down is a real word.",
@@ -115,11 +104,7 @@ object Codeword : PuzzleType {
 
     override val keyboardHelp = listOf("With a number picked, type its letter (again to clear it); Backspace clears, arrows walk the numbers.")
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: CodewordLogic.lastResort(difficulty)
-
-    /** The board when its answer was proved, null otherwise. What `FallbackTest` asserts on. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): CodewordState? = CodewordLogic.generateVerified(seed, difficulty)
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = CodewordLogic.generate(seed, difficulty)
 
     /** The hardest step of the ladder's walk from the givens, the measure the tiers are cut by. */
     override fun neededTechnique(state: PuzzleState): String? {
@@ -162,28 +147,6 @@ object Codeword : PuzzleType {
     }
 
     // ---- drawing ---------------------------------------------------------------------------
-
-    private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
-
-    private fun BoardHighlight.look(index: Int, dims: Boolean = true): Look {
-        val strong = index in this.strong
-        val soft = !strong && index in this.soft
-        return Look(strong, soft, dims && !isEmpty && !strong && !soft)
-    }
-
-    private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, corner: Float): Modifier =
-        if (!look.strong && !look.soft) this
-        else drawWithContent {
-            drawContent()
-            val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
-            drawRoundRect(
-                if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                topLeft = Offset(w / 2, w / 2),
-                size = Size(size.width - w, size.height - w),
-                cornerRadius = CornerRadius(corner.dp.toPx()),
-                style = Stroke(w),
-            )
-        }
 
     private fun up(l: Int) = ('A' + l).toString()
 
@@ -280,14 +243,8 @@ object Codeword : PuzzleType {
         // A broken rule shows after a pause and goes at once when mended; held here, not in the state (undo).
         val runs = remember(s.size, s.numbers) { CodewordLogic.runs(s.size, s.numbers) }
         val live = remember(s.letters) { CodewordLogic.conflicts(s.size, s.numbers, s.letters) }
-        var shown by remember(s.numbers) { mutableStateOf(CodewordLogic.Conflicts(emptySet(), emptySet())) }
-        LaunchedEffect(live) {
-            val keep = CodewordLogic.Conflicts(shown.numbers intersect live.numbers, shown.runs intersect live.runs)
-            shown = keep
-            if (keep.numbers == live.numbers && keep.runs == live.runs) return@LaunchedEffect
-            delay(SETTLE_MILLIS)
-            shown = live
-        }
+        val settled = rememberSettled(live, reset = s.numbers, change = s.letters)
+        val shown = CodewordLogic.Conflicts(live.numbers intersect settled.numbers, live.runs intersect settled.runs)
         val red = shown.runs.flatMap { runs[it].toList() }.toSet()
         // A letter set on a number settles on every square of it; a word spelled by the rules glows once.
         val cells = s.numbers.map { if (it == 0) null else s.letters[it - 1] }
@@ -332,7 +289,7 @@ object Codeword : PuzzleType {
                         val look = highlight.look(i)
                         Modifier
                             .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
-                            .ring(look, glow, pulse, corner = 4f)
+                            .ring(look, glow, pulse, corner = 4.dp)
                             .then(if (i in red) Modifier.border(2.dp, scheme.error, RoundedCornerShape(4.dp)) else Modifier)
                             .clickable(enabled = interactive && n !in s.given) { onState(s.select(n)) }
                     },
@@ -354,7 +311,7 @@ object Codeword : PuzzleType {
                                     .weight(1f)
                                     .height(NUMBER_KEY_HEIGHT)
                                     .highlightAnchor(CodewordLogic.key(n))
-                                    .ring(highlight.look(CodewordLogic.key(n), dims = false), glow, pulse, corner = 6f)
+                                    .ring(highlight.look(CodewordLogic.key(n), dims = false), glow, pulse, corner = 6.dp)
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(
                                         when {
@@ -399,7 +356,7 @@ object Codeword : PuzzleType {
                                     .weight(1f)
                                     .height(LETTER_KEY_HEIGHT)
                                     .highlightAnchor(CodewordLogic.letterKey(l))
-                                    .ring(highlight.look(CodewordLogic.letterKey(l), dims = false), glow, pulse, corner = 6f)
+                                    .ring(highlight.look(CodewordLogic.letterKey(l), dims = false), glow, pulse, corner = 6.dp)
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(
                                         when {

@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import kotlin.math.abs
 
 /**
  * Mate, taught by the prover. Indices in `focus` / `cited` / `targets` are the board's own squares, 0..63
@@ -48,15 +49,12 @@ internal object ChessTeacher {
     private fun side(white: Boolean) = if (white) "White" else "Black"
     /** Black's moves are written "...Kg8"; White's plain. [p] is the position the move is made in. */
     private fun dots(p: ChessPosition) = if (p.whiteToMove) "" else "..."
-    private fun abs(x: Int) = if (x < 0) -x else x
 
     /** "Rd1", "pawn d4": a piece and its square, for naming what covers a square. */
     private fun named(p: ChessPosition, s: Int): String {
-        val k = kind(p, s)
-        return if (k == 1) "pawn ${ChessRules.name(s)}" else "${" PNBRQK"[k]}${ChessRules.name(s)}"
+        val k = abs(p.pieceAt(s))
+        return if (k == 1) "pawn ${ChessRules.name(s)}" else "${ChessPosition.LETTERS[k]}${ChessRules.name(s)}"
     }
-
-    private fun kind(p: ChessPosition, s: Int): Int = p.pieceAt(s).let { if (it < 0) -it else it }
 
     // ---- replaying what the player has done ------------------------------------------------------------
 
@@ -146,8 +144,8 @@ internal object ChessTeacher {
         val white = position.whiteToMove
         val key = res.keys.firstOrNull { ChessRules.inCheck(ChessRules.play(position, it)) } ?: res.keys.first()
         val c = ChessRules.play(position, key)
-        val king = kingSquare(c, !white)
-        val piece = "${KIND[kind(position, ChessRules.from(key))]} on ${ChessRules.name(ChessRules.from(key))}"
+        val king = ChessRules.kingSq(c.sq, !white)
+        val piece = "${KIND[abs(position.pieceAt(ChessRules.from(key)))]} on ${ChessRules.name(ChessRules.from(key))}"
         return if (res.inMoves == 1) {
             val cited = mutableSetOf(king)
             val text = mateText(position, key, c, king, cited)
@@ -159,12 +157,6 @@ internal object ChessTeacher {
             Step(if (check) FORCING_KEY else QUIET_KEY, key, res.keys, setOf(ChessRules.from(key)), setOf(king, ChessRules.to(key)),
                 "Look at the $piece.", fit(text))
         }
-    }
-
-    private fun kingSquare(p: ChessPosition, white: Boolean): Int {
-        val k = if (white) 6 else -6
-        for (s in 0..63) if (p.pieceAt(s) == k) return s
-        return 0
     }
 
     /** Never longer than the panel. */

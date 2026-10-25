@@ -2,6 +2,8 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.arrowStep
+import com.joebywan.daybook.core.isEraseKey
+import com.joebywan.daybook.core.letterKey
 import com.joebywan.daybook.puzzles.CodewordLogic.EMPTY
 
 /** What a physical key asks of a Codeword board. No state, no focus. */
@@ -16,17 +18,11 @@ sealed interface CodewordKeyAction {
     data class Move(val step: Int) : CodewordKeyAction
 }
 
-private val LETTER_KEYS = listOf(
-    Key.A, Key.B, Key.C, Key.D, Key.E, Key.F, Key.G, Key.H, Key.I, Key.J, Key.K, Key.L, Key.M,
-    Key.N, Key.O, Key.P, Key.Q, Key.R, Key.S, Key.T, Key.U, Key.V, Key.W, Key.X, Key.Y, Key.Z,
-)
-
 /** The action for [key], or null for a key the board does not use. The caller has ruled out chords. */
 fun codewordKeyAction(key: Key): CodewordKeyAction? {
     arrowStep(key)?.let { (r, c) -> return CodewordKeyAction.Move(r + c) }
-    if (key == Key.Backspace || key == Key.Delete) return CodewordKeyAction.Clear
-    val letter = LETTER_KEYS.indexOf(key)
-    return if (letter >= 0) CodewordKeyAction.Letter(letter) else null
+    if (isEraseKey(key)) return CodewordKeyAction.Clear
+    return letterKey(key)?.let { CodewordKeyAction.Letter(it - 'a') }
 }
 
 /** What pressing [letter] does to [number]: gives it the letter, or takes it away if it already has it. */

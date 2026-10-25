@@ -39,7 +39,7 @@ class CodewordTeachingTest {
                     val t0 = System.nanoTime()
                     val step = Codeword.teach(s)!!
                     times += System.nanoTime() - t0
-                    assertFalse("${step.technique}", step.mistake)
+                    assertFalse(step.technique, step.mistake)
                     counts.merge(step.technique, 1, Int::plus)
                     if (step.fallback) fellBack = true
                     s = step.apply(s) as CodewordState

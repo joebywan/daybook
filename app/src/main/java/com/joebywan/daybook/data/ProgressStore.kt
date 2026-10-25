@@ -128,8 +128,7 @@ data class LevelProgress(
             val solves = levelSolves.mapNotNull(LevelSolve::decode).filter { it.level >= 1 }.groupBy { it.level }
             fun isDone(n: Int): Boolean {
                 val solved = solves[n].orEmpty().map { it.puzzleId }.toSet()
-                return Levels.plan(n, opened[n] ?: Levels.POOL.size, playerDeal)
-                    .all { it.puzzleId in solved || PuzzleRegistry.byId(it.puzzleId) == null }
+                return Levels.plan(n, opened[n] ?: Levels.POOL.size, playerDeal).all { levelBoardDone(it.puzzleId, solved) }
             }
             val done = (opened.keys + solves.keys).filter { it >= 1 && isDone(it) }.toSet()
             val current = opened.keys.filter { it >= 1 && it !in done }.minOrNull() ?: ((done.maxOrNull() ?: 0) + 1)
@@ -137,6 +136,9 @@ data class LevelProgress(
         }
     }
 }
+
+/** Whether a level's board of [puzzleId] counts as done, given the level's [solved] puzzles: one gone from the registry does. */
+fun levelBoardDone(puzzleId: String, solved: Set<String>): Boolean = puzzleId in solved || PuzzleRegistry.byId(puzzleId) == null
 
 /**
  * A game left part-finished: the board plus everything the play screen would otherwise lose.
@@ -488,8 +490,8 @@ object PuzzleOrder {
     val GENTLEST: List<String> = listOf(
         "pointers", "pipes", "snap", // See it, do it: one gesture, and the rules are visible on the board.
         "sudoku", "words", "sand", // Familiar, or (Sand) see it, do it.
-        "wordwheel", "target", "nonogram", // Familiar: most players know them from elsewhere.
-        "kings", "mambo", "mosaic", "sets", "inequality", "tents", "regions", "tally", // Quick to learn: few rules, instant feedback.
+        "wordwheel", "target", "nonogram", "mines", // Familiar: most players know them from elsewhere.
+        "kings", "mambo", "mosaic", "sets", "inequality", "tents", "lamps", "regions", "tally", // Quick to learn: few rules, instant feedback.
         "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", "codeword", // Takes a bit: more rules, or a longer chain of reasoning.
         "tower", // Last: a colour-code guesser, much the same game as Lexicon, which a new player has met by now.
     )

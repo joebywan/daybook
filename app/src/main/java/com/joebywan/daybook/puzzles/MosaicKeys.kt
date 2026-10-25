@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.core.digitKey
+import com.joebywan.daybook.core.isConfirmKey
 
 /** What a physical key asks of a Mosaic board (arrows move the cursor and are the board's). */
 sealed interface MosaicKeyAction {
@@ -13,20 +15,9 @@ sealed interface MosaicKeyAction {
 
 /** The action for [key] on a board with [colours] colours, or null. Digits past [colours] are not keys. */
 fun mosaicKeyAction(key: Key, colours: Int): MosaicKeyAction? {
-    val digit = when (key) {
-        Key.One, Key.NumPad1 -> 1
-        Key.Two, Key.NumPad2 -> 2
-        Key.Three, Key.NumPad3 -> 3
-        Key.Four, Key.NumPad4 -> 4
-        Key.Five, Key.NumPad5 -> 5
-        Key.Six, Key.NumPad6 -> 6
-        Key.Seven, Key.NumPad7 -> 7
-        Key.Eight, Key.NumPad8 -> 8
-        Key.Nine, Key.NumPad9 -> 9
-        Key.Spacebar, Key.Enter, Key.NumPadEnter -> return MosaicKeyAction.Fill
-        else -> return null
-    }
-    return if (digit <= colours) MosaicKeyAction.Pick(digit - 1) else null
+    if (isConfirmKey(key)) return MosaicKeyAction.Fill
+    val digit = digitKey(key) ?: return null
+    return if (digit in 1..colours) MosaicKeyAction.Pick(digit - 1) else null
 }
 
 /**

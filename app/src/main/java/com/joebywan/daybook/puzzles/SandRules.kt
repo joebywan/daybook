@@ -28,14 +28,14 @@ internal object SandLogic {
     }
 
     /** Colours and height per tier. Two spare tubes on every tier: slack never varies (standards section 3). */
-    class Spec(val colours: Int, val height: Int, val budget: Int)
+    class Spec(val colours: Int, val height: Int)
 
     const val SPARES = 2
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
-        Difficulty.STANDARD -> Spec(5, 4, GEN_BUDGET)
-        Difficulty.HARD -> Spec(7, 4, GEN_BUDGET)
-        Difficulty.EXPERT -> Spec(8, 4, GEN_BUDGET)
+        Difficulty.STANDARD -> Spec(5, 4)
+        Difficulty.HARD -> Spec(7, 4)
+        Difficulty.EXPERT -> Spec(8, 4)
     }
 
     /** Positions the generator may visit proving one board. */
@@ -79,9 +79,11 @@ internal object SandLogic {
         }
     }
 
-    /** Every tube empty or [height] layers of one colour. */
-    fun isSolved(tubes: List<List<Int>>, height: Int): Boolean =
-        tubes.all { t -> t.isEmpty() || (t.size == height && t.all { it == t[0] }) }
+    /** A finished tube: [height] layers of one colour. */
+    fun finished(t: List<Int>, height: Int): Boolean = t.size == height && t.all { it == t[0] }
+
+    /** Every tube empty or finished. */
+    fun isSolved(tubes: List<List<Int>>, height: Int): Boolean = tubes.all { t -> t.isEmpty() || finished(t, height) }
 
     /** Not solved, and no pour exists at all. */
     fun isStuck(tubes: List<List<Int>>, height: Int): Boolean =
@@ -276,7 +278,7 @@ internal object SandLogic {
         for (attempt in 0 until ATTEMPTS) {
             val tubes = deal(seed, attempt, spec)
             if (givesAway(tubes, spec.height)) continue
-            if (solve(tubes, spec.height, spec.budget) !is Verdict.Solvable) continue
+            if (solve(tubes, spec.height, GEN_BUDGET) !is Verdict.Solvable) continue
             if (trivial(tubes, spec.height, seed + attempt)) continue
             return SandState(tubes, spec.height, spec.colours)
         }

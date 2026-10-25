@@ -25,7 +25,7 @@ class SandTeachingTest {
 
 
     private fun board(day: Int, d: Difficulty) =
-        Sand.generateVerified(daySeed(day, Sand.id, d), d) ?: error("no board day $day ${d.name}")
+        SandLogic.generateVerified(daySeed(day, Sand.id, d), d) ?: error("no board day $day ${d.name}")
 
     /** Sortable, proved by a witness that replays under the test's own rules. */
     private fun provedSortable(s: SandState): Boolean {

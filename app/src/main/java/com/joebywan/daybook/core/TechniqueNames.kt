@@ -108,6 +108,8 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "only-place" to "a digit's only place in a line",
         "sign-bound" to "a square the signs leave one digit",
         "sign-place" to "a digit's only place, signs counted",
+        "naked-pair" to "two squares sharing two digits",
+        "hidden-pair" to "two digits with only two places",
     ),
     "chess" to linkedMapOf(
         "mate-in-one" to "a mate in one",
@@ -127,6 +129,7 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "last-square" to "the last square in a region",
         "only-digit" to "a square with one digit left",
         "only-place" to "a digit's only place in a region",
+        "locked-candidate" to "a digit locked beside one square",
     ),
     "cages" to linkedMapOf(
         "full-house" to "the last cell in a row, column or box",
@@ -136,6 +139,7 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "naked-single" to "a cell with one digit left",
         "cage-combination" to "a cage's digit combinations",
         "forty-five" to "the 45 rule",
+        "linked-totals" to "totals that share squares",
         "cage-chain" to "every cage worked through together",
     ),
     "target" to linkedMapOf(
@@ -169,12 +173,30 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "spare" to "using an empty tube",
         "plan" to "planning a pour ahead",
     ),
+    "mines" to linkedMapOf(
+        "all-found" to "a number with all its mines found",
+        "all-mines" to "a number with as many squares as mines",
+        "subset" to "one number's squares inside another's",
+        "pair" to "two numbers that share squares",
+        "count" to "counting the mines left",
+        "count-edge" to "the numbers needing every mine left",
+        "what-if" to "a what-if",
+    ),
     "dominoes" to linkedMapOf(
         "only-partner" to "a square with one partner left",
         "only-place" to "a domino with one place left",
         "only-domino" to "the one domino that fits a square",
         "region-value" to "what a region's values allow",
         "counting" to "counting the halves left in the tray",
+        "what-if" to "a what-if",
+    ),
+    "lamps" to linkedMapOf(
+        "zero" to "the squares beside a 0",
+        "done" to "a number with all its lamps",
+        "room" to "a number with just enough room",
+        "only-light" to "the one square that can light another",
+        "starve" to "a lamp that would starve a number",
+        "dark" to "a lamp that would leave a square dark",
         "what-if" to "a what-if",
     ),
     "codeword" to linkedMapOf(
