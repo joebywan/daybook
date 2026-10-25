@@ -354,7 +354,7 @@ object Tower : PuzzleType {
             TutorialFrame(
                 state = tutorialBoard(3),
                 caption = "Guesses 2 and 3 differ only in slot 1 and scored the same, so slot 1 is neither " +
-                    "blue nor gold. Teal is out, so it's brown. Tap brown: a colour goes into the first empty slot.",
+                    "blue nor gold. Teal is out, so it's brown. Tap brown: it fills the first empty slot.",
                 highlight = BoardHighlight(
                     strong = setOf(sw + 2, c + 0),
                     soft = setOf(TowerTeacher.peg(TUTORIAL_SLOTS, 1, 0), TowerTeacher.peg(TUTORIAL_SLOTS, 2, 0)),
