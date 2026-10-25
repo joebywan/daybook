@@ -134,7 +134,7 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Short words have the fewest look-alikes once a letter is in.",
         "Q is almost always followed by U.",
         "A letter already used is greyed: no other number can have it.",
-        "Every word across and down is a real word, so each crossing checks two.",
+        "Every square is in two words: a crossing checks both.",
     ),
     "wordwheel" to listOf(
         "The longest slot always uses every letter on the wheel.",

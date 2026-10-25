@@ -559,7 +559,7 @@ and every across and down run must be a word. Spec and decisions: `docs/CODEWORD
 - **Tiers: size and ladder depth.** Standard 7x7, finished one run at a time (a run only one word fits, a letter every
   fitting word shares); Hard 9x9, must need a number cut by every run it is in; Expert 11x11, must need every word worked
   through together. Givens are minimal for the tier's ladder (taken back in a random order while it still finishes, at
-  least one kept): about TODO / TODO / TODO a board. From one given letter the lists are so tight that the shallow steps
+  least one kept): about 1.8 / 1.1 / 1.0 a board. From one given letter the lists are so tight that the shallow steps
   finish most boards, so Hard and Expert are cut by what they need, not by their givens (Tally's `Spec.needs` precedent).
   A what-if technique was built and dropped: no board kept needed it.
 - **A board ships only if the ladder finishes it from its givens and `CodewordLogic.solve` (branch on the run with fewest

@@ -68,8 +68,9 @@ letters. Every step ends in one letter placed. Techniques, simplest first:
 3. `crossing`: a number's letters, cut by every run it is in, leave one.
 4. `all-words`: every run and every number worked through together (a letter pinned to one number is taken from the
    rest), to a fixpoint. Says so, as Cipher's chain does.
-5. `what-if`: a run with at most four words left: all but one of them, followed through step 4, leave some run with no
-   word.
+
+A fifth, `what-if` (a run with at most four words left: all but one, followed through step 4, leave some run with no
+word), was built for Expert and dropped: no board kept needed it (Measured).
 
 There is no "only number left for a letter": a grid uses a part of the alphabet, so a letter missing from every
 number's candidates may simply not be in the grid. A mistake is a number whose letter differs from the stored answer,
@@ -87,4 +88,17 @@ fewest words still fitting first, each slot's words tried in an order shuffled b
 
 ## Measured
 
-Filled in by the build; see the bottom of this file once it lands.
+- **Tiers as built:** Standard 7x7 (runs to 7 letters, about 15 black squares), finished one run at a time (`one-word`,
+  `run-agrees`); Hard 9x9 (runs to 6, about 27 black), must need `crossing`; Expert 11x11 (runs to 6, about 41 black), must
+  need `all-words`. Givens, minimal for each tier's ladder: 1.8 / 1.1 / 1.0 a board. Letters in play: 14.5 / 17.7 / 19.7.
+  From a single given letter the lists are so tight that the shallow steps finish most grids, so Hard and Expert are cut
+  by what they need, not by their givens. `what-if` was built and dropped: with Expert taking letters back under step 4,
+  no board needed it (0 of 1,440 draws).
+- **The build:** 1,000 grids a tier, from 2,880 / 2,640 / 54,720 draws (fill failures within a 20,000-node budget, the
+  tier's depth test, and about one fill in four losing uniqueness once `BONUS` words are allowed). 12 minutes on 12
+  desktop threads, almost all of it Expert. Scattering black squares (no 2x2 block) made fills nearly impossible
+  (2 in 480 at 7x7), so blocks are allowed. `CodewordGrids.kt` is 256 KB of source.
+- **On the device (JVM, a year of daily boards):** generation median / p95 / max 1 / 3 / 3 ms Standard, 5 / 8 / 10 Hard,
+  8 / 14 / 20 Expert (`CodewordRulesTest`); a hint median / p95 0.1 / 0.2 ms Standard, 0.2 / 0.5 Hard, 0.4 / 0.9 Expert,
+  max 2 ms. Steps a board, hints alone from the givens (200 boards a tier, no fallback): one-word 12.0 / 14.7 / 16.4,
+  run-agrees 0.5 / 0.4 / 0.3, crossing 0 / 1.5 / 0.8, all-words 0 / 0 / 1.1.
