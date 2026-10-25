@@ -16,7 +16,10 @@ import java.time.LocalDate
  */
 class LevelsTest {
 
-    /** Today's pool, copied. Appending to [Levels.POOL] is fine; anything else changes opened levels. */
+    /**
+     * The pool levels shipped with, copied (Lamps came after). Appending to [Levels.POOL] is fine; anything else changes
+     * opened levels. The pins below are at this size: every level opened with it keeps planning exactly so.
+     */
     private val pinnedPool = listOf(
         "sudoku", "kings", "mambo", "pipes", "shikaku", "mosaic", "sets", "atoms", "snap", "lits",
         "tower", "words", "nonogram", "inequality", "chess", "tents", "regions", "cages", "target",
@@ -67,17 +70,17 @@ class LevelsTest {
 
     @Test
     fun `the plans of levels 1 to 50 are pinned for each deal`() {
-        fun got(deal: Int) = (1..50).map { n -> Levels.plan(n, Levels.POOL.size, deal).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
+        fun got(deal: Int) = (1..50).map { n -> Levels.plan(n, pinnedPool.size, deal).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
         assertEquals(GOLDEN, got(1))
         assertEquals(GOLDEN_2, got(2))
         assertEquals("the default is the latest deal", Levels.plan(7, Levels.POOL.size, Levels.LATEST), Levels.plan(7))
         assertEquals(
             listOf(-3215747372223080039L, 6085545774054540416L, -4480082772839746525L, -8359627411479413995L, 7328236594175289981L),
-            Levels.plan(1, Levels.POOL.size, 1).map { it.seed },
+            Levels.plan(1, pinnedPool.size, 1).map { it.seed },
         )
         assertEquals(
             listOf(7688255564085075123L, -4094480006933299752L, -224227637783284087L, -7924503025723838927L, 6766780658332473636L),
-            Levels.plan(500, Levels.POOL.size, 1).map { it.seed },
+            Levels.plan(500, pinnedPool.size, 1).map { it.seed },
         )
     }
 
@@ -125,7 +128,7 @@ class LevelsTest {
     @Test
     fun `every puzzle appears in any ten levels in a row`() {
         for (deal in deals) {
-            val plans = (1..510).map { ids(Levels.plan(it, Levels.POOL.size, deal)) }
+            val plans = (1..510).map { ids(Levels.plan(it, pinnedPool.size, deal)) }
             for (start in 0..500) {
                 val seen = plans.subList(start, start + 10).flatten().toSet()
                 assertEquals("levels ${start + 1}-${start + 10} miss ${pinnedPool - seen}", pinnedPool.toSet(), seen)

@@ -508,6 +508,32 @@ hashed into every seed: never rename it.
   (Fredoka has no `≠`); green when the region is covered and keeps its rule, solid `scheme.error` once it cannot (1 s settle).
   Highlight indices: squares `row * width + col`, tray slot `DominoTeacher.TRAY + k`, badge `DominoTeacher.RULE + r`.
 
+## Lamps (light every square)
+
+White squares and walls, some walls numbered 0-4: put lamps so every white square is lit (a lamp lights its row and column
+to a wall), no lamp lights another, and a numbered wall touches exactly that many lamps. Spec and measured numbers:
+`docs/LAMPS_SPEC.md`. The genre is published by Nikoli as *Akari* ("Light Up"); neither name appears anywhere the player sees.
+`puzzles/LampsRules.kt` (state, `LampsLogic`: rules, the ladder, exhaustive count with a sealed `LampsVerdict`, generator),
+`LampsTeacher.kt`, `LampsKeys.kt` (keys and the pure tap/lamp/sweep functions), `Lamps.kt` (board, walkthrough, motif).
+`id = "lamps"` is hashed into every seed: never rename it.
+
+- **Tiers: 7x7 / 10x10 / 12x12, about a quarter walls (half-turn symmetric), and the rung a board must need, exactly:**
+  direct facts (a 0, a number with all its lamps, a number with just enough room, a square only one lamp can light) /
+  look-ahead (a lamp that would starve a number or leave a square dark) / a what-if (at most `MAX_LINKS` = 3 direct facts to
+  a contradiction). Tally's `Spec.needs`: a draw needing more or less is redrawn.
+- **The generator's ladder is the teacher's** (`LampsLogic.nextFact`, one fact at a time). A lamp on every square still dark
+  in a random order is the answer; every wall is numbered from it, then numbers are taken back (rung by rung, the tier's own
+  last, which must take one more) while the ladder finishes the board. `countSolutions` (direct facts propagated, then the
+  first lamp among an unlit square's sources: a partition, no budget) proves it again; `LampsOracle` (test: one row run at
+  a time, no propagation) is the independent check. No day of a year reaches `lastResort` (a fixed board per tier, accepted
+  by a test), so hints never fall back on a daily board.
+- **`solved` checks the rules**; a mistake is a lamp the one answer lacks. Crosses are notes, never read by the rules or
+  the teacher. What is lit, clashing lamps and broken numbers (over, or out of reach with crosses ignored) are derived; the
+  last two turn red after a 1 s settle. Lit squares are a static Amber wash, so reduced motion has nothing to still.
+- Input is Kings' and Tents': tap a cross, double-tap a lamp, tap a lamp to take it away, drag crosses (one state on lift).
+  Keyboard: L or Enter lamp, X or Space cross, Backspace clears. Highlight indices are squares (`highlightGrid`).
+- The accent is the picker's second choice (`0xFF9D4881`): its first, `0xFF3C28BD`, was left for Mines, built alongside.
+
 ## Motion and haptics
 
 The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s
@@ -568,7 +594,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand, Sudoku (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Cipher, Sand, Sudoku and Pointers (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand, Sudoku, Lamps (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Cipher, Sand, Sudoku, Pointers and Lamps (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

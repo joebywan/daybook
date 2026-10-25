@@ -9,6 +9,7 @@ WHAT'S INSIDE
 • Star Battle-style crown placement, Takuzu-style binary grids, Hashi-style bridges
 • Number puzzles: sums, letter sums (cryptarithms) and hit-the-target arithmetic
 • Dominoes: lay every tile so each coloured region keeps its rule
+• Lamps: light every square, with no lamp shining on another
 • Word puzzles: a hidden-word guessing game and a word wheel
 • Chess puzzles: mate in 2, 3 and 4
 • Relaxing ones too: pipe rotation, flood-fill, one-line paths, colour sorting and arrows to clear

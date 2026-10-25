@@ -116,4 +116,23 @@ The generic play-log card; nothing puzzle-specific.
 
 ## Measured
 
-Filled in from `LampsRulesTest`, `FallbackTest` and `LampsTeachingTest` once built.
+A year of daily seeds per tier from 2026-01-01 unless stated: `LampsRulesTest` `a year of daily boards ...`
+(`app/build/reports/lamps-generation.txt`), `FallbackTest` `lamps proves every daily board of a year on every tier` and
+`LampsTeachingTest` `coverage ...` (`app/build/reports/lamps-teaching-coverage.txt`, 200 boards a tier).
+
+| | Standard | Hard | Expert |
+|---|---|---|---|
+| Grid | 7x7 | 10x10 | 12x12 |
+| Walls (share of squares) | 28.1% | 26.0% | 26.4% |
+| Walls numbered (share of walls / of squares) | 50.0% / 14.1% | 51.9% / 13.5% | 48.7% / 12.9% |
+| Rung needed (every board of the year) | direct | look-ahead | what-if |
+| Draws per board (mean / most, of `ATTEMPTS` = 400) | 2.1 / 10 | 6.2 / 34 | 8.7 / 45 |
+| Days reaching `lastResort` | 0 | 0 | 0 |
+| Hint steps a board | 11.0 | 25.4 | 43.2 |
+| of which starve / dark / what-if | 0 / 0 / 0 | 2.7 / 0.4 / 0 | 5.9 / 0.7 / 5.5 |
+| Generation ms, desktop JVM (median / p95 / max) | 0.4 / 1.1 / 21.6 | 2.3 / 9.4 / 26.7 | 30.5 / 117.5 / 254.7 |
+
+Walls were first a fifth of the squares: nine in ten Expert draws then failed at once (fully numbered, the ladder still
+could not finish), and Expert took 365 ms median on the JVM. At about a quarter, most draws pass and the numbers left are
+about half the walls. The longest explanation over a year of walks is 230 characters (a what-if naming its chain), inside
+`MAX_EXPLANATION` = 260. Hints over whole Expert walks on the JVM: median 0.04 ms, p95 0.5 ms, max 10 ms.

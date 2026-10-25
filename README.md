@@ -83,6 +83,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
 | Pointers | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
+| Lamps | Lamp placement | Light every white square with lamps that shine along their row and column to a wall; no lamp may light another, and a numbered wall touches that many lamps |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -158,6 +159,12 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   values, counting, a short what-if) finishes it, then loosened while it still does. A board ships only if it needs its tier's
   deepest step, and an exhaustive search proves one answer; an independent solver that fills squares in reading order with
   no pruning confirms it in the tests.
+- **Lamps** — walls are drawn at random (symmetric under a half turn), a lamp goes on every square still dark in a random
+  order (so every square is lit), every wall is numbered from those lamps, and numbers are then taken back while the hint
+  ladder (a 0, a number with all its lamps or just enough room, a square only one lamp can light, then a lamp that would
+  starve a number or leave a square dark, then a short what-if) still finishes the board. A board ships only if it needs
+  exactly its tier's rung, and an exhaustive search proves one answer; an independent solver that walks the rows' runs with
+  no propagation confirms it in the tests.
 - **Tower and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by

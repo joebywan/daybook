@@ -186,8 +186,8 @@ internal object LampsTeacher {
             val num = if (link.wall >= 0) g.number[link.wall] else 0
             when (link.technique) {
                 ROOM -> "the $num would need ${if (link.targets.size == 1) "its last free square" else "its last ${link.targets.size} squares"}"
-                ONLY_LIGHT -> "a square would have one lamp left to light it"
-                else -> "the $num would have ${its(num)}, ruling out its other squares"
+                ONLY_LIGHT -> "a square would have one way left to be lit"
+                else -> "the $num would have ${its(num)}"
             }
         }
         cited += w.broken.at
@@ -197,7 +197,7 @@ internal object LampsTeacher {
             LampsLogic.SHORT -> "the $brokenNum could not get its ${plural(brokenNum, "lamp")}"
             else -> "a square could never be lit"
         }
-        val start = if (lamp) "Suppose a lamp went here." else "Suppose this square had no lamp."
+        val start = if (lamp) "Suppose a lamp here." else "Suppose no lamp here."
         val then = (chain + end).let { parts ->
             if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", then ") + ", and " + parts.last()
         }

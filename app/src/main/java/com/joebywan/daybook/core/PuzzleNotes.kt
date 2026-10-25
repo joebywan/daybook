@@ -163,7 +163,7 @@ private val NOTES: Map<String, List<String>> = mapOf(
     "lamps" to listOf(
         "A 4, or a 3 against the edge, fills every square beside it.",
         "A square boxed in by walls has to light itself.",
-        "A lamp that would light both of a 1's last two squares can't go there.",
+        "No lamp where it would light both of a 1's last two squares.",
         "Crosses help: a crossed square can still be lit from afar.",
     ),
 )
