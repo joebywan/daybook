@@ -175,10 +175,14 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   more junctions. (Counter-clockwise rotation and a lock mark: declined by the owner.)
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
+- [ ] **Screen RETARD and CRIPPLE out of the 6/7-letter grid lists** (`tools/words/exclude.txt`'s own section for those
+  lengths). Word Wheel's `GRID_6`/`GRID_7` hold them; Codeword's builder skips them (`CodewordGridsBuildTest.SKIP`) rather
+  than change the lists, which would move Word Wheel's boards. Rebuild both puzzles' lists in the same change.
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
 - [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
-  lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
-  fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
+  lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Mini crossword (5x5,
+  fills built offline from the hand-written clues; `test/CrosswordFill.kt`, Codeword's pattern maker and filler, is
+  written to be reused). Each gets a spec first (`docs/<NAME>_SPEC.md`).
 
 ## Future puzzle candidates
 
@@ -242,9 +246,6 @@ and Battleships is close to Tents.
 - [ ] **Mines, no guessing.** Minesweeper rules: tap reveals, long-press flags. Ship only boards logic clears from the
   first reveal (a solver proves it, as the Tents and Tally ladders do); a hint names the deduction ("this 2 already
   touches two flags, so the rest are safe"). Tiers: size and density. A mine loses the board, as Pointers' lives do. *M.*
-- [ ] **Codeword.** A filled crossword grid with a number for each letter and a few letters given; work out the
-  substitution. No clues, so it avoids the clue-database problem below. Reuses Lexicon's and Word Wheel's lists and
-  Word Wheel's grid layout; uniqueness is pattern matching against the list. Not Cipher: word shapes, not columns. *M–L.*
 - [ ] **Skyscrapers.** A Latin square with edge clues (how many buildings are visible from that side). Inequality's
   Latin-square rules, generator and prover carry over; only the clue type is new. *S–M.*
 - [ ] **Hitori.** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.

@@ -177,6 +177,12 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "counting" to "counting the halves left in the tray",
         "what-if" to "a what-if",
     ),
+    "codeword" to linkedMapOf(
+        "one-word" to "a word only one word fits",
+        "run-agrees" to "a letter every fitting word shares",
+        "crossing" to "a number cut by every word it is in",
+        "all-words" to "every word worked through together",
+    ),
 )
 
 /**

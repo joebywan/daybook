@@ -12,6 +12,7 @@ import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Cipher
+import com.joebywan.daybook.puzzles.Codeword
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
@@ -140,6 +141,10 @@ class FallbackTest {
     /** [Cipher.generateVerified] returns a board only when the ladder finished its sum and the search proved one answer. */
     @Test
     fun `cipher proves every daily board of a year on every tier`() = assertYearProved(Cipher) { seed, d -> Cipher.generateVerified(seed, d) }
+
+    /** [Codeword.generateVerified] returns a board only when the ladder finished its grid from the givens and the search proved one answer. */
+    @Test
+    fun `codeword proves every daily board of a year on every tier`() = assertYearProved(Codeword) { seed, d -> Codeword.generateVerified(seed, d) }
 
     /** [Target.generateVerified] returns a board only when the exhaustive table put the target exactly the tier's number of steps away. */
     @Test
