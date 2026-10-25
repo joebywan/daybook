@@ -382,7 +382,7 @@ object Tower : PuzzleType {
         if (s.solved || s.failed) return null
         val feedback = s.guesses.map(s::score)
         val step = TowerTeacher.deduce(s.slots, s.colours, s.guesses, feedback, s.current) ?: return null
-        fun fits(code: List<Int>) = TowerTeacher.consistent(code, s.guesses, feedback, base.colours)
+        fun fits(code: List<Int>) = TowerTeacher.consistent(code, s.guesses, feedback, s.colours)
         fun newGuesses(now: TowerState) = now.guesses.drop(s.guesses.size)
         return Deduction(
             technique = step.technique,
