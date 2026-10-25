@@ -28,7 +28,7 @@ class LevelsUiTest {
     private fun ids(level: Int) = Levels.plan(level).map { it.puzzleId }
 
     private fun progress(vararg solved: Pair<Int, Int>): LevelProgress = LevelProgress.of(
-        solved.map { "${it.first}|${Levels.POOL.size}" }.toSet(),
+        solved.map { "${it.first}|${Levels.POOL.size}|${Levels.LATEST}" }.toSet(),
         solved.flatMap { (level, count) -> ids(level).take(count).map { LevelSolve(level, it, 60, 0).encode() } }.toSet(),
     )
 
@@ -74,7 +74,7 @@ class LevelsUiTest {
 
     @Test fun `solving out of order skips what is done`() {
         // Boards 0, 1 and 3 solved, now board 2: the next is board 4.
-        val p = LevelProgress.of(setOf("1|${Levels.POOL.size}"), listOf(0, 1, 3).map { LevelSolve(1, ids(1)[it], 60, 0).encode() }.toSet())
+        val p = LevelProgress.of(setOf("1|${Levels.POOL.size}|${Levels.LATEST}"), listOf(0, 1, 3).map { LevelSolve(1, ids(1)[it], 60, 0).encode() }.toSet())
         assertEquals(ids(1)[4], levelNextOptions(1, p.plan(1), p.solved(1), ids(1)[2], p.current)[0].puzzleId)
     }
 

@@ -14,7 +14,8 @@ package com.joebywan.daybook.puzzles
  *
  * - [MISTAKE] — the row cannot be submitted because it is not a word. Any word is allowed, so
  *   probing with one that cannot be the answer is never called wrong.
- * - [OPENER] — nothing is known yet, so a word that splits the answer list best, given as a clue.
+ * - [OPENER] — nothing is known yet, so one of the words that split the answer list best (which one is the board's
+ *   [LexiconState.opener]), given as a clue.
  * - [PIN] — a letter known to be in the word has only as many slots left as it has copies, because
  *   every other slot is a green of another letter or was marked against it.
  * - [SUBMIT] — the row fits every mark; press Enter.
@@ -55,11 +56,17 @@ internal object LexiconTeacher {
     private const val POOL = 300
 
     /**
-     * The first guess on an empty board: the answer-list word that leaves the fewest words in
-     * expectation (found offline over every answer; `LexiconTeachingTest` checks it is a word of
-     * the right length and still the best of its list).
+     * First guesses for an empty board, one per board by [LexiconState.opener], so the opening hint is not the same clue
+     * every day. Each is an answer-list word among the best of its list at leaving few words: measured over every answer
+     * (the mean number left, sum of squared outcome sizes over the list), five letters 48.4 for RAISE to 52.0 for STARE,
+     * four letters 98.1 for TALE to 110.1 for LEAN, within 12% of the best. `LexiconTeachingTest` re-measures them.
      */
-    fun opener(length: Int): String = if (length == 4) "tale" else "raise"
+    fun openers(length: Int): List<String> =
+        if (length == 4) listOf("tale", "sale", "late", "real", "lane", "seal", "lean")
+        else listOf("raise", "arise", "irate", "slate", "arose", "alert", "stare")
+
+    /** The opener for [pick], a board's [LexiconState.opener]. */
+    fun opener(length: Int, pick: Int = 0): String = openers(length).let { it[pick.mod(it.size)] }
 
     /** "Clue: Lift (5)": a clue to [word] without the word, ready to drop into an explanation. */
     private fun clueFor(word: String) = "\u201C${WordList.clue(word)}\u201D (${word.length})"
@@ -154,10 +161,11 @@ internal object LexiconTeacher {
         guesses: List<String>,
         marks: List<List<Int>>,
         current: String,
+        opener: Int = 0,
     ): Step? {
         val clues = Clues(length, guesses, marks)
         mistake(clues, current)?.let { return it }
-        if (guesses.isEmpty()) return opening(length)
+        if (guesses.isEmpty()) return opening(length, opener)
         pin(clues, current)?.let { return it }
         return choose(clues, current)
     }
@@ -183,8 +191,8 @@ internal object LexiconTeacher {
 
     // ---- opener -----------------------------------------------------------------------------------
 
-    private fun opening(length: Int): Step {
-        val word = opener(length)
+    private fun opening(length: Int, pick: Int): Step {
+        val word = opener(length, pick)
         return Step(
             OPENER, Move.Open(word),
             focus = (0 until length).map { tile(length, 0, it) }.toSet(),
@@ -284,13 +292,7 @@ internal object LexiconTeacher {
             )
         }
         val word = bestGuess(fits, fits)
-        val worst = worstCase(word, fits)
-        val shown = if (fits.size == 2) {
-            "Two words fit every mark, and either could be it. Try the one that goes ${clueFor(word)}."
-        } else {
-            "${fits.size} words on the answer list fit every mark. Try the one that goes ${clueFor(word)}: " +
-                "however it is marked it leaves at most $worst."
-        }
+        val shown = splitText(word, fits)
         return Step(
             CHOOSE, Move.Fill(word),
             focus = lastRow,
@@ -327,8 +329,27 @@ internal object LexiconTeacher {
         return best
     }
 
-    /** The most words of [fits] that [word] could leave, over every mark it might draw. */
-    fun worstCase(word: String, fits: List<String>): Int = outcomes(word, fits).values.max()
+    /**
+     * Why [word] is the guess to make of [fits]: how its marks would split them. "7 words on the answer list fit every
+     * mark. Try the one that goes "Lift" (5): it can be marked 5 ways, and none leaves more than 2." Read off the
+     * candidates alone, as the pick is; shortened when the clue makes it too long for the panel.
+     */
+    private fun splitText(word: String, fits: List<String>): String {
+        val counts = outcomes(word, fits)
+        val worst = counts.values.max()
+        val clue = clueFor(word)
+        val long = when {
+            fits.size == 2 -> "Two words fit every mark, and either could be it. Try the one that goes $clue: " +
+                "if it isn't the word, its marks point to the other."
+            worst == 1 -> "${fits.size} words on the answer list fit every mark. Try the one that goes $clue: " +
+                "each of them would mark it differently, so after it you will know the word."
+            else -> "${fits.size} words on the answer list fit every mark. Try the one that goes $clue: " +
+                "it can be marked ${counts.size} ways, and none leaves more than $worst."
+        }
+        val short = if (fits.size == 2) "Two words fit. Try $clue: if it isn't the word, it is the other."
+        else "${fits.size} words fit. Try $clue: whatever its marks, at most $worst will be left."
+        return if (long.length <= MAX_EXPLANATION) long else short
+    }
 
     /** How many of [fits] draw each mark code for [word]. A probe-only hash container: read for its size and values, never its order. */
     private fun outcomes(word: String, fits: List<String>): Map<Int, Int> {

@@ -23,6 +23,15 @@ class LevelsTest {
         "cipher", "wordwheel", "tally", "sand", "pointers", "dominoes",
     )
 
+    /** Deal 2's gentlest-first order, copied: `PuzzleOrder.GENTLEST` on 2026-10-25. It must never change. */
+    private val pinnedGentle = listOf(
+        "pointers", "pipes", "snap", "sudoku", "words", "sand", "wordwheel", "target", "nonogram", "kings",
+        "mambo", "mosaic", "sets", "tower", "inequality", "tents", "regions",
+        "tally", "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes",
+    )
+
+    private val deals = 1..Levels.LATEST
+
     /** Puzzles that do not exist yet, appended to see what a bigger pool does. */
     private val future = pinnedPool + (1..35).map { "future$it" }
 
@@ -38,43 +47,56 @@ class LevelsTest {
 
     @Test
     fun `levels 1 to 5 use only puzzles with a walkthrough`() {
-        val starters = (1..5).flatMap { ids(Levels.plan(it)) }
-        for (id in starters + Levels.POOL.take(Levels.STARTER)) {
-            assertTrue("$id has no walkthrough", PuzzleRegistry.byId(id)!!.tutorial.isNotEmpty())
+        for (deal in deals) {
+            val starters = (1..5).flatMap { ids(Levels.plan(it, Levels.POOL.size, deal)) }
+            for (id in starters + Levels.POOL.take(Levels.STARTER)) {
+                assertTrue("$id has no walkthrough", PuzzleRegistry.byId(id)!!.tutorial.isNotEmpty())
+            }
+            assertEquals("deal $deal: levels 1-5 deal the starter puzzles once each", Levels.POOL.take(Levels.STARTER).sorted(), starters.sorted())
         }
-        assertEquals("levels 1-5 deal the starter puzzles once each", Levels.POOL.take(Levels.STARTER).sorted(), starters.sorted())
     }
 
     @Test
-    fun `the plans of levels 1 to 50 are pinned`() {
-        val got = (1..50).map { n -> Levels.plan(n).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
-        assertEquals(GOLDEN, got)
+    fun `deal 2 is frozen and deals the gentlest first`() {
+        assertEquals(pinnedGentle, Levels.GENTLE)
+        assertEquals(Levels.POOL.take(Levels.STARTER).sorted(), pinnedGentle.sorted())
+        fun level(n: Int) = ids(Levels.plan(n, Levels.POOL.size, 2))
+        assertEquals("levels 1-2 are the gentlest ten", pinnedGentle.take(10).toSet(), (level(1) + level(2)).toSet())
+        assertTrue("level 3 is from the gentlest 17", level(3).all { pinnedGentle.indexOf(it) < 17 })
+    }
+
+    @Test
+    fun `the plans of levels 1 to 50 are pinned for each deal`() {
+        fun got(deal: Int) = (1..50).map { n -> Levels.plan(n, Levels.POOL.size, deal).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
+        assertEquals(GOLDEN, got(1))
+        assertEquals(GOLDEN_2, got(2))
+        assertEquals("the default is the latest deal", Levels.plan(7, Levels.POOL.size, Levels.LATEST), Levels.plan(7))
         assertEquals(
             listOf(-3215747372223080039L, 6085545774054540416L, -4480082772839746525L, -8359627411479413995L, 7328236594175289981L),
-            Levels.plan(1).map { it.seed },
+            Levels.plan(1, Levels.POOL.size, 1).map { it.seed },
         )
         assertEquals(
             listOf(7688255564085075123L, -4094480006933299752L, -224227637783284087L, -7924503025723838927L, 6766780658332473636L),
-            Levels.plan(500).map { it.seed },
+            Levels.plan(500, Levels.POOL.size, 1).map { it.seed },
         )
     }
 
     @Test
     fun `appending to the pool never changes a plan at an older pool size`() {
-        for (n in 1..500) {
-            val today = Levels.plan(n, pinnedPool.size)
-            assertEquals("level $n", today, Levels.plan(n, future.take(pinnedPool.size)))
-            assertEquals("level $n", today, Levels.plan(n, Levels.POOL.take(pinnedPool.size)))
+        for (deal in deals) for (n in 1..500) {
+            val today = Levels.plan(n, pinnedPool.size, deal)
+            assertEquals("level $n", today, Levels.plan(n, future.take(pinnedPool.size), deal))
+            assertEquals("level $n", today, Levels.plan(n, Levels.POOL.take(pinnedPool.size), deal))
         }
     }
 
     @Test
     fun `every level is five different puzzles and none from the level before`() {
-        for (size in pinnedPool.size..future.size) {
+        for (deal in deals) for (size in pinnedPool.size..future.size) {
             val pool = future.take(size)
             var before = emptyList<String>()
             for (n in 1..500) {
-                val now = ids(Levels.plan(n, pool))
+                val now = ids(Levels.plan(n, pool, deal))
                 assertEquals("pool $size level $n: $now", Levels.SIZE, now.toSet().size)
                 assertTrue("pool $size level $n repeats ${now.intersect(before.toSet())}", now.none { it in before })
                 assertTrue(now.all { it in pool })
@@ -102,19 +124,21 @@ class LevelsTest {
 
     @Test
     fun `every puzzle appears in any ten levels in a row`() {
-        val plans = (1..510).map { ids(Levels.plan(it)) }
-        for (start in 0..500) {
-            val seen = plans.subList(start, start + 10).flatten().toSet()
-            assertEquals("levels ${start + 1}-${start + 10} miss ${pinnedPool - seen}", pinnedPool.toSet(), seen)
-        }
-        // A bigger pool stretches the window to about 2 * size / 5 levels (see Levels).
-        for (size in listOf(26, 30, 40, 60)) {
-            val pool = future.take(size)
-            val window = (2 * size + Levels.SIZE - 1) / Levels.SIZE + 1
-            val big = (1..300 + window).map { ids(Levels.plan(it, pool)) }
-            for (start in 5..300) {
-                val seen = big.subList(start, start + window).flatten().toSet()
-                assertEquals("pool $size, $window levels from ${start + 1}", pool.toSet(), seen)
+        for (deal in deals) {
+            val plans = (1..510).map { ids(Levels.plan(it, Levels.POOL.size, deal)) }
+            for (start in 0..500) {
+                val seen = plans.subList(start, start + 10).flatten().toSet()
+                assertEquals("levels ${start + 1}-${start + 10} miss ${pinnedPool - seen}", pinnedPool.toSet(), seen)
+            }
+            // A bigger pool stretches the window to about 2 * size / 5 levels (see Levels).
+            for (size in listOf(26, 30, 40, 60)) {
+                val pool = future.take(size)
+                val window = (2 * size + Levels.SIZE - 1) / Levels.SIZE + 1
+                val big = (1..300 + window).map { ids(Levels.plan(it, pool, deal)) }
+                for (start in 5..300) {
+                    val seen = big.subList(start, start + window).flatten().toSet()
+                    assertEquals("pool $size, $window levels from ${start + 1}", pool.toSet(), seen)
+                }
             }
         }
     }
@@ -155,6 +179,20 @@ class LevelsTest {
     }
 
     private companion object {
+        /**
+         * Deal 2: levels 1-5 differ. Deck 1 on is shuffled as in deal 1 and its repair reads deck 0's last ten, which
+         * could differ; today neither deal's tail clashes with deck 1's start, so levels 6 on are deal 1's.
+         */
+        val GOLDEN_2 by lazy {
+            listOf(
+                "kings/S sudoku/S nonogram/S words/S snap/S",
+                "pointers/S pipes/S target/S sand/S wordwheel/S",
+                "tents/S tower/S sets/S regions/S mambo/S",
+                "dominoes/S shikaku/S tally/S lits/S inequality/S",
+                "mosaic/S chess/S cages/S cipher/S atoms/S",
+            ) + GOLDEN.drop(5)
+        }
+
         val GOLDEN = listOf(
             "tower/S snap/S regions/S sets/S nonogram/S",
             "sand/S chess/S lits/S sudoku/S dominoes/S",
