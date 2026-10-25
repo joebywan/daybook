@@ -1,6 +1,7 @@
 - Swipe left or right on the home screen to change the difficulty.
 - Tap your streak on the home screen to open Statistics.
-- Share it again later: Statistics keeps your best result and your last random board for every puzzle and tier.
+- Statistics keeps your best result and last random board per puzzle and tier, to share again.
 - Share today's progress from Statistics: every daily you've solved today, per difficulty.
 - Word Wheel's share says how many bonus words you found.
-- Tower's pips sit in a square beside each guess, so they no longer look tied to the peg above.
+- Shikaku: new layouts, and every board solvable by hints alone.
+- Tower's pips sit in a square beside each guess.

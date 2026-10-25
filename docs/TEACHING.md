@@ -102,7 +102,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
 | Mambo | pair, sandwich, link, quota, almost, what-if | 0 (boards are carved so the first four finish them) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
-| Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
+| Shikaku | only fits, only reaches, common cells, what-if | 0 (the generator ships only boards the ladder finishes; was 0.5 / 2.5 / 3.5%) |
 | Mosaic | finish, count fills against colours, biggest swallow, centre; fallback offers a proven fill | 1.5 / 9 / 12.5% |
 | Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
 | Atoms | one neighbour, all forced, at least one, crossing, isolation, only way out, what-if | 0 / 0 / 0.5% |
@@ -158,9 +158,9 @@ board. No board changed. Deepest technique, share of the year's boards (%):
 |  | Hard | locked-to-a-line 2, would-empty 52, confined 41, what-if 6 | 0 / 0 | 16 |
 |  | Expert | last-square <1, locked-to-a-line 1, would-empty 39, confined 55, what-if 5 | 0.3 / 0.01 | 18 |
 | Mambo | all three | quota-met 100 (quota-almost-met and what-if: never, as steps or as deepest) | 0 / 0 | 30 / 55 / 85 |
-| Shikaku | Standard | only-fits 49, only-reaches 42, common-cells 5, what-if 4 | 1.4 / 0.15 | 13 |
-|  | Hard | only-fits 21, only-reaches 64, common-cells 7, what-if 7 | 4.1 / 0.26 | 20 |
-|  | Expert | only-fits 13, only-reaches 62, common-cells 15, what-if 11 | 3.6 / 0.16 | 23 |
+| Shikaku | Standard | only-fits 41, only-reaches 59 (was only-fits 49, only-reaches 42, common-cells 5, what-if 4) | 0 / 0 (was 1.4 / 0.15) | 12 |
+|  | Hard | only-reaches 74, common-cells 14, what-if 12 (was only-fits 21, only-reaches 64, common-cells 7, what-if 7) | 0 / 0 (was 4.1 / 0.26) | 17 |
+|  | Expert | common-cells 47, what-if 53 (was only-fits 13, only-reaches 62, common-cells 15, what-if 11) | 0 / 0 (was 3.6 / 0.16) | 21 |
 | Atoms | Standard | one-neighbour 4, all-forced 62, at-least-one 16, crossing 4, isolation 13, what-if 1 | 0 / 0 | 7 |
 |  | Hard | all-forced 40, at-least-one 18, crossing 14, isolation 25, what-if 3 | 0.3 / 0.02 | 12 |
 |  | Expert | all-forced 16, at-least-one 17, crossing 26, isolation 30, what-if 10 | 0.5 / 0.04 | 18 |
@@ -196,8 +196,12 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
 - **Mambo: one depth everywhere.** Every board of every tier is finished by pair, sandwich, link and quota, because the
   carver keeps only boards the first four finish. Quota-almost-met and what-if are never needed, as a step or at all. A gate
   needs the carver to run the whole ladder first (Expert: needs almost-met or what-if); size is the only difference today.
-- **Shikaku: overlapping, and it falls back.** Standard: no common-cells, what-if or fallback (90% pass); Hard: needs
-  only-reaches, no fallback; Expert: needs common-cells or what-if, no fallback (at most 26%). Ladder long enough.
+- **Shikaku: gated (2026-10-25).** Was overlapping and fell back. Tilings are now grown (about half non-guillotine) and
+  `Shikaku.accepts` gates every draw: Standard nothing past only-reaches, Hard something past only-fits, Expert common-cells
+  or what-if, never the fallback; Expert clues avoid their rectangle's corners (common-cells or what-if: 22% to 27% of proved
+  draws). Rows above are after the gate. Draws a board over a year: mean 8 / 11 / 33, p95 25 / 32 / 100, max 47 / 77 / 231 of
+  2000; JVM median 0.4 / 0.5 / 1.7 ms a board, Expert p95 6 ms, max 16 ms; Expert in Chromium 4 / 14 / 32 ms (median / p95
+  / max), WebKit 5 / 17 / 38 ms.
 - **Atoms: graded, but loosely.** 16% of Expert boards need nothing past all-forced; 14% of Standard boards need isolation
   or what-if. Standard: at most at-least-one (82%); Hard: needs crossing or isolation (39%); Expert: needs isolation or
   what-if (40%). only-way-out is never needed anywhere (it is shadowed by the rungs before it).

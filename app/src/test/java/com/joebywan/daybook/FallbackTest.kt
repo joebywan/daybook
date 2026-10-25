@@ -116,8 +116,8 @@ class FallbackTest {
     fun `kings proves every daily board of a year on every tier`() = assertYearProved(Kings, fellBack = "shipped an unproved board") { seed, d -> Kings.generateVerified(seed, d) }
 
     /**
-     * Shikaku proves its single tiling with `countTilings`; its fallback (a clue in each
-     * rectangle's corner) is trivially unique but is not what the generator is for. A year per tier.
+     * Shikaku proves its single tiling with `countTilings` and gates the hint walk; its last resort (one fixed
+     * seed's board) is proved but is not what the generator is for. A year per tier.
      */
     @Test
     fun `shikaku proves every daily board of a year on every tier`() = assertYearProved(Shikaku, fellBack = "shipped its corner-clue fallback") { seed, d -> Shikaku.generateVerified(seed, d) }

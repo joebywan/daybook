@@ -171,8 +171,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
     pair and finishes without fallback (32% of Expert boards fall back today). Also 180-degree symmetric givens.
   - Kings: Standard no confined or what-if; Hard needs confined; Expert needs what-if (5% of draws: cost it first).
   - Mambo: the carver must run the whole ladder first (almost-met and what-if are never needed today); then Expert needs one.
-  - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
-    or what-if, no fallback.
   - Atoms: Standard at most at-least-one; Hard needs crossing or isolation; Expert needs isolation or what-if. Also reaches
     up to 5.
   - Tents: Hard needs one-spot; Expert needs shared or served (18% of draws).
@@ -181,8 +179,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
     pictures: measure the pass rate.
   - Inequality (pairs, sign chains) and Regions (locked candidates): the ladder is too short; the techniques come first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
-- [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
-  same `countTilings` proof.
 - [ ] **Pipes: a branchier tree.** `spanningTree` is a depth-first maze (long corridors); a random-edge spanning tree gives
   more junctions. (Counter-clockwise rotation and a lock mark: declined by the owner.)
 - [ ] **Mate: tier by rating.** `tools/chess/build.py` ignores Lichess `Rating`; band each tier by rating as well as N.
