@@ -176,7 +176,7 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
 - **Today's three** (`core/TodaysThree.kt`, `ui/home/TodaysThreeRow.kt`). One quick puzzle, one mid-weight, one word or
   number puzzle, from the date alone (each slot steps one place a day through its own list: quick 9, words 5, mid-weight
-  everything else, 12; the mid-weight slot steps once more each 45 days, so no set repeats within a year whatever that
+  everything else, 13; the mid-weight slot steps once more each 45 days, so no set repeats within a year whatever that
   list's length), so it is the same for everyone and a shared card means the same three. It replaced today's pick
   (`PuzzleRegistry.featured`, stepped past the player's five most played): a per-player pick could not be the shared set,
   and two daily highlights would compete, so the pick's gold ring and sparkles moved onto the three. Home shows it as one

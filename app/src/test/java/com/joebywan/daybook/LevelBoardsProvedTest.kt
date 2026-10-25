@@ -9,6 +9,7 @@ import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Kings
+import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.NonogramLogic
@@ -60,6 +61,7 @@ class LevelBoardsProvedTest {
         "nonogram" to NonogramLogic::generateVerified,
         "dominoes" to DominoLogic::generateVerified,
         "mines" to MinesLogic::generateVerified,
+        "lamps" to LampsLogic::generateVerified,
     )
 
     @Test

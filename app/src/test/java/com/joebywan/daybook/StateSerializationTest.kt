@@ -20,6 +20,8 @@ import com.joebywan.daybook.puzzles.MamboState
 import com.joebywan.daybook.puzzles.MosaicState
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.RegionsState
+import com.joebywan.daybook.puzzles.LampsLogic
+import com.joebywan.daybook.puzzles.LampsState
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.TargetOp
@@ -124,6 +126,9 @@ class StateSerializationTest {
         is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is RegionsState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is TallyState -> state.tap(0, TallyLogic.REMOVED).tap(1, TallyLogic.KEPT)
+        is LampsState -> state.walls.indexOf(LampsLogic.WHITE).let {
+            state.withMark(it, LampsLogic.LAMP_MARK).withMark(state.walls.indexOf(LampsLogic.WHITE, it + 1), LampsLogic.CROSS)
+        }
         is DominoState -> DominoLogic.flip(DominoLogic.place(DominoLogic.place(state, 0, state.answer[0]), 1, state.answer[1]), 1)
         is TargetState -> state.combine(0, TargetOp.Add, 1)!!
         is WordWheelState -> state.enter(state.slots[1].word)

@@ -165,7 +165,7 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
-- [ ] **New puzzles, in order:** Lamps (Light Up rules), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
+- [ ] **New puzzles, in order:** Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
   fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
 
 ## Future puzzle candidates

@@ -7,6 +7,7 @@ import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Kings
+import com.joebywan.daybook.puzzles.Lamps
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mosaic
@@ -62,6 +63,7 @@ object PuzzleRegistry {
         Pointers,
         Dominoes,
         Mines,
+        Lamps,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }

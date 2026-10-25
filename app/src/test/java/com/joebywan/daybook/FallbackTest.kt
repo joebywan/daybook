@@ -8,6 +8,8 @@ import com.joebywan.daybook.puzzles.CageLogic
 import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.Kings
+import com.joebywan.daybook.puzzles.Lamps
+import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.Shikaku
@@ -240,6 +242,22 @@ class FallbackTest {
         for ((d, u) in used) {
             println("tally ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${TallyLogic.ATTEMPTS}")
             assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < TallyLogic.ATTEMPTS / 2)
+        }
+    }
+
+    /**
+     * [LampsLogic.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the tier's
+     * rung, and the count proved one answer. Also measures the redraws (printed).
+     */
+    @Test
+    fun `lamps proves every daily board of a year on every tier`() {
+        val used = Difficulty.entries.associateWith { mutableListOf<Int>() }
+        assertYearProved(Lamps, onProved = { seed, d ->
+            used.getValue(d) += 1 + (0 until LampsLogic.ATTEMPTS).first { LampsLogic.attempt(seed, d, it) != null }
+        }) { seed, d -> LampsLogic.generateVerified(seed, d) }
+        for ((d, u) in used) {
+            println("lamps ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${LampsLogic.ATTEMPTS}")
+            assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < LampsLogic.ATTEMPTS / 2)
         }
     }
 
