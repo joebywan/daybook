@@ -17,7 +17,7 @@ import java.time.LocalDate
  * [ParityFingerprint] line each, in the order the web page prints its `RANGE` lines under
  * `?dump&range=365` (puzzle, then day, then tier). Strip the `RANGE ` prefix from the page's output
  * and the two files should be identical; it is also how Android boards are compared before and
- * after a change. The per-puzzle web parity tests pin a few of these boards outright.
+ * after a change. `BoardPinTest` pins nine of each puzzle's boards outright.
  */
 class WebParityDumpTest {
 
