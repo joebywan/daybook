@@ -112,6 +112,21 @@ walkthrough), `ShikakuTeacher.kt`. `id = "shikaku"` is hashed into every seed: n
   deepened boards). Hints therefore never fall back on a generated board. `lastResort` is the board of one fixed seed, proved
   by a test; a year per tier never reaches it (`FallbackTest`). Changing the ladder changes every board (parity pins go red).
 
+## Atoms (bridges)
+
+Hashiwokakero as chemistry: bond atoms with single or double lines, no crossings, one molecule. `puzzles/Atoms.kt` (state, generator,
+`countSolutions`, board, walkthrough), `AtomsTeacher.kt`. `id = "atoms"` is hashed into every seed: never rename it.
+
+- **Tiers: 7x7 with 10 atoms / 9x9 with 18 / 11x11 with 28, and a depth gate** (`Atoms.specFor`, Tally's pattern): the deepest
+  technique of a hints-only walk from the empty board (`AtomsTeacher.depth`) must be at most at-least-one on Standard, crossing or
+  isolation on Hard, isolation or deeper on Expert, and every walk must finish, so hints never fall back on a generated board.
+  Only-way-out is shadowed by the rungs before it and almost never needed. Measured: `docs/TEACHING.md`, "Tier depth".
+- **Growth:** each new atom sprouts 2 to 6 squares off an existing one, never onto or across a bond (the old rule that let an atom
+  split a bond, and stored a broken answer on 4-35% of boards, is gone). Draw `a` is `Rng(seed + a)`, up to `ATTEMPTS` (2000); a
+  year's worst is 10 / 39 / 71 draws. A board ships only if the gate holds and `countSolutions` (exhaustive, no budget) proves one
+  answer; `AtomsTeachingTest` re-checks with its own atom-by-atom enumerator. `lastResort` is a three-atom chain no year reaches.
+- **`solved` checks the rules**; a mistake is a line with more bonds than the stored answer, sound because the answer is unique.
+
 ## Nonogram
 
 Run-length clues beside a grid; fill the squares that give every row and column its numbers. `puzzles/NonogramRules.kt`
@@ -136,6 +151,23 @@ into every seed: never rename it.
   stored picture never read) turns red once it has stayed so for a second. `NonogramRulesTest` brute-forces that rule.
 - The pictures are random noise, not drawings. Smoothing them into blobs made 5x5 boards fail the filter too often
   (4% passed the shape rules); see `docs/TODO.md`.
+
+## Mambo (Takuzu with = and x links)
+
+Two symbols, balanced in every line, never three alike together, printed `=`/`x` links honoured. `puzzles/Mambo.kt` (state, rules,
+generator, `countSolutions`), `MamboTeacher.kt` (the ladder and `depth`). `id = "mambo"` is hashed into every seed: never rename it.
+
+- **Tiers are size and ladder depth: 6x6 / 8x8 / 10x10.** Standard is finished by the first four techniques (pair, sandwich, link,
+  quota), Hard must need quota-almost-met and not what-if, Expert must need what-if (`MamboTeacher.depth`, `Mambo.rungFor`).
+- **The generator's ladder is the teacher's.** The carve takes back cells, then links, while the ladder up to the tier's rung still
+  finishes the board, one pass per rung, cheapest first; then the tier's draw is redrawn unless the walk needs exactly its rung, and
+  `countSolutions` (propagation plus a lookahead, then branching, no budget) proves one answer. Standard's boards are the ones it
+  always had. `depth`'s what-if is `whatIfAt` (looks only near each square; `MamboTeachingTest` holds it equal to the hint's
+  `whatIf`). Draws a board over a year: 1.00 / 1.42 / 1.01 mean, at most 1 / 6 / 2 of 40; JVM median / max 0.9 / 5, 4 / 23,
+  18 / 62 ms; Chromium median / p95 / max 1.4 / 1.7 / 2.4, 6.6 / 19 / 35, 29 / 41 / 78 ms, WebKit up to 3 / 49 / 91 ms
+  (before the lookahead in `countSolutions`, sparse Expert boards took over a second to count). `MamboRulesTest` walks the year per tier (with its own solver: three rules plus a one-deep supposition) and an
+  independent exhaustive count; `lastResort` (checkerboard, every link) is never reached.
+- **`solved` checks the rules**; a mistake is a symbol no legal answer keeps.
 
 ## Inequality (Futoshiki)
 
