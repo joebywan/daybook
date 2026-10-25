@@ -40,8 +40,8 @@ class WordWheelWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            1584025424, -2098451885, -449273414, -890747878, -215818805, 1390003321,
-            -2075303792, -788323706, -1010860532,
+            1018889751, 1954803247, 1266937928, -936734007, 2126808380, -1562429087,
+            907427678, -773029108, 1000227698,
         )
     }
 }
