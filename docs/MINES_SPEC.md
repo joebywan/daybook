@@ -42,9 +42,7 @@ less is redrawn.
 |---|---|---|---|
 | Standard | 8x8 | 10 (16%) | the single-number rules only |
 | Hard | 8x10 | 16 (20%) | a subset or pair step at least once |
-| Expert | 8x12 | 22 (23%) | the mine count or a what-if at least once |
-
-(Mine counts are the starting design; the Measured section records what shipped.)
+| Expert | 8x12 | 22 (23%) | the count against the numbers or a what-if at least once |
 
 ## Generator and proof
 
@@ -59,8 +57,8 @@ is unique. `lastResort(difficulty)` is the first seed counting from 1 whose draw
 
 Independent check, in tests (`MinesOracle`): exhaustive enumeration of every mine layout consistent with the revealed
 numbers and the mine total (frontier squares by backtracking, the rest counted combinatorially), with no rules at all.
-After each ladder step it checks that the step's squares are mine (or safe) in every consistent layout, and that from the
-opening exactly one layout fits the finished board's numbers.
+Every ladder step, on the generator's path and from boards a player made, is checked to hold in every consistent layout;
+since the steps reveal every safe square, every mine is forced and the answer is unique.
 
 ## The ladder (teacher = generator)
 
@@ -75,16 +73,18 @@ the hint is the first fact the player has not put down. One fact at a time, simp
 4. `PAIR` (level 2): two numbers that share squares; if B needs as many more mines than A as B has squares A cannot see, those
    squares are all mines and A's own squares are safe. The 1-2-1.
 5. `COUNT` (level 3): the mine total. Mines left 0: every hidden square is safe; mines left equal to the hidden squares: all
-   mines. Also the count against the numbers: when the numbers along the edge need exactly the mines left, every hidden
-   square no number touches is safe.
+   mines.
+5b. `EDGE` (`count-edge`, level 3): the count against the numbers. Numbers on squares none of them share (picked greedily,
+   largest need first) need every mine left between them, so every other hidden square is safe. An Expert board must use
+   this or a what-if: the plain count alone at the end (a pocket no number touches) is too slight.
 6. `WHAT_IF` (level 3): suppose a hidden square beside a number is a mine (or safe), follow the single-number rules at most
    `MAX_LINKS` (3) numbers, and one number is left with too many mines or too few squares: so the square is the other.
 
 A **mistake** is a flag on a safe square, sound because the board has one answer (the answer is read only for this and for
 the fallback). The **fallback** points at a safe square from the answer and says so; on a shipped board it is never reached
-(measured below). `neededTechnique` is `SUBSET` / `PAIR`, `COUNT` / `WHAT_IF` from the generator's walk, null on Standard.
+(measured below). `neededTechnique` is `SUBSET` / `PAIR`, `EDGE` / `WHAT_IF` from the generator's walk, null on Standard.
 
-Highlight indices: squares `0 until width * height`; the mines-left counter `width * height`.
+Highlight indices: squares `0 until width * height` (the counter is never highlighted; the count steps name it in words).
 
 ## Input
 
@@ -98,7 +98,12 @@ Highlight indices: squares `0 until width * height`; the mines-left counter `wid
 ## Layout
 
 A row above the board holds the hearts (Pointers' `Hearts`) and "N mines left" or, when failed, "Out of lives" and Try
-again, always the same height. The board sizes from both axes; the pen row sits under it and is `keepClear`.
+again, always the same height. The board sizes from both axes; the pen row sits under it and is `keepClear`. A box wider
+than 1.1 times its height (a phone on its side, a tablet) puts the hearts, the count and the pens in a column beside the
+board instead, which then has the whole height.
+
+Square size (CSS px / dp): 390x844 every tier 44.75 wide-bound; Expert at 375x537 (a phone browser with both toolbars)
+21.5, height-bound; a phone on its side (844x390) Expert about 31.
 
 ## Colours
 
@@ -128,5 +133,13 @@ mine." with all three and no hints.
 
 ## Measured
 
-To be filled from the build: acceptance per tier, draws per board, opening size, generation time (JVM, Chromium, WebKit),
-techniques per board, fallback.
+A year of daily boards per tier (`MinesRulesTest`, `build/reports/mines-generation.txt`), Standard / Hard / Expert:
+
+- Draws per board (of `ATTEMPTS` = 3000): mean 9.3 / 5.6 / 28.2, most 54 / 46 / 161. No day reaches `lastResort` (`FallbackTest`).
+- Opening (share of the safe squares open at load): median 35 / 25 / 24%, at most 44 / 44 / 45% (the cap).
+- Generation, desktop JVM, ms median / p95 / max: 0.3 / 1.3 / 4.1, 0.4 / 2.1 / 8.7, 2.5 / 12.1 / 30.9. Chromium: 0.7 / 2.7 / 6.8,
+  0.9 / 3.7 / 12.3, 6.9 / 32.4 / 54.3. WebKit: 1 / 3 / 7, 1 / 4 / 10, 7 / 28 / 63.
+- Hints alone (200 boards per tier, `MinesTeachingTest`): 20.8 / 32.8 / 42.8 steps per board; subset 0 / 2.1 / 2.8, pair 0 / 0.8 / 1.2,
+  count against the numbers 0 / 0 / 0.9, what-if 0 / 0 / 0.16 per board; the plain count never appears on a shipped board.
+  **Fallback: 0** on every tier, and none from boards a player made.
+- Of raw draws before the gate (2,000 a tier), the walk stalls (a guess would be needed) on 30 / 63 / 86%.
