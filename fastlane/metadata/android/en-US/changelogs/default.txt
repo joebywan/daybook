@@ -1,6 +1,6 @@
 - Swipe left or right on the home screen to change the difficulty.
 - Tap your streak on the home screen to open Statistics.
 - Share it again later: Statistics keeps your best result and your last random board for every puzzle and tier.
-- Word Wheel's share says how many bonus words you found.
-- Tower's pips sit in a square beside each guess, so they no longer look tied to the peg above.
-- Clearer word clues, and no interjections or old words in Word Wheel's grids.
+- Word Wheel's share says how many bonus words you found, and its hints reason from crossing slots more often.
+- Tower's pips sit in a square beside each guess.
+- Clearer word clues, and no interjections or old words in Word Wheel.
