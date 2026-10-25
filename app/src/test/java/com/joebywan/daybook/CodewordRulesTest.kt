@@ -177,7 +177,11 @@ class CodewordRulesTest {
                 val s = Codeword.generateVerified(seed, d)!!
                 times += System.nanoTime() - t0
                 givens += s.given.size
-                needs.merge(Codeword.neededTechnique(s), 1, Int::plus)
+                val need = Codeword.neededTechnique(s)
+                needs.merge(need, 1, Int::plus)
+                assertEquals(CodewordLogic.specFor(d).size, s.size)
+                if (d == Difficulty.STANDARD) assertTrue("$need", need in setOf(CodewordTeacher.ONE_WORD, CodewordTeacher.RUN_AGREES))
+                else assertEquals(CodewordLogic.specFor(d).needs, need)
             }
             times.sort()
             report.appendLine(

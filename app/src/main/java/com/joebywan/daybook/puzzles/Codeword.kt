@@ -434,7 +434,7 @@ object Codeword : PuzzleType {
 
     /**
      * The walkthrough's grid, ATE / PEAT / EXTRA / TEEN / NET across and APE / TEXT / EATEN / TREE / ANT down, with
-     * T given. Its numbers are fixed: [TUTORIAL_ORDER]'s letters are 1 to 7.
+     * T and E given. Its numbers are fixed: [TUTORIAL_ORDER]'s letters are 1 to 7.
      */
     internal const val TUTORIAL_GRID = "ate##" + "peat#" + "extra" + "#teen" + "##net"
     internal const val TUTORIAL_ORDER = "rteanxp"
@@ -442,15 +442,15 @@ object Codeword : PuzzleType {
     /** Number [letter]'s in the walkthrough. */
     internal fun tutorialNumber(letter: Char): Int = TUTORIAL_ORDER.indexOf(letter) + 1
 
-    /** The motif: E and A found, A's number picked. */
-    private val PREVIEW_PLACED = mapOf(tutorialNumber('e') to 'e' - 'a', tutorialNumber('a') to 'a' - 'a')
-    private val PREVIEW_PICK = tutorialNumber('a')
+    /** The motif: A and X found, X's number picked. */
+    private val PREVIEW_PLACED = mapOf(tutorialNumber('a') to 'a' - 'a', tutorialNumber('x') to 'x' - 'a')
+    private val PREVIEW_PICK = tutorialNumber('x')
 
-    /** The walkthrough's board, T given, with [placed] (number to letter) and [selected]. */
+    /** The walkthrough's board, T and E given, with [placed] (number to letter) and [selected]. */
     internal fun tutorialBoard(placed: Map<Int, Int> = emptyMap(), selected: Int? = null): CodewordState {
         val numbers = TUTORIAL_GRID.map { if (it == '#') 0 else tutorialNumber(it) }
         val solution = TUTORIAL_ORDER.map { it - 'a' }
-        val given = listOf(tutorialNumber('t'))
+        val given = listOf(tutorialNumber('t'), tutorialNumber('e')).sorted()
         return CodewordState(
             size = 5, numbers = numbers, solution = solution, given = given,
             letters = solution.indices.map { if (it + 1 in given) solution[it] else placed[it + 1] ?: EMPTY },
@@ -458,12 +458,14 @@ object Codeword : PuzzleType {
         )
     }
 
-    /** The squares of EATEN, the word down the middle. */
-    internal val TUTORIAL_EATEN = setOf(2, 7, 12, 17, 22)
+    /** The squares of ATE, the top word, and EXTRA, the middle row. */
+    internal val TUTORIAL_ATE = setOf(0, 1, 2)
+    internal val TUTORIAL_EXTRA = setOf(10, 11, 12, 13, 14)
 
     override val tutorial: List<TutorialFrame> by lazy {
         val e = tutorialNumber('e')
         val a = tutorialNumber('a')
+        val x = tutorialNumber('x')
         val r = tutorialNumber('r')
         val t = tutorialNumber('t')
         val b0 = tutorialBoard()
@@ -474,63 +476,62 @@ object Codeword : PuzzleType {
             { it is CodewordState && it.letters == letters(before) && it.selected == number },
             { it is CodewordState && it.letters == letters(before + (number to (letter - 'a'))) },
         )
-        val oneE = mapOf(e to 'e' - 'a')
-        val twoA = oneE + (a to 'a' - 'a')
-        val pe = place(emptyMap(), e, 'e')
-        val pa = place(oneE, a, 'a')
+        val oneA = mapOf(a to 'a' - 'a')
+        val twoX = oneA + (x to 'x' - 'a')
+        val pa = place(emptyMap(), a, 'a')
+        val px = place(oneA, x, 'x')
         val clash = TutorialPath(
-            { it is CodewordState && it.letters == letters(twoA) && it.selected == r },
-            { it is CodewordState && it.letters == letters(twoA + (r to 'e' - 'a')) },
-            // Back where it started, but by way of the E: only a move counted since says so.
-            { it is CodewordState && it.letters == letters(twoA) && it.moves > 0 },
+            { it is CodewordState && it.letters == letters(twoX) && it.selected == r },
+            { it is CodewordState && it.letters == letters(twoX + (r to 'x' - 'a')) },
+            // Back where it started, but by way of the X: only a move counted since says so.
+            { it is CodewordState && it.letters == letters(twoX) && it.moves > 0 },
         )
         listOf(
             TutorialFrame(
                 state = b0,
-                caption = "Each number is a letter, the same one everywhere, and no two numbers share one. T is given: " +
-                    "every $t is T. Every word across and down is a real word.",
-                highlight = BoardHighlight(strong = squaresOf(t)),
+                caption = "Each number is a letter, the same one everywhere, and no two numbers share one. T and E are given. " +
+                    "Every word across and down is a real word.",
+                highlight = BoardHighlight(strong = squaresOf(t) + squaresOf(e)),
             ),
             TutorialFrame(
                 state = b0,
-                caption = "The word down the middle reads $e $a T $e ${tutorialNumber('n')}. Only EATEN fits, so $e is E. " +
-                    "Tap one of its squares, then E.",
+                caption = "The top word reads $a T E. Only ATE fits, so $a is A. Tap one of its squares, then A.",
                 glow = { s ->
-                    if (pe.stage(s) < 0) BoardHighlight(strong = TUTORIAL_EATEN)
-                    else BoardHighlight(strong = setOf(CodewordLogic.letterKey('e' - 'a')), soft = squaresOf(e))
-                },
-                steps = pe.steps,
-                retry = "Tap a glowing square, then the E.",
-                done = "Every $e is E.",
-            ),
-            TutorialFrame(
-                state = tutorialBoard(oneE, selected = e),
-                caption = "EATEN gives A as well. Tap $a in the key under the grid, then A.",
-                glow = { s ->
-                    if (pa.stage(s) < 0) BoardHighlight(strong = setOf(CodewordLogic.key(a)), soft = squaresOf(a))
+                    if (pa.stage(s) < 0) BoardHighlight(strong = TUTORIAL_ATE)
                     else BoardHighlight(strong = setOf(CodewordLogic.letterKey(0)), soft = squaresOf(a))
                 },
                 steps = pa.steps,
-                retry = "Tap the glowing $a, then the A.",
+                retry = "Tap a glowing square, then the A.",
                 done = "Every $a is A.",
             ),
             TutorialFrame(
-                state = tutorialBoard(twoA, selected = a),
-                caption = "A letter on two numbers turns red. Give $r the E that $e has: tap $r in the key, then E. " +
-                    "Then tap E again to clear it.",
+                state = tutorialBoard(oneA, selected = a),
+                caption = "The middle row reads E $x T $r A. Only EXTRA fits, so $x is X. Tap $x in the key under the grid, then X.",
+                glow = { s ->
+                    if (px.stage(s) < 0) BoardHighlight(strong = setOf(CodewordLogic.key(x)), soft = TUTORIAL_EXTRA)
+                    else BoardHighlight(strong = setOf(CodewordLogic.letterKey('x' - 'a')), soft = squaresOf(x))
+                },
+                steps = px.steps,
+                retry = "Tap the glowing $x, then the X.",
+                done = "Every $x is X.",
+            ),
+            TutorialFrame(
+                state = tutorialBoard(twoX, selected = x),
+                caption = "A letter on two numbers turns red. Give $r the X that $x has: tap $r in the key, then X. " +
+                    "Then tap X again to clear it.",
                 glow = { s ->
                     when (clash.stage(s)) {
-                        -1 -> BoardHighlight(strong = setOf(CodewordLogic.key(r)), soft = squaresOf(e))
-                        0 -> BoardHighlight(strong = setOf(CodewordLogic.letterKey('e' - 'a')), soft = squaresOf(e))
-                        else -> BoardHighlight(strong = squaresOf(r) + CodewordLogic.letterKey('e' - 'a'), soft = squaresOf(e), warning = true)
+                        -1 -> BoardHighlight(strong = setOf(CodewordLogic.key(r)), soft = squaresOf(x))
+                        0 -> BoardHighlight(strong = setOf(CodewordLogic.letterKey('x' - 'a')), soft = squaresOf(x))
+                        else -> BoardHighlight(strong = squaresOf(r) + CodewordLogic.letterKey('x' - 'a'), soft = squaresOf(x), warning = true)
                     }
                 },
                 steps = clash.steps,
-                retry = "Tap the glowing $r, then the E, then the E again.",
+                retry = "Tap the glowing $r, then the X, then the X again.",
                 done = "Cleared. Tapping the letter again takes it out.",
             ),
             TutorialFrame(
-                state = tutorialBoard(twoA, selected = r),
+                state = tutorialBoard(twoX, selected = r),
                 caption = "Your turn: crack the rest. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Solved: ATE, PEAT, EXTRA, TEEN and NET.",

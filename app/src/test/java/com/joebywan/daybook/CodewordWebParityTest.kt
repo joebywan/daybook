@@ -32,6 +32,9 @@ class CodewordWebParityTest {
 
     companion object {
         /** Hashes of the 9 lines, in the order of [CipherWebParityTest.PARITY_DATES] and the tiers. */
-        val FINGERPRINTS = listOf<Int>()
+        val FINGERPRINTS = listOf(
+            -1222949206, 1665415768, 604764266, 1594770704, -316436760, 903922004,
+            -226230964, -1003865577, 266805959,
+        )
     }
 }

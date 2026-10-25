@@ -12,7 +12,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class CodewordKeysTest {
-    private val board = Codeword.tutorialBoard() // seven numbers, 2 given (T)
+    private val board = Codeword.tutorialBoard() // seven numbers, 2 and 3 given (T and E)
 
     @Test
     fun `keys map`() {
@@ -48,7 +48,7 @@ class CodewordKeysTest {
         val first = board.applyKey(CodewordKeyAction.Move(1))!!
         assertEquals(1, first.selected)
         assertNull(first.applyKey(CodewordKeyAction.Move(-1)))
-        assertEquals(3, first.applyKey(CodewordKeyAction.Move(1))!!.selected) // 2 is given
+        assertEquals(4, first.applyKey(CodewordKeyAction.Move(1))!!.selected) // 2 and 3 are given
         assertNull(board.select(7).applyKey(CodewordKeyAction.Move(1)))
     }
 }

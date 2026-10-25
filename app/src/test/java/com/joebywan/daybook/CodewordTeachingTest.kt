@@ -3,12 +3,14 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Codeword
 import com.joebywan.daybook.puzzles.CodewordLogic
 import com.joebywan.daybook.puzzles.CodewordLogic.EMPTY
 import com.joebywan.daybook.puzzles.CodewordState
 import com.joebywan.daybook.puzzles.CodewordTeacher
 import com.joebywan.daybook.puzzles.WheelWords
+import com.joebywan.daybook.puzzles.enter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -186,5 +188,70 @@ class CodewordTeachingTest {
         val b = CodewordTeacher.teach(other.copy(letters = s.letters))!!
         assertEquals(a.explanation, b.explanation)
         assertEquals(a.number to a.letter, b.number to b.letter)
+    }
+
+    @Test
+    fun `each walkthrough frame accepts its move, made by the real gestures, and rejects a wrong one`() {
+        val frames = Codeword.tutorial
+        assertEquals(5, frames.size)
+        assertEquals(listOf(true, false, false, false, false), frames.map { it.judge == null && !it.freePlay })
+        val a = Codeword.tutorialNumber('a')
+        val x = Codeword.tutorialNumber('x')
+        val r = Codeword.tutorialNumber('r')
+        val b0 = Codeword.tutorialBoard()
+        // The board has one answer, and it is the stored one; the oracle agrees.
+        assertEquals(1, CodewordOracle.count(5, b0.numbers, b0.letters))
+        assertEquals(b0.solution, (CodewordLogic.solve(5, b0.numbers, b0.letters) as CodewordLogic.Verdict.ExactlyOne).letters)
+        // The captions' claims: only ATE fits the top word from the givens, only EXTRA the middle row once A is in.
+        val shape = CodewordTeacher.Shape(5, b0.numbers, b0.letters.size)
+        fun onlyWord(letters: List<Int>, squares: Set<Int>): String? {
+            val r0 = shape.squares.indexOfFirst { it.toSet() == squares }
+            val hit = CodewordTeacher.findSteps(shape, letters).firstOrNull { it.run == r0 && it.technique == CodewordTeacher.ONE_WORD }
+            return hit?.let { com.joebywan.daybook.puzzles.CodewordWords.of(squares.size).words[it.words[0]] }
+        }
+        assertEquals("ate", onlyWord(b0.letters, Codeword.TUTORIAL_ATE))
+        // Frame 2: A on a square of ATE, then the A.
+        val pa = frames[1].steps!!
+        assertEquals(TutorialStep.REJECT, pa(b0))
+        val pickA = b0.select(a)
+        assertEquals(TutorialStep.PROGRESS, pa(pickA))
+        assertEquals(TutorialStep.REJECT, pa(b0.select(x)))
+        assertEquals(TutorialStep.REJECT, pa(pickA.enter(a, 4)))
+        val one = pickA.enter(a, 0)
+        assertEquals(TutorialStep.DONE, pa(one))
+        assertEquals("extra", onlyWord(one.letters, Codeword.TUTORIAL_EXTRA))
+        // Frame 3: X through the key.
+        val px = frames[2].steps!!
+        assertEquals(one.letters, (frames[2].state as CodewordState).letters)
+        val pickX = one.select(x)
+        assertEquals(TutorialStep.PROGRESS, px(pickX))
+        assertEquals(TutorialStep.REJECT, px(pickX.enter(x, 1)))
+        val two = pickX.enter(x, 'x' - 'a')
+        assertEquals(TutorialStep.DONE, px(two))
+        // Frame 4: R gets X (both turn red), then X again clears it.
+        val clash = frames[3].steps!!
+        val c0 = frames[3].state as CodewordState
+        assertEquals(two.letters, c0.letters)
+        assertEquals(TutorialStep.REJECT, clash(c0))
+        val pickR = c0.select(r)
+        assertEquals(TutorialStep.PROGRESS, clash(pickR))
+        assertEquals(TutorialStep.REJECT, clash(pickR.enter(r, 2)))
+        val rx = pickR.enter(r, 'x' - 'a')
+        assertEquals(TutorialStep.PROGRESS, clash(rx))
+        assertTrue(frames[3].glow!!(rx).warning)
+        assertEquals(setOf(r, x), CodewordLogic.conflicts(5, rx.numbers, rx.letters).numbers)
+        assertTrue(Codeword.teach(rx)!!.mistake)
+        assertEquals(TutorialStep.DONE, clash(rx.enter(r, 'x' - 'a')))
+        // Frame 5 is free play, and hints alone finish it with no fallback and no mistake.
+        assertTrue(frames[4].freePlay)
+        var now = frames[4].state as CodewordState
+        assertEquals(two.letters, now.letters)
+        while (!now.solved) {
+            val d = Codeword.teach(now)!!
+            assertFalse(d.fallback); assertFalse(d.mistake)
+            now = d.apply(now) as CodewordState
+        }
+        assertEquals(b0.solution, now.letters)
+        for (f in frames) assertTrue("caption ${f.caption.length}", f.caption.length <= 170)
     }
 }
