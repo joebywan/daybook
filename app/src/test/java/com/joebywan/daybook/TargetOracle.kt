@@ -48,6 +48,33 @@ object TargetOracle {
         return best
     }
 
+    /**
+     * The roads to [target] in exactly [steps] operations, counted on another principle from `TargetLogic.Roads`: every tile
+     * carries the sum that made it, written out (`(3+4)*5`, the two sides of + and x, and of 5 / 5, in text order, so swapping them,
+     * reordering independent steps or using the other of two equal tiles writes the same text), and every ordered pair of every
+     * position is tried round by round. The roads are the different texts of a tile equal to [target] after [steps] rounds.
+     */
+    fun roads(start: List<Int>, target: Int, steps: Int): Int {
+        var layer: Set<List<Pair<Int, String>>> = setOf(start.map { it to "$it" }.sortedBy { it.second })
+        val found = HashSet<String>()
+        for (round in 1..steps) {
+            val next = HashSet<List<Pair<Int, String>>>()
+            for (position in layer) for (i in position.indices) for (j in position.indices) {
+                if (i == j) continue
+                val (a, ea) = position[i]
+                val (b, eb) = position[j]
+                val rest = position.filterIndexed { k, _ -> k != i && k != j }
+                for ((r, sym) in listOf(a.toLong() + b to "+", a.toLong() * b to "*", (a - b).toLong() to "-", (if (b != 0 && a % b == 0) (a / b).toLong() else 0L) to "/")) {
+                    if (r !in 1..CAP) continue
+                    val text = if (sym == "+" || sym == "*" || a == b) listOf(ea, eb).sorted().joinToString(sym, "(", ")") else "($ea$sym$eb)"
+                    if (round == steps) { if (r.toInt() == target) found += text } else next += (rest + (r.toInt() to text)).sortedBy { it.second }
+                }
+            }
+            layer = next
+        }
+        return found.size
+    }
+
     /** Whether any sequence of operations from [tiles] makes a tile equal to [target]. */
     fun reachable(tiles: List<Int>, target: Int): Boolean = minOps(tiles, maxOf(target, 1))[target] >= 0
 }
