@@ -161,10 +161,6 @@ Five independent design reviews (puzzle construction, player experience, daily m
 accepted by the owner except where noted. Each item is one workstream and one PR; delete it here when it lands.
 Generator changes move every daily board of that puzzle (parity pins go red on purpose): batch them, one PR per puzzle.
 
-- [ ] **Play-screen fixes.** Mosaic's "Out of fills" line is unreserved under a height-sized board (`Mosaic.kt` `s.failed`)
-  and says "restart" when Undo works; Cage Sudoku shows two "Show me" buttons while the popover is open; a Tower colour tap
-  should fill the next empty peg (as the keyboard does); the first-visit offer line should carry the puzzle's tagline;
-  Tower moves to the end of `PuzzleOrder.GENTLEST` (redundant with Lexicon).
 - [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
   - Sudoku first: Hard needs a naked single and finishes without what-if or fallback; Expert needs locked candidates or a

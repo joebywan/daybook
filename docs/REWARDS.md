@@ -173,8 +173,8 @@ would rather let people rearrange than hide.
 - **Gentlest first, then most played** (the default): solves per puzzle, dailies of the last 60 days plus every practice game
   (they carry no day); ties and never-played puzzles keep `PuzzleOrder.GENTLEST`, the owner's one table of how quickly a
   newcomer gets going on Standard (see it, do it: Pointers, Pipes, Snap; then Sudoku, Lexicon, Sand; familiar: Word Wheel,
-  Target, Nonogram; quick to learn: Kings, Mambo, Mosaic, Sets, Tower, Inequality, Tents, Regions, Tally; takes a bit: Shikaku,
-  Atoms, LITS, Mate, Cage Sudoku, Cipher, Dominoes). So a new player's grid is that table, and Sudoku and Lexicon open the
+  Target, Nonogram; quick to learn: Kings, Mambo, Mosaic, Sets, Inequality, Tents, Regions, Tally; takes a bit: Shikaku,
+  Atoms, LITS, Mate, Cage Sudoku, Cipher, Dominoes; and Tower last, as much the same game as Lexicon). So a new player's grid is that table, and Sudoku and Lexicon open the
   second row of a three-column phone (`HomeOrderTest` pins it); a puzzle missing from it goes last. The solves are read once
   per app start and day, not live, so coming home from a solve never moves a tile under the player's finger.
 - **My own order**: press and hold a tile on the home grid, then drag it (the owner's call, replacing #231's Arrange screen
