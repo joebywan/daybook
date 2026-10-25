@@ -24,6 +24,9 @@ data class Praise(
     val toGo: String? = null,
     /** What the Share button previews and sends ([shareCard]); null hides the button. */
     val share: ShareCard? = null,
+    /** A second Share button, [setShareLabel], for the set this solve finished: a level, or today's three. */
+    val setShare: ShareCard? = null,
+    val setShareLabel: String = "",
     /**
      * The full show (all the confetti) rather than a light flourish: the first daily solve of today, an Expert solve, a
      * personal record, a streak milestone or an earned achievement. True by default, so a frame nobody judged stays loud.

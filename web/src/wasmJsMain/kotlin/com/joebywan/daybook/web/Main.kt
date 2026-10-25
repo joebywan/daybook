@@ -9,6 +9,14 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.platform.currentDate
 import com.joebywan.daybook.platform.dateOverride
+import com.joebywan.daybook.core.TodaysThree
+import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.data.LevelSolve
+import com.joebywan.daybook.platform.formatClock
+import com.joebywan.daybook.platform.formatDate
+import com.joebywan.daybook.ui.play.levelShareCard
+import com.joebywan.daybook.ui.play.threeShareCard
+import kotlinx.datetime.LocalDate
 import com.joebywan.daybook.ui.play.EarnedAchievement
 import com.joebywan.daybook.ui.play.Praise
 import com.joebywan.daybook.ui.play.finishPreview
@@ -17,7 +25,6 @@ import com.joebywan.daybook.ui.play.sharePreviewOpen
 import com.joebywan.daybook.ui.play.techniqueLine
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.WordWheelState
-import kotlinx.datetime.LocalDate
 import kotlin.time.TimeSource
 
 private fun locationSearch(): String = js("window.location.search")
@@ -157,6 +164,19 @@ fun main() {
             big = n > 0, streak = if (n > 0) 7 else 0, lines = listOf(sampleLine(params, tier)),
             achievements = all.take(n), toGo = if ("togo" in params) "Only Hard on Kings left for all done today!" else null,
             share = sampleShare(params["puzzle"], tier),
+            // `&leveldone` also shows the level's card, `&threedone` today's three's (sample solves, never stored).
+            setShare = when {
+                "leveldone" in params -> (params["level"]?.toIntOrNull() ?: 1).let { n ->
+                    val ids = listOf("sudoku", "kings", "pipes", "words", "sand")
+                    levelShareCard(n, ids, ids.mapIndexed { i, id -> LevelSolve(n, id, 200 + 60 * i, if (i == 1) 1 else 0) }, ::formatClock)
+                }
+                "threedone" in params -> day.let { today ->
+                    val three = TodaysThree.of(today)
+                    threeShareCard(three, three.map { Completion(it, tier, today, 300, 0) }, today, tier, formatDate(today, "d MMM"), 4, ::formatClock)
+                }
+                else -> null
+            },
+            setShareLabel = if ("leveldone" in params) "Share level" else "Share three",
         )
         // `&share` opens the share preview over the frame.
         sharePreviewOpen = "share" in params
