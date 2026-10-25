@@ -42,6 +42,7 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.forEachBit
 import com.joebywan.daybook.core.jvmHashSetOrder
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
@@ -462,7 +463,7 @@ object Lits : PuzzleType {
         var claimed = 0L
         masks.forEachIndexed { index, m ->
             claimed = claimed or m
-            forEachBit(m) { region[it] = index }
+            m.forEachBit { region[it] = index }
         }
         val sizes = IntArray(placed.size) { 4 }
         val opts = Array(placed.size) { g.tetrominoesIn(masks[it]) }
@@ -480,7 +481,7 @@ object Lits : PuzzleType {
             val frontier = g.spread(claimed) and claimed.inv()
             if (frontier == 0L) break
             var open = frontier
-            if (intact) forEachBit(frontier) { cell ->
+            if (intact) frontier.forEachBit { cell ->
                 if (hostBits(g, cell, region) and refused[cell].inv() == 0L) {
                     open = open and (1L shl cell).inv()
                 }
@@ -657,14 +658,6 @@ object Lits : PuzzleType {
         return rest.countTrailingZeroBits()
     }
 
-    private inline fun forEachBit(bits: Long, action: (Int) -> Unit) {
-        var rest = bits
-        while (rest != 0L) {
-            action(rest.countTrailingZeroBits())
-            rest = rest and (rest - 1)
-        }
-    }
-
     /**
      * A w x h grid (at most 64 squares) worked out once for the generator: squares as bits of a
      * `Long`, and every four-square connected placement, the 2x2 block included, as an id with its
@@ -781,7 +774,7 @@ object Lits : PuzzleType {
         fun tetrominoesIn(cells: Long): IntArray {
             var size = 0
             var buffer = IntArray(40)
-            forEachBit(cells) { cell ->
+            cells.forEachBit { cell ->
                 for (q in byLowest[cell]) {
                     if (mask[q] and cells.inv() != 0L) continue
                     if (size == buffer.size) buffer = buffer.copyOf(size * 2)
