@@ -142,10 +142,8 @@ object Snap : PuzzleType {
      */
     private fun lastResort(difficulty: Difficulty): SnapState {
         val (w, h) = shape(difficulty)
-        val marks = MutableList(w * h) { 0 }
         val path = boustrophedon(w, h)
-        path.forEachIndexed { rank, cell -> marks[cell] = rank + 1 }
-        return SnapState(w, h, marks.toList(), emptyList())
+        return SnapState(w, h, labels(w, h, path, path.indices.toList()), emptyList())
     }
 
     /** The numbers a board carries: the chosen steps of [path], ranked along it. */
