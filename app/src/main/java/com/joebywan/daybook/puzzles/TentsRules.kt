@@ -185,8 +185,11 @@ internal object TentsLogic {
 
     // ---- generator ---------------------------------------------------------------------------------
 
-    /** Retries with `Rng(seed + attempt)`; the rate that needs more than one is measured in `TentsRulesTest`. */
-    const val ATTEMPTS = 400
+    /**
+     * Retries with `Rng(seed + attempt)`. With the tier gate a year of daily seeds needs at most 5 / 27 / 143 draws (means
+     * 1.3 / 5.6 / 23: about 4% of Expert draws are finished by the ladder, unique and deep enough); `TentsRulesTest` measures.
+     */
+    const val ATTEMPTS = 2000
 
     /** A random tent set and trees beside each tent, or null; nothing proved yet. */
     private fun draw(n: Int, count: Int, rng: Rng): TentsState? {
@@ -214,27 +217,38 @@ internal object TentsLogic {
         )
     }
 
+    /**
+     * The tier gate, on the hints' walk from blank ([TentsTeacher.depth]): Hard needs a tree's one spot (or deeper), Expert
+     * a square touching all of a tree's choices or one whose trees are served. Standard is not gated. Without it a third of
+     * Expert boards needed nothing past a full line (docs/TEACHING.md, "Tier depth").
+     */
+    fun fitsTier(difficulty: Difficulty, s: TentsState): Boolean {
+        val t = TentsTeacher.TECHNIQUES
+        return when (difficulty) {
+            Difficulty.STANDARD -> true
+            Difficulty.HARD -> (TentsTeacher.depth(s) ?: -1) >= t.indexOf(TentsTeacher.ONE_SPOT)
+            Difficulty.EXPERT -> (TentsTeacher.depth(s) ?: -1) >= t.indexOf(TentsTeacher.SHARED)
+        }
+    }
+
     /** Null when nothing was proved. Pure in (seed, difficulty); only lists reach the `Rng`. */
     fun generateVerified(seed: Long, difficulty: Difficulty): TentsState? {
-        val n = sizeFor(difficulty)
-        for (attempt in 0 until ATTEMPTS) {
-            val s = draw(n, treesFor(difficulty), Rng(seed + attempt)) ?: continue
-            if (!solvesByLogic(n, s.trees, s.rowCounts, s.colCounts)) continue
-            if (countSolutions(n, s.trees, s.rowCounts, s.colCounts) != 1) continue
-            return s
-        }
+        for (a in 0 until ATTEMPTS) attempt(seed, difficulty, a)?.let { return it }
         return null
     }
 
-    /** A fixed board for a seed nothing proved: the first seed counting from 1 whose board has one answer (logic not required). */
-    fun lastResort(difficulty: Difficulty): TentsState {
+    /** Draw number [a] for [seed], if the ladder finishes it, it has one answer and it fits the tier. Public to tests so they can count the redraws. */
+    fun attempt(seed: Long, difficulty: Difficulty, a: Int): TentsState? {
         val n = sizeFor(difficulty)
-        var seed = 1L
-        while (true) {
-            val s = draw(n, treesFor(difficulty), Rng(seed++)) ?: continue
-            if (countSolutions(n, s.trees, s.rowCounts, s.colCounts) == 1) return s
-        }
+        val s = draw(n, treesFor(difficulty), Rng(seed + a)) ?: return null
+        if (!solvesByLogic(n, s.trees, s.rowCounts, s.colCounts)) return null
+        if (countSolutions(n, s.trees, s.rowCounts, s.colCounts) != 1) return null
+        return s.takeIf { fitsTier(difficulty, it) }
     }
+
+    /** A fixed board for a seed nothing proved: the first seed counting from 1 whose first draw passes, so proved and gated. */
+    fun lastResort(difficulty: Difficulty): TentsState =
+        generateSequence(1L) { it + 1 }.firstNotNullOf { attempt(it, difficulty, 0) }
 
     // ---- proof -------------------------------------------------------------------------------------
 
