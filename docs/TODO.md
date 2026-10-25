@@ -46,9 +46,6 @@ from a measurement or review, so you can check it is still true.
   generation is 187 ms median, 0.8 s p95, 1.7 s worst in Chromium (it was as slow before the depth gate). A cheaper fill
   (fewer restarts, or growing regions where the fill is already forced) would fix it; it moves every board. *M.*
 
-- [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
-  together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
-  would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
 - [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
@@ -168,7 +165,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
   - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
-- [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain.
 - [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
   lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
   fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).

@@ -28,7 +28,10 @@ import com.joebywan.daybook.puzzles.CageLogic.Sight
  *    combinations make ("a 2-cage totalling 3 is 1 and 2"); 6. [FORTY_FIVE] — a row, column or box holds 45, so
  *    the squares left over when whole cages are taken off (innies) or the squares the cages spill into
  *    (outies) have a known total, the same reasoning on that group.
- * 7. [CAGE_CHAIN] — what is left once every group is worked through together. This is the generator's own
+ * 7. [LINKED_TOTALS] — two or three of those groups sharing squares, each cutting the next one's digits (a cage and the
+ *    45-rule squares of a row it crosses, say), named one by one. Only the reasoning [CAGE_CHAIN] already does, so the
+ *    generator's ladder, and every board, are what they were.
+ * 8. [CAGE_CHAIN] — what is left once every group is worked through together. This is the generator's own
  *    ladder ([CageLogic.settle]), which is why a board it ships always has a step; it cannot name a single
  *    group, so it says so, and it is counted per tier in `docs/TEACHING.md`.
  *
@@ -43,6 +46,7 @@ internal object CageTeacher {
     const val NAKED_SINGLE = "naked-single"
     const val CAGE_COMBO = "cage-combination"
     const val FORTY_FIVE = "forty-five"
+    const val LINKED_TOTALS = "linked-totals"
     const val CAGE_CHAIN = "cage-chain"
     const val FALLBACK = "fallback"
     const val MISTAKE = "mistake"
@@ -50,9 +54,16 @@ internal object CageTeacher {
     /** The hint panel shows four lines. A step that would not fit is passed over for the next that does. */
     const val MAX_EXPLANATION = 200
 
+    /**
+     * A [LINKED_TOTALS] step names each group in turn, so it may run longer, as Cipher's do (the popover scrolls past its
+     * four lines): three groups take about 290 characters. On 200 Expert boards, of the 1,287 steps that were all cage
+     * chain, 435 fit 200 characters and 614 fit 300.
+     */
+    const val MAX_LINKED_EXPLANATION = 300
+
     val TECHNIQUES = listOf(
         FULL_HOUSE, CAGE_LAST, HIDDEN_SINGLE_BOX, HIDDEN_SINGLE_LINE, NAKED_SINGLE,
-        CAGE_COMBO, FORTY_FIVE, CAGE_CHAIN, FALLBACK,
+        CAGE_COMBO, FORTY_FIVE, LINKED_TOTALS, CAGE_CHAIN, FALLBACK,
     )
 
     private fun unitName(u: Int) = when {
@@ -145,6 +156,7 @@ internal object CageTeacher {
             ?: nakedSingle(plain)
             ?: group(board, plain, Kind.CAGE)
             ?: group(board, plain, Kind.INNIE)
+            ?: linked(board, plain)
             ?: chain(board, arr)
     }
 
@@ -303,6 +315,111 @@ internal object CageTeacher {
             }
         }
         return null
+    }
+
+    // ---- a few groups, linked through shared squares ------------------------------------------------
+
+    /** The most groups a [LINKED_TOTALS] step names. Measured (Expert): two settle 42% of the chain's steps, three 8% more. */
+    const val MAX_LINKS = 3
+
+    /** A [LINKED_TOTALS] search node: [path]'s groups in order, and the candidates after each one's cut ([cuts]). */
+    private class Link(val path: List<Int>, val cuts: List<IntArray>) {
+        val cand: IntArray get() = cuts.last()
+    }
+
+    /** What a group says, as its sentence's opening; the 45-rule is named the first time only ([named]). */
+    private fun subject(g: Group, named: Boolean): String {
+        val rule = if (named) "" else "by the 45-rule, "
+        return when (g.kind) {
+            Kind.CAGE -> "the cage totalling ${g.sum}"
+            Kind.INNIE -> "$rule${CageLogic.scopes[g.scope].name}'s marked squares total ${g.sum}"
+            Kind.OUTIE -> "${rule}the squares sticking out of ${CageLogic.scopes[g.scope].name} total ${g.sum}"
+        }
+    }
+
+    /** "or" lists for what a square may still be: "3 or 9", "1, 2 or 4". */
+    private fun either(digits: List<Int>) =
+        if (digits.size == 1) "${digits[0]}" else digits.dropLast(1).joinToString(", ") + " or " + digits.last()
+
+    /**
+     * Two or three groups (cages, innies, outies) where each after the first shares a square whose digits the ones before
+     * it cut, ending in a single none of them makes alone: breadth first, so the fewest groups, then the first in index
+     * order. Each cut is [Sight.allowed] on the candidates so far, the same rule [CageLogic.settle] runs to a fixpoint, so
+     * this explains a part of what [chain] would place and never more.
+     */
+    private fun linked(board: Board, plain: Sight): PlacementStep? {
+        val base = plain.cand
+        val work = Sight(board, plain.cells, prune = false)
+        var frontier = listOf(Link(emptyList(), listOf(base)))
+        for (depth in 1..MAX_LINKS) {
+            val next = ArrayList<Link>()
+            for (f in frontier) for ((gi, g) in board.groups.withIndex()) {
+                if (gi in f.path) continue
+                if (f.path.isNotEmpty() && g.cells.none { f.cand[it] != base[it] }) continue
+                f.cand.copyInto(work.cand)
+                val open = work.open(g)
+                val allow = work.allowed(g) ?: continue
+                var changed = false
+                for (a in open.indices) {
+                    val now = work.cand[open[a]] and allow[a]
+                    if (now == 0) { changed = false; break }
+                    if (now != work.cand[open[a]]) { work.cand[open[a]] = now; changed = true }
+                }
+                if (!changed) continue
+                val link = Link(f.path + gi, (if (f.path.isEmpty()) emptyList() else f.cuts) + work.cand.copyOf())
+                val single = singleIn(work)
+                // One group's own single is CAGE_COMBO's or FORTY_FIVE's (passed over only for length): not a link.
+                if (single != null && depth == 1) continue
+                if (single != null) linkedStep(board, link, single)?.let { return it }
+                if (depth < MAX_LINKS) next += link
+            }
+            frontier = next
+        }
+        return null
+    }
+
+    /** A square with one candidate, else a digit with one place in a unit (with that unit), on [work]'s candidates. */
+    private fun singleIn(work: Sight): Triple<Int, Int, Int?>? {
+        for (c in 0 until 81) {
+            if (work.cells[c] == 0 && work.cand[c].countOneBits() == 1) return Triple(c, digitsOf(work.cand[c])[0], null)
+        }
+        for (u in 0 until 27) for (d in 1..9) {
+            if (work.holds(u, d)) continue
+            val places = work.places(u, d)
+            if (places.size == 1) return Triple(places[0], d, u)
+        }
+        return null
+    }
+
+    /** [single], which [link]'s cuts made, as a step, or null if it does not fit the panel. */
+    private fun linkedStep(board: Board, link: Link, single: Triple<Int, Int, Int?>): PlacementStep? {
+        val (cell, digit, unit) = single
+        val groups = link.path.map { board.groups[it] }
+        val parts = groups.indices.map { i ->
+            val g = groups[i]
+            val who = subject(g, groups.take(i).any { it.kind != Kind.CAGE })
+            if (i == groups.lastIndex) {
+                val end = if (unit == null) "only $digit" else "the only place for $digit in ${unitName(unit)}"
+                return@map if (g.kind == Kind.CAGE) "$who leaves the glowing square $end" else "$who, which leaves the glowing square $end"
+            }
+            // The squares this group hands on: those a later group shares, else all of its open ones.
+            val later = groups.drop(i + 1).flatMap { it.cells.toList() }.toSet()
+            val open = g.cells.filter { link.cand[it] != 0 }
+            val shared = open.filter { it in later }.ifEmpty { open }
+            val digits = either(digitsOf(shared.fold(0) { m, c -> m or link.cuts[i][c] }))
+            val these = if (shared.size == 1) "the shared square" else "the shared squares"
+            if (g.kind == Kind.CAGE) "$who leaves $these only $digits" else "$who, so $these can only be $digits"
+        }
+        val text = parts.mapIndexed { i, p -> if (i == 0) p.cap() else "Then $p" }.joinToString(". ") + "."
+        if (text.length > MAX_LINKED_EXPLANATION) return null
+        val cells = groups.flatMap { it.cells.toList() }.toSet()
+        return PlacementStep(
+            LINKED_TOTALS, cell, digit,
+            focus = cells + cell,
+            cited = cells + (unit?.let { CageLogic.units[it].toSet() } ?: emptySet()),
+            nudge = "These totals share squares. Work them through one after another.",
+            explanation = text,
+        )
     }
 
     // ---- everything together ----------------------------------------------------------------------

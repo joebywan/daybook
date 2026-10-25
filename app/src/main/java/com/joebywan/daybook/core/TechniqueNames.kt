@@ -139,6 +139,7 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "naked-single" to "a cell with one digit left",
         "cage-combination" to "a cage's digit combinations",
         "forty-five" to "the 45 rule",
+        "linked-totals" to "totals that share squares",
         "cage-chain" to "every cage worked through together",
     ),
     "target" to linkedMapOf(
