@@ -351,7 +351,7 @@ internal object CageTeacher {
      * order. Each cut is [Sight.allowed] on the candidates so far, the same rule [CageLogic.settle] runs to a fixpoint, so
      * this explains a part of what [chain] would place and never more.
      */
-    private fun linked(board: Board, plain: Sight): Step? {
+    private fun linked(board: Board, plain: Sight): PlacementStep? {
         val base = plain.cand
         val work = Sight(board, plain.cells, prune = false)
         var frontier = listOf(Link(emptyList(), listOf(base)))
@@ -396,7 +396,7 @@ internal object CageTeacher {
     }
 
     /** [single], which [link]'s cuts made, as a step, or null if it does not fit the panel. */
-    private fun linkedStep(board: Board, link: Link, single: Triple<Int, Int, Int?>): Step? {
+    private fun linkedStep(board: Board, link: Link, single: Triple<Int, Int, Int?>): PlacementStep? {
         val (cell, digit, unit) = single
         val groups = link.path.map { board.groups[it] }
         val parts = groups.indices.map { i ->
@@ -417,7 +417,7 @@ internal object CageTeacher {
         val text = parts.mapIndexed { i, p -> if (i == 0) p.cap() else "Then $p" }.joinToString(". ") + "."
         if (text.length > MAX_LINKED_EXPLANATION) return null
         val cells = groups.flatMap { it.cells.toList() }.toSet()
-        return Step(
+        return PlacementStep(
             LINKED_TOTALS, cell, digit,
             focus = cells + cell,
             cited = cells + (unit?.let { CageLogic.units[it].toSet() } ?: emptySet()),
