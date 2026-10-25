@@ -45,6 +45,7 @@ import com.joebywan.daybook.core.ACHIEVEMENTS
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.earnedAchievements
 import com.joebywan.daybook.core.PuzzleRegistry
+import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.KeptCard
 import com.joebywan.daybook.data.Stats
@@ -64,6 +65,8 @@ fun StatsScreen(
     completions: List<Completion>,
     /** Share cards kept after their finish frames ([KeptCard]): a tier's best, and its last random board. */
     keptCards: List<KeptCard>,
+    /** The home grid's order, so a puzzle is found where the player keeps it. */
+    puzzles: List<PuzzleType>,
     onAchievements: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -152,55 +155,49 @@ fun StatsScreen(
                 Spacer(Modifier.height(8.dp))
             }
 
-            items(PuzzleRegistry.all, key = { it.id }) { puzzle ->
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(scheme.surface)
-                        .padding(14.dp),
-                ) {
-                    Text(
-                        puzzle.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color(puzzle.accent),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Difficulty.entries.forEach { difficulty ->
-                        val best = Stats.bestTime(completions, puzzle.id, difficulty)
-                        val count = completions.count {
-                            it.puzzleId == puzzle.id && it.difficulty == difficulty
-                        }
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                difficulty.label,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = scheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(
-                                if (best == null) "—" else formatClock(best),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = scheme.onSurface,
-                            )
-                            Spacer(Modifier.size(14.dp))
-                            Text(
-                                "$count solved",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = scheme.onSurfaceVariant,
-                            )
-                            // Always laid out, greyed when there is nothing to share, so a card arriving moves nothing.
-                            fun kept(best: Boolean) = keptCards.firstOrNull { it.puzzleId == puzzle.id && it.difficulty == difficulty && it.best == best }
-                            ShareLink("Best", kept(true), Color(puzzle.accent)) { open = keyOf(it) }
-                            ShareLink("Last", kept(false), Color(puzzle.accent)) { open = keyOf(it) }
-                        }
-                    }
+            // Two a row, in the home grid's order (the player's own, or most played first).
+            items(puzzles.chunked(2), key = { it.first().id }) { pair ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    pair.forEach { PuzzleStats(it, completions, keptCards, Modifier.weight(1f)) { c -> open = keyOf(c) } }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
 
             // A web page has no system backup to fall back on; Android does, so this is web-only.
             if (OFFERS_BACKUP) {
                 item { BackupControls() }
+            }
+        }
+    }
+}
+
+/** One puzzle's card: per tier, its best time over its solve count and share links. */
+@Composable
+private fun PuzzleStats(
+    puzzle: PuzzleType,
+    completions: List<Completion>,
+    keptCards: List<KeptCard>,
+    modifier: Modifier,
+    onOpen: (KeptCard) -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val accent = Color(puzzle.accent)
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(scheme.surface).padding(14.dp)) {
+        Text(puzzle.displayName, style = MaterialTheme.typography.titleMedium, color = accent, maxLines = 1)
+        Difficulty.entries.forEach { difficulty ->
+            val best = Stats.bestTime(completions, puzzle.id, difficulty)
+            val count = completions.count { it.puzzleId == puzzle.id && it.difficulty == difficulty }
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth()) {
+                Text(difficulty.label, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                Text(if (best == null) "—" else formatClock(best), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurface)
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("$count solved", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                // Always laid out, greyed when there is nothing to share, so a card arriving moves nothing.
+                fun kept(best: Boolean) = keptCards.firstOrNull { it.puzzleId == puzzle.id && it.difficulty == difficulty && it.best == best }
+                ShareLink("Best", kept(true), accent, onOpen)
+                ShareLink("Last", kept(false), accent, onOpen)
             }
         }
     }
@@ -232,6 +229,6 @@ private fun ShareLink(label: String, kept: KeptCard?, accent: Color, onOpen: (Ke
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .clickable(enabled = kept != null) { kept?.let(onOpen) }
-            .padding(start = 10.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+            .padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
     )
 }

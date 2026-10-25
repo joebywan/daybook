@@ -419,9 +419,10 @@ object Stats {
     fun streak(all: List<Completion>, today: LocalDate): Streak =
         streakOf(all.mapNotNull { it.day }.toSet(), today)
 
+    /** The time of the best solve in [KeptCard.beats]' order (fewest hints, then fastest), so it matches the Best card. */
     fun bestTime(all: List<Completion>, puzzleId: String, difficulty: Difficulty): Int? =
         all.filter { it.puzzleId == puzzleId && it.difficulty == difficulty }
-            .minOfOrNull { it.seconds }
+            .minWithOrNull(compareBy({ it.hints }, { it.seconds }))?.seconds
 }
 
 /** The home grid's order (docs/REWARDS.md, "Puzzle order"). Pure, so it is testable on its own. */
