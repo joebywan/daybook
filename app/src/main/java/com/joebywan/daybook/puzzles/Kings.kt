@@ -56,6 +56,7 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.hintOutline
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -1094,25 +1095,7 @@ object Kings : PuzzleType {
                                         if (dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
                                     }
                                 )
-                                .then(
-                                    when {
-                                        strong -> Modifier.drawWithContent {
-                                            drawContent()
-                                            val w = 4.dp.toPx()
-                                            drawRoundRect(
-                                                glow.copy(alpha = pulse.value),
-                                                topLeft = Offset(w / 2, w / 2),
-                                                size = Size(size.width - w, size.height - w),
-                                                cornerRadius = CornerRadius(4.dp.toPx()),
-                                                style = Stroke(w),
-                                            )
-                                        }
-                                        soft -> Modifier.border(
-                                            1.5.dp, glow.copy(alpha = 0.5f), RoundedCornerShape(4.dp),
-                                        )
-                                        else -> Modifier
-                                    }
-                                ),
+                                .hintOutline(strong, soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
                             when (mark) {

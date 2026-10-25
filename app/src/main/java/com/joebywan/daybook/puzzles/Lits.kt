@@ -48,6 +48,8 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawWalls
+import com.joebywan.daybook.ui.drawHintRings
+import com.joebywan.daybook.ui.drawHintDim
 
 @Serializable
 data class LitsState(
@@ -1458,16 +1460,7 @@ object Lits : PuzzleType {
 
                 // Dimming goes over the marks but under the walls, so the regions stay readable
                 // however much of the board has stepped back.
-                if (!highlight.isEmpty) {
-                    for (i in 0 until s.width * s.height) {
-                        if (i in highlight.strong || i in highlight.soft) continue
-                        drawRect(
-                            color = dim.copy(alpha = 0.62f),
-                            topLeft = Offset((i % s.width) * stepPx, (i / s.width) * stepPx),
-                            size = Size(stepPx, stepPx),
-                        )
-                    }
-                }
+                drawHintDim(highlight, s.width, s.height, stepPx, dim)
 
                 // Thick strokes wherever two different regions meet.
                 val edge = stepPx * 0.06f
@@ -1475,22 +1468,7 @@ object Lits : PuzzleType {
 
                 // Outlines last, on top of the walls: a glow that a wall half-covers is a glow the
                 // player has to hunt for.
-                val strongWidth = 4.dp.toPx()
-                val softWidth = 1.5.dp.toPx()
-                val radius = CornerRadius(4.dp.toPx())
-                for (i in 0 until s.width * s.height) {
-                    val strong = i in highlight.strong
-                    if (!strong && i !in highlight.soft) continue
-                    val stroke = if (strong) strongWidth else softWidth
-                    val inset = edge / 2f + stroke / 2f
-                    drawRoundRect(
-                        color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                        topLeft = Offset((i % s.width) * stepPx + inset, (i / s.width) * stepPx + inset),
-                        size = Size(stepPx - inset * 2f, stepPx - inset * 2f),
-                        cornerRadius = radius,
-                        style = Stroke(stroke),
-                    )
-                }
+                drawHintRings(highlight, s.width, s.height, stepPx, glow, pulse.value, inset = edge / 2f)
             }
         }
     }

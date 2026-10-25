@@ -59,6 +59,7 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawWalls
+import com.joebywan.daybook.ui.drawHintDim
 
 /** One fill: the cell tapped, and the colour poured into the area it belongs to. */
 data class MosaicMove(val cell: Int, val colour: Int)
@@ -1129,14 +1130,7 @@ object Mosaic : PuzzleType {
                     if (!highlight.isEmpty) {
                         // Everything the hint does not name steps back, so the glow is findable on
                         // a 160-cell board full of outlines.
-                        for (cell in s.cells.indices) {
-                            if (cell in highlight.strong || cell in highlight.soft) continue
-                            drawRect(
-                                color = scheme.background.copy(alpha = 0.62f),
-                                topLeft = Offset((cell % s.width) * stepPx, (cell / s.width) * stepPx),
-                                size = Size(stepPx, stepPx),
-                            )
-                        }
+                        drawHintDim(highlight, s.width, s.height, stepPx, scheme.background)
 
                         // A rim just inside the outline of a set of cells: one stroke per cell side
                         // that faces out of the set, inset by half its width so a neighbour's dimming

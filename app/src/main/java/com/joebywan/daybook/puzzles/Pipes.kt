@@ -47,6 +47,7 @@ import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.drawHintRings
 
 /**
  * Pipe shapes are direction bitmasks: bit 0 up, 1 right, 2 down, 3 left. Rotating a piece is a
@@ -683,23 +684,7 @@ object Pipes : PuzzleType {
                 }
 
                 // Outlines last, so a neighbour drawn later never paints over half of one.
-                if (!highlight.isEmpty) {
-                    val strongW = 4.dp.toPx()
-                    val softW = 1.5.dp.toPx()
-                    val corner = CornerRadius(4.dp.toPx())
-                    for (i in s.cells.indices) {
-                        val strong = i in highlight.strong
-                        if (!strong && i !in highlight.soft) continue
-                        val w = if (strong) strongW else softW
-                        drawRoundRect(
-                            color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                            topLeft = Offset((i % s.width) * cellPx + w / 2, (i / s.width) * cellPx + w / 2),
-                            size = Size(cellPx - w, cellPx - w),
-                            cornerRadius = corner,
-                            style = Stroke(w),
-                        )
-                    }
-                }
+                drawHintRings(highlight, s.width, s.height, cellPx, glow, pulse.value)
             }
         }
     }

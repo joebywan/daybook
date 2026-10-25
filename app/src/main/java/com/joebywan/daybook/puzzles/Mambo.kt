@@ -64,6 +64,7 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.hintOutline
 
 /** Empty, or one of the two symbols. */
 @Serializable
@@ -1153,23 +1154,7 @@ object Mambo : PuzzleType {
                 .clip(shape)
                 .background(fill)
                 .then(if (ringed) Modifier.border(2.dp, scheme.error, shape) else Modifier)
-                .then(
-                    when (look) {
-                        Look.STRONG -> Modifier.drawWithContent {
-                            drawContent()
-                            val w = 3.dp.toPx()
-                            drawRoundRect(
-                                glow.copy(alpha = pulse()),
-                                topLeft = Offset(w / 2, w / 2),
-                                size = Size(size.width - w, size.height - w),
-                                cornerRadius = CornerRadius(size.minDimension * 0.22f),
-                                style = Stroke(w),
-                            )
-                        }
-                        Look.SOFT -> Modifier.border(1.5.dp, glow.copy(alpha = 0.5f), shape)
-                        else -> Modifier
-                    }
-                ),
+                .hintOutline(look == Look.STRONG, look == Look.SOFT, glow, pulse, 3.dp, shape),
             contentAlignment = Alignment.Center,
         ) {
             if (sym != Sym.NONE) {

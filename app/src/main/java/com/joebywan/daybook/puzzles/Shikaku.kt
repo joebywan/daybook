@@ -47,6 +47,8 @@ import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.drawHintRings
 
 /** An axis-aligned block of cells, inclusive on both corners. */
 @Serializable
@@ -675,34 +677,17 @@ object Shikaku : PuzzleType {
                 // the named squares read without hunting; strong squares pulse, soft ones are quiet.
                 if (!highlight.isEmpty) {
                     Canvas(Modifier.matchParentSize()) {
-                        val strongW = 4.dp.toPx()
-                        val softW = 1.5.dp.toPx()
-                        val corner = CornerRadius(4.dp.toPx())
-                        for (i in s.clues.indices) {
-                            val strong = i in highlight.strong
-                            val soft = !strong && i in highlight.soft
-                            val topLeft = Offset((i % s.width) * cellPx, (i / s.width) * cellPx)
-                            if (!strong && !soft) {
-                                drawRect(scheme.background.copy(alpha = 0.62f), topLeft, Size(cellPx, cellPx))
-                                continue
-                            }
-                            val w = if (strong) strongW else softW
-                            if (strong) {
-                                drawRoundRect(
-                                    color = glow.copy(alpha = 0.16f * pulse.value),
-                                    topLeft = topLeft,
-                                    size = Size(cellPx, cellPx),
-                                    cornerRadius = corner,
-                                )
-                            }
+                        drawHintDim(highlight, s.width, s.height, cellPx, scheme.background)
+                        for (i in highlight.strong) {
+                            if (i !in s.clues.indices) continue
                             drawRoundRect(
-                                color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                                topLeft = Offset(topLeft.x + w / 2, topLeft.y + w / 2),
-                                size = Size(cellPx - w, cellPx - w),
-                                cornerRadius = corner,
-                                style = Stroke(w),
+                                color = glow.copy(alpha = 0.16f * pulse.value),
+                                topLeft = Offset((i % s.width) * cellPx, (i / s.width) * cellPx),
+                                size = Size(cellPx, cellPx),
+                                cornerRadius = CornerRadius(4.dp.toPx()),
                             )
                         }
+                        drawHintRings(highlight, s.width, s.height, cellPx, glow, pulse.value)
                     }
                 }
 

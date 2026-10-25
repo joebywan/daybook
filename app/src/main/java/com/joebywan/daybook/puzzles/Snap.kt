@@ -38,6 +38,8 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.drawHintRings
 
 @Serializable
 data class SnapState(
@@ -797,34 +799,11 @@ object Snap : PuzzleType {
                     )
                 }
 
-                if (!highlight.isEmpty) {
-                    // Everything the highlight does not name steps back under a veil in the page
-                    // colour, line and numbers included, so the named squares read at once.
-                    for (cell in 0 until s.cellCount) {
-                        if (cell in highlight.strong || cell in highlight.soft) continue
-                        drawRect(
-                            color = scheme.background.copy(alpha = 0.62f),
-                            topLeft = Offset((cell % s.width) * stepPx, (cell / s.width) * stepPx),
-                            size = Size(stepPx, stepPx),
-                        )
-                    }
-                    // Outlines last, so a neighbour drawn later never paints over half of one.
-                    val strongW = 4.dp.toPx()
-                    val softW = 1.5.dp.toPx()
-                    val corner = CornerRadius(stepPx * 0.16f)
-                    for (cell in 0 until s.cellCount) {
-                        val strong = cell in highlight.strong
-                        if (!strong && cell !in highlight.soft) continue
-                        val w = if (strong) strongW else softW
-                        drawRoundRect(
-                            color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                            topLeft = Offset((cell % s.width) * stepPx + w / 2, (cell / s.width) * stepPx + w / 2),
-                            size = Size(stepPx - w, stepPx - w),
-                            cornerRadius = corner,
-                            style = Stroke(w),
-                        )
-                    }
-                }
+                // Everything the highlight does not name steps back under a veil in the page
+                // colour, line and numbers included, so the named squares read at once.
+                drawHintDim(highlight, s.width, s.height, stepPx, scheme.background)
+                // Outlines last, so a neighbour drawn later never paints over half of one.
+                drawHintRings(highlight, s.width, s.height, stepPx, glow, pulse.value, CornerRadius(stepPx * 0.16f))
             }
         }
     }
