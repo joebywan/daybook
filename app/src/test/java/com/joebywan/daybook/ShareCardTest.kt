@@ -27,6 +27,9 @@ import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.WordWheelState
 import com.joebywan.daybook.ui.play.dayShareCard
+import com.joebywan.daybook.ui.play.levelShareCard
+import com.joebywan.daybook.ui.play.threeShareCard
+import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.ui.play.shareCard
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
@@ -267,7 +270,7 @@ class ShareCardTest {
                 "9 solved today · 12 day streak\n🟩 solved  ⬜ not yet\n$SHARE_URL",
             c.text,
         )
-        assertEquals("20 more at Standard to clear the day.", c.nudge)
+        assertEquals("never what is left", "Well played. Same time tomorrow?", c.nudge)
     }
 
     @Test fun `the day's card leaves out untouched tiers, and is not offered before a solve`() {
@@ -276,5 +279,35 @@ class ShareCardTest {
         assertEquals(listOf("Hard 26/26"), c.lines.filter { it.marks.isEmpty() }.map { it.tail })
         assertEquals("26 solved today", c.stats)
         assertEquals("Every Hard board done. A clean sweep.", c.nudge)
+    }
+
+    private fun mmss(s: Int) = "${s / 60}:${(s % 60).toString().padStart(2, '0')}"
+
+    @Test fun `today's three card marks the three at the tier, with their time and hints, and waits for a solve`() {
+        val three = listOf("p0", "p1", "p2")
+        assertNull(threeShareCard(three, solved(Difficulty.HARD, 0), today, Difficulty.STANDARD, "24 Oct", 3, ::mmss))
+        val done = listOf(Completion("p0", Difficulty.STANDARD, today, 125, 1), Completion("p2", Difficulty.STANDARD, today, 70, 0)) +
+            solved(Difficulty.STANDARD, 1, day = LocalDate(2026, 10, 23))
+        val c = threeShareCard(three, done, today, Difficulty.STANDARD, "24 Oct", 3, ::mmss)!!
+        assertEquals(
+            "Daybook · 24 Oct · Today's three · Standard\n🟩⬜🟩  2/3\n3:15 · 1 hint · 3 day streak\n🟩 solved  ⬜ not yet\n$SHARE_URL",
+            c.text,
+        )
+        assertEquals("A fine start on today's three.", c.nudge)
+        val all = threeShareCard(three, done + solved(Difficulty.STANDARD, 1), today, Difficulty.STANDARD, "24 Oct", 1, ::mmss)!!
+        assertEquals("All three done. A tidy day's work.", all.nudge)
+    }
+
+    @Test fun `the level card adds up the level's stored solves, in plan order`() {
+        val solves = listOf(
+            LevelSolve(14, "c", 600, 0), LevelSolve(14, "a", 400, 2), LevelSolve(14, "e", 300, 0),
+            LevelSolve(14, "b", 500, 0), LevelSolve(14, "d", 62, 0),
+            // Another level's solve is not this one's.
+            LevelSolve(13, "a", 999, 9),
+        )
+        val c = levelShareCard(14, listOf("a", "b", "c", "d", "e"), solves, ::mmss)
+        assertEquals("Daybook · Level 14 · 5/5\n🟥🟩🟩🟩🟩\n31:02 · 2 hints\n🟩 no hints  🟥 hints\n$SHARE_URL", c.text)
+        assertEquals("Level 14 done. On to level 15.", c.nudge)
+        assertEquals("Every board your own work.", levelShareCard(14, listOf("b", "c"), solves, ::mmss).nudge)
     }
 }

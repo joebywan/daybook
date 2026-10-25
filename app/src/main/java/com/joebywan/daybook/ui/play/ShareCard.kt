@@ -3,6 +3,7 @@ package com.joebywan.daybook.ui.play
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.puzzles.ChessState
 import com.joebywan.daybook.puzzles.LexiconMark
 import com.joebywan.daybook.puzzles.LexiconState
@@ -290,7 +291,46 @@ fun dayShareCard(ids: List<String>, completions: List<Completion>, today: LocalD
         lines = lines,
         stats = "${tiers.sumOf { it.second }} solved today" + if (streak >= 2) " · $streak day streak" else "",
         key = listOf(Mark.GREEN to "solved", Mark.WHITE to "not yet"),
-        nudge = if (most == ids.size) "Every ${best.label} board done. A clean sweep."
-            else "${ids.size - most} more at ${best.label} to clear the day.",
+        // Never what is left: the card is for what was done (docs/REWARDS.md).
+        nudge = if (most == ids.size) "Every ${best.label} board done. A clean sweep." else "Well played. Same time tomorrow?",
+    )
+}
+
+/**
+ * Today's three ([com.joebywan.daybook.core.TodaysThree]) at [tier] in one card, null until one of [three] is solved today:
+ * a mark per puzzle in order, the time and hints of those solved. [clock] formats seconds. Spoiler-free: which are done.
+ */
+fun threeShareCard(
+    three: List<String>, completions: List<Completion>, today: LocalDate, tier: Difficulty, date: String, streak: Int,
+    clock: (Int) -> String,
+): ShareCard? {
+    val solves = three.map { id -> completions.firstOrNull { it.puzzleId == id && it.day == today && it.difficulty == tier } }
+    val done = solves.filterNotNull()
+    if (done.isEmpty()) return null
+    val hints = done.sumOf { it.hints }
+    return ShareCard(
+        header = "Daybook · $date · Today's three · ${tier.label}",
+        lines = listOf(ShareLine(solves.map { if (it == null) Mark.WHITE else Mark.GREEN }, tail = "  ${done.size}/${three.size}")),
+        stats = clock(done.sumOf { it.seconds }) + (if (hints > 0) " · ${plural(hints, "hint")}" else "") +
+            if (streak >= 2) " · $streak day streak" else "",
+        key = listOf(Mark.GREEN to "solved", Mark.WHITE to "not yet"),
+        nudge = if (done.size == three.size) "All three done. A tidy day's work." else "A fine start on today's three.",
+    )
+}
+
+/**
+ * A finished level in one card: a mark per board of [plan] (puzzle ids, in order), green unaided, red with hints, from the
+ * level's stored [solves]; the total time and hints. [clock] formats seconds. Spoiler-free: counts only.
+ */
+fun levelShareCard(level: Int, plan: List<String>, solves: List<LevelSolve>, clock: (Int) -> String): ShareCard {
+    val by = solves.filter { it.level == level }.associateBy { it.puzzleId }
+    val got = plan.mapNotNull { by[it] }
+    val hints = got.sumOf { it.hints }
+    return ShareCard(
+        header = "Daybook · Level $level · ${got.size}/${plan.size}",
+        lines = listOf(ShareLine(plan.map { id -> by[id]?.let { if (it.hints > 0) Mark.RED else Mark.GREEN } ?: Mark.WHITE })),
+        stats = "${clock(got.sumOf { it.seconds })} · ${plural(hints, "hint")}",
+        key = listOf(Mark.GREEN to "no hints", Mark.RED to "hints"),
+        nudge = if (hints == 0) "Every board your own work." else "Level $level done. On to level ${level + 1}.",
     )
 }

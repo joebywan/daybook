@@ -41,7 +41,7 @@ class TierDepthReportTest {
         Mambo to listOf("pair", "sandwich", "link", "quota-met", "quota-almost-met", "what-if"),
         Shikaku to listOf("only-fits", "only-reaches", "common-cells", "what-if"),
         Atoms to listOf("one-neighbour", "all-forced", "at-least-one", "crossing", "isolation", "only-way-out", "what-if"),
-        Inequality to listOf("last-square", "only-digit", "only-place", "sign-bound", "sign-place"),
+        Inequality to listOf("last-square", "only-digit", "only-place", "sign-bound", "sign-place", "naked-pair", "hidden-pair"),
         Tents to listOf("no-tree", "line-done", "line-full", "touch", "one-spot", "shared", "served"),
         Nonogram to listOf("full-line", "line-finished", "overlap", "line-logic"),
         Lits to listOf("whole-region", "overlap", "avoid-2x2", "letter-clash", "neighbour", "what-if"),
