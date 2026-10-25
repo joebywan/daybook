@@ -1,5 +1,5 @@
+- Mate's difficulties follow puzzle ratings as well as the number of moves, and a quarter of Expert boards start with a quiet move.
 - Lexicon's first hint changes from board to board, and its later hints say how their word splits the words left.
 - From 1 November a daily Lexicon word never comes back until every other has had its day.
 - Clearer word clues, and no interjections or old words in Word Wheel's grids.
 - Swipe left or right on the home screen to change the difficulty.
-- Tap your streak to open Statistics, which keeps your best and latest results to share again.
