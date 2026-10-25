@@ -186,8 +186,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 - [ ] **Pipes: a branchier tree.** `spanningTree` is a depth-first maze (long corridors); a random-edge spanning tree gives
   more junctions. (Counter-clockwise rotation and a lock mark: declined by the owner.)
 - [ ] **Mate: tier by rating.** `tools/chess/build.py` ignores Lichess `Rating`; band each tier by rating as well as N.
-- [ ] **Lexicon teaching and repeats.** Rotate the opener hint by seed; the fallback says how its guess splits the words left;
-  a no-repeat cycle for Daily (supersedes the item above).
 - [ ] **Cipher: cap repeated totals** (some totals recur many times a tier); **Target: count the roads** (Expert needs few
   shortest answers, not only depth 5).
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
@@ -229,9 +227,6 @@ below have a famous branded version; use the descriptive name).
 - [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
   pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
   size-by-size retune; measure the pass rate before trying again.
-- [ ] **Lexicon: a no-repeat cycle for daily words.** The word is a pure function of the seed, so it can recur
-  (about even odds of a repeat within two months of Standard days). A cycle needs the day count, which the
-  `generate(seed, difficulty)` contract does not carry. Only if repeats bother anyone.
 
 - [ ] **Web: a late home-grid value can reach a tile stale.** The "In progress" set, passed down as a plain `Set` and landing in
   the first frames, reached `PuzzleTile` stale in about half of Chromium loads (DaybookApp had the new set; the tile recomposed
