@@ -66,8 +66,20 @@ internal object InequalityLogic {
 
     // ---- generator ---------------------------------------------------------------------------------
 
-    /** Retries with `Rng(seed + attempt)`; none has ever been needed (see `FallbackTest`). */
-    const val ATTEMPTS = 8
+    /**
+     * The ladder a tier may use ([deepest], a rung of [InequalityTeacher.TECHNIQUES]) and the rung its walk must reach
+     * ([needs], a pair rung; null for no gate), as Tally's `Spec.needs`: a board whose walk stops short is redrawn.
+     */
+    class Spec(val deepest: Int, val needs: Int?)
+
+    fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
+        Difficulty.STANDARD -> Spec(InequalityTeacher.rung(InequalityTeacher.SIGN_PLACE), null)
+        Difficulty.HARD -> Spec(InequalityTeacher.rung(InequalityTeacher.NAKED_PAIR), InequalityTeacher.rung(InequalityTeacher.NAKED_PAIR))
+        Difficulty.EXPERT -> Spec(InequalityTeacher.DEEPEST, InequalityTeacher.DEEPEST)
+    }
+
+    /** Retries with `Rng(seed + attempt)` until a draw meets its tier's [Spec] (see `FallbackTest`). */
+    const val ATTEMPTS = 200
 
     fun randomSquare(n: Int, rng: Rng): List<Int> {
         val g = IntArray(n * n)
@@ -88,46 +100,47 @@ internal object InequalityLogic {
     }
 
     /** Null when nothing was proved. Pure in (seed, difficulty); only lists reach the `Rng`. */
-    fun generateVerified(seed: Long, difficulty: Difficulty): InequalityState? {
-        val n = sizeFor(difficulty)
-        for (attempt in 0 until ATTEMPTS) {
-            val rng = Rng(seed + attempt)
-            val solution = randomSquare(n, rng)
-            val all = neighbours(n).map { (a, b) -> if (solution[a] < solution[b]) Sign(a, b) else Sign(b, a) }
-            val on = BooleanArray(all.size) { true }
-            fun shown() = all.filterIndexed { k, _ -> on[k] }
-            val cells = MutableList(n * n) { 0 }
-            fun finishes() = InequalityTeacher.solvesByLogic(n, cells, shown())
+    fun generateVerified(seed: Long, difficulty: Difficulty): InequalityState? =
+        (0 until ATTEMPTS).firstNotNullOfOrNull { draw(seed + it, sizeFor(difficulty), specFor(difficulty)) }
 
-            // Every sign shown; digits only until the ladder finishes (all of them at worst).
-            if (!finishes()) {
-                for (i in rng.shuffled((0 until n * n).toList())) {
-                    cells[i] = solution[i]
-                    if (finishes()) break
-                }
+    /** One attempt: a board drawn from `Rng(seed)` that meets [spec] and is proved, or null. */
+    fun draw(seed: Long, n: Int, spec: Spec): InequalityState? {
+        val rng = Rng(seed)
+        val solution = randomSquare(n, rng)
+        val all = neighbours(n).map { (a, b) -> if (solution[a] < solution[b]) Sign(a, b) else Sign(b, a) }
+        val on = BooleanArray(all.size) { true }
+        fun shown() = all.filterIndexed { k, _ -> on[k] }
+        val cells = MutableList(n * n) { 0 }
+        fun finishes() = InequalityTeacher.solvesByLogic(n, cells, shown(), spec.deepest)
+
+        // Every sign shown; digits only until the ladder finishes (all of them at worst).
+        if (!finishes()) {
+            for (i in rng.shuffled((0 until n * n).toList())) {
+                cells[i] = solution[i]
+                if (finishes()) break
             }
-            // Take back whatever the rest already implies, digits and signs alike, in random order.
-            val items = rng.shuffled((0 until n * n).filter { cells[it] != 0 } + all.indices.map { -1 - it })
-            for (item in items) {
-                if (item >= 0) {
-                    cells[item] = 0
-                    if (!finishes()) cells[item] = solution[item]
-                } else {
-                    on[-1 - item] = false
-                    if (!finishes()) on[-1 - item] = true
-                }
-            }
-            val signs = shown()
-            if (countSolutions(n, cells, signs) != 1) continue
-            return InequalityState(
-                size = n,
-                givens = cells.map { it != 0 },
-                cells = cells.toList(),
-                solution = solution,
-                signs = signs,
-            )
         }
-        return null
+        // Take back whatever the rest already implies, digits and signs alike, in random order.
+        val items = rng.shuffled((0 until n * n).filter { cells[it] != 0 } + all.indices.map { -1 - it })
+        for (item in items) {
+            if (item >= 0) {
+                cells[item] = 0
+                if (!finishes()) cells[item] = solution[item]
+            } else {
+                on[-1 - item] = false
+                if (!finishes()) on[-1 - item] = true
+            }
+        }
+        val signs = shown()
+        if (spec.needs != null && (InequalityTeacher.pairDepth(n, cells, signs, spec.deepest) ?: -1) < spec.needs) return null
+        if (countSolutions(n, cells, signs) != 1) return null
+        return InequalityState(
+            size = n,
+            givens = cells.map { it != 0 },
+            cells = cells.toList(),
+            solution = solution,
+            signs = signs,
+        )
     }
 
     /**
