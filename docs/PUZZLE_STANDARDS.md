@@ -97,6 +97,7 @@ What varies, as built:
 | Sand | colours (height 4 and two spare tubes on every tier) | 5 / 7 / 8 colours (`SandLogic.specFor`; `SandBalanceTest` `the tiers get harder in the order they are offered`: over a year a naive pourer sorts 79 / 44 / 27% of tries, a careful one 84 / 52 / 33%, the solver's median search is 21 / 30 / 37 positions; 8x4 is clearly harder than 7x4, so Expert kept height 4). Deals redrawn for giving the board away: 15 / 14 / 10% of attempts; the difficulty filter (a random pourer sorts it six times out of six) redraws about half of Standard's deals, 3% of Hard's, none of Expert's. Generation on the JVM, median / p95 / max ms: 0.7 / 2.1 / 8, 0.2 / 1.2 / 1.8, 0.2 / 1.4 / 3.1 |
 | Pointers | grid, arrow length and bends | 6x7, 2-4 squares / 12x12, 3-7 / 14x17, 3-9 (`PointersLogic.specFor`; `PointersRulesTest` `the tiers get bigger and more tangled in the order they are offered`, by mean depth) |
 | Dominoes | box and tray, rule kinds, and the deepest step of the ladder a board must need | 5x5 with 6-7 dominoes, sums, bounds and =, needs a region-value step / 6x6 with 9-10, adds all-different, needs counting / 7x7 with 12-14, needs a what-if (`DominoLogic.specFor`; `DominoRulesTest` `the tiers get harder in the order they are offered`) |
+| Codeword | grid side, and the deepest step of the ladder a board must need (givens minimal for that ladder) | 7x7 finished one run at a time / 9x9 needs a number cut by every word it is in / 11x11 needs every word worked through together (`CodewordLogic.specFor`; `CodewordRulesTest` `a year of daily boards - the tiers get bigger and need more`) |
 
 Rules for the tiers:
 
@@ -142,7 +143,7 @@ without editing it.
   returns `null` when the budget runs out, and `test/MosaicOptimumTest` `a search that runs out of budget reports
   nothing at all` pins that.
 - *Expose the split.* `generateVerified(seed, difficulty): State?` (null when nothing was proved) is what tests
-  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap`, `Inequality`, `Cipher`, `WordWheel` and `Tally` (internal). `generate` is
+  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap`, `Inequality`, `Cipher`, `WordWheel`, `Tally` and `Codeword` (internal). `generate` is
   `generateVerified(...) ?: lastResort(...)` (Shikaku's is `fallbackBoard`).
 - *Fallbacks.* Keep it named, tiny and honest (`Atoms.lastResort` is a three-atom chain; Snap's is a numbered
   boustrophedon). Before adding one, ask what fraction of seeds reach it and measure it; size the test sample
@@ -562,6 +563,7 @@ Y = yes, P = partial, N = no.
 | Word Wheel | Y letters, words | n/a the grid's words are the answer; `generateVerified` (laid to the tier's size, and no clued slot leaves more than 6 words; `lastResort` is seed 1's proved board), year test | Y `WordWheelState.solved` (every slot's word found) | Y `WordWheelOracle` (re-reads every run of the squares) | Y clue fallback measured | Y 5 | Y squares + wheel letters via `reportHighlight` + keepClear | Y `WordWheelWebParityTest` | Y | Y 200 / 70 |
 | Sand | Y colours (spares fixed) | n/a many answers; `generateVerified` (internal; a found sorting road is the witness, sealed `SandLogic.Verdict` with `Solvable(path)` / `Unsolvable` / `Truncated`, only `Solvable` ships; deals that give the board away and boards a random pourer always sorts are redrawn; `lastResort` fixed and proved), year test | Y `SandLogic.isSolved` (rules) | Y `SandSupport` (one layer at a time, breadth-first over raw positions), `SandOracle` (differential) | Y a search of the visible tubes, no fallback exists | Y 6 | Y tube anchors | Y `SandWebParityTest` | Y | Y 200 / 70 |
 | Dominoes | Y box, tray, ladder depth | Y `generateVerified` (internal; the tier's ladder finishes it needing exactly its deepest step, then `DominoLogic.solutions` == `Verdict.ExactlyOne`; `lastResort` one fixed seed's board per tier, proved by the oracle), year test | Y `DominoLogic.isSolved` (rules, not the stored answer) | Y `DominoOracle` (reading order, no pruning), `DominoTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares + tray slots + rule badges via `reportHighlight` + keepClear | N not yet (the lead adds it) | Y | Y 200 / 70 |
+| Codeword | Y side, ladder depth | Y a bundled list of dense fills (`CodewordGrids`, built offline by `CodewordGridsBuildTest`), each re-proved on the device: numbered from the seed, ladder finishes it from its givens, then `CodewordLogic.solve` == `Verdict.ExactlyOne`; `lastResort` proved, year test | Y `CodewordLogic.isSolved` (rules, not the stored answer) | Y `CodewordOracle` (letter by letter over the alphabet, no word index), `CodewordTeachingTest` | Y no fallback on generated boards | Y 5 | Y grid + key and letter anchors + keepClear | Y `CodewordWebParityTest` | Y | Y 200 / 70 |
 
 ### Known gaps and open items
 
