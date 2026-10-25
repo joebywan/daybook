@@ -10,7 +10,9 @@ import com.joebywan.daybook.puzzles.AtomsTeacher
 import com.joebywan.daybook.puzzles.CageTeacher
 import com.joebywan.daybook.puzzles.ChessTeacher
 import com.joebywan.daybook.puzzles.Cipher
+import com.joebywan.daybook.puzzles.Codeword
 import com.joebywan.daybook.puzzles.CipherTeacher
+import com.joebywan.daybook.puzzles.CodewordTeacher
 import com.joebywan.daybook.puzzles.DominoTeacher
 import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Mines
@@ -53,6 +55,7 @@ class TechniqueNamesTest {
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
+        "codeword" to CodewordTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 
@@ -85,6 +88,7 @@ class TechniqueNamesTest {
             Dominoes to listOf(DominoTeacher.REGION_VALUE, DominoTeacher.COUNTING, DominoTeacher.WHAT_IF),
             Cipher to listOf(null, CipherTeacher.CHAIN, CipherTeacher.WHAT_IF),
             Lamps to listOf(null, LampsTeacher.STARVE, LampsTeacher.WHAT_IF),
+            Codeword to listOf(null, CodewordTeacher.CROSSING, CodewordTeacher.ALL_WORDS),
         )
         for ((p, want) in expected) for (t in Difficulty.entries) for (seed in 1L..10L) {
             val board = p.generate(seed, t)
@@ -94,6 +98,9 @@ class TechniqueNamesTest {
             if (p == Lamps && t == Difficulty.HARD) {
                 // Hard needs a look-ahead: whichever of the two its walk went deepest to.
                 assertTrue("lamps seed $seed: $got", got in setOf(LampsTeacher.STARVE, LampsTeacher.DARK))
+            } else if (p == Codeword && t == Difficulty.STANDARD) {
+                // Codeword's Standard is "one run at a time": a word only one word fits, or a letter every fitting word shares.
+                assertTrue("codeword seed $seed: $got", got in setOf(CodewordTeacher.ONE_WORD, CodewordTeacher.RUN_AGREES))
             } else if (p == Cipher && t == Difficulty.STANDARD) {
                 assertTrue("cipher seed $seed: $got", got in setOf(CipherTeacher.COLUMN, CipherTeacher.PAIR, CipherTeacher.ONLY_LETTER))
             } else {

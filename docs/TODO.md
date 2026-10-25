@@ -165,8 +165,9 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
-- [ ] **New puzzles, in order:** Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
-  fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
+- [ ] **New puzzles, in order:** Pearl loop, Who's Who (a logic grid from templated clues), Mini crossword (5x5,
+  fills built offline from the hand-written clues; `test/CrosswordFill.kt`, Codeword's pattern maker and filler, is
+  written to be reused). Each gets a spec first (`docs/<NAME>_SPEC.md`).
 
 ## Future puzzle candidates
 
@@ -227,9 +228,6 @@ and Battleships is close to Tents.
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
   prototype the input before committing. *L.*
-- [ ] **Codeword.** A filled crossword grid with a number for each letter and a few letters given; work out the
-  substitution. No clues, so it avoids the clue-database problem below. Reuses Lexicon's and Word Wheel's lists and
-  Word Wheel's grid layout; uniqueness is pattern matching against the list. Not Cipher: word shapes, not columns. *M–L.*
 - [ ] **Skyscrapers.** A Latin square with edge clues (how many buildings are visible from that side). Inequality's
   Latin-square rules, generator and prover carry over; only the clue type is new. *S–M.*
 - [ ] **Hitori.** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.
