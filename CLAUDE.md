@@ -100,6 +100,20 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
 - The typed row and the "Not in the word list" note are `remember` state, never `PuzzleState`; the note sits in
   the header line whose room is always reserved, so a refusal cannot move the board.
 
+## Shikaku
+
+Cut the grid into rectangles, one number each, the number its area. `puzzles/Shikaku.kt` (state, generator, `countTilings`, board,
+walkthrough), `ShikakuTeacher.kt`. `id = "shikaku"` is hashed into every seed: never rename it.
+
+- **Tilings are grown, not cut** (`tile`: the first uncovered square in reading order is the top-left of whatever covers it, a
+  rectangle of 2 to the tier's max area drawn uniformly among those that fit; a boxed-in square redraws). Recursive bisection
+  made every board guillotine; now about half are not (`ShikakuClueTest` checks it with its own checker). No clue of 1, ever.
+- **A board ships only if `countTilings` proves one answer and the teacher's walk from the blank board finishes without the
+  fallback and needs its tier's technique** (`Shikaku.depth`, `accepts`): Standard nothing past only-reaches, Hard something past
+  only-fits, Expert at least one common-cells or what-if. On Expert a clue avoids its rectangle's corners (it measurably
+  deepened boards). Hints therefore never fall back on a generated board. `lastResort` is the board of one fixed seed, proved
+  by a test; a year per tier never reaches it (`FallbackTest`). Changing the ladder changes every board (parity pins go red).
+
 ## Atoms (bridges)
 
 Hashiwokakero as chemistry: bond atoms with single or double lines, no crossings, one molecule. `puzzles/Atoms.kt` (state, generator,

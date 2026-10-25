@@ -103,7 +103,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | Kings | last square, locked to a line, would empty, N confined, what-if | none: the generator keeps a board only if the ladder finishes it from blank and the tier's gate holds (a year per tier, hints alone finish all) |
 | Mambo | pair, sandwich, link, quota, almost, what-if | none: the generator's ladder is the teacher's, and each tier is gated on the rung it needs (a year per tier and 500 boards a tier, hints alone finish all; almost-met 0 / 2.9 / 5.7 and what-if 0 / 0 / 4.1 steps a board; the fallback exists for boards not made here) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0: the generator ships only boards the reasoning settles (`PipesTeacher.settles`, which also proves one answer); 300 boards per tier, hints alone finish all, no-loop 0.6 / 0.8 / 0.8% of steps |
-| Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
+| Shikaku | only fits, only reaches, common cells, what-if | 0 (the generator ships only boards the ladder finishes; was 0.5 / 2.5 / 3.5%) |
 | Mosaic | finish, count fills against colours, biggest swallow, centre; fallback offers a proven fill | 1.5 / 9 / 12.5% |
 | Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
 | Atoms | one neighbour, all forced, at least one, crossing, isolation, only way out, what-if | none on a generated board: a board ships only if hints finish it (the depth gate, below) |
@@ -161,9 +161,9 @@ board. No board changed (Mambo's and LITS's rows are after their gates, below). 
 | Mambo | Standard | quota-met 100 | 0 / 0 | 30 |
 |  | Hard | quota-almost-met 100 | 0 / 0 | 56 |
 |  | Expert | what-if 100 | 0 / 0 | 87 |
-| Shikaku | Standard | only-fits 49, only-reaches 42, common-cells 5, what-if 4 | 1.4 / 0.15 | 13 |
-|  | Hard | only-fits 21, only-reaches 64, common-cells 7, what-if 7 | 4.1 / 0.26 | 20 |
-|  | Expert | only-fits 13, only-reaches 62, common-cells 15, what-if 11 | 3.6 / 0.16 | 23 |
+| Shikaku | Standard | only-fits 41, only-reaches 59 (was only-fits 49, only-reaches 42, common-cells 5, what-if 4) | 0 / 0 (was 1.4 / 0.15) | 12 |
+|  | Hard | only-reaches 74, common-cells 14, what-if 12 (was only-fits 21, only-reaches 64, common-cells 7, what-if 7) | 0 / 0 (was 4.1 / 0.26) | 17 |
+|  | Expert | common-cells 47, what-if 53 (was only-fits 13, only-reaches 62, common-cells 15, what-if 11) | 0 / 0 (was 3.6 / 0.16) | 21 |
 | Atoms (gated) | Standard | one-neighbour 4, all-forced 80, at-least-one 16 | 0 / 0 | 7 |
 |  | Hard | crossing 58, isolation 42 | 0 / 0 | 15 |
 |  | Expert | isolation 76, what-if 24 | 0 / 0 | 24 |
@@ -206,8 +206,12 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   tier is redrawn unless the walk needs that rung: Standard the first four (its boards did not move), Hard almost-met and no
   what-if, Expert what-if. Draws a board over the year: 1.00 / 1.42 / 1.01 mean, 1 / 6 / 2 most. The rows above are
   after the gate.
-- **Shikaku: overlapping, and it falls back.** Standard: no common-cells, what-if or fallback (90% pass); Hard: needs
-  only-reaches, no fallback; Expert: needs common-cells or what-if, no fallback (at most 26%). Ladder long enough.
+- **Shikaku: gated (2026-10-25).** Was overlapping and fell back. Tilings are now grown (about half non-guillotine) and
+  `Shikaku.accepts` gates every draw: Standard nothing past only-reaches, Hard something past only-fits, Expert common-cells
+  or what-if, never the fallback; Expert clues avoid their rectangle's corners (common-cells or what-if: 22% to 27% of proved
+  draws). Rows above are after the gate. Draws a board over a year: mean 8 / 11 / 33, p95 25 / 32 / 100, max 47 / 77 / 231 of
+  2000; JVM median 0.4 / 0.5 / 1.7 ms a board, Expert p95 6 ms, max 16 ms; Expert in Chromium 4 / 14 / 32 ms (median / p95
+  / max), WebKit 5 / 17 / 38 ms.
 - **Atoms: gated (2026-10).** Before, graded loosely: 16% of Expert boards needed nothing past all-forced and 14% of Standard
   boards isolation or what-if. Now each new atom sprouts 2-6 squares away (2-4 before), Hard has 18 atoms (16) and Expert 28
   (24), and the gate is Standard at most at-least-one, Hard crossing or isolation, Expert isolation or deeper, every walk
