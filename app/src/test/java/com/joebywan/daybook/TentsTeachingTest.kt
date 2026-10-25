@@ -50,8 +50,17 @@ class TentsTeachingTest {
             var steps = 0
             for (day in 0 until 200) {
                 var used = false
-                walk(board(day, d)) { t -> counts[t] = counts.getValue(t) + 1; steps++; if (t == TentsTeacher.FALLBACK) used = true }
+                val seen = mutableSetOf<String>()
+                walk(board(day, d)) { t -> counts[t] = counts.getValue(t) + 1; steps++; seen += t; if (t == TentsTeacher.FALLBACK) used = true }
                 if (used) fellBack++
+                // The tier gate, seen through the play screen's own hint path.
+                val deep = TentsTeacher.SHARED in seen || TentsTeacher.SERVED in seen
+                val fits = when (d) {
+                    Difficulty.STANDARD -> true
+                    Difficulty.HARD -> deep || TentsTeacher.ONE_SPOT in seen
+                    Difficulty.EXPERT -> deep
+                }
+                assertTrue("${d.name} day $day: techniques $seen do not fit the tier", fits)
             }
             val line = "${d.name}: boards fell back $fellBack/200, steps $steps (${steps / 200.0}/board), $counts"
             println(line)

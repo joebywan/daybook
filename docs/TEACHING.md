@@ -171,8 +171,8 @@ board. No board changed (Mambo's rows are after its gate, below). Deepest techni
 |  | Hard | sign-bound 9, sign-place 91 | 0 / 0 | 24 |
 |  | Expert | sign-bound 4, sign-place 96 | 0 / 0 | 33 |
 | Tents | Standard | line-full 89, one-spot 10, shared 1, served 1 | 0 / 0 | 10 |
-|  | Hard | line-full 64, one-spot 28, shared 4, served 4 | 0 / 0 | 14 |
-|  | Expert | line-full 39, one-spot 43, shared 7, served 12 | 0 / 0 | 19 |
+|  | Hard | one-spot 78, shared 8, served 14 (gated: was line-full 64, one-spot 28, shared 4, served 4) | 0 / 0 | 15 |
+|  | Expert | shared 33, served 67 (gated: was line-full 39, one-spot 43, shared 7, served 12) | 0 / 0 | 21 |
 | Nonogram | Standard | line-logic 100; line passes 2: 95, 3: 5, 4+: <1 | 0 / 0 | 10 |
 |  | Hard | line-logic 100; passes 3: 79, 4+: 21 | 0 / 0 | 36 |
 |  | Expert | line-logic 100; passes 4: 79, 5+: 21 | 0 / 0 | 73 |
@@ -218,8 +218,10 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   Only-way-out stays shadowed (2 steps in 500 Expert boards).
 - **Inequality: the ladder is too short.** 91-96% of Hard and Expert boards top out at sign-place; size is the only
   difference. No gate is possible until there are deeper techniques (a pair in a line, a sign chain `a < b < c`).
-- **Tents: graded.** Hard: needs one-spot (36% today); Expert: needs shared or served (18%). The ladder is long enough;
-  `touch` is never needed.
+- **Tents: gated (built 2026-10).** `TentsLogic.fitsTier`, on `TentsTeacher.depth` (the hint walk from blank): Hard needs
+  one-spot or deeper, Expert needs shared or served; Standard is not gated. Draws a board over a year (a draw must also be
+  finished by the ladder and unique): mean 1.3 / 5.6 / 23, most 5 / 27 / 143 of 2000; JVM p50 / p95 / max 0.1 / 0.1 / 0.4,
+  2.6 / 9.3 / 41, 5.1 / 27 / 191 ms. Expert in the browser, p50 / p95 / max: 14 / 66 / 151 ms in Chromium, 17 / 75 / 125 in WebKit. `touch` is never needed.
 - **Nonogram: gated since the pictures became mirrored** (2026-10). Before, on noise, Hard and Expert overlapped in passes
   (3+: 54% / 75%) and 13% of Standard boards took one pass. Mirrored pictures are shallower (one pass on half of Standard,
   4+ on 7% of Expert), so a board must need 2 / 3 / 4 passes by tier (`Spec.minPasses`); the rows above are with the gate.

@@ -218,9 +218,13 @@ Tents and trees: a tent beside every tree (orthogonal, one each), no two tents t
 `puzzles/TentsRules.kt` (state, `TentsLogic` ladder, generator, exhaustive proof), `TentsTeacher.kt`, `TentsKeys.kt`, `Tents.kt` (object `Tents`,
 board, walkthrough, motif). `id = "tents"` is hashed into every seed: never rename it.
 
-- **Tiers are size alone: 6x6 / 8x8 / 10x10** (7 / 13 / 20 tents).
+- **Tiers: 6x6 / 8x8 / 10x10** (7 / 13 / 20 tents) **and the depth the hints need from blank** (`TentsLogic.fitsTier` on
+  `TentsTeacher.depth`, Tally's gate): Hard needs a tree's one spot or deeper, Expert a shared or served square; Standard is
+  not gated. Draws a board over a year: mean 1.3 / 5.6 / 23, most 5 / 27 / 143 of `ATTEMPTS` = 2000 (`TentsRulesTest`);
+  Expert JVM median 5 ms, worst 191 ms; Expert in the browser, p50 / p95 / max: 14 / 66 / 151 ms in Chromium, 17 / 75 / 125 in WebKit.
 - **A board ships only if the ladder finishes it** (`TentsLogic.deduce`) and `countSolutions` proves one answer; `TentsOracle` (walks the trees) is the
   independent check. No fallback in a year of seeds per tier, so hints never fall back on a generated board.
+  `lastResort` is the first seed from 1 whose first draw passes everything, so it is proved and gated too.
 - **`solved` checks the rules**; a mistake is a tent the stored answer lacks, sound because the board has one answer. Crosses are notes.
 - A tap lays grass (a note), a double tap a tent (one move); a tap on a tent removes it. **The grass a tent sprouts is derived, not stored** (`TentsState.seen`, as Kings' crosses), so removing a tent takes it away and the player's own grass in `marks` is never touched; a saved game from before keeps its stored grass as the player's. A drag lays grass on empty squares only, one move on lift. Highlight indices: squares `0 until n*n`, row clue `n*n+r`, column clue `n*n+n+c`.
 
