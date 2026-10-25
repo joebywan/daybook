@@ -167,8 +167,13 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
   - Inequality (pairs, sign chains) and Regions (locked candidates): the ladder is too short; the techniques come first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
+<<<<<<< HEAD
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
+=======
+- [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
+  same `countTilings` proof.
+>>>>>>> 0726b0aaeaaa3321a94e1ca24a1355e9b7b25a93
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
 - [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
   lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,

@@ -52,6 +52,10 @@ import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.play.finishPraise
 import com.joebywan.daybook.ui.play.levelNextOptions
 import com.joebywan.daybook.ui.play.nextOptions
+import com.joebywan.daybook.ui.play.nextToday
+import com.joebywan.daybook.ui.play.levelShareCard
+import com.joebywan.daybook.ui.play.threeShareCard
+import com.joebywan.daybook.core.TodaysThree
 import com.joebywan.daybook.ui.play.shareCard
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import com.joebywan.daybook.ui.settings.SettingsScreen
@@ -249,7 +253,9 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     val ids = remember { PuzzleOrder.gentlest(PuzzleRegistry.all.map { it.id }) }
     val playedBasis by produceState<List<Completion>?>(null, today) { value = store.completions.first() }
     val mostPlayed = remember(playedBasis, today) { PuzzleOrder.mostPlayed(playedBasis.orEmpty(), today, ids) }
-    val pick = remember(playedBasis, today) { PuzzleOrder.pick(playedBasis.orEmpty(), today) }
+    // Today's three (TodaysThree): the date alone, the same for everyone.
+    val three = remember(today) { TodaysThree.of(today) }
+    val doneToday = remember(completions, today) { completions.filter { it.day == today }.mapTo(HashSet()) { it.puzzleId to it.difficulty } }
     val storedOrder by launchPrefs.puzzleOrder.collectAsState(initial = emptyList())
     var pickedOrder by remember { mutableStateOf<List<String>?>(null) }
     val customOrder = pickedOrder ?: storedOrder
@@ -320,7 +326,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             }
             val savesInProgress by remember(tileKeys) { store.inProgress(tileKeys.keys) }.collectAsState(initial = emptySet())
             // Handed down as a state read in the tile itself: passed as a plain set it reached the tile stale on the web
-            // about half the time when it landed during the first frames (the pick kept "Try me!" over its saved game).
+            // about half the time when it landed during the first frames (a tile kept its old label over its saved game).
             val inProgress = remember { derivedStateOf { savesInProgress.mapNotNull(tileKeys::get).toSet() } }
             // The most recently saved of them, for the "Continue" row; a key's second field is its tier (savedGameKey).
             val resume = remember {
@@ -359,7 +365,13 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                 onStats = { route = Route.Stats },
                 onAchievements = { route = Route.Achievements(fromHome = true) },
                 onSettings = { route = Route.Settings },
-                pick = pick,
+                three = three.mapNotNull(PuzzleRegistry::byId),
+                // Today's dailies, whatever the mode: the three are dailies, and back from one is Home.
+                onThree = { puzzleId -> route = Route.Play(puzzleId, difficulty, today) },
+                threeCard = threeShareCard(
+                    three, completions, today, difficulty, formatDate(today, SHARE_DATE),
+                    Stats.streak(completions, today).current, ::formatClock,
+                ),
                 puzzles = puzzles,
                 inProgress = { inProgress.value },
                 customOrder = customOrder.isNotEmpty(),
@@ -461,7 +473,12 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                     levelNextOptions(level, levels.plan(level), levels.solved(level), puzzle.id, levels.current)
                 } else {
                     // Only what the store already holds, for the same reason.
-                    nextOptions(daily = current.day != null, tier = difficulty, doneTiers = tiersDoneOn(completions, puzzle.id, current.day))
+                    // "Next puzzle today" on today's own daily opened from Home only, so back from the next board (Home) is
+                    // where this one was opened from; an archive board's back is its own puzzle's archive.
+                    val next = if (current.day == today && !current.fromArchive) {
+                        nextToday(three, puzzles.map { it.id }, difficulty, doneToday, puzzle.id)
+                    } else null
+                    nextOptions(daily = current.day != null, tier = difficulty, doneTiers = tiersDoneOn(completions, puzzle.id, current.day), today = next)
                 }
                 // Keyed on the board: a level's next step goes straight to another puzzle, and PlayScreen's
                 // produced board would otherwise be the old puzzle's state for a frame (a ClassCastException in Board).
@@ -531,9 +548,24 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                             store.keepCard(kept)
                             if (current.day == null && level == null) store.keepCard(kept.copy(best = false))
                         }
+                        val levelDone = level != null && levelFinishedBy(levels, level, puzzle.id)
+                        // The set this solve finished, from what is stored plus this solve (the store records it a moment later).
+                        val setShare = when {
+                            level != null && levelDone -> levelShareCard(
+                                level, levels.plan(level).map { it.puzzleId },
+                                levels.solves[level].orEmpty().filter { it.puzzleId != puzzle.id } + LevelSolve(level, puzzle.id, seconds, hints),
+                                ::formatClock,
+                            )
+                            current.day == today && puzzle.id in three ->
+                                threeShareCard(three, completions + solve, today, difficulty, formatDate(today, SHARE_DATE), streak, ::formatClock)
+                                    ?.takeIf { three.all { id -> id == puzzle.id || (id to difficulty) in doneToday } }
+                            else -> null
+                        }
                         praise.copy(
-                            title = if (level != null && levelFinishedBy(levels, level, puzzle.id)) "Level $level done" else praise.title,
+                            title = if (levelDone) "Level $level done" else praise.title,
                             share = card,
+                            setShare = setShare,
+                            setShareLabel = if (level != null) "Share level" else "Share three",
                         )
                     },
                     options = options,
@@ -541,6 +573,9 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                         val tier = option.difficulty
                         when {
                             option.kind == NextKind.LEVEL -> playLevel(option.level ?: levels.current, option.puzzleId)
+                            // Opened as from Home (fromArchive false): back from it is Home, as from the board just solved.
+                            option.kind == NextKind.TODAY && tier != null && option.puzzleId != null ->
+                                route = Route.Play(option.puzzleId, tier, today)
                             tier == null -> route = backFrom(current)
                             // The same date, so on an archive day it is that past date's board (and back is still the archive).
                             option.kind == NextKind.DAILY -> route = current.copy(difficulty = tier)

@@ -879,6 +879,7 @@ private fun FinishedFrame(
                     color = scheme.onSurface,
                 )
                 praise.share?.let { ShareChip(it, accent) }
+                praise.setShare?.let { ShareChip(it, accent, praise.setShareLabel) }
             }
             praise.lines.forEach {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -914,9 +915,10 @@ private fun FinishedFrame(
 
 /** Opens the share preview ([SharePreview]) for the result's card ([Praise.share]). */
 @Composable
-private fun ShareChip(card: ShareCard, accent: Color) {
+private fun ShareChip(card: ShareCard, accent: Color, label: String = "Share") {
     // Saveable, so turning the device keeps the preview open.
-    var open by rememberSaveable { mutableStateOf(sharePreviewOpen) }
+    // The render hook opens the solve's own card, never the set's over it.
+    var open by rememberSaveable { mutableStateOf(sharePreviewOpen && label == "Share") }
     Row(
         Modifier.clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.22f))
             .clickable { open = true }
@@ -925,7 +927,7 @@ private fun ShareChip(card: ShareCard, accent: Color) {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
-        Text("Share", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
     }
     if (open) SharePreview(card) { open = false }
 }
