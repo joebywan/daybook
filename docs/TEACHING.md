@@ -100,9 +100,9 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | puzzle | teaches | fallback |
 |---|---|---|
 | Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | none on a generated board: the generator digs only while the tier's ladder finishes it (a year of daily boards per tier, and 300 a tier in `SudokuTeachingTest`; before that gate 0.5 / 6 / 34% of boards). Per board: naked single 0 / 1.7 / 1.1 steps, locked candidates 0 / 0 / 0.7, pairs 0 / 0 / 0.3, what-if 0 / 0 / 0.5 |
-| Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
+| Kings | last square, locked to a line, would empty, N confined, what-if | none: the generator keeps a board only if the ladder finishes it from blank and the tier's gate holds (a year per tier, hints alone finish all) |
 | Mambo | pair, sandwich, link, quota, almost, what-if | none: the generator's ladder is the teacher's, and each tier is gated on the rung it needs (a year per tier and 500 boards a tier, hints alone finish all; almost-met 0 / 2.9 / 5.7 and what-if 0 / 0 / 4.1 steps a board; the fallback exists for boards not made here) |
-| Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
+| Pipes | border, set neighbour / whichever way it turns, no loop | 0: the generator ships only boards the reasoning settles (`PipesTeacher.settles`, which also proves one answer); 300 boards per tier, hints alone finish all, no-loop 0.6 / 0.8 / 0.8% of steps |
 | Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
 | Mosaic | finish, count fills against colours, biggest swallow, centre; fallback offers a proven fill | 1.5 / 9 / 12.5% |
 | Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
@@ -129,7 +129,7 @@ Adopting it, or changing a teacher — the lessons so far:
 
 - **Measure the fallback rate; don't assume it.** Test soundness against an independent solver.
 - **A mistake means "no legal answer keeps this", not "differs from the stored answer".** LITS and
-  Pipes have boards with several answers, and calling a correct move wrong is the PR #15 bug again.
+  Pipes had boards with several answers, and calling a correct move wrong is the PR #15 bug again.
 - **Check that a generator's stored answer obeys its own rules.** Atoms' did not on 4-35% of boards
   by tier, and every mistake judged against it was suspect.
 - **Fix a generator by rejecting and retrying after the existing attempts**, so the daily boards
@@ -155,9 +155,9 @@ board. No board changed (Mambo's rows are after its gate, below). Deepest techni
 | Sudoku (gated) | Standard | hidden-single-box 26, hidden-single-line 74 | 0 / 0 | 53 |
 |  | Hard | naked-single 100 | 0 / 0 | 53 |
 |  | Expert | locked-candidates 38, naked-pair 13, hidden-pair 5, what-if 44 | 0 / 0 | 53 |
-| Kings | Standard | last-square 1, locked-to-a-line 3, would-empty 58, confined 33, what-if 6 | 0.3 / 0.02 | 15 |
-|  | Hard | locked-to-a-line 2, would-empty 52, confined 41, what-if 6 | 0 / 0 | 16 |
-|  | Expert | last-square <1, locked-to-a-line 1, would-empty 39, confined 55, what-if 5 | 0.3 / 0.01 | 18 |
+| Kings | Standard | last-square <1, locked-to-a-line 4, would-empty 95 (gated: was 58, with confined 33, what-if 6) | 0 / 0 | 13 |
+|  | Hard | confined 100, every one two colours in two lines (gated: was would-empty 52, confined 41, what-if 6) | 0 / 0 | 18 |
+|  | Expert | confined 68 (all three or more colours), what-if 32 (gated: was would-empty 39, confined 55, what-if 5) | 0 / 0 | 20 |
 | Mambo | Standard | quota-met 100 | 0 / 0 | 30 |
 |  | Hard | quota-almost-met 100 | 0 / 0 | 56 |
 |  | Expert | what-if 100 | 0 / 0 | 87 |
@@ -171,8 +171,8 @@ board. No board changed (Mambo's rows are after its gate, below). Deepest techni
 |  | Hard | sign-bound 9, sign-place 91 | 0 / 0 | 24 |
 |  | Expert | sign-bound 4, sign-place 96 | 0 / 0 | 33 |
 | Tents | Standard | line-full 89, one-spot 10, shared 1, served 1 | 0 / 0 | 10 |
-|  | Hard | line-full 64, one-spot 28, shared 4, served 4 | 0 / 0 | 14 |
-|  | Expert | line-full 39, one-spot 43, shared 7, served 12 | 0 / 0 | 19 |
+|  | Hard | one-spot 78, shared 8, served 14 (gated: was line-full 64, one-spot 28, shared 4, served 4) | 0 / 0 | 15 |
+|  | Expert | shared 33, served 67 (gated: was line-full 39, one-spot 43, shared 7, served 12) | 0 / 0 | 21 |
 | Nonogram | Standard | line-logic 100; line passes 2: 95, 3: 5, 4+: <1 | 0 / 0 | 10 |
 |  | Hard | line-logic 100; passes 3: 79, 4+: 21 | 0 / 0 | 36 |
 |  | Expert | line-logic 100; passes 4: 79, 5+: 21 | 0 / 0 | 73 |
@@ -195,9 +195,12 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   `Sudoku.generateVerified` digs symmetric pairs only while the tier's ladder finishes the board (singles in a unit / up to
   naked single / everything but the fallback) and redraws a board whose walk did not need the tier's technique (Hard a naked
   single, Expert locked candidates or deeper); the table above is the result, no tier overlaps another and nothing falls back.
-- **Kings: the tiers are the same depth.** would-empty / confined / what-if are 58/33/6, 52/41/6, 39/55/5% across the tiers;
-  only size differs. Standard: no confined or what-if (62% pass); Hard: needs confined; Expert: needs what-if (5% of draws,
-  so measure the cost of ~20 draws a board first). The ladder is long enough.
+- **Kings: gated (built 2026-10).** Before, would-empty / confined / what-if were 58/33/6, 52/41/6, 39/55/5% across the
+  tiers and only size differed. Now (`Kings.fitsTier`, on `KingsTeacher.depth`, the hint walk from blank): Standard needs
+  nothing past would-empty; Hard needs a confinement of two colours and nothing wider or a what-if; Expert needs a
+  confinement of three or more or a what-if. Expert on what-if alone was costed and dropped: 2% of 9x9 draws pass (a
+  9x9 carve fails about two times in three), a mean of 51 draws a board, 91 / 341 / 733 ms p50 / p95 / max on the JVM.
+  With the wide confinement too, 7% pass: draws a board mean 2.4 / 5.7 / 14.6, most 13 / 41 / 94 of 400 (`KingsRulesTest`). Expert in the browser, p50 / p95 / max: 28 / 102 / 209 ms in Chromium, 39 / 142 / 290 in WebKit.
 - **Mambo: gated (built).** It was one depth everywhere (quota-met 100 on every tier: the carver kept only boards the first
   four finish). The carver now takes clues back while the ladder up to the tier's rung still finishes the board, and the
   tier is redrawn unless the walk needs that rung: Standard the first four (its boards did not move), Hard almost-met and no
@@ -215,8 +218,10 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   Only-way-out stays shadowed (2 steps in 500 Expert boards).
 - **Inequality: the ladder is too short.** 91-96% of Hard and Expert boards top out at sign-place; size is the only
   difference. No gate is possible until there are deeper techniques (a pair in a line, a sign chain `a < b < c`).
-- **Tents: graded.** Hard: needs one-spot (36% today); Expert: needs shared or served (18%). The ladder is long enough;
-  `touch` is never needed.
+- **Tents: gated (built 2026-10).** `TentsLogic.fitsTier`, on `TentsTeacher.depth` (the hint walk from blank): Hard needs
+  one-spot or deeper, Expert needs shared or served; Standard is not gated. Draws a board over a year (a draw must also be
+  finished by the ladder and unique): mean 1.3 / 5.6 / 23, most 5 / 27 / 143 of 2000; JVM p50 / p95 / max 0.1 / 0.1 / 0.4,
+  2.6 / 9.3 / 41, 5.1 / 27 / 191 ms. Expert in the browser, p50 / p95 / max: 14 / 66 / 151 ms in Chromium, 17 / 75 / 125 in WebKit. `touch` is never needed.
 - **Nonogram: gated since the pictures became mirrored** (2026-10). Before, on noise, Hard and Expert overlapped in passes
   (3+: 54% / 75%) and 13% of Standard boards took one pass. Mirrored pictures are shallower (one pass on half of Standard,
   4+ on 7% of Expert), so a board must need 2 / 3 / 4 passes by tier (`Spec.minPasses`); the rows above are with the gate.

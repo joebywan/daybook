@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.RegionsLayout
@@ -11,12 +10,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class RegionsRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
-    private fun seed(day: Int, d: Difficulty) = DailySeed.seedFor(start.plusDays(day.toLong()), Regions.id, d)
+    private fun seed(day: Int, d: Difficulty) = daySeed(day, Regions.id, d)
     private fun board(day: Int, d: Difficulty) = Regions.generate(seed(day, d), d) as RegionsState
 
     /** Independent of the code under test: sizes, region digits and touching read straight off the grid. */

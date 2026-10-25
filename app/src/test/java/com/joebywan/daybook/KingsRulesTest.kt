@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.KingsState
@@ -10,21 +9,16 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * The generator's contract, checked against rules written out again from scratch.
  *
  * Nothing here calls the production rule check or the production solver: a board that is wrong in
  * the same way the generator is wrong would sail past a test that reused them, which is how a Hard
- * board shipped with two kings in one column of its own stored answer. The checker and the counter
- * below are deliberately slow, obvious re-statements of the printed rules.
+ * board shipped with two kings in one column of its own stored answer. The checker below and the
+ * counter in [KingsOracle] are deliberately slow, obvious re-statements of the printed rules.
  */
 class KingsRulesTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), "kings-probe", difficulty)
-    }
 
     // ---- an independent rule checker ------------------------------------------------------
 
@@ -43,36 +37,6 @@ class KingsRulesTest {
         return true
     }
 
-    /**
-     * Every legal placement, found by brute force over the columns of each row rather than by the
-     * generator's own pruned search.
-     */
-    private fun allSolutions(n: Int, region: List<Int>): List<Set<Int>> {
-        val out = mutableListOf<Set<Int>>()
-        val chosen = IntArray(n) { -1 }
-        // Stops once the board is emphatically ambiguous; every assertion below is about there
-        // being exactly one answer, and nine is already an answer to that.
-        fun walk(row: Int) {
-            if (out.size > 8) return
-            if (row == n) {
-                val kings = (0 until n).map { it * n + chosen[it] }.toSet()
-                if (legal(n, region, kings)) out += kings
-                return
-            }
-            for (c in 0 until n) {
-                // Column and touching are the only constraints cheap enough to prune on here;
-                // everything else is left to `legal` so the enumeration stays obviously complete.
-                if ((0 until row).any { chosen[it] == c }) continue
-                if (row > 0 && kotlin.math.abs(chosen[row - 1] - c) <= 1) continue
-                chosen[row] = c
-                walk(row + 1)
-                chosen[row] = -1
-            }
-        }
-        walk(0)
-        return out
-    }
-
     private fun place(state: KingsState, kings: Set<Int>) = state.copy(
         marks = state.marks.mapIndexed { i, _ -> if (i in kings) Mark.KING else Mark.EMPTY },
     )
@@ -84,7 +48,7 @@ class KingsRulesTest {
         for (difficulty in Difficulty.entries) {
             var illegal = 0
             var ambiguous = 0
-            for (seed in seeds(30, difficulty)) {
+            for (seed in seeds(30, difficulty, "kings-probe")) {
                 val state = Kings.generate(seed, difficulty) as KingsState
                 val n = state.size
 
@@ -105,7 +69,7 @@ class KingsRulesTest {
                 )
 
                 if (!legal(n, state.region, state.solution)) illegal++
-                val solutions = allSolutions(n, state.region)
+                val solutions = KingsOracle.allSolutions(n, state.region)
                 if (solutions.size != 1) ambiguous++
             }
             assertEquals("kings/${difficulty.name}: stored answers that break a rule", 0, illegal)
@@ -136,6 +100,30 @@ class KingsRulesTest {
 
     // The proved path is walked over a year of daily seeds per tier in FallbackTest.
 
+    /**
+     * The tier gate redraws: a year of daily seeds needed at most 13 / 41 / 94 draws (means 2.4 / 5.7 / 14.6) when it
+     * was built, against a budget of 400. Pinned loosely, so the gate getting much pickier shows here first.
+     */
+    @Test
+    fun `the tier gate's redraws stay well inside the budget`() {
+        val first = com.joebywan.daybook.core.SeedHash.epochDay(2026, 1, 1)
+        for ((difficulty, most) in listOf(Difficulty.STANDARD to 40, Difficulty.HARD to 100, Difficulty.EXPERT to 200)) {
+            val draws = (0 until 365).map { day ->
+                val seed = com.joebywan.daybook.core.SeedHash.daily(first + day, Kings.id, difficulty)
+                (0 until 400).first { Kings.attempt(seed, difficulty, it) != null } + 1
+            }
+            assertTrue("kings/$difficulty needed ${draws.max()} draws on some day", draws.max() <= most)
+        }
+    }
+
+    @Test
+    fun `the last resort is a proved board with one answer`() {
+        for (difficulty in Difficulty.entries) {
+            val s = Kings.lastResort(difficulty)
+            assertEquals("kings/$difficulty last resort", listOf(s.solution), KingsOracle.allSolutions(s.size, s.region))
+        }
+    }
+
     // ---- the win condition ------------------------------------------------------------------
 
     /**
@@ -146,9 +134,9 @@ class KingsRulesTest {
     @Test
     fun `a legal placement wins, whether or not it is the stored one`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(30, difficulty)) {
+            for (seed in seeds(30, difficulty, "kings-probe")) {
                 val state = Kings.generate(seed, difficulty) as KingsState
-                val found = allSolutions(state.size, state.region).singleOrNull()
+                val found = KingsOracle.allSolutions(state.size, state.region).singleOrNull()
                 assertNotNull("kings/${difficulty.name}/$seed has no single answer", found)
                 val solved = place(state, found!!)
                 assertTrue(
@@ -179,7 +167,7 @@ class KingsRulesTest {
      */
     @Test
     fun `every legal placement on this 5x5 is accepted`() {
-        val answers = allSolutions(5, regions)
+        val answers = KingsOracle.allSolutions(5, regions)
         assertTrue("the fixture board should admit several answers", answers.size > 1)
         for (answer in answers) assertTrue("$answer is legal but refused", board(answer).solved)
     }

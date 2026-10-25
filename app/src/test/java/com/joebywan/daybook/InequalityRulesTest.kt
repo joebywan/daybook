@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.InequalityLogic
@@ -11,13 +10,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class InequalityRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        Inequality.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Inequality.id, d), d) as InequalityState
+        Inequality.generate(daySeed(day, Inequality.id, d), d) as InequalityState
 
     /** Independent of the code under test: every row and column a permutation, every sign true. */
     private fun legal(s: InequalityState, cells: List<Int>): Boolean {

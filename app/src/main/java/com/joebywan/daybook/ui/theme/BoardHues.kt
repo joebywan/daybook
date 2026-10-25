@@ -19,12 +19,6 @@ object BoardHues {
     /** A solid shape (token, path, dot), either scheme. */
     fun mark(hue: Float) = Color.hsl(hue, .55f, .56f)
 
-    /** [n] hues spread across the table, every other row first: Coral, Green, Violet, Amber, Teal, Rose, Blue, Gold. */
-    fun contentHues(n: Int): List<Float> {
-        require(n in 2..5) { "a board takes 2 to 5 content hues, not $n" }
-        return SPREAD.take(n)
-    }
-
     /**
      * Text colour for a digit on [fill]: the theme's dark ink, else white, else black, the first with WCAG contrast of at
      * least 4.5:1 (else the best of the three). Computed per fill, never one colour for all (a mid-tone can fail both
@@ -53,6 +47,4 @@ object BoardHues {
     fun pair(seed: Int): Pair<Float, Float> = HUE_PAIRS[(seed and Int.MAX_VALUE) % HUE_PAIRS.size]
 
     private val TEXT = listOf(Color(0xFF1B2F29), Color.White, Color.Black)
-
-    private val SPREAD = listOf(0, 3, 6, 1, 4, 7, 5, 2).map { all[it] }
 }
