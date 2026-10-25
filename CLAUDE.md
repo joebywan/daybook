@@ -138,6 +138,23 @@ into every seed: never rename it.
 - The pictures are random noise, not drawings. Smoothing them into blobs made 5x5 boards fail the filter too often
   (4% passed the shape rules); see `docs/TODO.md`.
 
+## Mambo (Takuzu with = and x links)
+
+Two symbols, balanced in every line, never three alike together, printed `=`/`x` links honoured. `puzzles/Mambo.kt` (state, rules,
+generator, `countSolutions`), `MamboTeacher.kt` (the ladder and `depth`). `id = "mambo"` is hashed into every seed: never rename it.
+
+- **Tiers are size and ladder depth: 6x6 / 8x8 / 10x10.** Standard is finished by the first four techniques (pair, sandwich, link,
+  quota), Hard must need quota-almost-met and not what-if, Expert must need what-if (`MamboTeacher.depth`, `Mambo.rungFor`).
+- **The generator's ladder is the teacher's.** The carve takes back cells, then links, while the ladder up to the tier's rung still
+  finishes the board, one pass per rung, cheapest first; then the tier's draw is redrawn unless the walk needs exactly its rung, and
+  `countSolutions` (propagation plus a lookahead, then branching, no budget) proves one answer. Standard's boards are the ones it
+  always had. `depth`'s what-if is `whatIfAt` (looks only near each square; `MamboTeachingTest` holds it equal to the hint's
+  `whatIf`). Draws a board over a year: 1.00 / 1.42 / 1.01 mean, at most 1 / 6 / 2 of 40; JVM median / max 0.9 / 5, 4 / 23,
+  18 / 62 ms; Chromium median / p95 / max 1.4 / 1.7 / 2.4, 6.6 / 19 / 35, 29 / 41 / 78 ms, WebKit up to 3 / 49 / 91 ms
+  (before the lookahead in `countSolutions`, sparse Expert boards took over a second to count). `MamboRulesTest` walks the year per tier (with its own solver: three rules plus a one-deep supposition) and an
+  independent exhaustive count; `lastResort` (checkerboard, every link) is never reached.
+- **`solved` checks the rules**; a mistake is a symbol no legal answer keeps.
+
 ## Inequality (Futoshiki)
 
 A Latin square (1..N once per row and column, N = 4/5/6 by tier) with `<`/`>` signs between some neighbours. `puzzles/InequalityRules.kt`
