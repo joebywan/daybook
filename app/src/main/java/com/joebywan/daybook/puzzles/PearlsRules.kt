@@ -404,7 +404,9 @@ internal object PearlsLogic {
      * Applies the local rules (and with [loop] the loop rule) to [st] in place, to a fixpoint or a
      * contradiction. Squares are worked in rounds: round 0 is [seeds] (every square when null), and a
      * round's changes queue the squares they touch for the next. With [maxRounds] it stops quietly
-     * after that many rounds (a what-if that found nothing in time).
+     * after that many rounds (a what-if that found nothing in time). The loop rule reads lines only, so
+     * when [st] already keeps it and no line has been drawn since ([linesNew] false and none added),
+     * it is not asked again: the outcome is the same, and a what-if that only crosses an edge is far cheaper.
      */
     fun propagate(
         g: PearlsGrid,
@@ -413,7 +415,9 @@ internal object PearlsLogic {
         loop: Boolean,
         seeds: IntArray? = null,
         maxRounds: Int = Int.MAX_VALUE,
+        linesNew: Boolean = true,
     ): Outcome {
+        var drawn = linesNew
         val queued = BooleanArray(g.squares)
         var current = IntArrayList()
         for (s in seeds ?: IntArray(g.squares) { it }) if (!queued[s]) { queued[s] = true; current.add(s) }
@@ -438,7 +442,7 @@ internal object PearlsLogic {
                     while (true) {
                         val f = localRule(g, pearls, st, s) ?: break
                         if (f.contradiction) return Outcome(f, rounds)
-                        for (e in f.lines) if (st[e] == OPEN) { st[e] = LINE; touch(e) }
+                        for (e in f.lines) if (st[e] == OPEN) { st[e] = LINE; drawn = true; touch(e) }
                         for (e in f.crosses) if (st[e] == OPEN) { st[e] = CROSS; touch(e) }
                     }
                 }
@@ -448,7 +452,8 @@ internal object PearlsLogic {
                 next = t
                 next.clear()
             }
-            if (!loop) return Outcome(null, rounds)
+            if (!loop || !drawn) return Outcome(null, rounds)
+            drawn = false
             val f = smallLoop(g, pearls, st) ?: return Outcome(null, rounds)
             if (f.contradiction) return Outcome(f, rounds)
             if (rounds >= maxRounds) return Outcome(null, rounds)
@@ -471,7 +476,7 @@ internal object PearlsLogic {
     fun whatIf(g: PearlsGrid, pearls: String, st: IntArray, edge: Int, assume: Int, maxRounds: Int = MAX_ROUNDS): WhatIf? {
         val trial = st.copyOf()
         trial[edge] = assume
-        val out = propagate(g, pearls, trial, loop = true, seeds = seedsOf(g, pearls, edge), maxRounds = maxRounds)
+        val out = propagate(g, pearls, trial, loop = true, seeds = seedsOf(g, pearls, edge), maxRounds = maxRounds, linesNew = assume == LINE)
         return out.contradiction?.let { WhatIf(edge, assume, it, out.rounds) }
     }
 
@@ -625,6 +630,7 @@ internal object PearlsLogic {
         fun walk(st: IntArray) {
             if (found > 1) return
             if (propagate(g, pearls, st, loop = true).contradiction != null) return
+            if (!connected(g, pearls, st)) return
             val marks = CharArray(g.edgeCount) { if (st[it] == LINE) LINE_MARK else OPEN_MARK }.concatToString()
             if (isSolved(n, pearls, marks)) {
                 found++
@@ -649,12 +655,47 @@ internal object PearlsLogic {
                 if (found > 1) return
             }
         }
-        walk(IntArray(g.edgeCount))
+        // The root is first taken as far as the whole ladder goes, what-ifs included: every step of it is sound, so no
+        // answer is lost, and it spares the branches a short what-if would have closed (one board's count fell from half a
+        // second to a few milliseconds).
+        walk(settle(n, pearls, IntArray(g.edgeCount), WHAT_IF) ?: return PearlsVerdict.None)
         return when (found) {
             0 -> PearlsVerdict.None
             1 -> PearlsVerdict.ExactlyOne(answer)
             else -> PearlsVerdict.Several
         }
+    }
+
+    /**
+     * Whether every pearl and every square with a line can still meet: one piece of the board joined by edges
+     * not crossed. A loop is one piece, so a board cut in two by crosses has no answer (a prune for [solutions]).
+     */
+    private fun connected(g: PearlsGrid, pearls: String, st: IntArray): Boolean {
+        val need = BooleanArray(g.squares)
+        var start = -1
+        for (e in 0 until g.edgeCount) if (st[e] == LINE) { need[g.endA[e]] = true; need[g.endB[e]] = true }
+        for (s in 0 until g.squares) {
+            if (pearls[s] != '.') need[s] = true
+            if (need[s] && start < 0) start = s
+        }
+        if (start < 0) return true
+        val seen = BooleanArray(g.squares)
+        val queue = IntArray(g.squares)
+        var lo = 0
+        var hi = 0
+        queue[hi++] = start
+        seen[start] = true
+        while (lo < hi) {
+            val s = queue[lo++]
+            for (d in 0 until 4) {
+                val e = g.edge(s, d)
+                if (e < 0 || st[e] == CROSS) continue
+                val q = g.next(s, d)
+                if (!seen[q]) { seen[q] = true; queue[hi++] = q }
+            }
+        }
+        for (s in 0 until g.squares) if (need[s] && !seen[s]) return false
+        return true
     }
 
     // ---- generation ---------------------------------------------------------------------------
@@ -716,67 +757,110 @@ internal object PearlsLogic {
         val inside = BooleanArray(faces)
         inside[rng.nextInt(faces)] = true
         val target = n * n * rng.nextInt(low, high) / 100
-        var loop = boundary(n, inside)!!
-        while (loop.count { it == '1' } < target) {
+        val shape = LoopShape(n)
+        shape.trace(inside)
+        var length = shape.length
+        while (length < target) {
             val best = IntArrayList()
             var bestScore = Int.MAX_VALUE
-            var bestLoops = ArrayList<String>()
             for (f in 0 until faces) {
                 if (inside[f]) continue
                 val r = f / fw
                 val c = f % fw
                 if (!(r > 0 && inside[f - fw] || r < fw - 1 && inside[f + fw] || c > 0 && inside[f - 1] || c < fw - 1 && inside[f + 1])) continue
                 inside[f] = true
-                val next = boundary(n, inside)
+                val simple = shape.trace(inside)
                 inside[f] = false
-                if (next == null) continue
-                val score = if (rng.nextInt(100) < GREEDY_PERCENT) bare(n, next) - next.count { it == '1' } else 0
+                if (!simple) continue
+                // The most squares that could carry a pearl.
+                val score = if (rng.nextInt(100) < GREEDY_PERCENT) -shape.pearlSquares() else 0
                 if (score < bestScore) {
                     bestScore = score
                     best.clear()
-                    bestLoops = ArrayList()
                 }
-                if (score == bestScore) {
-                    best.add(f)
-                    bestLoops.add(next)
-                }
+                if (score == bestScore) best.add(f)
             }
             // Nowhere left to grow: good enough if it already visits the share's low end.
-            if (best.size == 0) return loop.takeIf { it.count { c -> c == '1' } >= n * n * low / 100 }
-            val k = rng.nextInt(best.size)
-            inside[best[k]] = true
-            loop = bestLoops[k]
+            if (best.size == 0) break
+            inside[best[rng.nextInt(best.size)]] = true
+            shape.trace(inside)
+            length = shape.length
         }
-        return loop
+        if (length < target && length < n * n * low / 100) return null
+        return CharArray(shape.on.size) { if (shape.on[it]) '1' else '0' }.concatToString()
     }
 
-    /** Squares [loop] visits that could carry no pearl: a turn beside a turn, or a straight between straights. */
-    private fun bare(n: Int, loop: String): Int {
-        val all = implied(n, loop)
+    /**
+     * The boundary of a face region, worked out in place with nothing allocated per candidate: [trace] fills
+     * [on] and says whether it is one simple closed curve, [length] is its edge count, and [pearlSquares] how
+     * many of its squares could carry a pearl ([implied]'s rule).
+     */
+    private class LoopShape(val n: Int) {
         val g = PearlsGrid.of(n)
-        val on = BooleanArray(g.squares)
-        for (e in 0 until g.edgeCount) if (loop[e] == '1') { on[g.endA[e]] = true; on[g.endB[e]] = true }
-        return (0 until g.squares).count { on[it] && all[it] == '.' }
+        val on = BooleanArray(g.edgeCount)
+        private val nb = IntArray(g.squares * 2)
+        private val degree = IntArray(g.squares)
+        var length = 0
+
+        fun trace(inside: BooleanArray): Boolean {
+            val fw = n - 1
+            fun face(r: Int, c: Int) = r in 0 until fw && c in 0 until fw && inside[r * fw + c]
+            degree.fill(0)
+            length = 0
+            for (r in 0 until n) for (c in 0 until n - 1) on[r * (n - 1) + c] = face(r - 1, c) != face(r, c)
+            for (r in 0 until n - 1) for (c in 0 until n) on[g.horizontal + r * n + c] = face(r, c - 1) != face(r, c)
+            var simple = true
+            for (e in 0 until g.edgeCount) {
+                if (!on[e]) continue
+                length++
+                val a = g.endA[e]
+                val b = g.endB[e]
+                if (degree[a] == 2 || degree[b] == 2) {
+                    simple = false
+                    continue
+                }
+                nb[a * 2 + degree[a]++] = b
+                nb[b * 2 + degree[b]++] = a
+            }
+            if (!simple || length == 0) return false
+            var start = -1
+            for (s in 0 until g.squares) {
+                if (degree[s] == 1) return false
+                if (degree[s] == 2 && start < 0) start = s
+            }
+            var prev = start
+            var at = nb[start * 2]
+            var steps = 1
+            while (at != start) {
+                val next = if (nb[at * 2] == prev) nb[at * 2 + 1] else nb[at * 2]
+                prev = at
+                at = next
+                steps++
+            }
+            return steps == length
+        }
+
+        private fun turns(s: Int): Boolean {
+            val a = nb[s * 2]
+            val b = nb[s * 2 + 1]
+            return a / n != b / n && a % n != b % n
+        }
+
+        fun pearlSquares(): Int {
+            var count = 0
+            for (s in 0 until g.squares) {
+                if (degree[s] != 2) continue
+                val t = turns(s)
+                val ta = turns(nb[s * 2])
+                val tb = turns(nb[s * 2 + 1])
+                if (t && !ta && !tb || !t && (ta || tb)) count++
+            }
+            return count
+        }
     }
 
     /** How often a growth step is greedy (the face that leaves the most pearls); the rest take any face that keeps the loop simple. */
     private const val GREEDY_PERCENT = 95
-
-    /** The boundary of the face region [inside] as an edge string, or null when it is not one simple closed curve. */
-    private fun boundary(n: Int, inside: BooleanArray): String? {
-        val fw = n - 1
-        val g = PearlsGrid.of(n)
-        fun face(r: Int, c: Int) = r in 0 until fw && c in 0 until fw && inside[r * fw + c]
-        val on = CharArray(g.edgeCount) { '0' }
-        for (r in 0 until n) for (c in 0 until n - 1) {
-            if (face(r - 1, c) != face(r, c)) on[r * (n - 1) + c] = '1'
-        }
-        for (r in 0 until n - 1) for (c in 0 until n) {
-            if (face(r, c - 1) != face(r, c)) on[g.horizontal + r * n + c] = '1'
-        }
-        val marks = CharArray(g.edgeCount) { if (on[it] == '1') LINE_MARK else OPEN_MARK }.concatToString()
-        return if (isSolved(n, ".".repeat(n * n), marks)) on.concatToString() else null
-    }
 
     /** Every pearl [loop] allows: black on a turn whose neighbours go straight, white on a straight with a turn beside it. */
     fun implied(n: Int, loop: String): String {

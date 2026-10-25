@@ -324,6 +324,9 @@ object Pearls : PuzzleType {
 
     // ---- drawing --------------------------------------------------------------------------------
 
+    private val PEARL_BLACK = Color(0xFF15191A)
+    private val PEARL_WHITE = Color(0xFFFAF7EF)
+
     /** What a board draws besides its own marks; all optional. */
     private class Overlay(
         val highlight: BoardHighlight = BoardHighlight.None,
@@ -370,11 +373,15 @@ object Pearls : PuzzleType {
                 val pearl = s.pearls[q]
                 if (pearl != '.') {
                     val r = u * 0.3f
+                    // Black and white whatever the scheme: the rules name the colours. Each has a rim of the
+                    // other, so a black pearl still reads on a dark board and a white one on a light board.
+                    val ring = Stroke(maxOf(u * 0.06f, 1.5f))
                     if (pearl == PearlsLogic.BLACK) {
-                        drawCircle(scheme.onSurface, r, c)
+                        drawCircle(PEARL_BLACK, r, c)
+                        if (dark) drawCircle(PEARL_WHITE, r, c, style = ring)
                     } else {
-                        drawCircle(scheme.surface, r, c)
-                        drawCircle(scheme.onSurface, r, c, style = Stroke(maxOf(u * 0.07f, 1.5f)))
+                        drawCircle(PEARL_WHITE, r, c)
+                        drawCircle(PEARL_BLACK, r, c, style = ring)
                     }
                 }
                 for (d in 0 until 4) {
