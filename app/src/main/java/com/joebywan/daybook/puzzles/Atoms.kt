@@ -41,6 +41,7 @@ import com.joebywan.daybook.ui.GLOW_ALPHA
 import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.graphics.drawscope.scale
 import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.core.union
 
 /** An atom sits on a lattice point and needs exactly [bonds] bond-ends. */
 @Serializable
@@ -696,9 +697,7 @@ object Atoms : PuzzleType {
                                 androidx.compose.ui.geometry.Offset(atom.col * px, atom.row * px),
                                 androidx.compose.ui.geometry.Offset((atom.col + 1) * px, (atom.row + 1) * px),
                             )
-                            box = box?.let { b ->
-                                androidx.compose.ui.geometry.Rect(minOf(b.left, r.left), minOf(b.top, r.top), maxOf(b.right, r.right), maxOf(b.bottom, r.bottom))
-                            } ?: r
+                            box = box?.union(r) ?: r
                         }
                         for (index in named.strong + named.soft) {
                             if (index in s.atoms.indices) {
