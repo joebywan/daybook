@@ -24,6 +24,7 @@ import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.Tents
+import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.SnapState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -166,6 +167,10 @@ class FallbackTest {
     /** [Tents.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test
     fun `tents proves every daily board of a year on every tier`() = assertYearProved(Tents) { seed, d -> Tents.generateVerified(seed, d) }
+
+    /** [Sudoku.generateVerified] returns a board only when the tier's ladder finished it and a search proved one answer. */
+    @Test
+    fun `sudoku proves every daily board of a year on every tier`() = assertYearProved(Sudoku) { seed, d -> Sudoku.generateVerified(seed, d) }
 
     @Test
     fun `lits never falls back to a single region`() {

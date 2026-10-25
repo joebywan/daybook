@@ -173,8 +173,8 @@ would rather let people rearrange than hide.
 - **Gentlest first, then most played** (the default): solves per puzzle, dailies of the last 60 days plus every practice game
   (they carry no day); ties and never-played puzzles keep `PuzzleOrder.GENTLEST`, the owner's one table of how quickly a
   newcomer gets going on Standard (see it, do it: Pointers, Pipes, Snap; then Sudoku, Lexicon, Sand; familiar: Word Wheel,
-  Target, Nonogram; quick to learn: Kings, Mambo, Mosaic, Sets, Tower, Inequality, Tents, Regions, Tally; takes a bit: Shikaku,
-  Atoms, LITS, Mate, Cage Sudoku, Cipher, Dominoes). So a new player's grid is that table, and Sudoku and Lexicon open the
+  Target, Nonogram; quick to learn: Kings, Mambo, Mosaic, Sets, Inequality, Tents, Regions, Tally; takes a bit: Shikaku,
+  Atoms, LITS, Mate, Cage Sudoku, Cipher, Dominoes; and Tower last, as much the same game as Lexicon). So a new player's grid is that table, and Sudoku and Lexicon open the
   second row of a three-column phone (`HomeOrderTest` pins it); a puzzle missing from it goes last. The solves are read once
   per app start and day, not live, so coming home from a solve never moves a tile under the player's finger.
 - **My own order**: press and hold a tile on the home grid, then drag it (the owner's call, replacing #231's Arrange screen
@@ -209,6 +209,17 @@ under the pinned rows says "Continue Kings · Hard" beside the puzzle's motif an
 (`ProgressStore.inProgress` lists newest first). Its room is taken only while it shows. It follows the store until the first
 touch on that visit (the board just left is saved as Play fades out, so it can land a moment after Home appears), then holds
 until Home is entered again or the tier or mode changes, so it never appears or goes under a finger.
+
+## This week (`ui/stats/ThisWeek.kt`)
+
+The top card of the stats screen: a circle for today and each of the six days before (filled and numbered with the boards solved
+that day, today outlined), then "N days played, M daily boards solved.", or "A fresh week: today's boards are ready." when the
+week is empty; never a count of what is missing. Under each puzzle's tiers, once its most solved tier (the easier on a tie) has a
+solve in 3 of the last 8 weeks, "Your recent median" with that tier and time (the latest
+week with a solve), then a line through each week's median (gaps bridged). No axis, no "faster" or "slower": the line is the player's own times and says nothing about them.
+Decision: **only dated completions count.** A `Completion` holds the day of the board it solved and no time of play, so practice
+and level solves (`day == null`) cannot be put in a week; an archive board counts on its own day. Weeks end today, so none splits
+at a month or year. Pure and tested: `ThisWeek.days`, `summary`, `weeklyMedians`, `trend` (`ThisWeekTest`). Static: nothing animates.
 
 ## Kept share cards (`KeptCard` in `data/ProgressStore.kt`, `ui/stats/StatsScreen.kt`)
 
