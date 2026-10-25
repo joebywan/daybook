@@ -9,6 +9,7 @@ import com.joebywan.daybook.core.streakOf
 import com.joebywan.daybook.platform.currentTimeMillis
 import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.play.ShareCard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -226,6 +227,48 @@ object SavedGames {
 }
 
 /**
+ * A share card kept after its finish frame has gone, so the stats screen can share it again. [best] is the player's best
+ * solve of the puzzle and tier (any board: daily, level or random, as [Stats.bestTime] counts them all); otherwise it is
+ * the last random board solved there. [seconds], [hints], [undos] and [bonus] are the solve's, for ranking ([beats]).
+ */
+@Serializable
+data class KeptCard(
+    val puzzleId: String,
+    val difficulty: Difficulty,
+    val best: Boolean,
+    val seconds: Int,
+    val hints: Int,
+    val card: ShareCard,
+    /** Moves taken back, as the share card counts them (`PlayLog.played(log).count { it.undone }`). Defaulted: older cards load. */
+    val undos: Int = 0,
+    /** Word Wheel's bonus words found; 0 for every other puzzle. Defaulted: older cards load. */
+    val bonus: Int = 0,
+) {
+    /**
+     * The owner's order for Best: fewest hints, then fastest, then fewest undos, then most bonus words. Only a strict win
+     * beats; a full tie keeps the card already kept.
+     */
+    fun beats(other: KeptCard): Boolean =
+        compareValuesBy(this, other, { it.hints }, { it.seconds }, { it.undos }, { -it.bonus }) < 0
+
+    fun encode(): String = SavedJson.encodeToString(this)
+
+    companion object {
+        fun decode(raw: String): KeptCard? = runCatching { SavedJson.decodeFromString<KeptCard>(raw) }.getOrNull()
+    }
+}
+
+/** Which kept cards survive a write. Pure, so the replace-only-when-beaten rule is testable on its own. */
+object KeptCards {
+    /** One card per puzzle, tier and kind: a last card always replaces its slot, a best only when it [KeptCard.beats] it. */
+    fun keep(all: List<KeptCard>, entry: KeptCard): List<KeptCard> {
+        val same = all.firstOrNull { it.puzzleId == entry.puzzleId && it.difficulty == entry.difficulty && it.best == entry.best }
+        if (same != null && entry.best && !entry.beats(same)) return all
+        return all - setOfNotNull(same) + entry
+    }
+}
+
+/**
  * All saved progress. Local only — there is no account, no sync and no network permission.
  *
  * [store] is the [KeyValueStore.PROGRESS] file: DataStore on Android, `localStorage` on the web.
@@ -327,6 +370,13 @@ class ProgressStore(private val store: KeyValueStore) {
         }
     }
 
+    /** The kept share cards ([KeptCard]): an older store has none. */
+    val keptCards: Flow<List<KeptCard>> = store.stringSet(KEY_CARDS).map { raw -> raw.mapNotNull(KeptCard::decode) }
+
+    suspend fun keepCard(entry: KeptCard) {
+        store.updateStringSet(KEY_CARDS) { raw -> KeptCards.keep(raw.mapNotNull(KeptCard::decode), entry).map(KeptCard::encode).toSet() }
+    }
+
     /**
      * Puzzles whose walkthrough has been offered. The offer is one passive line under the board,
      * shown on a player's first visit and never again — recorded as soon as it is shown, not when
@@ -353,6 +403,7 @@ class ProgressStore(private val store: KeyValueStore) {
         const val KEY_TUTORIALS_OFFERED = "tutorials_offered"
         const val KEY_LEVELS = "levels"
         const val KEY_LEVEL_SOLVES = "level_solves"
+        const val KEY_CARDS = "share_cards"
     }
 }
 
@@ -403,9 +454,29 @@ object PuzzleOrder {
      * under the player's finger on the way back home.
      */
     fun mostPlayed(all: List<Completion>, today: LocalDate, ids: List<String>): List<String> {
-        val from = today.toEpochDays() - WINDOW_DAYS
-        val counts = all.filter { it.day == null || it.day.toEpochDays() >= from }.groupingBy { it.puzzleId }.eachCount()
+        val counts = playCounts(all, today)
         return ids.sortedByDescending { counts[it] ?: 0 }
+    }
+
+    private fun playCounts(all: List<Completion>, today: LocalDate): Map<String, Int> {
+        val from = today.toEpochDays() - WINDOW_DAYS
+        return all.filter { it.day == null || it.day.toEpochDays() >= from }.groupingBy { it.puzzleId }.eachCount()
+    }
+
+    /** How many of the most played puzzles today's pick never lands on. */
+    const val PICK_SKIPS_TOP = 5
+
+    /**
+     * Today's pick ("Try me!"): [PuzzleRegistry.featured]'s rotation, stepped forward past the player's [PICK_SKIPS_TOP]
+     * most played puzzles (by [mostPlayed]'s counts, whatever the grid's order; only puzzles with a counted solve), so it
+     * points at something they play less. A new player gets the plain rotation. Pure: the caller passes the once-a-day basis.
+     */
+    fun pick(all: List<Completion>, today: LocalDate): String {
+        val counts = playCounts(all, today)
+        val ids = PuzzleRegistry.all.map { it.id }
+        val skip = mostPlayed(all, today, gentlest(ids)).filter { (counts[it] ?: 0) > 0 }.take(PICK_SKIPS_TOP).toSet()
+        val start = ids.indexOf(PuzzleRegistry.featured(today.toEpochDays()).id)
+        return ids.indices.map { ids[(start + it) % ids.size] }.firstOrNull { it !in skip } ?: ids[start]
     }
 
     /**

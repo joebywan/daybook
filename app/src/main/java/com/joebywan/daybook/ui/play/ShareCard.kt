@@ -14,6 +14,7 @@ import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.TowerState
 import com.joebywan.daybook.puzzles.WordWheelState
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.Serializable
 
 /**
  * The play log: what happened in a game, in order, one character per event, kept in [com.joebywan.daybook.data.SavedGame.log]
@@ -95,12 +96,14 @@ enum class Mark(val text: String) {
 }
 
 /** A line of the graphic: [marks], then a red square when a hint came before it ([hinted]), then [tail] as written. */
+@Serializable
 data class ShareLine(val marks: List<Mark>, val hinted: Boolean = false, val tail: String = "") {
     fun text(spaced: Boolean): String =
         marks.joinToString(if (spaced) " " else "") { it.text } + (if (hinted) " " + Mark.RED.text else "") + tail
 }
 
-/** Everything the share preview shows and the text it sends. Pure data. */
+/** Everything the share preview shows and the text it sends. Pure data; serialisable, as the stats screen keeps some ([com.joebywan.daybook.data.KeptCard]). */
+@Serializable
 data class ShareCard(
     val header: String,
     val lines: List<ShareLine>,
@@ -119,8 +122,6 @@ data class ShareCard(
             append(SHARE_URL)
         }
 }
-
-private const val HINTED_NUDGE = "The hints got you there. Try tomorrow's with fewer."
 
 private fun plural(n: Int, one: String, many: String = one + "s") = "$n ${if (n == 1) one else many}"
 
@@ -157,6 +158,10 @@ fun shareCard(
     val lines: List<ShareLine>
     val key: List<Pair<Mark, String>>
     val nudge: String
+    // A daily comes back tomorrow; a random or level board does not, so its nudges look to the next one instead.
+    val next = if (date != null) "tomorrow" else "next time"
+    val nextCap = next.replaceFirstChar { it.uppercase() }
+    val hintedNudge = "The hints got you there. Try ${if (date != null) "tomorrow's" else "the next one"} with fewer."
     when (state) {
         is LexiconState, is TowerState -> {
             // Rows are the final guesses; the log's live moves are the last of them (an older save logged none before).
@@ -186,9 +191,9 @@ fun shareCard(
                 key = listOf(Mark.EXACT to "right colour and slot", Mark.CLOSE to "right colour", Mark.RED to "hint")
             }
             nudge = when {
-                hints > 0 -> HINTED_NUDGE
+                hints > 0 -> hintedNudge
                 guessed == 1 -> "First guess. Nothing to improve on."
-                else -> "No hints, ${plural(guessed, "guess", "guesses")}. Fewer tomorrow?"
+                else -> "No hints, ${plural(guessed, "guess", "guesses")}. Fewer $next?"
             }
         }
         is SetsState -> {
@@ -196,8 +201,8 @@ fun shareCard(
             key = listOf(Mark.GREEN to "a set", Mark.WHITE to "not a set", Mark.YELLOW to "undone", Mark.RED to "hint")
             val off = undone + moves.count { it.wrong }
             nudge = when {
-                hints > 0 -> HINTED_NUDGE
-                off > 0 -> "No hints. ${plural(off, "claim")} off a clean run. Tomorrow?"
+                hints > 0 -> hintedNudge
+                off > 0 -> "No hints. ${plural(off, "claim")} off a clean run. $nextCap?"
                 else -> "Every claim a set. Nothing to improve on."
             }
         }
@@ -206,8 +211,8 @@ fun shareCard(
             lines = listOf(ShareLine(moves.map { it.mark() }, tail = "#"))
             key = listOf(Mark.GREEN to "move", Mark.YELLOW to "taken back", Mark.RED to "hint")
             nudge = when {
-                hints > 0 -> HINTED_NUDGE
-                undone > 0 -> "No hints. ${plural(undone, "move")} taken back from a clean mate. Tomorrow?"
+                hints > 0 -> hintedNudge
+                undone > 0 -> "No hints. ${plural(undone, "move")} taken back from a clean mate. $nextCap?"
                 else -> "A clean mate. Nothing to improve on."
             }
         }
@@ -216,9 +221,9 @@ fun shareCard(
             lines = listOf(ShareLine(moves.map { it.mark() }, tail = "   ${plural(steps, "step")} · par ${state.par}"))
             key = listOf(Mark.GREEN to "step", Mark.YELLOW to "undone", Mark.RED to "hint")
             nudge = when {
-                hints > 0 -> HINTED_NUDGE
-                undone > 0 -> "No hints. $undone undone from a clean run. Tomorrow?"
-                steps > state.par -> "No hints, nothing undone. Par is ${state.par}: tomorrow?"
+                hints > 0 -> hintedNudge
+                undone > 0 -> "No hints. $undone undone from a clean run. $nextCap?"
+                steps > state.par -> "No hints, nothing undone. Par is ${state.par}: $next?"
                 else -> "On par, nothing undone. Nothing to improve on."
             }
         }
@@ -227,14 +232,14 @@ fun shareCard(
             val lost = PointersLogic.LIVES - state.lives
             lines = listOf(ShareLine(List(state.lives) { Mark.HEART } + List(lost) { Mark.LOST }))
             key = listOf(Mark.HEART to "life left", Mark.LOST to "life lost")
-            nudge = if (lost == 0) "Not a single bump." else "${plural(lost, "bump")}. None tomorrow?"
+            nudge = if (lost == 0) "Not a single bump." else "${plural(lost, "bump")}. None $next?"
         }
         else -> {
             lines = listOf(ShareLine(strip(moves)))
             key = listOf(Mark.GREEN to "own move", Mark.YELLOW to "undone", Mark.RED to "hint")
             nudge = when {
-                hints > 0 -> HINTED_NUDGE
-                undone > 0 -> "No hints. $undone undone from a clean strip. Tomorrow?"
+                hints > 0 -> hintedNudge
+                undone > 0 -> "No hints. $undone undone from a clean strip. $nextCap?"
                 else -> "A clean solve. Nothing to improve on."
             }
         }
@@ -244,6 +249,7 @@ fun shareCard(
             else "Daybook · ${puzzle.displayName} · ${tier.label} · ${date ?: "random board"}$suffix",
         lines = lines,
         stats = clock +
+            (if (hints > 0) " · ${plural(hints, "hint")}" else "") +
             (if (state is WordWheelState && state.bonus.isNotEmpty()) " · +${plural(state.bonus.size, "bonus word")}" else "") +
             if (streak >= 2) " · $streak day streak" else "",
         key = key,

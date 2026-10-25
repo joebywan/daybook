@@ -148,7 +148,9 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   walks the list). It sits last in `finishPraise`, in place of the bare "No hints needed.", so it only shows on a no-hint
   solve that earned no achievement, record, percentile or board-needed line; a solve with hints keeps its hint line. At most 64 characters.
   Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
-- **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added. Its
+- **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added; `PuzzleOrder.pick` steps that rotation forward past
+  the player's five most played puzzles (play counts, whatever the grid's order; only puzzles with a solve), so it suggests
+  something they play less, and a new player gets the plain rotation. Its
   home tile, while unsolved, gets a thin gold ring, a frame of twinkling gold sparkles (`ui/home/FeaturedMark.kt`; one infinite
   transition read only in the draw phase) and "Try me!" tilted across the thumbnail with a halo, content description
   "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved or
@@ -207,6 +209,15 @@ under the pinned rows says "Continue Kings · Hard" beside the puzzle's motif an
 (`ProgressStore.inProgress` lists newest first). Its room is taken only while it shows. It follows the store until the first
 touch on that visit (the board just left is saved as Play fades out, so it can land a moment after Home appears), then holds
 until Home is entered again or the tier or mode changes, so it never appears or goes under a finger.
+
+## Kept share cards (`KeptCard` in `data/ProgressStore.kt`, `ui/stats/StatsScreen.kt`)
+
+Every solve keeps its share card (`share_cards`, one JSON `KeptCard` per entry), so Statistics can share it again: each tier row
+has **Best** and **Last**, always laid out, greyed when nothing is kept. Last is the last *random* board solved at that puzzle and
+tier, always replaced. Best is any board (daily, level or random, as best times count them all), ranked in the owner's order:
+**fewest hints, then fastest, then fewest undos (as the share card counts them), then most bonus words (Word Wheel; 0 elsewhere)**.
+Only a strict win replaces it; a full tie keeps the old card. Bests start from the build that added them, so the first card
+kept is the best until beaten, and Best can be slower than the best time beside it when the faster solve used a hint.
 
 ## Reduced motion and haptics (`ui/Motion.kt`, the platform seam)
 

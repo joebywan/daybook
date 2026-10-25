@@ -56,11 +56,48 @@ class ShareCardTest {
         // 20 moves, two a square: move 2 undone, move 4 after a hint.
         val c = card(Sudoku, sudoku, "mmmumhm" + "m".repeat(15), date = null, streak = 1)
         assertEquals(
-            "Daybook · Sudoku · Expert · random board\n🟩🟨🟥🟩🟩🟩🟩🟩🟩🟩\n12:04\n" +
+            "Daybook · Sudoku · Expert · random board\n🟩🟨🟥🟩🟩🟩🟩🟩🟩🟩\n12:04 · 1 hint\n" +
                 "🟩 own move  🟨 undone  🟥 hint\n$SHARE_URL",
             c.text,
         )
-        assertEquals("The hints got you there. Try tomorrow's with fewer.", c.nudge)
+        assertEquals("The hints got you there. Try the next one with fewer.", c.nudge)
+        assertEquals("The hints got you there. Try tomorrow's with fewer.", card(Sudoku, sudoku, "mhm").nudge)
+    }
+
+    @Test fun `the stats carry the hints, clock first, and none means nothing`() {
+        assertEquals("12:04 · 2 hints · 6 day streak", card(Sudoku, sudoku, "mhmhm").stats)
+        assertEquals("12:04 · 1 hint", card(Sudoku, sudoku, "mhm", streak = 1).stats)
+        // The count is the game's, not the log's: an older save logged none of them.
+        assertEquals("12:04 · 3 hints · 6 day streak", card(Sudoku, sudoku, "mmm", hints = 3).stats)
+        val s = WordWheel.generate(1L, Difficulty.STANDARD) as WordWheelState
+        assertEquals("12:04 · 1 hint · +1 bonus word · 6 day streak", card(WordWheel, s.copy(bonus = listOf("one")), "hm").stats)
+    }
+
+    @Test fun `a board that is not a daily never says tomorrow`() {
+        val lex = LexiconState(5, 6, "crane", listOf("slate", "pride", "crane"))
+        val op = TargetMove(0, 1, 2, 3, TargetOp.Add, 5)
+        val target = TargetState(listOf(2, 3, 4, 5, 25, 50), target = 999, par = 2, log = listOf(op, op, op))
+        assertEquals("No hints. 1 undone from a clean strip. Next time?", card(Sudoku, sudoku, "mmum", date = null).nudge)
+        assertEquals("No hints, 3 guesses. Fewer next time?", card(Lexicon, lex, "mmm", date = null).nudge)
+        assertEquals("No hints, nothing undone. Par is 2: next time?", card(Target, target, "mmm", date = null).nudge)
+        val random = listOf(
+            card(Sudoku, sudoku, "mhm", date = null), card(Sudoku, sudoku, "mmum", date = null),
+            card(Lexicon, lex, "mmm", date = null), card(Target, target, "mmm", date = null),
+            card(Target, target, "mmmum", date = null), card(Chess, ChessState(start = "8/8/8/8/8/8/8/8 w - - 0 1", mateIn = 2), "mmum", date = null),
+            card(Sets, SetsState(emptyList(), 0, emptyList(), emptyList()), "mwm", date = null),
+            shareCard(Sudoku, Difficulty.HARD, null, "3:10", 0, sudoku, "mhm", 1, level = 14),
+        )
+        random.forEach { assertFalse(it.nudge, it.nudge.contains("tomorrow", ignoreCase = true)) }
+    }
+
+    @Test fun `the nudge is for the preview, never the shared text`() {
+        val cards = listOf(
+            card(Sudoku, sudoku, "mhm"), card(Sudoku, sudoku, "mmum"), card(Sudoku, sudoku, "mmm"),
+            card(Sudoku, sudoku, "mhm", date = null), card(Sudoku, sudoku, "mmum", date = null),
+            card(Lexicon, LexiconState(5, 6, "crane", listOf("slate", "crane")), "mm"),
+        )
+        cards.forEach { assertFalse(it.text, it.nudge in it.text) }
+        cards.forEach { assertFalse(it.text, it.text.contains("tomorrow", ignoreCase = true) || it.text.contains("next time", ignoreCase = true)) }
     }
 
     @Test fun `under ten moves is a square a move`() {
@@ -79,7 +116,7 @@ class ShareCardTest {
         val s = LexiconState(5, 6, "crane", listOf("slate", "pride", "crane"))
         val c = card(Lexicon, s, "mmhm", tier = Difficulty.STANDARD, streak = 0)
         assertEquals(
-            "Daybook · Lexicon · Standard · 22 Oct · 3/6\n⬜⬜🟩⬜🟩\n⬜🟩⬜⬜🟩\n🟩🟩🟩🟩🟩 🟥\n12:04\n" +
+            "Daybook · Lexicon · Standard · 22 Oct · 3/6\n⬜⬜🟩⬜🟩\n⬜🟩⬜⬜🟩\n🟩🟩🟩🟩🟩 🟥\n12:04 · 1 hint\n" +
                 "🟩 right place  🟨 wrong place  🟥 hint\n$SHARE_URL",
             c.text,
         )
@@ -93,7 +130,7 @@ class ShareCardTest {
     @Test fun `tower is pips per guess in the board's order`() {
         val s = TowerState(4, 6, 8, listOf(0, 1, 2, 3), listOf(listOf(1, 0, 4, 4), listOf(0, 1, 3, 2), listOf(0, 1, 2, 3)), List(4) { -1 })
         assertEquals(
-            "Daybook · Tower · Expert · 22 Oct · 3/8\n○ ○ · ·\n● ● ○ ○ 🟥\n● ● ● ●\n12:04 · 6 day streak\n" +
+            "Daybook · Tower · Expert · 22 Oct · 3/8\n○ ○ · ·\n● ● ○ ○ 🟥\n● ● ● ●\n12:04 · 1 hint · 6 day streak\n" +
                 "● right colour and slot  ○ right colour  🟥 hint\n$SHARE_URL",
             card(Tower, s, "mhmm").text,
         )
@@ -143,7 +180,7 @@ class ShareCardTest {
     @Test fun `sets is a square a claim`() {
         val s = SetsState(emptyList(), 0, emptyList(), emptyList())
         assertEquals(
-            "Daybook · Sets · Expert · 22 Oct\n🟩⬜🟨🟩🟥\n12:04 · 6 day streak\n" +
+            "Daybook · Sets · Expert · 22 Oct\n🟩⬜🟨🟩🟥\n12:04 · 1 hint · 6 day streak\n" +
                 "🟩 a set  ⬜ not a set  🟨 undone  🟥 hint\n$SHARE_URL",
             card(Sets, s, "mwmumhm").text,
         )
