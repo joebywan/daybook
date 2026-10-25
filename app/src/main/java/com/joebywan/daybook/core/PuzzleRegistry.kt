@@ -24,6 +24,7 @@ import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
+import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WordWheel
 
 /**
@@ -60,6 +61,7 @@ object PuzzleRegistry {
         Sand,
         Pointers,
         Dominoes,
+        WhosWho,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }
