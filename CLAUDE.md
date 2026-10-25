@@ -470,8 +470,12 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 `openLevel` / `recordLevelSolve` in `data/ProgressStore.kt`; the screens are `ui/home/LevelsScreen.kt`, `LaunchMode.LEVELS`,
 `Route.Levels` / `Route.Play(level)` in `ui/DaybookApp.kt` and `levelNextOptions` in `ui/play/NextSteps.kt`.
 
-- **`Levels.POOL` is append-only and a plan is `(level, poolSize)` alone.** An opened level stores the pool size it was opened with,
+- **`Levels.POOL` is append-only and a plan is `(level, poolSize, deal)` alone.** An opened level stores the pool size it was opened with,
   so adding a puzzle never changes a level someone has started; `LevelsTest` pins the plans, and the web parity check diffs a year of them.
+- **Levels 1-5 deal the gentlest first (deal 2).** A stored entry is `"n|poolSize|deal"` (no deal = deal 1, the old free
+  shuffle of deck 0); deal 2 deals deck 0 in bands of `Levels.GENTLE`, a frozen copy of `GENTLEST` (edit `GENTLEST` freely,
+  never `GENTLE`). The deal is **per player**: `openLevel` writes the one already stored, `Levels.LATEST` only for a first
+  level, because mixing deals inside deck 0 would repeat and skip puzzles in levels 1-5. A plan is `(level, poolSize, deal)`.
 - **A level board's seed and tier come from its level's stored plan**, never from the route or the full pool, so the play route waits
   for `levelProgress` to load; open a level through `playLevel` (it calls `openLevel` first).
 - **Everything about progress is derived** (`LevelProgress.of`): the current level, done levels, "Level N done" on home. Nothing pops up.
