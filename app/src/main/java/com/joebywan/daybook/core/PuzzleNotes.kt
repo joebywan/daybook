@@ -139,8 +139,8 @@ private val NOTES: Map<String, List<String>> = mapOf(
     "mini" to listOf(
         "Start with the shortest words: the fewest words fit them.",
         "A crossing letter cuts a word down to a handful.",
-        "Every square is in two words, so a doubtful letter can be checked the other way.",
-        "Clues and answers agree in form: a plural clue, a plural answer.",
+        "Every square is in two words: check a doubtful letter both ways.",
+        "Tap a square twice to read the clue going the other way.",
         "Stuck on a clue? Fill its crossings first.",
     ),
     "wordwheel" to listOf(

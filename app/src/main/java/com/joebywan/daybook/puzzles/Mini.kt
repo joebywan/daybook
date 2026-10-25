@@ -158,7 +158,7 @@ object Mini : PuzzleType {
     override val id = "mini"
     override val displayName = "Mini Crossword"
     override val tagline = "A small crossword. Solve the clues."
-    override val accent = 0xFFE7A365
+    override val accent = 0xFFC7C785
     override val rules = listOf(
         "Every row and column of white squares is a word, and each word has a clue: 1 Across, 2 Down and so on.",
         "Tap a square, then type. Tap it again to turn between Across and Down, or tap the clue.",
@@ -169,12 +169,6 @@ object Mini : PuzzleType {
     override val keyboardHelp = listOf("Type letters; Backspace clears. Arrows move (one the other way turns first), Space turns.")
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = MiniLogic.generate(seed, difficulty)
-
-    /** The deepest logic step of the hints' walk from the empty grid. */
-    override fun neededTechnique(state: PuzzleState): String? {
-        val s = state as MiniState
-        return MiniTeacher.walk(s.size, s.answer)?.let { MiniTeacher.depthOf(it) }
-    }
 
     override fun withoutSelection(state: PuzzleState): PuzzleState =
         (state as MiniState).let { if (it.cursor == null && it.across) it else it.copy(cursor = null, across = true) }

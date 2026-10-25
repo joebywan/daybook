@@ -11,7 +11,7 @@ WHAT'S INSIDE
 • Dominoes: lay every tile so each coloured region keeps its rule
 • Mines: clear a minefield by its numbers alone, never a guess
 • Lamps: light every square, with no lamp shining on another
-• Word puzzles: a hidden-word guessing game, a word wheel and a codeword
+• Word puzzles: a hidden-word guessing game, a word wheel, a codeword and a mini crossword
 • Chess puzzles: mate in 2, 3 and 4
 • Relaxing ones too: pipe rotation, flood-fill, one-line paths, colour sorting and arrows to clear
 

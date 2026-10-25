@@ -1,0 +1,165 @@
+[
+    {
+        "key": "mini|STANDARD|3333966770364032187",
+        "savedAt": 1792000000000,
+        "game": {
+            "state": {
+                "type": "com.joebywan.daybook.puzzles.MiniState",
+                "size": 5,
+                "answer": "#his#covetatoneterse#lye#",
+                "clues": [
+                    "Belonging to him",
+                    "Long to possess",
+                    "Make amends",
+                    "Brief and to the point",
+                    "Soap-making alkali",
+                    "Place to check in",
+                    "Elephant's tusk material",
+                    "Touch or taste, say",
+                    "Feline pet",
+                    "Golf ball's perch"
+                ],
+                "letters": "#zq #               #   #",
+                "cursor": 3,
+                "moves": 2
+            },
+            "history": [
+                {
+                    "type": "com.joebywan.daybook.puzzles.MiniState",
+                    "size": 5,
+                    "answer": "#his#covetatoneterse#lye#",
+                    "clues": [
+                        "Belonging to him",
+                        "Long to possess",
+                        "Make amends",
+                        "Brief and to the point",
+                        "Soap-making alkali",
+                        "Place to check in",
+                        "Elephant's tusk material",
+                        "Touch or taste, say",
+                        "Feline pet",
+                        "Golf ball's perch"
+                    ],
+                    "letters": "#   #               #   #"
+                }
+            ],
+            "hints": 1,
+            "seconds": 75,
+            "log": "hm"
+        }
+    },
+    {
+        "key": "mini|HARD|-3235129906062357634",
+        "savedAt": 1792000000000,
+        "game": {
+            "state": {
+                "type": "com.joebywan.daybook.puzzles.MiniState",
+                "size": 6,
+                "answer": "#tar##love##agendabarter##sack##elk#",
+                "clues": [
+                    "Road surface goo",
+                    "Tennis zero",
+                    "Meeting's list of items",
+                    "Trade without money",
+                    "Fire from a job, or a big bag",
+                    "Large deer",
+                    "Roman wrap",
+                    "Opposed",
+                    "Hired car, say",
+                    "Science room",
+                    "Ship's floor, or cards",
+                    "Noah's boat"
+                ],
+                "letters": "#zq ##    ##            ##    ##   #",
+                "cursor": 3,
+                "moves": 2
+            },
+            "history": [
+                {
+                    "type": "com.joebywan.daybook.puzzles.MiniState",
+                    "size": 6,
+                    "answer": "#tar##love##agendabarter##sack##elk#",
+                    "clues": [
+                        "Road surface goo",
+                        "Tennis zero",
+                        "Meeting's list of items",
+                        "Trade without money",
+                        "Fire from a job, or a big bag",
+                        "Large deer",
+                        "Roman wrap",
+                        "Opposed",
+                        "Hired car, say",
+                        "Science room",
+                        "Ship's floor, or cards",
+                        "Noah's boat"
+                    ],
+                    "letters": "#   ##    ##            ##    ##   #"
+                }
+            ],
+            "hints": 1,
+            "seconds": 75,
+            "log": "hm"
+        }
+    },
+    {
+        "key": "mini|EXPERT|-3940701136410179183",
+        "savedAt": 1792000000000,
+        "game": {
+            "state": {
+                "type": "com.joebywan.daybook.puzzles.MiniState",
+                "size": 7,
+                "answer": "##per##stoke##arrest#pat#pew#perish##natty##dye##",
+                "clues": [
+                    "For each",
+                    "Add fuel to a fire",
+                    "Take into custody",
+                    "Gentle tap",
+                    "Church bench",
+                    "Die",
+                    "Smartly dressed",
+                    "Hair colouring",
+                    "Foreshadow",
+                    "Scrape, with \"out\"",
+                    "Breather",
+                    "Tree fluid",
+                    "Snare",
+                    "Quiz",
+                    "For what reason",
+                    "Beam of light"
+                ],
+                "letters": "##zq ##     ##      #   #   #      ##     ##   ##",
+                "cursor": 4,
+                "moves": 2
+            },
+            "history": [
+                {
+                    "type": "com.joebywan.daybook.puzzles.MiniState",
+                    "size": 7,
+                    "answer": "##per##stoke##arrest#pat#pew#perish##natty##dye##",
+                    "clues": [
+                        "For each",
+                        "Add fuel to a fire",
+                        "Take into custody",
+                        "Gentle tap",
+                        "Church bench",
+                        "Die",
+                        "Smartly dressed",
+                        "Hair colouring",
+                        "Foreshadow",
+                        "Scrape, with \"out\"",
+                        "Breather",
+                        "Tree fluid",
+                        "Snare",
+                        "Quiz",
+                        "For what reason",
+                        "Beam of light"
+                    ],
+                    "letters": "##   ##     ##      #   #   #      ##     ##   ##"
+                }
+            ],
+            "hints": 1,
+            "seconds": 75,
+            "log": "hm"
+        }
+    }
+]

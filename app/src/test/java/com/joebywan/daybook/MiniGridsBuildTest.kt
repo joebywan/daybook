@@ -44,12 +44,12 @@ class MiniGridsBuildTest {
                 println("shape $sh")
                 PROBE.clear()
                 buildTier(only!!, pool, limit = SWEEP_DRAWS)
+                // Every fill the sweep drew, kept or not: the clue share's spread, and which rungs the walks needed.
                 val ps = PROBE.toList()
                 val shares = ps.map { it[0].toDouble() / it[1] }.sorted()
-                println("probe distinct fills ${FILLS.size}"); FILLS.clear()
-                println("probe n=${ps.size} share p10 ${shares[ps.size / 10]} p25 ${shares[ps.size / 4]} p50 ${shares[ps.size / 2]} p75 ${shares[ps.size * 3 / 4]} p90 ${shares[ps.size * 9 / 10]}")
-                println("probe clue letters hist " + ps.groupingBy { it[0] }.eachCount().toSortedMap())
-                println("probe mean one ${ps.map { it[2] }.average()} cross ${ps.map { it[3] }.average()} all ${ps.map { it[4] }.average()}; needs cross ${ps.count { it[3] > 0 }} needs all ${ps.count { it[4] > 0 }} neither ${ps.count { it[3] == 0 && it[4] == 0 }}")
+                fun at(q: Int) = "%.3f".format(shares[ps.size * q / 100])
+                println("fills ${ps.size}: clue share p10 ${at(10)} p25 ${at(25)} p50 ${at(50)} p75 ${at(75)} p90 ${at(90)}")
+                println("needs crossing ${ps.count { it[2] > 0 }}, all-words ${ps.count { it[3] > 0 }}, neither ${ps.count { it[2] == 0 && it[3] == 0 }}")
             }
             pool.shutdown()
             return
@@ -75,7 +75,7 @@ class MiniGridsBuildTest {
             }
             drawn += BATCH
             stalled = if (found.size == before) stalled + 1 else 0
-            println("$tier drawn $drawn kept ${found.size} fails $FAILS depth $DEPTHS (${(System.nanoTime() - started) / 1_000_000_000} s)")
+            println("$tier drawn $drawn kept ${found.size} fails $FAILS (${(System.nanoTime() - started) / 1_000_000_000} s)")
         }
         stats(tier, found, drawn)
         return found.sorted()
@@ -90,6 +90,7 @@ class MiniGridsBuildTest {
         val blacks = found.map { e -> e.count { it == MiniLogic.BLACK } }
         val slots = found.map { MiniLogic.slots(size, it).size }
         fun avg(xs: List<Int>) = "%.2f".format(xs.average())
+        // The device's proof, timed on the JVM.
         val times = found.take(200).map { e -> val t0 = System.nanoTime(); MiniLogic.board(e, tier); (System.nanoTime() - t0) / 100_000 / 10.0 }.sorted()
         println("$tier board ms median ${times[times.size / 2]} p95 ${times[times.size * 95 / 100]} max ${times.last()}")
         println(
@@ -155,11 +156,8 @@ class MiniGridsBuildTest {
         /** Why draws fail, for the log: pattern, fill, board. */
         val FAILS = AtomicIntegerArray(3)
 
-        /** The depth each kept-or-not filled grid's walk reached: one-word, crossing, all-words, broken walk. */
-        val DEPTHS = AtomicIntegerArray(4)
-
+        /** Per filled grid in a sweep: clue letters, white squares, crossing steps, all-words steps. */
         val PROBE = java.util.concurrent.ConcurrentLinkedQueue<IntArray>()
-        val FILLS: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
         fun seed(tier: Difficulty, i: Int): Long = SEED * 1_000_003L + tier.ordinal * 10_000_019L + i
 
@@ -174,10 +172,10 @@ class MiniGridsBuildTest {
             val white = CrosswordFill.pattern(rng, size, 3, shape.maxRun, shape.blacks) ?: return null.also { FAILS.incrementAndGet(0) }
             val grid = CrosswordFill.fill(rng, white, size, INDEXES, BUDGET) ?: return null.also { FAILS.incrementAndGet(1) }
             val entry = String(grid)
-            val walk = MiniTeacher.walk(size, entry)
-            DEPTHS.incrementAndGet(if (walk == null) 3 else MiniTeacher.TECHNIQUES.indexOf(MiniTeacher.depthOf(walk)))
-            FILLS.add(entry)
-            if (walk != null) PROBE.add(intArrayOf(walk.count { it.technique == MiniTeacher.CLUE }, entry.count { it != '#' }, walk.count { it.technique == MiniTeacher.ONE_WORD }, walk.count { it.technique == MiniTeacher.CROSSING }, walk.count { it.technique == MiniTeacher.ALL_WORDS }))
+            val walk = if (sweepShape != null) MiniTeacher.walk(size, entry) else null
+            if (sweepShape != null && walk != null) {
+                PROBE.add(intArrayOf(walk.count { it.technique == MiniTeacher.CLUE }, entry.count { it != '#' }, walk.count { it.technique == MiniTeacher.CROSSING }, walk.count { it.technique == MiniTeacher.ALL_WORDS }))
+            }
             return entry.takeIf { MiniLogic.board(it, tier) != null } ?: null.also { FAILS.incrementAndGet(2) }
         }
     }

@@ -205,7 +205,7 @@ class MiniRulesTest {
                 assertEquals(MiniLogic.specFor(d).size, s.size)
                 read += MiniTeacher.walk(s.size, s.answer)!!.count { it.technique == MiniTeacher.CLUE }
                 whites += s.answer.count { it != BLACK }
-                needs.merge(Mini.neededTechnique(s), 1, Int::plus)
+                needs.merge(MiniTeacher.depthOf(MiniTeacher.walk(s.size, s.answer)!!), 1, Int::plus)
             }
             times.sort()
             means += read / 365.0

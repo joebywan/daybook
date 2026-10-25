@@ -86,6 +86,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
 | Lamps | Lamp placement | Light every white square with lamps that shine along their row and column to a wall; no lamp may light another, and a numbered wall touches that many lamps |
 | Codeword | Codeword (number crossword) | A filled crossword in which every letter is a number: work out which letter each number stands for |
+| Mini Crossword | Mini crossword | A small crossword, every square in a word across and a word down: solve the clues and fill the grid |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -177,6 +178,11 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   fitting word shares, a number cut by every word it is in, every word worked through together) still finishes the
   grid; the device numbers the letters from the seed and proves the one answer again with an exhaustive search, and an
   independent solver that walks the alphabet letter by letter confirms it in the tests.
+- **Mini Crossword** — grids are dense fills from the same screened lists, built offline with Codeword's filler, every
+  word clued by hand. A clue names one word, so the answer is the clues'; what is proved is how much the crossings
+  give: the hints' walk (a slot only one word fits, one word its crossings leave, every crossing worked through) must
+  finish the grid reading a tier's share of its letters from the clues, and an exhaustive search proves those letters
+  and the crossings leave one grid. An independent solver that fills square by square over the alphabet confirms it.
 - **Codebreaker and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by
