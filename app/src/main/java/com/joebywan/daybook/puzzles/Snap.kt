@@ -72,7 +72,7 @@ data class SnapState(
 object Snap : PuzzleType {
 
     override val id = "snap"
-    override val displayName = "Snap"
+    override val displayName = "Trail"
     override val tagline = "One line, every square, numbers in order"
     override val accent = 0xFFD9584C
     override val rules = listOf(
@@ -637,7 +637,7 @@ object Snap : PuzzleType {
                 caption = "Your turn: finish the line. Every square once, 2 then 3, ending on 4. " +
                     "Watch for squares down to two ways in.",
                 freePlay = true,
-                done = "Solved. That's Snap.",
+                done = "Solved. That's Trail.",
             ),
         )
     }

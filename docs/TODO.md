@@ -21,6 +21,9 @@ from a measurement or review, so you can check it is still true.
   and the calendar's day cells (sized from width, ~40dp at 360). The archive calendar's day cells size from both axes and
   are as large as the box allows: ~44dp at 375x537 and ~41dp on a phone on its side (844x390), where six weeks must fit
   under the title; dropping the "N days, all unlocked" line when the box is short would buy them about 5dp. *S each.*
+- [ ] **Screenshots show the old names.** Snap, Mambo, Tower and Pointers became Trail, Sun & Moon, Codebreaker and Arrows
+  (2026-10-25); `docs/screenshots/home.png` and the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
+  with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
