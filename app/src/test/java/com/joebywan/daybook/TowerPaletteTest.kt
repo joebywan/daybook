@@ -14,7 +14,9 @@ import org.junit.Test
  * n is each tier's colour count. Written from the CIE formulas, independent of the palette's own construction.
  */
 class TowerPaletteTest {
-    private fun closest(n: Int) = (0 until n).flatMap { i -> (i + 1 until n).map { j -> apart(Tower.palette[i], Tower.palette[j], tritanopia = false) } }.min()
+    private fun apart(a: Color, b: Color) = ColourDistance.apart(a, b, tritan = false)
+
+    private fun closest(n: Int) = (0 until n).flatMap { i -> (i + 1 until n).map { j -> apart(Tower.palette[i], Tower.palette[j]) } }.min()
 
     @Test
     fun `pegs are told apart by colour at every tier's count, colour-blind vision included`() {

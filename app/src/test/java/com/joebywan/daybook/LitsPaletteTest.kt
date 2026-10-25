@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import androidx.compose.ui.graphics.Color
+import com.joebywan.daybook.ColourDistance.lin
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.ui.theme.DarkScheme
 import com.joebywan.daybook.ui.theme.LightScheme
@@ -15,6 +16,8 @@ import org.junit.Test
  * and the letter on each reads at 4.5:1. Written from the CIE formulas, independent of the palette's construction.
  */
 class LitsPaletteTest {
+    private fun apart(a: Color, b: Color) = ColourDistance.apart(a, b)
+
     private val colours = Lits.palette.values.toList()
 
     @Test

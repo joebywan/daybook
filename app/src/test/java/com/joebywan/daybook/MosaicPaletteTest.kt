@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import androidx.compose.ui.graphics.Color
+import com.joebywan.daybook.ColourDistance.lin
 import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.MosaicTeacher
 import com.joebywan.daybook.ui.theme.DarkScheme
@@ -17,6 +18,8 @@ import org.junit.Test
  * carries what the five-colour colour-blind distance cannot.
  */
 class MosaicPaletteTest {
+    private fun apart(a: Color, b: Color) = ColourDistance.apart(a, b)
+
     private fun closest(n: Int) = (0 until n).flatMap { i -> (i + 1 until n).map { j -> apart(Mosaic.palette[i], Mosaic.palette[j]) } }.min()
 
     @Test

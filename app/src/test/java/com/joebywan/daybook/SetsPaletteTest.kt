@@ -1,6 +1,9 @@
 package com.joebywan.daybook
 
 import androidx.compose.ui.graphics.Color
+import com.joebywan.daybook.ColourDistance.lab
+import com.joebywan.daybook.ColourDistance.lin
+import com.joebywan.daybook.ColourDistance.rgb
 import com.joebywan.daybook.puzzles.Card
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsTeacher
@@ -17,6 +20,7 @@ import org.junit.Test
  * construction.
  */
 class SetsPaletteTest {
+    private fun apart(a: Color, b: Color) = ColourDistance.apart(a, b)
 
     // WCAG 2 contrast ratio from relative luminance.
     private fun luminance(c: Color): Double = rgb(c).map(::lin).let { 0.2126 * it[0] + 0.7152 * it[1] + 0.0722 * it[2] }

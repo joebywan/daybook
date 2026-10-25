@@ -12,10 +12,12 @@ import org.junit.Test
 /**
  * Sand's colours, told apart by colour as well as by their symbol: every pair of the first n colours is at least a set
  * CIEDE2000 apart for normal vision and for simulated deuteranopia and protanopia (Machado 2009, severity 1), where n is
- * each tier's colour count. The formulas are in `ColourDifference.kt`, written from the CIE definitions.
+ * each tier's colour count. The formulas are `TowerPaletteTest`'s, written from the CIE definitions.
  */
 class SandPaletteTest {
-    private fun closest(n: Int) = (0 until n).flatMap { i -> (i + 1 until n).map { j -> apart(Sand.palette[i], Sand.palette[j], tritanopia = false) } }.min()
+    private fun apart(a: Color, b: Color) = ColourDistance.apart(a, b, tritan = false)
+
+    private fun closest(n: Int) = (0 until n).flatMap { i -> (i + 1 until n).map { j -> apart(Sand.palette[i], Sand.palette[j]) } }.min()
 
     @Test
     fun `colours are told apart at every tier's count, colour-blind vision included`() {
