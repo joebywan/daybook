@@ -40,8 +40,8 @@ class TargetWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            321820487, 603268927, -1278172615, -370636261, 571995852, -807844237,
-            -1851755020, -542638594, 378234432,
+            321820487, 603268927, 1352141401, -370636261, 571995852, -1787017900,
+            -1851755020, -542638594, 2088847740,
         )
     }
 }

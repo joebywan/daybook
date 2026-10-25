@@ -121,11 +121,14 @@ Run-length clues beside a grid; fill the squares that give every row and column 
 (state, rules, line solver, generator), `NonogramTeacher.kt`, `Nonogram.kt` (board, walkthrough, motif). `id = "nonogram"` is hashed
 into every seed: never rename it.
 
-- **Tiers are size alone: 5x5 / 10x10 / 15x15**, all at 55% filled. The same line logic and a longer way to carry it.
+- **Tiers: 5x5 / 10x10 / 15x15, and the fewest line passes a board needs: 2 / 3 / 4** (`Spec.minPasses`, `NonogramLogic.linePasses`:
+  passes over every row and column from a blank board until lines alone finish it). About 53 / 56 / 58% filled.
 - **A board ships only if lines alone finish it** (`NonogramLogic.lineSolvable`: per line, the squares every legal layout of
   the clue agrees on, to a fixpoint). That also makes the answer unique, and `NonogramRulesTest` checks it with an
-  independent oracle that tries every arrangement of every row. About 50-80% of random pictures pass, so 400 draws per seed
-  never fall back (a year per tier is tested); `lastResort` is a fixed diagonal, itself proved line-solvable.
+  independent oracle that tries every arrangement of every row. Of the draws with no blank or full line, 95 / 90 / 92% are
+  line-solvable; with the pass gate a year's worst seed needs 101 / 56 / 160 of the 400 draws and none falls back (a year per
+  tier is tested); `lastResort` is a fixed diagonal, itself proved line-solvable. Expert takes 1.6 ms median, 18 ms worst on
+  the JVM; 2 / 8 / 18 ms median / p95 / max in Chromium, 3 / 10 / 23 in WebKit.
 - **`solved` checks the clues, not the stored picture.** Crosses are notes and never count.
 - **Hints cannot fall back**, so there is no fallback to measure: if the player's marks are right, some line always has a
   square to settle (settled squares only ever help). The mistake is a mark the stored picture disagrees with, sound because the
@@ -137,8 +140,10 @@ into every seed: never rename it.
   board's picture, so each daily and each random board has its own and nothing is saved. A line whose runs match its clue turns
   green; a line no legal layout of its clue can hold (`lineImpossible`: too many, a run too long, no gap; crosses ignored, the
   stored picture never read) turns red once it has stayed so for a second. `NonogramRulesTest` brute-forces that rule.
-- The pictures are random noise, not drawings. Smoothing them into blobs made 5x5 boards fail the filter too often
-  (4% passed the shape rules); see `docs/TODO.md`.
+- **Pictures are mirrored**: random squares reflected left to right, top to bottom or both (chosen per draw), so a finished
+  board looks drawn rather than noise. Mirrored pictures are easier (half of 5x5 boards took one pass, Expert's 4+ fell
+  from 21% to 7%), which is what the pass gate is for. Smoothing into blobs was tried earlier and failed the shape rules
+  on 96% of 5x5 draws.
 
 ## Mambo (Takuzu with = and x links)
 
@@ -301,6 +306,12 @@ after a game show.
   Expert 1 large, exactly 5 (all six numbers). Targets are 100-999 and never a starting tile. Measured over a year of daily seeds per tier
   (`TargetRulesTest`, `build/reports/target-par-distribution.txt`): shortest-answer lengths 3/4 = 164/201 (mean 3.55), 4/5 = 285/80 (4.22), 5 = 365 (5.00); no fallback on any day;
   12-16 ms a board on a desktop JVM. Hard/Expert never ship a target reachable in one or two steps.
+- **Expert also caps the roads: at most 5 shortest answers** (`TargetLogic.Roads`, `Spec.maxRoads`). A road is the tree of an answer's operations: the order of
+  independent steps, of a step's two tiles, and which of two equal tiles was used do not count; `(3+4)+5` and `3+(4+5)` are two. Counted by a memoised count of
+  trees per group of tiles (a shortest answer of p steps uses exactly p + 1 tiles, every step feeding the target). Uncapped, Expert targets had a median of 13 roads
+  (p90 41, max 157); now 1/3/3/4/5 (min/p25/median/p75/max). `generateVerified` tries the tier's candidates in a shuffled order for one with few enough, else draws
+  new numbers; no fallback in a year. Expert generation on the JVM: median 5 / p95 14 / max 53 ms; Chromium 19 / 54 / 102 ms, WebKit 27 / 68 / 110 (Hard, uncapped, 14 / 30 / 117 and 19 / 42 / 64). Hard is not capped (12 roads turned 78% of its
+  targets four steps away into 87%: shorter, not harder). `TargetOracle.roads` writes every answer out as text, both operand orders tried, and agrees on a sample.
 - **`TargetLogic.table` is the proof**: depth-first over every order of every operation, no budget (so nothing truncated can pass for a proof), minimum depth per value.
   Equal tiles are tried once and `x1`, `/1` are skipped (they change nothing). `generateVerified` draws the numbers, takes the table, picks a target whose
   depth fits the tier (candidates walked in ascending order; no hash order reaches the `Rng`), retries up to 24 times; `lastResort` is a fixed board per tier, itself checked.
@@ -325,7 +336,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
   Measured: about a quarter of four-letter addend pairs have a five-letter total with one answer that the ladder finishes, out of 1,801 tried, ~45 ms a pair on
   a desktop JVM: far too slow to search on a phone. Two five-letter addends (no leading carry, no 6-letter list) gave one ladder board per 30 pairs, three
   addends none, though both have many one-answer sums: they need trial, not columns. So **every tier is 4 + 4 = 5**, and the tier is the hardest technique the
-  ladder needs (`CipherSumsBuildTest.tierOf`): Standard columns and pairs only, Hard all columns together, Expert a two-column what-if. 1,200 sums a tier,
+  ladder needs (`CipherSumsBuildTest.tierOf`): Standard columns and pairs only, Hard all columns together, Expert a two-column what-if. 1,200 sums a tier, no total more than three times in one (`MAX_PER_TOTAL`; uncapped, `cacao` made 42 of Standard; now 636 / 694 / 727 different totals),
   sorted; the list's order is a contract (`CipherWebParityTest` goes red on purpose when it moves). Rebuilding after a ladder change re-rates every sum.
 - **The device proves each board again:** `generateVerified` picks an entry with `Rng(seed + attempt)`, requires the ladder to finish it and
   `CipherLogic.prove` (column by column, no budget, sealed `Verdict` where only `ExactlyOne` carries an answer) to find one answer, which becomes the stored
@@ -344,7 +355,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
   which L has"), then the column as a sum with every other digit ruled out by name ("at most 1 + 9 + 1 = 11, so I is 0 or 1; T has 1"), else each
   other digit followed until it breaks. `deduce` picks, of the placements the first productive technique allows, the shortest it can show within
   `MAX_EXPLANATION` (260, more than other teachers: the popover scrolls beyond its room); the walk keeps `findStep`'s first, so tiers are unchanged. Shown
-  on 91 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
+  on 89 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
 - State: `words`, `solution`, `digits` (a digit per letter in alphabetical order, -1 for none) and `selected` (in state, as Inequality's; `withoutSelection`).
   The letter key row under the sum shows each letter's digit and selects it; keyboard: a letter key selects it, a digit sets it, Backspace clears, arrows walk the letters.
 ## Pointers (clear the arrows)
