@@ -258,21 +258,27 @@ A grid cut into regions; a region of N squares holds 1..N once each, and equal d
 (`RegionsLayout`, `RegionsLogic`: rules, generator, exhaustive proof), `RegionsTeacher.kt`, `RegionsKeys.kt`, `Regions.kt` (state, board, walkthrough,
 motif). `id = "regions"` is hashed into every seed: never rename it.
 
-- **Tiers are size alone: 5x5 / 7x7 / 9x9**, regions of 2 to 5 squares. Givens are minimal for the ladder (about 27 / 21 / 19% of squares).
+- **Tiers: size and ladder depth: 5x5 / 7x7 / 9x9**, regions of 2 to 5 squares (`RegionsLogic.specFor`, Tally's `Spec.needs`). Standard uses the three
+  single rungs, ungated (its boards did not move); Hard and Expert add the locked candidate and must take at least 2 / 6 locked steps (4.0 / 8.2 a board
+  on average). Givens are minimal for the tier's ladder: about 27 / 19 / 17% of squares (were 27 / 22 / 19).
 - **The partition and the fill are built together** (`randomBoard`): a random cut almost never has a legal fill (every region holds a 1, and no two 1s may
   touch, so a 2x2 window needs four different digits). Pick the first free square in reading order, grow a region, give it 1..k with none touching an
   equal digit; a dead end redraws. Starting from the most boxed-in square instead failed on most 9x9 draws. Regions of one square are refused.
 - **A board ships only if the teacher's ladder finishes it** (`RegionsTeacher.solvesByLogic`: last square in a region, only digit left, only place in the
-  region), digits are taken back in random order while that holds, and `countSolutions` (candidate masks, exhaustive, no budget) proves one answer.
-  `RegionsOracle` (naive reading-order search) is the independent check. `lastResort` is the board of one fixed seed, itself proved by a test. About 8%
-  of Expert days need a second attempt (`RegionsRulesTest`); a year per tier never reaches `lastResort` (`FallbackTest`). Changing the ladder or the draw
-  changes every board (parity pins go red on purpose).
+  region, then a locked candidate: a region's digit whose every place touches one square outside it strikes it there, and that square is left one digit
+  or its own region's digit one place), digits are taken back in random order while that holds, and `countSolutions` (candidate masks, exhaustive, no
+  budget) proves one answer. `RegionsOracle` (naive reading-order search) is the independent check. `lastResort` is the board of one fixed seed, itself
+  proved by a test. A dig that misses the gate is dug again in a new order (up to `DIGS` = 4) before the fill is redrawn, because the fill is ~85 ms of
+  a 9x9 draw; about 14% of Expert days need a second fill (`RegionsRulesTest`), and a year per tier never reaches `lastResort` (`FallbackTest`).
+  Generation costs what it did before the gate (JVM 1.4 / 8 / 73 ms median, 7 / 32 / 319 p95; Chromium 3 / 18 / 187 median, 14 / 80 / 822 p95,
+  36 / 172 / 1700 max, was 3 / 19 / 173, 15 / 87 / 738, 58 / 175 / 1828; WebKit about the same). Changing the ladder or the draw changes every board
+  (parity pins go red on purpose).
+- **The generator's walk is `lockedSteps`, not `depth`**: it places every single of a pass at once (the single rungs are order-free while every digit
+  is right), so it meets the same stuck boards and locked steps as the hints. `RegionsRulesTest` checks the two agree.
 - **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer. No pencil marks.
 - Region colours are derived (`Regions.regionColours`: a 3 to 5 colouring of the region graph, hues Violet/Amber/Teal/Blue/Gold; the thick walls carry the
   regions as well). The selected square and its digit's twins go plain (surface) so they stand out from the colours. Highlight indices: squares `0 until n*n`,
   digit keys `1000 + d`.
-- A locked-candidate technique (a digit whose only places in a region all touch one square rules that square out) would cut the givens further; not built,
-  `docs/TODO.md`.
 ## Sudoku
 
 The classic 9x9. `puzzles/Sudoku.kt` (state, rules, generator, `countSolutions`), `SudokuTeacher.kt`, `SudokuBoard.kt` (grid and pad,

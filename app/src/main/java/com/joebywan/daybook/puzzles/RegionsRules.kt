@@ -91,7 +91,7 @@ internal object RegionsLogic {
     // ---- generator ---------------------------------------------------------------------------------
 
     /** Retries with `Rng(seed + attempt)`; `FallbackTest` walks a year to see whether one is ever needed. */
-    const val ATTEMPTS = 8
+    const val ATTEMPTS = 40
 
     private fun orth(n: Int, i: Int): List<Int> = buildList {
         if (i / n > 0) add(i - n)
@@ -216,16 +216,40 @@ internal object RegionsLogic {
         return best
     }
 
-    /** Null when nothing was proved. Pure in (seed, difficulty); only lists reach the `Rng`. [attempts] is for tests that count redraws. */
-    fun generateVerified(seed: Long, difficulty: Difficulty, attempts: Int = ATTEMPTS): RegionsState? {
-        val n = sizeFor(difficulty)
-        for (attempt in 0 until attempts) {
-            val rng = Rng(seed + attempt)
-            val (region, solution) = randomBoard(n, rng) ?: continue
-            val layout = RegionsLayout(n, region)
-            val cells = MutableList(n * n) { 0 }
-            fun finishes() = RegionsTeacher.solvesByLogic(layout, cells)
+    /**
+     * The ladder a tier may use ([deepest], a rung of [RegionsTeacher.TECHNIQUES]) and how many locked-candidate steps its
+     * walk must take ([needs]), as Tally's `Spec.needs`: a board whose walk takes fewer is redrawn.
+     */
+    class Spec(val deepest: Int, val needs: Int)
 
+    fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
+        Difficulty.STANDARD -> Spec(RegionsTeacher.rung(RegionsTeacher.ONLY_PLACE), 0)
+        Difficulty.HARD -> Spec(RegionsTeacher.DEEPEST, HARD_LOCKED)
+        Difficulty.EXPERT -> Spec(RegionsTeacher.DEEPEST, EXPERT_LOCKED)
+    }
+
+    private const val HARD_LOCKED = 2
+    private const val EXPERT_LOCKED = 6
+
+    /** Digs of one fill before it is redrawn. */
+    private const val DIGS = 4
+
+    /** Null when nothing was proved. Pure in (seed, difficulty); only lists reach the `Rng`. [attempts] is for tests that count redraws. */
+    fun generateVerified(seed: Long, difficulty: Difficulty, attempts: Int = ATTEMPTS): RegionsState? =
+        (0 until attempts).firstNotNullOfOrNull { draw(seed + it, sizeFor(difficulty), specFor(difficulty)) }
+
+    /** One attempt: a board drawn from `Rng(seed)` that meets [spec] and is proved, or null. */
+    fun draw(seed: Long, n: Int, spec: Spec): RegionsState? {
+        val rng = Rng(seed)
+        val (region, solution) = randomBoard(n, rng) ?: return null
+        val layout = RegionsLayout(n, region)
+        val cells = MutableList(n * n) { 0 }
+        fun finishes() = RegionsTeacher.solvesByLogic(layout, cells, spec.deepest)
+
+        // The fill is the costly part (about 85 ms of a 9x9 draw), so a dig that misses the gate is dug again, from
+        // nothing and in a new order, before the fill is thrown away.
+        for (dig in 0 until DIGS) {
+            cells.fill(0)
             // Digits only until the ladder finishes (all of them at worst).
             if (!finishes()) {
                 for (i in rng.shuffled((0 until n * n).toList())) {
@@ -238,16 +262,17 @@ internal object RegionsLogic {
                 cells[i] = 0
                 if (!finishes()) cells[i] = solution[i]
             }
-            if (countSolutions(layout, cells) != 1) continue
-            return RegionsState(
-                size = n,
-                region = region,
-                givens = cells.map { it != 0 },
-                cells = cells.toList(),
-                solution = solution,
-            )
+            if (spec.needs == 0 || (RegionsTeacher.lockedSteps(layout, cells, spec.deepest) ?: 0) >= spec.needs) break
+            if (dig == DIGS - 1) return null
         }
-        return null
+        if (countSolutions(layout, cells) != 1) return null
+        return RegionsState(
+            size = n,
+            region = region,
+            givens = cells.map { it != 0 },
+            cells = cells.toList(),
+            solution = solution,
+        )
     }
 
     /** The seed [lastResort] draws from. */
