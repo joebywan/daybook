@@ -85,8 +85,17 @@ is `CLUE + k`, pad item `i` is `PAD + i`.
 - Under it the clue list, a scrolling strip that takes the height left (it scrolls to a hinted clue); under that the
   pad: the pen (✓ / ✗) and the selected category's items. Nothing changes size when feedback shows.
 - A window wider than tall puts the clues beside the table.
-- Keyboard (`WhosWhoKeys.kt`, pure): arrows move the selection, 1-5 tick that item, Shift+1-5 cross it, Space switches the
-  pen, Backspace clears the cell.
+- Keyboard (`WhosWhoKeys.kt`, pure): arrows move the selection, 1-5 tick that item, Shift+1-5 cross it,
+  Backspace clears the cell.
+
+## Measured (JVM unless stated; a year of daily seeds per tier)
+
+- Clues a board: 6.6 / 8.8 / 12.2. Removing any one clue of 90 sampled boards leaves several answers 773 times and one answer
+  the ladder cannot reach 52 times: no clue is spare.
+- Draws a board: mean 1.00 / 1.00 / 1.49, most 1 / 1 / 4 of 400; no day reaches `lastResort`.
+- Generation, median / p95 / max ms: JVM (a loaded desktop) 0.1 / 0.4 / 30, 0.9 / 4.8 / 14, 25 / 89 / 228; Expert in Chromium
+  40 / 106 / 294, in WebKit 53 / 126 / 267.
+- Hints: `docs/TEACHING.md`. No fallback exists on a shipped board.
 
 ## Tests
 

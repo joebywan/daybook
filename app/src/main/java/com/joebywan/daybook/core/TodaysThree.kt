@@ -5,7 +5,8 @@ import kotlinx.datetime.LocalDate
 /**
  * Today's three (`docs/REWARDS.md`): one quick puzzle, one mid-weight, one word or number puzzle, derived from the date
  * alone, so it is the same for everyone and nothing is stored. Each slot steps one place a day through its own list
- * (9, 11 and 5 long today, so a set of three comes round again only after their least common multiple, 495 days).
+ * (8, 13 and 5 long today, so a set of three comes round again only after their least common multiple, 520 days;
+ * Tents moved to the mid-weight list when Who's Who joined it, since 9 and 12 would have repeated within the year).
  * Plain list indexing: no hash order, so the JVM and the web agree.
  *
  * Changing a list (or adding a puzzle, which joins the mid-weight list) moves every later day's three, and can make the
@@ -13,7 +14,7 @@ import kotlinx.datetime.LocalDate
  */
 object TodaysThree {
     /** Quick: one gesture or few rules, a Standard board in a few minutes. */
-    val QUICK = listOf("pointers", "pipes", "snap", "sand", "kings", "mambo", "sets", "mosaic", "tents")
+    val QUICK = listOf("pointers", "pipes", "snap", "sand", "kings", "mambo", "sets", "mosaic")
 
     /** Words and numbers. */
     val WORDS = listOf("words", "wordwheel", "target", "cipher", "tally")

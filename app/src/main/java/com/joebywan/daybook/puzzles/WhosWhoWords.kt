@@ -5,7 +5,7 @@ package com.joebywan.daybook.puzzles
  *
  * Plain, screened words with no brand and nothing regional. **The lists' order is part of the contract**: a board
  * stores indices into them ([WhosWhoState.groups], [WhosWhoState.items]) and the generator draws by index, so
- * reordering, adding or removing an entry changes saved games and every daily board (`WhosWhoWebParityTest` goes red
+ * reordering, adding or removing an entry changes saved games and every daily board (`BoardPinTest` goes red
  * on purpose). Append-only, and only with a parity re-pin.
  */
 internal object WhosWhoWords {
