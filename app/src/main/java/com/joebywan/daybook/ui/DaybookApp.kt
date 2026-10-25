@@ -28,6 +28,7 @@ import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.data.ProgressStore
 import com.joebywan.daybook.data.PuzzleOrder
 import com.joebywan.daybook.data.Stats
+import com.joebywan.daybook.data.TechniquesMet
 import com.joebywan.daybook.data.savedGameKey
 import com.joebywan.daybook.platform.PlatformBackHandler
 import com.joebywan.daybook.platform.currentDate
@@ -58,6 +59,7 @@ import com.joebywan.daybook.ui.play.shareCard
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.AchievementsScreen
+import com.joebywan.daybook.ui.stats.TechniquesScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import com.joebywan.daybook.ui.theme.Appearance
 import com.joebywan.daybook.ui.theme.DaybookTheme
@@ -83,6 +85,8 @@ sealed interface Route {
     data object Settings : Route
     /** [fromHome]: back returns to where it was opened from. */
     data class Achievements(val fromHome: Boolean = false) : Route
+    /** The techniques hints have explained, opened from Statistics. */
+    data object Techniques : Route
     /** [day]: the day last played from it, which the list opens at. */
     data class Archive(val puzzleId: String, val day: LocalDate? = null) : Route
     /** The levels list; [level] shows that level's five boards instead. */
@@ -104,6 +108,7 @@ sealed interface Route {
 /** Where back goes from [r]: the screen it was opened from. One level's boards go back to the list of levels. */
 internal fun backFrom(r: Route): Route = when {
     r is Route.Achievements && !r.fromHome -> Route.Stats
+    r is Route.Techniques -> Route.Stats
     r is Route.Play && r.fromArchive -> Route.Archive(r.puzzleId, r.day)
     r is Route.Levels && r.level != null -> Route.Levels()
     else -> Route.Home
@@ -118,6 +123,7 @@ internal fun encodeRoute(r: Route): String =
         Route.Home -> "home"
         Route.Stats -> "stats"
         Route.Settings -> "settings"
+        Route.Techniques -> "techniques"
         is Route.Achievements -> "achievements|${r.fromHome}"
         is Route.Archive -> "archive|${r.puzzleId}|${r.day ?: ""}"
         is Route.Levels -> "levels|${r.level ?: ""}"
@@ -129,6 +135,7 @@ internal fun decodeRoute(text: String): Route {
     return when (f[0]) {
         "stats" -> Route.Stats
         "settings" -> Route.Settings
+        "techniques" -> Route.Techniques
         "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
         // The fields after the first few came later: a string saved before them still decodes.
         "archive" -> Route.Archive(f[1], f.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse))
@@ -242,6 +249,8 @@ private fun DaybookScreens(
     val puzzles = remember(customOrder, mostPlayed) {
         (if (customOrder.isEmpty()) mostPlayed else PuzzleOrder.arranged(customOrder, ids)).mapNotNull(PuzzleRegistry::byId)
     }
+    val metRaw by store.techniquesMet.collectAsState(initial = emptySet())
+    val techniquesMet = remember(metRaw, puzzles) { TechniquesMet.of(metRaw, puzzles.map { it.id }) }
 
     // Roll the date over without needing the app to be restarted at midnight.
     LaunchedEffect(Unit) {
@@ -353,7 +362,14 @@ private fun DaybookScreens(
             keptCards = store.keptCards.collectAsState(initial = emptyList()).value,
             puzzles = puzzles,
             onAchievements = { route = Route.Achievements() },
+            techniques = techniquesMet,
+            onTechniques = { route = Route.Techniques },
             onBack = { route = Route.Home },
+        )
+
+        Route.Techniques -> TechniquesScreen(
+            techniques = techniquesMet,
+            onBack = { route = backFrom(current) },
         )
 
         is Route.Achievements -> AchievementsScreen(
@@ -515,6 +531,7 @@ private fun DaybookScreens(
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
                     showTimer = showTimer,
                     level = level,
+                    onTaught = { technique -> scope.launch { store.recordTechniqueMet(puzzle.id, technique) } },
                     onBack = { route = backFrom(current) },
                 )
                 } }

@@ -20,10 +20,11 @@ package com.joebywan.daybook.puzzles
  * 6. [WHAT_IF] — one symbol here would force, in one round of the rules above, a board that breaks
  *    a rule; so it is the other.
  *
- * Every generated board is carved so that the first four alone finish it ([Mambo]'s
- * `solvableByLogic`), so on a real board [ALMOST], [WHAT_IF] and the fallback are only reached from
- * boards the rules have not been applied to in order — they matter for boards with several answers,
- * which the tests walk too.
+ * The generator's ladder is this one ([depth]): every board is carved so that the ladder up to its
+ * tier's rung finishes it, and gated on needing that rung: Standard falls to the first four, every
+ * Hard board needs [ALMOST] (and never [WHAT_IF]), every Expert board needs [WHAT_IF]. So the
+ * fallback is never reached on a generated board; it exists for boards not made here. Raise the
+ * generator and this teacher must learn the new step.
  *
  * Orders never come from a hash: every loop walks lines and cells in index order, so the same board
  * gets the same hint on every platform (CLAUDE.md, "Hash iteration order").
@@ -144,6 +145,117 @@ internal object MamboTeacher {
             explanation = "This one needs a longer chain than a hint can walk through, " +
                 "so here's a square from the answer: it's a ${sym.word()}.",
         )
+    }
+
+    // ---- depth: the generator's view of the same ladder ------------------------------------------
+
+    /** [depth]'s rungs: the first four techniques, then [ALMOST], then [WHAT_IF]. */
+    const val RUNG_SIMPLE = 0
+    const val RUNG_ALMOST = 1
+    const val RUNG_WHAT_IF = 2
+
+    /**
+     * The deepest rung a walk by [deduce] needs to finish [cells], using rungs up to [max] only, or
+     * null when that ladder stalls. The first four techniques together are exactly
+     * [Mambo.propagate] (a monotone fixpoint, so the order they are taken in cannot matter), and
+     * [deduce] reaches [almost] or [whatIf] only once none of them applies; so this walk takes the
+     * same deeper steps the hints would, without rescanning the board for every simple one. The
+     * what-if is [whatIfAt], [whatIf]'s choice found by looking only near each square.
+     */
+    fun depth(n: Int, cells: List<Sym>, links: List<Link>, max: Int): Int? {
+        val lines = linesOf(n)
+        val linksAt = Array(n * n) { i -> links.filter { it.a == i || it.b == i } }
+        val grid = cells.toTypedArray()
+        var deepest = RUNG_SIMPLE
+        while (true) {
+            if (!Mambo.propagate(n, grid, links)) return null
+            if (grid.none { it == Sym.NONE }) return if (Mambo.isSolved(n, grid.toList(), links)) deepest else null
+            val almost = if (max >= RUNG_ALMOST) almost(n, grid.toList(), lines) else null
+            if (almost != null) {
+                deepest = maxOf(deepest, RUNG_ALMOST)
+                for ((i, sym) in almost.places) grid[i] = sym
+                continue
+            }
+            val (i, sym) = (if (max >= RUNG_WHAT_IF) whatIfAt(n, grid, linksAt) else null) ?: return null
+            deepest = RUNG_WHAT_IF
+            grid[i] = sym.other()
+        }
+    }
+
+    /**
+     * The square and symbol [whatIf] would suppose, or null when it finds none. Exact only on a
+     * board none of the four simple techniques changes (where [depth] and [deduce] ask it): every
+     * forcing then runs through the supposed square, so only that square's row, column and links,
+     * and the lines and links of what they force, can break. `MamboTeachingTest` holds the two
+     * equal on every board a hint walk reaches.
+     */
+    internal fun whatIfAt(n: Int, grid: Array<Sym>, linksAt: Array<List<Link>>): Pair<Int, Sym>? {
+        for (i in grid.indices) {
+            if (grid[i] != Sym.NONE) continue
+            for (sym in SYMS) if (breaksIfSupposed(n, grid, linksAt, i, sym)) return i to sym
+        }
+        return null
+    }
+
+    private fun breaksIfSupposed(n: Int, grid: Array<Sym>, linksAt: Array<List<Link>>, i: Int, sym: Sym): Boolean {
+        val half = n / 2
+        val r = i / n
+        val c = i % n
+        val forced = arrayOfNulls<Sym>(n * n)
+        val changed = mutableListOf(i)
+        var clash = false
+        fun force(at: Int, s: Sym) {
+            if (grid[at] != Sym.NONE) return
+            when (forced[at]) {
+                null -> { forced[at] = s; changed += at }
+                s -> Unit
+                else -> clash = true
+            }
+        }
+        grid[i] = sym
+        try {
+            // One round of the four simple techniques, on the windows and lines through i alone.
+            for ((line, pos) in listOf(IntArray(n) { r * n + it } to c, IntArray(n) { it * n + c } to r)) {
+                for (k in maxOf(0, pos - 2)..minOf(pos, n - 3)) {
+                    val x = grid[line[k]]
+                    val y = grid[line[k + 1]]
+                    val z = grid[line[k + 2]]
+                    if (x != Sym.NONE && x == y) force(line[k + 2], x.other())
+                    if (y != Sym.NONE && y == z) force(line[k], y.other())
+                    if (x != Sym.NONE && x == z) force(line[k + 1], x.other())
+                }
+                for (s in SYMS) if (line.count { grid[it] == s } == half) line.forEach { force(it, s.other()) }
+            }
+            for (link in linksAt[i]) {
+                val o = if (link.a == i) link.b else link.a
+                force(o, if (link.same) sym else sym.other())
+            }
+            if (clash) return true
+            for (at in changed) if (at != i) grid[at] = forced[at]!!
+            try {
+                for (at in changed) {
+                    val ar = at / n
+                    val ac = at % n
+                    for (line in listOf(IntArray(n) { ar * n + it }, IntArray(n) { it * n + ac })) {
+                        for (k in 0 until n - 2) {
+                            val x = grid[line[k]]
+                            if (x != Sym.NONE && grid[line[k + 1]] == x && grid[line[k + 2]] == x) return true
+                        }
+                        for (s in SYMS) if (line.count { grid[it] == s } > half) return true
+                    }
+                    for (link in linksAt[at]) {
+                        val a = grid[link.a]
+                        val b = grid[link.b]
+                        if (a != Sym.NONE && b != Sym.NONE && (a == b) != link.same) return true
+                    }
+                }
+                return false
+            } finally {
+                for (at in changed) if (at != i) grid[at] = Sym.NONE
+            }
+        } finally {
+            grid[i] = Sym.NONE
+        }
     }
 
     // ---- reasoning from what the player can see ---------------------------------------------------
