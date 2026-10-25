@@ -175,8 +175,8 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   solve that earned no achievement, record, percentile or board-needed line; a solve with hints keeps its hint line. At most 64 characters.
   Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
 - **Today's three** (`core/TodaysThree.kt`, `ui/home/TodaysThreeRow.kt`). One quick puzzle, one mid-weight, one word or
-  number puzzle, from the date alone (each slot steps one place a day through its own list: quick 9, words 5, mid-weight
-  everything else, 11), so it is the same for everyone and a shared card means the same three. It replaced today's pick
+  number puzzle, from the date alone (each slot steps one place a day through its own list: quick 8, words 5, mid-weight
+  everything else, 13; the three lengths need a least common multiple over a year, so Mosaic went mid-weight when Lamps came), so it is the same for everyone and a shared card means the same three. It replaced today's pick
   (`PuzzleRegistry.featured`, stepped past the player's five most played): a per-player pick could not be the shared set,
   and two daily highlights would compete, so the pick's gold ring and sparkles moved onto the three. Home shows it as one
   row over the grid: "Today's three" and, once one is solved today at the grid's tier, a Share button; then a chip per
