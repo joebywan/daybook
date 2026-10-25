@@ -20,8 +20,9 @@ import java.util.concurrent.Executors
  * and writes the same file every time (a fixed seed draws the addend pairs; the work is split across threads
  * but read back in draw order). A sum is two four-letter answer words and a five-letter answer word
  * (`LexiconWords`, so every word is screened and well known) with exactly one answer that the teacher's ladder
- * finishes. Each addend pair gives at most one sum, its first total in alphabetical order, and that sum's
- * tier is the hardest technique the ladder needs for it ([tierOf]). Drawing stops once every tier is full.
+ * finishes. Each addend pair gives at most one sum: its first total in alphabetical order whose tier (the
+ * hardest technique the ladder needs for it, [tierOf]) still has room and holds that total fewer than
+ * [MAX_PER_TOTAL] times. Drawing stops once every tier is full.
  *
  * Why offline: about one pair in four has such a total, and finding it means proving each of the 1,801
  * five-letter totals (~7 ms a pair on 12 desktop threads; a phone has one, and the web one slower thread).
@@ -41,27 +42,38 @@ class CipherSumsBuildTest {
         val seen = HashSet<String>() // probed only, never iterated
         val tiers = Difficulty.entries.associateWith { mutableListOf<String>() }
         val pool = Executors.newFixedThreadPool(THREADS)
+        val pairs = fours.size * (fours.size - 1) / 2
         var drawn = 0
-        while (tiers.values.any { it.size < PER_TIER }) {
+        while (tiers.values.any { it.size < PER_TIER } && seen.size < pairs) {
             val batch = mutableListOf<Pair<String, String>>()
-            while (batch.size < BATCH) {
+            while (batch.size < BATCH && seen.size < pairs) {
                 val a = rng.pick(fours)
                 val b = rng.pick(fours)
                 if (a == b || !seen.add(minOf(a, b) + maxOf(a, b))) continue
                 batch += a to b
             }
             drawn += batch.size
+            // What is full when the batch starts, so a worker's choice cannot depend on the others' timing.
+            val open = tiers.mapValues { (_, list) ->
+                if (list.size >= PER_TIER) null else list.groupingBy { it.substringAfter('=') }.eachCount()
+            }
             val found = batch.map { (a, b) ->
                 pool.submit<Pair<String, Difficulty>?> {
                     fives.firstNotNullOfOrNull { t ->
                         val sum = CipherSum(listOf(a, b, t))
                         if (!sum.wellFormed || CipherLogic.prove(sum) !is CipherLogic.Verdict.ExactlyOne ||
                             !CipherTeacher.solvesByLogic(sum)
-                        ) null else "$a+$b=$t" to tierOf(sum)
+                        ) return@firstNotNullOfOrNull null
+                        val tier = tierOf(sum)
+                        val counts = open.getValue(tier) ?: return@firstNotNullOfOrNull null
+                        if ((counts[t] ?: 0) >= MAX_PER_TOTAL) null else "$a+$b=$t" to tier
                     }
                 }
             }.mapNotNull { it.get() }
-            for ((entry, tier) in found) tiers.getValue(tier).let { if (it.size < PER_TIER) it += entry }
+            for ((entry, tier) in found) tiers.getValue(tier).let { list ->
+                val total = entry.substringAfter('=')
+                if (list.size < PER_TIER && list.count { it.endsWith("=$total") } < MAX_PER_TOTAL) list += entry
+            }
             println("drawn $drawn: " + tiers.map { "${it.key} ${it.value.size}" })
         }
         pool.shutdown()
@@ -89,8 +101,11 @@ class CipherSumsBuildTest {
         const val SEED = 20261022L
         const val PER_TIER = 1200
         const val BATCH = 1200
-        const val THREADS = 12
+        const val THREADS = 24
         const val CHUNK = 300
+
+        /** No total serves more than this many sums a tier (uncapped, `cacao` was 42 of Standard's 1,200). */
+        const val MAX_PER_TOTAL = 3
 
         /** Standard: columns alone or two at a time. Hard: every column together. Expert: a what-if on two columns. */
         internal fun tierOf(sum: CipherSum): Difficulty {
