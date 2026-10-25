@@ -76,6 +76,16 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
   build fails if an answer has none), compiled into `LexiconClues.kt`. A new answer needs a clue in the same change;
   `LexiconCluesTest` checks coverage, that no clue contains its word, and that no two answers share one.
   Answers were not enlarged: SCOWL level 40 for answers is slang and vulgarity.
+- **Daily words go round a cycle from 2026-11-01** (`SeedHash.LEXICON_CYCLE_FROM`): a hashed seed gave even odds of a repeat
+  within two months. From that day `SeedHash.daily` gives `"words"` a tagged seed carrying the day (`lexiconCycleDay` reads it
+  back), and `LexiconRules.cycle` maps it through one fixed shuffle of the tier's answer list per round, so no word recurs within
+  a round (1,801 / 1,801 / 1,366 days); round 0 puts the words drawn on hashed days of the same length at its back. Earlier days
+  keep their hashed seeds, so the archive, saves (which hold the word anyway) and completions are untouched; Random and Levels
+  never cycle. `LexiconCycleTest` checks two rounds a tier and the cutover. Changing the list or the shuffle moves every cycled day.
+- **The opener rotates**: `LexiconState.opener` (defaulted 0, so an old save opens with RAISE/TALE) picks one of seven strong
+  openers per length (`LexiconTeacher.openers`, all within 12% of the best's expected words left), drawn from the seed apart
+  from the answer, so it tells nothing about the word. The best-guess fallback says how its word splits what is left ("it can
+  be marked 5 ways, and none leaves more than 2"), read off the candidates alone.
 - **A probe is never a mistake.** The teacher's only mistake is a row that is not a word. Calling a legal probe
   wrong is the PR #15 bug.
 - **A pin is a fact about the marks alone**, so `LexiconTeachingTest` checks it against every accepted word that

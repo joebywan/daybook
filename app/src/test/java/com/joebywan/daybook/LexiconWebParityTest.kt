@@ -41,7 +41,7 @@ class LexiconWebParityTest {
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
             -140410173, -1938919453, -1763740956, -838444861, -1288154454, -1817746797,
-            -257695951, -1426351997, -297379001,
+            1584740410, 1131602613, -24969380,
         )
     }
 }
