@@ -5,7 +5,9 @@ import com.joebywan.daybook.core.LevelBoard
 import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.Streak
+import com.joebywan.daybook.core.praisedTechniquesOf
 import com.joebywan.daybook.core.streakOf
+import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.platform.currentTimeMillis
 import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -348,6 +350,14 @@ class ProgressStore(private val store: KeyValueStore) {
         return added
     }
 
+    /** Every technique a hint has explained, as `puzzleId|technique` ([TechniquesMet]); an older store has none. */
+    val techniquesMet: Flow<Set<String>> = store.stringSet(KEY_TECHNIQUES_MET)
+
+    /** Records that a hint on [puzzleId] explained [technique] (`Deduction.technique`). Once each: a set. */
+    suspend fun recordTechniqueMet(puzzleId: String, technique: String) {
+        store.updateStringSet(KEY_TECHNIQUES_MET) { it + TechniquesMet.encode(puzzleId, technique) }
+    }
+
     /** The game in progress on this board, if one was left behind. */
     suspend fun savedGame(key: String): SavedGame? =
         SavedGames.find(store.stringSet(KEY_SAVED).first().savedGames(), key)
@@ -427,8 +437,31 @@ class ProgressStore(private val store: KeyValueStore) {
         const val KEY_LEVELS = "levels"
         const val KEY_LEVEL_SOLVES = "level_solves"
         const val KEY_CARDS = "share_cards"
+        const val KEY_TECHNIQUES_MET = "techniques_met"
     }
 }
+
+/**
+ * The techniques page (`ui/stats/TechniquesScreen.kt`): per puzzle with a teacher, its praised techniques in
+ * `TechniqueNames.kt`'s order, each marked once a hint has explained it. Recorded from the first build that had the
+ * page (`techniques_met`); hints opened before it left nothing to read back.
+ */
+object TechniquesMet {
+    fun encode(puzzleId: String, technique: String): String = "$puzzleId|$technique"
+
+    /** [puzzleIds] (the home grid's order) that have a teacher, each with its techniques. Unknown entries are ignored. */
+    fun of(raw: Set<String>, puzzleIds: List<String>): List<PuzzleTechniques> =
+        puzzleIds.mapNotNull { id ->
+            val praised = praisedTechniquesOf(id)
+            val names = techniqueNamesOf(id).filterKeys { it in praised }
+            if (names.isEmpty()) null
+            else PuzzleTechniques(id, names.map { (technique, name) -> MetTechnique(name, encode(id, technique) in raw) })
+        }
+}
+
+data class MetTechnique(val name: String, val met: Boolean)
+
+data class PuzzleTechniques(val puzzleId: String, val techniques: List<MetTechnique>)
 
 /** Derived numbers for the stats screen. Pure, so it is trivially testable. */
 object Stats {

@@ -22,7 +22,7 @@ import kotlinx.datetime.LocalDate
  * For the render harness: `?mode=levels` (or `random`) opens home in that mode, `?screen=levels` the levels
  * list, `&level=N` with it that level's boards, and `?puzzle=<id>&level=N` that board of level N;
  * `?screen=archive&puzzle=<id>` that puzzle's archive, with `&day=` that day selected; `?screen=stats` the statistics
- * (`&share` with it opens the day's share preview, once a daily is solved).
+ * (`&share` with it opens the day's share preview, once a daily is solved); `?screen=techniques` the techniques page.
  */
 @Composable
 fun DaybookWebApp(params: Map<String, String>) {
@@ -35,6 +35,7 @@ fun DaybookWebApp(params: Map<String, String>) {
         when {
             params["screen"] == "levels" -> Route.Levels(level)
             params["screen"] == "stats" -> Route.Stats
+            params["screen"] == "techniques" -> Route.Techniques
             params["screen"] == "archive" && puzzleParam != null ->
                 Route.Archive(puzzleParam, params["day"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() })
             else -> puzzleParam?.let(PuzzleRegistry::byId)?.let {

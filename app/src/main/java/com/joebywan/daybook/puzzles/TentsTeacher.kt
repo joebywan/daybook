@@ -129,6 +129,21 @@ internal object TentsTeacher {
         }
     }
 
+    /**
+     * The deepest technique (an index into [TECHNIQUES]) a player walking [s] from blank by hints alone needs, or null when
+     * the hints get stuck. The generator's tier gate (`TentsLogic.fitsTier`), so it walks exactly as the hints do.
+     */
+    fun depth(s: TentsState): Int? {
+        var cur = s.copy(marks = List(s.size * s.size) { 0 }, moves = 0)
+        var deepest = -1
+        while (!cur.solved) {
+            val f = deduce(cur.size, cur.trees, cur.rowCounts, cur.colCounts, cur.seen) ?: return null
+            deepest = maxOf(deepest, TECHNIQUES.indexOf(f.technique))
+            cur = f.targets.fold(cur) { acc, i -> acc.withMark(i, f.value) }
+        }
+        return deepest
+    }
+
     private fun nextFact(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, st: IntArray): Step? {
         fun free(i: Int) = !trees[i] && st[i] == 0
         val treeIdx = trees.indices.filter { trees[it] }

@@ -159,7 +159,7 @@ class KingsTeachingTest {
      * Not a correctness check but a measurement, printed and written to
      * `app/build/reports/kings-teaching-coverage.txt`: how often each technique is what a player
      * needs next, and how often the what-if and the fallback are reached, per tier. The assertions
-     * only pin the walk finishing and the fallback staying under a tenth of boards; the numbers are the point.
+     * pin the walk finishing, the tier gate and the fallback never being reached; the numbers are the point.
      */
     @Test
     fun `coverage - which techniques boards need, per difficulty`() {
@@ -183,6 +183,15 @@ class KingsTeachingTest {
                     s = d.apply(s) as KingsState
                 }
                 used.forEach { boardCounts[it] = boardCounts.getValue(it) + 1 }
+                // The tier gate, seen through the play screen's own hint path.
+                val confined = KingsTeacher.CONFINED in used
+                val whatIf = KingsTeacher.WHAT_IF in used
+                val fits = when (difficulty) {
+                    Difficulty.STANDARD -> !confined && !whatIf
+                    Difficulty.HARD -> confined && !whatIf
+                    Difficulty.EXPERT -> confined || whatIf
+                }
+                assertTrue("$difficulty/$seed: techniques $used do not fit the tier", fits)
             }
             report.appendLine()
             report.appendLine("${difficulty.name} — $totalSteps steps, ${"%.1f".format(totalSteps / perTier.toDouble())} per board")
@@ -195,12 +204,8 @@ class KingsTeachingTest {
                 )
             }
             val fallbackBoards = boardCounts.getValue(KingsTeacher.FALLBACK)
-            // Measured at 0% / 0% / ~1% of boards when this was written. A tenth would mean the
-            // techniques had stopped covering the boards the generator makes.
-            assertTrue(
-                "$difficulty: the fallback is reached on $fallbackBoards/$perTier boards",
-                fallbackBoards * 10 < perTier,
-            )
+            // The generator ships only boards the ladder finishes, so the fallback is never reached.
+            assertEquals("$difficulty: the fallback is reached on $fallbackBoards/$perTier boards", 0, fallbackBoards)
         }
         println(report)
         writeReport("kings-teaching-coverage.txt", report.toString())

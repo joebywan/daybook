@@ -12,6 +12,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import java.time.LocalDate
 
 /**
@@ -28,7 +29,7 @@ class MamboRulesTest {
     }
 
     @Test
-    fun `every generated board is solvable by propagation alone`() {
+    fun `every generated board is solvable without a guess`() {
         for (difficulty in Difficulty.entries) {
             for (seed in seeds) {
                 val state = Mambo.generate(seed, difficulty) as MamboState
@@ -59,17 +60,30 @@ class MamboRulesTest {
     fun `the proved path ships every daily board of a year on every tier`() {
         // Asserts on generateVerified, not generate: the last resort also satisfies "valid board",
         // so only the null check can fail if the search ever came up empty.
+        // The tiers' gates are checked here with this file's own solver: Standard falls to the three
+        // rules alone, Hard and Expert never do (MamboTeachingTest checks which rung each needs).
         val start = LocalDate.of(2026, 1, 1)
+        val report = StringBuilder()
         for (difficulty in Difficulty.entries) {
             val everyLink = Mambo.lastResort(sideOf(difficulty)).links.size
+            val draws = mutableListOf<Int>()
+            val millis = mutableListOf<Double>()
             for (day in 0 until 365L) {
                 val date = start.plusDays(day)
                 val seed = DailySeed.seedFor(date, Mambo.id, difficulty)
                 val label = "mambo/${difficulty.name}/$date"
-                val state = Mambo.generateVerified(seed, difficulty)
-                assertNotNull("$label was not proved", state)
-                state!!
+                val t0 = System.nanoTime()
+                val proved = Mambo.proved(seed, difficulty)
+                millis += (System.nanoTime() - t0) / 1e6
+                assertNotNull("$label was not proved", proved)
+                val state = proved!!.first
+                draws += proved.second + 1
                 assertEquals("$label: generate ships the proved board", state, Mambo.generate(seed, difficulty))
+                assertEquals(
+                    "$label: the three rules alone ${if (difficulty == Difficulty.STANDARD) "do not finish" else "finish"} it",
+                    difficulty == Difficulty.STANDARD,
+                    solveByRules(state, lookahead = false) != null,
+                )
                 assertTrue("$label prints every link, as the last resort does", state.links.size < everyLink)
                 assertEquals("$label needs a guess", state.solution, solveByRules(state))
                 assertTrue("$label: stored answer breaks a rule", obeysRules(state.size, state.solution, state.links))
@@ -78,7 +92,16 @@ class MamboRulesTest {
                         (!state.givens[it] || state.cells[it] == state.solution[it])
                 })
             }
+            millis.sort()
+            report.appendLine(
+                "${difficulty.name}: draws mean %.2f, max %d; ms median %.1f, p95 %.1f, max %.1f".format(
+                    draws.average(), draws.max(), millis[millis.size / 2], millis[millis.size * 95 / 100], millis.last(),
+                )
+            )
         }
+        println(report)
+        File("build/reports").mkdirs()
+        File("build/reports/mambo-draws.txt").writeText(report.toString())
     }
 
     @Test
@@ -220,13 +243,50 @@ class MamboRulesTest {
     )
 
     /**
-     * Fills what the three rules force, and returns the finished grid — or null if the board
-     * stalls, which is exactly the state that would make a player guess.
+     * Fills what the three rules force and returns the finished grid, or null if the board stalls,
+     * which is exactly the state that would make a player guess. With [lookahead], a stalled board
+     * may also suppose one symbol on one square, run the rules to the end, and take the other
+     * symbol if that breaks a rule: one supposition deep, never a guess on a guess. That covers
+     * everything the teacher's quota-almost-met and one-round what-if can do (each is such a
+     * supposition followed less far), on a different principle: whole closure, not one round.
      */
-    private fun solveByRules(state: MamboState): List<Sym>? {
+    private fun solveByRules(state: MamboState, lookahead: Boolean = true): List<Sym>? {
         val n = state.size
-        val half = n / 2
         val grid = state.cells.toMutableList()
+        while (true) {
+            close(n, state.links, grid)
+            if (breaks(n, state.links, grid)) return null
+            if (Sym.NONE !in grid) return grid.toList()
+            if (!lookahead) return null
+            val (i, sym) = grid.indices.filter { grid[it] == Sym.NONE }.flatMap { i -> listOf(i to Sym.SUN, i to Sym.MOON) }
+                .firstOrNull { (i, sym) ->
+                    val trial = grid.toMutableList().also { it[i] = sym }
+                    close(n, state.links, trial)
+                    breaks(n, state.links, trial)
+                } ?: return null
+            grid[i] = sym.other()
+        }
+    }
+
+    /** Whether a part-filled grid shows three alike in a line, a line past half, or a broken link. */
+    private fun breaks(n: Int, links: List<Link>, grid: List<Sym>): Boolean {
+        for (r in 0 until n) for (c in 0 until n) {
+            val i = r * n + c
+            val g = grid[i]
+            if (g == Sym.NONE) continue
+            if (c + 2 < n && grid[i + 1] == g && grid[i + 2] == g) return true
+            if (r + 2 < n && grid[i + n] == g && grid[i + 2 * n] == g) return true
+        }
+        for (line in 0 until n) for (sym in listOf(Sym.SUN, Sym.MOON)) {
+            if ((0 until n).count { grid[line * n + it] == sym } > n / 2) return true
+            if ((0 until n).count { grid[it * n + line] == sym } > n / 2) return true
+        }
+        return links.any { grid[it.a] != Sym.NONE && grid[it.b] != Sym.NONE && (grid[it.a] == grid[it.b]) != it.same }
+    }
+
+    /** Writes into empty squares whatever the three rules force, until nothing changes; a conflict shows in [breaks]. */
+    private fun close(n: Int, links: List<Link>, grid: MutableList<Sym>) {
+        val half = n / 2
         var changed = true
 
         fun put(i: Int, sym: Sym) {
@@ -264,14 +324,12 @@ class MamboRulesTest {
                 }
             }
 
-            for (link in state.links) {
+            for (link in links) {
                 val a = grid[link.a]
                 val b = grid[link.b]
                 if (a != Sym.NONE) put(link.b, if (link.same) a else a.other())
                 if (b != Sym.NONE) put(link.a, if (link.same) b else b.other())
             }
         }
-
-        return if (grid.contains(Sym.NONE)) null else grid.toList()
     }
 }

@@ -160,54 +160,73 @@ object Pipes : PuzzleType {
         Difficulty.EXPERT -> 8 to 11
     }
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
-        val rng = Rng(seed)
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        generateVerified(seed, difficulty) ?: lastResort(difficulty)
+
+    /** Trees tried per seed before [generateVerified] gives up. */
+    internal const val ATTEMPTS = 40
+
+    /**
+     * A board the hints' reasoning settles tile by tile ([PipesTeacher.settles], which also proves it
+     * has one answer), or null when none of [ATTEMPTS] trees was. Attempt `a` uses `Rng(seed + a)`,
+     * so a board depends on its seed alone.
+     */
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): PipesState? {
         val (w, h) = shape(difficulty)
-        // The tree is grown outwards from here, so this cell is the natural mains inlet: every
-        // other tile is downstream of it in the solution.
-        val source = rng.nextInt(w * h)
-        val solved = spanningTree(rng, w, h, source)
-
-        // Scramble. Re-scramble in the unlikely event the board lands already solved.
-        var cells: List<Int>
-        do {
-            cells = solved.map { mask ->
-                var m = mask
-                repeat(rng.nextInt(4)) { m = rotateCw(m) }
-                m
-            }
-        } while (cells == solved && solved.any { it != 0 })
-
-        return PipesState(w, h, cells, source)
+        for (attempt in 0 until ATTEMPTS) {
+            val rng = Rng(seed + attempt)
+            // The mains inlet: in a tree every other tile is downstream of it, wherever it is.
+            val source = rng.nextInt(w * h)
+            val solved = spanningTree(rng, w, h)
+            if (!PipesTeacher.settles(w, h, solved)) continue
+            // Scramble. Re-scramble in the unlikely event the board lands already solved.
+            var cells: List<Int>
+            do {
+                cells = solved.map { mask ->
+                    var m = mask
+                    repeat(rng.nextInt(4)) { m = rotateCw(m) }
+                    m
+                }
+            } while (cells == solved)
+            return PipesState(w, h, cells, source)
+        }
+        return null
     }
 
-    /** Randomised depth-first spanning tree; each cell records the edges it keeps. */
-    private fun spanningTree(rng: Rng, w: Int, h: Int, start: Int): List<Int> {
-        val masks = MutableList(w * h) { 0 }
-        val seen = BooleanArray(w * h)
-        val stack = ArrayDeque<Int>()
-        seen[start] = true
-        stack.addLast(start)
+    /** Only when no tree of [ATTEMPTS] was settled, which a year per tier never reaches (`FallbackTest`): seed 1's board, proved by the same test. */
+    internal fun lastResort(difficulty: Difficulty): PipesState = generateVerified(1L, difficulty)!!
 
-        while (stack.isNotEmpty()) {
-            val current = stack.last()
-            val r = current / w
-            val c = current % w
-            val options = buildList {
-                if (r > 0 && !seen[current - w]) add(UP to (current - w))
-                if (r < h - 1 && !seen[current + w]) add(DOWN to (current + w))
-                if (c > 0 && !seen[current - 1]) add(LEFT to (current - 1))
-                if (c < w - 1 && !seen[current + 1]) add(RIGHT to (current + 1))
+    /**
+     * Randomised Kruskal: every edge of the grid in a shuffled order, each kept when it joins two
+     * pieces not yet joined. Each cell records the edges it keeps. A depth-first maze (the first
+     * generator) made long corridors with few junctions; this branches everywhere, so boards have
+     * about twice the T-junctions and some crosses.
+     */
+    private fun spanningTree(rng: Rng, w: Int, h: Int): List<Int> {
+        val masks = MutableList(w * h) { 0 }
+        val parent = IntArray(w * h) { it }
+        fun root(i: Int): Int {
+            var x = i
+            while (parent[x] != x) {
+                parent[x] = parent[parent[x]]
+                x = parent[x]
             }
-            if (options.isEmpty()) {
-                stack.removeLast()
-                continue
+            return x
+        }
+        val edges = buildList {
+            for (i in 0 until w * h) {
+                if (i % w < w - 1) add(i to RIGHT)
+                if (i / w < h - 1) add(i to DOWN)
             }
-            val (direction, next) = rng.pick(options)
-            masks[current] = masks[current] or direction
-            masks[next] = masks[next] or opposite(direction)
-            seen[next] = true
-            stack.addLast(next)
+        }
+        for ((i, direction) in rng.shuffled(edges)) {
+            val j = if (direction == RIGHT) i + 1 else i + w
+            val a = root(i)
+            val b = root(j)
+            if (a == b) continue
+            parent[a] = b
+            masks[i] = masks[i] or direction
+            masks[j] = masks[j] or opposite(direction)
         }
         return masks
     }

@@ -59,6 +59,8 @@ internal object KingsTeacher {
         val cited: Set<Int>,
         val nudge: String,
         val explanation: String,
+        /** For [CONFINED]: how many colours and lines it ties together (two or more). */
+        val width: Int = 0,
     ) {
         val targets: Set<Int> get() = (kings + crosses + clears).toSet()
     }
@@ -85,9 +87,11 @@ internal object KingsTeacher {
         val blocked: BooleanArray,
         /** Each region's colour, by name, as the board paints it. */
         val names: List<String> = Kings.regionNames(n, region),
+        /** `reach[x][c]`: a king on x rules out c. Worked out once a board and shared by [withKing]. */
+        val reach: Array<BooleanArray> = Array(n * n) { x -> BooleanArray(n * n).also { r -> Kings.attacks(n, region, x).forEach { r[it] = true } } },
     ) {
         private val ruledOut = BooleanArray(n * n).also { out ->
-            for (k in kings) for (c in Kings.attacks(n, region, k)) out[c] = true
+            for (k in kings) for (c in out.indices) if (reach[k][c]) out[c] = true
         }
 
         /** Regions first: "purple" is the first thing a player reads a Kings board by. */
@@ -105,7 +109,7 @@ internal object KingsTeacher {
 
         fun satisfied(h: House) = h.cells.any { it in kings }
 
-        fun withKing(cell: Int) = Sight(n, region, kings + cell, blocked, names)
+        fun withKing(cell: Int) = Sight(n, region, kings + cell, blocked, names, reach)
 
         fun unsatisfied(kind: Kind) = houses.filter { it.kind == kind && !satisfied(it) }
     }
@@ -252,6 +256,30 @@ internal object KingsTeacher {
             ?: whatIf(sight)
     }
 
+    /**
+     * How deep the ladder goes on this board: [deepest] the hardest technique it needs (an index into [TECHNIQUES]),
+     * [widest] the most colours one [CONFINED] step ties together (0 when none does).
+     */
+    class Depth(val deepest: Int, val widest: Int)
+
+    /**
+     * Walks the ladder from the blank board, as the hints would, or null when it gets stuck. The generator's tier gate,
+     * so the ladder is the generator's too: every shipped board is finished by hints alone, with no fallback.
+     */
+    fun depth(n: Int, region: List<Int>): Depth? {
+        val marks = MutableList(n * n) { Mark.EMPTY }
+        var deepest = -1
+        var widest = 0
+        while (!Kings.isSolved(n, region, marks)) {
+            val step = deduce(n, region, marks) ?: return null
+            deepest = maxOf(deepest, TECHNIQUES.indexOf(step.technique))
+            widest = maxOf(widest, step.width)
+            step.kings.forEach { marks[it] = Mark.KING }
+            step.crosses.forEach { if (marks[it] == Mark.EMPTY) marks[it] = Mark.BLOCKED }
+        }
+        return Depth(deepest, widest)
+    }
+
     private fun lastSquare(s: Sight): Step? {
         for (h in s.houses) {
             if (s.satisfied(h)) continue
@@ -312,6 +340,7 @@ internal object KingsTeacher {
                         "$names only fit in $where, so those ${numberWord(k)} kings are theirs. " +
                             "Nothing else in $where can hold a king."
                     },
+                    width = if (k == 1) 0 else k,
                 )
             }
         }
@@ -346,6 +375,7 @@ internal object KingsTeacher {
                         "${where.cap()} only reach ${join(colours)}, so those ${numberWord(k)} colours' kings " +
                             "are in them. The rest of ${join(colours)} can be crossed out."
                     },
+                    width = if (k == 1) 0 else k,
                 )
             }
         }
@@ -364,7 +394,7 @@ internal object KingsTeacher {
             val open = s.openIn(h)
             if (open.size >= bestSize) continue
             val attackers = s.region.indices.filter { x ->
-                s.isOpen(x) && x !in h.cells && Kings.attacks(s.n, s.region, x).containsAll(open)
+                s.isOpen(x) && x !in h.cells && open.all { s.reach[x][it] }
             }
             if (attackers.isEmpty()) continue
             best = h to attackers

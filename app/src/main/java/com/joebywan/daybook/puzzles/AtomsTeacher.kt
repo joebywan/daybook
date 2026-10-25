@@ -273,15 +273,33 @@ internal object AtomsTeacher {
      * Takes no answer on purpose — see the class comment. [counts] are taken as the player's; the
      * caller has already dealt with any that are mistakes.
      */
-    fun deduce(atoms: List<Atom>, pairs: List<Pair2>, counts: List<Int>): Step? {
-        val s = sightOf(atoms, pairs, counts)
-        if (atoms.indices.any { s.need(it) < 0 }) return null
+    fun deduce(atoms: List<Atom>, pairs: List<Pair2>, counts: List<Int>): Step? = deduce(sightOf(atoms, pairs, counts))
+
+    private fun deduce(s: Sight): Step? {
+        if ((0 until s.n).any { s.need(it) < 0 }) return null
         for (level in BASIC..WITH_ISOLATION) {
             val f = atomRule(s, level) ?: continue
             return explainAtom(s, f, level)
         }
         onlyWayOut(s)?.let { return it }
         return whatIf(s)
+    }
+
+    /**
+     * The deepest technique, as its index in [TECHNIQUES], that a walk by [deduce] alone needs from the
+     * empty board to the end, or null when the walk stops short (a hint would fall back). Each step holds
+     * for every answer, so a finished walk has also found the only one. The generator gates tiers on it.
+     */
+    fun depth(atoms: List<Atom>, pairs: List<Pair2>): Int? {
+        // One sight for the whole walk: the lines' geometry is worked out once, only the bonds change.
+        val sight = sightOf(atoms, pairs, List(pairs.size) { 0 })
+        var deepest = -1
+        while (true) {
+            val step = deduce(sight) ?: break
+            deepest = maxOf(deepest, TECHNIQUES.indexOf(step.technique))
+            step.raise.forEach { (p, to) -> sight.lo[p] = to }
+        }
+        return deepest.takeIf { atoms.indices.all { sight.need(it) == 0 } }
     }
 
     /** What one atom's count forces on its lines, at one level of sight. */
@@ -335,27 +353,26 @@ internal object AtomsTeacher {
         }
         // Why each line out of this atom has the room it has, when that room is less than a
         // stranger to the board would assume.
-        val crossedTo = mutableListOf<String>()
-        val shutOut = mutableListOf<String>()
-        val shutDouble = mutableListOf<String>()
+        val crossedTo = mutableListOf<Int>()
+        val shutOut = mutableListOf<Int>()
+        val shutDouble = mutableListOf<Int>()
         var pairOnly = true
         val citedExtra = mutableSetOf<Int>()
         for (p in lines) {
             val b = s.other(p, a)
-            val who = "the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}"
             val basic = s.cap(p, BASIC)
             val crossed = s.cap(p, WITH_CROSSING)
             val isolated = s.cap(p, WITH_ISOLATION)
             when {
                 level >= WITH_CROSSING && crossed < basic -> {
-                    crossedTo += who
+                    crossedTo += b
                     s.crossedBy(p)?.let { citedExtra += pairCell(n, it) }
                 }
                 level >= WITH_ISOLATION && isolated < crossed -> {
                     val group = s.component(s.pairs[p].a, extra = p)
                     citedExtra += group
                     if (group.size != 2) pairOnly = false
-                    if (isolated == 0) shutOut += who else shutDouble += who
+                    if (isolated == 0) shutOut += b else shutDouble += b
                 }
             }
         }
@@ -364,23 +381,34 @@ internal object AtomsTeacher {
             pairOnly -> "finish both and cut them off"
             else -> "finish that group and cut it off"
         }
-        val reasons = buildList {
-            if (crossedTo.isNotEmpty()) add("a bond crosses the way to ${join(crossedTo)}")
-            when (shutOut.size) {
-                0 -> Unit
-                1 -> add("a bond to ${shutOut[0]} would $shut, so that's out")
-                else -> add("a bond to ${join(shutOut, "or")} would $shut, so those are out")
-            }
-            when (shutDouble.size) {
-                0 -> Unit
-                1 -> add("a double to ${shutDouble[0]} would $shut, so one at most")
-                else -> add("a double to ${join(shutDouble, "or")} would $shut, so one each at most")
+        // Neighbours by number and place ("to the 2 above"), or, when that runs past the panel, by
+        // direction alone ("above").
+        fun reasonsFor(short: Boolean): List<String> {
+            fun who(b: Int) = "the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}"
+            fun listed(bs: List<Int>, and: String = "and") =
+                if (short) join(bs.map { way(s.atoms[a], s.atoms[it]) }, and) else "to " + join(bs.map(::who), and)
+            return buildList {
+                if (crossedTo.isNotEmpty()) {
+                    add(if (short) "a bond crosses the line ${listed(crossedTo)}" else "a bond crosses the way ${listed(crossedTo)}")
+                }
+                when (shutOut.size) {
+                    0 -> Unit
+                    1 -> add("a bond ${listed(shutOut)} would $shut, so that's out")
+                    else -> add("a bond ${listed(shutOut, "or")} would $shut, so those are out")
+                }
+                when (shutDouble.size) {
+                    0 -> Unit
+                    1 -> add("a double ${listed(shutDouble)} would $shut, so one at most")
+                    else -> add("a double ${listed(shutDouble, "or")} would $shut, so one each at most")
+                }
             }
         }
-        val prefix = if (reasons.isEmpty()) "" else reasons.joinToString("; ").cap() + ". "
+        val reasons = reasonsFor(short = false)
+        fun prefixOf(r: List<String>) = if (r.isEmpty()) "" else r.joinToString("; ").cap() + ". "
+        var prefix = prefixOf(reasons)
 
         val needWords = if (s.degree(a) == 0) "needs ${bondsWord(f.need)}" else "still needs ${bondsWord(f.need)}"
-        val body = when (f.rule) {
+        fun bodyFor(prefix: String) = when (f.rule) {
             ONE_NEIGHBOUR -> {
                 val p = f.raise.keys.first()
                 val b = s.other(p, a)
@@ -446,6 +474,11 @@ internal object AtomsTeacher {
                     if (prefix.length + withSpare.length <= MAX_EXPLANATION) withSpare else "$lead. $tail"
                 }
             }
+        }
+        var body = bodyFor(prefix)
+        if (prefix.length + body.length > MAX_EXPLANATION) {
+            prefix = prefixOf(reasonsFor(short = true))
+            body = bodyFor(prefix)
         }
         val targets = f.raise.keys.map { pairCell(n, it) }.toSet()
         return Step(
