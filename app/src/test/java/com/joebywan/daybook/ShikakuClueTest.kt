@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.puzzles.Block
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
 import org.junit.Assert.assertEquals
@@ -49,38 +50,45 @@ class ShikakuClueTest {
     }
 
     /**
-     * The same rule on the path 2000 failed uniqueness checks would be needed to reach. Forced by
-     * calling it outright, because a fallback that is only ever exercised by accident is a fallback
-     * nobody has actually checked.
+     * The last resort is the board of one fixed seed, so it must itself be proved: this is what
+     * stops it throwing. Checked here with this file's own counter, and for the rule above.
      */
     @Test
-    fun `the fallback board carries no clue of 1 either`() {
+    fun `the last resort is proved on every tier and carries no clue of 1`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds) {
-                val state = Shikaku.fallbackBoard(seed, difficulty)
-                val label = "shikaku-fallback/${difficulty.name}/$seed"
-                assertTrue(
-                    "$label has a clue of 1",
-                    state.clues.none { it == 1 },
-                )
-                assertTrue(
-                    "$label has a rectangle of area 1",
-                    state.solution.none { it.area == 1 },
-                )
-                assertEquals(
-                    "$label clues do not sum to the grid",
-                    state.width * state.height,
-                    state.clues.filterNotNull().sum(),
-                )
-                // The fallback's claim to be a legal board at all rests on its corner clues forcing
-                // one tiling. That is asserted rather than assumed, for the same reason as above.
-                assertEquals(
-                    "$label is not uniquely tileable",
-                    1,
-                    countTilings(state.width, state.height, state.clues),
-                )
-            }
+            val state = Shikaku.lastResort(difficulty)
+            val label = "shikaku-last-resort/${difficulty.name}"
+            assertTrue("$label has a clue of 1", state.clues.none { it == 1 })
+            assertEquals("$label clues do not sum to the grid", state.width * state.height, state.clues.filterNotNull().sum())
+            assertEquals("$label is not uniquely tileable", 1, countTilings(state.width, state.height, state.clues))
         }
+    }
+
+    /**
+     * Tilings are grown, not cut, so layouts with no cut across the whole grid (a pinwheel, at its
+     * smallest) must turn up. Measured with this file's own checker: a tiling is a guillotine one if
+     * some full row or column line inside its box crosses no rectangle and both sides are again.
+     * Over a year of daily boards, 46 / 61 / 71% were non-guillotine when this was written.
+     */
+    @Test
+    fun `tilings are not only guillotine cuts`() {
+        for (difficulty in Difficulty.entries) {
+            val boards = (0 until 60).map { Shikaku.generate(daySeed(it, "shikaku", difficulty), difficulty) as ShikakuState }
+            val pinwheels = boards.count { !guillotine(it.solution, 0, 0, it.height - 1, it.width - 1) }
+            assertTrue("$difficulty: only $pinwheels of ${boards.size} boards are non-guillotine", pinwheels * 4 >= boards.size)
+        }
+    }
+
+    private fun guillotine(blocks: List<Block>, r0: Int, c0: Int, r1: Int, c1: Int): Boolean {
+        val inside = blocks.filter { it.r0 >= r0 && it.r1 <= r1 && it.c0 >= c0 && it.c1 <= c1 }
+        if (inside.size <= 1) return true
+        for (cut in r0 until r1) {
+            if (inside.none { it.r0 <= cut && it.r1 > cut }) return guillotine(inside, r0, c0, cut, c1) && guillotine(inside, cut + 1, c0, r1, c1)
+        }
+        for (cut in c0 until c1) {
+            if (inside.none { it.c0 <= cut && it.c1 > cut }) return guillotine(inside, r0, c0, r1, cut) && guillotine(inside, r0, cut + 1, r1, c1)
+        }
+        return false
     }
 
     // ---- what the rule must not have broken -----------------------------------------------------

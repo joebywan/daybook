@@ -184,6 +184,8 @@ class ShikakuTeachingTest {
             val boardCounts = ShikakuTeacher.TECHNIQUES.associateWith { 0 }.toMutableMap()
             var totalSteps = 0
             var longest = ""
+            var deepBoards = 0
+            var pastFits = 0
             for (seed in seeds(perTier, difficulty, "shikaku-coverage")) {
                 var s = Shikaku.generate(seed, difficulty) as ShikakuState
                 val used = mutableSetOf<String>()
@@ -198,6 +200,8 @@ class ShikakuTeachingTest {
                     s = d.apply(s) as ShikakuState
                 }
                 used.forEach { boardCounts[it] = boardCounts.getValue(it) + 1 }
+                if (ShikakuTeacher.COMMON_CELLS in used || ShikakuTeacher.WHAT_IF in used) deepBoards++
+                if (used.any { it != ShikakuTeacher.ONLY_FITS }) pastFits++
             }
             report.appendLine()
             report.appendLine("${difficulty.name} — $totalSteps steps, ${"%.1f".format(totalSteps / perTier.toDouble())} per board")
@@ -210,11 +214,14 @@ class ShikakuTeachingTest {
                 )
             }
             report.appendLine("  longest explanation, ${longest.length} characters: $longest")
+            // The generator's gate, seen from the walk: never the fallback, and each tier's demand.
             val fallbackBoards = boardCounts.getValue(ShikakuTeacher.FALLBACK)
-            assertTrue(
-                "$difficulty: the fallback is reached on $fallbackBoards/$perTier boards",
-                fallbackBoards * 10 < perTier,
-            )
+            assertEquals("$difficulty: the fallback is reached on $fallbackBoards/$perTier boards", 0, fallbackBoards)
+            when (difficulty) {
+                Difficulty.STANDARD -> assertEquals("Standard boards needing common cells or a what-if", 0, deepBoards)
+                Difficulty.HARD -> assertEquals("Hard boards needing only-reaches or deeper", perTier, pastFits)
+                Difficulty.EXPERT -> assertEquals("Expert boards needing common cells or a what-if", perTier, deepBoards)
+            }
         }
         println(report)
         writeReport("shikaku-teaching-coverage.txt", report.toString())
