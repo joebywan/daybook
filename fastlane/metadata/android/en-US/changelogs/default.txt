@@ -2,5 +2,5 @@
 - Swipe left or right on the home screen to change the difficulty.
 - Tap your streak on the home screen to open Statistics.
 - Share it again later: Statistics keeps your best result and your last random board for every puzzle and tier.
-- Share today's progress from Statistics: every daily you've solved today, per difficulty.
 - Word Wheel's share says how many bonus words you found.
+- Clearer word clues, and no interjections or old words in Word Wheel's grids.

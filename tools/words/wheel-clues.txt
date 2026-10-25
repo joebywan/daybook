@@ -124,7 +124,7 @@ barley: Grain for malt
 bar: Pub counter
 barter: Trade without money
 basket: Wicker carrier
-bat: Cricket club, or a flying mammal
+bat: Flying mammal, or a club for hitting
 battery: Torch's power cell
 bay: Coastal inlet
 bayonet: Blade on a rifle
@@ -150,7 +150,7 @@ big: Large
 bin: Rubbish container
 bitmap: Image stored pixel by pixel
 bit: Small piece
-bladder: Football's inner bag
+bladder: Organ that stores urine
 bleary: Blurry-eyed
 blithe: Carefree
 blogger: Online diarist
@@ -640,7 +640,6 @@ freshly: Newly
 fretful: Anxious
 fright: Scare
 fringe: Edge, or hair over the forehead
-fro: To and ___
 fry: Cook in oil
 fun: Enjoyment
 funeral: Burial service
@@ -648,7 +647,6 @@ fur: Animal's coat
 furtive: Sneaky
 gab: Chatter
 gag: Comedian's line
-gal: Girl, informally
 gallery: Art museum
 galley: Ship's kitchen
 gallows: Hanging frame
@@ -663,10 +661,9 @@ garlic: Pungent bulb
 garment: Article of clothing
 garnet: Dark red gem
 garnish: Decorate a dish
-gas: Petrol, in America
+gas: Vapour, or what a stove burns
 gastric: Of the stomach
 gazelle: Graceful antelope
-gee: Mild exclamation
 gelatin: Jelly's setting agent
 gel: Hair goo
 gem: Jewel
@@ -756,7 +753,6 @@ heretic: Dissenter from doctrine
 heroine: Female lead
 her: That woman
 hew: Chop with an axe
-hey: Informal hello
 hid: Concealed
 him: That man
 hip: Joint below the waist
@@ -777,7 +773,6 @@ how: In what way
 hub: Centre of a wheel
 hue: Colour
 hug: Embrace
-huh: Sound of confusion
 humanly: As far as people can
 hum: Sing with closed lips
 hustle: Bustle, or hurry along
@@ -859,7 +854,6 @@ juniper: Gin berry shrub
 jut: Stick out
 karate: Martial art of chops and kicks
 keg: Beer barrel
-ken: Range of knowledge
 key: Lock opener
 kid: Child
 kindred: Related
@@ -1014,7 +1008,7 @@ motive: Reason behind a crime
 mow: Cut the grass
 mud: Wet dirt
 mug: Coffee cup
-mum: Mother, in Britain
+mum: Mother, or silent
 murder: Killing
 mutant: Product of a genetic change
 myriad: Countless
@@ -1329,7 +1323,7 @@ recoil: Flinch back
 record: Vinyl disc
 recount: Narrate, or count again
 recoup: Get back, as losses
-rector: Church of England priest
+rector: Parish priest, or a college head
 red: Colour of blood
 redhead: Ginger-haired person
 redone: Done over
@@ -1663,7 +1657,6 @@ sunrise: Daybreak
 supper: Evening meal
 support: Prop up
 supreme: Highest
-sup: Take a little at a time
 surgeon: Operating doctor
 surmise: Guess
 surname: Family name
@@ -1724,7 +1717,6 @@ thrice: Three times
 throne: Royal seat
 through: From end to end
 thrust: Forceful shove
-thy: Your, of old
 ticket: Admission pass
 tickle: Make giggle
 tie: Neckwear
@@ -1803,7 +1795,6 @@ turtle: Shelled reptile
 twinkle: Sparkle like a star
 two: One plus one
 typhoon: Pacific hurricane
-ugh: Disgusted sound
 umpire: Referee
 unblock: Clear
 unclean: Soiled
@@ -1892,7 +1883,6 @@ woe: Sorrow
 wok: Stir-fry pan
 won: Came first
 woo: Court
-wow: Expression of amazement
 wreath: Christmas door ring
 wreathe: Encircle
 written: Set down in ink

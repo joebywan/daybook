@@ -257,6 +257,17 @@ pap
 sac
 sop
 daemon
+# Interjections, archaisms and slang (out of the grid; still bonus words where a wheel spells them)
+huh
+ugh
+hey
+gee
+wow
+gal
+thy
+ken
+sup
+fro
 # Inflections the stem rule cannot see: comparatives with a doubled consonant, plurals. Irregular pasts stay, as Lexicon's gave and laid do
 badder
 fatter
