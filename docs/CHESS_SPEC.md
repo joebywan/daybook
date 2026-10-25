@@ -110,7 +110,7 @@ Budget (emulator p95 <= 300 ms, max <= 1.5 s) is met, so Expert stays mate in 4.
   entries `"<fen> <last-uci-or-->"` in chunked string constants (a JVM string constant is capped at 64 KB, see
   `LexiconWords.kt`). Header comment: GENERATED, by which script, from which dump (name and date), sorted-order contract.
 - Picked by index: `list[seed.mod(list.size)]`-style with `Rng`; adding or removing a position moves every later
-  daily board, so a parity pin goes red on purpose (as `LexiconWebParityTest`).
+  daily board, so a parity pin goes red on purpose (as Lexicon's in `BoardPinTest`).
 - Credit: README one line, and a short `docs/chess-positions/NOTICE.md` stating source, licence (CC0) and the date
   of the dump used.
 
