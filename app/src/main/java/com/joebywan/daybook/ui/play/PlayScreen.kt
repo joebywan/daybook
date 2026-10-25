@@ -274,10 +274,6 @@ private fun PlayBoard(
     // stack and its clock are exactly where they were when the player comes back.
     var showTutorial by rememberSaveable(initial) { mutableStateOf(false) }
     val hasTutorial = puzzle.tutorial.isNotEmpty()
-    // Whether this puzzle gets the space under the board at all. Fixed per puzzle, so it can never
-    // be the thing that moves a board; puzzles that neither teach nor have a walkthrough keep the
-    // layout they always had.
-    val teaches = remember(initial) { hasTutorial || puzzle.teach(initial) != null }
     val hintSession = rememberHintSession(initial)
     // Undoable: the cleared board goes on the history, so one mis-tap beside Undo costs nothing. Pointers has no Undo.
     fun restart() {
@@ -303,7 +299,7 @@ private fun PlayBoard(
     val state = game.state
     val seconds = game.seconds
     val finished = state.solved || finishPreview != null
-    var reopenedSolved by remember(initial) { mutableStateOf(false) }
+    var reopenedSolved by rememberSaveable(initial) { mutableStateOf(false) }
 
     // Reads `game` rather than the values unpacked above: this runs from effects that outlive the
     // composition that started them, where those locals would be frozen at their first value.
@@ -562,7 +558,7 @@ private fun PlayBoard(
                 color = scheme.onSurfaceVariant,
                 modifier = if (showTimer) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
             )
-            if (teaches && offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
+            if (offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
                 Box(Modifier.matchParentSize().background(scheme.background), contentAlignment = Alignment.Center) {
                     Text(
                         "New to ${puzzle.displayName}? One-minute walkthrough",
