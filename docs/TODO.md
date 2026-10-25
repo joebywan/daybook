@@ -183,8 +183,7 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
 - [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
-- [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
-  lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
+- [ ] **New puzzles, in order:** Lamps (Light Up rules), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
   fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
 
 ## Future puzzle candidates
@@ -250,9 +249,6 @@ and Battleships is close to Tents.
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
   prototype the input before committing. *L.*
-- [ ] **Mines, no guessing.** Minesweeper rules: tap reveals, long-press flags. Ship only boards logic clears from the
-  first reveal (a solver proves it, as the Tents and Tally ladders do); a hint names the deduction ("this 2 already
-  touches two flags, so the rest are safe"). Tiers: size and density. A mine loses the board, as Pointers' lives do. *M.*
 - [ ] **Codeword.** A filled crossword grid with a number for each letter and a few letters given; work out the
   substitution. No clues, so it avoids the clue-database problem below. Reuses Lexicon's and Word Wheel's lists and
   Word Wheel's grid layout; uniqueness is pattern matching against the list. Not Cipher: word shapes, not columns. *M–L.*
@@ -295,6 +291,11 @@ only spend their time railroaded through a tutorial.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
+- **Mines: chording.** A tap on a number whose flags are met opening its other neighbours, as most versions have. Left out
+  (`docs/MINES_SPEC.md`): with a wrong flag it opens a mine, a life lost to a note. Add it only if the owner wants the speed.
+- **Mines Expert on a short screen.** Eight wide keeps the square at 42-45 dp on a phone, but twelve rows are height-bound in a
+  phone browser with both toolbars (375x537: about 21 px squares; a phone on its side puts the controls beside the board and gets
+  about 31). Shorter Expert boards (8x11) or fewer rows are the lever if a mis-tap there is reported.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),

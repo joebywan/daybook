@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -401,115 +402,137 @@ object Mines : PuzzleType {
             onState(next)
         }
 
-        Column(
-            Modifier
-                .fillMaxSize()
-                .boardKeys(live) { key, _, repeat ->
-                    movedCursor(cursor, key, s.height, s.width)?.let { cursor = it; return@boardKeys true }
-                    val at = cursor ?: return@boardKeys false
-                    val action = minesKeyAction(key) ?: return@boardKeys false
-                    if (!repeat) act(at, action == MinesKeyAction.Flag)
-                    true
-                }
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // Lives and the count, always this height, so a mine found or a loss never moves the board.
-            Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-                Pointers.Hearts(s.lives, Modifier)
-                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    if (s.failed) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Out of lives", style = MaterialTheme.typography.bodyMedium, color = scheme.error, maxLines = 1)
-                            FilledTonalButton(onClick = { if (interactive) onState(s.retry()) }) { Text("Try again", maxLines = 1) }
+        val keys = Modifier.boardKeys(live) { key, _, repeat ->
+            movedCursor(cursor, key, s.height, s.width)?.let { cursor = it; return@boardKeys true }
+            val at = cursor ?: return@boardKeys false
+            val action = minesKeyAction(key) ?: return@boardKeys false
+            if (!repeat) act(at, action == MinesKeyAction.Flag)
+            true
+        }
+
+        @Composable
+        fun Grid(modifier: Modifier) = BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+            // Both axes: whichever runs out first sets the square.
+            val step = minOf(maxWidth / s.width, maxHeight / s.height)
+            val unitPx = with(density) { step.toPx() }
+            val digits = remember(unitPx) { digitLayouts(measurer, unitPx * 0.58f, density) }
+            val b = bump
+            Canvas(
+                Modifier
+                    .size(step * s.width, step * s.height)
+                    .highlightGrid(s.width, s.height)
+                    .gridCursor(cursor.takeIf { live }, s.width, s.height, scheme.primary)
+                    .pointerInput(s, live, flagPen) {
+                        if (!live) return@pointerInput
+                        fun cellAt(o: Offset): Int {
+                            val unit = size.width.toFloat() / s.width
+                            val c = (o.x / unit).toInt().coerceIn(0, s.width - 1)
+                            val r = (o.y / unit).toInt().coerceIn(0, s.height - 1)
+                            return r * s.width + c
                         }
-                    } else {
-                        val left = s.minesLeft
-                        Text(
-                            if (s.solved) "All clear" else "$left mine${if (left == 1) "" else "s"} left",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                        detectTapGestures(
+                            onTap = { o -> act(cellAt(o), flagPen) },
+                            onLongPress = { o -> act(cellAt(o), !flagPen) },
                         )
+                    },
+            ) {
+                drawBoard(
+                    s, size.width / s.width, digits, scheme, hues,
+                    Overlay(highlight, glow, pulse.value, b?.cell ?: -1, b?.progress?.value ?: 0f, !still),
+                    feel, Color(accent),
+                )
+            }
+        }
+
+        BoxWithConstraints(Modifier.fillMaxSize().then(keys).padding(horizontal = 16.dp)) {
+            if (maxWidth > maxHeight * 1.1f) {
+                // A wide box (a phone on its side, a tablet) puts the lives and the pen beside the board, which then has
+                // the whole height: twelve rows on a phone on its side are short of it.
+                Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                    Grid(Modifier.weight(1f).fillMaxHeight().padding(vertical = 8.dp))
+                    Column(
+                        Modifier.width(148.dp).padding(start = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Pointers.Hearts(s.lives, Modifier)
+                        Box(Modifier.height(48.dp), contentAlignment = Alignment.Center) { Status(s, interactive, onState) }
+                        Pens(flagPen, enabled = live, vertical = true, onPen = { flagPen = it })
                     }
                 }
-            }
-
-            BoxWithConstraints(
-                Modifier.weight(1f).fillMaxWidth().padding(bottom = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                // Both axes: whichever runs out first sets the square.
-                val step = minOf(maxWidth / s.width, maxHeight / s.height)
-                val unitPx = with(density) { step.toPx() }
-                val digits = remember(unitPx) { digitLayouts(measurer, unitPx * 0.58f, density) }
-                val b = bump
-                Canvas(
-                    Modifier
-                        .size(step * s.width, step * s.height)
-                        .highlightGrid(s.width, s.height)
-                        .gridCursor(cursor.takeIf { live }, s.width, s.height, scheme.primary)
-                        .pointerInput(s, live, flagPen) {
-                            if (!live) return@pointerInput
-                            fun cellAt(o: Offset): Int {
-                                val unit = size.width.toFloat() / s.width
-                                val c = (o.x / unit).toInt().coerceIn(0, s.width - 1)
-                                val r = (o.y / unit).toInt().coerceIn(0, s.height - 1)
-                                return r * s.width + c
-                            }
-                            detectTapGestures(
-                                onTap = { o -> act(cellAt(o), flagPen) },
-                                onLongPress = { o -> act(cellAt(o), !flagPen) },
-                            )
-                        },
-                ) {
-                    drawBoard(
-                        s, size.width / s.width, digits, scheme, hues,
-                        Overlay(highlight, glow, pulse.value, b?.cell ?: -1, b?.progress?.value ?: 0f, !still),
-                        feel, Color(accent),
-                    )
+            } else {
+                Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Lives and the count, always this height, so a mine found or a loss never moves the board.
+                    Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Pointers.Hearts(s.lives, Modifier)
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { Status(s, interactive, onState) }
+                    }
+                    Grid(Modifier.weight(1f).fillMaxWidth().padding(bottom = 8.dp))
+                    Pens(flagPen, enabled = live, vertical = false, onPen = { flagPen = it })
                 }
             }
-
-            PenRow(flagPen, enabled = live, onPen = { flagPen = it })
         }
     }
 
-    /** Reveal or Flag. Kept clear of the hint popover: the player reaches for it to make a hinted move. */
+    /** "N mines left" or "All clear", or, with no lives left, the loss and Try again. */
     @Composable
-    private fun PenRow(flagPen: Boolean, enabled: Boolean, onPen: (Boolean) -> Unit) {
+    private fun Status(s: MinesState, interactive: Boolean, onState: (PuzzleState) -> Unit) {
+        val scheme = MaterialTheme.colorScheme
+        if (s.failed) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Out of lives", style = MaterialTheme.typography.bodyMedium, color = scheme.error, maxLines = 1)
+                FilledTonalButton(onClick = { if (interactive) onState(s.retry()) }) { Text("Try again", maxLines = 1) }
+            }
+        } else {
+            val left = s.minesLeft
+            Text(
+                if (s.solved) "All clear" else "$left mine${if (left == 1) "" else "s"} left",
+                style = MaterialTheme.typography.labelLarge,
+                color = scheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+
+    /** Reveal or Flag, side by side or one above the other. Kept clear of the hint popover: the player reaches for it to make a hinted move. */
+    @Composable
+    private fun Pens(flagPen: Boolean, enabled: Boolean, vertical: Boolean, onPen: (Boolean) -> Unit) {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
-        Row(
-            Modifier.fillMaxWidth().padding(bottom = 6.dp).keepClear(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-        ) {
-            for (option in listOf(false, true)) {
-                val chosen = flagPen == option
-                Row(
-                    Modifier
-                        .width(124.dp)
-                        .height(46.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(if (chosen) Color(accent).copy(alpha = 0.22f) else scheme.surface)
-                        .border(if (chosen) 2.dp else 1.dp, if (chosen) Color(accent) else scheme.outline, RoundedCornerShape(14.dp))
-                        .clickable(enabled = enabled) { onPen(option) },
-                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Canvas(Modifier.size(22.dp)) {
-                        val u = size.minDimension
-                        if (option) drawFlag(0f, 0f, u, BoardHues.ink(BoardHues.HUE_PAIRS[0].second, dark), scheme.onSurface.copy(alpha = 0.7f))
-                        else {
-                            // An open square: a tile with its number showing.
-                            drawRoundRect(scheme.onSurface.copy(alpha = 0.75f), Offset(u * 0.12f, u * 0.12f), Size(u * 0.76f, u * 0.76f), CornerRadius(u * 0.16f), style = Stroke(u * 0.08f))
-                            drawCircle(scheme.onSurface.copy(alpha = 0.75f), u * 0.1f, Offset(u / 2, u / 2))
-                        }
+        @Composable
+        fun Pen(option: Boolean) {
+            val chosen = flagPen == option
+            Row(
+                Modifier
+                    .width(124.dp)
+                    .height(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (chosen) Color(accent).copy(alpha = 0.22f) else scheme.surface)
+                    .border(if (chosen) 2.dp else 1.dp, if (chosen) Color(accent) else scheme.outline, RoundedCornerShape(14.dp))
+                    .clickable(enabled = enabled) { onPen(option) },
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Canvas(Modifier.size(22.dp)) {
+                    val u = size.minDimension
+                    if (option) drawFlag(0f, 0f, u, BoardHues.ink(BoardHues.HUE_PAIRS[0].second, dark), scheme.onSurface.copy(alpha = 0.7f))
+                    else {
+                        // An open square: a tile with its number showing.
+                        drawRoundRect(scheme.onSurface.copy(alpha = 0.75f), Offset(u * 0.12f, u * 0.12f), Size(u * 0.76f, u * 0.76f), CornerRadius(u * 0.16f), style = Stroke(u * 0.08f))
+                        drawCircle(scheme.onSurface.copy(alpha = 0.75f), u * 0.1f, Offset(u / 2, u / 2))
                     }
-                    Text(if (option) "Flag" else "Reveal", style = MaterialTheme.typography.labelLarge, color = scheme.onSurface)
                 }
+                Text(if (option) "Flag" else "Reveal", style = MaterialTheme.typography.labelLarge, color = scheme.onSurface)
             }
+        }
+        if (vertical) {
+            Column(Modifier.keepClear(), verticalArrangement = Arrangement.spacedBy(12.dp)) { Pen(false); Pen(true) }
+        } else {
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 6.dp).keepClear(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            ) { Pen(false); Pen(true) }
         }
     }
 }

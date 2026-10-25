@@ -82,6 +82,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
 | Pointers | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
+| Mines | Minefield, no guessing | Reveal every square without a mine; each number counts the mines touching it, the board opens with a clear patch, and a mine costs one of three lives |
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -153,6 +154,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
 - **Pointers** — arrows are laid one at a time, each only where "is in the way of" stays free of cycles, so some order always
   clears the board, and since taking an arrow away only ever opens a way out, no order of free taps can strand you. The
   finished board is cleared greedily before it ships, and the tests check a year of boards with an independent cycle check.
+- **Mines** — the seed picks an opening (kept clear, with the patch it opens already showing) and the mines. A board ships
+  only if the hint ladder, walked from the opening and revealing each square it proves, reveals every safe square needing
+  exactly its tier's deepest step, so no square is ever a guess and the answer is unique; an independent enumeration of
+  every layout the numbers allow checks every step in the tests.
 - **Dominoes** — a shape is grown a domino at a time (that tiling is the answer), dominoes from the double-six set are
   dealt onto it, and the regions' rules are read off the answer, tightened until the hint ladder (pairing, rule fit, region
   values, counting, a short what-if) finishes it, then loosened while it still does. A board ships only if it needs its tier's
