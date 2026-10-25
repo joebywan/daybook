@@ -81,6 +81,8 @@ class MamboTeachingTest {
         for (difficulty in Difficulty.entries) {
             for (seed in seeds(40, difficulty)) {
                 var s = Mambo.generate(seed, difficulty) as MamboState
+                val start = s
+                val used = mutableSetOf<String>()
                 var guard = 0
                 while (!s.solved) {
                     assertTrue("mambo/$difficulty/$seed: walk did not finish", guard++ < 200)
@@ -89,6 +91,7 @@ class MamboTeachingTest {
                     d!!
                     assertFalse("$difficulty/$seed: a mistake on a board built from hints", d.mistake)
                     val step = MamboTeacher.teach(s)!!
+                    used += step.technique
                     assertTrue("$difficulty/$seed ${d.technique}: a step with no move", step.places.isNotEmpty())
                     for ((i, sym) in step.places) {
                         assertEquals("$difficulty/$seed ${d.technique}: against the answer", s.solution[i], sym)
@@ -102,8 +105,42 @@ class MamboTeachingTest {
                     s = next
                 }
                 assertEquals(s.solution, s.cells)
+                // The tier's gate, read off the hints' own walk, and the generator's depth agreeing with it.
+                val rung = when {
+                    MamboTeacher.WHAT_IF in used -> MamboTeacher.RUNG_WHAT_IF
+                    MamboTeacher.ALMOST in used -> MamboTeacher.RUNG_ALMOST
+                    else -> MamboTeacher.RUNG_SIMPLE
+                }
+                assertEquals("$difficulty/$seed: the walk's deepest rung ($used)", difficulty.ordinal, rung)
+                assertEquals(rung, MamboTeacher.depth(start.size, start.cells, start.links, MamboTeacher.RUNG_WHAT_IF))
+                assertFalse("$difficulty/$seed: the fallback", MamboTeacher.FALLBACK in used)
             }
         }
+    }
+
+    @Test
+    fun `the generator's what-if picks the hint's square`() {
+        // whatIfAt looks only near each square; the hint's whatIf scans the whole board. Wherever the
+        // simple four and almost-met are spent, the two must name the same square or both none.
+        var compared = 0
+        val boards = Difficulty.entries.flatMap { d -> seeds(30, d, "mambo-whatif").map { Mambo.generate(it, d) as MamboState } }
+        val rng = java.util.Random(5)
+        val loose = generateSequence { 0 }.mapNotNull { looseBoard(rng) }.take(400).map { (cells, links) -> Triple(6, cells, links) }
+        for ((n, start, links) in boards.map { Triple(it.size, it.cells, it.links) } + loose) {
+            val linksAt = Array(n * n) { i -> links.filter { it.a == i || it.b == i } }
+            var cells = start
+            while (true) {
+                val step = MamboTeacher.deduce(n, cells, links)
+                if (step == null || step.technique == MamboTeacher.WHAT_IF) {
+                    val fast = MamboTeacher.whatIfAt(n, cells.toTypedArray(), linksAt)
+                    assertEquals("$cells", step?.places, fast?.let { (i, sym) -> mapOf(i to sym.other()) })
+                    compared++
+                }
+                if (step == null) break
+                cells = cells.mapIndexed { i, v -> step.places[i] ?: v }
+            }
+        }
+        assertTrue("too few what-ifs compared: $compared", compared > 300)
     }
 
     @Test
