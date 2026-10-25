@@ -86,11 +86,17 @@ data class LevelProgress(
     val opened: Map<Int, Int>,
     val solves: Map<Int, List<LevelSolve>>,
     val done: Set<Int>,
+    /**
+     * The player's deal (`Levels.LATEST`'s doc): the one their opened levels were stored with, or the latest when
+     * nothing is opened yet. One per player, never per level: deck 0 dealt half one way and half the other would
+     * repeat some puzzles in levels 1-5 and skip others, so a player who opened a level before deal 2 keeps deal 1.
+     */
+    val deal: Int = Levels.LATEST,
 ) {
     /** The pool size [level] plans with: the stored one once opened, the whole pool before. */
     fun poolSize(level: Int): Int = opened[level] ?: Levels.POOL.size
 
-    fun plan(level: Int): List<LevelBoard> = Levels.plan(level, poolSize(level))
+    fun plan(level: Int): List<LevelBoard> = Levels.plan(level, poolSize(level), deal)
 
     fun solved(level: Int): Set<String> = solves[level].orEmpty().map { it.puzzleId }.toSet()
 
@@ -100,24 +106,32 @@ data class LevelProgress(
     companion object {
         val FRESH = of(emptySet(), emptySet())
 
-        /** From the raw `levels` and `level_solves` sets; malformed entries are skipped. */
+        /**
+         * From the raw `levels` (`"n|poolSize"`, or `"n|poolSize|deal"` since deal 2) and `level_solves` sets;
+         * malformed entries are skipped. The deal is the lowest stored, so any entry from before deal 2 means deal 1.
+         */
         fun of(levels: Set<String>, levelSolves: Set<String>): LevelProgress {
             val opened = HashMap<Int, Int>()
+            var deal: Int? = null
             for (raw in levels) {
                 val parts = raw.split("|")
-                val n = parts.getOrNull(0)?.toIntOrNull() ?: continue
-                val size = parts.getOrNull(1)?.toIntOrNull()?.takeIf { parts.size == 2 && it in Levels.STARTER..Levels.POOL.size } ?: continue
+                if (parts.size !in 2..3) continue
+                val n = parts[0].toIntOrNull() ?: continue
+                val size = parts[1].toIntOrNull()?.takeIf { it in Levels.STARTER..Levels.POOL.size } ?: continue
+                val d = (if (parts.size == 2) 1 else parts[2].toIntOrNull())?.takeIf { it in 1..Levels.LATEST } ?: continue
                 opened[n] = minOf(size, opened[n] ?: size)
+                deal = minOf(d, deal ?: d)
             }
+            val playerDeal = deal ?: Levels.LATEST
             val solves = levelSolves.mapNotNull(LevelSolve::decode).filter { it.level >= 1 }.groupBy { it.level }
             fun isDone(n: Int): Boolean {
                 val solved = solves[n].orEmpty().map { it.puzzleId }.toSet()
-                return Levels.plan(n, opened[n] ?: Levels.POOL.size)
+                return Levels.plan(n, opened[n] ?: Levels.POOL.size, playerDeal)
                     .all { it.puzzleId in solved || PuzzleRegistry.byId(it.puzzleId) == null }
             }
             val done = (opened.keys + solves.keys).filter { it >= 1 && isDone(it) }.toSet()
             val current = opened.keys.filter { it >= 1 && it !in done }.minOrNull() ?: ((done.maxOrNull() ?: 0) + 1)
-            return LevelProgress(current, opened, solves, done)
+            return LevelProgress(current, opened, solves, done, playerDeal)
         }
     }
 }
@@ -296,16 +310,23 @@ class ProgressStore(private val store: KeyValueStore) {
         combine(store.stringSet(KEY_LEVELS), store.stringSet(KEY_LEVEL_SOLVES), LevelProgress::of)
 
     /**
-     * Records that [level] was opened, with today's pool size unless it was opened before, and returns the
-     * pool size its plan must use from now on, so adding a puzzle never changes a level already started.
+     * Records that [level] was opened, with today's pool size and the player's deal unless it was opened before,
+     * and returns the plan it must use from now on, so adding a puzzle or a deal never changes a level already
+     * started. A first level opened gets `Levels.LATEST`; every later one the deal already stored.
      */
-    suspend fun openLevel(level: Int): Int {
-        var size = Levels.POOL.size
+    suspend fun openLevel(level: Int): List<LevelBoard> {
+        var plan = emptyList<LevelBoard>()
         store.updateStringSet(KEY_LEVELS) { existing ->
-            val known = LevelProgress.of(existing, emptySet()).opened[level]
-            if (known != null) existing.also { size = known } else existing + "$level|$size"
+            val p = LevelProgress.of(existing, emptySet())
+            val known = level in p.opened
+            plan = p.plan(level)
+            when {
+                known -> existing
+                p.deal == 1 -> existing + "$level|${Levels.POOL.size}"
+                else -> existing + "$level|${Levels.POOL.size}|${p.deal}"
+            }
         }
-        return size
+        return plan
     }
 
     /**

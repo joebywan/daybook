@@ -92,12 +92,25 @@ JVM, median / p95 / max ms: warm 8.4 / 123 / 420 before, 2.6 / 28 / 68 after; fi
 Teacher first-hint on the x86 Android emulator after the change (Expert, 400 positions, median / p95 / max ms): warm 11 / 94 / 234
 (old search 47 / 585 / 1353), cold first 50 16 / 109 / 263; Hard warm 2.1 / 6.3 / 18. Web wasm, headless Chromium: Expert warm 7 / 74 / 181.
 Budget (emulator p95 <= 300 ms, max <= 1.5 s) is met, so Expert stays mate in 4.
+After the rating bands (Expert 1800+, a quarter quiet keys) the desktop bench is slower, as harder positions should be: Expert warm
+4.9 / 51 / 182, cold first 50 8.4 / 42 / 61; Hard warm 0.8 / 3.1 / 18.5. Scaled by the emulator's ratio above (about 3.4x at p95)
+that is roughly 170 ms p95 and 620 ms max, inside the budget; not yet re-measured on the emulator or the web.
 
 ## Data (`tools/chess/build.py`, `puzzles/ChessPositions.kt`)
 
 - Input: the Lichess puzzle CSV (`lichess_db_puzzle.csv.zst`, CC0, https://database.lichess.org/#puzzles), themes
   `mateIn2`/`mateIn3`/`mateIn4`. In the CSV, `FEN` is the position *before* the opponent's move and `Moves[0]` is
   that move: apply it, store the position after it, and its UCI as `last`.
+- **Each tier is a Lichess rating band as well as a mate length** (`BANDS`, with `RatingDeviation` at most 90 so the
+  rating has settled): Standard mate in 2 rated 700-1199, Hard mate in 3 rated 1300-1749, Expert mate in 4 rated 1800+.
+  Before (no band) the three medians were 1047 / 1346 / 1738 with the middle halves overlapping (825-1329, 1072-1669,
+  1461-2020), so a 2200 mate in 2 could be Standard and a 1300 mate in 4 Expert; now 1010 / 1504 / 2063, no overlap.
+  The gaps of 100 between bands leave room for rating noise. Candidates in band: 288k / 61k / 11k, so the 1,500 a tier
+  are far from the limit (a random daily pick repeats by chance either way; 1,500 is about four years of days).
+- **Expert prefers quiet keys**: every in-band mate in 4 whose Lichess key is neither check nor capture is verified, and up
+  to 400 with a proved quiet key are taken first (561 proved, so 400 of 1,500, 27%; before, 67 of 1,500 by chance). Their
+  median rating is about the same as the rest (2092 against 2049): Lichess's rating does not see them as harder, but a
+  key that gives no check is the classic hard first move, so it is the share and not more.
 - **The build script verifies each candidate with python-chess** (a venv under the scratchpad; do not vendor it):
   shortest forced mate is exactly N, exactly one key move, side to move is the player, not already in check-with-no-
   moves, not too many pieces to read on a phone board (all 32 is fine). Candidates failing any check are dropped.

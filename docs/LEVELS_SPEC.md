@@ -87,7 +87,8 @@ All 24 have one today, so the rule only matters once a puzzle without one is add
 
 In `ProgressStore` (`KeyValueStore.PROGRESS`). New keys only; nothing already on a phone changes shape.
 
-- `levels` — a string set, one entry per level the player has opened: `"n|poolSize"`.
+- `levels` — a string set, one entry per level the player has opened: `"n|poolSize"`, or `"n|poolSize|deal"` since deal 2
+  (see "Deal 2" below; an entry without a deal is deal 1).
 - `level_solves` — a string set, one entry per board solved in a level: `"n|puzzleId|seconds|hints"`.
 - Derived, never stored: the current level is the lowest opened level that is not done, else the highest done plus one. A level
   is done when all five of its plan's puzzle ids have a solve. Level 1 is open from the start.
@@ -181,11 +182,25 @@ differs from the plan above:
   reach levels 1-5.
 - **Tiers** come from `Rng(SeedHash.levelPick(level, ...))` shuffling the curve's multiset, in draw order. The card's line is
   `Levels.summary(boards)`: "All Standard", "Mostly Hard, one Expert", "Two Standard, two Hard, one Expert".
-- **Storage:** `ProgressStore.openLevel(n): Int` writes `"n|poolSize"` once and returns the stored size;
+- **Storage:** `ProgressStore.openLevel(n)` writes `"n|poolSize"` once (now with the deal: see Deal 2) and returns the stored plan;
   `recordLevelSolve(LevelSolve): Boolean` writes `"n|puzzleId|seconds|hints"` unless that puzzle of that level was solved
   before (so a replay records nothing for the level). The caller records the practice `Completion` as well. `levelProgress`
   is a flow of `LevelProgress.of(levels, levelSolves)`, pure: `current`, `opened`, `solves`, `done`, `plan(n)`, `solved(n)`,
   `isUnlocked(n)`.
+- **Deal 2, a gentle first deck (2026-10-25).** Deal 1's deck 0 shuffled the 25 starters freely, so level 1 could hand a
+  newcomer Cipher, Mate, Dominoes and Cages. Deal 2 deals deck 0 in bands of `Levels.GENTLE`, a frozen copy of
+  `PuzzleOrder.GENTLEST` as it stood that day (frozen as `POOL` is, so a later edit to the home order cannot move a plan):
+  level `i` draws five, by one `Rng`, from the cards not yet dealt among the first 10 / 10 / 17 / 25 / 25 of that order.
+  So levels 1-2 are the gentlest ten, level 3 comes from what is left of the gentlest 17, levels 4-5 take the rest, and
+  deck 0 still deals each starter once. Decks 1 on are shuffled as before, but deck 1's repair reads deck 0's tail, so the
+  deal can change any plan, not only 1-5 (today levels 6 on happen to agree): a plan is `(level, poolSize, deal)`.
+  **The deal is per player, not per level.** Mixing them inside deck 0 (levels 1-3 under deal 1, level 4 under deal 2) would
+  repeat some puzzles in levels 1-5 and skip others, and swapping a level mid-deck has no clean repair. So
+  `ProgressStore.openLevel` writes the deal the player already has (`LevelProgress.deal`: the lowest stored, an entry with
+  none being deal 1) and `Levels.LATEST` only when nothing is opened yet. Anyone who opened a level before this build keeps
+  deal 1 everywhere; a new player gets deal 2 everywhere. Entries are still written once, so an opened level never moves.
+  `openLevel` now returns the plan itself. `LevelsTest` pins 50 levels of each deal and runs every rule over both;
+  `LevelProgressTest` covers the old entry, the new one and the mixed history. The parity dump uses the latest deal.
 - **Backup needed no change:** the web export copies every `daybook.*` localStorage entry verbatim, so the two new keys
   travel with it.
 - **Proof:** `LevelBoardsProvedTest` walks levels 1-365 (1,387 boards with a `generateVerified`) and none falls back; about
