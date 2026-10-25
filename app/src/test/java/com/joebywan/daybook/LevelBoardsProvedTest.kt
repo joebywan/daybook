@@ -55,14 +55,16 @@ class LevelBoardsProvedTest {
     )
 
     @Test
-    fun `every level board of levels 1 to 365 is proved`() {
+    fun `every level board of levels 1 to 365 is proved, under every deal`() {
         val began = System.nanoTime()
         val gaveUp = mutableListOf<String>()
         var checked = 0
         val ms = sortedMapOf<String, Long>()
+        val seen = HashSet<Long>() // both deals deal mostly the same boards; prove each once
         for (level in 1..365) {
-            for (b in Levels.plan(level)) {
+            for (b in (1..Levels.LATEST).flatMap { Levels.plan(level, Levels.POOL.size, it) }) {
                 val prove = verified[b.puzzleId] ?: continue
+                if (!seen.add(b.seed)) continue
                 checked++
                 val t = System.nanoTime()
                 val proved = prove(b.seed, b.difficulty)

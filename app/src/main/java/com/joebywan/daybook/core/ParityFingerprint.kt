@@ -40,7 +40,7 @@ object ParityFingerprint {
     fun line(type: PuzzleType, date: String, tier: Difficulty, seed: Long): String =
         "${type.id} $date ${tier.name} seed=$seed ${body(type.generate(seed, tier))}"
 
-    /** A level's five boards at today's pool, one line each: `levels <id> L<n> <TIER> seed=<seed> <body>`. */
+    /** A level's five boards at today's pool and the latest deal, one line each: `levels <id> L<n> <TIER> seed=<seed> <body>`. */
     fun levelLines(level: Int): List<String> = Levels.plan(level).map { b ->
         "levels " + line(PuzzleRegistry.byId(b.puzzleId)!!, "L$level", b.difficulty, b.seed)
     }
@@ -84,7 +84,7 @@ object ParityFingerprint {
             "tray=${s.tray.joinToString(",") { "${it.a}${it.b}" }} answer=${s.answer.joinToString(",") { "${it.first}-${it.second}" }}"
         is SandState -> "c=${s.colours} h=${s.height} tubes=${s.tubes.joinToString("/") { t -> t.joinToString("") }}"
         is PointersState -> "${s.width}x${s.height} arrows=" + s.arrows.joinToString(",") { it.joinToString(".") }
-        is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer}"
+        is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer} opener=${s.opener}"
         is CipherState -> "words=${s.words.joinToString(",")} solution=${s.solution.joinToString("")}"
         is WordWheelState -> "wheel=${s.wheel} ${s.width}x${s.height} slots=" +
             s.slots.joinToString(";") { "${it.word}@${it.row},${it.col}${if (it.across) "a" else "d"}" }

@@ -54,7 +54,7 @@ internal object LexiconSupport {
         val steps = ArrayList<LexiconTeacher.Step>()
         var solved = false
         while (guesses.size < s.maxGuesses && !solved) {
-            val step = LexiconTeacher.teach(s.length, guesses, marks, "")
+            val step = LexiconTeacher.teach(s.length, guesses, marks, "", s.opener)
                 ?: error("no hint for ${s.answer} after $guesses")
             steps += step
             val word = when (val m = step.move) {
