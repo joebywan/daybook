@@ -37,7 +37,8 @@ package com.joebywan.daybook.puzzles
  * for a single left 95 Expert boards needing the fallback somewhere: the 24-clue Expert boards are
  * dug for uniqueness, not rated, and many need chains no four-line hint can carry. A step cannot
  * leave eliminations behind for the next one, so every step has to end in a placement, and that
- * is the ceiling here.
+ * is the ceiling here. Since 2026-10 the generator digs only while this ladder finishes the board
+ * ([depth], `Sudoku.generateVerified`), so no generated board reaches the fallback.
  *
  * Orders never come from a hash: every loop walks cells, units or digits in index order, so the same
  * board gets the same hint on every platform (CLAUDE.md, "Hash iteration order").
@@ -234,14 +235,32 @@ internal object SudokuTeacher {
      * Takes no answer on purpose — see the class comment. [cells] is 81 digits, 0 for empty; the
      * caller has already dealt with any that are mistakes.
      */
-    fun deduce(cells: List<Int>): Step? {
+    fun deduce(cells: List<Int>, ceiling: String = WHAT_IF): Step? {
         val sight = sightOf(cells)
+        val top = TECHNIQUES.indexOf(ceiling)
         return fullHouse(sight)
             ?: hiddenSingle(sight, Kind.BOX)
             ?: hiddenSingle(sight, null)
-            ?: nakedSingle(sight)
-            ?: withElimination(sight)
-            ?: whatIf(sight)
+            ?: (if (top >= TECHNIQUES.indexOf(NAKED_SINGLE)) nakedSingle(sight) else null)
+            ?: (if (top >= TECHNIQUES.indexOf(LOCKED)) withElimination(sight) else null)
+            ?: (if (top >= TECHNIQUES.indexOf(WHAT_IF)) whatIf(sight) else null)
+    }
+
+    /**
+     * How deep a walk by [deduce] goes to finish [cells] from the start, applying every step: the index in [TECHNIQUES]
+     * of the deepest technique it used (-1 for a full grid), or null when it stops short, so the board needs more than
+     * [ceiling] (the generator's gate, `Sudoku.generateVerified`). [ceiling] is [HIDDEN_SINGLE_LINE] (singles in a unit),
+     * [NAKED_SINGLE] or [WHAT_IF] (everything); the eliminations come and go together, so no ceiling falls between.
+     */
+    fun depth(cells: List<Int>, ceiling: String = WHAT_IF): Int? {
+        val grid = cells.toMutableList()
+        var deepest = -1
+        while (0 in grid) {
+            val step = deduce(grid, ceiling) ?: return null
+            deepest = maxOf(deepest, TECHNIQUES.indexOf(step.technique))
+            grid[step.cell] = step.digit
+        }
+        return deepest
     }
 
     private fun fullHouse(s: Sight): Step? {
@@ -470,39 +489,61 @@ internal object SudokuTeacher {
     /** The digits a supposition forces, in order, and where it breaks. */
     private class Chain(val forced: List<Pair<Int, Int>>, val broken: Contradiction)
 
-    private fun contradiction(s: Sight): Contradiction? {
-        for (c in 0 until 81) if (s.cells[c] == 0 && s.cand[c] == 0) return Contradiction(c, null, 0)
-        for (u in units) for (d in 1..9) {
-            if (!s.holds(u, d) && s.places(u, d).isEmpty()) return Contradiction(null, u, d)
+    /*
+     * The chain is the hot loop of a hint and of the generator's dig (every what-if tried on every board it digs), so it
+     * keeps the digits and candidates in arrays, strikes a placed digit from its peers in place, and allocates nothing
+     * per unit. The candidates it keeps are exactly [sightOf] of the digits so far: [whatIf] is handed a fresh sight
+     * with nothing struck off. A filled cell's mask is 0, so a held digit is never counted as a place.
+     */
+
+    /** Where [cells] breaks: the first empty cell with no digit left, else the first unit with no place for a digit. */
+    private fun contradiction(cells: IntArray, cand: IntArray): Contradiction? {
+        for (c in 0 until 81) if (cells[c] == 0 && cand[c] == 0) return Contradiction(c, null, 0)
+        for (u in units) {
+            var held = 0
+            var free = 0
+            for (c in u.cells) if (cells[c] != 0) held = held or bit(cells[c]) else free = free or cand[c]
+            for (d in 1..9) if (!has(held or free, d)) return Contradiction(null, u, d)
         }
         return null
     }
 
-    /** A single on [s]: hidden in a box, hidden in a line, then naked. The same order [deduce] uses. */
-    private fun anySingle(s: Sight): Pair<Int, Int>? {
+    /** A single on [cells]: hidden in a box, hidden in a line, then naked. The same order [deduce] uses. */
+    private fun anySingle(cells: IntArray, cand: IntArray): Pair<Int, Int>? {
         for (boxFirst in listOf(true, false)) for (u in units) {
             if ((u.kind == Kind.BOX) != boxFirst) continue
-            for (d in 1..9) {
-                if (s.holds(u, d)) continue
-                val places = s.places(u, d)
-                if (places.size == 1) return places[0] to d
+            var once = 0
+            var twice = 0
+            for (c in u.cells) {
+                twice = twice or (once and cand[c])
+                once = once or cand[c]
             }
+            val single = once and twice.inv()
+            if (single == 0) continue
+            val d = single.countTrailingZeroBits()
+            return u.cells.first { has(cand[it], d) } to d
         }
-        for (c in 0 until 81) if (s.cells[c] == 0 && s.cand[c].countOneBits() == 1) return c to digitsOf(s.cand[c])[0]
+        for (c in 0 until 81) if (cells[c] == 0 && cand[c].countOneBits() == 1) return c to cand[c].countTrailingZeroBits()
         return null
     }
 
     /** With [cell] supposed to be [digit], the forced singles up to [MAX_CHAIN] and where they break. */
     private fun chainFrom(s: Sight, cell: Int, digit: Int): Chain? {
-        var cells = s.cells.toMutableList().also { it[cell] = digit }
+        val cells = s.cells.toIntArray()
+        val cand = s.cand.copyOf()
+        fun place(c: Int, d: Int) {
+            cells[c] = d
+            cand[c] = 0
+            for (p in Sudoku.peers(c)) cand[p] = cand[p] and bit(d).inv()
+        }
+        place(cell, digit)
         val forced = mutableListOf<Pair<Int, Int>>()
         while (true) {
-            val cur = sightOf(cells)
-            contradiction(cur)?.let { return Chain(forced.toList(), it) }
+            contradiction(cells, cand)?.let { return Chain(forced.toList(), it) }
             if (forced.size == MAX_CHAIN) return null
-            val (c, d) = anySingle(cur) ?: return null
+            val (c, d) = anySingle(cells, cand) ?: return null
             forced += c to d
-            cells = cells.toMutableList().also { it[c] = d }
+            place(c, d)
         }
     }
 
@@ -510,6 +551,7 @@ internal object SudokuTeacher {
         var best: Step? = null
         var bestLength = Int.MAX_VALUE
         fun consider(target: Int, digit: Int, supposed: Int, supposedDigit: Int, lead: String, close: String) {
+            if (bestLength == 0) return // nothing can be shorter
             val chain = chainFrom(s, supposed, supposedDigit) ?: return
             if (chain.forced.size >= bestLength) return
             val digits = chain.forced.mapIndexed { i, (_, d) ->
