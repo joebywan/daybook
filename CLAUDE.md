@@ -359,8 +359,11 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   `rememberSaveable` count that reorders the display only; one accepted word is one state. The gesture is keyed on the wheel and reads
   the board through `rememberUpdatedState` (Snap's lesson). The notice uses the header line, whose room is always kept.
 - **Teacher:** `PINNED` (an empty slot whose length, crossing letters and the wheel leave one grid word, found and bonus words excluded:
-  reads the public grid list, never a slot's word; given as that word's clue, as Lexicon's hints are: only "Show me" types it) then `CLUE` (the slot with the fewest words that fit, given as its word's clue: reads
-  the stored word, so it is the fallback). No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
+  reads the public grid list, never a slot's word; given as that word's clue, as Lexicon's hints are: only "Show me" types it), then `CROSSING` (of the words that fit an empty slot,
+  only one leaves every empty slot crossing it a different word that fits and agrees at the crossing; same list, same clue), then `CLUE` (the slot with the fewest words that fit, given as its word's clue: reads
+  the stored word, so it is the fallback: 33 / 37 / 33% of steps over a year a tier, and an exhaustive search of every consistent filling
+  pins only 0.1-0.2 points more, so the rest is honestly open). The generator's `walk` keeps the old ladder (`crossings = false`) so a
+  stronger teacher never moves a board. No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
   `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.
 
 ## Tally (keep the numbers that make every sum)

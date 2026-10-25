@@ -50,9 +50,10 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
 - [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
-  (`tools/words/wheel-clues.txt`); cluing more widens the boards (every added word moves daily boards, as Lexicon's do). About 40% of
-  hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
-  reasoning. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
+  (`tools/words/wheel-clues.txt`); cluing more widens the boards (every added word moves daily boards, as Lexicon's do). About a third of
+  hint steps are still the clue fallback, and no reasoning over what shows can cut that (an exhaustive search of every filling pins
+  0.1-0.2 points more, `docs/TEACHING.md`): only the boards can. The generator could reject boards whose hints-alone walk (with
+  `crossing`) needs many clues; that moves daily boards and costs attempts, not measured. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
 
 - [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far (an Undo of the restart hands them back), and Target's "steps" is the
   operations still on the board at the finish (not only those that build the target); both are simple readings the owner may
@@ -186,8 +187,7 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
 - [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
-- [ ] **Teacher upgrades already listed:** Word Wheel's "two slots, two words", Cage Sudoku naming the cage chain, Regions'
-  locked candidate.
+- [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
 - [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
   lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
   fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
