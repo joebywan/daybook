@@ -8,6 +8,7 @@ import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.ui.play.NextKind
 import com.joebywan.daybook.ui.play.NextOption
 import com.joebywan.daybook.ui.play.mainOption
+import com.joebywan.daybook.ui.play.nextToday
 import com.joebywan.daybook.ui.play.nextOptions
 import com.joebywan.daybook.ui.play.pillOption
 import com.joebywan.daybook.ui.play.tiersDoneOn
@@ -26,6 +27,7 @@ class NextStepsTest {
         val where = when (it.kind.name) {
             "RANDOM" -> "random:${it.difficulty!!.name}"
             "DAILY" -> "daily:${it.difficulty!!.name}"
+            "TODAY" -> "today:${it.puzzleId}:${it.difficulty!!.name}"
             else -> "home"
         }
         "${it.label}>$where"
@@ -195,4 +197,27 @@ class NextStepsTest {
     }
 
     @Test fun `a random board's pill is Another`() = assertEquals("Another>random:HARD", pill(false, HARD))
+
+    // ---- next puzzle today ----
+
+    @Test fun `next puzzle today leads the daily's buttons, is the filled one and the pill's`() {
+        val options = nextOptions(daily = true, tier = HARD, doneTiers = emptySet(), today = "kings")
+        assertEquals(
+            listOf("Next puzzle today>today:kings:HARD", "Easier Daily>daily:STANDARD", "Random>random:HARD", "Harder Daily>daily:EXPERT", "Done>home"),
+            render(options),
+        )
+        assertEquals("Kings · Hard", options.first().note)
+        assertEquals("Next puzzle today", mainOption(options)?.label)
+        assertEquals("Next puzzle today", pillOption(options)?.label)
+    }
+
+    @Test fun `the next puzzle is the three's first undone, then the home order's, never the board just solved`() {
+        val three = listOf("a", "b", "c")
+        val order = listOf("x", "c", "a", "y", "b")
+        assertEquals("b", nextToday(three, order, HARD, setOf("b" to STANDARD), justSolved = "a"))
+        assertEquals("c", nextToday(three, order, HARD, setOf("b" to HARD), justSolved = "a"))
+        // The three done at this tier: the home order, skipping what is done.
+        assertEquals("y", nextToday(three, order, HARD, setOf("a" to HARD, "b" to HARD, "x" to HARD), justSolved = "c"))
+        assertEquals(null, nextToday(three, order, HARD, (order - "y").map { it to HARD }.toSet(), justSolved = "y"))
+    }
 }

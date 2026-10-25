@@ -101,6 +101,7 @@ import com.joebywan.daybook.data.PuzzleOrder
 import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.ui.LocalHaptics
 import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.play.ShareCard
 import com.joebywan.daybook.ui.stats.MedalIcon
 import com.joebywan.daybook.platform.GetTheAppCard
 import com.joebywan.daybook.platform.formatDate
@@ -124,7 +125,7 @@ private const val COLUMNS = 3
 private const val MAX_COLUMNS = 7
 private val MinTileWidth = 150.dp
 private val MinShortTileWidth = 110.dp
-private val TileGap = 8.dp
+internal val TileGap = 8.dp
 private val TilePadding = 6.dp
 
 /** A tile's height less its motif: padding, the gap, one line of name, the gap and the tier dots. */
@@ -175,7 +176,9 @@ fun HomeScreen(
     onStats: () -> Unit,
     onAchievements: () -> Unit,
     onSettings: () -> Unit,
-    pick: String,
+    three: List<PuzzleType>,
+    onThree: (String) -> Unit,
+    threeCard: ShareCard?,
     puzzles: List<PuzzleType>,
     inProgress: () -> Set<String>,
     customOrder: Boolean,
@@ -194,7 +197,7 @@ fun HomeScreen(
     // What the header and the pinned rows take, so the grid knows the height left for its tiles (homeColumns).
     var headerHeight by remember { mutableStateOf(0) }
     var optionsHeight by remember { mutableStateOf(0) }
-    var resumeHeight by remember { mutableStateOf(0) }
+    var threeHeight by remember { mutableStateOf(0) }
     val density = LocalDensity.current
     val list = rememberLazyListState()
     // Where the grid shows, in root pixels: from the pinned rows' foot to the list's. Plain fields, read by a drag only.
@@ -219,7 +222,7 @@ fun HomeScreen(
     ) {
         // A phone on its side. A tablet in landscape is taller than this and keeps the stacked rows.
         val short = maxHeight < 480.dp && maxWidth > maxHeight
-        val gridHeight = maxHeight - TopPadding - with(density) { (headerHeight + optionsHeight).toDp() }
+        val gridHeight = maxHeight - TopPadding - with(density) { (headerHeight + optionsHeight + threeHeight).toDp() }
         // The tier and Daily/Random rows stay pinned while the title and the grid scroll under them, so a player
         // halfway down the grid can change either without scrolling back. The grid is sized to fit without
         // scrolling, but a short screen or a large font scale can still overflow it.
@@ -258,7 +261,14 @@ fun HomeScreen(
                     LaunchOptions(difficulty, onDifficulty, mode, onMode, levelStrip = { LevelStrip(levels, onLevels) }, sideBySide = short)
                 }
             }
-            resumeShown?.let { (puzzle, tier) -> item { ContinueRow(puzzle, tier, Modifier.onSizeChanged { resumeHeight = it.height }) { onLaunch(puzzle.id) } } }
+            // Always laid out, so the grid under it never moves; unseen in Levels, whose boards are a set of their own.
+            item {
+                TodaysThreeRow(
+                    three, difficulty, doneToday, threeCard, shown = mode != LaunchMode.LEVELS, onPlay = onThree,
+                    modifier = Modifier.onSizeChanged { threeHeight = it.height },
+                )
+            }
+            resumeShown?.let { (puzzle, tier) -> item { ContinueRow(puzzle, tier, Modifier) { onLaunch(puzzle.id) } } }
             if (mode == LaunchMode.LEVELS) item {
                 // The level's draw order, not the arranged one: a level is a set the player is given, in the order dealt.
                 LevelGrid(levels, levels.current, onPlay = onLaunch, onAllLevels = onLevels, height = gridHeight, inProgress = inProgress)
@@ -269,10 +279,7 @@ fun HomeScreen(
                     difficulty = difficulty,
                     // Today's dailies in either mode: a random solve never marks a tile, so Random keeps the daily marks.
                     doneToday = doneToday,
-                    pick = pick,
                     height = gridHeight,
-                    // The Continue row takes room from the first screen, not from the grid's own sizing.
-                    shownHeight = gridHeight - with(density) { (if (resumeShown != null) resumeHeight else 0).toDp() },
                     onLaunch = onLaunch,
                     onOrder = onOrder,
                     scroll = { list.scrollBy(it) },
@@ -490,9 +497,7 @@ private fun PuzzleGrid(
     inProgress: () -> Set<String>,
     difficulty: Difficulty,
     doneToday: Set<Pair<String, Difficulty>>,
-    pick: String,
     height: Dp,
-    shownHeight: Dp,
     onLaunch: (String) -> Unit,
     onOrder: (List<String>) -> Unit,
     scroll: suspend (Float) -> Float,
@@ -503,8 +508,6 @@ private fun PuzzleGrid(
     val moveSpec: AnimationSpec<Offset> = if (still) snap() else tween(MOVE_MS)
     val liftSpec: AnimationSpec<Float> = if (still) snap() else tween(MOVE_MS)
     val byId = puzzles.associateBy { it.id }
-    // "Try me!" is for the day, not the tier: gone once any tier of the pick is solved today.
-    val pickDone = Difficulty.entries.any { (pick to it) in doneToday }
     val justSolved = LocalJustSolved.current
     var drag by remember { mutableStateOf<Drag?>(null) }
     // Each row's height, from the last layout: a row is as tall as its tallest tile.
@@ -517,17 +520,7 @@ private fun PuzzleGrid(
         val tileW = with(density) { tileWidth(maxWidth, columns).roundToPx() }
         val gap = with(density) { TileGap.roundToPx() }
         val gridW = with(density) { maxWidth.roundToPx() }
-        // Today's pick sits in the last square of the first screen when the player's order puts it further down: shown
-        // there for the day, never stored. Rows counted at one line of name; a wrapped name can leave it partly below.
-        val stored = puzzles.map { it.id }
-        val rowsShown = ((shownHeight + TileGap) / (previewSize + TileChrome + TileGap)).toInt().coerceAtLeast(1)
-        val pickAt = stored.indexOf(pick)
-        val pickSlot = minOf(rowsShown * columns, stored.size) - 1
-        val ids = if (pickAt > pickSlot) PuzzleOrder.moved(stored, pickAt, pickSlot) else stored
-        // A new order from the shown one; the pick goes back to its own place unless it was the tile moved.
-        fun reorder(order: List<String>, mover: String) = onOrder(
-            if (ids == stored || mover == pick) order else order.minus(pick).let { it.take(pickAt) + pick + it.drop(pickAt) },
-        )
+        val ids = puzzles.map { it.id }
         val rows = (ids.size + columns - 1) / columns
         fun top(row: Int) = (0 until row).sumOf { rowHeights.getOrElse(it) { 0 } + gap }
         fun rowAt(y: Float) = (0 until rows).lastOrNull { top(it) <= y } ?: 0
@@ -583,7 +576,7 @@ private fun PuzzleGrid(
                         val lift by animateFloatAsState(if (d?.id == id) 1f else 0f, liftSpec, label = "lift")
                         val index = ids.indexOf(id)
                         PuzzleTile(
-                            byId.getValue(id), (id to difficulty) in doneToday, isPick = id == pick && !pickDone, inProgress, previewSize,
+                            byId.getValue(id), (id to difficulty) in doneToday, inProgress, previewSize,
                             cornerTick = false,
                             // A long press held still and let go is not a tap: the click lands before the drag ends.
                             onClick = { if (drag == null) onLaunch(id) },
@@ -599,10 +592,10 @@ private fun PuzzleGrid(
                                 .semantics {
                                     customActions = listOfNotNull(
                                         if (index > 0) CustomAccessibilityAction("Move earlier") {
-                                            reorder(PuzzleOrder.moved(ids, index, index - 1), id); true
+                                            onOrder(PuzzleOrder.moved(ids, index, index - 1)); true
                                         } else null,
                                         if (index < ids.lastIndex) CustomAccessibilityAction("Move later") {
-                                            reorder(PuzzleOrder.moved(ids, index, index + 1), id); true
+                                            onOrder(PuzzleOrder.moved(ids, index, index + 1)); true
                                         } else null,
                                     )
                                 },
@@ -641,7 +634,7 @@ private fun PuzzleGrid(
                             drag = null
                             if (held != null) {
                                 val from = ids.indexOf(held.id)
-                                if (to != null && to != from) reorder(PuzzleOrder.moved(ids, from, to), held.id)
+                                if (to != null && to != from) onOrder(PuzzleOrder.moved(ids, from, to))
                                 haptics.tick()
                             }
                         },
@@ -707,7 +700,6 @@ internal fun TileGrid(count: Int, height: Dp, tile: @Composable (index: Int, pre
 internal fun PuzzleTile(
     puzzle: PuzzleType,
     solved: Boolean,
-    isPick: Boolean,
     inProgress: () -> Set<String>,
     previewSize: Dp,
     onClick: () -> Unit,
@@ -716,9 +708,7 @@ internal fun PuzzleTile(
     footer: @Composable (accent: Color) -> Unit,
 ) {
     val accent = Color(puzzle.accent)
-    // A started pick shows "In progress" alone: the invitation has been taken up, and two labels cannot share a thumbnail.
     val started = puzzle.id in inProgress()
-    val marked = isPick && !solved && !started
     HomeTile(
         name = puzzle.displayName,
         accent = accent,
@@ -726,12 +716,9 @@ internal fun PuzzleTile(
         justSolved = solved && LocalJustSolved.current?.first == puzzle.id,
         cornerTick = cornerTick,
         onClick = onClick,
-        // Today's pick (unsolved): gold ring and sparkles, drawn inside the tile, so nothing moves.
         modifier = modifier,
-        frame = if (marked) Modifier.sparkleFrame() else Modifier,
         motif = {
             puzzle.Preview(Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)))
-            if (marked) TryMeLabel(previewSize, Modifier.align(Alignment.Center))
             if (started) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
         },
         footer = { footer(accent) },
