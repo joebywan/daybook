@@ -63,8 +63,8 @@ data class LitsState(
      *
      * A LITS board can admit more than one legal shading, and this used to read
      * `shaded == solution`: a player who found a different but entirely valid answer was told they
-     * had not finished. [solution] is still carried because [Lits.hint] has to nudge towards
-     * *some* answer, but it no longer decides anything.
+     * had not finished. [solution] is still carried because the teacher's mistakes and fallback
+     * lean on *some* answer, but it no longer decides anything.
      */
     override val solved: Boolean get() = Lits.isSolved(width, height, region, shaded)
 
@@ -1148,17 +1148,11 @@ object Lits : PuzzleType {
     /** The share of a cell a crossed-off square keeps clear, matching Kings' crosses. */
     private const val CROSS_INSET = 0.28f
 
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as LitsState
-        val wrong = s.shaded.indices.firstOrNull { s.shaded[it] != s.solution[it] } ?: return null
-        return s.toggle(wrong)
-    }
-
     // ---- teaching -----------------------------------------------------------------------------
 
     /**
-     * A mistake to take back or a step to reason out — see [LitsTeacher]. Replaces the old [hint],
-     * which toggled a square straight out of [LitsState.solution] and taught nothing.
+     * A mistake to take back or a step to reason out — see [LitsTeacher]. Never null on an unsolved
+     * board (the fallback shades a square of some answer), so `hint()` is never reached.
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as LitsState

@@ -103,9 +103,7 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
 - **Parity:** `DAYBOOK_PARITY_DUMP=<file> ./gradlew :app:testDebugUnitTest --tests
   '*WebParityDumpTest*'` writes the JVM's year in the same order; strip `RANGE ` from the page's
   lines and the files must be identical. The same file, taken before and after a change, is how
-  Android boards are proved unchanged. `WebParityTest` (Kings, and the shared `PARITY_DATES`),
-  `MosaicAtomsWebParityTest`, `WebParityShikakuSnapSudokuTest`, `WebParityMamboPipesSetsTowerTest` and one
-  `<Puzzle>WebParityTest` for each later puzzle pin a few boards per puzzle outright. For LITS alone,
+  Android boards are proved unchanged. `BoardPinTest` pins nine boards of every puzzle outright. For LITS alone,
   `DAYBOOK_LITS_DUMP=<file>` (`DAYBOOK_LITS_DAYS`, default 730) runs `LitsYearDumpTest`: the same
   lines over two years plus per-board JVM times in `<file>.times`.
 

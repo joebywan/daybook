@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.LexiconWords
 import com.joebywan.daybook.puzzles.WheelEntry
@@ -16,16 +15,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class WordWheelRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private val lenient = Json { ignoreUnknownKeys = true }
 
     private fun daily(day: Int, d: Difficulty): WordWheelState? =
-        WordWheel.generateVerified(DailySeed.seedFor(start.plusDays(day.toLong()), WordWheel.id, d), d)
+        WordWheel.generateVerified(daySeed(day, WordWheel.id, d), d)
 
     @Test
     fun `a word fills its own slot, a real word is a bonus, and nothing else changes the board`() {
@@ -128,37 +124,9 @@ class WordWheelRulesTest {
                     "sizes $sizes\n",
             )
         }
-        File("build/reports").mkdirs()
-        File("build/reports/wordwheel-generation.txt").writeText(report.toString())
+        writeReport("wordwheel-generation.txt", report.toString())
         println(report)
         assertTrue("the tiers get harder in the order they are offered: $means", means[0] < means[1] && means[1] < means[2])
-    }
-
-    @Test
-    fun `how often a board needs a second attempt`() {
-        val report = StringBuilder()
-        for (d in Difficulty.entries) {
-            val attempts = IntArray(WordWheelLogic.ATTEMPTS + 1)
-            for (day in 0 until 365) {
-                val seed = DailySeed.seedFor(start.plusDays(day.toLong()), WordWheel.id, d)
-                // Lay one attempt at a time: the first whose board is the one shipped is the attempt that shipped.
-                val b = WordWheel.generateVerified(seed, d)
-                val used = (1..WordWheelLogic.ATTEMPTS).firstOrNull { n -> b != null && attemptBoard(seed, d, n - 1) == b } ?: 0
-                attempts[used]++
-            }
-            report.append("${d.name}: attempts used ${attempts.withIndex().filter { it.value > 0 }.joinToString { "${it.index}x${it.value}" }}\n")
-        }
-        File("build/reports").mkdirs()
-        File("build/reports/wordwheel-attempts.txt").writeText(report.toString())
-        println(report)
-    }
-
-    private fun attemptBoard(seed: Long, d: Difficulty, attempt: Int): WordWheelState? {
-        val spec = WordWheelLogic.specFor(d)
-        val rng = com.joebywan.daybook.core.Rng(seed + attempt)
-        val roots = WheelWords.roots(spec.letters)
-        val root = roots[rng.nextInt(roots.size)]
-        return WordWheelLogic.lay(root, spec, rng)
     }
 
     @Test

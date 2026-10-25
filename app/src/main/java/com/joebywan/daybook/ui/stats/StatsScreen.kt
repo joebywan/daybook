@@ -136,7 +136,7 @@ fun StatsScreen(
             item {
                 val streak = Stats.streak(completions, today)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Tile("Solved", Stats.totalSolved(completions).toString(), Modifier.weight(1f))
+                    Tile("Solved", completions.size.toString(), Modifier.weight(1f))
                     Tile(
                         if (streak.lapsed) "Welcome back" else "Streak",
                         if (streak.alive) streak.current.toString() else "-",

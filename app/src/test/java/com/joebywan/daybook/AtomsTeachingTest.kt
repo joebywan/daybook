@@ -14,7 +14,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 
 /**
@@ -28,10 +27,6 @@ import java.time.LocalDate
  * has it.
  */
 class AtomsTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String = "atoms-teach") = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     // ---- independent rules --------------------------------------------------------------------
 
@@ -177,7 +172,7 @@ class AtomsTeachingTest {
     @Test
     fun `every step on a real board agrees with the answer and adds a bond`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(40, difficulty)) {
+            for (seed in seeds(40, difficulty, "atoms-teach")) {
                 var s = Atoms.generate(seed, difficulty) as AtomsState
                 var guard = 0
                 while (!s.solved) {
@@ -335,8 +330,7 @@ class AtomsTeachingTest {
             )
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/atoms-teaching-coverage.txt").writeText(report.toString())
+        writeReport("atoms-teaching-coverage.txt", report.toString())
     }
 
     // ---- mistakes -------------------------------------------------------------------------------

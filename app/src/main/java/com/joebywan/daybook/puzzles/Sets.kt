@@ -388,24 +388,11 @@ object Sets : PuzzleType {
         }
     }
 
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as SetsState
-        val next = allSets(s.cards).firstOrNull { it !in s.found } ?: return null
-        return s.copy(
-            found = s.found + listOf(next),
-            selected = emptyList(),
-            lastWrong = false,
-            lastRepeat = false,
-            lastPick = emptyList(),
-            moves = s.moves + 1,
-        )
-    }
-
     // ---- teaching --------------------------------------------------------------------------
 
     /**
-     * A pick to rethink or a set to find — see [SetsTeacher]. Replaces the old `hint()`, which put
-     * a whole set straight into the strip and taught nothing about how it was found.
+     * A pick to rethink or a set to find — see [SetsTeacher]. Never null on an unsolved board, so
+     * the play screen never falls back to `hint()`.
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as SetsState

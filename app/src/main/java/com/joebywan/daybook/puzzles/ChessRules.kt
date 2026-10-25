@@ -18,32 +18,6 @@ class ChessPosition internal constructor(
 ) {
     fun pieceAt(sq: Int): Int = this.sq[sq]
 
-    fun toFen(): String {
-        val sb = StringBuilder()
-        for (r in 7 downTo 0) {
-            var empty = 0
-            for (f in 0..7) {
-                val v = sq[r * 8 + f]
-                if (v == 0) { empty++; continue }
-                if (empty > 0) { sb.append(empty); empty = 0 }
-                val c = LETTERS[abs(v)]
-                sb.append(if (v > 0) c else c.lowercaseChar())
-            }
-            if (empty > 0) sb.append(empty)
-            if (r > 0) sb.append('/')
-        }
-        sb.append(if (whiteToMove) " w " else " b ")
-        if (castling == 0) sb.append('-') else {
-            if (castling and 1 != 0) sb.append('K')
-            if (castling and 2 != 0) sb.append('Q')
-            if (castling and 4 != 0) sb.append('k')
-            if (castling and 8 != 0) sb.append('q')
-        }
-        sb.append(' ')
-        if (ep < 0) sb.append('-') else sb.append(('a' + ep % 8)).append(('1' + ep / 8))
-        return sb.toString()
-    }
-
     companion object {
         internal const val LETTERS = " PNBRQK"
 
