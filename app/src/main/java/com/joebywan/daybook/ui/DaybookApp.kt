@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui
 
+import com.joebywan.daybook.core.SeedHash
 import kotlinx.coroutines.flow.Flow
 import com.joebywan.daybook.data.levelBoardDone
 import androidx.compose.runtime.Composable
@@ -290,7 +291,7 @@ private fun DaybookScreens(
                     levelBoards.orEmpty().associate { savedGameKey(it.puzzleId, it.difficulty, it.seed) to it.puzzleId }
                 } else PuzzleRegistry.all.mapNotNull { p ->
                     val seed = when (mode) {
-                        LaunchMode.RANDOM -> DailySeed.randomSeed(
+                        LaunchMode.RANDOM -> SeedHash.random(
                             p.id, difficulty, store.currentRandomNonce(p.id, difficulty) ?: return@mapNotNull null,
                         )
                         else -> DailySeed.seedFor(today, p.id, difficulty)
@@ -414,7 +415,7 @@ private fun DaybookScreens(
                 val seed = when {
                     levelBoard != null -> levelBoard.seed
                     current.day != null -> DailySeed.seedFor(current.day, puzzle.id, difficulty)
-                    else -> DailySeed.randomSeed(puzzle.id, difficulty, current.nonce)
+                    else -> SeedHash.random(puzzle.id, difficulty, current.nonce)
                 }
                 val gameKey = savedGameKey(puzzle.id, difficulty, seed)
                 val options = if (level != null) {

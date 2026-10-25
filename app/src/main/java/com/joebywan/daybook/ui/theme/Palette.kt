@@ -9,8 +9,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Colours and type, kept apart from [DaybookTheme] because that reaches for the Android window
-// and this does not: the web build compiles this file as it stands and wraps it in its own theme.
+// Colours and type; [DaybookTheme] picks the scheme, and both builds compile this file as it stands.
 
 private val Ink = Color(0xFF11201C)
 private val InkSoft = Color(0xFF1B2F29)

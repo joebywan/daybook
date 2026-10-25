@@ -1,12 +1,9 @@
 package com.joebywan.daybook.core
 
 /**
- * The arithmetic behind [DailySeed], with no platform types in it.
- *
- * Split out of [DailySeed] so that the web build compiles this very file rather than a copy of it:
- * [DailySeed] speaks `java.time.LocalDate`, which Kotlin/Wasm does not have, while everything that
- * decides which board a date gets lives here and takes the date as an epoch day. Two copies of this
- * code would be two chances for a phone and a browser to disagree about today's puzzle.
+ * Every board's seed: a daily's from its epoch day ([DailySeed] passes a date's), a random game's from its nonce, a
+ * level board's from its level. One copy, compiled by both builds, so a phone and a browser cannot disagree about
+ * today's puzzle.
  */
 object SeedHash {
 
@@ -17,6 +14,7 @@ object SeedHash {
         return h
     }
 
+    /** A random game's seed: a fresh [nonce] (a counter or a random number) gives a fresh board. */
     fun random(puzzleId: String, difficulty: Difficulty, nonce: Long): Long =
         mix(nonce xor puzzleId.stableHash() xor (difficulty.ordinal * 0x9E3779B9L))
 

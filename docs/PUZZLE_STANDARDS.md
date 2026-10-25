@@ -122,7 +122,7 @@ Rules for the tiers:
 ## 4. Generation
 
 **Seeding.** `core/DailySeed.seedFor(date, puzzleId, difficulty)` -> `core/SeedHash.daily` for the daily
-board; `randomSeed` for random boards. Use only `core/Rng` (splitmix64, hand-rolled so it cannot drift): never
+board; `SeedHash.random` for random boards. Use only `core/Rng` (splitmix64, hand-rolled so it cannot drift): never
 `kotlin.random`, `java.util.Random`, `Math.random`, clocks or counters. Retry with `Rng(seed + attempt)` so a
 board that needs three attempts still depends only on its seed (`Kings.generateVerified`).
 

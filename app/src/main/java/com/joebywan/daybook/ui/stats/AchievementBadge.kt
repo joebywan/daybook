@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.stats
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -55,7 +56,7 @@ private fun colourOf(c: AchievementCategory, dark: Boolean) = when (c) {
 fun AchievementBadge(id: String, earned: Boolean, modifier: Modifier = Modifier) {
     val a = ACHIEVEMENTS.first { it.id == id }
     val scheme = MaterialTheme.colorScheme
-    val dark = scheme.background.luminance() < 0.5f
+    val dark = BoardHues.isDark(scheme)
     val fill = colourOf(a.category, dark)
     val glyph = BADGE_GLYPHS.getValue(id)
     val ink = if (fill.luminance() > 0.35f) Color(0xFF11201C) else Color.White
