@@ -157,51 +157,52 @@ fun shareCard(
     var suffix = ""
     val lines: List<ShareLine>
     val key: List<Pair<Mark, String>>
-    val nudge: String
     // A daily comes back tomorrow; a random or level board does not, so its nudges look to the next one instead.
     val next = if (date != null) "tomorrow" else "next time"
     val nextCap = next.replaceFirstChar { it.uppercase() }
-    val hintedNudge = "The hints got you there. Try ${if (date != null) "tomorrow's" else "the next one"} with fewer."
+    // Rows are the final guesses; the log's live moves are the last of them (an older save logged none before).
+    fun hintedRows(guessed: Int): (Int) -> Boolean {
+        val live = moves.filter { !it.undone && !it.wrong }
+        val offset = guessed - live.size
+        return { row -> live.getOrNull(row - offset)?.hinted == true }
+    }
+    fun guessNudge(guessed: Int) =
+        if (guessed == 1) "First guess. Nothing to improve on." else "No hints, ${plural(guessed, "guess", "guesses")}. Fewer $next?"
+    // Every nudge below is for a solve without hints; one with them gets the same line whatever the puzzle.
+    val own: String
     when (state) {
-        is LexiconState, is TowerState -> {
-            // Rows are the final guesses; the log's live moves are the last of them (an older save logged none before).
-            val guessed = if (state is LexiconState) state.guesses.size else (state as TowerState).guesses.size
-            val live = moves.filter { !it.undone && !it.wrong }
-            val offset = guessed - live.size
-            fun hinted(row: Int) = live.getOrNull(row - offset)?.hinted == true
-            if (state is LexiconState) {
-                suffix = " · $guessed/${state.maxGuesses}"
-                lines = state.allMarks.mapIndexed { row, marks ->
-                    ShareLine(marks.map {
-                        when (it) { LexiconMark.CORRECT -> Mark.GREEN; LexiconMark.PRESENT -> Mark.YELLOW; else -> Mark.WHITE }
-                    }, hinted(row))
-                }
-                key = listOf(Mark.GREEN to "right place", Mark.YELLOW to "wrong place", Mark.RED to "hint")
-            } else {
-                state as TowerState
-                suffix = " · $guessed/${state.maxGuesses}"
-                lines = state.guesses.mapIndexed { row, guess ->
-                    val f = state.score(guess)
-                    ShareLine(
-                        List(f.exact) { Mark.EXACT } + List(f.misplaced) { Mark.CLOSE } +
-                            List(state.slots - f.exact - f.misplaced) { Mark.NONE },
-                        hinted(row),
-                    )
-                }
-                key = listOf(Mark.EXACT to "right colour and slot", Mark.CLOSE to "right colour", Mark.RED to "hint")
+        is LexiconState -> {
+            val guessed = state.guesses.size
+            val hinted = hintedRows(guessed)
+            suffix = " · $guessed/${state.maxGuesses}"
+            lines = state.allMarks.mapIndexed { row, marks ->
+                ShareLine(marks.map {
+                    when (it) { LexiconMark.CORRECT -> Mark.GREEN; LexiconMark.PRESENT -> Mark.YELLOW; else -> Mark.WHITE }
+                }, hinted(row))
             }
-            nudge = when {
-                hints > 0 -> hintedNudge
-                guessed == 1 -> "First guess. Nothing to improve on."
-                else -> "No hints, ${plural(guessed, "guess", "guesses")}. Fewer $next?"
+            key = listOf(Mark.GREEN to "right place", Mark.YELLOW to "wrong place", Mark.RED to "hint")
+            own = guessNudge(guessed)
+        }
+        is TowerState -> {
+            val guessed = state.guesses.size
+            val hinted = hintedRows(guessed)
+            suffix = " · $guessed/${state.maxGuesses}"
+            lines = state.guesses.mapIndexed { row, guess ->
+                val f = state.score(guess)
+                ShareLine(
+                    List(f.exact) { Mark.EXACT } + List(f.misplaced) { Mark.CLOSE } +
+                        List(state.slots - f.exact - f.misplaced) { Mark.NONE },
+                    hinted(row),
+                )
             }
+            key = listOf(Mark.EXACT to "right colour and slot", Mark.CLOSE to "right colour", Mark.RED to "hint")
+            own = guessNudge(guessed)
         }
         is SetsState -> {
             lines = listOf(ShareLine(moves.map { it.mark() }))
             key = listOf(Mark.GREEN to "a set", Mark.WHITE to "not a set", Mark.YELLOW to "undone", Mark.RED to "hint")
             val off = undone + moves.count { it.wrong }
-            nudge = when {
-                hints > 0 -> hintedNudge
+            own = when {
                 off > 0 -> "No hints. ${plural(off, "claim")} off a clean run. $nextCap?"
                 else -> "Every claim a set. Nothing to improve on."
             }
@@ -210,8 +211,7 @@ fun shareCard(
             suffix = " · mate in ${state.mateIn}"
             lines = listOf(ShareLine(moves.map { it.mark() }, tail = "#"))
             key = listOf(Mark.GREEN to "move", Mark.YELLOW to "taken back", Mark.RED to "hint")
-            nudge = when {
-                hints > 0 -> hintedNudge
+            own = when {
                 undone > 0 -> "No hints. ${plural(undone, "move")} taken back from a clean mate. $nextCap?"
                 else -> "A clean mate. Nothing to improve on."
             }
@@ -220,8 +220,7 @@ fun shareCard(
             val steps = state.log.size
             lines = listOf(ShareLine(moves.map { it.mark() }, tail = "   ${plural(steps, "step")} · par ${state.par}"))
             key = listOf(Mark.GREEN to "step", Mark.YELLOW to "undone", Mark.RED to "hint")
-            nudge = when {
-                hints > 0 -> hintedNudge
+            own = when {
                 undone > 0 -> "No hints. $undone undone from a clean run. $nextCap?"
                 steps > state.par -> "No hints, nothing undone. Par is ${state.par}: $next?"
                 else -> "On par, nothing undone. Nothing to improve on."
@@ -232,13 +231,12 @@ fun shareCard(
             val lost = PointersLogic.LIVES - state.lives
             lines = listOf(ShareLine(List(state.lives) { Mark.HEART } + List(lost) { Mark.LOST }))
             key = listOf(Mark.HEART to "life left", Mark.LOST to "life lost")
-            nudge = if (lost == 0) "Not a single bump." else "${plural(lost, "bump")}. None $next?"
+            own = if (lost == 0) "Not a single bump." else "${plural(lost, "bump")}. None $next?"
         }
         else -> {
             lines = listOf(ShareLine(strip(moves)))
             key = listOf(Mark.GREEN to "own move", Mark.YELLOW to "undone", Mark.RED to "hint")
-            nudge = when {
-                hints > 0 -> hintedNudge
+            own = when {
                 undone > 0 -> "No hints. $undone undone from a clean strip. $nextCap?"
                 else -> "A clean solve. Nothing to improve on."
             }
@@ -253,7 +251,7 @@ fun shareCard(
             (if (state is WordWheelState && state.bonus.isNotEmpty()) " · +${plural(state.bonus.size, "bonus word")}" else "") +
             if (streak >= 2) " · $streak day streak" else "",
         key = key,
-        nudge = nudge,
+        nudge = if (hints > 0) "The hints got you there. Try ${if (date != null) "tomorrow's" else "the next one"} with fewer." else own,
         spaced = state is TowerState,
     )
 }

@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui
 
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
@@ -182,32 +183,22 @@ fun rememberMoveFeel(
         LocalMoveCount.current, cells, units, BooleanArray(units.size) { complete(it) }, LocalReducedMotion.current,
         LocalUndoCount.current, LocalSolveCount.current, LocalBoardArrives.current,
     )
-    LaunchedEffect(feel.settleRun) {
-        if (feel.settleRun > 0) animate(0f, 1f, animationSpec = tween(SETTLE_MS)) { v, _ -> feel.settle = v }
-    }
-    LaunchedEffect(feel.sweepRun) {
-        if (feel.sweepRun > 0) animate(0f, 1f, animationSpec = tween(SWEEP_MS)) { v, _ -> feel.sweep = v }
-    }
-    LaunchedEffect(feel.waveRun) {
-        if (feel.waveRun > 0) animate(0f, 1f, animationSpec = tween(SOLVE_WAVE_MS, easing = LinearEasing)) { v, _ -> feel.wave = v }
-    }
-    LaunchedEffect(feel.arriveRun) {
-        if (feel.arriveRun > 0) animate(0f, 1f, animationSpec = tween(ARRIVE_MS, easing = LinearEasing)) { v, _ -> feel.arrive = v }
-    }
+    Play(feel.settleRun, tween(SETTLE_MS)) { feel.settle = it }
+    Play(feel.sweepRun, tween(SWEEP_MS)) { feel.sweep = it }
+    Play(feel.waveRun, tween(SOLVE_WAVE_MS, easing = LinearEasing)) { feel.wave = it }
+    Play(feel.arriveRun, tween(ARRIVE_MS, easing = LinearEasing)) { feel.arrive = it }
     return feel
 }
 
-/** For a board built of one composable per square: square [i] arrives, settles, and glows in [glow] (at most 35%). */
-fun Modifier.moveFeel(feel: MoveFeel, i: Int, glow: Color): Modifier = drawWithContent {
-    val a = feel.alpha(i)
-    if (a <= 0f) return@drawWithContent
-    if (a < 1f) drawContext.canvas.saveLayer(Rect(Offset.Zero, size), Paint().apply { alpha = a })
-    val s = feel.scale(i)
-    if (s == 1f) drawContent() else scale(s) { this@drawWithContent.drawContent() }
-    val g = feel.glow(i)
-    if (g > 0f && glow.isSpecified) drawRect(glow.copy(alpha = GLOW_ALPHA * g))
-    if (a < 1f) drawContext.canvas.restore()
+/** Runs [set] from 0 to 1 over [spec] each time [run] goes up (never for 0, the run before any). */
+@Composable
+private fun Play(run: Int, spec: AnimationSpec<Float>, set: (Float) -> Unit) {
+    LaunchedEffect(run) { if (run > 0) animate(0f, 1f, animationSpec = spec) { v, _ -> set(v) } }
 }
+
+/** For a board built of one composable per square: square [i] arrives, settles, and glows in [glow] (at most 35%). */
+fun Modifier.moveFeel(feel: MoveFeel, i: Int, glow: Color): Modifier =
+    drawWithContent { feelSquare(feel, i, Offset.Zero, size, glow) { this@drawWithContent.drawContent() } }
 
 /** The strongest a finished unit's glow is drawn: a wash, never a fill. */
 const val GLOW_ALPHA = 0.35f

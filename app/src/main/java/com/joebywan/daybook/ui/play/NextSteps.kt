@@ -93,10 +93,10 @@ fun pillOption(options: List<NextOption>): NextOption? =
  */
 fun levelNextOptions(level: Int, plan: List<LevelBoard>, solved: Set<String>, justSolved: String, current: Int): List<NextOption> {
     val done = solved + justSolved
-    val next = plan.firstOrNull { it.puzzleId !in done && PuzzleRegistry.byId(it.puzzleId) != null }
+    val next = plan.firstNotNullOfOrNull { b -> PuzzleRegistry.byId(b.puzzleId)?.takeIf { b.puzzleId !in done }?.let { b to it.displayName } }
     val go = if (next != null) {
-        val name = PuzzleRegistry.byId(next.puzzleId)?.displayName ?: next.puzzleId
-        NextOption("Next in level $level", NextKind.LEVEL, next.difficulty, next.puzzleId, level, "$name · ${next.difficulty.label}")
+        val (board, name) = next
+        NextOption("Next in level $level", NextKind.LEVEL, board.difficulty, board.puzzleId, level, "$name · ${board.difficulty.label}")
     } else {
         val to = maxOf(level + 1, current)
         NextOption("Level $to", NextKind.LEVEL, null, null, to)

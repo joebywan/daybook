@@ -44,12 +44,13 @@ class HighlightBounds {
     /** Controls the player needs while a hint is up (a digit pad, a palette), in window coordinates. */
     val keepClear: Collection<Rect> get() = keep.values
 
-    internal fun setKeepClear(key: Any, rect: Rect?) {
-        if (rect == null) keep.remove(key) else if (keep[key] != rect) keep[key] = rect
-    }
+    internal fun setKeepClear(key: Any, rect: Rect?) = keep.update(key, rect)
 
-    internal fun set(key: Any, rect: Rect?) {
-        if (rect == null) parts.remove(key) else if (parts[key] != rect) parts[key] = rect
+    internal fun set(key: Any, rect: Rect?) = parts.update(key, rect)
+
+    // A write only when something changed, so an unchanged report recomposes nothing.
+    private fun MutableMap<Any, Rect>.update(key: Any, rect: Rect?) {
+        if (rect == null) remove(key) else if (this[key] != rect) this[key] = rect
     }
 }
 
@@ -90,13 +91,9 @@ fun Modifier.reportHighlight(bounds: (IntSize, BoardHighlight) -> Rect?): Modifi
 fun Modifier.highlightGrid(cols: Int, rows: Int): Modifier = reportHighlight { size, highlight ->
     val w = size.width / cols.toFloat()
     val h = size.height / rows.toFloat()
-    var out: Rect? = null
-    for (i in highlight.strong + highlight.soft) {
-        if (i < 0 || i >= cols * rows) continue
-        val cell = Rect(Offset((i % cols) * w, (i / cols) * h), Offset((i % cols + 1) * w, (i / cols + 1) * h))
-        out = out?.union(cell) ?: cell
-    }
-    out
+    (highlight.strong + highlight.soft).filter { it in 0 until cols * rows }
+        .map { i -> Rect(Offset((i % cols) * w, (i / cols) * h), Offset((i % cols + 1) * w, (i / cols + 1) * h)) }
+        .reduceOrNull(Rect::union)
 }
 
 /** Reports this whole node when [index] is one of the highlight's. */

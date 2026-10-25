@@ -1,17 +1,18 @@
 package com.joebywan.daybook.ui.settings
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import com.joebywan.daybook.ui.card
+import com.joebywan.daybook.ui.CardText
+import com.joebywan.daybook.ui.TitledScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.SOLVE_SOUND_NOTE
 import com.joebywan.daybook.platform.VIBRATION_NOTE
 import com.joebywan.daybook.platform.rememberRateLink
@@ -51,25 +51,9 @@ fun SettingsScreen(
     onAppearance: (Appearance) -> Unit,
     onBack: () -> Unit,
 ) {
-    val scheme = MaterialTheme.colorScheme
     val rateLink = rememberRateLink()
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(scheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            BackButton(onBack)
-            Text(
-                "Settings",
-                style = MaterialTheme.typography.titleLarge,
-                color = scheme.onBackground,
-                modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp),
-            )
-        }
-
+    TitledScreen("Settings", null, onBack) {
         LazyColumn(
             contentPadding = PaddingValues(18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -102,7 +86,7 @@ fun SettingsScreen(
             }
             item { AppearanceChoice(appearance, onAppearance) }
             item { PuzzleOrderRow(customOrder, onResetOrder) }
-            if (rateLink != null) item { RateRow(rateLink) }
+            item { RateRow(rateLink) }
             item { Credits() }
         }
     }
@@ -115,19 +99,11 @@ private fun AppearanceChoice(appearance: Appearance, onAppearance: (Appearance) 
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(scheme.surface)
+            .card(scheme.surface)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Column {
-            Text("Appearance", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-            Text(
-                "Light or dark, or the same as your device.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-            )
-        }
+        Column { CardText("Appearance", "Light or dark, or the same as your device.") }
         SegmentedControl(
             modifier = Modifier,
             options = Appearance.entries,
@@ -154,31 +130,18 @@ private fun Credits() {
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(scheme.surface)
+            .card(scheme.surface)
             .padding(14.dp),
     ) {
-        Text("Word lists", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-        Text(
+        CardText(
+            "Word lists",
             "Lexicon's words come from SCOWL (Spell Checker Oriented Word Lists), Copyright 2000-2016 " +
                 "by Kevin Atkinson, used under its permissive licence. The lists are provided \"as is\" " +
                 "without warranty, and Kevin Atkinson makes no representations about their suitability " +
                 "for any purpose.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant,
         )
-        Text(
-            "Typeface",
-            style = MaterialTheme.typography.titleMedium,
-            color = scheme.onSurface,
-            modifier = Modifier.padding(top = 12.dp),
-        )
-        Text(
-            "Fredoka, Copyright 2016 The Fredoka Project Authors, used under the SIL Open Font " +
-                "License 1.1.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant,
-        )
+        Spacer(Modifier.height(12.dp))
+        CardText("Typeface", "Fredoka, Copyright 2016 The Fredoka Project Authors, used under the SIL Open Font License 1.1.")
     }
 }
 
@@ -189,18 +152,15 @@ private fun PuzzleOrderRow(customOrder: Boolean, onReset: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(scheme.surface)
+            .card(scheme.surface)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Puzzle order", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-            Text(
+            CardText(
+                "Puzzle order",
                 if (customOrder) "Your own order. Puzzles added later join at the end."
                 else "Most played first, over the last two months. Press and hold a puzzle on the home screen to move it.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
             )
         }
         if (customOrder) {
@@ -229,8 +189,7 @@ private fun SettingSwitch(
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(scheme.surface)
+            .card(scheme.surface)
             // The whole row toggles, and the switch inside is only its picture, so a screen
             // reader meets one control with a name rather than an unlabelled switch.
             .toggleable(value = checked, role = Role.Switch, onValueChange = onChecked)
@@ -239,8 +198,7 @@ private fun SettingSwitch(
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-            Text(detail, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+            CardText(title, detail)
         }
         Switch(checked = checked, onCheckedChange = null)
     }
