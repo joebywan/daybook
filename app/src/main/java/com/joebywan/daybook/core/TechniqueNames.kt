@@ -108,6 +108,8 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "only-place" to "a digit's only place in a line",
         "sign-bound" to "a square the signs leave one digit",
         "sign-place" to "a digit's only place, signs counted",
+        "naked-pair" to "two squares sharing two digits",
+        "hidden-pair" to "two digits with only two places",
     ),
     "chess" to linkedMapOf(
         "mate-in-one" to "a mate in one",
@@ -127,6 +129,7 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "last-square" to "the last square in a region",
         "only-digit" to "a square with one digit left",
         "only-place" to "a digit's only place in a region",
+        "locked-candidate" to "a digit locked beside one square",
     ),
     "cages" to linkedMapOf(
         "full-house" to "the last cell in a row, column or box",

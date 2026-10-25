@@ -24,6 +24,8 @@ sounded. Do not turn it off.
 - `core/PuzzleType.kt` — the contract. Adding a puzzle is one file in `puzzles/` plus one line
   in `core/PuzzleRegistry.kt` (and its place in `PuzzleOrder.GENTLEST`, the new player's order); home grid, archive, streaks, stats, hints and saves pick it up.
   What every puzzle must have beyond that (tiers, proof, hints, walkthrough, tests): `docs/PUZZLE_STANDARDS.md`.
+- Four puzzles show players a different name from their code and `id`: Snap is **Trail**, Mambo **Sun & Moon**, Tower
+  **Codebreaker**, Pointers **Arrows** (`displayName`, the owner's choice, 2026-10-25). This file uses the code names.
 - `generate(seed, difficulty)` **must be pure**. Daily boards come from
   `hash(date, puzzleId, difficulty)`, so purity is what makes the whole archive free and offline.
 - `PuzzleState` is a sealed `@Serializable` interface living in `puzzles/` — Kotlin requires
@@ -100,6 +102,20 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
 - The typed row and the "Not in the word list" note are `remember` state, never `PuzzleState`; the note sits in
   the header line whose room is always reserved, so a refusal cannot move the board.
 
+## Shikaku
+
+Cut the grid into rectangles, one number each, the number its area. `puzzles/Shikaku.kt` (state, generator, `countTilings`, board,
+walkthrough), `ShikakuTeacher.kt`. `id = "shikaku"` is hashed into every seed: never rename it.
+
+- **Tilings are grown, not cut** (`tile`: the first uncovered square in reading order is the top-left of whatever covers it, a
+  rectangle of 2 to the tier's max area drawn uniformly among those that fit; a boxed-in square redraws). Recursive bisection
+  made every board guillotine; now about half are not (`ShikakuClueTest` checks it with its own checker). No clue of 1, ever.
+- **A board ships only if `countTilings` proves one answer and the teacher's walk from the blank board finishes without the
+  fallback and needs its tier's technique** (`Shikaku.depth`, `accepts`): Standard nothing past only-reaches, Hard something past
+  only-fits, Expert at least one common-cells or what-if. On Expert a clue avoids its rectangle's corners (it measurably
+  deepened boards). Hints therefore never fall back on a generated board. `lastResort` is the board of one fixed seed, proved
+  by a test; a year per tier never reaches it (`FallbackTest`). Changing the ladder changes every board (parity pins go red).
+
 ## Atoms (bridges)
 
 Hashiwokakero as chemistry: bond atoms with single or double lines, no crossings, one molecule. `puzzles/Atoms.kt` (state, generator,
@@ -145,7 +161,7 @@ into every seed: never rename it.
   from 21% to 7%), which is what the pass gate is for. Smoothing into blobs was tried earlier and failed the shape rules
   on 96% of 5x5 draws.
 
-## Mambo (Takuzu with = and x links)
+## Mambo (Takuzu with = and x links; shown to players as Sun & Moon)
 
 Two symbols, balanced in every line, never three alike together, printed `=`/`x` links honoured. `puzzles/Mambo.kt` (state, rules,
 generator, `countSolutions`), `MamboTeacher.kt` (the ladder and `depth`). `id = "mambo"` is hashed into every seed: never rename it.
@@ -168,13 +184,21 @@ A Latin square (1..N once per row and column, N = 4/5/6 by tier) with `<`/`>` si
 (`Sign`, rules, generator, exhaustive proof), `InequalityTeacher.kt`, `InequalityKeys.kt`, `Inequality.kt` (state, board, walkthrough,
 motif). `id = "inequality"` is hashed into every seed: never rename it.
 
-- **Tiers are size alone.** Clues are minimal at every size (about 1/6 of squares given at most, a fifth of the signs shown), and
-  Standard being sparse is the intended trade, as Snap's.
+- **Tiers: size and ladder depth together** (`InequalityLogic.specFor`, Tally's `Spec.needs`). Standard 4x4 uses the five single
+  rungs, ungated (its boards did not move). Hard 5x5 may use naked pairs and must need one; Expert 6x6 may use hidden pairs too and
+  must need one. A draw whose walk stops short is redrawn: 8.4 / 11.2 draws mean (max 57 / 75) of `ATTEMPTS` = 200. Clues are minimal
+  for the tier's ladder: givens 6 / 3 / 5% of squares, signs 4.6 / 9.5 / 14.7. A sign chain `a < b < c` needs no rung: the sign cut
+  runs to a fixpoint, so chain bounds are already `SIGN_BOUND`. Generation: Chromium 0.2 / 4 / 19 ms median, 0.4 / 17 / 83 p95,
+  2 / 41 / 181 max; WebKit about 1.5x. 7x7 Expert was measured, not built (22% of draws need a hidden pair; a draw costs ~5x a 6x6's).
 - **A board ships only if the teacher's ladder finishes it** (`InequalityTeacher.solvesByLogic`: last square, only digit, only place,
-  then the same two with candidates cut by the signs to a fixpoint). Digits and signs are then taken back in random order while that
+  then the same two with candidates cut by the signs to a fixpoint, then a naked pair and a hidden pair in a line, each a cut that
+  leaves a single, counting the signs again if it takes that). Digits and signs are then taken back in random order while that
   still holds, and the result is proved by `InequalityLogic.countSolutions` (candidate masks, exhaustive, no budget). So hints never
   fall back on a generated board; the fallback exists for boards not made here. `InequalityOracle` (naive reading-order DFS) is the
   independent check. Changing the ladder changes every board (parity pins go red on purpose).
+- **The generator's walk is `pairDepth`, not `depth`**: it places every single of a pass at once (the five single rungs are
+  order-free while every digit is right), so it meets the same stuck boards and pair steps as the hints, 2.5x faster.
+  `InequalityRulesTest` checks the two agree, on shipped boards and on boards one clue short.
 - **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer.
 - **No pencil marks** (a 6x6 is small; Sudoku's notes would be the template if asked). The selected square is in the state (as Sudoku's),
   so `withoutSelection` is overridden. Highlight indices: squares `0 until n*n`, the k-th sign `n*n + k`, digit keys `1000 + d`.
@@ -236,21 +260,27 @@ A grid cut into regions; a region of N squares holds 1..N once each, and equal d
 (`RegionsLayout`, `RegionsLogic`: rules, generator, exhaustive proof), `RegionsTeacher.kt`, `RegionsKeys.kt`, `Regions.kt` (state, board, walkthrough,
 motif). `id = "regions"` is hashed into every seed: never rename it.
 
-- **Tiers are size alone: 5x5 / 7x7 / 9x9**, regions of 2 to 5 squares. Givens are minimal for the ladder (about 27 / 21 / 19% of squares).
+- **Tiers: size and ladder depth: 5x5 / 7x7 / 9x9**, regions of 2 to 5 squares (`RegionsLogic.specFor`, Tally's `Spec.needs`). Standard uses the three
+  single rungs, ungated (its boards did not move); Hard and Expert add the locked candidate and must take at least 2 / 6 locked steps (4.0 / 8.2 a board
+  on average). Givens are minimal for the tier's ladder: about 27 / 19 / 17% of squares (were 27 / 22 / 19).
 - **The partition and the fill are built together** (`randomBoard`): a random cut almost never has a legal fill (every region holds a 1, and no two 1s may
   touch, so a 2x2 window needs four different digits). Pick the first free square in reading order, grow a region, give it 1..k with none touching an
   equal digit; a dead end redraws. Starting from the most boxed-in square instead failed on most 9x9 draws. Regions of one square are refused.
 - **A board ships only if the teacher's ladder finishes it** (`RegionsTeacher.solvesByLogic`: last square in a region, only digit left, only place in the
-  region), digits are taken back in random order while that holds, and `countSolutions` (candidate masks, exhaustive, no budget) proves one answer.
-  `RegionsOracle` (naive reading-order search) is the independent check. `lastResort` is the board of one fixed seed, itself proved by a test. About 8%
-  of Expert days need a second attempt (`RegionsRulesTest`); a year per tier never reaches `lastResort` (`FallbackTest`). Changing the ladder or the draw
-  changes every board (parity pins go red on purpose).
+  region, then a locked candidate: a region's digit whose every place touches one square outside it strikes it there, and that square is left one digit
+  or its own region's digit one place), digits are taken back in random order while that holds, and `countSolutions` (candidate masks, exhaustive, no
+  budget) proves one answer. `RegionsOracle` (naive reading-order search) is the independent check. `lastResort` is the board of one fixed seed, itself
+  proved by a test. A dig that misses the gate is dug again in a new order (up to `DIGS` = 4) before the fill is redrawn, because the fill is ~85 ms of
+  a 9x9 draw; about 14% of Expert days need a second fill (`RegionsRulesTest`), and a year per tier never reaches `lastResort` (`FallbackTest`).
+  Generation costs what it did before the gate (JVM 1.4 / 8 / 73 ms median, 7 / 32 / 319 p95; Chromium 3 / 18 / 187 median, 14 / 80 / 822 p95,
+  36 / 172 / 1700 max, was 3 / 19 / 173, 15 / 87 / 738, 58 / 175 / 1828; WebKit about the same). Changing the ladder or the draw changes every board
+  (parity pins go red on purpose).
+- **The generator's walk is `lockedSteps`, not `depth`**: it places every single of a pass at once (the single rungs are order-free while every digit
+  is right), so it meets the same stuck boards and locked steps as the hints. `RegionsRulesTest` checks the two agree.
 - **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer. No pencil marks.
 - Region colours are derived (`Regions.regionColours`: a 3 to 5 colouring of the region graph, hues Violet/Amber/Teal/Blue/Gold; the thick walls carry the
   regions as well). The selected square and its digit's twins go plain (surface) so they stand out from the colours. Highlight indices: squares `0 until n*n`,
   digit keys `1000 + d`.
-- A locked-candidate technique (a digit whose only places in a region all touch one square rules that square out) would cut the givens further; not built,
-  `docs/TODO.md`.
 ## Sudoku
 
 The classic 9x9. `puzzles/Sudoku.kt` (state, rules, generator, `countSolutions`), `SudokuTeacher.kt`, `SudokuBoard.kt` (grid and pad,
@@ -376,7 +406,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
   on 89 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
 - State: `words`, `solution`, `digits` (a digit per letter in alphabetical order, -1 for none) and `selected` (in state, as Inequality's; `withoutSelection`).
   The letter key row under the sum shows each letter's digit and selects it; keyboard: a letter key selects it, a digit sets it, Backspace clears, arrows walk the letters.
-## Pointers (clear the arrows)
+## Pointers (clear the arrows; shown to players as Arrows)
 
 The board is covered in arrows, each a bent line of squares ending in a head. Tap one and it slides off the way its head points if
 nothing is in its way to the edge; if something is, it bumps (a shake, a warning flash) and a life goes. Clear every arrow; lose three
@@ -799,7 +829,7 @@ assertion loose enough to survive the bug is the same thing wearing a number.
     before publishing (`tools/save-check/check.py`, `.github/actions/save-check`), and a lost or changed save blocks
     the release. Run it locally on any APK, or on a published one with Actions > "Release save check".
 - **"What's new" is `fastlane/metadata/android/en-US/changelogs/default.txt`, and every release shows it**: Play gets it
-  through `publish-play.yml` (`whatsNewDirectory`; over 500 characters fails the upload), our F-Droid repo files it under the
+  through `publish-play.yml` (`whatsNewDirectory`; over 500 characters fails the upload, so `ChangelogLengthTest` fails the PR first), our F-Droid repo files it under the
   newest APK's version code (`tools/fdroid/build-repo.sh`). Rewrite it in the PR that changes what players see, or the next
   release repeats old news. The GitHub Release carries it too (`release.yml`, above the generated notes), which is what
   f-droid.org shows: its entry's `Changelog:` link is the Releases page (f-droid.org does not read the file itself; it wants

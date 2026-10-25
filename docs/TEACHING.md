@@ -103,7 +103,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | Kings | last square, locked to a line, would empty, N confined, what-if | none: the generator keeps a board only if the ladder finishes it from blank and the tier's gate holds (a year per tier, hints alone finish all) |
 | Mambo | pair, sandwich, link, quota, almost, what-if | none: the generator's ladder is the teacher's, and each tier is gated on the rung it needs (a year per tier and 500 boards a tier, hints alone finish all; almost-met 0 / 2.9 / 5.7 and what-if 0 / 0 / 4.1 steps a board; the fallback exists for boards not made here) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0: the generator ships only boards the reasoning settles (`PipesTeacher.settles`, which also proves one answer); 300 boards per tier, hints alone finish all, no-loop 0.6 / 0.8 / 0.8% of steps |
-| Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
+| Shikaku | only fits, only reaches, common cells, what-if | 0 (the generator ships only boards the ladder finishes; was 0.5 / 2.5 / 3.5%) |
 | Mosaic | finish, count fills against colours, biggest swallow, centre; fallback offers a proven fill | 1.5 / 9 / 12.5% |
 | Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
 | Atoms | one neighbour, all forced, at least one, crossing, isolation, only way out, what-if | none on a generated board: a board ships only if hints finish it (the depth gate, below) |
@@ -112,10 +112,10 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | LITS | whole region, overlap, avoid 2x2 / letter clash, neighbour, what-if | 0 / 0 / 0% (300 boards per tier). It was 42 / 23 / 30% while 43 / 22 / 29% of boards had several answers under the win check; the generator now proves one (the test holds one-answer boards under 2%) |
 | Tower | one change, only colour left, accounted for, what-if; else a guess that fits every score | every board, 28-35% of turns: Mastermind is mostly choosing a guess |
 | Lexicon | a typed row that cannot be submitted, a letter pinned to its slot by the marks, one word left, else the word that leaves the fewest, with how it splits them ("7 words ... fit every mark. Try the one that goes “...” (5): it can be marked 5 ways, and none leaves more than 2"; given as a crossword clue, not the word). The opener is one of seven per length, picked per board (`LexiconState.opener`) | every board; 93% of turns after the opener (pins are the other 7%): choosing a word is most of the game. A pin holds for every accepted word that fits, not only the answer list |
-| Inequality | last square, only digit, only place, then the same two once the signs are counted (candidates cut by `a < b` bounds, to a fixpoint) | none: the generator keeps a board only while these finish it (200 boards per tier, hints alone finish all; the fallback exists for boards not made here) |
+| Inequality | last square, only digit, only place, then the same two once the signs are counted (candidates cut by `a < b` bounds, to a fixpoint), then a naked pair and a hidden pair in a line (Hard and Expert) | none: the generator keeps a board only while these finish it (200 boards per tier, hints alone finish all; the fallback exists for boards not made here) |
 | Nonogram | one line at a time: clues fill the line, clue already complete, overlap of the clue's slides, what the marks already in the line leave possible | none exists: every board is line-solvable, so some line always has a square to settle (200 boards per tier, hints alone finish all) |
 | Tents | one fact at a time, mirroring the generator's ladder: no tree beside it, row/column done or full, around a tent, a tree's one square left, a square touching all of a tree's choices, a square whose trees already have their tents. Crosses are notes and never read; a mistake is a tent no answer keeps (no tree, touches a tent, over a clue; sound because the board has one answer) | none: the ladder finishes every shipped board (200 boards per tier, hints alone finish all, 11.6 / 18.4 / 27.1 steps per board; a cross group is one step; the fallback exists for boards not made here). Steps also checked against every answer of 255 random 6x6 boards with several |
-| Regions | one fact at a time, mirroring the generator's ladder: the last square of a region, the only digit its region and touching squares leave, the only place in a region for a digit (every other empty square has that digit touching it). A mistake is a digit the stored answer lacks (sound because the board has one answer): too big for its region, repeats in its region, or touches an equal digit | none: the ladder finishes every shipped board (200 boards per tier, hints alone finish all; 18.2 / 38.6 / 65.3 steps per board, mostly only-digit; the fallback exists for boards not made here). Steps also checked against every answer of boards with several (an independent enumerator, 60 Standard boards with givens removed) |
+| Regions | one fact at a time, mirroring the generator's ladder: the last square of a region, the only digit its region and touching squares leave, the only place in a region for a digit (every other empty square has that digit touching it), then (Hard and Expert) a locked candidate: a region's digit whose every place touches one square outside it strikes it there, and that square is left one digit or its region's digit one place. A mistake is a digit the stored answer lacks (sound because the board has one answer): too big for its region, repeats in its region, or touches an equal digit | none: the ladder finishes every shipped board (200 boards per tier, hints alone finish all; 18.2 / 39.7 / 67.4 steps per board, mostly only-digit, 4.0 / 8.1 locked a Hard / Expert board; the fallback exists for boards not made here). Steps also checked against every answer of boards with several (an independent enumerator, 60 Standard boards with givens removed) |
 | Cage Sudoku | full house, cage last (a cage with one square left), hidden/naked singles, cage combination (the open squares must total what is left, which only certain digit sets make: "a 2-cage totalling 3 is 1 and 2"), the 45-rule (a row, column, box or neighbouring group holds 45 a unit, so the squares its whole cages leave over, or spill into, have a known total), then cage chain (every group worked through together; named as such, not explained group by group). Pencil marks are never read; every step ends in a placement; a mistake is a digit the stored answer lacks (a repeat in a cage, a cage over or wrong, a clash, else the answer), sound because the board has one answer | none: the generator's ladder is the teacher's (200 boards per tier and a year of daily boards, hints alone finish all; 67 / 73 / 81 steps per board, of which cage combination 7.6 / 14.3 / 13.5, 45-rule 0.1 / 3.8 / 6.7 and cage chain 0 / 0.7 / 6.3 per board; the fallback exists for boards not made here). Steps also checked against every answer of 12 boards with several |
 | Target | a step on a shortest road, found by an exhaustive search of the visible tiles: finish (two tiles make the target), else the answer nearest the target, with the steps still to go. A mistake is a step after which no sequence reaches the target (the same search; merely slower is fine); "Show me" takes it and what followed back | none exists: the teacher reads no stored answer (`par` is not read; a test changes it and the hint is identical), and hints alone finish every sampled board in exactly `par` steps (200 boards per tier, 3.55 / 4.22 / 5.00 steps, each checked against an independent breadth-first oracle). First hint on Expert, desktop JVM: median 18 ms, p95 30 ms, max 34 ms |
 | Cipher | one column at a time with the carries: the leading carry (a total longer than the addends starts with 1), one column ("in the tens column, 4 + R + 1 carried ends in 2, so R is 7"), the only letter left for 0 when ten letters use every digit, two columns through the carry between them, all columns together (named as such, as Cage's chain), then a what-if on two neighbouring columns, never a trial of the whole sum. Candidates are re-derived from placed digits on every call; every step ends in a placement; the explanation shows the working (`CipherWorking`: each carry used with its reason, then the column with every other digit ruled out by name, else each other digit followed until it breaks) on 89 / 80 / 75% of steps (Standard / Hard / Expert), the rest, mostly all-columns and what-if steps, in summary; a mistake is a letter whose digit the stored answer lacks (a shared digit, a word starting with 0, a column that doesn't add up, else the answer), sound because the board has one answer | none: a sum is listed only if the ladder finishes it, and a tier is the hardest technique it needs (200 boards per tier, hints alone finish all; steps per board, Standard / Hard / Expert: leading carry 1 / 1 / 1, column 3.2 / 2.9 / 2.7, pair 2.7 / 2.1 / 1.9, all columns 0 / 1.4 / 0.3, two-column what-if 0 / 0 / 1.3). Steps also checked against every answer of 40 random sums with several |
@@ -161,15 +161,15 @@ board. No board changed (Mambo's rows are after its gate, below). Deepest techni
 | Mambo | Standard | quota-met 100 | 0 / 0 | 30 |
 |  | Hard | quota-almost-met 100 | 0 / 0 | 56 |
 |  | Expert | what-if 100 | 0 / 0 | 87 |
-| Shikaku | Standard | only-fits 49, only-reaches 42, common-cells 5, what-if 4 | 1.4 / 0.15 | 13 |
-|  | Hard | only-fits 21, only-reaches 64, common-cells 7, what-if 7 | 4.1 / 0.26 | 20 |
-|  | Expert | only-fits 13, only-reaches 62, common-cells 15, what-if 11 | 3.6 / 0.16 | 23 |
+| Shikaku | Standard | only-fits 41, only-reaches 59 (was only-fits 49, only-reaches 42, common-cells 5, what-if 4) | 0 / 0 (was 1.4 / 0.15) | 12 |
+|  | Hard | only-reaches 74, common-cells 14, what-if 12 (was only-fits 21, only-reaches 64, common-cells 7, what-if 7) | 0 / 0 (was 4.1 / 0.26) | 17 |
+|  | Expert | common-cells 47, what-if 53 (was only-fits 13, only-reaches 62, common-cells 15, what-if 11) | 0 / 0 (was 3.6 / 0.16) | 21 |
 | Atoms (gated) | Standard | one-neighbour 4, all-forced 80, at-least-one 16 | 0 / 0 | 7 |
 |  | Hard | crossing 58, isolation 42 | 0 / 0 | 15 |
 |  | Expert | isolation 76, what-if 24 | 0 / 0 | 24 |
-| Inequality | Standard | only-digit 1, sign-bound 43, sign-place 57 | 0 / 0 | 16 |
-|  | Hard | sign-bound 9, sign-place 91 | 0 / 0 | 24 |
-|  | Expert | sign-bound 4, sign-place 96 | 0 / 0 | 33 |
+| Inequality (gated) | Standard | only-digit 1, sign-bound 43, sign-place 57 | 0 / 0 | 16 |
+|  | Hard | naked-pair 100 | 0 / 0 | 25 |
+|  | Expert | hidden-pair 100 | 0 / 0 | 35 |
 | Tents | Standard | line-full 89, one-spot 10, shared 1, served 1 | 0 / 0 | 10 |
 |  | Hard | one-spot 78, shared 8, served 14 (gated: was line-full 64, one-spot 28, shared 4, served 4) | 0 / 0 | 15 |
 |  | Expert | shared 33, served 67 (gated: was line-full 39, one-spot 43, shared 7, served 12) | 0 / 0 | 21 |
@@ -179,9 +179,9 @@ board. No board changed (Mambo's rows are after its gate, below). Deepest techni
 | LITS | Standard | avoid-2x2 1, letter-clash 48, neighbour 47, what-if 4 | 0 / 0 | 15 |
 |  | Hard | avoid-2x2 1, letter-clash 62, neighbour 35, what-if 2 | 0 / 0 | 21 |
 |  | Expert | letter-clash 35, neighbour 60, what-if 5 | 0 / 0 | 28 |
-| Regions | Standard | only-digit 49, only-place 51 | 0 / 0 | 18 |
-|  | Hard | only-digit 19, only-place 81 | 0 / 0 | 38 |
-|  | Expert | only-digit 3, only-place 97 | 0 / 0 | 65 |
+| Regions (gated) | Standard | only-digit 49, only-place 51 | 0 / 0 | 18 |
+|  | Hard | locked-candidate 100 (at least 2 a board; 4.0 mean) | 0 / 0 | 40 |
+|  | Expert | locked-candidate 100 (at least 6 a board; 8.2 mean) | 0 / 0 | 67 |
 
 Nonogram's ladder says nothing (any line with a mark in it is `line-logic`), so its depth is **line passes**: from a blank
 board, settle every row with what the board then holds, then every column, and count the passes until nothing changes
@@ -206,8 +206,12 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   tier is redrawn unless the walk needs that rung: Standard the first four (its boards did not move), Hard almost-met and no
   what-if, Expert what-if. Draws a board over the year: 1.00 / 1.42 / 1.01 mean, 1 / 6 / 2 most. The rows above are
   after the gate.
-- **Shikaku: overlapping, and it falls back.** Standard: no common-cells, what-if or fallback (90% pass); Hard: needs
-  only-reaches, no fallback; Expert: needs common-cells or what-if, no fallback (at most 26%). Ladder long enough.
+- **Shikaku: gated (2026-10-25).** Was overlapping and fell back. Tilings are now grown (about half non-guillotine) and
+  `Shikaku.accepts` gates every draw: Standard nothing past only-reaches, Hard something past only-fits, Expert common-cells
+  or what-if, never the fallback; Expert clues avoid their rectangle's corners (common-cells or what-if: 22% to 27% of proved
+  draws). Rows above are after the gate. Draws a board over a year: mean 8 / 11 / 33, p95 25 / 32 / 100, max 47 / 77 / 231 of
+  2000; JVM median 0.4 / 0.5 / 1.7 ms a board, Expert p95 6 ms, max 16 ms; Expert in Chromium 4 / 14 / 32 ms (median / p95
+  / max), WebKit 5 / 17 / 38 ms.
 - **Atoms: gated (2026-10).** Before, graded loosely: 16% of Expert boards needed nothing past all-forced and 14% of Standard
   boards isolation or what-if. Now each new atom sprouts 2-6 squares away (2-4 before), Hard has 18 atoms (16) and Expert 28
   (24), and the gate is Standard at most at-least-one, Hard crossing or isolation, Expert isolation or deeper, every walk
@@ -216,8 +220,12 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   board crossing 0 / 1.1 / 2.1, isolation 0 / 0.5 / 1.4, what-if 0 / 0 / 0.4; draws 1.9 / 5.5 / 10.9 mean, 10 / 39 / 71 most
   of 2000; JVM generation 0.4 / 1.4 / 8.7 ms median, 2.3 / 8.8 / 37 ms p95, 39 / 26 / 89 ms worst (a loaded desktop).
   Only-way-out stays shadowed (2 steps in 500 Expert boards).
-- **Inequality: the ladder is too short.** 91-96% of Hard and Expert boards top out at sign-place; size is the only
-  difference. No gate is possible until there are deeper techniques (a pair in a line, a sign chain `a < b < c`).
+- **Inequality: gated (2026-10).** Before, 91-96% of Hard and Expert boards topped out at sign-place (Standard only-digit 1,
+  sign-bound 43, sign-place 57; Hard sign-bound 9, sign-place 91; Expert sign-bound 4, sign-place 96; median steps 16 / 24 / 33).
+  The ladder gained a naked pair and a hidden pair in a line (each a cut, then a single, counting the signs again if needed); a
+  sign chain needed nothing new, since the sign cut already runs to a fixpoint. With the full ladder and no gate, 12% of 5x5 and
+  27% of 6x6 draws need a pair (8% a hidden one). Now Standard is untouched, Hard (ladder to naked pair) must need a naked pair,
+  Expert (the whole ladder) must need a hidden pair: 1.3 naked pair steps a Hard board, 0.5 naked and 1.5 hidden on Expert.
 - **Tents: gated (built 2026-10).** `TentsLogic.fitsTier`, on `TentsTeacher.depth` (the hint walk from blank): Hard needs
   one-spot or deeper, Expert needs shared or served; Standard is not gated. Draws a board over a year (a draw must also be
   finished by the ladder and unique): mean 1.3 / 5.6 / 23, most 5 / 27 / 143 of 2000; JVM p50 / p95 / max 0.1 / 0.1 / 0.4,
@@ -228,8 +236,11 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   Deeper than that needs a technique line logic lacks (a what-if across two lines).
 - **LITS: the tiers are the same depth** (neighbour or what-if 51 / 37 / 65%). Standard: no neighbour or what-if (49%);
   Expert: needs what-if (5%; LITS proving is slow, so measure the cost first). Ladder long enough.
-- **Regions: the ladder is too short.** 97% of Expert and 81% of Hard need only-place; size is the only difference. Needs
-  the locked candidate (`docs/TODO.md`) before any gate.
+- **Regions: gated (2026-10).** Before, 97% of Expert and 81% of Hard needed only-place (Hard only-digit 19, only-place 81;
+  Expert only-digit 3, only-place 97; median steps 18 / 38 / 65). The ladder gained the locked candidate (one elimination, then
+  a placement). With it and no gate, locked steps a board were 0 on 25% of 5x5 draws, and at least 2 on 81% of 7x7 and 6 on
+  58% of 9x9 draws. Now Standard is untouched, Hard must take at least two locked steps and Expert at least six; givens fell
+  from 21.6 / 19.1% to 19.1 / 16.6% of squares on Hard / Expert.
 
 **Snap feasibility.** `SnapDeducerReportTest` (same switch; `build/reports/snap-deducer.txt`) prototypes a whole-board
 deducer in test code: every joint between neighbours in, out or unknown; *degree* (two joints a square, one at the 1 and

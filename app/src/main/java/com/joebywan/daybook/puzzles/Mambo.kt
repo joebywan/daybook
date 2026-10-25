@@ -119,7 +119,7 @@ data class MamboState(
 object Mambo : PuzzleType {
 
     override val id = "mambo"
-    override val displayName = "Mambo"
+    override val displayName = "Sun & Moon"
     override val tagline = "Balance two symbols, never three alike in a line"
     override val accent = 0xFF6E8FD8
 

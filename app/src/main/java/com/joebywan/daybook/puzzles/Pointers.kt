@@ -65,7 +65,7 @@ import kotlin.math.sqrt
 object Pointers : PuzzleType {
 
     override val id = "pointers"
-    override val displayName = "Pointers"
+    override val displayName = "Arrows"
     override val tagline = "Clear every arrow, without a bump"
     override val accent = 0xFFC95E77
     override val rules = listOf(
