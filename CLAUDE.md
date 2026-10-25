@@ -451,6 +451,22 @@ hashed into every seed: never rename it.
   (Fredoka has no `≠`); green when the region is covered and keeps its rule, solid `scheme.error` once it cannot (1 s settle).
   Highlight indices: squares `row * width + col`, tray slot `DominoTeacher.TRAY + k`, badge `DominoTeacher.RULE + r`.
 
+## Pipes
+
+Rotate tiles until every opening meets another and the pipework is one network. `puzzles/Pipes.kt` (state, generator, board,
+walkthrough), `PipesTeacher.kt`, `PipesKeys.kt`. `id = "pipes"` is hashed into every seed: never rename it.
+
+- **The answer is a randomised Kruskal spanning tree** (every grid edge in `Rng.shuffled` order, kept when it joins two pieces):
+  per board 7.1 / 11.4 / 18.7 T-junctions and 0.9 / 1.7 / 3.0 crosses (Standard 5x7 / Hard 6x9 / Expert 8x11). The first generator
+  was a depth-first maze, long corridors with 3.2 / 5.2 / 8.5 T-junctions and almost no crosses.
+- **A board ships only if the teacher's reasoning settles every tile** (`PipesTeacher.settles`: the border, neighbours and no-loop,
+  shapes only); each step is sound for every answer, so that also proves one answer. Branchier trees have several answers far more
+  often (5-12% of raw Kruskal boards, against none of the maze's sampled), which is what the gate removes. `generateVerified` tries 40
+  trees with `Rng(seed + attempt)`: 95 / 91 / 84% pass first, a year never needs more than 3; `lastResort` is seed 1's board,
+  itself proved (`FallbackTest`). Under 0.5 ms a board on the JVM. Hints never fall back on a generated board (`PipesTeachingTest`).
+- **`solved` checks the rules** (fully joined and one network), never a stored answer; there is none.
+- Counter-clockwise rotation and a lock mark were proposed and **declined by the owner**: do not add them.
+
 ## Motion and haptics
 
 The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s
@@ -511,7 +527,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Cipher, Sand and Pointers (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand, Pipes (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Cipher, Sand, Pointers and Pipes (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

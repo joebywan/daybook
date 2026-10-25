@@ -124,11 +124,18 @@ class PipesTeachingTest {
     @Test
     fun `on a board with two answers, following the other one is not a mistake`() {
         var checked = 0
+        // Generated boards have one answer each (the generator ships only boards the reasoning settles), so the
+        // two-answer boards come from the test's own random trees at each tier's size: boards not made here.
+        val rng = java.util.Random(5)
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(300, difficulty, "pipes-coverage")) {
-                val s = Pipes.generate(seed, difficulty) as PipesState
+            val generated = Pipes.generate(1L, difficulty) as PipesState
+            repeat(300) { k ->
+                val seed = k
+                val shapes = randomTree(rng, generated.width, generated.height)
+                    .map { m -> var x = m; repeat(rng.nextInt(4)) { x = Pipes.rotateCw(x) }; x }
+                val s = generated.copy(cells = shapes)
                 val answers = allSolutions(s.width, s.height, s.cells, cap = 50)
-                if (answers.size < 2) continue
+                if (answers.size < 2) return@repeat
                 val found = PipesTeacher.solve(s.width, s.height, s.cells)!!
                 for (other in answers.filter { it != found }) {
                     val differ = other.indices.filter { other[it] != found[it] }.toSet()
@@ -196,7 +203,7 @@ class PipesTeachingTest {
     // ---- coverage, measured -------------------------------------------------------------------------
 
     @Test
-    fun `hints alone solve every board, and the fallback is rare`() {
+    fun `hints alone solve every board, with no fallback`() {
         val boards = 300
         val report = StringBuilder("\nPipes coverage ($boards boards per tier, walked from the scramble by hints alone)\n")
         for (difficulty in Difficulty.entries) {
@@ -229,7 +236,7 @@ class PipesTeachingTest {
                 "$it ${counts.getValue(it)} (${"%.2f".format(100.0 * counts.getValue(it) / total)}%)"
             })
             report.append("  fallback boards $fallbackBoards/$boards\n")
-            assertTrue("$difficulty: fallback on $fallbackBoards of $boards boards", fallbackBoards * 100 < boards)
+            assertEquals("$difficulty: fallback boards", 0, fallbackBoards)
         }
         println(report)
     }
