@@ -175,7 +175,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
     or what-if, no fallback.
   - Atoms: Standard at most at-least-one; Hard needs crossing or isolation; Expert needs isolation or what-if. Also reaches
     up to 5.
-  - Tents: Hard needs one-spot; Expert needs shared or served (18% of draws).
   - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
   - Nonogram: no gate needed (size separates the tiers); optional Expert needs 4+ line passes (21%). Mirror-symmetric
     pictures: measure the pass rate.

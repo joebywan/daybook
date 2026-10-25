@@ -168,8 +168,8 @@ board. No board changed. Deepest technique, share of the year's boards (%):
 |  | Hard | sign-bound 9, sign-place 91 | 0 / 0 | 24 |
 |  | Expert | sign-bound 4, sign-place 96 | 0 / 0 | 33 |
 | Tents | Standard | line-full 89, one-spot 10, shared 1, served 1 | 0 / 0 | 10 |
-|  | Hard | line-full 64, one-spot 28, shared 4, served 4 | 0 / 0 | 14 |
-|  | Expert | line-full 39, one-spot 43, shared 7, served 12 | 0 / 0 | 19 |
+|  | Hard | one-spot 78, shared 8, served 14 (gated: was line-full 64, one-spot 28, shared 4, served 4) | 0 / 0 | 15 |
+|  | Expert | shared 33, served 67 (gated: was line-full 39, one-spot 43, shared 7, served 12) | 0 / 0 | 21 |
 | Nonogram | Standard | overlap 4, line-logic 96; line passes 1: 13, 2: 65, 3: 20, 4+: 2 | 0 / 0 | 12 |
 |  | Hard | line-logic 100; passes 1: <1, 2: 46, 3: 42, 4+: 12 | 0 / 0 | 35 |
 |  | Expert | line-logic 100; passes 2: 25, 3: 54, 4+: 21 | 0 / 0 | 69 |
@@ -203,8 +203,10 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   what-if (40%). only-way-out is never needed anywhere (it is shadowed by the rungs before it).
 - **Inequality: the ladder is too short.** 91-96% of Hard and Expert boards top out at sign-place; size is the only
   difference. No gate is possible until there are deeper techniques (a pair in a line, a sign chain `a < b < c`).
-- **Tents: graded.** Hard: needs one-spot (36% today); Expert: needs shared or served (18%). The ladder is long enough;
-  `touch` is never needed.
+- **Tents: gated (built 2026-10).** `TentsLogic.fitsTier`, on `TentsTeacher.depth` (the hint walk from blank): Hard needs
+  one-spot or deeper, Expert needs shared or served; Standard is not gated. Draws a board over a year (a draw must also be
+  finished by the ladder and unique): mean 1.3 / 5.6 / 23, most 5 / 27 / 143 of 2000; JVM p50 / p95 / max 0.1 / 0.1 / 0.4,
+  2.6 / 9.3 / 41, 5.1 / 27 / 191 ms. Expert in the browser, p50 / p95 / max: 14 / 66 / 151 ms in Chromium, 17 / 75 / 125 in WebKit. `touch` is never needed.
 - **Nonogram: Hard and Expert overlap in passes** (3+ passes: 54% / 75%); the size gap (35 against 69 steps) already
   separates them. Optional: Expert needs 4+ passes (21% pass, cheap to redraw). Deeper than that needs a technique line logic
   lacks (a what-if across two lines), so no gate is needed for now.
