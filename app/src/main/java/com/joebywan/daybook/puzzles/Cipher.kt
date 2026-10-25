@@ -42,12 +42,14 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
 import com.joebywan.daybook.ui.PAD_HEIGHT
@@ -138,26 +140,13 @@ object Cipher : PuzzleType {
         val s = state as CipherState
         val step = CipherTeacher.teach(s) ?: return null
         val l = step.letter
-        val digit = step.digit
-        val mistake = step.technique == CipherTeacher.MISTAKE
-        val wrong = s.digits[l]
-        return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = s.sum.tilesOf(l) + CipherLogic.key(l),
-            mistake = mistake,
+        return placementDeduction(
+            s, PlacementStep(step.technique, l, step.digit, step.focus, step.cited, step.nudge, step.explanation),
+            mistake = step.technique == CipherTeacher.MISTAKE,
             fallback = step.technique == CipherTeacher.FALLBACK,
-            applyTo = { now ->
-                val t = now as CipherState
-                if (t.digits[l] == digit) t else t.withDigit(l, digit).select(l)
-            },
-            reachedBy = { now ->
-                val t = now as CipherState
-                if (mistake) t.digits[l] != wrong else t.digits[l] == digit
-            },
+            targets = s.sum.tilesOf(l) + CipherLogic.key(l),
+            valueAt = { t, letter -> t.digits[letter] },
+            place = { t, letter, digit -> t.withDigit(letter, digit).select(letter) },
         )
     }
 

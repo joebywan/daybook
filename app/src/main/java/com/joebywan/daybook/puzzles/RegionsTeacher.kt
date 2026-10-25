@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.PlacementStep
+
+
 /**
  * Regions, reasoned a step at a time.
  *
@@ -37,17 +40,6 @@ internal object RegionsTeacher {
 
     /** Highlight index of digit [d]'s key under the board. */
     fun pad(d: Int): Int = 1000 + d
-
-    class Step(
-        val technique: String,
-        val cell: Int,
-        /** 0 for a clear (a mistake). */
-        val digit: Int,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
 
     // ---- what the player can see ------------------------------------------------------------------
 
@@ -108,30 +100,30 @@ internal object RegionsTeacher {
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ------------------------
 
-    fun teach(s: RegionsState): Step? {
+    fun teach(s: RegionsState): PlacementStep? {
         if (s.solved) return null
         mistake(s)?.let { return it }
         return deduce(RegionsLayout(s.size, s.region), s.cells) ?: fallback(s)
     }
 
-    private fun fallback(s: RegionsState): Step? {
+    private fun fallback(s: RegionsState): PlacementStep? {
         val i = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
         val d = s.solution[i]
-        return Step(
+        return PlacementStep(
             FALLBACK, i, d, setOf(i), emptySet(),
             "Try this square.",
             "No short reason found: the stored answer has a $d here.",
         )
     }
 
-    private fun mistake(s: RegionsState): Step? {
+    private fun mistake(s: RegionsState): PlacementStep? {
         val layout = RegionsLayout(s.size, s.region)
         val wrong = s.cells.indices.firstOrNull { s.cells[it] != 0 && !s.givens[it] && s.cells[it] != s.solution[it] }
             ?: return null
         val d = s.cells[wrong]
         val clear = "Select it and tap $d again to clear it."
         fun step(explanation: String, cited: Set<Int>) =
-            Step(MISTAKE, wrong, 0, setOf(wrong), cited, "Check this $d.", explanation)
+            PlacementStep(MISTAKE, wrong, 0, setOf(wrong), cited, "Check this $d.", explanation)
 
         val size = layout.sizeOf[wrong]
         if (d > size) return step("This region has $size squares, so it only holds 1 to $size. $clear", layout.members[layout.region[wrong]].toSet() - wrong)
@@ -146,13 +138,13 @@ internal object RegionsTeacher {
 
     private fun andList(ds: List<Int>) = if (ds.size < 2) ds.joinToString("") else ds.dropLast(1).joinToString(", ") + " and " + ds.last()
 
-    fun deduce(layout: RegionsLayout, cells: List<Int>): Step? {
+    fun deduce(layout: RegionsLayout, cells: List<Int>): PlacementStep? {
         val hit = findStep(layout, cells) ?: return null
         val x = hit.cell
         val d = hit.digit
         val members = layout.members[hit.region]
         return when (hit.technique) {
-            LAST -> Step(
+            LAST -> PlacementStep(
                 LAST, x, d, members.toSet(), members.filter { cells[it] != 0 }.toSet(),
                 "Look at this region.",
                 if (members.size == 1) "A region of one square holds just a 1."
@@ -170,7 +162,7 @@ internal object RegionsTeacher {
                     touchDigits.isEmpty() -> "Its region is one square, so it holds just a 1."
                     else -> "The squares touching it have ${andList(touchDigits)}, so only $d is left."
                 }
-                Step(
+                PlacementStep(
                     ONLY_DIGIT, x, d, setOf(x), (inRegion + touching.firstPerDigit(cells)).toSet(),
                     "Which digits can this square still take?", why,
                 )
@@ -179,7 +171,7 @@ internal object RegionsTeacher {
                 val base = candidates(layout, cells)
                 val blockers = members.filter { it != x && cells[it] == 0 && !has(base[it], d) }
                     .mapNotNull { o -> layout.around[o].firstOrNull { cells[it] == d } }.toSet()
-                Step(
+                PlacementStep(
                     ONLY_PLACE, x, d, members.toSet(), blockers,
                     "Where can the $d go in this region?",
                     "This region still needs a $d, and every other empty square in it has a $d touching it. This square is the only place left.",

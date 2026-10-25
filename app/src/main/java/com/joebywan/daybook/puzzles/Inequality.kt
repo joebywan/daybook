@@ -38,13 +38,16 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.DigitKeyAction
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
+import com.joebywan.daybook.core.digitKeyAction
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.PAD_GAP
 import com.joebywan.daybook.ui.PAD_HEIGHT
 import com.joebywan.daybook.ui.PadKey
@@ -120,27 +123,12 @@ object Inequality : PuzzleType {
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as InequalityState
         val step = InequalityTeacher.teach(s) ?: return null
-        val cell = step.cell
-        val digit = step.digit
-        val mistake = step.technique == InequalityTeacher.MISTAKE
-        val wrong = s.cells[cell]
-        return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = setOf(cell),
-            mistake = mistake,
+        return placementDeduction(
+            s, step,
+            mistake = step.technique == InequalityTeacher.MISTAKE,
             fallback = step.technique == InequalityTeacher.FALLBACK,
-            applyTo = { now ->
-                val t = now as InequalityState
-                if (t.cells[cell] == digit) t else t.withCell(cell, digit).select(cell)
-            },
-            reachedBy = { now ->
-                val t = now as InequalityState
-                if (mistake) t.cells[cell] != wrong else t.cells[cell] == digit
-            },
+            valueAt = { t, cell -> t.cells[cell] },
+            place = { t, cell, digit -> t.withCell(cell, digit).select(cell) },
         )
     }
 
@@ -343,8 +331,8 @@ object Inequality : PuzzleType {
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
                 .boardKeys(interactive) { key, _, repeat ->
-                    val action = inequalityKeyAction(key, n) ?: return@boardKeys false
-                    if (!repeat || action is InequalityKeyAction.Move) s.applyKey(action)?.let(onState)
+                    val action = digitKeyAction(key, n) ?: return@boardKeys false
+                    if (!repeat || action is DigitKeyAction.Move) s.applyKey(action)?.let(onState)
                     true
                 },
             contentAlignment = Alignment.Center,
