@@ -129,7 +129,7 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
   Covers streaks (current run, only while it is alive, so never a lapsed one), per-puzzle streaks, 100 solves, 30 days, one
   of each, full set and clean sweep. Null for earned ones, first solve and top tier. Positive wording only; never a loss.
 - **Next puzzle today.** On today's own daily opened from Home (not an archive day), the frame's first button, filled as
-  the main one and the pill's way on, is "Next puzzle today" (`nextToday` in `ui/play/NextSteps.kt`): the first of today's
+  the main one and the pill's way on, is "Next puzzle" with the puzzle named under it (`nextToday` in `ui/play/NextSteps.kt`): the first of today's
   three not yet solved at this tier, else the first unsolved daily at this tier in the home grid's order; none once every
   daily at the tier is done. It opens that board as from Home, so back (and Done) from it goes Home, where the board just
   solved was opened from. An archive board does not offer it: its back is its own puzzle's archive, which another puzzle's

@@ -264,7 +264,7 @@ fun HomeScreen(
             // Always laid out, so the grid under it never moves; unseen in Levels, whose boards are a set of their own.
             item {
                 TodaysThreeRow(
-                    three, difficulty, doneToday, threeCard, shown = mode != LaunchMode.LEVELS, onPlay = onThree,
+                    three, difficulty, doneToday, threeCard, shown = mode != LaunchMode.LEVELS, compact = short, onPlay = onThree,
                     modifier = Modifier.onSizeChanged { threeHeight = it.height },
                 )
             }

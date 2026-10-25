@@ -49,7 +49,7 @@ data class NextOption(
  * tier in that direction is offered instead, and the button is dropped if nothing in that direction
  * is undone. [doneTiers] need not include [tier]; the board just solved counts as done regardless,
  * because the store records it asynchronously. [today] (offered on today's own daily only: [nextToday]) leads the list
- * as "Next puzzle today", the frame's main button.
+ * as "Next puzzle" (named under it), the frame's main button.
  */
 fun nextOptions(daily: Boolean, tier: Difficulty, doneTiers: Set<Difficulty>, today: String? = null): List<NextOption> {
     val tiers = Difficulty.entries
@@ -61,7 +61,8 @@ fun nextOptions(daily: Boolean, tier: Difficulty, doneTiers: Set<Difficulty>, to
         buildList {
             today?.let { id ->
                 val name = PuzzleRegistry.byId(id)?.displayName ?: id
-                add(NextOption("Next puzzle today", NextKind.TODAY, tier, id, note = "$name · ${tier.label}"))
+                // The tier is the one just played; the pill has room for the name alone.
+                add(NextOption("Next puzzle", NextKind.TODAY, tier, id, note = name))
             }
             if (easier != null) add(NextOption("Easier Daily", NextKind.DAILY, easier))
             add(NextOption("Random", NextKind.RANDOM, tier))

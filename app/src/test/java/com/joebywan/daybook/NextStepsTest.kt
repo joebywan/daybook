@@ -203,12 +203,12 @@ class NextStepsTest {
     @Test fun `next puzzle today leads the daily's buttons, is the filled one and the pill's`() {
         val options = nextOptions(daily = true, tier = HARD, doneTiers = emptySet(), today = "kings")
         assertEquals(
-            listOf("Next puzzle today>today:kings:HARD", "Easier Daily>daily:STANDARD", "Random>random:HARD", "Harder Daily>daily:EXPERT", "Done>home"),
+            listOf("Next puzzle>today:kings:HARD", "Easier Daily>daily:STANDARD", "Random>random:HARD", "Harder Daily>daily:EXPERT", "Done>home"),
             render(options),
         )
-        assertEquals("Kings · Hard", options.first().note)
-        assertEquals("Next puzzle today", mainOption(options)?.label)
-        assertEquals("Next puzzle today", pillOption(options)?.label)
+        assertEquals("Kings", options.first().note)
+        assertEquals("Next puzzle", mainOption(options)?.label)
+        assertEquals("Next puzzle", pillOption(options)?.label)
     }
 
     @Test fun `the next puzzle is the three's first undone, then the home order's, never the board just solved`() {
