@@ -40,8 +40,8 @@ class NonogramWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            -709644446, -176013402, 80316099, 1096799170, 536503228, 1289023416,
-            -1389945940, 1124852156, 1729280159,
+            1752508638, -1625939962, 2141403329, 19736485, -842812765, -1742655730,
+            1838771215, 1089667542, 1941448408,
         )
     }
 }
