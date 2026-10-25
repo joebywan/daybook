@@ -166,7 +166,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
     or what-if, no fallback.
   - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
-  - Inequality (pairs, sign chains): the ladder is too short; the techniques come first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
   same `countTilings` proof.
