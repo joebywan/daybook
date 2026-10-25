@@ -40,6 +40,7 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.GLOW_ALPHA
 import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.graphics.drawscope.scale
+import com.joebywan.daybook.ui.fitStep
 
 /** An atom sits on a lattice point and needs exactly [bonds] bond-ends. */
 @Serializable
@@ -678,7 +679,7 @@ object Atoms : PuzzleType {
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
         BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-            val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.size, maxHeight / s.size) else maxWidth / s.size
+            val step = fitStep(s.size, s.size)
             val stepPx = with(LocalDensity.current) { step.toPx() }
             val radius = stepPx * 0.34f
 

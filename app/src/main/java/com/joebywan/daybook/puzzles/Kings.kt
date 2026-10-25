@@ -57,6 +57,8 @@ import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.hintOutline
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -967,14 +969,10 @@ object Kings : PuzzleType {
             }.padding(14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.size, maxHeight / s.size) else maxWidth / s.size
+            val cell = fitStep(s.size, s.size)
             val cellPx = with(LocalDensity.current) { cell.toPx() }
 
-            fun cellAt(offset: Offset): Int {
-                val r = (offset.y / cellPx).toInt().coerceIn(0, s.size - 1)
-                val c = (offset.x / cellPx).toInt().coerceIn(0, s.size - 1)
-                return r * s.size + c
-            }
+            fun cellAt(offset: Offset) = gridCellAt(offset, cellPx, s.size, s.size)
 
             // One tap: a mark now, or a king if its partner arrives in time.
             //

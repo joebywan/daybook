@@ -65,6 +65,7 @@ import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.hintOutline
+import com.joebywan.daybook.ui.gridCellAt
 
 /** Empty, or one of the two symbols. */
 @Serializable
@@ -1024,9 +1025,7 @@ object Mambo : PuzzleType {
                         .pointerInput(s, interactive, cellPx) {
                             if (!interactive) return@pointerInput
                             detectTapGestures { offset: Offset ->
-                                val c = (offset.x / cellPx).toInt().coerceIn(0, s.size - 1)
-                                val r = (offset.y / cellPx).toInt().coerceIn(0, s.size - 1)
-                                val i = r * s.size + c
+                                val i = gridCellAt(offset, cellPx, s.size, s.size)
                                 cursor = i
                                 if (!s.givens[i]) {
                                     val next = when (s.cells[i]) {

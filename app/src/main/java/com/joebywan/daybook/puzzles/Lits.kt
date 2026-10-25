@@ -50,6 +50,8 @@ import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawWalls
 import com.joebywan.daybook.ui.drawHintRings
 import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
 
 @Serializable
 data class LitsState(
@@ -1343,14 +1345,10 @@ object Lits : PuzzleType {
             }.padding(18.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
+            val step = fitStep(s.width, s.height)
             val stepPx = with(LocalDensity.current) { step.toPx() }
 
-            fun cellAt(offset: Offset): Int {
-                val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
-                val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
-                return r * s.width + c
-            }
+            fun cellAt(offset: Offset) = gridCellAt(offset, stepPx, s.width, s.height)
 
             Canvas(
                 Modifier

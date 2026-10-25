@@ -60,6 +60,7 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawWalls
 import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.gridCellAt
 
 /** One fill: the cell tapped, and the colour poured into the area it belongs to. */
 data class MosaicMove(val cell: Int, val colour: Int)
@@ -1081,9 +1082,7 @@ object Mosaic : PuzzleType {
                         .pointerInput(s, live, selected) {
                             if (!live) return@pointerInput
                             detectTapGestures { offset: Offset ->
-                                val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
-                                val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
-                                val cell = r * s.width + c
+                                val cell = gridCellAt(offset, stepPx, s.width, s.height)
                                 cursor = cell
                                 // Silence rather than a wasted fill when the area is already this
                                 // colour: no state out means no move spent and no undo entry.

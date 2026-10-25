@@ -49,6 +49,8 @@ import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.drawHintRings
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
 
 /** An axis-aligned block of cells, inclusive on both corners. */
 @Serializable
@@ -565,12 +567,11 @@ object Shikaku : PuzzleType {
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
         BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp), contentAlignment = Alignment.Center) {
-            val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
+            val cell = fitStep(s.width, s.height)
             val cellPx = with(LocalDensity.current) { cell.toPx() }
 
             fun cellAt(offset: Offset): Pair<Int, Int> =
-                (offset.y / cellPx).toInt().coerceIn(0, s.height - 1) to
-                    (offset.x / cellPx).toInt().coerceIn(0, s.width - 1)
+                gridCellAt(offset, cellPx, s.width, s.height).let { it / s.width to it % s.width }
 
             val preview = dragFrom?.let { from ->
                 dragTo?.let { to ->

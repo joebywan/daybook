@@ -48,6 +48,8 @@ import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.drawHintRings
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
 
 /**
  * Pipe shapes are direction bitmasks: bit 0 up, 1 right, 2 down, 3 left. Rotating a piece is a
@@ -589,7 +591,7 @@ object Pipes : PuzzleType {
             }.padding(16.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
+            val cell = fitStep(s.width, s.height)
             val cellPx = with(LocalDensity.current) { cell.toPx() }
             Canvas(
                 Modifier
@@ -600,10 +602,9 @@ object Pipes : PuzzleType {
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
                         detectTapGestures { offset: Offset ->
-                            val c = (offset.x / cellPx).toInt().coerceIn(0, s.width - 1)
-                            val r = (offset.y / cellPx).toInt().coerceIn(0, s.height - 1)
-                            cursor = r * s.width + c
-                            onState(s.rotate(r * s.width + c))
+                            val i = gridCellAt(offset, cellPx, s.width, s.height)
+                            cursor = i
+                            onState(s.rotate(i))
                         }
                     }
             ) {

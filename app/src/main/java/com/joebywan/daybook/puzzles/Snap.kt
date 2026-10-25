@@ -40,6 +40,7 @@ import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.drawHintRings
+import com.joebywan.daybook.ui.fitStep
 
 @Serializable
 data class SnapState(
@@ -718,7 +719,7 @@ object Snap : PuzzleType {
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
         BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-            val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
+            val step = fitStep(s.width, s.height)
             val stepPx = with(LocalDensity.current) { step.toPx() }
 
             Canvas(
