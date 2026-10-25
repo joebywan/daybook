@@ -17,6 +17,8 @@ import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.Codeword
 import com.joebywan.daybook.puzzles.CodewordLogic
+import com.joebywan.daybook.puzzles.Mini
+import com.joebywan.daybook.puzzles.MiniLogic
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Inequality
@@ -160,6 +162,10 @@ class FallbackTest {
     /** [CodewordLogic.generateVerified] returns a board only when the ladder finished its grid from the givens and the search proved one answer. */
     @Test
     fun `codeword proves every daily board of a year on every tier`() = assertYearProved(Codeword) { seed, d -> CodewordLogic.generateVerified(seed, d) }
+
+    /** [MiniLogic.generateVerified] returns a board only when its grid is clued, its clue share is the tier's and the search proved the crossings settle the rest. */
+    @Test
+    fun `mini proves every daily board of a year on every tier`() = assertYearProved(Mini) { seed, d -> MiniLogic.generateVerified(seed, d) }
 
     /** [WordWheelLogic.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
     @Test

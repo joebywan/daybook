@@ -4,6 +4,7 @@ import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.CageState
 import com.joebywan.daybook.puzzles.CipherState
 import com.joebywan.daybook.puzzles.CodewordState
+import com.joebywan.daybook.puzzles.MiniState
 import com.joebywan.daybook.puzzles.DominoState
 import com.joebywan.daybook.puzzles.LampsState
 import com.joebywan.daybook.puzzles.ChessState
@@ -91,6 +92,7 @@ object ParityFingerprint {
         is MinesState -> "${s.width}x${s.height} opening=${s.opening} mines=${s.mines} marks=${s.marks}"
         is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer} opener=${s.opener}"
         is CodewordState -> "${s.size}x${s.size} numbers=${s.numbers.joinToString(".")} solution=${s.solution.joinToString(".")} given=${s.given.joinToString(".")}"
+        is MiniState -> "${s.size}x${s.size} answer=${s.answer} clues=${s.clues.joinToString("|")}"
         is CipherState -> "words=${s.words.joinToString(",")} solution=${s.solution.joinToString("")}"
         is WordWheelState -> "wheel=${s.wheel} ${s.width}x${s.height} slots=" +
             s.slots.joinToString(";") { "${it.word}@${it.row},${it.col}${if (it.across) "a" else "d"}" }

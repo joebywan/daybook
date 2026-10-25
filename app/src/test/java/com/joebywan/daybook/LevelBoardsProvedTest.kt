@@ -12,6 +12,7 @@ import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mambo
+import com.joebywan.daybook.puzzles.MiniLogic
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.MinesLogic
@@ -62,6 +63,7 @@ class LevelBoardsProvedTest {
         "dominoes" to DominoLogic::generateVerified,
         "mines" to MinesLogic::generateVerified,
         "lamps" to LampsLogic::generateVerified,
+        "mini" to MiniLogic::generateVerified,
     )
 
     @Test
