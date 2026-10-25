@@ -173,9 +173,9 @@ do not, and both are cross-checked against an independent checker.
 
 **An independent checker, in tests.** New tests are written on a different principle from the code they
 check, so the two cannot share a blind spot. Exemplars: `test/SnapCluesTest` (naive DFS, no budget, order
-checked at the leaf: the opposite of the generator on every point), `test/KingsRulesTest` (brute force over
+checked at the leaf: the opposite of the generator on every point; it lives in `test/SnapOracle`), `test/KingsOracle` (brute force over
 columns), `test/ShikakuClueTest` (its own `countTilings`), `test/LitsOracle`, `test/MosaicOptimumTest`
-(breadth-first on small boards), `test/MamboRulesTest` (propagation re-written), `test/MamboSolvedTest`.
+(breadth-first on small boards), `test/MamboRulesTest` (propagation re-written), `test/MamboOracle`.
 
 **The generator must not give away the board** (Snap's "forced minimally" lesson, CLAUDE.md): after forcing
 uniqueness, take back every clue the rest already implies, and give the result a budget the test enforces.

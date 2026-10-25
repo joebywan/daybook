@@ -7,8 +7,6 @@ import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.SandLogic
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 /**
  * Sand's tiers, measured as `LexiconBalanceTest` measures Lexicon's: two players over a year of daily boards per tier.
@@ -23,7 +21,6 @@ import java.time.LocalDate
  */
 class SandBalanceTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
     private fun play(t0: List<List<Int>>, h: Int, rng: Rng, careful: Boolean): Boolean {
         var t = t0
@@ -59,7 +56,7 @@ class SandBalanceTest {
         var careful = 0
         val nodes = mutableListOf<Int>()
         for (day in 0 until 365) {
-            val seed = DailySeed.seedFor(start.plusDays(day.toLong()), Sand.id, d)
+            val seed = daySeed(day, Sand.id, d)
             val s = Sand.generateVerified(seed, d) ?: error("no board ${d.name} day $day")
             for (k in 0 until 5) {
                 if (play(s.tubes, s.height, Rng(seed * 31 + k), careful = false)) naive++
@@ -79,8 +76,7 @@ class SandBalanceTest {
             "${d.name} ${spec.colours}x${spec.height}: naive wins ${"%.3f".format(t.naive)}, careful ${"%.3f".format(t.careful)}, solver positions median ${t.nodes}"
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/sand-balance.txt").writeText(report + "\n")
+        writeReport("sand-balance.txt", report + "\n")
         val (s, h, e) = Difficulty.entries.map { tiers.getValue(it) }
         assertTrue("naive: $report", s.naive > h.naive + 0.1 && h.naive > e.naive + 0.1)
         assertTrue("careful: $report", s.careful > h.careful && h.careful > e.careful)
@@ -91,7 +87,7 @@ class SandBalanceTest {
     fun `no tier varies the spare tubes`() {
         for (d in Difficulty.entries) {
             val spec = SandLogic.specFor(d)
-            val s = Sand.generate(DailySeed.seedFor(start, Sand.id, d), d) as com.joebywan.daybook.puzzles.SandState
+            val s = Sand.generate(DailySeed.seedFor(TEST_START, Sand.id, d), d) as com.joebywan.daybook.puzzles.SandState
             assertTrue(s.tubes.size == spec.colours + 2 && s.tubes.count { it.isEmpty() } == 2)
         }
     }

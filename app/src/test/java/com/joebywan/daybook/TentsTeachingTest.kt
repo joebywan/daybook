@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.TentsLogic
@@ -12,14 +11,11 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class TentsTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        TentsLogic.generateVerified(DailySeed.seedFor(start.plusDays(day.toLong()), "tents", d), d)
+        TentsLogic.generateVerified(daySeed(day, "tents", d), d)
             ?: error("no proved board for day $day ${d.name}")
 
     /** Every step's conclusion must hold in the (unique) answer; applies each until solved. */
@@ -58,8 +54,7 @@ class TentsTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/tents-teaching-coverage.txt").writeText(report.toString())
+        writeReport("tents-teaching-coverage.txt", report.toString())
     }
 
     @Test

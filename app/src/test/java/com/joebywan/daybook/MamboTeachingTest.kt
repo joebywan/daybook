@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Link
@@ -14,8 +13,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 /**
  * The Mambo hint solver, checked against an enumerator written out again here on a different
@@ -28,10 +25,6 @@ import java.time.LocalDate
  * standing has it.
  */
 class MamboTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String = "mambo-teach") = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     // ---- independent rules --------------------------------------------------------------------
 
@@ -79,7 +72,7 @@ class MamboTeachingTest {
     @Test
     fun `every step on a real board agrees with the answer and fills a square`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(40, difficulty)) {
+            for (seed in seeds(40, difficulty, "mambo-teach")) {
                 var s = Mambo.generate(seed, difficulty) as MamboState
                 var guard = 0
                 while (!s.solved) {
@@ -232,8 +225,7 @@ class MamboTeachingTest {
             assertEquals("$difficulty: the fallback was reached", 0, boardCounts.getValue(MamboTeacher.FALLBACK))
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/mambo-teaching-coverage.txt").writeText(report.toString())
+        writeReport("mambo-teaching-coverage.txt", report.toString())
     }
 
     // ---- mistakes -------------------------------------------------------------------------------

@@ -88,7 +88,7 @@ class MamboRulesTest {
             val state = Mambo.lastResort(n)
             assertEquals("last resort at $n needs a guess", state.solution, solveByRules(state))
             assertTrue("last resort at $n breaks a rule", obeysRules(n, state.solution, state.links))
-            assertEquals("last resort at $n has several answers", 1, countAnswers(state, cap = 2))
+            assertEquals("last resort at $n has several answers", 1, MamboOracle.countAnswers(state.size, state.cells, state.links))
             assertEquals(emptyList<Any>(), state.violations())
             assertTrue(state.copy(cells = state.solution).solved)
             assertFalse(state.solved)
@@ -104,7 +104,7 @@ class MamboRulesTest {
             for (day in 0 until days.toLong()) {
                 val date = start.plusDays(day)
                 val state = Mambo.generate(DailySeed.seedFor(date, Mambo.id, difficulty), difficulty) as MamboState
-                assertEquals("mambo/${difficulty.name}/$date has several answers", 1, countAnswers(state, cap = 2))
+                assertEquals("mambo/${difficulty.name}/$date has several answers", 1, MamboOracle.countAnswers(state.size, state.cells, state.links))
             }
         }
     }
@@ -195,50 +195,6 @@ class MamboRulesTest {
             if (r + 2 < n && grid[i] == grid[i + n] && grid[i] == grid[i + 2 * n]) return false
         }
         return links.all { (grid[it.a] == grid[it.b]) == it.same }
-    }
-
-    /**
-     * How many full grids keep the board's given cells and links, counting no further than [cap].
-     * Fills row-major, checking each cell against what lies behind it, with no propagation.
-     */
-    private fun countAnswers(state: MamboState, cap: Int): Int {
-        val n = state.size
-        val grid = MutableList(n * n) { if (state.givens[it]) state.solution[it] else Sym.NONE }
-        val linksAt = Array(n * n) { mutableListOf<Link>() }
-        state.links.forEach { linksAt[maxOf(it.a, it.b)] += it }
-        var found = 0
-
-        fun fits(i: Int): Boolean {
-            val r = i / n
-            val c = i % n
-            val sym = grid[i]
-            if (c >= 2 && grid[i - 1] == sym && grid[i - 2] == sym) return false
-            if (r >= 2 && grid[i - n] == sym && grid[i - 2 * n] == sym) return false
-            if ((0..c).count { grid[r * n + it] == sym } > n / 2) return false
-            if ((0..r).count { grid[it * n + c] == sym } > n / 2) return false
-            if (c == n - 1 && (0 until n).count { grid[r * n + it] == sym } != n / 2) return false
-            if (r == n - 1 && (0 until n).count { grid[it * n + c] == sym } != n / 2) return false
-            return linksAt[i].all { (grid[it.a] == grid[it.b]) == it.same }
-        }
-
-        fun fill(i: Int) {
-            if (found >= cap) return
-            if (i == n * n) {
-                // The last cell of each line was balance-checked as it landed; the other symbol's
-                // count follows because the line is full.
-                found++
-                return
-            }
-            val options = if (state.givens[i]) listOf(grid[i]) else listOf(Sym.SUN, Sym.MOON)
-            for (sym in options) {
-                grid[i] = sym
-                if (fits(i)) fill(i + 1)
-            }
-            if (!state.givens[i]) grid[i] = Sym.NONE
-        }
-
-        fill(0)
-        return found
     }
 
     /** A legal 4x4 answer: rows and columns balanced, no three in a line. */
