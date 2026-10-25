@@ -223,20 +223,8 @@ object Tally : PuzzleType {
     }
 
     /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
-    private fun applyStep(s: TallyState, step: TallyTeacher.Step): TallyState {
-        val next = s.marks.toCharArray()
-        var changed = 0
-        fun set(i: Int, mark: Char) {
-            if (next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        step.clears.forEach { set(it, TallyLogic.UNMARKED) }
-        step.stays.forEach { set(it, TallyLogic.KEPT) }
-        step.goes.forEach { set(it, TallyLogic.REMOVED) }
-        return if (changed == 0) s else s.copy(marks = next.concatToString(), moves = s.moves + changed)
-    }
+    private fun applyStep(s: TallyState, step: TallyTeacher.Step): TallyState =
+        s.paint(step.clears, TallyLogic.UNMARKED).paint(step.stays, TallyLogic.KEPT).paint(step.goes, TallyLogic.REMOVED)
 
     // ---- drawing --------------------------------------------------------------------------------
 

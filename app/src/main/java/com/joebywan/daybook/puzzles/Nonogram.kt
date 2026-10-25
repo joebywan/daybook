@@ -232,20 +232,8 @@ object Nonogram : PuzzleType {
     }
 
     /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
-    private fun applyStep(s: NonogramState, step: NonogramTeacher.Step): NonogramState {
-        val next = s.cells.toCharArray()
-        var changed = 0
-        fun set(i: Int, mark: Char) {
-            if (next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        step.clears.forEach { set(it, NonogramLogic.UNMARKED) }
-        step.fills.forEach { set(it, NonogramLogic.FILLED) }
-        step.crosses.forEach { set(it, NonogramLogic.CROSSED) }
-        return if (changed == 0) s else s.copy(cells = next.concatToString(), moves = s.moves + changed)
-    }
+    private fun applyStep(s: NonogramState, step: NonogramTeacher.Step): NonogramState =
+        s.paint(step.clears, NonogramLogic.UNMARKED).paint(step.fills, NonogramLogic.FILLED).paint(step.crosses, NonogramLogic.CROSSED)
 
     // ---- drawing --------------------------------------------------------------------------------
 
