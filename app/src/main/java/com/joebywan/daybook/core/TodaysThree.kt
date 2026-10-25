@@ -26,7 +26,7 @@ object TodaysThree {
         val quick = QUICK.filter { it in ids }
         val words = WORDS.filter { it in ids }
         val mid = ids.filter { it !in QUICK && it !in WORDS }
-        val d = day.toEpochDays().toLong()
+        val d = day.toEpochDays()
         val cycle = maxOf(1, quick.size * words.size).toLong()
         fun List<String>.at(i: Long) = if (isEmpty()) null else this[i.mod(size)]
         return listOfNotNull(quick.at(d), mid.at(d.mod(cycle) + d.floorDiv(cycle)), words.at(d))

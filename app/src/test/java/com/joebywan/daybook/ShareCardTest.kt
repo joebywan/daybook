@@ -136,7 +136,7 @@ class ShareCardTest {
     @Test fun `tower is pips per guess in the board's order`() {
         val s = TowerState(4, 6, 8, listOf(0, 1, 2, 3), listOf(listOf(1, 0, 4, 4), listOf(0, 1, 3, 2), listOf(0, 1, 2, 3)), List(4) { -1 })
         assertEquals(
-            "Daybook · Tower · Expert · 22 Oct · 3/8\n○ ○ · ·\n● ● ○ ○ 🟥\n● ● ● ●\n12:04 · 1 hint · 6 day streak\n" +
+            "Daybook · Codebreaker · Expert · 22 Oct · 3/8\n○ ○ · ·\n● ● ○ ○ 🟥\n● ● ● ●\n12:04 · 1 hint · 6 day streak\n" +
                 "● right colour and slot  ○ right colour  🟥 hint\n$SHARE_URL",
             card(Tower, s, "mhmm").text,
         )
@@ -173,7 +173,7 @@ class ShareCardTest {
         for (i in listOf(Pointers.SIDE, Pointers.ROW, Pointers.HOOK, Pointers.TOP, Pointers.SHORT)) s = s.tap(Pointers.TUTORIAL_ARROWS[i][0])!!
         val c = card(Pointers, s, "m".repeat(6))
         assertEquals(
-            "Daybook · Pointers · Expert · 22 Oct\n❤️❤️🖤\n12:04 · 6 day streak\n" +
+            "Daybook · Arrows · Expert · 22 Oct\n❤️❤️🖤\n12:04 · 6 day streak\n" +
                 "❤️ life left  🖤 life lost\n$SHARE_URL",
             c.text,
         )

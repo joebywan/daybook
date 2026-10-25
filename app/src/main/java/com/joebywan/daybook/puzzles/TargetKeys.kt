@@ -1,6 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.core.digitKey
+import com.joebywan.daybook.core.isEnterKey
+import com.joebywan.daybook.core.isEraseKey
 
 /**
  * What a physical key asks of a Target board. Keys read like a calculator: type a tile's number, an operator,
@@ -22,32 +25,19 @@ sealed interface TargetKeyAction {
 
 /** The action for [key] (with [shift] held, since + and * are shifted on most keyboards), or null. */
 fun targetKeyAction(key: Key, shift: Boolean = false): TargetKeyAction? {
-    val digit = when (key) {
-        Key.Zero, Key.NumPad0 -> 0
-        Key.One, Key.NumPad1 -> 1
-        Key.Two, Key.NumPad2 -> 2
-        Key.Three, Key.NumPad3 -> 3
-        Key.Four, Key.NumPad4 -> 4
-        Key.Five, Key.NumPad5 -> 5
-        Key.Six, Key.NumPad6 -> 6
-        Key.Seven, Key.NumPad7 -> 7
-        Key.Eight, Key.NumPad8 -> 8
-        Key.Nine, Key.NumPad9 -> 9
-        else -> -1
-    }
-    if (digit >= 0) {
+    digitKey(key)?.let { digit ->
         // Shift+8 is *, Shift+= is +: operators, not digits.
         if (shift && digit == 8) return TargetKeyAction.Operator(TargetOp.Mul)
         return if (shift) null else TargetKeyAction.Digit(digit)
     }
-    return when (key) {
-        Key.Plus, Key.NumPadAdd -> TargetKeyAction.Operator(TargetOp.Add)
-        Key.Equals -> if (shift) TargetKeyAction.Operator(TargetOp.Add) else null
-        Key.Minus, Key.NumPadSubtract -> TargetKeyAction.Operator(TargetOp.Sub)
-        Key.NumPadMultiply, Key.X -> TargetKeyAction.Operator(TargetOp.Mul)
-        Key.Slash, Key.NumPadDivide -> TargetKeyAction.Operator(TargetOp.Div)
-        Key.Enter, Key.NumPadEnter -> TargetKeyAction.Enter
-        Key.Backspace, Key.Delete -> TargetKeyAction.Back
+    return when {
+        key == Key.Plus || key == Key.NumPadAdd -> TargetKeyAction.Operator(TargetOp.Add)
+        key == Key.Equals -> if (shift) TargetKeyAction.Operator(TargetOp.Add) else null
+        key == Key.Minus || key == Key.NumPadSubtract -> TargetKeyAction.Operator(TargetOp.Sub)
+        key == Key.NumPadMultiply || key == Key.X -> TargetKeyAction.Operator(TargetOp.Mul)
+        key == Key.Slash || key == Key.NumPadDivide -> TargetKeyAction.Operator(TargetOp.Div)
+        isEnterKey(key) -> TargetKeyAction.Enter
+        isEraseKey(key) -> TargetKeyAction.Back
         else -> null
     }
 }

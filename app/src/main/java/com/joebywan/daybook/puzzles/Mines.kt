@@ -72,6 +72,10 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.PenRow
+import com.joebywan.daybook.ui.gridCellAt
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.hintRims
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -87,7 +91,7 @@ object Mines : PuzzleType {
     override val id = "mines"
     override val displayName = "Mines"
     override val tagline = "Every safe square, found without a guess"
-    override val accent = 0xFF9D4881
+    override val accent = 0xFF3C28BD
     override val rules = listOf(
         "Each number counts the mines in the squares touching it, corners included.",
         "Reveal every square without a mine. Revealing a mine costs a life; lose all three and the board is lost: try it again from the start.",
@@ -104,9 +108,6 @@ object Mines : PuzzleType {
     override val offersUndo = false
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = MinesLogic.generate(seed, difficulty)
-
-    /** The board when the ladder cleared it from its opening at the tier's depth, null otherwise. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): MinesState? = MinesLogic.generateVerified(seed, difficulty)
 
     override fun teach(state: PuzzleState): Deduction? = MinesTeacher.deduction(state as MinesState)
 
@@ -300,18 +301,13 @@ object Mines : PuzzleType {
             drawCircle(scheme.error.copy(alpha = (1f - t) * 0.8f), u * (0.5f + 0.6f * t), Offset(cx, cy), style = Stroke(u * 0.08f))
         }
 
-        if (lit) {
-            fun rim(indices: Set<Int>, width: Float, color: Color) {
-                for (i in indices) {
-                    if (i !in 0 until w * h) continue
-                    val x = (i % w) * u
-                    val y = (i / w) * u
-                    drawRoundRect(color, Offset(x + width / 2, y + width / 2), Size(u - width, u - width), CornerRadius(u * 0.15f), style = Stroke(width))
-                }
+        if (lit) hintRims(hl, u, overlay.glow, overlay.pulse, scheme.background) { set, width, colour ->
+            for (i in set) {
+                if (i !in 0 until w * h) continue
+                val x = (i % w) * u
+                val y = (i / w) * u
+                drawRoundRect(colour, Offset(x + width / 2, y + width / 2), Size(u - width, u - width), CornerRadius(u * 0.15f), style = Stroke(width))
             }
-            rim(hl.soft - hl.strong, u * 0.07f, overlay.glow.copy(alpha = 0.5f))
-            rim(hl.strong, u * 0.2f, scheme.background.copy(alpha = 0.9f * overlay.pulse))
-            rim(hl.strong, u * 0.11f, overlay.glow.copy(alpha = overlay.pulse))
         }
     }
 
@@ -412,8 +408,7 @@ object Mines : PuzzleType {
 
         @Composable
         fun Grid(modifier: Modifier) = BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-            // Both axes: whichever runs out first sets the square.
-            val step = minOf(maxWidth / s.width, maxHeight / s.height)
+            val step = fitStep(s.width, s.height)
             val unitPx = with(density) { step.toPx() }
             val digits = remember(unitPx) { digitLayouts(measurer, unitPx * 0.58f, density) }
             val b = bump
@@ -424,12 +419,7 @@ object Mines : PuzzleType {
                     .gridCursor(cursor.takeIf { live }, s.width, s.height, scheme.primary)
                     .pointerInput(s, live, flagPen) {
                         if (!live) return@pointerInput
-                        fun cellAt(o: Offset): Int {
-                            val unit = size.width.toFloat() / s.width
-                            val c = (o.x / unit).toInt().coerceIn(0, s.width - 1)
-                            val r = (o.y / unit).toInt().coerceIn(0, s.height - 1)
-                            return r * s.width + c
-                        }
+                        fun cellAt(o: Offset) = gridCellAt(o, size.width.toFloat() / s.width, s.width, s.height)
                         detectTapGestures(
                             onTap = { o -> act(cellAt(o), flagPen) },
                             onLongPress = { o -> act(cellAt(o), !flagPen) },
@@ -495,44 +485,25 @@ object Mines : PuzzleType {
         }
     }
 
-    /** Reveal or Flag, side by side or one above the other. Kept clear of the hint popover: the player reaches for it to make a hinted move. */
+    private const val REVEAL_PEN = 'r'
+    private const val FLAG_PEN = 'f'
+
+    /** Reveal or Flag ([PenRow]), side by side under the board or stacked beside it. */
     @Composable
     private fun Pens(flagPen: Boolean, enabled: Boolean, vertical: Boolean, onPen: (Boolean) -> Unit) {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
-        @Composable
-        fun Pen(option: Boolean) {
-            val chosen = flagPen == option
-            Row(
-                Modifier
-                    .width(124.dp)
-                    .height(46.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(if (chosen) Color(accent).copy(alpha = 0.22f) else scheme.surface)
-                    .border(if (chosen) 2.dp else 1.dp, if (chosen) Color(accent) else scheme.outline, RoundedCornerShape(14.dp))
-                    .clickable(enabled = enabled) { onPen(option) },
-                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Canvas(Modifier.size(22.dp)) {
-                    val u = size.minDimension
-                    if (option) drawFlag(0f, 0f, u, BoardHues.ink(BoardHues.HUE_PAIRS[0].second, dark), scheme.onSurface.copy(alpha = 0.7f))
-                    else {
-                        // An open square: a tile with its number showing.
-                        drawRoundRect(scheme.onSurface.copy(alpha = 0.75f), Offset(u * 0.12f, u * 0.12f), Size(u * 0.76f, u * 0.76f), CornerRadius(u * 0.16f), style = Stroke(u * 0.08f))
-                        drawCircle(scheme.onSurface.copy(alpha = 0.75f), u * 0.1f, Offset(u / 2, u / 2))
-                    }
-                }
-                Text(if (option) "Flag" else "Reveal", style = MaterialTheme.typography.labelLarge, color = scheme.onSurface)
+        PenRow(
+            "$REVEAL_PEN$FLAG_PEN", if (flagPen) FLAG_PEN else REVEAL_PEN, enabled, Color(accent),
+            { if (it == FLAG_PEN) "Flag" else "Reveal" }, { onPen(it == FLAG_PEN) }, vertical,
+        ) { option ->
+            val u = size.minDimension
+            if (option == FLAG_PEN) drawFlag(0f, 0f, u, BoardHues.ink(BoardHues.HUE_PAIRS[0].second, dark), scheme.onSurface.copy(alpha = 0.7f))
+            else {
+                // An open square: a tile with its number showing.
+                drawRoundRect(scheme.onSurface.copy(alpha = 0.75f), Offset(u * 0.12f, u * 0.12f), Size(u * 0.76f, u * 0.76f), CornerRadius(u * 0.16f), style = Stroke(u * 0.08f))
+                drawCircle(scheme.onSurface.copy(alpha = 0.75f), u * 0.1f, Offset(u / 2, u / 2))
             }
-        }
-        if (vertical) {
-            Column(Modifier.keepClear(), verticalArrangement = Arrangement.spacedBy(12.dp)) { Pen(false); Pen(true) }
-        } else {
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = 6.dp).keepClear(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-            ) { Pen(false); Pen(true) }
         }
     }
 }

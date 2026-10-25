@@ -129,6 +129,7 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "last-square" to "the last square in a region",
         "only-digit" to "a square with one digit left",
         "only-place" to "a digit's only place in a region",
+        "locked-candidate" to "a digit locked beside one square",
     ),
     "cages" to linkedMapOf(
         "full-house" to "the last cell in a row, column or box",
@@ -138,6 +139,7 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "naked-single" to "a cell with one digit left",
         "cage-combination" to "a cage's digit combinations",
         "forty-five" to "the 45 rule",
+        "linked-totals" to "totals that share squares",
         "cage-chain" to "every cage worked through together",
     ),
     "target" to linkedMapOf(

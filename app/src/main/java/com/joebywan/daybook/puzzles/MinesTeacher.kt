@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.plural
 
 /**
  * Mines, reasoned a step at a time (`docs/MINES_SPEC.md`, "The ladder").
@@ -117,7 +118,6 @@ internal object MinesTeacher {
 
     // ---- reasoning --------------------------------------------------------------------------------------------------
 
-    private fun plural(k: Int, word: String) = if (k == 1) "1 $word" else "$k ${word}s"
 
     private fun others(k: Int) = if (k == 1) "other square" else "other $k squares"
 

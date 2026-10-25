@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.play
 
+import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
@@ -117,6 +118,7 @@ import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.LocalSolveCount
 import com.joebywan.daybook.ui.LocalUndoCount
 import com.joebywan.daybook.ui.SOLVE_WAVE_MS
+import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
@@ -158,14 +160,14 @@ fun PlayScreen(
     options: List<NextOption>,
     onNext: (NextOption) -> Unit,
     onBack: () -> Unit,
-    onNewGame: (() -> Unit)? = null,
-    tutorialOffered: Boolean? = null,
-    onTutorialOffered: () -> Unit = {},
-    showTimer: Boolean = true,
+    onNewGame: (() -> Unit)?,
+    tutorialOffered: Boolean?,
+    onTutorialOffered: () -> Unit,
+    showTimer: Boolean,
     /** The level this board belongs to, if any: the subtitle says so where a daily shows its date. */
-    level: Int? = null,
+    level: Int?,
     /** A hint explained this technique (`Deduction.technique`), for the techniques page. */
-    onTaught: (String) -> Unit = {},
+    onTaught: (String) -> Unit,
 ) {
     // The harder boards take hundreds of milliseconds to generate, which would freeze the frame if
     // it happened during composition. Android runs it off the main thread; the web has only one
@@ -176,86 +178,11 @@ fun PlayScreen(
         value = generateBoard(puzzle, seed, difficulty)
     }
 
-    val ready = generated
-    if (ready == null) {
+    val initial = generated
+    if (initial == null) {
         DealingBoard(puzzle)
-    } else {
-        PlayBoard(
-            puzzle, difficulty, day, ready, restore, persist, onSolved, praiseFor, options, onNext, onBack,
-            onNewGame, tutorialOffered, onTutorialOffered, showTimer, level, onTaught,
-        )
+        return
     }
-}
-
-/**
- * Silent for [LOADING_MESSAGE_DELAY_MS], so a board that arrives straight away does not flash a
- * message. The box fills the screen either way and the board replaces it, so nothing resizes when
- * the board arrives. Where generation runs off the main thread ([GENERATION_ANIMATES]) a spinner
- * turns above the line; on the web the thread is busy generating, so a spinner would sit frozen
- * and is left out (and the message has to be painted *before* generating starts, which is why the
- * web's delay is zero: nothing can be painted once the board is underway).
- *
- * No header at all: the back arrow was the only thing in it, and a lone "How to play" button for
- * rules you cannot yet see would be worse than the empty strip it would fill. Back out of a board
- * still being dealt with the system back button, same as anywhere else.
- */
-@Composable
-private fun DealingBoard(puzzle: PuzzleType) {
-    val scheme = MaterialTheme.colorScheme
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(scheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing),
-        contentAlignment = Alignment.Center,
-    ) {
-        var due by remember { mutableStateOf(LOADING_MESSAGE_DELAY_MS <= 0L) }
-        LaunchedEffect(Unit) {
-            if (!due) {
-                delay(LOADING_MESSAGE_DELAY_MS)
-                due = true
-            }
-        }
-        if (due) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (GENERATION_ANIMATES) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
-                        strokeWidth = 3.dp,
-                        color = scheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(16.dp))
-                }
-                Text(
-                    "Setting out ${puzzle.displayName}...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlayBoard(
-    puzzle: PuzzleType,
-    difficulty: Difficulty,
-    day: LocalDate?,
-    initial: PuzzleState,
-    restore: suspend () -> SavedGame?,
-    persist: suspend (SavedGame?) -> Unit,
-    onSolved: (seconds: Int, hints: Int) -> Unit,
-    praiseFor: (seconds: Int, hints: Int, state: PuzzleState, log: String, taught: List<String>) -> Praise,
-    options: List<NextOption>,
-    onNext: (NextOption) -> Unit,
-    onBack: () -> Unit,
-    onNewGame: (() -> Unit)?,
-    tutorialOffered: Boolean?,
-    onTutorialOffered: () -> Unit,
-    showTimer: Boolean,
-    level: Int?,
-    onTaught: (String) -> Unit,
-) {
     val scheme = MaterialTheme.colorScheme
 
     val pristine = remember(initial) { SavedGame(initial) }
@@ -360,13 +287,15 @@ private fun PlayBoard(
     }
 
     LaunchedEffect(state.solved) {
-        if (state.solved && !recorded) {
+        if (!state.solved) return@LaunchedEffect
+        if (!recorded) {
             recorded = true
             // Asked before onSolved: the history must not yet contain this solve.
             praise = praiseFor(seconds, game.hints, game.state, game.log, game.taught)
             onSolved(seconds, game.hints)
             haptics.success()
         }
+        hintSession.clear()
     }
 
     // Counts moves, undos and solving moves for the boards' move feel (LocalMoveCount and its neighbours); not saved, so a
@@ -418,7 +347,6 @@ private fun PlayBoard(
     }
 
     WatchHint(hintSession, puzzle, state, onReached = LocalChime.current)
-    LaunchedEffect(state.solved) { if (state.solved) hintSession.clear() }
 
     /**
      * Hint, for a puzzle that teaches: nudge, then explain, then — only on a third, explicit tap —
@@ -479,8 +407,8 @@ private fun PlayBoard(
     // leave the board the room. The hint is a popover over the content, never a slot in this
     // column, so nothing in it changes size when a hint opens, the offer shows, or the puzzle is
     // solved.
-    val screenHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
-    val buttonPad = if (screenHeight < 640.dp) 10.dp else 22.dp
+    val windowHeight = LocalWindowInfo.current.containerSize.height.toFloat()
+    val buttonPad = if (windowHeight < with(LocalDensity.current) { 640.dp.toPx() }) 10.dp else 22.dp
     val highlightBounds = remember { HighlightBounds() }
     var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
     var contentTop by remember { mutableStateOf(0f) }
@@ -542,8 +470,11 @@ private fun PlayBoard(
                     color = scheme.onSurfaceVariant,
                 )
             }
-            IconCircle(Icons.AutoMirrored.Filled.HelpOutline, "How to play") {
-                if (hasTutorial) showTutorial = true else showRules = true
+            Box(
+                Modifier.size(48.dp).clip(CircleShape).clickable { if (hasTutorial) showTutorial = true else showRules = true },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.AutoMirrored.Filled.HelpOutline, "How to play", tint = scheme.onSurfaceVariant)
             }
         }
 
@@ -598,7 +529,7 @@ private fun PlayBoard(
             ) {
                 puzzle.Board(
                     state = state,
-                    onState = { next -> push(next) },
+                    onState = ::push,
                     interactive = !state.solved,
                 )
             }
@@ -648,12 +579,8 @@ private fun PlayBoard(
                 ) {
                     Text("How to play", style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
                     Spacer(Modifier.height(6.dp))
-                    puzzle.rules.forEach { rule ->
-                        Text("•  $rule", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
-                        Spacer(Modifier.height(6.dp))
-                    }
-                    // A wide window is the desktop, where the keys are most likely used and least likely guessed.
-                    KeyboardHelpLine(puzzle, MaterialTheme.typography.bodySmall, scheme.onSurfaceVariant)
+                    // With the keys: a wide window is the desktop, where they are most likely used and least likely guessed.
+                    RulesList(puzzle, MaterialTheme.typography.bodySmall, scheme.onSurfaceVariant, gap = 6.dp)
                 }
             }
         }
@@ -724,7 +651,7 @@ private fun PlayBoard(
             safeTop = contentTop,
             boardTop = boardTop,
             toolbarTop = toolbarTop,
-            windowHeight = with(LocalDensity.current) { screenHeight.toPx() },
+            windowHeight = windowHeight,
         )
     }
     }
@@ -749,25 +676,56 @@ private fun PlayBoard(
         )
     }
 
-    if (showRules) {
-        AlertDialog(
-            onDismissRequest = { showRules = false },
-            confirmButton = {
-                TextButton(onClick = { showRules = false }) { Text("Got it") }
-            },
-            title = { Text("How to play ${puzzle.displayName}") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    puzzle.rules.forEach { rule ->
-                        Text("•  $rule", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    KeyboardHelpLine(puzzle)
+    if (showRules) RulesDialog("How to play ${puzzle.displayName}", puzzle) { showRules = false }
+}
+
+/**
+ * Silent for [LOADING_MESSAGE_DELAY_MS], so a board that arrives straight away does not flash a
+ * message. The box fills the screen either way and the board replaces it, so nothing resizes when
+ * the board arrives. Where generation runs off the main thread ([GENERATION_ANIMATES]) a spinner
+ * turns above the line; on the web the thread is busy generating, so a spinner would sit frozen
+ * and is left out (and the message has to be painted *before* generating starts, which is why the
+ * web's delay is zero: nothing can be painted once the board is underway).
+ *
+ * No header at all: the back arrow was the only thing in it, and a lone "How to play" button for
+ * rules you cannot yet see would be worse than the empty strip it would fill. Back out of a board
+ * still being dealt with the system back button, same as anywhere else.
+ */
+@Composable
+private fun DealingBoard(puzzle: PuzzleType) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(scheme.background)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+        contentAlignment = Alignment.Center,
+    ) {
+        var due by remember { mutableStateOf(LOADING_MESSAGE_DELAY_MS <= 0L) }
+        LaunchedEffect(Unit) {
+            delay(LOADING_MESSAGE_DELAY_MS)
+            due = true
+        }
+        if (due) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (GENERATION_ANIMATES) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 3.dp,
+                        color = scheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(16.dp))
                 }
-            },
-        )
+                Text(
+                    "Setting out ${puzzle.displayName}...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
+
 
 /** How long an extended streak takes to count up in the finished frame, and the scale a milestone's title stamps in from. */
 private const val COUNT_MS = 600
@@ -855,8 +813,7 @@ private fun FinishedFrame(
         val hide = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onHide)
         Column(
             Modifier.align(Alignment.TopCenter).padding(horizontal = 16.dp).widthIn(max = 380.dp).fillMaxWidth()
-                .shadow(6.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
-                .background(scheme.surface).background(accent.copy(alpha = 0.22f)).then(hide)
+                .frameCard(scheme.surface).background(accent.copy(alpha = 0.22f)).then(hide)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -893,14 +850,12 @@ private fun FinishedFrame(
         if (praise.achievements.isNotEmpty()) {
             Box(
                 Modifier.align(Alignment.Center).padding(horizontal = 32.dp).widthIn(max = 340.dp).fillMaxWidth()
-                    .shadow(6.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
-                    .background(scheme.surface).padding(horizontal = 12.dp, vertical = 10.dp),
+                    .frameCard(scheme.surface).padding(horizontal = 12.dp, vertical = 10.dp),
             ) { ResultsBlock(praise, accent, badge, celebrate) }
         }
         Column(
             Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp).widthIn(max = 380.dp).fillMaxWidth()
-                .shadow(6.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
-                .background(scheme.surface).then(hide).padding(10.dp),
+                .frameCard(scheme.surface).then(hide).padding(10.dp),
         ) {
             val main = mainOption(options)
             options.chunked(2).forEachIndexed { row, pair ->
@@ -914,6 +869,11 @@ private fun FinishedFrame(
         }
     }
 }
+
+private val FrameShape = RoundedCornerShape(20.dp)
+
+/** One of the finished frame's raised cards. */
+private fun Modifier.frameCard(color: Color): Modifier = shadow(6.dp, FrameShape).clip(FrameShape).background(color)
 
 /** Opens the share preview ([SharePreview]) for the result's card ([Praise.share]). */
 @Composable
@@ -976,23 +936,11 @@ private fun NextTile(option: NextOption, main: Boolean, accent: Color, modifier:
 }
 
 @Composable
-private fun IconCircle(icon: ImageVector, label: String, onClick: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    Box(
-        Modifier.size(48.dp).clip(CircleShape).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, label, tint = scheme.onSurfaceVariant)
-    }
-}
-
-@Composable
 private fun ToolButton(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Column(
         modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(scheme.surface)
+            .card(scheme.surface)
             .clickable(onClick = onClick)
             .padding(vertical = 13.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1003,13 +951,32 @@ private fun ToolButton(icon: ImageVector, label: String, modifier: Modifier, onC
     }
 }
 
-/** The "Keyboard" line of a rules dialog: the board's keys, then the play screen's. Nothing for a board with none. */
+/** A puzzle's rules, scrolling, under [title], with a "Got it". */
 @Composable
-internal fun KeyboardHelpLine(
+internal fun RulesDialog(title: String, puzzle: PuzzleType, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Got it") } },
+        title = { Text(title) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) { RulesList(puzzle) } },
+    )
+}
+
+/**
+ * The rules as bullets, [gap] under each, then the "Keyboard" line: the board's keys, then the play screen's (nothing for
+ * a board with none).
+ */
+@Composable
+private fun RulesList(
     puzzle: PuzzleType,
     style: TextStyle = MaterialTheme.typography.bodyMedium,
     color: Color = Color.Unspecified,
+    gap: Dp = 8.dp,
 ) {
+    puzzle.rules.forEach { rule ->
+        Text("•  $rule", style = style, color = color)
+        Spacer(Modifier.height(gap))
+    }
     if (puzzle.keyboardHelp.isEmpty()) return
     Text(
         "Keyboard: " + puzzle.keyboardHelp.joinToString(" ") +

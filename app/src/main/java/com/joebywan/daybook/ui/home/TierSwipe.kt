@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.home
 
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -20,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.ui.LocalReducedMotion
-import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -89,12 +89,7 @@ internal fun TierFlash(flash: Pair<Difficulty, Int>?, modifier: Modifier) {
     LaunchedEffect(flash) {
         if (flash == null) return@LaunchedEffect
         alpha.snapTo(FLASH_ALPHA)
-        if (still) {
-            delay((FLASH_HOLD_MS + FLASH_MS).toLong())
-            alpha.snapTo(0f)
-        } else {
-            alpha.animateTo(0f, tween(FLASH_MS, delayMillis = FLASH_HOLD_MS))
-        }
+        alpha.animateTo(0f, if (still) snap(FLASH_HOLD_MS + FLASH_MS) else tween(FLASH_MS, delayMillis = FLASH_HOLD_MS))
     }
     if (flash != null) Surface(
         modifier = modifier.graphicsLayer { this.alpha = alpha.value },

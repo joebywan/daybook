@@ -54,28 +54,30 @@ private val SHAPES: Map<Char, Shapes> by lazy {
     ART.mapValues { (_, a) -> Shapes(a.body.map(::parse), a.detail.map(::parse)) }
 }
 
+private val WHITE_FILL = Color(0xFFF6F2E8)
+private val WHITE_LINE = Color(0xFF1C1B1F)
+private val BLACK_FILL = Color(0xFF2B2A30)
+private val BLACK_LINE = Color(0xFFF6F2E8)
+
+/** The outline, in 100ths of the piece, so it thickens with the cell. */
+private const val OUTLINE = 6f
+
 /**
  * Draws one piece in a square of side [size] at [topLeft]. [kind] is K Q R B N P.
- * White and black differ in fill and outline: pass a light fill with a dark outline for white and a dark
- * fill with a light outline for black. [outline] is in 100ths of the piece, so it thickens with the cell.
+ * White is a light fill with a dark outline, black a dark fill with a light outline; [alpha] fades both.
  */
-internal fun DrawScope.drawChessPiece(
-    kind: Char,
-    topLeft: Offset,
-    size: Float,
-    fill: Color,
-    line: Color,
-    outline: Float = 6f,
-) {
+internal fun DrawScope.drawChessPiece(kind: Char, topLeft: Offset, size: Float, white: Boolean, alpha: Float = 1f) {
     val sh = SHAPES[kind] ?: return
+    val fill = (if (white) WHITE_FILL else BLACK_FILL).copy(alpha = alpha)
+    val line = (if (white) WHITE_LINE else BLACK_LINE).copy(alpha = alpha)
     translate(topLeft.x, topLeft.y) {
         scale(size / 100f, pivot = Offset.Zero) {
-            val edge = Stroke(outline, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            val edge = Stroke(OUTLINE, cap = StrokeCap.Round, join = StrokeJoin.Round)
             // Fill, outline, then fill again: a ball on a crown keeps the body's outline off its own interior.
             sh.body.forEach { drawPath(it, fill, style = Fill) }
             sh.body.forEach { drawPath(it, line, style = edge) }
             sh.body.forEach { drawPath(it, fill, style = Fill) }
-            sh.detail.forEach { drawPath(it, line, style = Stroke(outline * 0.7f, cap = StrokeCap.Round)) }
+            sh.detail.forEach { drawPath(it, line, style = Stroke(OUTLINE * 0.7f, cap = StrokeCap.Round)) }
         }
     }
 }
@@ -85,10 +87,6 @@ internal fun DrawScope.drawChessMotif(
     box: Size,
     light: Color,
     dark: Color,
-    whiteFill: Color,
-    whiteLine: Color,
-    blackFill: Color,
-    blackLine: Color,
 ) {
     val cols = 5
     val rows = 3
@@ -108,9 +106,6 @@ internal fun DrawScope.drawChessMotif(
         Triple('N', true, 4 to 2),
     )
     for ((k, white, rc) in pieces) {
-        drawChessPiece(
-            k, Offset(ox + rc.first * cell, oy + rc.second * cell), cell,
-            if (white) whiteFill else blackFill, if (white) whiteLine else blackLine,
-        )
+        drawChessPiece(k, Offset(ox + rc.first * cell, oy + rc.second * cell), cell, white)
     }
 }

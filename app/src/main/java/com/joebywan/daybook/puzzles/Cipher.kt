@@ -21,7 +21,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,14 +29,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -46,15 +42,21 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
+import com.joebywan.daybook.ui.PAD_HEIGHT
+import com.joebywan.daybook.ui.PadKey
+import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -89,7 +91,6 @@ data class CipherState(
 }
 
 private val KEY_HEIGHT = 46.dp
-private val PAD_HEIGHT = 48.dp
 private val GAP = 14.dp
 private val MAX_SLOT = 64.dp
 
@@ -139,26 +140,13 @@ object Cipher : PuzzleType {
         val s = state as CipherState
         val step = CipherTeacher.teach(s) ?: return null
         val l = step.letter
-        val digit = step.digit
-        val mistake = step.technique == CipherTeacher.MISTAKE
-        val wrong = s.digits[l]
-        return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = s.sum.tilesOf(l) + CipherLogic.key(l),
-            mistake = mistake,
+        return placementDeduction(
+            s, PlacementStep(step.technique, l, step.digit, step.focus, step.cited, step.nudge, step.explanation),
+            mistake = step.technique == CipherTeacher.MISTAKE,
             fallback = step.technique == CipherTeacher.FALLBACK,
-            applyTo = { now ->
-                val t = now as CipherState
-                if (t.digits[l] == digit) t else t.withDigit(l, digit).select(l)
-            },
-            reachedBy = { now ->
-                val t = now as CipherState
-                if (mistake) t.digits[l] != wrong else t.digits[l] == digit
-            },
+            targets = s.sum.tilesOf(l) + CipherLogic.key(l),
+            valueAt = { t, letter -> t.digits[letter] },
+            place = { t, letter, digit -> t.withDigit(letter, digit).select(letter) },
         )
     }
 
@@ -254,28 +242,6 @@ object Cipher : PuzzleType {
 
     // ---- drawing ---------------------------------------------------------------------------
 
-    private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
-
-    private fun BoardHighlight.look(index: Int, dims: Boolean = true): Look {
-        val strong = index in this.strong
-        val soft = !strong && index in this.soft
-        return Look(strong, soft, dims && !isEmpty && !strong && !soft)
-    }
-
-    private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, corner: Float): Modifier =
-        if (!look.strong && !look.soft) this
-        else drawWithContent {
-            drawContent()
-            val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
-            drawRoundRect(
-                if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                topLeft = Offset(w / 2, w / 2),
-                size = Size(size.width - w, size.height - w),
-                cornerRadius = CornerRadius(corner.dp.toPx()),
-                style = Stroke(w),
-            )
-        }
-
     /** Where tile (row, col) sits in the sum's box: columns from the right, the total below the rule. */
     private fun tileOrigin(sum: CipherSum, row: Int, col: Int, slot: Float): Offset =
         Offset((sum.width - col) * slot, (row + if (row == sum.rows - 1) RULE else 0f) * slot)
@@ -322,7 +288,7 @@ object Cipher : PuzzleType {
                         .then(if (selected == l) Modifier.border(2.5.dp, scheme.onBackground, RoundedCornerShape(8.dp)) else Modifier),
                     contentAlignment = Alignment.Center,
                 ) {
-                    val letter = sum.letters[l].uppercaseChar().toString()
+                    val letter = sum.name(l)
                     if (placed) {
                         // The letter in the corner, too small to read on the home grid's motif.
                         if (tile >= 28.dp) Text(
@@ -433,7 +399,7 @@ object Cipher : PuzzleType {
                         Modifier
                             .moveFeel(feel, l, Color(accent))
                             .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
-                            .ring(look, glow, pulse, corner = 8f)
+                            .ring(look, glow, pulse, corner = 8.dp)
                             .then(if (sum.tile(r, c) in redColumn) Modifier.border(2.dp, scheme.error, RoundedCornerShape(8.dp)) else Modifier)
                             .clickable(enabled = interactive) { onState(s.select(l)) }
                     },
@@ -450,14 +416,14 @@ object Cipher : PuzzleType {
                                 .weight(1f)
                                 .height(KEY_HEIGHT)
                                 .highlightAnchor(CipherLogic.key(l))
-                                .ring(look, glow, pulse, corner = 8f)
+                                .ring(look, glow, pulse, corner = 8.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(if (s.selected == l) mark.copy(alpha = if (dark) 0.55f else 0.4f) else scheme.surface)
                                 .clickable(enabled = interactive) { onState(s.select(l)) },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            Text(sum.letters[l].uppercaseChar().toString(), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
+                            Text(sum.name(l), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
                             Text(
                                 if (s.digits[l] == EMPTY) "·" else s.digits[l].toString(),
                                 style = MaterialTheme.typography.titleMedium,
@@ -473,24 +439,20 @@ object Cipher : PuzzleType {
                     (0..9).forEach { digit ->
                         val at = s.selected
                         val owner = s.digits.indices.firstOrNull { s.digits[it] == digit && it != at }
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .height(PAD_HEIGHT)
-                                .highlightAnchor(CipherLogic.pad(digit))
-                                .ring(highlight.look(CipherLogic.pad(digit), dims = false), glow, pulse, corner = 8f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (owner != null) scheme.surfaceVariant else scheme.surface)
-                                .clickable(enabled = interactive && at != null) {
-                                    val next = s.enter(at ?: return@clickable, digit)
-                                    if (next !== s) onState(next)
-                                },
-                            contentAlignment = Alignment.Center,
+                        PadKey(
+                            CipherLogic.pad(digit), highlight, glow, pulse,
+                            fill = if (owner != null) scheme.surfaceVariant else scheme.surface,
+                            enabled = interactive && at != null,
+                            onClick = {
+                                val next = s.enter(at ?: return@PadKey, digit)
+                                if (next !== s) onState(next)
+                            },
+                            corner = 8.dp,
                         ) {
                             Text(digit.toString(), style = MaterialTheme.typography.titleMedium, color = if (owner != null) scheme.outline else scheme.onSurface)
                             if (owner != null) {
                                 Text(
-                                    sum.letters[owner].uppercaseChar().toString(),
+                                    sum.name(owner),
                                     Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
                                     fontSize = 10.sp,
                                     color = scheme.outline,

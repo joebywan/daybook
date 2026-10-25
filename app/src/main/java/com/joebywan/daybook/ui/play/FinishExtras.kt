@@ -133,7 +133,7 @@ fun PartyPopper(modifier: Modifier = Modifier) {
  * motion it is simply there.
  */
 @Composable
-fun ResultsBlock(praise: Praise, accent: Color, badge: Dp = 84.dp, celebrate: Boolean = false) {
+fun ResultsBlock(praise: Praise, accent: Color, badge: Dp, celebrate: Boolean) {
     val scheme = MaterialTheme.colorScheme
     val items = praise.achievements
     var index by rememberSaveable { mutableIntStateOf(0) }
@@ -146,32 +146,30 @@ fun ResultsBlock(praise: Praise, accent: Color, badge: Dp = 84.dp, celebrate: Bo
         Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (items.isNotEmpty()) {
-            val a = items[index % items.size]
-            Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                    .then(if (items.size > 1) Modifier.clickable { tapped = true; index = (index + 1) % items.size } else Modifier),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Spacer(Modifier.height(6.dp))
-                AchievementBadge(a.id, true, Modifier.size(badge).graphicsLayer {
-                    rotationY = flip.value
-                    cameraDistance = 12f * density
-                })
-                Spacer(Modifier.height(8.dp))
-                Text(a.title, style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text(a.description, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 2, textAlign = TextAlign.Center)
-                if (items.size > 1) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${index % items.size + 1} of ${items.size}", style = MaterialTheme.typography.labelMedium, color = scheme.onSurface)
-                        items.indices.forEach { i ->
-                            Spacer(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(
-                                if (i == index % items.size) accent else scheme.onSurfaceVariant.copy(alpha = 0.35f)))
-                        }
+        val a = items[index % items.size]
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                .then(if (items.size > 1) Modifier.clickable { tapped = true; index = (index + 1) % items.size } else Modifier),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(6.dp))
+            AchievementBadge(a.id, true, Modifier.size(badge).graphicsLayer {
+                rotationY = flip.value
+                cameraDistance = 12f * density
+            })
+            Spacer(Modifier.height(8.dp))
+            Text(a.title, style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(a.description, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 2, textAlign = TextAlign.Center)
+            if (items.size > 1) {
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("${index % items.size + 1} of ${items.size}", style = MaterialTheme.typography.labelMedium, color = scheme.onSurface)
+                    items.indices.forEach { i ->
+                        Spacer(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(
+                            if (i == index % items.size) accent else scheme.onSurfaceVariant.copy(alpha = 0.35f)))
                     }
-                    Text("Tap to see next achievement", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 }
+                Text("Tap to see next achievement", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
         }
         praise.toGo?.let {

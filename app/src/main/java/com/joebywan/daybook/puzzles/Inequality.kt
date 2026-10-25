@@ -20,16 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -43,15 +38,22 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.DigitKeyAction
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
-import com.joebywan.daybook.core.highlightAnchor
+import com.joebywan.daybook.core.digitKeyAction
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.core.placementDeduction
+import com.joebywan.daybook.ui.PAD_GAP
+import com.joebywan.daybook.ui.PAD_HEIGHT
+import com.joebywan.daybook.ui.PadKey
+import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
@@ -89,9 +91,6 @@ data class InequalityState(
     fun select(index: Int): InequalityState = copy(selected = index)
 }
 
-private val PAD_HEIGHT = 48.dp
-private val PAD_GAP = 18.dp
-
 /** A square's side as a share of its slot; the rest is the gap a sign sits in. Tuned by rendering. */
 private const val CELL = 0.66f
 
@@ -124,27 +123,12 @@ object Inequality : PuzzleType {
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as InequalityState
         val step = InequalityTeacher.teach(s) ?: return null
-        val cell = step.cell
-        val digit = step.digit
-        val mistake = step.technique == InequalityTeacher.MISTAKE
-        val wrong = s.cells[cell]
-        return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = setOf(cell),
-            mistake = mistake,
+        return placementDeduction(
+            s, step,
+            mistake = step.technique == InequalityTeacher.MISTAKE,
             fallback = step.technique == InequalityTeacher.FALLBACK,
-            applyTo = { now ->
-                val t = now as InequalityState
-                if (t.cells[cell] == digit) t else t.withCell(cell, digit).select(cell)
-            },
-            reachedBy = { now ->
-                val t = now as InequalityState
-                if (mistake) t.cells[cell] != wrong else t.cells[cell] == digit
-            },
+            valueAt = { t, cell -> t.cells[cell] },
+            place = { t, cell, digit -> t.withCell(cell, digit).select(cell) },
         )
     }
 
@@ -241,30 +225,6 @@ object Inequality : PuzzleType {
         (state as InequalityState).let { if (it.selected == null) it else it.copy(selected = null) }
 
     // ---- drawing ---------------------------------------------------------------------------
-
-    /** What [LocalBoardHighlight] asks of one square, key or sign. */
-    private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
-
-    private fun BoardHighlight.look(index: Int, dims: Boolean = true): Look {
-        val strong = index in this.strong
-        val soft = !strong && index in this.soft
-        return Look(strong, soft, dims && !isEmpty && !strong && !soft)
-    }
-
-    /** A ring just inside the square, breathing for strong and quiet for soft; the pulse is read at draw time. */
-    private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, corner: Float): Modifier =
-        if (!look.strong && !look.soft) this
-        else drawWithContent {
-            drawContent()
-            val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
-            drawRoundRect(
-                if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                topLeft = Offset(w / 2, w / 2),
-                size = Size(size.width - w, size.height - w),
-                cornerRadius = CornerRadius(corner.dp.toPx()),
-                style = Stroke(w),
-            )
-        }
 
     /**
      * A chevron centred on ([cx], [cy]) whose narrow end is the smaller digit: `<` when the smaller
@@ -371,8 +331,8 @@ object Inequality : PuzzleType {
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
                 .boardKeys(interactive) { key, _, repeat ->
-                    val action = inequalityKeyAction(key, n) ?: return@boardKeys false
-                    if (!repeat || action is InequalityKeyAction.Move) s.applyKey(action)?.let(onState)
+                    val action = digitKeyAction(key, n) ?: return@boardKeys false
+                    if (!repeat || action is DigitKeyAction.Move) s.applyKey(action)?.let(onState)
                     true
                 },
             contentAlignment = Alignment.Center,
@@ -394,7 +354,7 @@ object Inequality : PuzzleType {
                                 .size(cell)
                                 .moveFeel(feel, i, Color(accent))
                                 .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
-                                .ring(look, glow, pulse, corner = 8f)
+                                .ring(look, glow, pulse, corner = 8.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
                                     when {
@@ -449,19 +409,14 @@ object Inequality : PuzzleType {
                     (1..n).forEach { digit ->
                         val remaining = n - s.cells.count { it == digit }
                         val at = s.selected
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .height(PAD_HEIGHT)
-                                .highlightAnchor(InequalityTeacher.pad(digit))
-                                .ring(highlight.look(InequalityTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (remaining == 0) scheme.surfaceVariant else scheme.surface)
-                                .clickable(enabled = interactive && at != null) {
-                                    val next = s.enter(at ?: return@clickable, digit)
-                                    if (next !== s) onState(next)
-                                },
-                            contentAlignment = Alignment.Center,
+                        PadKey(
+                            InequalityTeacher.pad(digit), highlight, glow, pulse,
+                            fill = if (remaining == 0) scheme.surfaceVariant else scheme.surface,
+                            enabled = interactive && at != null,
+                            onClick = {
+                                val next = s.enter(at ?: return@PadKey, digit)
+                                if (next !== s) onState(next)
+                            },
                         ) {
                             Text(
                                 digit.toString(),

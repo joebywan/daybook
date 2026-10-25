@@ -21,7 +21,7 @@ class WordWheelRulesTest {
     private val lenient = Json { ignoreUnknownKeys = true }
 
     private fun daily(day: Int, d: Difficulty): WordWheelState? =
-        WordWheel.generateVerified(daySeed(day, WordWheel.id, d), d)
+        WordWheelLogic.generateVerified(daySeed(day, WordWheel.id, d), d)
 
     @Test
     fun `a word fills its own slot, a real word is a bonus, and nothing else changes the board`() {
@@ -133,7 +133,7 @@ class WordWheelRulesTest {
     fun `the last resort is a fixed, proved board on every tier`() {
         for (d in Difficulty.entries) {
             val b = WordWheelLogic.lastResort(d)
-            assertEquals(WordWheel.generateVerified(WordWheelLogic.LAST_RESORT_SEED, d), b)
+            assertEquals(WordWheelLogic.generateVerified(WordWheelLogic.LAST_RESORT_SEED, d), b)
             assertEquals(emptyList<String>(), WordWheelOracle.problems(b))
             assertTrue(WordWheelTeacher.walk(b).maxChoice <= WordWheelLogic.MAX_CHOICE)
         }

@@ -5,14 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -40,9 +38,8 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialStep
-import com.joebywan.daybook.ui.play.KeyboardHelpLine
+import com.joebywan.daybook.ui.play.RulesDialog
 import com.joebywan.daybook.ui.teach.HintPanel
-import com.joebywan.daybook.ui.teach.HintSlotHeight
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
@@ -51,6 +48,14 @@ import kotlinx.coroutines.launch
 
 /** The solve chime (a no-op when sound is off), so a finished step in a tutorial announces its new caption. */
 val LocalChime = staticCompositionLocalOf<() -> Unit> { {} }
+
+/**
+ * Height of the fixed slot under the board (the play screen has no slot: its hint is a popover). Sized for the longest
+ * hint text: five lines of body text plus a row of buttons, which at 390dp holds about 210 characters, every explanation
+ * the teachers produce bar Pipes' and Atoms' longest (measured, up to 230). Those few scroll inside the slot, with a fade
+ * to say there is more. Four lines (132dp) clipped at about 145 characters, and half the teachers run past that.
+ */
+private val HintSlotHeight = 156.dp
 
 /** Why the caption area says what it says. */
 private enum class Status { WAITING, RETRY, DONE }
@@ -81,17 +86,13 @@ fun TutorialRunner(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Never empty: the play screen offers a walkthrough only to a puzzle that has one.
     val frames = puzzle.tutorial
-    if (frames.isEmpty()) {
-        // Closing is navigation, which must not happen mid-composition.
-        LaunchedEffect(Unit) { onClose() }
-        return
-    }
     val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
 
     var index by rememberSaveable { mutableIntStateOf(0) }
-    val frame = frames[index.coerceIn(0, frames.lastIndex)]
+    val frame = frames[index]
     var board by remember(index) { mutableStateOf(frame.state) }
     var moved by remember(index) { mutableStateOf(Status.WAITING) }
     // The done line of the move that brought us here, shown until this frame has news of its own.
@@ -265,20 +266,5 @@ fun TutorialRunner(
         }
     }
 
-    if (showRules) {
-        AlertDialog(
-            onDismissRequest = { showRules = false },
-            confirmButton = { TextButton(onClick = { showRules = false }) { Text("Got it") } },
-            title = { Text("${puzzle.displayName} in short") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    puzzle.rules.forEach { rule ->
-                        Text("•  $rule", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    KeyboardHelpLine(puzzle)
-                }
-            },
-        )
-    }
+    if (showRules) RulesDialog("${puzzle.displayName} in short", puzzle) { showRules = false }
 }

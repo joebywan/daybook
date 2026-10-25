@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.archive
 
+import com.joebywan.daybook.ui.TitledScreen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,9 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,7 +43,6 @@ import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
-import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.ui.home.TierDots
 import com.joebywan.daybook.ui.stats.MonthBar
@@ -53,10 +50,7 @@ import com.joebywan.daybook.ui.stats.MonthGrid
 import com.joebywan.daybook.ui.stats.firstOfMonth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.minus
-import kotlinx.datetime.plus
 
 /** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
 private const val DAY_DATE = "EEE d MMM yyyy"
@@ -92,8 +86,6 @@ internal object ArchiveCalendar {
  * solved; tapping one shows its three tiers under the grid (beside it on a wide screen), so a play is
  * two taps. The selected day and the month shown are `rememberSaveable`, and coming back from a board
  * opens at that board's day ([openAt], from the route).
- *
- * There is no back control on the screen; the system back button is the way out.
  */
 @Composable
 fun ArchiveScreen(
@@ -107,7 +99,6 @@ fun ArchiveScreen(
     /** The day to select: the one just played, so coming back keeps the player's place. */
     openAt: LocalDate? = null,
 ) {
-    val scheme = MaterialTheme.colorScheme
     val puzzle = PuzzleRegistry.byId(puzzleId) ?: return
     val accent = Color(puzzle.accent)
     val done = completions.filter { it.puzzleId == puzzleId }
@@ -123,31 +114,11 @@ fun ArchiveScreen(
     val selected = picked?.let(LocalDate::fromEpochDays)
     val started by remember(selected) { selected?.let(inProgress) ?: flowOf(emptySet()) }.collectAsState(emptySet())
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(scheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+    TitledScreen(
+        "${puzzle.displayName} archive",
+        "${today.toEpochDays() - DailySeed.EPOCH.toEpochDays() + 1} days, all unlocked",
+        onBack,
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            // Nothing on Android, where the system back button is the way out.
-            BackButton(onBack)
-            Column(
-                Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)
-            ) {
-                Text(
-                    "${puzzle.displayName} archive",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = scheme.onBackground,
-                )
-                Text(
-                    "${today.toEpochDays() - DailySeed.EPOCH.toEpochDays() + 1} days, all unlocked",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
-        }
-
         BoxWithConstraints(
             Modifier.fillMaxSize().padding(start = 18.dp, end = 18.dp, bottom = 12.dp),
             contentAlignment = Alignment.TopCenter,
@@ -168,8 +139,7 @@ fun ArchiveScreen(
                         month,
                         back = month > ArchiveCalendar.firstMonth(),
                         forward = month < lastMonth,
-                        onBack = { shown = month.minus(DatePeriod(months = 1)).toEpochDays() },
-                        onForward = { shown = month.plus(DatePeriod(months = 1)).toEpochDays() },
+                        onMonth = { shown = it.toEpochDays() },
                     )
                     MonthGrid(month, cell, weeks = 6) { day, m ->
                         if (day < DailySeed.EPOCH) {

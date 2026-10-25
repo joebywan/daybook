@@ -15,7 +15,7 @@ import org.junit.Test
 class TargetRulesTest {
 
     private fun board(day: Int, d: Difficulty) =
-        Target.generateVerified(daySeed(day, Target.id, d), d)
+        TargetLogic.generateVerified(daySeed(day, Target.id, d), d)
             ?: error("no proved board for day $day ${d.name}")
 
     @Test
@@ -132,7 +132,7 @@ class TargetRulesTest {
             val t0 = System.nanoTime()
             for (day in 0 until 365) {
                 val seed = daySeed(day, Target.id, d)
-                val s = Target.generateVerified(seed, d)
+                val s = TargetLogic.generateVerified(seed, d)
                 if (s == null) { gaveUp++; continue }
                 assertEquals(s, Target.generate(seed, d))
                 assertTrue("${d.name} day $day par ${s.par}", s.par in spec.parLo..spec.parHi)

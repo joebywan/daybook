@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.forEachBit
+
 /**
  * Mosaic, taught one fill at a time.
  *
@@ -84,10 +87,13 @@ internal object MosaicTeacher {
         val width: Int,
         val cells: List<Int>,
         val label: IntArray,
-        val count: Int,
-        val nbr: LongArray,
-        val hue: IntArray,
+        /** The board as a search position; [Mosaic.Position.play] copies, so this one is never changed. */
+        val root: Mosaic.Position,
     ) {
+        val count get() = root.count
+        val nbr get() = root.nbr
+        val hue get() = root.hue
+
         fun cellsOf(area: Int): Set<Int> = cells.indices.filter { label[it] == area }.toSet()
 
         fun cellsOf(areas: Long): Set<Int> = cells.indices.filter { (areas shr label[it]) and 1L != 0L }.toSet()
@@ -95,77 +101,15 @@ internal object MosaicTeacher {
         /** The first cell of [area] in reading order, which is what a fill is recorded against. */
         fun firstCell(area: Int): Int = cells.indices.first { label[it] == area }
 
-        val root: Pos
-            get() = Pos(
-                LongArray(count) { 1L shl it },
-                nbr.copyOf(),
-                hue.copyOf(),
-                if (count == 64) -1L else (1L shl count) - 1,
-                count,
-            )
-
         companion object {
             const val MAX_AREAS = 61
 
             fun of(width: Int, height: Int, cells: List<Int>): Areas? {
-                val n = cells.size
-                val label = IntArray(n) { -1 }
-                val queue = IntArray(n)
-                var count = 0
-                for (i in 0 until n) {
-                    if (label[i] >= 0) continue
-                    if (count == MAX_AREAS) return null
-                    var head = 0
-                    var tail = 0
-                    label[i] = count
-                    queue[tail++] = i
-                    while (head < tail) {
-                        val x = queue[head++]
-                        val r = x / width
-                        val c = x % width
-                        for (y in intArrayOf(
-                            if (r > 0) x - width else -1,
-                            if (r < height - 1) x + width else -1,
-                            if (c > 0) x - 1 else -1,
-                            if (c < width - 1) x + 1 else -1,
-                        )) {
-                            if (y >= 0 && label[y] < 0 && cells[y] == cells[x]) {
-                                label[y] = count
-                                queue[tail++] = y
-                            }
-                        }
-                    }
-                    count++
-                }
-                val nbr = LongArray(count)
-                for (x in 0 until n) {
-                    val right = if (x % width < width - 1) x + 1 else -1
-                    val down = if (x / width < height - 1) x + width else -1
-                    for (y in intArrayOf(right, down)) {
-                        if (y < 0 || label[x] == label[y]) continue
-                        nbr[label[x]] = nbr[label[x]] or (1L shl label[y])
-                        nbr[label[y]] = nbr[label[y]] or (1L shl label[x])
-                    }
-                }
-                val hue = IntArray(count)
-                for (x in 0 until n) hue[label[x]] = cells[x]
-                return Areas(width, cells, label, count, nbr, hue)
+                val (label, root) = Mosaic.areas(width, height, cells, MAX_AREAS) ?: return null
+                return Areas(width, cells, label, root)
             }
         }
     }
-
-    /**
-     * A search position: groups of the board's areas, each group named by the area that was
-     * flooded to make it. No two touching groups share a colour, so a fill merges exactly the
-     * flooded group's same-coloured neighbours and never cascades.
-     */
-    class Pos(
-        val member: LongArray,
-        val nbr: LongArray,
-        val hue: IntArray,
-        val alive: Long,
-        val count: Int,
-    )
 
     /** An exact table key: every live group's membership with its colour packed on top, sorted. */
     private class Key(val v: LongArray) {
@@ -191,128 +135,33 @@ internal object MosaicTeacher {
         private val failedAt = HashMap<Key, Int>()
         private val wonAt = HashMap<Key, Int>()
 
-        fun gain(p: Pos, group: Int, colour: Int): Int {
-            var n = 0
-            var near = p.nbr[group]
-            while (near != 0L) {
-                val j = near.countTrailingZeroBits()
-                near = near and (near - 1)
-                if (p.hue[j] == colour) n++
-            }
-            return n
-        }
+        private val bounds = Mosaic.Bound(64)
 
-        fun play(p: Pos, group: Int, colour: Int): Pos {
-            var eaten = 0L
-            var near = p.nbr[group]
-            while (near != 0L) {
-                val j = near.countTrailingZeroBits()
-                near = near and (near - 1)
-                if (p.hue[j] == colour) eaten = eaten or (1L shl j)
-            }
-            val member = p.member.copyOf()
-            val nbr = p.nbr.copyOf()
-            val hue = p.hue.copyOf()
-            var grown = p.member[group]
-            var touching = p.nbr[group]
-            var bits = eaten
-            while (bits != 0L) {
-                val j = bits.countTrailingZeroBits()
-                bits = bits and (bits - 1)
-                grown = grown or p.member[j]
-                touching = touching or p.nbr[j]
-            }
-            touching = touching and (eaten or (1L shl group)).inv()
-            member[group] = grown
-            nbr[group] = touching
-            hue[group] = colour
-            var rim = touching
-            while (rim != 0L) {
-                val k = rim.countTrailingZeroBits()
-                rim = rim and (rim - 1)
-                nbr[k] = (nbr[k] and eaten.inv()) or (1L shl group)
-            }
-            return Pos(member, nbr, hue, p.alive and eaten.inv(), p.count - eaten.countOneBits())
-        }
+        fun gain(p: Mosaic.Position, group: Int, colour: Int): Int = p.eaten(group, colour).countOneBits()
 
-        fun distinctColours(p: Pos): Int {
-            var present = 0
-            var bits = p.alive
-            while (bits != 0L) {
-                val j = bits.countTrailingZeroBits()
-                bits = bits and (bits - 1)
-                present = present or (1 shl p.hue[j])
-            }
-            return present.countOneBits()
-        }
+        /** How many steps the farthest live group is from [from]. */
+        fun eccentricity(p: Mosaic.Position, from: Int): Int = bounds.sweep(p, from).toInt()
 
-        /** Distances from [from] to every live group, -1 for dead ones. */
-        fun distances(p: Pos, from: Int): IntArray {
-            val dist = IntArray(p.hue.size) { -1 }
-            val queue = IntArray(p.hue.size)
-            var head = 0
-            var tail = 0
-            dist[from] = 0
-            queue[tail++] = from
-            while (head < tail) {
-                val u = queue[head++]
-                var bits = p.nbr[u]
-                while (bits != 0L) {
-                    val v = bits.countTrailingZeroBits()
-                    bits = bits and (bits - 1)
-                    if (dist[v] >= 0) continue
-                    dist[v] = dist[u] + 1
-                    queue[tail++] = v
-                }
-            }
-            return dist
-        }
-
-        private fun farthest(p: Pos, from: Int): Pair<Int, Int> {
-            val d = distances(p, from)
-            var far = from
-            for (i in d.indices) if (d[i] > d[far]) far = i
-            return far to d[far]
-        }
-
-        /** Admissible lower bound on the fills still needed. */
-        fun bound(p: Pos): Int {
-            if (p.count <= 1) return 0
-            val first = farthest(p, p.alive.countTrailingZeroBits()).first
-            val spread = farthest(p, first).second
-            return maxOf(distinctColours(p) - 1, (spread + 1) / 2)
-        }
-
-        private fun key(p: Pos): Key {
+        private fun key(p: Mosaic.Position): Key {
             val v = LongArray(p.count)
             var k = 0
-            var bits = p.alive
-            while (bits != 0L) {
-                val j = bits.countTrailingZeroBits()
-                bits = bits and (bits - 1)
-                v[k++] = p.member[j] or (p.hue[j].toLong() shl 61)
-            }
+            p.alive.forEachBit { j -> v[k++] = p.member[j] or (p.hue[j].toLong() shl 61) }
             v.sort()
             return Key(v)
         }
 
         /** Every fill in [p], encoded `group * 8 + colour`, most swallowing first, then index order. */
-        fun moves(p: Pos): List<Int> {
+        fun moves(p: Mosaic.Position): List<Int> {
             val out = ArrayList<Int>()
-            var bits = p.alive
-            while (bits != 0L) {
-                val g = bits.countTrailingZeroBits()
-                bits = bits and (bits - 1)
-                for (c in 0 until colours) if (c != p.hue[g]) out += g * 8 + c
-            }
+            p.alive.forEachBit { g -> for (c in 0 until colours) if (c != p.hue[g]) out += g * 8 + c }
             return out.sortedWith(compareByDescending<Int> { gain(p, it / 8, it % 8) }.thenBy { it })
         }
 
         /** Whether [p] can be finished in at most [r] fills. Meaningless once [exhausted]. */
-        fun canFinish(p: Pos, r: Int): Boolean {
+        fun canFinish(p: Mosaic.Position, r: Int): Boolean {
             if (p.count <= 1) return true
             if (r <= 0 || exhausted) return false
-            if (bound(p) > r) return false
+            if (bounds.of(p) > r) return false
             val key = key(p)
             if ((failedAt[key] ?: -1) >= r) return false
             if ((wonAt[key] ?: Int.MAX_VALUE) <= r) return true
@@ -321,7 +170,7 @@ internal object MosaicTeacher {
                 return false
             }
             for (m in moves(p)) {
-                if (canFinish(play(p, m / 8, m % 8), r - 1)) {
+                if (canFinish(p.play(m / 8, m % 8), r - 1)) {
                     wonAt[key] = r
                     return true
                 }
@@ -332,11 +181,11 @@ internal object MosaicTeacher {
         }
 
         /** Whether filling [group] with [colour] leaves [p] finishable in the [r] - 1 fills after it. */
-        fun keeps(p: Pos, group: Int, colour: Int, r: Int): Boolean = canFinish(play(p, group, colour), r - 1)
+        fun keeps(p: Mosaic.Position, group: Int, colour: Int, r: Int): Boolean = canFinish(p.play(group, colour), r - 1)
 
         /** The fewest fills that finish [p], or null past [cap] or the budget. */
-        fun optimum(p: Pos, cap: Int): Int? {
-            for (r in bound(p)..cap) {
+        fun optimum(p: Mosaic.Position, cap: Int): Int? {
+            for (r in bounds.of(p)..cap) {
                 if (canFinish(p, r)) return r
                 if (exhausted) return null
             }
@@ -412,18 +261,11 @@ internal object MosaicTeacher {
 
     /** The neighbours of [group] in [colour], as cells: what the fill would swallow. */
     private fun swallowed(a: Areas, group: Int, colour: Int): Set<Int> {
-        var eaten = 0L
-        var near = a.nbr[group]
-        while (near != 0L) {
-            val j = near.countTrailingZeroBits()
-            near = near and (near - 1)
-            if (a.hue[j] == colour) eaten = eaten or (1L shl j)
-        }
-        return a.cellsOf(eaten)
+        return a.cellsOf(a.root.eaten(group, colour))
     }
 
     /** Why this colour for this area, in a few words, and never claiming more than is true. */
-    private fun colourReason(search: Search, root: Pos, colours: Int, group: Int, colour: Int): String {
+    private fun colourReason(search: Search, root: Mosaic.Position, colours: Int, group: Int, colour: Int): String {
         val g = search.gain(root, group, colour)
         val best = (0 until colours).filter { it != root.hue[group] }.maxOf { search.gain(root, group, it) }
         return when {
@@ -433,7 +275,7 @@ internal object MosaicTeacher {
         }
     }
 
-    private fun finish(a: Areas, root: Pos): Step? {
+    private fun finish(a: Areas, root: Mosaic.Position): Step? {
         for (g in 0 until a.count) {
             if (root.nbr[g] != root.alive and (1L shl g).inv()) continue
             val others = (0 until a.count).filter { it != g }.map { a.hue[it] }.distinct()
@@ -451,8 +293,8 @@ internal object MosaicTeacher {
         return null
     }
 
-    private fun count(a: Areas, root: Pos, colours: Int, r: Int, search: Search): Step? {
-        val k = search.distinctColours(root)
+    private fun count(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search): Step? {
+        val k = root.colours()
         if (k < 3 || r != k - 1) return null
         val lone = (0 until a.count).filter { g -> (0 until a.count).count { a.hue[it] == a.hue[g] } == 1 }
         val present = (0 until colours).filter { c -> a.hue.any { it == c } }
@@ -477,12 +319,12 @@ internal object MosaicTeacher {
         )
     }
 
-    private fun maxGain(search: Search, root: Pos, colours: Int): Int =
+    private fun maxGain(search: Search, root: Mosaic.Position, colours: Int): Int =
         (0 until root.count).maxOf { g ->
             (0 until colours).filter { it != root.hue[g] }.maxOfOrNull { search.gain(root, g, it) } ?: 0
         }
 
-    private fun biggest(a: Areas, root: Pos, colours: Int, r: Int, search: Search): Step? {
+    private fun biggest(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search): Step? {
         val mx = maxGain(search, root, colours)
         if (mx < 2) return null
         for (g in 0 until a.count) {
@@ -490,12 +332,7 @@ internal object MosaicTeacher {
                 if (c == a.hue[g] || search.gain(root, g, c) != mx) continue
                 if (!search.keeps(root, g, c, r)) continue
                 var near = a.cellsOf(g)
-                var bits = a.nbr[g]
-                while (bits != 0L) {
-                    val j = bits.countTrailingZeroBits()
-                    bits = bits and (bits - 1)
-                    near = near + a.cellsOf(j)
-                }
+                a.nbr[g].forEachBit { j -> near = near + a.cellsOf(j) }
                 return fill(
                     a, BIGGEST, g, c,
                     focus = near,
@@ -510,7 +347,7 @@ internal object MosaicTeacher {
     }
 
     /** Whether some fill swallows several areas and none of the fills that swallow the most is safe. */
-    private fun biggestLoses(a: Areas, root: Pos, colours: Int, r: Int, search: Search): Boolean {
+    private fun biggestLoses(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search): Boolean {
         val mx = maxGain(search, root, colours)
         if (mx < 2) return false
         for (g in 0 until a.count) for (c in 0 until colours) {
@@ -519,9 +356,9 @@ internal object MosaicTeacher {
         return true
     }
 
-    private fun centre(a: Areas, root: Pos, colours: Int, r: Int, search: Search): Step? {
+    private fun centre(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search): Step? {
         if (a.count < 3) return null
-        val ecc = IntArray(a.count) { g -> search.distances(root, g).max() }
+        val ecc = IntArray(a.count) { g -> search.eccentricity(root, g) }
         val least = ecc.min()
         if (least == ecc.max()) return null
         for (g in 0 until a.count) {
@@ -542,7 +379,7 @@ internal object MosaicTeacher {
         return null
     }
 
-    private fun keeps(a: Areas, root: Pos, r: Int, search: Search): Step? {
+    private fun keeps(a: Areas, root: Mosaic.Position, r: Int, search: Search): Step? {
         // Up to two keeping fills: the first to teach, the second only to know whether it is alone.
         // "The only fill that works" is a fact the player can use — everything else loses — even
         // where no rule of thumb explains why.
@@ -577,7 +414,7 @@ internal object MosaicTeacher {
 
     private fun lost(s: MosaicState, a: Areas, search: Search): Step {
         val left = s.limit - s.moves
-        val k = search.distinctColours(a.root)
+        val k = a.root.colours()
         val why = when {
             left <= 0 -> "You're out of fills."
             k - 1 > left -> "$k colours are left and a fill wipes out one at most, so it needs ${fills(k - 1)}; " +
@@ -638,6 +475,4 @@ internal object MosaicTeacher {
     // ---- words ----------------------------------------------------------------------------------
 
     private fun fills(n: Int) = if (n == 1) "1 fill" else "$n fills"
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
 }

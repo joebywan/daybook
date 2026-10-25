@@ -1,0 +1,19 @@
+name: Set up the build
+description: >
+  JDK 17, the Android SDK and Gradle, as every workflow that runs ./gradlew needs them. web/ compiles files
+  out of app/ and the build configures both projects, so a web-only build needs the Android SDK as well.
+  The caller has checked out the repo. gradle/actions stays on v5 (CLAUDE.md, Settled).
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - uses: android-actions/setup-android@v4
+      with:
+        packages: 'platforms;android-36 build-tools;36.0.0'
+
+    - uses: gradle/actions/setup-gradle@v5
