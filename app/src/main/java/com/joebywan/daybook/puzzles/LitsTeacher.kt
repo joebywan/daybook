@@ -190,6 +190,13 @@ internal object LitsTeacher {
         }
     }
 
+    /** [Lits.impossible]: the empty squares no candidate shape of their region ([Sight.cand]) covers. */
+    fun impossible(width: Int, height: Int, region: List<Int>, shaded: List<Boolean>): Set<Int> {
+        val layout = Layout(width, height, region)
+        val sight = Sight(layout, shaded.toBooleanArray(), BooleanArray(layout.n))
+        return (0 until layout.n).filter { c -> !shaded[c] && sight.cand(layout.of[c]).none { c in it.cells } }.toSet()
+    }
+
     private const val BLOCK = 1
     private const val LETTER = 2
 

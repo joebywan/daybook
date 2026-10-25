@@ -55,7 +55,7 @@ class LexiconRulesTest {
         val words = WordList.answers(5)
         for (i in words.indices step 11) {
             for (j in words.indices step 13) {
-                val packed = LexiconRules.mark(words[i], words[j]).foldIndexed(0) { k, acc, m ->
+                val packed = LexiconSupport.refMark(words[i], words[j]).foldIndexed(0) { k, acc, m ->
                     var p = 1
                     repeat(k) { p *= 3 }
                     acc + m * p
