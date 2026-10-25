@@ -278,15 +278,33 @@ internal object AtomsTeacher {
      * Takes no answer on purpose — see the class comment. [counts] are taken as the player's; the
      * caller has already dealt with any that are mistakes.
      */
-    fun deduce(atoms: List<Atom>, pairs: List<Pair2>, counts: List<Int>): Step? {
-        val s = sightOf(atoms, pairs, counts)
-        if (atoms.indices.any { s.need(it) < 0 }) return null
+    fun deduce(atoms: List<Atom>, pairs: List<Pair2>, counts: List<Int>): Step? = deduce(sightOf(atoms, pairs, counts))
+
+    private fun deduce(s: Sight): Step? {
+        if ((0 until s.n).any { s.need(it) < 0 }) return null
         for (level in BASIC..WITH_ISOLATION) {
             val f = atomRule(s, level) ?: continue
             return explainAtom(s, f, level)
         }
         onlyWayOut(s)?.let { return it }
         return whatIf(s)
+    }
+
+    /**
+     * The deepest technique, as its index in [TECHNIQUES], that a walk by [deduce] alone needs from the
+     * empty board to the end, or null when the walk stops short (a hint would fall back). Each step holds
+     * for every answer, so a finished walk has also found the only one. The generator gates tiers on it.
+     */
+    fun depth(atoms: List<Atom>, pairs: List<Pair2>): Int? {
+        // One sight for the whole walk: the lines' geometry is worked out once, only the bonds change.
+        val sight = sightOf(atoms, pairs, List(pairs.size) { 0 })
+        var deepest = -1
+        while (true) {
+            val step = deduce(sight) ?: break
+            deepest = maxOf(deepest, TECHNIQUES.indexOf(step.technique))
+            step.raise.forEach { (p, to) -> sight.lo[p] = to }
+        }
+        return deepest.takeIf { atoms.indices.all { sight.need(it) == 0 } }
     }
 
     /** What one atom's count forces on its lines, at one level of sight. */
