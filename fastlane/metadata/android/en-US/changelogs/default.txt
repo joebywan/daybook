@@ -1,6 +1,6 @@
-- Mate follows puzzle ratings as well as moves; some Expert boards open with a quiet move.
-- Tower: tapping a colour fills the next empty peg. Tower now comes last for new players.
-- "Show me" no longer appears twice while a hint is open.
-- Mosaic: out of fills, the board stays put; Undo, or a hint finds the fill that lost it.
-- The walkthrough offer says what each puzzle is about.
-- Lexicon's first hint varies by board; a daily word never repeats until every other has had its day.
+- Mate's difficulties follow puzzle ratings as well as the number of moves, and a quarter of Expert boards start with a quiet move.
+- Lexicon's first hint changes from board to board, and its later hints say how their word splits the words left.
+- From 1 November a daily Lexicon word never comes back until every other has had its day.
+- Clearer word clues, and no interjections or old words in Word Wheel's grids.
+- Levels now start with the gentlest puzzles.
+- Swipe left or right on the home screen to change the difficulty.
