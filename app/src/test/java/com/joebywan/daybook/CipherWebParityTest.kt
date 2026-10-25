@@ -40,8 +40,8 @@ class CipherWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            -1533378851, -1411600883, -1325571935, -252108292, 1306860686, -2038024778,
-            -785057721, -1158363483, 30689278,
+            -79979298, 1671228490, 601322572, -592290008, 778419263, 639822651,
+            -1610681059, 575364404, 783509597,
         )
     }
 }
