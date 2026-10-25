@@ -148,7 +148,7 @@ Adopting it, or changing a teacher — the lessons so far:
 per tier (2026-01-01 on, seeds exactly as the daily makes them), walks each with its own teacher from the blank board to
 the end, applying every step, and writes `build/reports/tier-depth.txt`: the deepest technique each walk needed (in the
 ladder's order; fallback steps counted apart), fallback boards and steps, median steps, and each technique's mean steps a
-board. No board changed (Mambo's rows are after its gate, below). Deepest technique, share of the year's boards (%):
+board. No board changed (Mambo's and LITS's rows are after their gates, below). Deepest technique, share of the year's boards (%):
 
 | puzzle | tier | deepest technique (% of boards) | fallback boards / steps % | median steps |
 |---|---|---|---|---|
@@ -176,9 +176,9 @@ board. No board changed (Mambo's rows are after its gate, below). Deepest techni
 | Nonogram | Standard | line-logic 100; line passes 2: 95, 3: 5, 4+: <1 | 0 / 0 | 10 |
 |  | Hard | line-logic 100; passes 3: 79, 4+: 21 | 0 / 0 | 36 |
 |  | Expert | line-logic 100; passes 4: 79, 5+: 21 | 0 / 0 | 73 |
-| LITS | Standard | avoid-2x2 1, letter-clash 48, neighbour 47, what-if 4 | 0 / 0 | 15 |
-|  | Hard | avoid-2x2 1, letter-clash 62, neighbour 35, what-if 2 | 0 / 0 | 21 |
-|  | Expert | letter-clash 35, neighbour 60, what-if 5 | 0 / 0 | 28 |
+| LITS (gated) | Standard | avoid-2x2 2, letter-clash 97, neighbour <1 | 0 / 0 | 15 |
+|  | Hard | avoid-2x2 1, letter-clash 63, neighbour 35, what-if 2 | 0 / 0 | 21 |
+|  | Expert | letter-clash <1, neighbour 64, what-if 35 | 0 / 0 | 30 |
 | Regions (gated) | Standard | only-digit 49, only-place 51 | 0 / 0 | 18 |
 |  | Hard | locked-candidate 100 (at least 2 a board; 4.0 mean) | 0 / 0 | 40 |
 |  | Expert | locked-candidate 100 (at least 6 a board; 8.2 mean) | 0 / 0 | 67 |
@@ -234,8 +234,20 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   (3+: 54% / 75%) and 13% of Standard boards took one pass. Mirrored pictures are shallower (one pass on half of Standard,
   4+ on 7% of Expert), so a board must need 2 / 3 / 4 passes by tier (`Spec.minPasses`); the rows above are with the gate.
   Deeper than that needs a technique line logic lacks (a what-if across two lines).
-- **LITS: the tiers are the same depth** (neighbour or what-if 51 / 37 / 65%). Standard: no neighbour or what-if (49%);
-  Expert: needs what-if (5%; LITS proving is slow, so measure the cost first). Ladder long enough.
+- **LITS: gated (2026-10).** Before, the tiers were the same depth: Standard avoid-2x2 1, letter-clash 48, neighbour 47,
+  what-if 4; Hard letter-clash 62, neighbour 35, what-if 2; Expert letter-clash 35, neighbour 60, what-if 5. Now each proved
+  board is walked by `LitsTeacher.depth` (the teacher's ladder from blank, no answer) and `Lits.score` keeps it or draws
+  again: Standard must not need neighbour or what-if; Hard keeps its first proved board; Expert takes
+  the first board needing what-if among its first eight proved draws, else the first needing neighbour. A strict Expert
+  gate cost 20 draws a board (each a carve, ~15 ms on the JVM): median 240 ms, p95 1.3 s on the JVM, so it is capped;
+  sixteen draws would give what-if 37% at 177 ms median, eight give 35% at about 105-150 ms. Draws over the year: 2.1 /
+  1.0 / 6.4 mean, 14 / 1 / 8 most. The search budget was tripled (a board inside the old one did not move: 3 Hard days of
+  the year had run out of it under the cap and gone uncapped, and now stay under it), and a board never leaves the
+  seven-square cap while a proved one exists under it. One Standard and one Expert day ran out of budget and ship the
+  nearest proved board (neighbour, letter-clash). Generation, a year a tier, median / p95 / max: JVM 19 / 79 / 228,
+  11 / 44 / 114, 137 / 262 / 341 ms (a loaded desktop); Chromium 27 / 117 / 414, 20 / 69 / 151, 228 / 434 / 562 ms; WebKit
+  33 / 135 / 569, 26 / 76 / 180, 309 / 542 / 782 ms. 9x9 for Expert was not tried: the generator's squares are bits of a
+  `Long` (64 squares), so it would be a rewrite, and it would cost more per draw, not less.
 - **Regions: gated (2026-10).** Before, 97% of Expert and 81% of Hard needed only-place (Hard only-digit 19, only-place 81;
   Expert only-digit 3, only-place 97; median steps 18 / 38 / 65). The ladder gained the locked candidate (one elimination, then
   a placement). With it and no gate, locked steps a board were 0 on 25% of 5x5 draws, and at least 2 on 81% of 7x7 and 6 on

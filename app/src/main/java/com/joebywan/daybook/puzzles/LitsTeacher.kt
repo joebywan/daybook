@@ -432,6 +432,22 @@ internal object LitsTeacher {
             ?: whatIf(sight)
     }
 
+    /**
+     * The deepest technique ([TECHNIQUES] index) a walk by [deduce] from the blank board needs to finish it,
+     * or null when the walk gets stuck. The generator's tier gate ([Lits.build]): no answer reaches it.
+     */
+    fun depth(width: Int, height: Int, region: List<Int>): Int? {
+        val shaded = BooleanArray(width * height)
+        var deepest = -1
+        while (!Lits.isSolved(width, height, region, shaded.asList())) {
+            val step = deduce(width, height, region, shaded.asList()) ?: return null
+            if (step.shades.all { shaded[it] }) return null
+            deepest = maxOf(deepest, TECHNIQUES.indexOf(step.technique))
+            for (c in step.shades) shaded[c] = true
+        }
+        return deepest
+    }
+
     private fun wholeRegion(s: Sight): Step? {
         for (k in 0 until s.layout.count) {
             val cells = s.layout.cellsOf[k]
