@@ -1,4 +1,4 @@
-- Mate's difficulties follow puzzle ratings as well as moves; some Expert boards start with a quiet move.
+- Mate follows puzzle ratings as well as moves; some Expert boards open with a quiet move.
 - Tower: tapping a colour fills the next empty peg. Tower now comes last for new players.
 - "Show me" no longer appears twice while a hint is open.
 - Mosaic: out of fills, the board stays put; Undo, or a hint finds the fill that lost it.
