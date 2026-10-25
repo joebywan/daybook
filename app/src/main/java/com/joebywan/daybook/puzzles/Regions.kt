@@ -16,18 +16,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -48,10 +43,14 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
-import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.PAD_GAP
+import com.joebywan.daybook.ui.PAD_HEIGHT
+import com.joebywan.daybook.ui.PadKey
+import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
@@ -91,9 +90,6 @@ data class RegionsState(
 
     fun select(index: Int): RegionsState = copy(selected = index)
 }
-
-private val PAD_HEIGHT = 48.dp
-private val PAD_GAP = 18.dp
 
 /** Regions: fill each region with 1 up to its size, and never let equal digits touch. */
 object Regions : PuzzleType {
@@ -281,30 +277,6 @@ object Regions : PuzzleType {
 
     // ---- drawing ---------------------------------------------------------------------------
 
-    /** What [LocalBoardHighlight] asks of one square or key. */
-    private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
-
-    private fun BoardHighlight.look(index: Int, dims: Boolean = true): Look {
-        val strong = index in this.strong
-        val soft = !strong && index in this.soft
-        return Look(strong, soft, dims && !isEmpty && !strong && !soft)
-    }
-
-    /** A ring just inside the square, breathing for strong and quiet for soft; the pulse is read at draw time. */
-    private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, corner: Float): Modifier =
-        if (!look.strong && !look.soft) this
-        else drawWithContent {
-            drawContent()
-            val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
-            drawRoundRect(
-                if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                topLeft = Offset(w / 2, w / 2),
-                size = Size(size.width - w, size.height - w),
-                cornerRadius = CornerRadius(corner.dp.toPx()),
-                style = Stroke(w),
-            )
-        }
-
     /** Region walls over a grid of [slot]-sized squares: thin between squares of a region, thick between regions and round the edge. */
     private fun DrawScope.walls(n: Int, region: List<Int>, slot: Float, thin: Color, thick: Color, thinW: Float, thickW: Float) {
         // Clipped to the grid: a thick wall's square end would otherwise poke out past the edge.
@@ -425,7 +397,7 @@ object Regions : PuzzleType {
                                 .size(slot)
                                 .moveFeel(feel, i, Color(accent))
                                 .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
-                                .ring(look, glow, pulse, corner = 2f)
+                                .ring(look, glow, pulse, corner = 2.dp)
                                 .background(fill)
                                 .then(if (i in conflicts) Modifier.border(2.dp, scheme.error) else Modifier)
                                 .then(if (s.selected == i) Modifier.border(3.dp, scheme.onBackground) else Modifier)
@@ -460,19 +432,14 @@ object Regions : PuzzleType {
                 ) {
                     (1..digits).forEach { digit ->
                         val at = s.selected
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .height(PAD_HEIGHT)
-                                .highlightAnchor(RegionsTeacher.pad(digit))
-                                .ring(highlight.look(RegionsTeacher.pad(digit), dims = false), glow, pulse, corner = 10f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(scheme.surface)
-                                .clickable(enabled = interactive && at != null) {
-                                    val next = s.enter(at ?: return@clickable, digit)
-                                    if (next !== s) onState(next)
-                                },
-                            contentAlignment = Alignment.Center,
+                        PadKey(
+                            RegionsTeacher.pad(digit), highlight, glow, pulse,
+                            fill = scheme.surface,
+                            enabled = interactive && at != null,
+                            onClick = {
+                                val next = s.enter(at ?: return@PadKey, digit)
+                                if (next !== s) onState(next)
+                            },
                         ) {
                             Text(digit.toString(), style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
                         }
