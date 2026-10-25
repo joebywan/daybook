@@ -44,9 +44,6 @@ from a measurement or review, so you can check it is still true.
   placement, and Regions has no pencil marks; it would need a step that explains one elimination and then a placement
   (Inequality's `SIGN_BOUND` is the model). *M.*
 
-- [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
-  together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
-  would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
 - [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
@@ -173,7 +170,7 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   same `countTilings` proof.
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
-- [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
+- [ ] **Teacher upgrades already listed:** Regions' locked candidate.
 - [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
   lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
   fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).

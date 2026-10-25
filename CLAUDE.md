@@ -302,7 +302,8 @@ shares with Sudoku). `id = "cages"` is hashed into every seed: never rename it.
   costs about 25 ms on the JVM per board and 36 / 51 / 58 ms (median / p95 / max) in Chromium, 50 / 70 / 78 in WebKit.
 - **The logic must stay inside the teacher.** The generator's ladder is the teacher's, so `deduce` ends in `CAGE_CHAIN` ("every group worked
   through together"), which is exactly `settle`. Raise the generator's power (a new rule in `Sight`) and the teacher already has it
-  unexplained; the fix is a named technique, not a fallback. `CageTeachingTest` walks 200 boards a tier and a year of daily boards and
+  unexplained; the fix is a named technique, not a fallback. `LINKED_TOTALS` (two or three groups sharing squares, each cut in
+  turn, before `CAGE_CHAIN`) is such a slice of `settle`, so it moved no board; Expert's cage chain fell from 6.3 to 3.4 steps a board. `CageTeachingTest` walks 200 boards a tier and a year of daily boards and
   asserts no fallback; `FallbackTest` `cages proves every daily board of a year` asserts `generateVerified` never gives up.
 - **`solved` checks the rules** (`CageLogic.isSolved`: a finished Sudoku grid, every cage's digits different and totalling its sum). A
   mistake is a digit that differs from the stored square, sound because the board has one answer. Red: Sudoku clashes plus
