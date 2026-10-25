@@ -50,9 +50,10 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
 - [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
-  (`tools/words/wheel-clues.txt`); cluing more widens the boards (every added word moves daily boards, as Lexicon's do). About 40% of
-  hint steps are the clue fallback; a "two slots, two words" step (slots that share their only candidates) would turn some into
-  reasoning. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
+  (`tools/words/wheel-clues.txt`); cluing more widens the boards (every added word moves daily boards, as Lexicon's do). About a third of
+  hint steps are still the clue fallback, and no reasoning over what shows can cut that (an exhaustive search of every filling pins
+  0.1-0.2 points more, `docs/TEACHING.md`): only the boards can. The generator could reject boards whose hints-alone walk (with
+  `crossing`) needs many clues; that moves daily boards and costs attempts, not measured. Expert grids reach 8x8 and get ~20dp squares at 375x537. *M.*
 
 - [ ] **Share card: two readings to confirm.** Restart counts as undoing every move so far (an Undo of the restart hands them back), and Target's "steps" is the
   operations still on the board at the finish (not only those that build the target); both are simple readings the owner may
@@ -161,35 +162,22 @@ Five independent design reviews (puzzle construction, player experience, daily m
 accepted by the owner except where noted. Each item is one workstream and one PR; delete it here when it lands.
 Generator changes move every daily board of that puzzle (parity pins go red on purpose): batch them, one PR per puzzle.
 
-- [ ] **Play-screen fixes.** Mosaic's "Out of fills" line is unreserved under a height-sized board (`Mosaic.kt` `s.failed`)
-  and says "restart" when Undo works; Cage Sudoku shows two "Show me" buttons while the popover is open; a Tower colour tap
-  should fill the next empty peg (as the keyboard does); the first-visit offer line should carry the puzzle's tagline;
-  Tower moves to the end of `PuzzleOrder.GENTLEST` (redundant with Lexicon).
 - [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
-  - Sudoku first: Hard needs a naked single and finishes without what-if or fallback; Expert needs locked candidates or a
-    pair and finishes without fallback (32% of Expert boards fall back today). Also 180-degree symmetric givens.
   - Kings: Standard no confined or what-if; Hard needs confined; Expert needs what-if (5% of draws: cost it first).
-  - Mambo: the carver must run the whole ladder first (almost-met and what-if are never needed today); then Expert needs one.
   - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
     or what-if, no fallback.
-  - Atoms: Standard at most at-least-one; Hard needs crossing or isolation; Expert needs isolation or what-if. Also reaches
-    up to 5.
   - Tents: Hard needs one-spot; Expert needs shared or served (18% of draws).
   - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
-  - Nonogram: no gate needed (size separates the tiers); optional Expert needs 4+ line passes (21%). Mirror-symmetric
-    pictures: measure the pass rate.
   - Inequality (pairs, sign chains) and Regions (locked candidates): the ladder is too short; the techniques come first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
   same `countTilings` proof.
-- [ ] **Cipher: cap repeated totals** (some totals recur many times a tier); **Target: count the roads** (Expert needs few
-  shortest answers, not only depth 5).
+- [ ] **Target: count the roads** (Expert needs few shortest answers, not only depth 5).
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
 - [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
-- [ ] **Teacher upgrades already listed:** Word Wheel's "two slots, two words", Cage Sudoku naming the cage chain, Regions'
-  locked candidate.
+- [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
 - [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
   lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
   fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
@@ -220,10 +208,6 @@ below have a famous branded version; use the descriptive name).
   toolbar do not move. Static renders of all three tiers matched pixel for pixel across both browsers and both schemes.
   Not done: headless WebKit ignores hand-built TouchEvents, so its touch slop on a 15x15 sweep is unchecked (only a real
   iPhone or the emulator can), and the 5x5 finish frame's cover of the last rows at 375x537 is by design.
-- [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
-  pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
-  size-by-size retune; measure the pass rate before trying again.
-
 - [ ] **Web: a late home-grid value can reach a tile stale.** The "In progress" set, passed down as a plain `Set` and landing in
   the first frames, reached `PuzzleTile` stale in about half of Chromium loads (DaybookApp had the new set; the tile recomposed
   with the old one; WebKit and Android never showed it). It is now a state read in the tile (`inProgress: () -> Set<String>`),
@@ -235,7 +219,7 @@ below have a famous branded version; use the descriptive name).
 - [ ] **Cipher: other shapes need longer words.** Every tier is 4 + 4 = 5 because the leading carry is the foothold the no-trial ladder needs, and the
   answer lists stop at five letters. A screened six-letter answer list (SCOWL through `tools/words/build.py`, screened by hand as the others were) would
   allow 5 + 5 = 6, which would give Hard and Expert a different look. Measured without it: 5 + 5 = 5 gave one ladder board per 30 pairs, three addends none.
-- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 91 / 80 / 75% of steps (Standard / Hard /
+- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 89 / 80 / 75% of steps (Standard / Hard /
   Expert); most all-columns steps and nearly every two-column what-if still say "only X = d" in summary. Those need two columns combined as algebra
   ("U + O + carry is 11, and O is 1 + U + carry, so 2U ...") or a case split on a carry whose branches stall without a second split; tried, the second
   split ran every explanation past 260 characters. A hint in two parts (the carry first, then the letter) may be the shape that fits. *M–L.*

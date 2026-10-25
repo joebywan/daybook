@@ -11,6 +11,12 @@ import com.joebywan.daybook.core.Deduction
  *   which only "Show me" types. This reads the grid list, the public list of well-known words a slot can hold
  *   ([WheelWords.grid]), never the board's stored words, so it is reasoning: the stored word is always among the words
  *   that fit, and when one fits it is that one.
+ * - [CROSSING]: no slot is pinned alone, but of the words that fit an empty slot, only one leaves the empty slots crossing it
+ *   a word (one that fits them, agrees at the crossing square and is not the same word: every slot holds a different one).
+ *   Given by its clue as [PINNED] is. Still the public list only. Measured: this takes the fallback from 41 / 44 / 38% of
+ *   steps to 33 / 37 / 33% (a year of daily boards a tier), and an exhaustive search over every consistent filling of the
+ *   empty slots reaches only 0.1-0.2 points further, so what is left is honestly open: several fillings fit what shows.
+ *   Slots sharing their only words ("two slots, two words") were measured too and pinned nothing more.
  * - [CLUE]: nothing is pinned. The slot with the fewest words that fit is named with its word's crossword clue. That reads
  *   the stored word, so it is the fallback, and it says so ("the one here is clued").
  *
@@ -25,10 +31,11 @@ import com.joebywan.daybook.core.Deduction
 internal object WordWheelTeacher {
 
     const val PINNED = "pinned"
+    const val CROSSING = "crossing"
     const val CLUE = "clue"
 
     /** Every step [teach] can produce, simplest first. */
-    val TECHNIQUES = listOf(PINNED, CLUE)
+    val TECHNIQUES = listOf(PINNED, CROSSING, CLUE)
 
     /** The step that reads a stored word. */
     val FALLBACKS = listOf(CLUE)
@@ -45,7 +52,7 @@ internal object WordWheelTeacher {
     class Step(
         val technique: String,
         val slot: Int,
-        /** The word the move enters: the one word that fits for [PINNED], the stored one for [CLUE]. */
+        /** The word the move enters: the one word left for [PINNED] and [CROSSING], the stored one for [CLUE]. */
         val word: String,
         /** How many grid words fit the slot. */
         val choices: Int,
@@ -64,21 +71,32 @@ internal object WordWheelTeacher {
             w !in tried && WheelWords.spellable(w, wheel) && pattern.indices.all { pattern[it] == null || pattern[it] == w[it] }
         }
 
-    fun teach(s: WordWheelState): Step? {
+    /** [crossings] false is the ladder the generator was built on (pinned, then clue), so boards never move with the teacher. */
+    fun teach(s: WordWheelState, crossings: Boolean = true): Step? {
         if (s.solved) return null
         val empty = s.slots.indices.filter { !s.filled(it) }
-        return deduce(s.wheel, s.width, shapes(s), empty, s.shown().toList(), s.found + s.bonus) ?: clue(s, empty)
+        return deduce(s.wheel, s.width, shapes(s), empty, s.shown().toList(), s.found + s.bonus, crossings) ?: clue(s, empty)
     }
 
     /**
      * A slot pinned to one word, from visible facts only: the wheel, the slots' shapes, which are still [empty], the letters
      * [shown] in the grid and the words [tried]. Nothing here can see a slot's word.
      */
-    fun deduce(wheel: String, width: Int, shapes: List<Shape>, empty: List<Int>, shown: List<Char?>, tried: List<String>): Step? {
+    fun deduce(
+        wheel: String,
+        width: Int,
+        shapes: List<Shape>,
+        empty: List<Int>,
+        shown: List<Char?>,
+        tried: List<String>,
+        crossings: Boolean = true,
+    ): Step? {
+        val fitsOf = arrayOfNulls<List<String>>(shapes.size)
         for (k in empty) {
             val shape = shapes[k]
             val pattern = List(shape.length) { shown[shape.cell(it, width)] }
             val fits = candidates(wheel, pattern, tried)
+            fitsOf[k] = fits
             if (fits.size != 1) continue
             val word = fits[0]
             val cells = List(shape.length) { shape.cell(it, width) }
@@ -96,6 +114,43 @@ internal object WordWheelTeacher {
                 explanation = explanation,
                 focus = cells.toSet(),
                 cited = known,
+                targets = cells.toSet(),
+            )
+        }
+        return if (crossings) crossing(width, shapes, empty, shown, fitsOf) else null
+    }
+
+    /** An empty slot of which only one fitting word leaves every empty slot crossing it a word ([fitsOf]: the words fitting each). */
+    private fun crossing(width: Int, shapes: List<Shape>, empty: List<Int>, shown: List<Char?>, fitsOf: Array<List<String>?>): Step? {
+        for (a in empty) {
+            val fits = fitsOf[a]!!
+            if (fits.size < 2) continue
+            val shape = shapes[a]
+            val cells = List(shape.length) { shape.cell(it, width) }
+            // (letter of a, crossing slot, its letter) for each empty slot sharing a square with a
+            val crossers = empty.filter { it != a }.mapNotNull { b ->
+                val other = List(shapes[b].length) { shapes[b].cell(it, width) }
+                val i = cells.indexOfFirst { it in other }
+                if (i < 0) null else Triple(i, b, other.indexOf(cells[i]))
+            }
+            if (crossers.isEmpty()) continue
+            val blocking = mutableSetOf<Int>()
+            val left = fits.filter { w ->
+                val stop = crossers.firstOrNull { (i, b, j) -> fitsOf[b]!!.none { v -> v != w && v[j] == w[i] } }
+                if (stop != null) blocking += stop.second
+                stop == null
+            }
+            if (left.size != 1) continue
+            val word = left[0]
+            val crossCells = blocking.flatMap { b -> List(shapes[b].length) { shapes[b].cell(it, width) } }.toSet()
+            val them = if (blocking.size == 1) "the slot crossing it" else "the slots crossing it"
+            return Step(
+                CROSSING, a, word, 1,
+                nudge = "A slot crossing this one leaves it only one word.",
+                explanation = "${fits.size} words from the wheel fit these ${shape.length} squares, but only one leaves a word for $them. " +
+                    "Its clue: ${clueFor(word)}.",
+                focus = cells.toSet(),
+                cited = cells.filter { shown[it] != null }.toSet() + crossCells,
                 targets = cells.toSet(),
             )
         }
@@ -149,14 +204,17 @@ internal object WordWheelTeacher {
     /** What a hints-alone walk of a board meets: steps by technique, and the most words that fit the slot a clue names. */
     class Walk(val pinned: Int, val clued: Int, val maxChoice: Int)
 
-    /** Fills [start] by hints alone, counting what it takes. The generator keeps a board only if [Walk.maxChoice] stays small. */
+    /**
+     * Fills [start] by hints alone, counting what it takes. The generator keeps a board only if [Walk.maxChoice] stays small.
+     * It walks the ladder the boards were built on (no [CROSSING]): a stronger teacher must not change which boards ship.
+     */
     fun walk(start: WordWheelState): Walk {
         var s = start
         var pinned = 0
         var clued = 0
         var maxChoice = 0
         while (!s.solved) {
-            val step = teach(s) ?: break
+            val step = teach(s, crossings = false) ?: break
             if (step.technique == PINNED) pinned++ else {
                 clued++
                 maxChoice = maxOf(maxChoice, step.choices)
