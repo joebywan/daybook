@@ -336,28 +336,55 @@ internal object LampsLogic {
         for (i in f.targets) k[i] = f.value
     }
 
-    /**
-     * The supposition [assume] at [square], followed at most [maxLinks] direct facts; null when it breaks nothing.
-     *
-     * [k] (lit as [lit]) must hold no direct fact and break no rule, as it does wherever the ladder reaches a what-if.
-     * Then only a number or a square the supposition has touched (a square whose knowledge or light changed, or one that
-     * sees it) can break or yield a fact, so only those are looked at, in the ladder's own order: the same chain as a
-     * scan of the whole board, for a fraction of the work.
-     */
-    private fun whatIf(g: Geo, k: IntArray, lit: BooleanArray, square: Int, assume: Int, maxLinks: Int): WhatIf? {
+    /** One what-if search's working copy of the knowledge [k] and light [lit], reused across its suppositions. */
+    private class Scratch(val k: IntArray, val lit: BooleanArray) {
         val t = k.copyOf()
         val l = lit.copyOf()
         val touched = BooleanArray(k.size)
         val wallMark = BooleanArray(k.size)
         val squareMark = BooleanArray(k.size)
-        val walls = ArrayList<Int>()
-        val squares = ArrayList<Int>()
+        val walls = IntArray(k.size)
+        var wallCount = 0
+        val squares = IntArray(k.size)
+        var squareCount = 0
+        val changed = IntArray(k.size)
+        var changedCount = 0
+
+        /** Back to [k] and [lit], undoing only what the last supposition changed. */
+        fun reset() {
+            for (c in 0 until changedCount) {
+                val i = changed[c]
+                t[i] = k[i]
+                l[i] = lit[i]
+                touched[i] = false
+            }
+            for (c in 0 until wallCount) wallMark[walls[c]] = false
+            for (c in 0 until squareCount) squareMark[squares[c]] = false
+            changedCount = 0
+            wallCount = 0
+            squareCount = 0
+        }
+    }
+
+    /**
+     * The supposition [assume] at [square], followed at most [maxLinks] direct facts; null when it breaks nothing.
+     *
+     * The scratch's knowledge (and light) must hold no direct fact and break no rule, as it does wherever the ladder reaches a what-if.
+     * Then only a number or a square the supposition has touched (a square whose knowledge or light changed, or one that
+     * sees it) can break or yield a fact, so only those are looked at, in the ladder's own order: the same chain as a
+     * scan of the whole board, for a fraction of the work.
+     */
+    private fun whatIf(g: Geo, z: Scratch, square: Int, assume: Int, maxLinks: Int): WhatIf? {
+        z.reset()
+        val t = z.t
+        val l = z.l
         fun touch(i: Int) {
-            if (touched[i]) return
-            touched[i] = true
-            for (w in g.numbersBeside[i]) if (!wallMark[w]) { wallMark[w] = true; walls.add(w) }
-            if (!squareMark[i]) { squareMark[i] = true; squares.add(i) }
-            for (j in g.sight[i]) if (!squareMark[j]) { squareMark[j] = true; squares.add(j) }
+            if (z.touched[i]) return
+            z.touched[i] = true
+            z.changed[z.changedCount++] = i
+            for (w in g.numbersBeside[i]) if (!z.wallMark[w]) { z.wallMark[w] = true; z.walls[z.wallCount++] = w }
+            if (!z.squareMark[i]) { z.squareMark[i] = true; z.squares[z.squareCount++] = i }
+            for (j in g.sight[i]) if (!z.squareMark[j]) { z.squareMark[j] = true; z.squares[z.squareCount++] = j }
         }
         fun set(i: Int, v: Int) {
             t[i] = v
@@ -370,8 +397,8 @@ internal object LampsLogic {
         set(square, assume)
         val links = ArrayList<Fact>()
         while (true) {
-            val ws = walls.toIntArray().also { it.sort() }
-            val ys = squares.toIntArray().also { it.sort() }
+            val ws = z.walls.copyOf(z.wallCount).also { it.sort() }
+            val ys = z.squares.copyOf(z.squareCount).also { it.sort() }
             broken(g, t, l, ws, ys)?.let { return WhatIf(square, assume, links, it) }
             if (links.size == maxLinks) return null
             val f = directFact(g, t, l, ws, ys) ?: return null
@@ -387,13 +414,14 @@ internal object LampsLogic {
     fun firstWhatIf(g: Geo, k: IntArray): WhatIf? {
         val lit = litBy(g, k)
         if (broken(g, k, lit) != null) return null
+        val z = Scratch(k, lit)
         var best: WhatIf? = null
         for (x in k.indices) {
             if (!candidate(g, k, lit, x)) continue
             for (assume in intArrayOf(LAMP, NO)) {
                 val limit = best?.links?.size?.minus(1) ?: MAX_LINKS
                 if (limit < 0) return best
-                val w = whatIf(g, k, lit, x, assume, limit) ?: continue
+                val w = whatIf(g, z, x, assume, limit) ?: continue
                 best = w
             }
         }
