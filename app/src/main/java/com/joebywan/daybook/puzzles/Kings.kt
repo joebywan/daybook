@@ -2,7 +2,6 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -24,10 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -59,6 +55,7 @@ import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.hintOutline
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
+import androidx.compose.foundation.layout.BoxScope
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -837,15 +834,7 @@ object Kings : PuzzleType {
                 for (r in 0 until MOTIF_SIZE) {
                     for (c in 0 until MOTIF_SIZE) {
                         val i = r * MOTIF_SIZE + c
-                        Box(
-                            Modifier
-                                .padding(start = cell * c, top = cell * r)
-                                .size(cell)
-                                .padding(1.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color(regionColours[motifRegions[i]])),
-                            contentAlignment = Alignment.Center,
-                        ) {
+                        Tile(cell, r, c, Color(regionColours[motifRegions[i]])) {
                             when (motifMarks[i]) {
                                 Mark.KING -> Crown(cell, MarkInk)
                                 Mark.BLOCKED -> BlockedCross(cell)
@@ -1081,20 +1070,13 @@ object Kings : PuzzleType {
                         // read without having to hunt for their outlines. The tiles are opaque, so
                         // stepping back means fading toward the page rather than going see-through.
                         val dim = !(highlight.isEmpty || strong || soft)
-                        Box(
-                            Modifier
-                                .padding(start = cell * c, top = cell * r)
-                                .size(cell)
-                                .moveFeel(feel, i, Color(accent))
-                                .padding(1.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(
-                                    Color(regionColours[palette[s.region[i]]]).let {
-                                        if (dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
-                                    }
-                                )
-                                .hintOutline(strong, soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
-                            contentAlignment = Alignment.Center,
+                        Tile(
+                            cell, r, c,
+                            Color(regionColours[palette[s.region[i]]]).let {
+                                if (dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
+                            },
+                            feel = Modifier.moveFeel(feel, i, Color(accent)),
+                            outline = Modifier.hintOutline(strong, soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
                         ) {
                             when (mark) {
                                 // A clashing crown is filled in the error colour, which on a red
@@ -1114,6 +1096,31 @@ object Kings : PuzzleType {
                 }
             }
         }
+    }
+
+    /** Square (r, c) of a grid of [cell]-sized tiles, in [fill]: the board's tile and the motif's. */
+    @Composable
+    private fun Tile(
+        cell: Dp,
+        r: Int,
+        c: Int,
+        fill: Color,
+        feel: Modifier = Modifier,
+        outline: Modifier = Modifier,
+        mark: @Composable BoxScope.() -> Unit,
+    ) {
+        Box(
+            Modifier
+                .padding(start = cell * c, top = cell * r)
+                .size(cell)
+                .then(feel)
+                .padding(1.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(fill)
+                .then(outline),
+            contentAlignment = Alignment.Center,
+            content = mark,
+        )
     }
 
     /**
