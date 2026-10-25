@@ -169,8 +169,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
     or what-if, no fallback.
   - Tents: Hard needs one-spot; Expert needs shared or served (18% of draws).
   - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
-  - Nonogram: no gate needed (size separates the tiers); optional Expert needs 4+ line passes (21%). Mirror-symmetric
-    pictures: measure the pass rate.
   - Inequality (pairs, sign chains) and Regions (locked candidates): the ladder is too short; the techniques come first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
@@ -212,10 +210,6 @@ below have a famous branded version; use the descriptive name).
   toolbar do not move. Static renders of all three tiers matched pixel for pixel across both browsers and both schemes.
   Not done: headless WebKit ignores hand-built TouchEvents, so its touch slop on a 15x15 sweep is unchecked (only a real
   iPhone or the emulator can), and the 5x5 finish frame's cover of the last rows at 375x537 is by design.
-- [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
-  pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
-  size-by-size retune; measure the pass rate before trying again.
-
 - [ ] **Web: a late home-grid value can reach a tile stale.** The "In progress" set, passed down as a plain `Set` and landing in
   the first frames, reached `PuzzleTile` stale in about half of Chromium loads (DaybookApp had the new set; the tile recomposed
   with the old one; WebKit and Android never showed it). It is now a state read in the tile (`inProgress: () -> Set<String>`),
