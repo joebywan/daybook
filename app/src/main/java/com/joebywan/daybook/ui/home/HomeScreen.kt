@@ -58,6 +58,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -205,6 +206,11 @@ fun HomeScreen(
     LaunchedEffect(mode, difficulty) {
         snapshotFlow { touched to resume() }.takeWhile { !it.first }.collect { resumeShown = it.second }
     }
+    val haptics = LocalHaptics.current
+    // The tier a sideways swipe last moved to, and a count, so the name fades in again for every swipe (TierSwipe.kt).
+    var flash by remember { mutableStateOf<Pair<Difficulty, Int>?>(null) }
+    val swipeMode by rememberUpdatedState(mode)
+    val swipeTier by rememberUpdatedState(difficulty)
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -221,6 +227,11 @@ fun HomeScreen(
             Modifier.fillMaxSize().onGloballyPositioned { window.bottom = it.boundsInRoot().bottom }
                 .pointerInput(mode, difficulty) {
                     awaitEachGesture { awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial); touched = true }
+                }
+                .tierSwipe({ swipeMode }, { swipeTier }) { tier ->
+                    onDifficulty(tier)
+                    haptics.tick()
+                    flash = tier to (flash?.second ?: 0) + 1
                 },
             state = list,
             contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = TopPadding, bottom = 18.dp),
@@ -282,6 +293,7 @@ fun HomeScreen(
             }
             item { GetTheAppCard() }
         }
+        TierFlash(flash, Modifier.align(Alignment.Center))
     }
 
     if (pickingArchive) {

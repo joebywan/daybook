@@ -464,6 +464,11 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
   puzzle to another, and without the key `PlayScreen`'s produced board was the last puzzle's state for a frame (a crash on the emulator).
 - `RouteSaver` fields are only ever added at the end: a route saved before `level` existed still reads (`LevelsUiTest`).
 - The mode row (Daily · Levels · Random) sits above the tier row. In Levels mode the tier row stays laid out, invisible, under the level strip, so the grid below cannot move when the mode changes.
+- **A sideways swipe on Home changes the tier** (`ui/home/TierSwipe.kt`): left harder, right easier, nothing past the ends or in
+  Levels, nothing from within 28dp of a side. Decided by the pure `swipedTier` (`TierSwipeTest`); the detector watches on the Initial
+  pass and consumes only once a move is plainly sideways (past slop, twice as far across as down, before the long-press timeout), so
+  taps, the long-press tile drag and the list's scroll keep working. It calls the same `onDifficulty` as the tier row, whose pill slides
+  (`SegmentedControl`), and the new tier's name fades over the grid (`TierFlash`). Mouse drags count too (Compose's scroll ignores the mouse).
 
 ## Typography
 
