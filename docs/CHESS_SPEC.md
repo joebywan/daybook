@@ -57,7 +57,7 @@ change the encoding but must keep this surface:
 ```kotlin
 class ChessPosition { /* 64 squares, side, castling, ep */
     companion object { fun fromFen(fen: String): ChessPosition }
-    fun toFen(): String
+    fun toFen(): String                               // test sources only (ChessFen.kt)
     val whiteToMove: Boolean
     fun pieceAt(sq: Int): Int
 }
@@ -123,7 +123,7 @@ that is roughly 170 ms p95 and 620 ms max, inside the budget; not yet re-measure
   entries `"<fen> <last-uci-or-->"` in chunked string constants (a JVM string constant is capped at 64 KB, see
   `LexiconWords.kt`). Header comment: GENERATED, by which script, from which dump (name and date), sorted-order contract.
 - Picked by index: `list[seed.mod(list.size)]`-style with `Rng`; adding or removing a position moves every later
-  daily board, so a parity pin goes red on purpose (as `LexiconWebParityTest`).
+  daily board, so a parity pin goes red on purpose (as Lexicon's in `BoardPinTest`).
 - Credit: README one line, and a short `docs/chess-positions/NOTICE.md` stating source, licence (CC0) and the date
   of the dump used.
 

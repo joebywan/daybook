@@ -6,7 +6,6 @@ import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 
 /**
@@ -66,8 +65,7 @@ class LitsUniquenessTest {
                     "$multiClassic / $days without exactly one connected answer (classic rule)"
             )
         }
-        File("build/reports").mkdirs()
-        File("build/reports/lits-uniqueness.txt").writeText(sb.toString())
+        writeReport("lits-uniqueness.txt", sb.toString())
     }
 
     private fun joined(cells: Set<Int>, w: Int, h: Int): Boolean {

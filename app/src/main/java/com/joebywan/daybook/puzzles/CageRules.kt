@@ -553,7 +553,8 @@ internal object CageLogic {
     }
 
     /** One try at a board for [seed]: null when this attempt's cages and givens could not be made to finish, or proved nothing. */
-    fun attempt(seed: Long, difficulty: Difficulty, attempt: Int, spec: Spec = specFor(difficulty)): CageState? {
+    fun attempt(seed: Long, difficulty: Difficulty, attempt: Int): CageState? {
+        val spec = specFor(difficulty)
         val rng = Rng(seed + attempt)
         val solution = Sudoku.fullGrid(rng)
         val d = draft(rng, solution, spec) ?: return null
