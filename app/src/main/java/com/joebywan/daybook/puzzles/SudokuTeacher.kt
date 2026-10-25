@@ -1,5 +1,11 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.digitsOf
+import com.joebywan.daybook.core.has
+
+
 /**
  * Sudoku, reasoned the way a person reasons it, one named step at a time.
  *
@@ -77,20 +83,6 @@ internal object SudokuTeacher {
         LOCKED, NAKED_PAIR, HIDDEN_PAIR, WHAT_IF, FALLBACK,
     )
 
-    /**
-     * One step: the digit to place (or, for a mistake, the cell to clear), where to look, and why.
-     * [digit] is 0 for a clear.
-     */
-    class Step(
-        val technique: String,
-        val cell: Int,
-        val digit: Int,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
-
     // ---- units ------------------------------------------------------------------------------------
 
     private enum class Kind { BOX, ROW, COLUMN }
@@ -121,9 +113,6 @@ internal object SudokuTeacher {
     private fun unitsOf(cell: Int): List<Unit> =
         listOf(units[boxOf(cell)], units[9 + cell / 9], units[18 + cell % 9])
 
-    private fun bit(d: Int) = 1 shl d
-    private fun has(mask: Int, d: Int) = mask and bit(d) != 0
-    private fun digitsOf(mask: Int) = (1..9).filter { has(mask, it) }
 
     // ---- what the player can see -------------------------------------------------------------------
 
@@ -158,18 +147,18 @@ internal object SudokuTeacher {
      * The next thing to show this player, or null on a solved board. Mistakes come first: every step
      * reasoned from a board with a wrong digit on it could be reasoning from a falsehood.
      */
-    fun teach(s: SudokuState): Step? {
+    fun teach(s: SudokuState): PlacementStep? {
         if (s.solved) return null
         mistake(s)?.let { return it }
         return deduce(s.cells) ?: fallback(s)
     }
 
-    private fun mistake(s: SudokuState): Step? {
+    private fun mistake(s: SudokuState): PlacementStep? {
         val wrong = s.cells.indices.firstOrNull { s.cells[it] != 0 && s.cells[it] != s.solution[it] }
             ?: return null
         val d = s.cells[wrong]
         val clear = "Select it and tap $d again to clear it"
-        fun step(explanation: String, cited: Set<Int>) = Step(
+        fun step(explanation: String, cited: Set<Int>) = PlacementStep(
             MISTAKE, wrong, 0, setOf(wrong), cited, "Check this $d.", explanation,
         )
 
@@ -210,14 +199,14 @@ internal object SudokuTeacher {
      * cell with the fewest candidates, which is where the player was most likely stuck. Says plainly
      * that it is doing this.
      */
-    private fun fallback(s: SudokuState): Step? {
+    private fun fallback(s: SudokuState): PlacementStep? {
         val sight = sightOf(s.cells)
         val cell = s.cells.indices
             .filter { s.cells[it] == 0 }
             .minByOrNull { sight.cand[it].countOneBits() }
             ?: return null
         val d = s.solution[cell]
-        return Step(
+        return PlacementStep(
             FALLBACK, cell, d,
             focus = setOf(cell),
             cited = emptySet(),
@@ -235,7 +224,7 @@ internal object SudokuTeacher {
      * Takes no answer on purpose — see the class comment. [cells] is 81 digits, 0 for empty; the
      * caller has already dealt with any that are mistakes.
      */
-    fun deduce(cells: List<Int>, ceiling: String = WHAT_IF): Step? {
+    fun deduce(cells: List<Int>, ceiling: String = WHAT_IF): PlacementStep? {
         val sight = sightOf(cells)
         val top = TECHNIQUES.indexOf(ceiling)
         return fullHouse(sight)
@@ -263,12 +252,12 @@ internal object SudokuTeacher {
         return deepest
     }
 
-    private fun fullHouse(s: Sight): Step? {
+    private fun fullHouse(s: Sight): PlacementStep? {
         for (u in units) {
             val empty = u.cells.filter { s.cells[it] == 0 }
             if (empty.size != 1) continue
             val d = (1..9).first { !s.holds(u, it) }
-            return Step(
+            return PlacementStep(
                 FULL_HOUSE, empty[0], d,
                 focus = u.cells.toSet(),
                 cited = u.cells.toSet(),
@@ -281,7 +270,7 @@ internal object SudokuTeacher {
     }
 
     /** With [kind] BOX, boxes only; with null, rows and columns. */
-    private fun hiddenSingle(s: Sight, kind: Kind?): Step? {
+    private fun hiddenSingle(s: Sight, kind: Kind?): PlacementStep? {
         for (u in units) {
             if ((kind == Kind.BOX) != (u.kind == Kind.BOX)) continue
             for (d in 1..9) {
@@ -289,7 +278,7 @@ internal object SudokuTeacher {
                 val places = s.places(u, d)
                 if (places.size != 1) continue
                 val cell = places[0]
-                return Step(
+                return PlacementStep(
                     if (u.kind == Kind.BOX) HIDDEN_SINGLE_BOX else HIDDEN_SINGLE_LINE, cell, d,
                     focus = u.cells.toSet(),
                     cited = u.cells.toSet() + blockers(s, u, d, cell),
@@ -309,11 +298,11 @@ internal object SudokuTeacher {
             .sorted()
             .toSet()
 
-    private fun nakedSingle(s: Sight): Step? {
+    private fun nakedSingle(s: Sight): PlacementStep? {
         for (cell in 0 until 81) {
             if (s.cells[cell] != 0 || s.cand[cell].countOneBits() != 1) continue
             val d = digitsOf(s.cand[cell])[0]
-            return Step(
+            return PlacementStep(
                 NAKED_SINGLE, cell, d,
                 focus = setOf(cell),
                 cited = Sudoku.peers(cell).filter { s.cells[it] != 0 }.toSet(),
@@ -458,13 +447,13 @@ internal object SudokuTeacher {
         return null
     }
 
-    private fun withElimination(s: Sight): Step? {
+    private fun withElimination(s: Sight): PlacementStep? {
         for (e in eliminations(s)) {
             val after = s.copyWithout(e.removed)
             val single = singleAfter(after, e.removed) ?: continue
             val text = "${e.reason} ${single.sentence()}"
             if (text.length > MAX_EXPLANATION) continue
-            return Step(
+            return PlacementStep(
                 e.technique, single.cell, single.digit,
                 focus = e.where,
                 cited = e.pattern + (single.unit?.cells.orEmpty()),
@@ -547,8 +536,8 @@ internal object SudokuTeacher {
         }
     }
 
-    private fun whatIf(s: Sight): Step? {
-        var best: Step? = null
+    private fun whatIf(s: Sight): PlacementStep? {
+        var best: PlacementStep? = null
         var bestLength = Int.MAX_VALUE
         fun consider(target: Int, digit: Int, supposed: Int, supposedDigit: Int, lead: String, close: String) {
             if (bestLength == 0) return // nothing can be shorter
@@ -565,7 +554,7 @@ internal object SudokuTeacher {
             val text = "$lead, $middle${chain.broken.phrase(digits.isNotEmpty())}. $close"
             if (text.length > MAX_EXPLANATION) return
             bestLength = chain.forced.size
-            best = Step(
+            best = PlacementStep(
                 WHAT_IF, target, digit,
                 focus = setOf(target, supposed),
                 cited = chain.forced.map { it.first }.toSet() + chain.broken.cells() + supposed,

@@ -52,6 +52,13 @@ class RegionsTeachingTest {
             println(line)
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
+            // The tier gate, seen from the hints: Standard never needs a locked candidate; Hard two a board, Expert six.
+            val locked = counts.getValue(RegionsTeacher.LOCKED)
+            when (d) {
+                Difficulty.STANDARD -> assertEquals(0, locked)
+                Difficulty.HARD -> assertTrue("$locked", locked >= 2 * 200)
+                Difficulty.EXPERT -> assertTrue("$locked", locked >= 6 * 200)
+            }
         }
         writeReport("regions-teaching-coverage.txt", report.toString())
     }

@@ -56,7 +56,7 @@ enum class LaunchMode(val label: String) {
 }
 
 /**
- * The difficulty the grid is set to, remembered between launches.
+ * The grid's tier, the settings and the grid's order, remembered between launches.
  *
  * [store] is the [KeyValueStore.LAUNCH] file.
  *
@@ -64,7 +64,7 @@ enum class LaunchMode(val label: String) {
  * not progress. Losing it costs one tap, so it must never be able to interfere with the file that
  * holds solved days and half-finished boards.
  *
- * Difficulty is the only grid selection stored (the timer switch is a setting, not a selection). [LaunchMode] deliberately is not: a player who ends a session in
+ * [LaunchMode] deliberately is not stored: a player who ends a session in
  * Random would otherwise open the app the next morning to a grid that quietly hides the day's
  * puzzles, and the daily is the whole point of the app.
  */
@@ -84,9 +84,7 @@ class LaunchPreferences(private val store: KeyValueStore) {
      */
     val showTimer: Flow<Boolean> = store.string(KEY_SHOW_TIMER).map { timerShown(it, hasPlayed = false) }
 
-    suspend fun setShowTimer(show: Boolean) {
-        store.putString(KEY_SHOW_TIMER, if (show) "on" else "off")
-    }
+    suspend fun setShowTimer(show: Boolean) = setFlag(KEY_SHOW_TIMER, show)
 
     /**
      * Writes the switch down the first time a build with the off default runs: on for a player who
@@ -110,19 +108,19 @@ class LaunchPreferences(private val store: KeyValueStore) {
      * Whether a solved puzzle plays its short chime. On unless the player turned it off. The device
      * being on silent is a separate, platform check; this is the player's own switch.
      */
-    val playSound: Flow<Boolean> = store.string(KEY_SOUND).map { it != "off" }
+    val playSound: Flow<Boolean> = flag(KEY_SOUND)
 
-    suspend fun setPlaySound(play: Boolean) {
-        store.putString(KEY_SOUND, if (play) "on" else "off")
-    }
+    suspend fun setPlaySound(play: Boolean) = setFlag(KEY_SOUND, play)
 
     /** Whether a move, a bump and a solve buzz. On unless the player turned it off. */
-    val vibrate: Flow<Boolean> = store.string(KEY_VIBRATE).map { it != "off" }
+    val vibrate: Flow<Boolean> = flag(KEY_VIBRATE)
 
-    suspend fun setVibrate(on: Boolean) {
-        store.putString(KEY_VIBRATE, if (on) "on" else "off")
-    }
+    suspend fun setVibrate(on: Boolean) = setFlag(KEY_VIBRATE, on)
 
+    /** An on/off switch, stored as "on" or "off"; anything but "off" (nothing stored included) is on. */
+    private fun flag(key: String): Flow<Boolean> = store.string(key).map { it != "off" }
+
+    private suspend fun setFlag(key: String, on: Boolean) = store.putString(key, if (on) "on" else "off")
 
     /**
      * The player's own order of the home grid, as puzzle ids; empty (the default) means most played first. Read through

@@ -27,7 +27,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -47,6 +46,10 @@ import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 /** An axis-aligned block of cells, inclusive on both corners. */
 @Serializable
@@ -527,36 +530,11 @@ object Shikaku : PuzzleType {
             val cell = minOf(maxWidth, maxHeight) / 3
             for (r in 0 until 3) {
                 for (c in 0 until 3) {
-                    val owner = PREVIEW_BLOCKS.first { it.contains(r, c) }
-                    Box(
-                        Modifier
-                            .padding(start = cell * c, top = cell * r)
-                            .size(cell)
-                            .padding(0.7.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(owner.fill(dark)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        PREVIEW_CLUES[r * 3 + c]?.let { clue ->
-                            Text(
-                                clue.toString(),
-                                fontSize = (cell.value * 0.46f).sp,
-                                fontWeight = FontWeight.Bold,
-                                color = scheme.onSurface,
-                            )
-                        }
-                    }
+                    Square(cell, r, c, PREVIEW_BLOCKS.first { it.contains(r, c) }.fill(dark), PREVIEW_CLUES[r * 3 + c])
                 }
             }
             PREVIEW_BLOCKS.forEach { block ->
-                Box(
-                    Modifier
-                        .padding(start = cell * block.c0, top = cell * block.r0)
-                        .width(cell * (block.c1 - block.c0 + 1))
-                        .height(cell * (block.r1 - block.r0 + 1))
-                        .padding(1.dp)
-                        .border(2.dp, block.edge(dark), RoundedCornerShape(4.dp))
-                )
+                Box(Modifier.over(block, cell).border(2.dp, block.edge(dark), RoundedCornerShape(4.dp)))
             }
         }
     }
@@ -579,21 +557,13 @@ object Shikaku : PuzzleType {
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
         BoxWithConstraints(Modifier.fillMaxWidth().padding(14.dp), contentAlignment = Alignment.Center) {
-            val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
+            val cell = fitStep(s.width, s.height)
             val cellPx = with(LocalDensity.current) { cell.toPx() }
 
             fun cellAt(offset: Offset): Pair<Int, Int> =
-                (offset.y / cellPx).toInt().coerceIn(0, s.height - 1) to
-                    (offset.x / cellPx).toInt().coerceIn(0, s.width - 1)
+                gridCellAt(offset, cellPx, s.width, s.height).let { it / s.width to it % s.width }
 
-            val preview = dragFrom?.let { from ->
-                dragTo?.let { to ->
-                    Block(
-                        minOf(from.first, to.first), minOf(from.second, to.second),
-                        maxOf(from.first, to.first), maxOf(from.second, to.second),
-                    )
-                }
-            }
+            val preview = dragFrom?.let { from -> dragTo?.let { to -> spanning(from, to) } }
 
             Box(
                 Modifier
@@ -627,16 +597,7 @@ object Shikaku : PuzzleType {
                                 val from = dragFrom
                                 val to = dragTo
                                 if (from != null && to != null) {
-                                    onState(
-                                        s.place(
-                                            Block(
-                                                minOf(from.first, to.first),
-                                                minOf(from.second, to.second),
-                                                maxOf(from.first, to.first),
-                                                maxOf(from.second, to.second),
-                                            )
-                                        )
-                                    )
+                                    onState(s.place(spanning(from, to)))
                                 }
                                 dragFrom = null
                                 dragTo = null
@@ -652,45 +613,22 @@ object Shikaku : PuzzleType {
                 for (r in 0 until s.height) {
                     for (c in 0 until s.width) {
                         val i = r * s.width + c
-                        val owner = s.blockAt(r, c)
-                        Box(
-                            Modifier
-                                .padding(start = cell * c, top = cell * r)
-                                .size(cell)
-                                .moveFeel(feel, i, Color(accent))
-                                .padding(0.7.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(owner?.fill(dark) ?: scheme.surfaceVariant),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            s.clues[i]?.let { clue ->
-                                Text(
-                                    clue.toString(),
-                                    fontSize = (cell.value * 0.46f).sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = scheme.onSurface,
-                                )
-                            }
-                        }
+                        val fill = s.blockAt(r, c)?.fill(dark) ?: scheme.surfaceVariant
+                        Square(cell, r, c, fill, s.clues[i], Modifier.moveFeel(feel, i, Color(accent)))
                     }
                 }
 
                 // Each committed rectangle is outlined in its own hue, matching its fill.
                 s.blocks.forEach { block ->
-                    Box(
-                        Modifier
-                            .padding(start = cell * block.c0, top = cell * block.r0)
-                            .width(cell * (block.c1 - block.c0 + 1))
-                            .height(cell * (block.r1 - block.r0 + 1))
-                            .padding(1.dp)
-                            .border(2.dp, block.edge(dark), RoundedCornerShape(4.dp))
-                    )
+                    Box(Modifier.over(block, cell).border(2.dp, block.edge(dark), RoundedCornerShape(4.dp)))
                 }
 
                 // What a hint names. Everything else steps back under a veil in the page colour, so
                 // the named squares read without hunting; strong squares pulse, soft ones are quiet.
                 if (!highlight.isEmpty) {
                     Canvas(Modifier.matchParentSize()) {
+                        // One square at a time, veil or glow, in reading order: a whole-board pass of
+                        // each moves the anti-aliased rim of a glowing square under its neighbours' veil.
                         val strongW = 4.dp.toPx()
                         val softW = 1.5.dp.toPx()
                         val corner = CornerRadius(4.dp.toPx())
@@ -728,10 +666,7 @@ object Shikaku : PuzzleType {
                 preview?.let { block ->
                     Box(
                         Modifier
-                            .padding(start = cell * block.c0, top = cell * block.r0)
-                            .width(cell * (block.c1 - block.c0 + 1))
-                            .height(cell * (block.r1 - block.r0 + 1))
-                            .padding(1.dp)
+                            .over(block, cell)
                             .clip(RoundedCornerShape(4.dp))
                             .background(scheme.primary.copy(alpha = 0.22f))
                             .border(3.dp, scheme.primary, RoundedCornerShape(4.dp))
@@ -740,6 +675,41 @@ object Shikaku : PuzzleType {
             }
         }
     }
+
+    /** Square (r, c) of a grid of [cell]-sized squares, in [fill], with its clue if it has one. */
+    @Composable
+    private fun Square(cell: Dp, r: Int, c: Int, fill: Color, clue: Int?, feel: Modifier = Modifier) {
+        Box(
+            Modifier
+                .padding(start = cell * c, top = cell * r)
+                .size(cell)
+                .then(feel)
+                .padding(0.7.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(fill),
+            contentAlignment = Alignment.Center,
+        ) {
+            clue?.let {
+                Text(
+                    it.toString(),
+                    fontSize = (cell.value * 0.46f).sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+
+    /** Where [block] sits on a grid of [cell]-sized squares, 1dp in. */
+    private fun Modifier.over(block: Block, cell: Dp): Modifier =
+        padding(start = cell * block.c0, top = cell * block.r0)
+            .width(cell * (block.c1 - block.c0 + 1))
+            .height(cell * (block.r1 - block.r0 + 1))
+            .padding(1.dp)
+
+    /** The rectangle with corners [a] and [b], each (row, column). */
+    private fun spanning(a: Pair<Int, Int>, b: Pair<Int, Int>) =
+        Block(minOf(a.first, b.first), minOf(a.second, b.second), maxOf(a.first, b.first), maxOf(a.second, b.second))
 
     // ---- rectangle colours --------------------------------------------------------------------
 

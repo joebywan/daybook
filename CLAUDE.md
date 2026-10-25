@@ -24,6 +24,8 @@ sounded. Do not turn it off.
 - `core/PuzzleType.kt` — the contract. Adding a puzzle is one file in `puzzles/` plus one line
   in `core/PuzzleRegistry.kt` (and its place in `PuzzleOrder.GENTLEST`, the new player's order); home grid, archive, streaks, stats, hints and saves pick it up.
   What every puzzle must have beyond that (tiers, proof, hints, walkthrough, tests): `docs/PUZZLE_STANDARDS.md`.
+- Four puzzles show players a different name from their code and `id`: Snap is **Trail**, Mambo **Sun & Moon**, Tower
+  **Codebreaker**, Pointers **Arrows** (`displayName`, the owner's choice, 2026-10-25). This file uses the code names.
 - `generate(seed, difficulty)` **must be pure**. Daily boards come from
   `hash(date, puzzleId, difficulty)`, so purity is what makes the whole archive free and offline.
 - `PuzzleState` is a sealed `@Serializable` interface living in `puzzles/` — Kotlin requires
@@ -159,7 +161,7 @@ into every seed: never rename it.
   from 21% to 7%), which is what the pass gate is for. Smoothing into blobs was tried earlier and failed the shape rules
   on 96% of 5x5 draws.
 
-## Mambo (Takuzu with = and x links)
+## Mambo (Takuzu with = and x links; shown to players as Sun & Moon)
 
 Two symbols, balanced in every line, never three alike together, printed `=`/`x` links honoured. `puzzles/Mambo.kt` (state, rules,
 generator, `countSolutions`), `MamboTeacher.kt` (the ladder and `depth`). `id = "mambo"` is hashed into every seed: never rename it.
@@ -258,21 +260,27 @@ A grid cut into regions; a region of N squares holds 1..N once each, and equal d
 (`RegionsLayout`, `RegionsLogic`: rules, generator, exhaustive proof), `RegionsTeacher.kt`, `RegionsKeys.kt`, `Regions.kt` (state, board, walkthrough,
 motif). `id = "regions"` is hashed into every seed: never rename it.
 
-- **Tiers are size alone: 5x5 / 7x7 / 9x9**, regions of 2 to 5 squares. Givens are minimal for the ladder (about 27 / 21 / 19% of squares).
+- **Tiers: size and ladder depth: 5x5 / 7x7 / 9x9**, regions of 2 to 5 squares (`RegionsLogic.specFor`, Tally's `Spec.needs`). Standard uses the three
+  single rungs, ungated (its boards did not move); Hard and Expert add the locked candidate and must take at least 2 / 6 locked steps (4.0 / 8.2 a board
+  on average). Givens are minimal for the tier's ladder: about 27 / 19 / 17% of squares (were 27 / 22 / 19).
 - **The partition and the fill are built together** (`randomBoard`): a random cut almost never has a legal fill (every region holds a 1, and no two 1s may
   touch, so a 2x2 window needs four different digits). Pick the first free square in reading order, grow a region, give it 1..k with none touching an
   equal digit; a dead end redraws. Starting from the most boxed-in square instead failed on most 9x9 draws. Regions of one square are refused.
 - **A board ships only if the teacher's ladder finishes it** (`RegionsTeacher.solvesByLogic`: last square in a region, only digit left, only place in the
-  region), digits are taken back in random order while that holds, and `countSolutions` (candidate masks, exhaustive, no budget) proves one answer.
-  `RegionsOracle` (naive reading-order search) is the independent check. `lastResort` is the board of one fixed seed, itself proved by a test. About 8%
-  of Expert days need a second attempt (`RegionsRulesTest`); a year per tier never reaches `lastResort` (`FallbackTest`). Changing the ladder or the draw
-  changes every board (parity pins go red on purpose).
+  region, then a locked candidate: a region's digit whose every place touches one square outside it strikes it there, and that square is left one digit
+  or its own region's digit one place), digits are taken back in random order while that holds, and `countSolutions` (candidate masks, exhaustive, no
+  budget) proves one answer. `RegionsOracle` (naive reading-order search) is the independent check. `lastResort` is the board of one fixed seed, itself
+  proved by a test. A dig that misses the gate is dug again in a new order (up to `DIGS` = 4) before the fill is redrawn, because the fill is ~85 ms of
+  a 9x9 draw; about 14% of Expert days need a second fill (`RegionsRulesTest`), and a year per tier never reaches `lastResort` (`FallbackTest`).
+  Generation costs what it did before the gate (JVM 1.4 / 8 / 73 ms median, 7 / 32 / 319 p95; Chromium 3 / 18 / 187 median, 14 / 80 / 822 p95,
+  36 / 172 / 1700 max, was 3 / 19 / 173, 15 / 87 / 738, 58 / 175 / 1828; WebKit about the same). Changing the ladder or the draw changes every board
+  (parity pins go red on purpose).
+- **The generator's walk is `lockedSteps`, not `depth`**: it places every single of a pass at once (the single rungs are order-free while every digit
+  is right), so it meets the same stuck boards and locked steps as the hints. `RegionsRulesTest` checks the two agree.
 - **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer. No pencil marks.
 - Region colours are derived (`Regions.regionColours`: a 3 to 5 colouring of the region graph, hues Violet/Amber/Teal/Blue/Gold; the thick walls carry the
   regions as well). The selected square and its digit's twins go plain (surface) so they stand out from the colours. Highlight indices: squares `0 until n*n`,
   digit keys `1000 + d`.
-- A locked-candidate technique (a digit whose only places in a region all touch one square rules that square out) would cut the givens further; not built,
-  `docs/TODO.md`.
 ## Sudoku
 
 The classic 9x9. `puzzles/Sudoku.kt` (state, rules, generator, `countSolutions`), `SudokuTeacher.kt`, `SudokuBoard.kt` (grid and pad,
@@ -399,7 +407,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
   on 89 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
 - State: `words`, `solution`, `digits` (a digit per letter in alphabetical order, -1 for none) and `selected` (in state, as Inequality's; `withoutSelection`).
   The letter key row under the sum shows each letter's digit and selects it; keyboard: a letter key selects it, a digit sets it, Backspace clears, arrows walk the letters.
-## Pointers (clear the arrows)
+## Pointers (clear the arrows; shown to players as Arrows)
 
 The board is covered in arrows, each a bent line of squares ending in a head. Tap one and it slides off the way its head points if
 nothing is in its way to the edge; if something is, it bumps (a shake, a warning flash) and a life goes. Clear every arrow; lose three
@@ -479,7 +487,7 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
 A square of digits 1-9 with a target beside every row and under every column; remove numbers until what is left in every line adds
 up to its target. Exactly one answer. The genre is published as Rullo and as "Number Sums"; neither name (nor "Kakuro", a different
 puzzle) appears anywhere the player sees. `puzzles/TallyRules.kt` (state, `TallyLogic`: line logic, what-if, exhaustive count with a
-`TallyVerdict`, generator), `TallyTeacher.kt`, `TallyKeys.kt`, `Tally.kt` (object `Tally`, board, walkthrough, motif). `id = "tally"`
+`TallyVerdict`, generator), `TallyTeacher.kt`, `Tally.kt` (object `Tally`, board, keys, walkthrough, motif; the pen stack it shares with Nonogram is `core/PenMarks.kt` and `ui/PenBoard.kt`). `id = "tally"`
 is hashed into every seed: never rename it.
 
 - **Marks:** untouched, removed (`x`, faded and struck: it no longer counts) and kept (`o`, circled: a note that the player is sure,
@@ -822,7 +830,7 @@ assertion loose enough to survive the bug is the same thing wearing a number.
     before publishing (`tools/save-check/check.py`, `.github/actions/save-check`), and a lost or changed save blocks
     the release. Run it locally on any APK, or on a published one with Actions > "Release save check".
 - **"What's new" is `fastlane/metadata/android/en-US/changelogs/default.txt`, and every release shows it**: Play gets it
-  through `publish-play.yml` (`whatsNewDirectory`; over 500 characters fails the upload), our F-Droid repo files it under the
+  through `publish-play.yml` (`whatsNewDirectory`; over 500 characters fails the upload, so `ChangelogLengthTest` fails the PR first), our F-Droid repo files it under the
   newest APK's version code (`tools/fdroid/build-repo.sh`). Rewrite it in the PR that changes what players see, or the next
   release repeats old news. The GitHub Release carries it too (`release.yml`, above the generated notes), which is what
   f-droid.org shows: its entry's `Changelog:` link is the Releases page (f-droid.org does not read the file itself; it wants
