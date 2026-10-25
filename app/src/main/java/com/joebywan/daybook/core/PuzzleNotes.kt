@@ -160,6 +160,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "The tray holds one of each domino: count what is left.",
         "A big total over two squares needs big halves on both.",
     ),
+    "pearls" to listOf(
+        "A black pearl on the edge of the board runs two squares inward.",
+        "Three white pearls in a row can never share one straight line.",
+        "A square with only one way in is never on the loop.",
+        "Never join the two ends of a line unless it is the whole loop.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */

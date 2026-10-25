@@ -13,6 +13,8 @@ import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.CipherTeacher
 import com.joebywan.daybook.puzzles.DominoTeacher
 import com.joebywan.daybook.puzzles.Dominoes
+import com.joebywan.daybook.puzzles.Pearls
+import com.joebywan.daybook.puzzles.PearlsTeacher
 import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.KingsTeacher
 import com.joebywan.daybook.puzzles.LexiconTeacher
@@ -47,7 +49,7 @@ class TechniqueNamesTest {
         "inequality" to InequalityTeacher.TECHNIQUES, "chess" to ChessTeacher.TECHNIQUES, "tents" to TentsTeacher.TECHNIQUES,
         "regions" to RegionsTeacher.TECHNIQUES, "cages" to CageTeacher.TECHNIQUES, "target" to TargetTeacher.TECHNIQUES,
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
-        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
+        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 
@@ -79,6 +81,7 @@ class TechniqueNamesTest {
             Tally to listOf(null, TallyTeacher.WAYS, TallyTeacher.WHAT_IF),
             Dominoes to listOf(DominoTeacher.REGION_VALUE, DominoTeacher.COUNTING, DominoTeacher.WHAT_IF),
             Cipher to listOf(null, CipherTeacher.CHAIN, CipherTeacher.WHAT_IF),
+            Pearls to listOf(null, PearlsTeacher.SMALL_LOOP, PearlsTeacher.WHAT_IF),
         )
         for ((p, want) in expected) for (t in Difficulty.entries) for (seed in 1L..10L) {
             val board = p.generate(seed, t)

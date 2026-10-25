@@ -832,16 +832,25 @@ internal object PearlsLogic {
 
     /**
      * Only when none of [ATTEMPTS] draws was accepted, which a year of daily seeds on every tier never
-     * reaches (`FallbackTest`). A fixed board per tier, which `PearlsRulesTest` proves is accepted at its tier.
+     * reaches (`FallbackTest`). A fixed board per tier (what seed 424242 drew), which `PearlsRulesTest`
+     * proves is accepted at its tier: one loop, the tier's rung needed exactly.
      */
-    fun lastResort(difficulty: Difficulty): PearlsState = LAST_RESORT[difficulty.ordinal]
-
-    private val LAST_RESORT: List<PearlsState> by lazy { Difficulty.entries.map { lastResortOf(it) } }
-
-    private fun lastResortOf(difficulty: Difficulty): PearlsState = when (difficulty) {
-        Difficulty.STANDARD -> PearlsState(6, "", "")
-        Difficulty.HARD -> PearlsState(8, "", "")
-        Difficulty.EXPERT -> PearlsState(10, "", "")
+    fun lastResort(difficulty: Difficulty): PearlsState = when (difficulty) {
+        Difficulty.STANDARD -> PearlsState(
+            6, "b.......w.......ww..b....b.w........",
+            "110000000110000001100111000001101000101011011011010001000011",
+        )
+        Difficulty.HARD -> PearlsState(
+            8, ".b..w..............bw....w..w...w......b..b....w........b....bw.",
+            "0111100000010001100001100000001011100111000000000110001101000100" +
+                "010010000001100010111000100000011010010110100101",
+        )
+        Difficulty.EXPERT -> PearlsState(
+            10,
+            "..w...b...w....w...w...b...............w.b...w.b.........w....b.b.....w..wb..b...........w.w.....w..",
+            "111010111000000000011001000000010000011100011111001000110011000000011011001000000111100111100111" +
+                "100110011110011100100001110001000110001101000001101100101100010010111010011000101001",
+        )
     }
 }
 

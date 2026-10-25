@@ -462,7 +462,7 @@ object PuzzleOrder {
         "sudoku", "words", "sand", // Familiar, or (Sand) see it, do it.
         "wordwheel", "target", "nonogram", // Familiar: most players know them from elsewhere.
         "kings", "mambo", "mosaic", "sets", "inequality", "tents", "regions", "tally", // Quick to learn: few rules, instant feedback.
-        "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", // Takes a bit: more rules, or a longer chain of reasoning.
+        "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", "pearls", // Takes a bit: more rules, or a longer chain of reasoning.
         "tower", // Last: a colour-code guesser, much the same game as Lexicon, which a new player has met by now.
     )
 

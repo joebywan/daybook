@@ -17,6 +17,8 @@ import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Tally
+import com.joebywan.daybook.puzzles.Pearls
+import com.joebywan.daybook.puzzles.PearlsLogic
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Pointers
@@ -240,6 +242,35 @@ class FallbackTest {
             assertTrue("${difficulty.name} came close to the allowance: $most", most < TallyLogic.ATTEMPTS / 2)
         }
         assertTrue("tally shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
+     * [Pearls.generateVerified] returns a board only when the tier's rungs finished it, needing exactly the tier's
+     * deepest, and the exhaustive count proved one loop. Also measures the redraws (printed): a draw is redrawn when
+     * its loop stalls short of the share of squares, when every pearl it allows still leaves two loops, when the
+     * ladder needs the wrong rung, or when the count disagrees.
+     */
+    @Test
+    fun `pearls proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            var total = 0
+            var most = 0
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Pearls.id, difficulty)
+                val proved = Pearls.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("pearls $date/${difficulty.name}", proved, Pearls.generate(seed, difficulty))
+                val used = 1 + (0 until PearlsLogic.ATTEMPTS).first { PearlsLogic.attempt(seed, difficulty, it) != null }
+                total += used
+                most = maxOf(most, used)
+            }
+            println("pearls ${difficulty.name}: draws per board mean ${"%.1f".format(total / 365.0)}, most $most of ${PearlsLogic.ATTEMPTS}")
+            assertTrue("${difficulty.name} came close to the allowance: $most", most < PearlsLogic.ATTEMPTS / 2)
+        }
+        assertTrue("pearls shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /**
