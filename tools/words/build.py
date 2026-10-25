@@ -165,6 +165,27 @@ def read_clues(name):
     return dict(line.rstrip("\n").split(": ", 1) for line in open(os.path.join(HERE, name)) if line.strip())
 
 
+# Clues should read the same in any English: no trivia about named people, no one country's sports, no
+# "in America" tags. A flagged clue that is fine (a Greek letter, Noah's ark) goes in clue-lint-allow.txt as
+# its exact line, so editing the clue lints it again.
+LINT = {
+    "a name mid-sentence": re.compile(r"(?<![.!?:;(\"] )(?<!^)(?<!\")\b[A-Z][a-z]+"),
+    "a sport": re.compile(r"\b(baseball|football|cricket|soccer|rugby|hockey|basketball|gridiron|innings?|"
+                          r"quarterback|touchdown|home run)\b", re.I),
+    "a regional tag": re.compile(r"\b(in|to|of) (Britain|America|Australia|Canada|England|Scotland|Ireland|"
+                                 r"the (US|USA|UK|States))\b|\b(American|British|Aussie|Australian|Canadian|US|UK)\b"),
+}
+
+
+def lint_clues():
+    allowed = {line.rstrip("\n") for line in open(os.path.join(HERE, "clue-lint-allow.txt")) if line.strip()}
+    bad = [f"  {name}: {w}: {c}   ({why})" for name in ("clues.txt", "wheel-clues.txt")
+           for w, c in read_clues(name).items() if f"{w}: {c}" not in allowed
+           for why, rx in LINT.items() if rx.search(c)]
+    if bad:
+        sys.exit("clues to rewrite (or add to tools/words/clue-lint-allow.txt):\n" + "\n".join(bad))
+
+
 def clue_text(obj, source, clues):
     """`internal object OBJ { val ALL: String }`: lines `word: clue`, in chunks under the 64 KB string cap."""
     lines = [
@@ -294,7 +315,10 @@ def wheel_kotlin(grid, roots, bonus):
 
 
 if __name__ == "__main__":
-    result = main(sys.argv[1], sys.argv[2], sys.argv[3])
+    lint_clues()
+    if sys.argv[1:] == ["--lint"]:
+        sys.exit(0)
+    result =main(sys.argv[1], sys.argv[2], sys.argv[3])
     for n in LENGTHS:
         print(n, "guesses", len(result[n][0]), "answers", len(result[n][1]), file=sys.stderr)
     grid, roots, bonus, wheel_clues = wheel(main(sys.argv[1], sys.argv[2], sys.argv[3], WHEEL_LENGTHS))
