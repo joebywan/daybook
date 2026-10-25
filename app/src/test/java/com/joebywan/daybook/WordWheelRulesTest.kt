@@ -130,32 +130,6 @@ class WordWheelRulesTest {
     }
 
     @Test
-    fun `how often a board needs a second attempt`() {
-        val report = StringBuilder()
-        for (d in Difficulty.entries) {
-            val attempts = IntArray(WordWheelLogic.ATTEMPTS + 1)
-            for (day in 0 until 365) {
-                val seed = daySeed(day, WordWheel.id, d)
-                // Lay one attempt at a time: the first whose board is the one shipped is the attempt that shipped.
-                val b = WordWheel.generateVerified(seed, d)
-                val used = (1..WordWheelLogic.ATTEMPTS).firstOrNull { n -> b != null && attemptBoard(seed, d, n - 1) == b } ?: 0
-                attempts[used]++
-            }
-            report.append("${d.name}: attempts used ${attempts.withIndex().filter { it.value > 0 }.joinToString { "${it.index}x${it.value}" }}\n")
-        }
-        writeReport("wordwheel-attempts.txt", report.toString())
-        println(report)
-    }
-
-    private fun attemptBoard(seed: Long, d: Difficulty, attempt: Int): WordWheelState? {
-        val spec = WordWheelLogic.specFor(d)
-        val rng = com.joebywan.daybook.core.Rng(seed + attempt)
-        val roots = WheelWords.roots(spec.letters)
-        val root = roots[rng.nextInt(roots.size)]
-        return WordWheelLogic.lay(root, spec, rng)
-    }
-
-    @Test
     fun `the last resort is a fixed, proved board on every tier`() {
         for (d in Difficulty.entries) {
             val b = WordWheelLogic.lastResort(d)
