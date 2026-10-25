@@ -39,7 +39,7 @@ aglow: Shining
 agony: Extreme suffering
 agree: Concur
 ahead: In front
-aide: Presidential helper
+aide: Assistant
 airy: Light and breezy
 aisle: Church path between pews
 ajar: Slightly open
@@ -169,7 +169,7 @@ bang: Loud noise
 banjo: Twangy instrument
 bank: Where the river's edge is, or savings are kept
 barb: Pointed insult
-bard: Poet, like Shakespeare
+bard: Poet of old
 bare: Naked
 barge: Canal boat
 bark: Dog's cry, or tree's skin
@@ -290,7 +290,7 @@ boil: Heat water to 100 degrees
 bold: Daring
 bolt: Door lock, or a sprint
 bomb: Explosive device
-bond: Tie that unites, or James
+bond: Tie that unites, or a debt certificate
 bone: Dog's treat
 bonus: Extra payment
 bony: Skinny, like a skeleton
@@ -388,7 +388,7 @@ bush: Shrub
 bushy: Thick and shaggy
 bust: Sculpture of head and shoulders
 busy: Hard at work
-butte: Flat-topped hill in the West
+butte: Isolated flat-topped hill
 buxom: Full-figured
 buzz: Bee's sound
 cabin: Log home
@@ -437,7 +437,7 @@ cedar: Fragrant wood
 cede: Give up, as territory
 cell: Prisoner's room
 cello: Large bowed string instrument
-cent: Penny
+cent: Hundredth of a dollar
 chafe: Rub sore
 chaff: Husks of grain
 chain: Linked metal loops
@@ -446,7 +446,7 @@ chalk: Blackboard writer
 champ: Winner, informally
 chant: Monk's monotone
 chaos: Total disorder
-chap: Fellow, in Britain
+chap: Crack, as dry lips
 char: Burn black
 charm: Lucky amulet, or appeal
 chart: Graph
@@ -511,7 +511,7 @@ claw: Cat's scratcher
 clay: Potter's material
 clean: Spotless
 clear: Transparent
-cleat: Football shoe stud
+cleat: Shoe stud for grip
 clef: Music symbol
 cleft: Split in a chin
 clerk: Office worker
@@ -612,7 +612,7 @@ crisp: Fresh and crunchy
 croak: Frog's call
 crock: Earthen pot
 crook: Thief
-croon: Sing softly, like Sinatra
+croon: Sing softly and sentimentally
 crop: Harvested produce
 cross: Angry, or intersect
 crow: Black bird
@@ -645,7 +645,7 @@ cycle: Pedal
 cynic: Doubter of human goodness
 cyst: Fluid-filled sac
 daddy: Dad
-daft: Silly, in Britain
+daft: Soft in the head
 daily: Every day
 dairy: Milk and cheese
 daisy: White flower with a yellow centre
@@ -799,7 +799,7 @@ dump: Landfill
 dumpy: Short and stout
 dunce: Slow learner
 dune: Sandy hill
-dunk: Basketball showpiece
+dunk: Dip in a drink, as a biscuit
 dusk: Twilight
 dusky: Dim, shadowy
 dust: Furniture's coating
@@ -811,7 +811,7 @@ dwell: Live
 dwelt: Resided
 each: Per person
 eager: Keen
-eagle: Bald symbol of America
+eagle: Large bird of prey, or two under par
 earl: British nobleman
 early: Ahead of schedule
 earn: Make a wage
@@ -1033,7 +1033,7 @@ forte: Strong point, or loud in music
 forth: Onward
 forty: Four tens
 forum: Roman public square, or an online discussion board
-foul: Disgusting, or a basketball infraction
+foul: Disgusting, or against the rules
 found: Discovered, or established
 four: Number of seasons
 fowl: Chicken or duck
@@ -1148,7 +1148,7 @@ gnat: Tiny biting fly
 gnaw: Chew persistently
 gnome: Garden figurine
 goad: Prod into action
-goal: Aim, or a soccer score
+goal: Aim, or a score between the posts
 goat: Billy or nanny
 godly: Pious
 goes: Departs
@@ -1325,10 +1325,10 @@ homey: Comfortably domestic
 hone: Sharpen
 honey: Bee product
 honk: Goose's cry, or a car's horn
-hood: Car bonnet, in America
+hood: Head covering on a jacket
 hoof: Horse's foot
 hook: Fishing tool
-hoop: Basketball ring
+hoop: Ring, as on a barrel
 hoot: Owl's call
 hope: Optimism
 horde: Large crowd
@@ -1402,7 +1402,7 @@ jade: Green gemstone
 jail: Prison
 jamb: Door's side post
 jaunt: Short trip
-jazz: Louis Armstrong's music
+jazz: Improvised music with swing
 jeer: Taunt
 jelly: Toast topping
 jerk: Sudden yank
@@ -1439,7 +1439,7 @@ keep: Hold on to
 kelp: Large seaweed
 kept: Held on to
 khaki: Army-uniform colour
-kick: Football strike
+kick: Strike with the foot
 kill: Slay
 kiln: Pottery oven
 kilo: Thousand grams
@@ -1538,7 +1538,7 @@ lice: Head pests
 lick: Ice cream eater's move
 lieu: Place, in "in ___ of"
 life: Existence
-lift: Elevator in Britain
+lift: Raise, or a ride in a car
 light: Not heavy
 like: Fancy
 lilac: Purple, fragrant shrub
@@ -1588,7 +1588,7 @@ loot: Plunder
 lope: Long, easy stride
 lord: Noble title
 lore: Traditional knowledge
-lorry: British truck
+lorry: Truck, in Britain
 lose: Not win
 loss: Defeat
 lost: Misplaced
@@ -1713,7 +1713,7 @@ miss: Fail to hit
 mist: Fine drizzle, or fog
 misty: Lightly hazy
 mite: Tiny arachnid
-mitt: Baseball glove
+mitt: Padded glove
 moan: Groan
 moat: Castle's watery defence
 mock: Make fun of
@@ -1743,7 +1743,7 @@ moth: Flame-drawn insect
 motif: Recurring theme
 motor: Engine
 motto: Slogan
-mound: Pitcher's perch
+mound: Heap of earth
 mount: Climb
 mourn: Grieve
 mouse: Computer pointer
@@ -1805,7 +1805,7 @@ nick: Small cut
 niece: Sibling's daughter
 nifty: Handy and clever
 night: When stars come out
-nine: Baseball team's players
+nine: Three times three
 ninth: After the eighth
 nippy: Chilly
 noble: Aristocratic
@@ -1861,7 +1861,7 @@ onto: Atop, with "on"
 ooze: Seep slowly
 opal: Iridescent gem
 open: Not shut
-opera: La Traviata, for one
+opera: Drama sung on a stage
 opium: Poppy-derived narcotic
 optic: Of the eye
 opus: Composer's work
@@ -1887,7 +1887,7 @@ pace: Walking speed
 pack: Wolves' group, or fill a suitcase
 pact: Treaty
 paddy: Rice field
-pagan: Non-Christian, in old usage
+pagan: Follower of an old nature religion
 page: Book leaf
 paid: Settled up
 pail: Bucket
@@ -1970,7 +1970,7 @@ pink: Rose colour
 pint: Half a quart
 pious: Devout
 pipe: Plumber's tube
-pitch: Baseball throw, or a tar-like substance
+pitch: Toss, or a tar-like substance
 pithy: Short and to the point
 pity: Sympathy
 pivot: Turning point
@@ -2068,7 +2068,7 @@ prude: Excessively modest person
 prune: Dried plum, or trim a tree
 psalm: Sacred song
 psych: Trick, in slang
-puck: Hockey disc
+puck: Rubber disc on ice
 pudgy: Round and soft
 puff: Short breath
 puffy: Swollen
@@ -2079,7 +2079,7 @@ puma: Mountain lion
 pump: Gas station device
 punch: Fruit drink, or a hit
 punk: Rock genre with safety pins
-punt: Flat-bottomed boat, or a football kick
+punt: Flat-bottomed boat, or a bet
 puny: Weak and small
 pupil: Student, or part of the eye
 puppy: Young dog
@@ -2101,7 +2101,7 @@ quart: Two pints
 queen: Chess's strongest piece
 query: Question
 quest: Knight's search
-queue: Line, in Britain
+queue: Line of people waiting
 quick: Not slow
 quiet: Silent
 quill: Old-fashioned pen
@@ -2586,7 +2586,7 @@ spook: Ghost, or startle
 spool: Thread holder
 spoon: Cereal utensil
 spore: Fungus's reproductive cell
-sport: Football or tennis
+sport: Game played for exercise
 spot: Leopard's marking
 spout: Teapot's pourer
 spray: Aerosol's output
@@ -2618,7 +2618,7 @@ star: Sun, for one
 stare: Gaze rudely
 stark: Bare, or bleak
 start: Begin
-state: Texas or Ohio
+state: Condition, or a part of a federation
 stave: Musical staff, or ward off
 stay: Remain
 steak: Sirloin or rib-eye
@@ -2704,7 +2704,7 @@ sweep: Brush clean
 sweet: Sugary
 swell: Grow bigger, or great
 swept: Cleaned with a broom
-swift: Fast bird, or Taylor
+swift: Speedy, or a fast-flying bird
 swig: Big drink
 swill: Pig food
 swim: Do laps
@@ -2719,7 +2719,7 @@ sword: Fencer's weapon
 swore: Cursed
 sworn: Under oath
 swum: Done the backstroke
-swung: Hit a baseball
+swung: Moved like a pendulum
 syrup: Pancake topping
 tabby: Striped cat
 table: Dining furniture
@@ -2770,7 +2770,7 @@ tenor: High male voice
 tense: Verb time, or strained
 tent: Camping shelter
 tenth: One part in ten
-tepee: Plains Indian tent
+tepee: Cone-shaped tent of hides
 tepid: Lukewarm
 term: Semester
 terse: Brief and to the point
@@ -2796,7 +2796,7 @@ thin: Slim
 think: Ponder
 third: Bronze medal place
 this: Not that
-thong: Flip-flop, in Australia
+thong: Narrow strip of leather
 thorn: Rose's prickle
 those: Not these
 three: A crowd's number
@@ -2881,7 +2881,7 @@ tree: Oak or elm
 trek: Long, hard journey
 trend: Fashion's direction
 trial: Court proceeding
-tribe: Native group
+tribe: Large kinship group
 trick: Magician's deception
 trill: Warbling sound
 trim: Neaten by cutting
@@ -2921,7 +2921,7 @@ twig: Small branch
 twin: Double sibling
 twine: Garden string
 twirl: Spin
-twist: Plot surprise, or Chubby Checker's dance
+twist: Plot surprise, or wring
 tying: Making a knot
 type: Kind, or keyboard
 udder: Milk producer on a cow
@@ -3054,7 +3054,7 @@ wept: Cried
 were: Past of "are"
 west: Where the sun sets
 whack: Strike sharply
-whale: Moby Dick, for one
+whale: Largest sea mammal
 wharf: Dock
 what: Question starter
 wheat: Bread grain
