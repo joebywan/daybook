@@ -35,13 +35,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.ui.LocalReducedMotion
-import com.joebywan.daybook.ui.theme.BoardHues
 import kotlin.math.PI
 import kotlin.math.cos
 
-// Today's pick marker (docs/REWARDS.md): a twinkling gold sparkle frame on the tile and "Try me!" across the
-// thumbnail. Only drawn while the pick is unsolved and not in progress, so nothing animates once it is done or started
-// (nor under reduced motion). Neither changes layout. The "In progress" label shares the tilt and halo.
+// Today's three's next board (docs/REWARDS.md): a twinkling gold sparkle frame on its chip, drawn only while it is
+// unsolved, so nothing animates once the three are done (and it holds still under reduced motion). It changes no layout.
 
 private val SparkleGold = Color(0xFFF5C542)
 private val RingGold = Color(0xFFE8A317).copy(alpha = 0.7f)
@@ -97,22 +95,9 @@ private fun DrawScope.sparkle(c: Offset, r: Float, alpha: Float) {
     drawPath(path, SparkleGold, alpha)
 }
 
-/** "Try / me!" tilted across the whole thumbnail, with a halo so it reads over any puzzle's icon. Overlay: takes no space. */
-@Composable
-fun TryMeLabel(previewSize: Dp, modifier: Modifier = Modifier) {
-    val dark = BoardHues.isDark(MaterialTheme.colorScheme)
-    TiltedLabel(
-        "Try\nme!", "Today's pick", previewSize, 0.31f,
-        ink = if (dark) Color(0xFFFFE9A8) else Color(0xFF2B1B00),
-        halo = if (dark) Color(0xFF2A1A00) else Color(0xFFFFF4D6),
-        modifier = modifier,
-    )
-}
-
 /**
- * "In / progress" on a tile whose board at the grid's tier and mode has a game left part-played. The same tilt and halo as
- * [TryMeLabel], in the scheme's moss on its surface rather than gold, so the two never read as one mark. Smaller, since
- * "progress" is the longer word.
+ * "In / progress" on a tile whose board at the grid's tier and mode has a game left part-played: tilted across the
+ * thumbnail in the scheme's moss, with a halo of its surface so it reads over any puzzle's icon. Overlay: takes no space.
  */
 @Composable
 fun InProgressLabel(previewSize: Dp, modifier: Modifier = Modifier) {
