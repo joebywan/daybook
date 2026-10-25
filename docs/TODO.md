@@ -155,6 +155,52 @@ frames, so settle each step with two `requestAnimationFrame`s and a `resize` bef
   grow, Enter commits, Esc cancels; Snap: arrows extend the path via `extend`, Backspace retracts). The mouse
   suits all three better, so leaving them pointer-only is defensible. *M-L each.*
 
+## Council review (2026-10-25)
+
+Five independent design reviews (puzzle construction, player experience, daily meta, word/number games, genre mix),
+accepted by the owner except where noted. Each item is one workstream and one PR; delete it here when it lands.
+Generator changes move every daily board of that puzzle (parity pins go red on purpose): batch them, one PR per puzzle.
+
+- [ ] **Accent rule: perceptual distance, not hue.** Replace `docs/COLOUR.md`'s 25-degree hue rule with a CIEDE2000 floor
+  between every pair of accents (both schemes, colour-blind modes included), pinned by one test, the floor set at today's
+  closest pair so nothing changes. Unblocks any 26th puzzle (see "Accents are crowded").
+- [ ] **Play-screen fixes.** Mosaic's "Out of fills" line is unreserved under a height-sized board (`Mosaic.kt` `s.failed`)
+  and says "restart" when Undo works; Cage Sudoku shows two "Show me" buttons while the popover is open; a Tower colour tap
+  should fill the next empty peg (as the keyboard does); the first-visit offer line should carry the puzzle's tagline;
+  Tower moves to the end of `PuzzleOrder.GENTLEST` (redundant with Lexicon).
+- [ ] **Measure tier depth.** A report (env-gated test, no board change): for a year of daily seeds per tier, the deepest
+  teacher technique each board needs, for Sudoku, Kings, Mambo, Shikaku, Atoms, Inequality, Tents, Nonogram, LITS, Regions.
+  Decides which tiers overlap and so which get a depth gate. Also measure whether a Snap teacher reasoning over the whole
+  board (forced corners, squares with two free neighbours, pockets) can hint without fallback.
+- [ ] **Depth gates** (after the measurement), Tally's `Spec.needs` pattern: each tier must need its technique. Sudoku first
+  (34% Expert fallback; also 180-degree symmetric givens), Mambo (`ALMOST`/`WHAT_IF` never needed today), Kings, Atoms
+  (also reaches up to 5), Tents, Nonogram (also mirror-symmetric pictures; measure the pass rate). Inequality (pairs, sign
+  chains) and Regions (locked candidates) need the techniques first.
+- [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
+  same `countTilings` proof.
+- [ ] **Pipes: a branchier tree.** `spanningTree` is a depth-first maze (long corridors); a random-edge spanning tree gives
+  more junctions. (Counter-clockwise rotation and a lock mark: declined by the owner.)
+- [ ] **Mate: tier by rating.** `tools/chess/build.py` ignores Lichess `Rating`; band each tier by rating as well as N.
+- [ ] **Word content pass.** A lint in `tools/words/build.py` (capitalised names, sports, "in Britain/America" tags) and a
+  hand fix of what it finds (trivia: "or Taylor", "Sinatra"; US-only: "Baseball team's players"; dated: "tepee", "pagan");
+  interjections and archaisms out of Word Wheel's grid (`huh`, `ugh`, `hey`, `gee`, `thy`, `ken`, `sup`, `fro`).
+  (Lexicon headline words such as `vomit`: declined by the owner.)
+- [ ] **Lexicon teaching and repeats.** Rotate the opener hint by seed; the fallback says how its guess splits the words left;
+  a no-repeat cycle for Daily (supersedes the item above).
+- [ ] **Cipher: cap repeated totals** (some totals recur many times a tier); **Target: count the roads** (Expert needs few
+  shortest answers, not only depth 5).
+- [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
+  derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
+- [ ] **Levels: a gentle first deck.** Levels 1-5 deal any of 25 (`Levels.STARTER`); deal deck 0 by `GENTLEST` band, with
+  a plan version on newly opened levels so opened ones never move.
+- [ ] **Stats: this week.** A seven-day strip and a per-puzzle time trend, against the player's own history only.
+- [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
+- [ ] **Teacher upgrades already listed:** Word Wheel's "two slots, two words", Cage Sudoku naming the cage chain, Regions'
+  locked candidate.
+- [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
+  lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
+  fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
+
 ## Future puzzle candidates
 
 Ideas for further puzzles, none started. Any new puzzle follows `docs/PUZZLE_STANDARDS.md` (three
@@ -244,9 +290,10 @@ and Battleships is close to Tents.
 Close to existing puzzles, so not suggested: Kakuro (Cages), Kropki (Inequality), Battleships (Tents). Any new
 puzzle first needs the accent-spacing rule relaxed (see "Accents are crowded" below).
 
-**Not recommended** (noted so nobody re-investigates): a crossword needs a licensed clue database, which
-we cannot generate or ship offline; plain word-search and sliding-tile puzzles are generator-easy but do
-not demand thought, against the owner's stated taste.
+**Not recommended** (noted so nobody re-investigates): plain word-search and sliding-tile puzzles are generator-easy
+but do not demand thought, against the owner's stated taste. (A crossword was here for want of a clue database; the
+hand-written clues are one now, see the council list.) Curated themed puzzles (four groups of four, themed word hunts)
+were declined by the owner (2026-10-25): a shipped list runs out and would need revisiting every year.
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
 A practice mode per technique was declined by the owner: players can use the hints themselves, and it would
 only spend their time railroaded through a tutorial.
