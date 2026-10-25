@@ -18,7 +18,7 @@ internal class RegionsLayout(val n: Int, val region: List<Int>) {
     val sizeOf: IntArray = IntArray(n * n) { members[region[it]].size }
 
     /** The up to eight squares touching each square, edge or corner, in index order. */
-    val around: List<IntArray> = List(n * n) { RegionsLogic.aroundOf(n, it).toIntArray() }
+    val around: List<IntArray> = List(n * n) { TentsLogic.around(n, it).toIntArray() }
 
     /** Everything a digit in a square must differ from: its region-mates and the squares touching it. */
     val peers: List<IntArray> = List(n * n) { i ->
@@ -151,7 +151,7 @@ internal object RegionsLogic {
             val c = cells[at]
             for (d in rng.shuffled((1..k).toList())) {
                 if (used and (1 shl d) != 0) continue
-                if (aroundOf(n, c).any { digit[it] == d }) continue
+                if (TentsLogic.around(n, c).any { digit[it] == d }) continue
                 digit[c] = d
                 if (place(cells, at + 1, used or (1 shl d))) return true
             }
@@ -180,15 +180,6 @@ internal object RegionsLogic {
         val renumber = IntArray(n * n) { -1 }
         var k = 0
         return region.map { r -> if (renumber[r] < 0) renumber[r] = k++; renumber[r] } to digit.toList()
-    }
-
-    /** The up to eight squares touching [i], edge or corner, in index order. */
-    fun aroundOf(n: Int, i: Int): List<Int> = buildList {
-        for (dr in -1..1) for (dc in -1..1) {
-            val r = i / n + dr
-            val c = i % n + dc
-            if ((dr != 0 || dc != 0) && r in 0 until n && c in 0 until n) add(r * n + c)
-        }
     }
 
     /** Strikes every settled digit from its peers, to a fixpoint. False when some square is left with no digit. */
