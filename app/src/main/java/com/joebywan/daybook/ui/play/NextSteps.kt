@@ -14,6 +14,9 @@ enum class NextKind {
     /** The same date's board at [NextOption.difficulty] (a past date's board on an archive day). */
     DAILY,
 
+    /** Today's daily of another puzzle, [NextOption.puzzleId], at [NextOption.difficulty] ([nextToday]). */
+    TODAY,
+
     /** A board of level [NextOption.level]: [NextOption.puzzleId], or its first unsolved board when that is null. */
     LEVEL,
 
@@ -45,9 +48,10 @@ data class NextOption(
  * date at another tier and are never offered for a tier already done that day: the nearest undone
  * tier in that direction is offered instead, and the button is dropped if nothing in that direction
  * is undone. [doneTiers] need not include [tier]; the board just solved counts as done regardless,
- * because the store records it asynchronously.
+ * because the store records it asynchronously. [today] (offered on today's own daily only: [nextToday]) leads the list
+ * as "Next puzzle" (named under it), the frame's main button.
  */
-fun nextOptions(daily: Boolean, tier: Difficulty, doneTiers: Set<Difficulty>): List<NextOption> {
+fun nextOptions(daily: Boolean, tier: Difficulty, doneTiers: Set<Difficulty>, today: String? = null): List<NextOption> {
     val tiers = Difficulty.entries
     val here = tiers.indexOf(tier)
     return if (daily) {
@@ -55,6 +59,11 @@ fun nextOptions(daily: Boolean, tier: Difficulty, doneTiers: Set<Difficulty>): L
         val easier = tiers.take(here).lastOrNull { it !in done }
         val harder = tiers.drop(here + 1).firstOrNull { it !in done }
         buildList {
+            today?.let { id ->
+                val name = PuzzleRegistry.byId(id)?.displayName ?: id
+                // The tier is the one just played; the pill has room for the name alone.
+                add(NextOption("Next puzzle", NextKind.TODAY, tier, id, note = name))
+            }
             if (easier != null) add(NextOption("Easier Daily", NextKind.DAILY, easier))
             add(NextOption("Random", NextKind.RANDOM, tier))
             if (harder != null) add(NextOption("Harder Daily", NextKind.DAILY, harder))
@@ -71,19 +80,27 @@ fun nextOptions(daily: Boolean, tier: Difficulty, doneTiers: Set<Difficulty>): L
 }
 
 /**
- * The button the finished frame fills in: going on with the level when there is one, since that is what a level asks for;
- * otherwise "Done"/"Home", which is the safe default on a daily or random board.
+ * The next of today's dailies at [tier] after solving [justSolved]: the first of [three] (today's three) not yet done, else
+ * the first of [order] (the home grid's) not yet done; null once every one is. [done] is today's (puzzle, tier) solves.
+ */
+fun nextToday(three: List<String>, order: List<String>, tier: Difficulty, done: Set<Pair<String, Difficulty>>, justSolved: String): String? =
+    (three + order).firstOrNull { it != justSolved && (it to tier) !in done }
+
+/**
+ * The button the finished frame fills in: going on, with the level or with today's next puzzle, since that is what the
+ * player came for; otherwise "Done"/"Home", which is the safe default.
  */
 fun mainOption(options: List<NextOption>): NextOption? =
-    options.firstOrNull { it.kind == NextKind.LEVEL } ?: options.firstOrNull { it.kind == NextKind.DONE }
+    options.firstOrNull { it.kind == NextKind.LEVEL || it.kind == NextKind.TODAY } ?: options.firstOrNull { it.kind == NextKind.DONE }
 
 /**
  * The one way on that the results pill shows beside Done, once the frame is hidden (as it always is on a solved board
- * reopened): a daily tier still to play, harder first, since the pill has no room for the rest of the frame; else the
- * first option that is not Done (Another on a random board, the next board on a level).
+ * reopened): today's next puzzle; else a daily tier still to play, harder first, since the pill has no room for the rest
+ * of the frame; else the first option that is not Done (Another on a random board, the next board on a level).
  */
 fun pillOption(options: List<NextOption>): NextOption? =
-    options.lastOrNull { it.kind == NextKind.DAILY } ?: options.firstOrNull { it.kind != NextKind.DONE }
+    options.firstOrNull { it.kind == NextKind.TODAY } ?: options.lastOrNull { it.kind == NextKind.DAILY }
+        ?: options.firstOrNull { it.kind != NextKind.DONE }
 
 /**
  * The buttons for a solved board of [level]: [plan] is its boards, [solved] the puzzles solved in it, and
