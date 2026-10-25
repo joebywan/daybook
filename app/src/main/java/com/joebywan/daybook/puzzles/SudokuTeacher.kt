@@ -1,6 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.digitsOf
+import com.joebywan.daybook.core.has
 
 
 /**
@@ -109,9 +112,6 @@ internal object SudokuTeacher {
     private fun unitsOf(cell: Int): List<Unit> =
         listOf(units[boxOf(cell)], units[9 + cell / 9], units[18 + cell % 9])
 
-    private fun bit(d: Int) = 1 shl d
-    private fun has(mask: Int, d: Int) = mask and bit(d) != 0
-    private fun digitsOf(mask: Int) = (1..9).filter { has(mask, it) }
 
     // ---- what the player can see -------------------------------------------------------------------
 

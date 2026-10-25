@@ -159,13 +159,11 @@ internal object InequalityLogic {
         val cand = IntArray(n * n) { if (given[it] == 0) full else 1 shl given[it] }
         var found = 0
 
-        fun single(m: Int) = m and (m - 1) == 0
-
         fun settle(c: IntArray): Boolean {
             do {
                 var changed = false
                 for (i in c.indices) {
-                    if (!single(c[i])) continue
+                    if (c[i].countOneBits() > 1) continue
                     for (j in c.indices) {
                         if (j == i || (j / n != i / n && j % n != i % n) || c[j] and c[i] == 0) continue
                         c[j] = c[j] and c[i].inv()
@@ -189,7 +187,7 @@ internal object InequalityLogic {
         fun search(c: IntArray) {
             if (!settle(c)) return
             var best = -1
-            for (i in c.indices) if (!single(c[i]) && (best < 0 || c[i].countOneBits() < c[best].countOneBits())) best = i
+            for (i in c.indices) if (c[i].countOneBits() > 1 && (best < 0 || c[i].countOneBits() < c[best].countOneBits())) best = i
             if (best < 0) { found++; return }
             for (d in 1..n) {
                 if (c[best] and (1 shl d) == 0) continue

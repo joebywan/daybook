@@ -1,6 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.digitsOf
+import com.joebywan.daybook.core.has
 
 
 /**
@@ -50,10 +53,6 @@ internal object InequalityTeacher {
 
     // ---- what the player can see ------------------------------------------------------------------
 
-    private fun bit(d: Int) = 1 shl d
-    private fun has(mask: Int, d: Int) = mask and bit(d) != 0
-    private fun digitsOf(n: Int, mask: Int) = (1..n).filter { has(mask, it) }
-    private fun single(mask: Int) = mask != 0 && mask and (mask - 1) == 0
 
     /** Rows 0..n-1, then columns. */
     private fun lines(n: Int): List<List<Int>> =
@@ -111,12 +110,12 @@ internal object InequalityTeacher {
             val empty = line.filter { cells[it] == 0 }
             if (empty.size == 1) {
                 val missing = InequalityLogic.fullMask(n) and line.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
-                if (single(missing)) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), li)
+                if (missing.countOneBits() == 1) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), li)
             }
         }
         // 2. A square whose row and column leave one digit.
         for (i in 0 until n * n) {
-            if (cells[i] == 0 && single(sight.base[i])) return Hit(ONLY_DIGIT, i, sight.base[i].countTrailingZeroBits(), -1)
+            if (cells[i] == 0 && sight.base[i].countOneBits() == 1) return Hit(ONLY_DIGIT, i, sight.base[i].countTrailingZeroBits(), -1)
         }
         // 3. A digit with one place left in a line.
         for ((li, line) in all.withIndex()) {
@@ -128,7 +127,7 @@ internal object InequalityTeacher {
         }
         // 4. A square the signs leave one digit.
         for (i in 0 until n * n) {
-            if (cells[i] == 0 && single(sight.cand[i])) return Hit(SIGN_BOUND, i, sight.cand[i].countTrailingZeroBits(), -1)
+            if (cells[i] == 0 && sight.cand[i].countOneBits() == 1) return Hit(SIGN_BOUND, i, sight.cand[i].countTrailingZeroBits(), -1)
         }
         // 5. A digit with one place left once the signs are counted.
         for ((li, line) in all.withIndex()) {
@@ -298,7 +297,7 @@ internal object InequalityTeacher {
         }
         val cited = chosen.flatMap { listOf(n * n + it.k, it.other) }.toSet() + holders(n, cells, x, (1..n).filter { !has(base, it) })
         val clause = chosen.joinToString(" and ") { it.text }
-        var text = "Its row and column leave ${orList(digitsOf(n, base))}, but it has to be $clause. That leaves only $d."
+        var text = "Its row and column leave ${orList(digitsOf(base, n))}, but it has to be $clause. That leaves only $d."
         if (text.length > MAX_EXPLANATION) text = "The signs leave only $d here: it has to be $clause."
         return PlacementStep(
             SIGN_BOUND, x, d, setOf(x) + chosen.map { n * n + it.k }, cited,

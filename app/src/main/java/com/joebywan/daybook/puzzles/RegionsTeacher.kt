@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.has
 
 
 /**
@@ -43,9 +45,6 @@ internal object RegionsTeacher {
 
     // ---- what the player can see ------------------------------------------------------------------
 
-    private fun bit(d: Int) = 1 shl d
-    private fun has(mask: Int, d: Int) = mask and bit(d) != 0
-    private fun single(mask: Int) = mask != 0 && mask and (mask - 1) == 0
 
     /** For each empty square the digits still possible there; 0 for a filled square. */
     private fun candidates(layout: RegionsLayout, cells: List<Int>): IntArray {
@@ -71,11 +70,11 @@ internal object RegionsTeacher {
             val empty = members.filter { cells[it] == 0 }
             if (empty.size != 1) continue
             val missing = RegionsLogic.fullMask(members.size) and members.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
-            if (single(missing)) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), r)
+            if (missing.countOneBits() == 1) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), r)
         }
         // 2. A square whose region and neighbours leave one digit.
         for (i in cells.indices) {
-            if (cells[i] == 0 && single(base[i])) return Hit(ONLY_DIGIT, i, base[i].countTrailingZeroBits(), layout.region[i])
+            if (cells[i] == 0 && base[i].countOneBits() == 1) return Hit(ONLY_DIGIT, i, base[i].countTrailingZeroBits(), layout.region[i])
         }
         // 3. A digit with one place left in its region.
         for ((r, members) in layout.members.withIndex()) {
