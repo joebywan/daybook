@@ -161,21 +161,26 @@ Five independent design reviews (puzzle construction, player experience, daily m
 accepted by the owner except where noted. Each item is one workstream and one PR; delete it here when it lands.
 Generator changes move every daily board of that puzzle (parity pins go red on purpose): batch them, one PR per puzzle.
 
-- [ ] **Accent rule: perceptual distance, not hue.** Replace `docs/COLOUR.md`'s 25-degree hue rule with a CIEDE2000 floor
-  between every pair of accents (both schemes, colour-blind modes included), pinned by one test, the floor set at today's
-  closest pair so nothing changes. Unblocks any 26th puzzle (see "Accents are crowded").
 - [ ] **Play-screen fixes.** Mosaic's "Out of fills" line is unreserved under a height-sized board (`Mosaic.kt` `s.failed`)
   and says "restart" when Undo works; Cage Sudoku shows two "Show me" buttons while the popover is open; a Tower colour tap
   should fill the next empty peg (as the keyboard does); the first-visit offer line should carry the puzzle's tagline;
   Tower moves to the end of `PuzzleOrder.GENTLEST` (redundant with Lexicon).
-- [ ] **Measure tier depth.** A report (env-gated test, no board change): for a year of daily seeds per tier, the deepest
-  teacher technique each board needs, for Sudoku, Kings, Mambo, Shikaku, Atoms, Inequality, Tents, Nonogram, LITS, Regions.
-  Decides which tiers overlap and so which get a depth gate. Also measure whether a Snap teacher reasoning over the whole
-  board (forced corners, squares with two free neighbours, pockets) can hint without fallback.
-- [ ] **Depth gates** (after the measurement), Tally's `Spec.needs` pattern: each tier must need its technique. Sudoku first
-  (34% Expert fallback; also 180-degree symmetric givens), Mambo (`ALMOST`/`WHAT_IF` never needed today), Kings, Atoms
-  (also reaches up to 5), Tents, Nonogram (also mirror-symmetric pictures; measure the pass rate). Inequality (pairs, sign
-  chains) and Regions (locked candidates) need the techniques first.
+- [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
+  "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
+  - Sudoku first: Hard needs a naked single and finishes without what-if or fallback; Expert needs locked candidates or a
+    pair and finishes without fallback (32% of Expert boards fall back today). Also 180-degree symmetric givens.
+  - Kings: Standard no confined or what-if; Hard needs confined; Expert needs what-if (5% of draws: cost it first).
+  - Mambo: the carver must run the whole ladder first (almost-met and what-if are never needed today); then Expert needs one.
+  - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
+    or what-if, no fallback.
+  - Atoms: Standard at most at-least-one; Hard needs crossing or isolation; Expert needs isolation or what-if. Also reaches
+    up to 5.
+  - Tents: Hard needs one-spot; Expert needs shared or served (18% of draws).
+  - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
+  - Nonogram: no gate needed (size separates the tiers); optional Expert needs 4+ line passes (21%). Mirror-symmetric
+    pictures: measure the pass rate.
+  - Inequality (pairs, sign chains) and Regions (locked candidates): the ladder is too short; the techniques come first.
+  - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
   same `countTilings` proof.
 - [ ] **Pipes: a branchier tree.** `spanningTree` is a depth-first maze (long corridors); a random-edge spanning tree gives
@@ -286,8 +291,7 @@ and Battleships is close to Tents.
   the minimum, so tiers by minimum moves and a cap equal to it (Mosaic's zero slack). Planning, not the 15-puzzle
   ruled out below, but the least deductive of these. *M.*
 
-Close to existing puzzles, so not suggested: Kakuro (Cages), Kropki (Inequality), Battleships (Tents). Any new
-puzzle first needs the accent-spacing rule relaxed (see "Accents are crowded" below).
+Close to existing puzzles, so not suggested: Kakuro (Cages), Kropki (Inequality), Battleships (Tents).
 
 **Not recommended** (noted so nobody re-investigates): plain word-search and sliding-tile puzzles are generator-easy
 but do not demand thought, against the owner's stated taste. (A crossword was here for want of a clue database; the
@@ -312,9 +316,6 @@ only spend their time railroaded through a tutorial.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
-- **Accents are crowded.** With twenty-four puzzles no hue is 25 degrees from every accent (`docs/COLOUR.md` asks for that);
-  Sand took the widest gap, hue 346, 19 degrees from the accents either side of it. A next puzzle needs the rule relaxed
-  or a lightness/saturation difference to carry it.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),
