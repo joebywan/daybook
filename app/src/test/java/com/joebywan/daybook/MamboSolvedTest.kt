@@ -15,8 +15,9 @@ import java.time.LocalDate
 
 /**
  * `solved` must be the rules, not a comparison with the stored answer. Everything here is written
- * apart from the code it checks: the rule checker reads each line as a string, and the answer
- * counter fills the board row by row from a table of legal rows, where the generator propagates.
+ * apart from the code it checks: the rule checker reads each line as a string, and the answers are
+ * counted by [MamboOracle], which fills the board cell by cell where the generator propagates.
+ * That every generated board has one answer is `MamboRulesTest`'s.
  */
 class MamboSolvedTest {
 
@@ -33,66 +34,6 @@ class MamboSolvedTest {
             if ("SSS" in l || "MMM" in l) return false
         }
         return links.all { (g[it.a] == g[it.b]) == it.same }
-    }
-
-    // ---- an independent answer counter: row by row, from every legal row ----------------------
-
-    private fun legalRows(n: Int): List<List<Sym>> {
-        val out = mutableListOf<List<Sym>>()
-        for (mask in 0 until (1 shl n)) {
-            if (Integer.bitCount(mask) != n / 2) continue
-            val row = (0 until n).map { if (mask shr it and 1 == 1) Sym.SUN else Sym.MOON }
-            if ((2 until n).any { row[it] == row[it - 1] && row[it] == row[it - 2] }) continue
-            out += row
-        }
-        return out
-    }
-
-    /** Number of legal grids that honour the clues and links, stopping at [cap]. */
-    private fun countAnswers(n: Int, clue: List<Sym>, links: List<Link>, cap: Int = 2): Int {
-        val rows = legalRows(n)
-        val grid = MutableList(n * n) { Sym.NONE }
-        var found = 0
-        fun go(r: Int) {
-            if (found >= cap) return
-            if (r == n) {
-                if (legal(n, grid, links)) found++
-                return
-            }
-            for (row in rows) {
-                if ((0 until n).any { clue[r * n + it] != Sym.NONE && clue[r * n + it] != row[it] }) continue
-                for (c in 0 until n) grid[r * n + c] = row[c]
-                // Prune on columns so far: no triple, no more than half of a symbol.
-                var ok = true
-                for (c in 0 until n) {
-                    val suns = (0..r).count { grid[it * n + c] == Sym.SUN }
-                    if (suns > n / 2 || r + 1 - suns > n / 2) ok = false
-                    if (r >= 2 && grid[r * n + c] == grid[(r - 1) * n + c] && grid[r * n + c] == grid[(r - 2) * n + c]) ok = false
-                }
-                for (l in links) if (l.a / n <= r && l.b / n <= r && (grid[l.a] == grid[l.b]) != l.same) ok = false
-                if (ok) go(r + 1)
-            }
-            for (c in 0 until n) grid[r * n + c] = Sym.NONE
-        }
-        go(0)
-        return found
-    }
-
-    // ---- the premise: does every generated board have exactly one answer? ----------------------
-
-    @Test
-    fun `every generated board has exactly one answer`() {
-        for (tier in Difficulty.entries) {
-            var checked = 0
-            for (seed in seeds(300, tier, "mambo")) {
-                val s = Mambo.generate(seed, tier) as MamboState
-                val clues = s.cells
-                assertTrue("$tier/$seed stored answer breaks the rules", legal(s.size, s.solution, s.links))
-                assertEquals("$tier/$seed has several answers", 1, countAnswers(s.size, clues, s.links))
-                checked++
-            }
-            assertEquals(300, checked)
-        }
     }
 
     // ---- solved is the rules ------------------------------------------------------------------
@@ -121,13 +62,13 @@ class MamboSolvedTest {
     @Test
     fun `a legal answer other than the stored one is solved`() {
         val s = Mambo.generate(DailySeed.seedFor(LocalDate.of(2026, 3, 1), "mambo", Difficulty.STANDARD), Difficulty.STANDARD) as MamboState
-        assertEquals(1, countAnswers(s.size, s.cells, s.links))
+        assertEquals(1, MamboOracle.countAnswers(s.size, s.cells, s.links))
 
         // Two answers by hand: with nothing printed, a 4x4 has many.
         val a = listOf("SSMM", "MMSS", "SMSM", "MSMS").joinToString("").map { if (it == 'S') Sym.SUN else Sym.MOON }
         val b = listOf("SMSM", "MSMS", "SSMM", "MMSS").joinToString("").map { if (it == 'S') Sym.SUN else Sym.MOON }
         assertNotEquals(a, b)
-        assertTrue(countAnswers(4, List(16) { Sym.NONE }, emptyList(), cap = 3) >= 3)
+        assertTrue(MamboOracle.countAnswers(4, List(16) { Sym.NONE }, emptyList(), cap = 3) >= 3)
         assertTrue(legal(4, a, emptyList()) && legal(4, b, emptyList()))
         val board = empty4().copy(solution = a)
         assertTrue(board.copy(cells = a).solved)
