@@ -58,7 +58,6 @@ class CodewordRulesTest {
                 assertTrue("$entry: every run 3 to 7 letters", words.all { it.length in 3..7 })
                 assertTrue("$entry: every run a grid word", words.all { WheelWords.isGridWord(it) })
                 assertEquals("$entry: no word twice", words.size, words.distinct().size)
-                assertTrue("$entry: no skipped word", words.none { it in CodewordGridsBuildTest.SKIP })
                 assertTrue("$entry: givens", e.givens.isNotEmpty() && e.givens.all { it - 'a' in e.alphabet })
                 // Connected: flood from the first white square.
                 val seen = mutableSetOf(e.squares.indexOfFirst { it != '#' })

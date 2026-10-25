@@ -21,7 +21,7 @@ import java.util.concurrent.Executors
  * and writes the same file every time: draw `i` of a tier uses `Rng(seed(tier, i))` alone, the draws are split across
  * threads but read back in draw order, and a tier keeps its first [PER_TIER] grids in that order.
  *
- * A draw is a block pattern and a dense fill ([CrosswordFill], from Word Wheel's grid lists less [SKIP]); then every
+ * A draw is a block pattern and a dense fill ([CrosswordFill], from Word Wheel's grid lists); then every
  * letter given, and letters taken back in an order the `Rng` shuffles while the tier's ladder (up to
  * [CodewordLogic.Spec.needs]) still finishes the board, keeping at least one. Kept only when the walk needs the tier's
  * deepest step at least once (Hard and Expert), and [CodewordLogic.solve] finds exactly one answer both with the grid
@@ -119,8 +119,6 @@ class CodewordGridsBuildTest {
         const val CHUNK = 200
         const val BUDGET = 20_000
 
-        /** Words the lists hold that no grid should show (the lists themselves are Lexicon's and Word Wheel's contract). */
-        val SKIP = setOf("retard", "cripple")
 
         val SHAPES = mapOf(
             Difficulty.STANDARD to Shape(maxRun = 7, blacks = 14),
@@ -134,7 +132,7 @@ class CodewordGridsBuildTest {
         fun seed(tier: Difficulty, i: Int): Long = SEED * 1_000_003L + tier.ordinal * 10_000_019L + i
 
         private val INDEXES: Map<Int, CrosswordFill.Index> by lazy {
-            (CodewordWords.MIN..CodewordWords.MAX).associateWith { l -> CrosswordFill.Index(WheelWords.grid(l).filter { it !in SKIP }) }
+            (CodewordWords.MIN..CodewordWords.MAX).associateWith { l -> CrosswordFill.Index(WheelWords.grid(l)) }
         }
 
         /** The grid lists with every bonus word of the same length: the wider check of uniqueness. */

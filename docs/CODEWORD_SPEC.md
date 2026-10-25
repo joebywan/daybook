@@ -10,7 +10,7 @@ file records only what is specific to this puzzle. Where the two disagree on a p
 | | |
 |---|---|
 | `id` | `"codeword"` (hashed into every seed: never rename). Display name **Codeword**. Not Cipher: Cipher works back from columns and carries, Codeword from the shapes of words. |
-| Words | Word Wheel's grid lists `WordWheelWords.GRID_3..7`: Lexicon's answer screening at every length (well known, no plurals or inflections), so 4 and 5 letters are exactly Lexicon's answers. Not widened, not edited (they are a contract of Lexicon's and Word Wheel's boards). The builder skips a few words those lists hold that no grid should show (`CodewordGridsBuildTest.SKIP`); they stay in the lists, so they are still words to the rules and the proof, which only makes the proof stronger. |
+| Words | Word Wheel's grid lists `WordWheelWords.GRID_3..7`: Lexicon's answer screening at every length (well known, no plurals or inflections), so 4 and 5 letters are exactly Lexicon's answers. Not widened, not edited (they are a contract of Lexicon's and Word Wheel's boards). |
 | Grids | **Fully checked**: every white square is in an across word *and* a down word, every word 3 to 7 letters (no two-letter words: the lists have none, and a two-letter run would be a word nobody can check). Black squares are symmetric under a half-turn, the white squares are connected, no word appears twice in a grid. |
 | Built offline | A dense fill from a 5,000-word list takes a backtracking search per grid (and many patterns have none), far too slow and too variable to run on a phone. `CodewordGridsBuildTest` (env-gated, fixed seed, reproducible) writes `puzzles/CodewordGrids.kt`: per tier, a sorted list of entries, each a filled grid and its given letters. The list's order is a contract: adding or removing an entry moves every daily board after it, and `BoardPinTest` goes red on purpose. |
 | Numbers | Not stored in the list: the device numbers the grid's letters 1..k by a shuffle drawn from the board's `Rng`, so the same fill comes back with other numbers. |
@@ -94,11 +94,11 @@ fewest words still fitting first, each slot's words tried in an order shuffled b
   From a single given letter the lists are so tight that the shallow steps finish most grids, so Hard and Expert are cut
   by what they need, not by their givens. `what-if` was built and dropped: with Expert taking letters back under step 4,
   no board needed it (0 of 1,440 draws).
-- **The build:** 1,000 grids a tier, from 2,880 / 2,640 / 54,720 draws (fill failures within a 20,000-node budget, the
+- **The build:** 1,000 grids a tier, from 2,880 / 2,880 / 54,720 draws (fill failures within a 20,000-node budget, the
   tier's depth test, and about one fill in four losing uniqueness once `BONUS` words are allowed). 12 minutes on 12
   desktop threads, almost all of it Expert. Scattering black squares (no 2x2 block) made fills nearly impossible
   (2 in 480 at 7x7), so blocks are allowed. `CodewordGrids.kt` is 256 KB of source.
 - **On the device (JVM, a year of daily boards):** generation median / p95 / max 1 / 3 / 3 ms Standard, 5 / 8 / 10 Hard,
   8 / 14 / 20 Expert (`CodewordRulesTest`); a hint median / p95 0.1 / 0.2 ms Standard, 0.2 / 0.5 Hard, 0.4 / 0.9 Expert,
-  max 2 ms. Steps a board, hints alone from the givens (200 boards a tier, no fallback): one-word 12.0 / 14.7 / 16.4,
-  run-agrees 0.5 / 0.4 / 0.3, crossing 0 / 1.5 / 0.8, all-words 0 / 0 / 1.1.
+  max 2 ms. Steps a board, hints alone from the givens (200 boards a tier, no fallback): one-word 12.2 / 14.9 / 16.4,
+  run-agrees 0.6 / 0.4 / 0.4, crossing 0 / 1.5 / 0.8, all-words 0 / 0 / 1.1.

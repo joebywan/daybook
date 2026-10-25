@@ -164,9 +164,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 - [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
-- [ ] **Screen RETARD and CRIPPLE out of the 6/7-letter grid lists** (`tools/words/exclude.txt`'s own section for those
-  lengths). Word Wheel's `GRID_6`/`GRID_7` hold them; Codeword's builder skips them (`CodewordGridsBuildTest.SKIP`) rather
-  than change the lists, which would move Word Wheel's boards. Rebuild both puzzles' lists in the same change.
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
 - [ ] **New puzzles, in order:** Pearl loop, Who's Who (a logic grid from templated clues), Mini crossword (5x5,
   fills built offline from the hand-written clues; `test/CrosswordFill.kt`, Codeword's pattern maker and filler, is

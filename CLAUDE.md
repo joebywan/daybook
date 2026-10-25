@@ -642,7 +642,7 @@ and every across and down run must be a word. Spec and decisions: `docs/CODEWORD
   The pattern maker and the filler are `test/CrosswordFill.kt`, free of anything Codeword-specific, for the mini crossword
   that may follow. Grids are **fully checked** (every white square in an across and a down word, words 3-7 letters, no
   two-letter words), symmetric under a half-turn, connected, no word twice; words are Word Wheel's grid lists
-  (`WheelWords.grid`, Lexicon's answer screening), less `CodewordGridsBuildTest.SKIP`. Scattering the black squares (no
+  (`WheelWords.grid`, Lexicon's answer screening). Scattering the black squares (no
   2x2 block) interlocked the grid so tightly that almost no fill existed; blocks are allowed. The lists' order is a contract
   (`BoardPinTest` goes red on purpose when it moves).
 - **Numbers are not stored in the list:** the device numbers a grid's letters 1..k by a shuffle from the board's `Rng`.
