@@ -12,7 +12,7 @@ import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.NonogramLogic
-import com.joebywan.daybook.puzzles.Pointers
+import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Sets
@@ -47,7 +47,7 @@ class LevelBoardsProvedTest {
         "tally" to Tally::generateVerified,
         "sand" to Sand::generateVerified,
         "tents" to Tents::generateVerified,
-        "pointers" to Pointers::generateVerified,
+        "pointers" to PointersLogic::generateVerified,
         "target" to Target::generateVerified,
         "cages" to Cages::generateVerified,
         "nonogram" to NonogramLogic::generateVerified,

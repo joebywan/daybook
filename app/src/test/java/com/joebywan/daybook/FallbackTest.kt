@@ -22,6 +22,7 @@ import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Pointers
+import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.SnapState
@@ -153,11 +154,11 @@ class FallbackTest {
     fun `sand proves every daily board of a year on every tier`() = assertYearProved(Sand) { seed, d -> Sand.generateVerified(seed, d) }
 
     /**
-     * [Pointers.generateVerified] returns a board only when it covered the grid to the tier's density and the greedy
+     * [PointersLogic.generateVerified] returns a board only when it covered the grid to the tier's density and the greedy
      * clear emptied it; the last resort is rows of arrows all pointing right.
      */
     @Test
-    fun `pointers proves every daily board of a year on every tier`() = assertYearProved(Pointers) { seed, d -> Pointers.generateVerified(seed, d) }
+    fun `pointers proves every daily board of a year on every tier`() = assertYearProved(Pointers) { seed, d -> PointersLogic.generateVerified(seed, d) }
 
     /** [Regions.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test
