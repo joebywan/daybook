@@ -111,7 +111,7 @@ into every seed: never rename it.
   independent oracle that tries every arrangement of every row. Of the draws with no blank or full line, 95 / 90 / 92% are
   line-solvable; with the pass gate a year's worst seed needs 101 / 56 / 160 of the 400 draws and none falls back (a year per
   tier is tested); `lastResort` is a fixed diagonal, itself proved line-solvable. Expert takes 1.6 ms median, 18 ms worst on
-  the JVM.
+  the JVM; 2 / 8 / 18 ms median / p95 / max in Chromium, 3 / 10 / 23 in WebKit.
 - **`solved` checks the clues, not the stored picture.** Crosses are notes and never count.
 - **Hints cannot fall back**, so there is no fallback to measure: if the player's marks are right, some line always has a
   square to settle (settled squares only ever help). The mistake is a mark the stored picture disagrees with, sound because the
