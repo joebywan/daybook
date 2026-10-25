@@ -61,6 +61,7 @@ import com.joebywan.daybook.ui.swept
 import com.joebywan.daybook.ui.penKeys
 import com.joebywan.daybook.ui.penGrid
 import com.joebywan.daybook.ui.PenRow
+import androidx.compose.ui.unit.Density
 
 /** Each board draws its filled squares as a diagonal blend of two colours; the pair is the board's own. */
 private val PALETTES = listOf(
@@ -245,33 +246,30 @@ object Nonogram : PuzzleType {
     private const val CLUE_GAP = 0.18f
 
     /**
-     * Where everything sits, in squares ([u] pixels each): the clue block to the left and above,
-     * then the grid. Shared by the board and the home motif so both draw the same thing.
+     * Where everything sits in a [maxWidth] x [maxHeight] box, in squares ([u] pixels each): the clue
+     * block to the left and above, then the grid. Sized from both axes (CLAUDE.md): a 15x15 board with
+     * its clues is wider than a phone's screen allows by height alone on a short one, and the reverse
+     * on a tall one. Shared by the board and the home motif so both draw the same thing.
      */
-    private class Geometry(
-        val u: Float,
-        val width: Int,
-        val height: Int,
-        val rowSlots: Int,
-        val colSlots: Int,
-    ) {
-        val gridX = (rowSlots * SLOT_W + CLUE_GAP) * u
-        val gridY = (colSlots * SLOT_H + CLUE_GAP) * u
-        val totalW = gridX + width * u
-        val totalH = gridY + height * u
+    private class Geometry(s: NonogramState, clues: List<List<Int>>, maxWidth: Dp, maxHeight: Dp, density: Density) {
+        private val rowSlots = clues.take(s.height).maxOf { maxOf(it.size, 1) }
+        private val colSlots = clues.drop(s.height).maxOf { maxOf(it.size, 1) }
+        private val left = rowSlots * SLOT_W + CLUE_GAP
+        private val top = colSlots * SLOT_H + CLUE_GAP
+        private val across = s.width + rowSlots * SLOT_W + CLUE_GAP
+        private val down = s.height + colSlots * SLOT_H + CLUE_GAP
+        private val unit = minOf(maxWidth / across, maxHeight / down)
+        val u = with(density) { unit.toPx() }
+        val gridX = left * u
+        val gridY = top * u
+
+        /** The whole drawing, and the grid within it, in dp. */
+        val box = Modifier.size(unit * across, unit * down)
+        val grid = Modifier.offset(unit * left, unit * top).size(unit * s.width, unit * s.height)
     }
 
-    private fun unitsAcross(s: NonogramState, rowSlots: Int) = s.width + rowSlots * SLOT_W + CLUE_GAP
-
-    private fun unitsDown(s: NonogramState, colSlots: Int) = s.height + colSlots * SLOT_H + CLUE_GAP
-
-    /** The clue numbers of every row (then column) as measured text, one layout per number. */
-    private fun measureClues(
-        measurer: TextMeasurer,
-        clues: List<List<Int>>,
-        fontPx: Float,
-        density: androidx.compose.ui.unit.Density,
-    ): List<List<TextLayoutResult>> {
+    /** The clue numbers of every row, then column, as measured text, one layout per number. */
+    private fun measureClues(measurer: TextMeasurer, clues: List<List<Int>>, fontPx: Float, density: Density): List<List<TextLayoutResult>> {
         val style = TextStyle(fontSize = with(density) { fontPx.toSp() }, fontWeight = FontWeight.SemiBold)
         return clues.map { line -> (if (line.isEmpty()) listOf(0) else line).map { measurer.measure(it.toString(), style) } }
     }
@@ -283,17 +281,15 @@ object Nonogram : PuzzleType {
         val pulse: Float = 1f,
     )
 
+    /** [text], [done] and [bad] are per line, rows then columns. */
     private fun DrawScope.drawBoard(
         s: NonogramState,
         g: Geometry,
-        rowText: List<List<TextLayoutResult>>,
-        colText: List<List<TextLayoutResult>>,
-        rowDone: BooleanArray,
-        colDone: BooleanArray,
+        text: List<List<TextLayoutResult>>,
+        done: BooleanArray,
         scheme: androidx.compose.material3.ColorScheme,
         palette: Pair<Color, Color>,
-        rowBad: BooleanArray = BooleanArray(s.height),
-        colBad: BooleanArray = BooleanArray(s.width),
+        bad: BooleanArray = BooleanArray(s.height + s.width),
         overlay: Overlay = Overlay(),
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
@@ -330,62 +326,35 @@ object Nonogram : PuzzleType {
 
         // Grid lines, heavier every five squares so a 15-wide board can be counted.
         val thin = maxOf(u * 0.03f, 1f)
-        for (i in 0..s.width) {
+        fun gridLine(i: Int, from: Offset, to: Offset) {
             val heavy = i % 5 == 0
-            drawLine(
-                if (heavy) scheme.onSurfaceVariant.copy(alpha = 0.7f) else scheme.outline,
-                Offset(g.gridX + i * u, g.gridY), Offset(g.gridX + i * u, g.gridY + s.height * u),
-                if (heavy) thin * 2f else thin,
-            )
+            drawLine(if (heavy) scheme.onSurfaceVariant.copy(alpha = 0.7f) else scheme.outline, from, to, if (heavy) thin * 2f else thin)
         }
-        for (i in 0..s.height) {
-            val heavy = i % 5 == 0
-            drawLine(
-                if (heavy) scheme.onSurfaceVariant.copy(alpha = 0.7f) else scheme.outline,
-                Offset(g.gridX, g.gridY + i * u), Offset(g.gridX + s.width * u, g.gridY + i * u),
-                if (heavy) thin * 2f else thin,
-            )
-        }
+        for (i in 0..s.width) gridLine(i, Offset(g.gridX + i * u, g.gridY), Offset(g.gridX + i * u, g.gridY + s.height * u))
+        for (i in 0..s.height) gridLine(i, Offset(g.gridX, g.gridY + i * u), Offset(g.gridX + s.width * u, g.gridY + i * u))
 
         // Clues. A line that already shows its numbers fades, the way a ticked-off list does.
-        for (r in 0 until s.height) {
-            val lit1 = lit && named(n + r)
-            if (lit1) {
-                drawRoundRect(
-                    overlay.glow.copy(alpha = 0.16f * overlay.pulse),
-                    Offset(0f, g.gridY + r * u), Size(g.gridX, u), CornerRadius(u * 0.2f),
-                )
-            }
-            val tint = if (rowBad[r]) scheme.error else if (rowDone[r]) scheme.primary else Color.Unspecified
-            if (tint.isSpecified) {
-                drawRoundRect(tint.copy(alpha = 0.16f), Offset(0f, g.gridY + r * u), Size(g.gridX, u), CornerRadius(u * 0.2f))
-            }
-            val line = rowText[r]
-            for ((k, layout) in line.withIndex()) {
-                val cx = g.gridX - CLUE_GAP * u - (line.size - 1 - k) * SLOT_W * u - SLOT_W * u / 2f
-                val cy = g.gridY + (r + 0.5f) * u
+        // [centre] places a number by how many numbers come after it in the line.
+        fun clues(line: Int, band: Offset, bandSize: Size, centre: (after: Int) -> Offset) {
+            val lit1 = lit && named(n + line)
+            if (lit1) drawRoundRect(overlay.glow.copy(alpha = 0.16f * overlay.pulse), band, bandSize, CornerRadius(u * 0.2f))
+            val tint = if (bad[line]) scheme.error else if (done[line]) scheme.primary else Color.Unspecified
+            if (tint.isSpecified) drawRoundRect(tint.copy(alpha = 0.16f), band, bandSize, CornerRadius(u * 0.2f))
+            val numbers = text[line]
+            for ((k, layout) in numbers.withIndex()) {
+                val (cx, cy) = centre(numbers.size - 1 - k)
                 val alpha = if (lit && !lit1) 0.35f else 1f
                 drawText(layout, if (tint.isSpecified) tint.copy(alpha = alpha) else scheme.onSurface.copy(alpha = alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
+            }
+        }
+        for (r in 0 until s.height) {
+            clues(r, Offset(0f, g.gridY + r * u), Size(g.gridX, u)) { after ->
+                Offset(g.gridX - CLUE_GAP * u - after * SLOT_W * u - SLOT_W * u / 2f, g.gridY + (r + 0.5f) * u)
             }
         }
         for (c in 0 until s.width) {
-            val lit1 = lit && named(n + s.height + c)
-            if (lit1) {
-                drawRoundRect(
-                    overlay.glow.copy(alpha = 0.16f * overlay.pulse),
-                    Offset(g.gridX + c * u, 0f), Size(u, g.gridY), CornerRadius(u * 0.2f),
-                )
-            }
-            val tint = if (colBad[c]) scheme.error else if (colDone[c]) scheme.primary else Color.Unspecified
-            if (tint.isSpecified) {
-                drawRoundRect(tint.copy(alpha = 0.16f), Offset(g.gridX + c * u, 0f), Size(u, g.gridY), CornerRadius(u * 0.2f))
-            }
-            val line = colText[c]
-            for ((k, layout) in line.withIndex()) {
-                val cx = g.gridX + (c + 0.5f) * u
-                val cy = g.gridY - CLUE_GAP * u - (line.size - 1 - k) * SLOT_H * u - SLOT_H * u / 2f
-                val alpha = if (lit && !lit1) 0.35f else 1f
-                drawText(layout, if (tint.isSpecified) tint.copy(alpha = alpha) else scheme.onSurface.copy(alpha = alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
+            clues(s.height + c, Offset(g.gridX + c * u, 0f), Size(u, g.gridY)) { after ->
+                Offset(g.gridX + (c + 0.5f) * u, g.gridY - CLUE_GAP * u - after * SLOT_H * u - SLOT_H * u / 2f)
             }
         }
 
@@ -423,20 +392,12 @@ object Nonogram : PuzzleType {
         rim(highlight.strong, u * 0.11f, overlay.glow.copy(alpha = overlay.pulse))
     }
 
-    private fun linesDone(s: NonogramState, rows: List<List<Int>>, cols: List<List<Int>>): Pair<BooleanArray, BooleanArray> {
-        val rowDone = BooleanArray(s.height) { r ->
-            NonogramLogic.runs(BooleanArray(s.width) { c -> s.cells[r * s.width + c] == NonogramLogic.FILLED }) == rows[r]
-        }
-        val colDone = BooleanArray(s.width) { c ->
-            NonogramLogic.runs(BooleanArray(s.height) { r -> s.cells[r * s.width + c] == NonogramLogic.FILLED }) == cols[c]
-        }
-        return rowDone to colDone
-    }
+    /** Which lines (rows, then columns) show their clue. */
+    private fun linesDone(s: NonogramState, clues: List<List<Int>>) = BooleanArray(clues.size) { NonogramLogic.lineDone(s, it, clues[it]) }
 
-    /** Which rows and columns of [s] no legal layout of their clue can hold. */
-    private fun linesImpossible(s: NonogramState, rows: List<List<Int>>, cols: List<List<Int>>): Pair<BooleanArray, BooleanArray> =
-        BooleanArray(s.height) { NonogramLogic.lineImpossible(rows[it], s.cells, NonogramLogic.rowCells(s.width, it)) } to
-            BooleanArray(s.width) { NonogramLogic.lineImpossible(cols[it], s.cells, NonogramLogic.colCells(s.width, s.height, it)) }
+    /** Which lines (rows, then columns) no legal layout of their clue can hold. */
+    private fun linesImpossible(s: NonogramState, clues: List<List<Int>>) =
+        BooleanArray(clues.size) { NonogramLogic.lineImpossible(clues[it], s.cells, NonogramLogic.lineCells(s.width, s.height, it)) }
 
     private fun paletteFor(s: NonogramState): Pair<Color, Color> =
         PALETTES[(s.solution.hashCode() and Int.MAX_VALUE) % PALETTES.size].let { Color(it.first) to Color(it.second) }
@@ -453,11 +414,7 @@ object Nonogram : PuzzleType {
         var pen by rememberSaveable(s.solution) { mutableStateOf(NonogramLogic.FILLED) }
         val sweep = remember(s.solution) { mutableStateOf<Sweep?>(null) }
         val cursor = remember(s.solution) { mutableStateOf<Int?>(null) }
-
-        val rows = remember(s.solution) { NonogramLogic.rowClues(s) }
-        val cols = remember(s.solution) { NonogramLogic.colClues(s) }
-        val rowSlots = rows.maxOf { maxOf(it.size, 1) }
-        val colSlots = cols.maxOf { maxOf(it.size, 1) }
+        val clues = remember(s.solution) { NonogramLogic.clues(s) }
 
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
@@ -476,51 +433,33 @@ object Nonogram : PuzzleType {
                 Modifier.weight(1f).fillMaxWidth().padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                // Sized from both axes (CLAUDE.md): a 15x15 board with its clues is wider than a
-                // phone's screen allows by height alone on a short one, and the reverse on a tall one.
-                val unit = minOf(maxWidth / unitsAcross(s, rowSlots), maxHeight / unitsDown(s, colSlots))
-                val unitPx = with(density) { unit.toPx() }
-                val g = Geometry(unitPx, s.width, s.height, rowSlots, colSlots)
-                val fontPx = unitPx * 0.52f
-                val rowText = remember(s.solution, unitPx) { measureClues(measurer, rows, fontPx, density) }
-                val colText = remember(s.solution, unitPx) { measureClues(measurer, cols, fontPx, density) }
+                val g = Geometry(s, clues, maxWidth, maxHeight, density)
+                val text = remember(s.solution, g.u) { measureClues(measurer, clues, g.u * 0.52f, density) }
 
                 val shown = s.swept(sweep.value)
-                val (rowDone, colDone) = linesDone(shown, rows, cols)
                 val palette = remember(s.solution) { paletteFor(s) }
                 // Lines finished by their clues, on the board as handed (not the sweep still under the finger).
                 val units = remember(s.solution) { lineUnits(s.width, s.height) }
-                val done = linesDone(s, rows, cols)
-                val feel = rememberMoveFeel(s.cells.toList(), units) { u ->
-                    if (u < s.height) done.first[u] else done.second[u - s.height]
-                }
+                val done = linesDone(s, clues)
+                val feel = rememberMoveFeel(s.cells.toList(), units) { done[it] }
 
                 // A line must stay impossible for a second, and be so now, before it turns red.
                 // The next change cancels the wait and starts it over.
-                val bad = linesImpossible(shown, rows, cols)
-                var settled by remember(s.solution) { mutableStateOf(bad) }
+                val impossible = linesImpossible(shown, clues)
+                var settled by remember(s.solution) { mutableStateOf(impossible) }
                 LaunchedEffect(shown.cells) {
                     delay(SETTLE_MILLIS)
-                    settled = bad
+                    settled = impossible
                 }
-                val rowBad = BooleanArray(s.height) { bad.first[it] && settled.first[it] }
-                val colBad = BooleanArray(s.width) { bad.second[it] && settled.second[it] }
+                val bad = BooleanArray(clues.size) { impossible[it] && settled[it] }
 
-                Box(Modifier.size(g.totalW.asDp(density), g.totalH.asDp(density))) {
+                Box(g.box) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(
-                            shown, g, rowText, colText, rowDone, colDone, scheme, palette, rowBad, colBad,
-                            Overlay(highlight, glow, pulse.value), feel, Color(accent),
-                        )
+                        drawBoard(shown, g, text, linesDone(shown, clues), scheme, palette, bad, Overlay(highlight, glow, pulse.value), feel, Color(accent))
                     }
                     // Taps and sweeps are read over the grid alone, in its own coordinates; the
                     // clues beside it are not part of the play area.
-                    Box(
-                        Modifier
-                            .offset(g.gridX.asDp(density), g.gridY.asDp(density))
-                            .size((s.width * unitPx).asDp(density), (s.height * unitPx).asDp(density))
-                            .penGrid(s, interactive, pen, unitPx, sweep, cursor, scheme.primary, onState),
-                    )
+                    Box(g.grid.penGrid(s, interactive, pen, g.u, sweep, cursor, scheme.primary, onState))
                 }
             }
 
@@ -536,8 +475,6 @@ object Nonogram : PuzzleType {
             }
         }
     }
-
-    private fun Float.asDp(density: androidx.compose.ui.unit.Density): Dp = with(density) { this@asDp.toDp() }
 
     // ---- the home motif -------------------------------------------------------------------------
 
@@ -556,19 +493,13 @@ object Nonogram : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
-        val rows = remember { NonogramLogic.rowClues(motif) }
-        val cols = remember { NonogramLogic.colClues(motif) }
-        val rowSlots = rows.maxOf { maxOf(it.size, 1) }
-        val colSlots = cols.maxOf { maxOf(it.size, 1) }
+        val clues = remember { NonogramLogic.clues(motif) }
+        val done = remember { linesDone(motif, clues) }
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-            val unit = minOf(maxWidth / unitsAcross(motif, rowSlots), maxHeight / unitsDown(motif, colSlots))
-            val unitPx = with(density) { unit.toPx() }
-            val g = Geometry(unitPx, motif.width, motif.height, rowSlots, colSlots)
-            val rowText = remember(unitPx) { measureClues(measurer, rows, unitPx * 0.52f, density) }
-            val colText = remember(unitPx) { measureClues(measurer, cols, unitPx * 0.52f, density) }
-            val (rowDone, colDone) = remember { linesDone(motif, rows, cols) }
-            Canvas(Modifier.size(g.totalW.asDp(density), g.totalH.asDp(density))) {
-                drawBoard(motif, g, rowText, colText, rowDone, colDone, scheme, paletteFor(motif))
+            val g = Geometry(motif, clues, maxWidth, maxHeight, density)
+            val text = remember(g.u) { measureClues(measurer, clues, g.u * 0.52f, density) }
+            Canvas(g.box) {
+                drawBoard(motif, g, text, done, scheme, paletteFor(motif))
             }
         }
     }

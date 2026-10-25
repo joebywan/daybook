@@ -93,6 +93,9 @@ internal object NonogramLogic {
         return List(s.width) { c -> runs(BooleanArray(s.height) { r -> p[r][c] }) }
     }
 
+    /** Every line's clue: rows first, then columns (as [lineCells] numbers them). */
+    fun clues(s: NonogramState): List<List<Int>> = rowClues(s) + colClues(s)
+
     /** The squares of row [r], then of column [c], as indices into the board. */
     fun rowCells(width: Int, r: Int): List<Int> = List(width) { r * width + it }
 
@@ -113,15 +116,12 @@ internal object NonogramLogic {
      * Whether the filled squares give every line its clue. The rules, not a comparison with
      * [NonogramState.solution]: a board whose clues several pictures satisfy accepts any of them.
      */
-    fun isSolved(s: NonogramState): Boolean {
-        val filled = Array(s.height) { r -> BooleanArray(s.width) { c -> s.cells[r * s.width + c] == FILLED } }
-        val rows = rowClues(s)
-        val cols = colClues(s)
-        for (r in 0 until s.height) if (runs(filled[r]) != rows[r]) return false
-        for (c in 0 until s.width) {
-            if (runs(BooleanArray(s.height) { r -> filled[r][c] }) != cols[c]) return false
-        }
-        return true
+    fun isSolved(s: NonogramState): Boolean = clues(s).withIndex().all { (line, clue) -> lineDone(s, line, clue) }
+
+    /** Whether the filled squares of [line] (rows first, then columns) make exactly [clue]. */
+    fun lineDone(s: NonogramState, line: Int, clue: List<Int>): Boolean {
+        val at = lineCells(s.width, s.height, line)
+        return runs(BooleanArray(at.size) { s.cells[at[it]] == FILLED }) == clue
     }
 
     // ---- the line solver ------------------------------------------------------------------
@@ -242,10 +242,8 @@ internal object NonogramLogic {
 
     /** Whether a picture ([solution], row by row) can be finished by lines alone from a blank board. */
     fun lineSolvable(width: Int, height: Int, solution: String): Boolean {
-        val p = picture(width, height, solution)
-        val rows = List(height) { runs(p[it]) }
-        val cols = List(width) { c -> runs(BooleanArray(height) { r -> p[r][c] }) }
-        val done = solveByLines(width, height, rows, cols, IntArray(width * height)) ?: return false
+        val board = NonogramState(width, height, solution)
+        val done = solveByLines(width, height, rowClues(board), colClues(board), IntArray(width * height)) ?: return false
         return done.none { it == UNKNOWN }
     }
 
