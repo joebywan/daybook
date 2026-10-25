@@ -239,7 +239,7 @@ object Lexicon : PuzzleType {
         val s = state as LexiconState
         if (!s.open) return null
         val marks = s.allMarks
-        val step = LexiconTeacher.teach(s.length, s.guesses, marks, s.current) ?: return null
+        val step = LexiconTeacher.teach(s.length, s.guesses, marks, s.current, s.opener) ?: return null
         val base = s
         fun fits(word: String) = LexiconRules.consistent(word, base.guesses, marks)
         fun newGuesses(now: LexiconState) = now.guesses.drop(base.guesses.size)

@@ -75,7 +75,21 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
   (`WordList.clue`); only "Show me" types it. The clues are `tools/words/clues.txt` (one per answer, hand-written; the
   build fails if an answer has none), compiled into `LexiconClues.kt`. A new answer needs a clue in the same change;
   `LexiconCluesTest` checks coverage, that no clue contains its word, and that no two answers share one.
-  Answers were not enlarged: SCOWL level 40 for answers is slang and vulgarity.
+  Answers were not enlarged: SCOWL level 40 for answers is slang and vulgarity. Clues are neutral English (the app is
+  Australian-built, played anywhere): `build.py` lints both clue files and fails on a capitalised name mid-clue, a
+  sport, or a country tag ("in America"); a flagged clue that is fine goes in `tools/words/clue-lint-allow.txt` as its
+  exact line (`python3 tools/words/build.py --lint` needs no inputs). Prefer a sense every dialect shares; a word whose
+  only sense is regional is tagged ", in Britain" / ", in America". Grim headline answers such as `vomit` stay (the owner).
+- **Daily words go round a cycle from 2026-11-01** (`SeedHash.LEXICON_CYCLE_FROM`): a hashed seed gave even odds of a repeat
+  within two months. From that day `SeedHash.daily` gives `"words"` a tagged seed carrying the day (`lexiconCycleDay` reads it
+  back), and `LexiconRules.cycle` maps it through one fixed shuffle of the tier's answer list per round, so no word recurs within
+  a round (1,801 / 1,801 / 1,366 days); round 0 puts the words drawn on hashed days of the same length at its back. Earlier days
+  keep their hashed seeds, so the archive, saves (which hold the word anyway) and completions are untouched; Random and Levels
+  never cycle. `LexiconCycleTest` checks two rounds a tier and the cutover. Changing the list or the shuffle moves every cycled day.
+- **The opener rotates**: `LexiconState.opener` (defaulted 0, so an old save opens with RAISE/TALE) picks one of seven strong
+  openers per length (`LexiconTeacher.openers`, all within 12% of the best's expected words left), drawn from the seed apart
+  from the answer, so it tells nothing about the word. The best-guess fallback says how its word splits what is left ("it can
+  be marked 5 ways, and none leaves more than 2"), read off the candidates alone.
 - **A probe is never a mistake.** The teacher's only mistake is a row that is not a word. Calling a legal probe
   wrong is the PR #15 bug.
 - **A pin is a fact about the marks alone**, so `LexiconTeachingTest` checks it against every accepted word that
@@ -328,7 +342,8 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   `ROOTS_5..7` (the wheels: grid words spelling at least 8 / 12 / 14 other grid words, a seven also a six) and `BONUS` (Lexicon's guess
   rule at every length, kept to words some root can spell). A wheel is an index into `ROOTS_n` and the grid is laid from the `GRID`
   lists in order, so adding or removing a word moves daily boards and `WordWheelWebParityTest` goes red on purpose. Exclusions for
-  3/6/7 letters are in their own section of `exclude.txt` (Lexicon never draws those lengths). A new 6/7-letter grid word needs a clue
+  3/6/7 letters are in their own section of `exclude.txt` (Lexicon never draws those lengths), interjections and archaisms
+  (`huh`, `thy`) included: an excluded word leaves the grid but stays a bonus word if the guess rule takes it. A new 6/7-letter grid word needs a clue
   in `wheel-clues.txt`; `WordWheelRulesTest` checks every grid word has one, none contains its word, no two share one (with Lexicon's).
 - **Tiers: 5 letters, 4-6 words in 6x6 / 6 letters, 6-8 words in 7x7 / 7 letters, 8-11 words in 8x8 with a six besides the root.**
   Slot 0 is the root (all the letters); the wheel is shown scrambled. Layout: words cross only on equal letters, one across one down;
@@ -481,6 +496,8 @@ Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` vi
 
 Boards were coming out beige and one-note. The shared hue family, the three layers (scheme / accent / content hues)
 and the rules are in `docs/COLOUR.md`; read it before choosing colours for a new board.
+A new puzzle's accent comes from `AccentSpacingTest`, which prints the candidate furthest from every accent (CIEDE2000,
+colour-blind vision included) and pins a floor between every pair; the palette tests share its maths (`ColourDistance`).
 
 ## Rules that keep being relearned
 

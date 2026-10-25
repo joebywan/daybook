@@ -1,0 +1,36 @@
+# Clues the lint in build.py flags that are fine as they are: exact "word: clue" lines.
+alpha: First Greek letter
+chirp: Cricket's sound
+claret: Red Bordeaux wine
+condor: Huge Andean vulture
+cougar: Big cat of the Rockies
+curry: Spicy Indian dish
+dash: Quick run, or Morse code's partner
+delta: River's mouth, or a Greek letter
+diaper: Nappy, in America
+earl: British nobleman
+emir: Middle Eastern ruler
+filet: Boneless cut, in French
+gentile: Not Jewish
+hock: Pawn, or a wine from Germany
+lorry: Truck, in Britain
+ocean: Atlantic or Pacific
+omega: Last Greek letter
+oracle: Prophet at Delphi
+ozone: Layer shielding Earth from UV
+pasty: Pale, or a Cornish pie
+pence: British pennies
+pizza: Cheesy Italian pie
+polar: Like a bear in the Arctic
+pole: Fishing rod, or a North or South one
+poppy: Remembrance Day flower
+pray: Talk to God
+rhino: Horned African beast
+roman: Upright type style, or a Caesar
+scythe: Grim Reaper's blade
+sling: Arm support, or David's weapon
+snowy: Like a white Christmas
+taco: Folded Mexican shell
+tundra: Treeless Arctic plain
+yen: Craving, or Japanese currency
+zebra: Striped African animal
