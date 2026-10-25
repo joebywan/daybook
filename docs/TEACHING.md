@@ -99,7 +99,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | puzzle | teaches | fallback |
 |---|---|---|
 | Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | 0.5 / 6 / 34% (1% of Expert steps: Expert is dug for uniqueness, not rated) |
-| Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
+| Kings | last square, locked to a line, would empty, N confined, what-if | none: the generator keeps a board only if the ladder finishes it from blank and the tier's gate holds (a year per tier, hints alone finish all) |
 | Mambo | pair, sandwich, link, quota, almost, what-if | 0 (boards are carved so the first four finish them) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
 | Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
@@ -154,9 +154,9 @@ board. No board changed. Deepest technique, share of the year's boards (%):
 | Sudoku | Standard | hidden-single-box 93, hidden-single-line 6, naked-single <1, locked-candidates <1, what-if <1 | 0.5 / 0.01 | 43 |
 |  | Hard | hidden-single-box 29, hidden-single-line 48, naked-single 12, locked-candidates 3, naked-pair 1, hidden-pair 1, what-if 7 | 6.6 / 0.18 | 51 |
 |  | Expert | hidden-single-box 3, hidden-single-line 31, naked-single 24, locked-candidates 16, naked-pair 10, hidden-pair 5, what-if 13 | 32.3 / 1.02 | 57 |
-| Kings | Standard | last-square 1, locked-to-a-line 3, would-empty 58, confined 33, what-if 6 | 0.3 / 0.02 | 15 |
-|  | Hard | locked-to-a-line 2, would-empty 52, confined 41, what-if 6 | 0 / 0 | 16 |
-|  | Expert | last-square <1, locked-to-a-line 1, would-empty 39, confined 55, what-if 5 | 0.3 / 0.01 | 18 |
+| Kings | Standard | last-square <1, locked-to-a-line 4, would-empty 95 (gated: was 58, with confined 33, what-if 6) | 0 / 0 | 13 |
+|  | Hard | confined 100, every one two colours in two lines (gated: was would-empty 52, confined 41, what-if 6) | 0 / 0 | 18 |
+|  | Expert | confined 68 (all three or more colours), what-if 32 (gated: was would-empty 39, confined 55, what-if 5) | 0 / 0 | 20 |
 | Mambo | all three | quota-met 100 (quota-almost-met and what-if: never, as steps or as deepest) | 0 / 0 | 30 / 55 / 85 |
 | Shikaku | Standard | only-fits 49, only-reaches 42, common-cells 5, what-if 4 | 1.4 / 0.15 | 13 |
 |  | Hard | only-fits 21, only-reaches 64, common-cells 7, what-if 7 | 4.1 / 0.26 | 20 |
@@ -190,9 +190,12 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   Hard boards need locked candidates or more. Gate Hard on "needs a naked single, finished without what-if or fallback";
   Expert on "needs locked candidates or a pair, finished without fallback" (at most 42% of today's draws, fewer once those that fall back are excluded). The ladder
   is long enough; Expert's fallback is a generator that digs for uniqueness and never asks the ladder.
-- **Kings: the tiers are the same depth.** would-empty / confined / what-if are 58/33/6, 52/41/6, 39/55/5% across the tiers;
-  only size differs. Standard: no confined or what-if (62% pass); Hard: needs confined; Expert: needs what-if (5% of draws,
-  so measure the cost of ~20 draws a board first). The ladder is long enough.
+- **Kings: gated (built 2026-10).** Before, would-empty / confined / what-if were 58/33/6, 52/41/6, 39/55/5% across the
+  tiers and only size differed. Now (`Kings.fitsTier`, on `KingsTeacher.depth`, the hint walk from blank): Standard needs
+  nothing past would-empty; Hard needs a confinement of two colours and nothing wider or a what-if; Expert needs a
+  confinement of three or more or a what-if. Expert on what-if alone was costed and dropped: 2% of 9x9 draws pass (a
+  9x9 carve fails about two times in three), a mean of 51 draws a board, 91 / 341 / 733 ms p50 / p95 / max on the JVM.
+  With the wide confinement too, 7% pass: draws a board mean 2.4 / 5.7 / 14.6, most 13 / 41 / 94 of 400 (`KingsRulesTest`). Expert in the browser, p50 / p95 / max: 28 / 102 / 209 ms in Chromium, 39 / 142 / 290 in WebKit.
 - **Mambo: one depth everywhere.** Every board of every tier is finished by pair, sandwich, link and quota, because the
   carver keeps only boards the first four finish. Quota-almost-met and what-if are never needed, as a step or at all. A gate
   needs the carver to run the whole ladder first (Expert: needs almost-met or what-if); size is the only difference today.
