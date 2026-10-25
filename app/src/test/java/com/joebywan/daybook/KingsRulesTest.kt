@@ -136,6 +136,30 @@ class KingsRulesTest {
 
     // The proved path is walked over a year of daily seeds per tier in FallbackTest.
 
+    /**
+     * The tier gate redraws: a year of daily seeds needed at most 13 / 41 / 94 draws (means 2.4 / 5.7 / 14.6) when it
+     * was built, against a budget of 400. Pinned loosely, so the gate getting much pickier shows here first.
+     */
+    @Test
+    fun `the tier gate's redraws stay well inside the budget`() {
+        val first = com.joebywan.daybook.core.SeedHash.epochDay(2026, 1, 1)
+        for ((difficulty, most) in listOf(Difficulty.STANDARD to 40, Difficulty.HARD to 100, Difficulty.EXPERT to 200)) {
+            val draws = (0 until 365).map { day ->
+                val seed = com.joebywan.daybook.core.SeedHash.daily(first + day, Kings.id, difficulty)
+                (0 until 400).first { Kings.attempt(seed, difficulty, it) != null } + 1
+            }
+            assertTrue("kings/$difficulty needed ${draws.max()} draws on some day", draws.max() <= most)
+        }
+    }
+
+    @Test
+    fun `the last resort is a proved board with one answer`() {
+        for (difficulty in Difficulty.entries) {
+            val s = Kings.lastResort(difficulty)
+            assertEquals("kings/$difficulty last resort", listOf(s.solution), allSolutions(s.size, s.region))
+        }
+    }
+
     // ---- the win condition ------------------------------------------------------------------
 
     /**

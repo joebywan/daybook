@@ -165,6 +165,8 @@ fun PlayScreen(
     showTimer: Boolean = true,
     /** The level this board belongs to, if any: the subtitle says so where a daily shows its date. */
     level: Int? = null,
+    /** A hint explained this technique (`Deduction.technique`), for the techniques page. */
+    onTaught: (String) -> Unit = {},
 ) {
     // The harder boards take hundreds of milliseconds to generate, which would freeze the frame if
     // it happened during composition. Android runs it off the main thread; the web has only one
@@ -181,7 +183,7 @@ fun PlayScreen(
     } else {
         PlayBoard(
             puzzle, difficulty, day, ready, restore, persist, onSolved, praiseFor, options, onNext, onBack,
-            onNewGame, tutorialOffered, onTutorialOffered, showTimer, level,
+            onNewGame, tutorialOffered, onTutorialOffered, showTimer, level, onTaught,
         )
     }
 }
@@ -253,6 +255,7 @@ private fun PlayBoard(
     onTutorialOffered: () -> Unit,
     showTimer: Boolean,
     level: Int?,
+    onTaught: (String) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -411,6 +414,7 @@ private fun PlayBoard(
     // One logged hint per counted hint, exactly where the count goes up; a deduction's technique beside it, for the praise.
     fun countHint(opened: Deduction? = null) {
         val taught = if (opened == null || opened.mistake) game.taught else game.taught + opened.technique
+        if (opened != null && !opened.mistake) onTaught(opened.technique)
         game = game.copy(hints = game.hints + 1, log = game.log + PlayLog.HINT, taught = taught)
     }
 

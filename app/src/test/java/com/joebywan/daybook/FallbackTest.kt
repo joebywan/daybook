@@ -19,6 +19,7 @@ import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.Sand
+import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.Target
@@ -164,6 +165,16 @@ class FallbackTest {
     /** [Mines.generateVerified] returns a board only when the ladder cleared it from its opening needing exactly the tier's step. */
     @Test
     fun `mines proves every daily board of a year on every tier`() = assertYearProved(Mines) { seed, d -> Mines.generateVerified(seed, d) }
+
+    /**
+     * [Pipes.generateVerified] returns a board only when the hints' reasoning settles every tile (so one answer); the last
+     * resort is seed 1's board, which must itself be proved.
+     */
+    @Test
+    fun `pipes proves every daily board of a year on every tier`() {
+        assertYearProved(Pipes) { seed, d -> Pipes.generateVerified(seed, d) }
+        for (d in Difficulty.entries) assertTrue("pipes $d last resort", Pipes.generateVerified(1L, d) != null)
+    }
 
     /** [Regions.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test
