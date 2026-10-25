@@ -45,8 +45,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.DigitKeyAction
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.boardKeys
+import com.joebywan.daybook.core.digitKeyAction
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.ui.PAD_GAP
@@ -94,7 +96,7 @@ internal fun SudokuGridBoard(
     interactive: Boolean,
     onSelect: (Int) -> Unit,
     onEnter: (cell: Int, digit: Int, notesMode: Boolean) -> Unit,
-    onKey: (SudokuKeyAction, notesMode: Boolean) -> Unit,
+    onKey: (DigitKeyAction, notesMode: Boolean) -> Unit,
     accent: Color,
     topBand: (Int) -> Float = { 0f },
     units: List<IntArray> = SUDOKU_UNITS,
@@ -116,7 +118,7 @@ internal fun SudokuGridBoard(
     var notesMode by rememberSaveable { mutableStateOf(false) }
     val measurer = rememberTextMeasurer()
     // The keyboard (web, or a hardware keyboard on Android): digits, clear and arrows, mapped by
-    // sudokuKeyAction and applied through the same state functions the pad and a tap use. See boardKeys.
+    // digitKeyAction and applied through the same state functions the pad and a tap use. See boardKeys.
     // Breathes only while something glows, as on Kings.
     val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
@@ -127,8 +129,8 @@ internal fun SudokuGridBoard(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .boardKeys(interactive) { key, _, repeat ->
-                val action = sudokuKeyAction(key) ?: return@boardKeys false
-                if (!repeat || action is SudokuKeyAction.Move) onKey(action, notesMode)
+                val action = digitKeyAction(key, 9) ?: return@boardKeys false
+                if (!repeat || action is DigitKeyAction.Move) onKey(action, notesMode)
                 true
             },
         contentAlignment = Alignment.Center,

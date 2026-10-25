@@ -1,6 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.core.isEnterKey
+import com.joebywan.daybook.core.isEraseKey
+import com.joebywan.daybook.core.letterKey
 
 /** What a physical key asks of a Word Wheel board. No state, no focus: that is [wordWheelKeyAction]'s whole job. */
 sealed interface WheelKeyAction {
@@ -16,21 +19,12 @@ sealed interface WheelKeyAction {
     data object Clear : WheelKeyAction
 }
 
-private val WHEEL_LETTER_KEYS = listOf(
-    Key.A, Key.B, Key.C, Key.D, Key.E, Key.F, Key.G, Key.H, Key.I, Key.J, Key.K, Key.L, Key.M,
-    Key.N, Key.O, Key.P, Key.Q, Key.R, Key.S, Key.T, Key.U, Key.V, Key.W, Key.X, Key.Y, Key.Z,
-)
-
 /** The action for [key], or null for a key the board does not use. The caller has already ruled out chords. */
-fun wordWheelKeyAction(key: Key): WheelKeyAction? {
-    val at = WHEEL_LETTER_KEYS.indexOf(key)
-    return when {
-        at >= 0 -> WheelKeyAction.Letter('a' + at)
-        key == Key.Enter || key == Key.NumPadEnter -> WheelKeyAction.Enter
-        key == Key.Backspace || key == Key.Delete -> WheelKeyAction.Backspace
-        key == Key.Escape -> WheelKeyAction.Clear
-        else -> null
-    }
+fun wordWheelKeyAction(key: Key): WheelKeyAction? = letterKey(key)?.let { WheelKeyAction.Letter(it) } ?: when {
+    isEnterKey(key) -> WheelKeyAction.Enter
+    isEraseKey(key) -> WheelKeyAction.Backspace
+    key == Key.Escape -> WheelKeyAction.Clear
+    else -> null
 }
 
 /**
