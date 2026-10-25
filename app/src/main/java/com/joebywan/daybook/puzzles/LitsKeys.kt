@@ -1,9 +1,10 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.core.isConfirmKey
 
 /** Space, Enter or X shades the square under the cursor, or clears it, as a tap does. */
-fun litsToggleKey(key: Key): Boolean = key == Key.Spacebar || key == Key.Enter || key == Key.NumPadEnter || key == Key.X
+fun litsToggleKey(key: Key): Boolean = isConfirmKey(key) || key == Key.X
 
 /**
  * Shift+arrow: the square [from] has just been left, [to] is where the cursor landed. Lays [from]'s

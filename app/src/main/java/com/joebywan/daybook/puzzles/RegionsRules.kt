@@ -191,15 +191,13 @@ internal object RegionsLogic {
         }
     }
 
-    private fun single(m: Int) = m and (m - 1) == 0
-
     /** Strikes every settled digit from its peers, to a fixpoint. False when some square is left with no digit. */
     private fun settle(layout: RegionsLayout, c: IntArray): Boolean {
         do {
             var changed = false
             for (i in c.indices) {
                 if (c[i] == 0) return false
-                if (!single(c[i])) continue
+                if (c[i].countOneBits() > 1) continue
                 for (j in layout.peers[i]) {
                     if (c[j] and c[i] == 0) continue
                     c[j] = c[j] and c[i].inv()
@@ -214,7 +212,7 @@ internal object RegionsLogic {
     /** The unsettled square with fewest digits left, or -1 if every square is settled. */
     private fun squarest(c: IntArray): Int {
         var best = -1
-        for (i in c.indices) if (!single(c[i]) && (best < 0 || c[i].countOneBits() < c[best].countOneBits())) best = i
+        for (i in c.indices) if (c[i].countOneBits() > 1 && (best < 0 || c[i].countOneBits() < c[best].countOneBits())) best = i
         return best
     }
 

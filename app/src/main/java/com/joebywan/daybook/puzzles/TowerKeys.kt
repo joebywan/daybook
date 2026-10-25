@@ -1,6 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.core.digitKey
+import com.joebywan.daybook.core.isEnterKey
+import com.joebywan.daybook.core.isEraseKey
 
 /** What a physical key asks of a Tower board. There is no cursor: pegs fill left to right. */
 sealed interface TowerKeyAction {
@@ -16,21 +19,10 @@ sealed interface TowerKeyAction {
 
 /** The action for [key] on a board with [colours] colours, or null. Digits past [colours] are not keys. */
 fun towerKeyAction(key: Key, colours: Int): TowerKeyAction? {
-    val digit = when (key) {
-        Key.One, Key.NumPad1 -> 1
-        Key.Two, Key.NumPad2 -> 2
-        Key.Three, Key.NumPad3 -> 3
-        Key.Four, Key.NumPad4 -> 4
-        Key.Five, Key.NumPad5 -> 5
-        Key.Six, Key.NumPad6 -> 6
-        Key.Seven, Key.NumPad7 -> 7
-        Key.Eight, Key.NumPad8 -> 8
-        Key.Nine, Key.NumPad9 -> 9
-        Key.Backspace, Key.Delete -> return TowerKeyAction.Back
-        Key.Enter, Key.NumPadEnter -> return TowerKeyAction.Submit
-        else -> return null
-    }
-    return if (digit <= colours) TowerKeyAction.Colour(digit - 1) else null
+    if (isEraseKey(key)) return TowerKeyAction.Back
+    if (isEnterKey(key)) return TowerKeyAction.Submit
+    val digit = digitKey(key) ?: return null
+    return if (digit in 1..colours) TowerKeyAction.Colour(digit - 1) else null
 }
 
 /** The board after [action], or null when it changes nothing (a full row, an empty one, not ready). */

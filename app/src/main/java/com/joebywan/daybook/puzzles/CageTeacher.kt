@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.digitsOf
+import com.joebywan.daybook.core.has
 import com.joebywan.daybook.puzzles.CageLogic.Board
 import com.joebywan.daybook.puzzles.CageLogic.Group
 import com.joebywan.daybook.puzzles.CageLogic.Kind
@@ -50,17 +53,6 @@ internal object CageTeacher {
         CAGE_COMBO, FORTY_FIVE, CAGE_CHAIN, FALLBACK,
     )
 
-    /** One step: the digit to place (for a mistake, the cell to clear: [digit] is 0), where to look, and why. */
-    class Step(
-        val technique: String,
-        val cell: Int,
-        val digit: Int,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
-
     private fun unitName(u: Int) = when {
         u < 9 -> "the ${CageLogic.BOX_NAMES[u]} box"
         u < 18 -> "row ${u - 8}"
@@ -69,28 +61,26 @@ internal object CageTeacher {
 
     private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
 
-    private fun digitsOf(mask: Int) = (1..9).filter { mask and (1 shl it) != 0 }
-
     /** "1", "1 and 2", "1, 2 and 4". */
     private fun listed(digits: List<Int>) =
         if (digits.size == 1) "${digits[0]}" else digits.dropLast(1).joinToString(", ") + " and " + digits.last()
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback -----------------------
 
-    fun teach(s: CageState): Step? {
+    fun teach(s: CageState): PlacementStep? {
         if (s.solved) return null
         val board = Board(s.cageOf, s.sums)
         mistake(s, board)?.let { return it }
         return deduce(board, s.cells) ?: fallback(s, board)
     }
 
-    private fun mistake(s: CageState, board: Board): Step? {
+    private fun mistake(s: CageState, board: Board): PlacementStep? {
         val cells = s.cells
         val solution = s.grid.solution
         val wrong = cells.indices.firstOrNull { cells[it] != 0 && cells[it] != solution[it] } ?: return null
         val d = cells[wrong]
         val clear = "Select it and tap $d again to clear it"
-        fun step(explanation: String, cited: Set<Int>) = Step(
+        fun step(explanation: String, cited: Set<Int>) = PlacementStep(
             MISTAKE, wrong, 0, setOf(wrong), cited, "Check this $d.", explanation,
         )
 
@@ -133,12 +123,12 @@ internal object CageTeacher {
     }
 
     /** Nothing short enough to explain applied: point at a digit from the answer, and say so plainly. */
-    private fun fallback(s: CageState, board: Board): Step? {
+    private fun fallback(s: CageState, board: Board): PlacementStep? {
         val sight = Sight(board, s.cells.toIntArray())
         val cell = s.cells.indices.filter { s.cells[it] == 0 }
             .minByOrNull { sight.cand[it].countOneBits() } ?: return null
         val d = s.grid.solution[cell]
-        return Step(
+        return PlacementStep(
             FALLBACK, cell, d, focus = setOf(cell), cited = emptySet(),
             nudge = "This one takes a longer chain. Look at the glowing cell.",
             explanation = "This one needs a longer chain than a hint can walk through, so here's a " +
@@ -149,7 +139,7 @@ internal object CageTeacher {
     // ---- reasoning from what the player can see ----------------------------------------------------
 
     /** The simplest step visible on this board, or null when none of the techniques applies. */
-    fun deduce(board: Board, cells: List<Int>): Step? {
+    fun deduce(board: Board, cells: List<Int>): PlacementStep? {
         val arr = cells.toIntArray()
         val plain = Sight(board, arr, prune = false)
         return fullHouse(plain)
@@ -162,13 +152,13 @@ internal object CageTeacher {
             ?: chain(board, arr)
     }
 
-    private fun fullHouse(s: Sight): Step? {
+    private fun fullHouse(s: Sight): PlacementStep? {
         for (u in 0 until 27) {
             val empty = CageLogic.units[u].filter { s.cells[it] == 0 }
             if (empty.size != 1) continue
             val d = (1..9).first { !s.holds(u, it) }
             val all = CageLogic.units[u].toSet()
-            return Step(
+            return PlacementStep(
                 FULL_HOUSE, empty[0], d, focus = all, cited = all,
                 nudge = "Look at ${unitName(u)}.",
                 explanation = "${unitName(u).cap()} has one empty cell left, and $d is the only digit it's " +
@@ -178,7 +168,7 @@ internal object CageTeacher {
         return null
     }
 
-    private fun cageLast(board: Board, cells: IntArray): Step? {
+    private fun cageLast(board: Board, cells: IntArray): PlacementStep? {
         for (k in board.cages.indices) {
             val cage = board.cages[k]
             val empty = cage.filter { cells[it] == 0 }
@@ -188,7 +178,7 @@ internal object CageTeacher {
             val explanation = if (cage.size == 1) "This cage is a single square, so its total, ${board.sums[k]}, is the digit."
             else "This cage totals ${board.sums[k]} and its other squares add up to ${board.sums[k] - d}, so " +
                 "the glowing square is $d."
-            return Step(
+            return PlacementStep(
                 CAGE_LAST, empty[0], d, focus = cage.toSet(), cited = cage.toSet(),
                 nudge = "Look at the cage totalling ${board.sums[k]}.",
                 explanation = explanation,
@@ -197,7 +187,7 @@ internal object CageTeacher {
         return null
     }
 
-    private fun hiddenSingle(s: Sight, boxes: Boolean): Step? {
+    private fun hiddenSingle(s: Sight, boxes: Boolean): PlacementStep? {
         for (u in 0 until 27) {
             if ((u < 9) != boxes) continue
             for (d in 1..9) {
@@ -209,7 +199,7 @@ internal object CageTeacher {
                     .mapNotNull { c ->
                         (Sudoku.peers(c).toList() + s.board.mates[c].toList()).sorted().firstOrNull { s.cells[it] == d }
                     }.toSet()
-                return Step(
+                return PlacementStep(
                     if (boxes) HIDDEN_SINGLE_BOX else HIDDEN_SINGLE_LINE, cell, d,
                     focus = CageLogic.units[u].toSet(),
                     cited = CageLogic.units[u].toSet() + blockers,
@@ -222,11 +212,11 @@ internal object CageTeacher {
         return null
     }
 
-    private fun nakedSingle(s: Sight): Step? {
+    private fun nakedSingle(s: Sight): PlacementStep? {
         for (cell in 0 until 81) {
             if (s.cells[cell] != 0 || s.cand[cell].countOneBits() != 1) continue
             val d = digitsOf(s.cand[cell])[0]
-            return Step(
+            return PlacementStep(
                 NAKED_SINGLE, cell, d,
                 focus = setOf(cell),
                 cited = (Sudoku.peers(cell).toList() + s.board.mates[cell].toList()).filter { s.cells[it] != 0 }.toSet(),
@@ -267,7 +257,7 @@ internal object CageTeacher {
     }
 
     /** CAGE_COMBO for [Kind.CAGE]; FORTY_FIVE for [Kind.INNIE] (and the outies). */
-    private fun group(board: Board, plain: Sight, kind: Kind): Step? {
+    private fun group(board: Board, plain: Sight, kind: Kind): PlacementStep? {
         for (g in board.groups) {
             if ((g.kind == Kind.CAGE) != (kind == Kind.CAGE)) continue
             val open = plain.open(g)
@@ -286,7 +276,7 @@ internal object CageTeacher {
             val text = "${lead(plain, g)} ${single.sentence}"
             if (text.length > MAX_EXPLANATION) continue
             val scope = if (g.scope >= 0) CageLogic.scopes[g.scope] else null
-            return Step(
+            return PlacementStep(
                 if (g.kind == Kind.CAGE) CAGE_COMBO else FORTY_FIVE, single.cell, single.digit,
                 focus = g.cells.toSet() + (scope?.cells?.toSet() ?: emptySet()) + single.cell,
                 cited = g.cells.toSet() + (single.unit?.let { CageLogic.units[it].toSet() } ?: emptySet()),
@@ -322,12 +312,12 @@ internal object CageTeacher {
     // ---- everything together ----------------------------------------------------------------------
 
     /** What the generator's ladder places that no single group explains: every group worked through together. */
-    private fun chain(board: Board, cells: IntArray): Step? {
+    private fun chain(board: Board, cells: IntArray): PlacementStep? {
         val s = Sight(board, cells)
         for (cell in 0 until 81) {
             if (cells[cell] != 0 || s.cand[cell].countOneBits() != 1) continue
             val d = digitsOf(s.cand[cell])[0]
-            return Step(
+            return PlacementStep(
                 CAGE_CHAIN, cell, d,
                 focus = board.cages[board.cageOf[cell]].toSet() + cell,
                 cited = board.cages[board.cageOf[cell]].toSet(),
@@ -340,7 +330,7 @@ internal object CageTeacher {
             if (s.holds(u, d)) continue
             val places = s.places(u, d)
             if (places.size != 1) continue
-            return Step(
+            return PlacementStep(
                 CAGE_CHAIN, places[0], d,
                 focus = CageLogic.units[u].toSet(),
                 cited = board.cages[board.cageOf[places[0]]].toSet(),
