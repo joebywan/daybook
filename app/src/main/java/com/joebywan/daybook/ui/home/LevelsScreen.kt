@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.home
 
+import com.joebywan.daybook.data.levelBoardDone
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.CardText
 import com.joebywan.daybook.ui.TitledScreen
@@ -47,7 +48,7 @@ import com.joebywan.daybook.platform.formatClock
 /** How many boards of [level] are solved; a puzzle no longer in the registry counts, as it shows finished. */
 fun solvedCount(progress: LevelProgress, level: Int): Int {
     val solved = progress.solved(level)
-    return progress.plan(level).count { it.puzzleId in solved || PuzzleRegistry.byId(it.puzzleId) == null }
+    return progress.plan(level).count { levelBoardDone(it.puzzleId, solved) }
 }
 
 /**
@@ -224,7 +225,7 @@ private fun LevelRow(progress: LevelProgress, level: Int, onClick: () -> Unit, t
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 progress.plan(level).forEach { b ->
                     val accent = PuzzleRegistry.byId(b.puzzleId)?.let { Color(it.accent) } ?: scheme.outline
-                    val done = b.puzzleId in solved || PuzzleRegistry.byId(b.puzzleId) == null
+                    val done = levelBoardDone(b.puzzleId, solved)
                     Box(Modifier.size(10.dp).clip(CircleShape).background(if (done) accent else scheme.outline.copy(alpha = 0.3f)))
                 }
             }

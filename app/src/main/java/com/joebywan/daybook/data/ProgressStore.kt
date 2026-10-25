@@ -112,8 +112,7 @@ data class LevelProgress(
             val solves = levelSolves.mapNotNull(LevelSolve::decode).filter { it.level >= 1 }.groupBy { it.level }
             fun isDone(n: Int): Boolean {
                 val solved = solves[n].orEmpty().map { it.puzzleId }.toSet()
-                return Levels.plan(n, opened[n] ?: Levels.POOL.size)
-                    .all { it.puzzleId in solved || PuzzleRegistry.byId(it.puzzleId) == null }
+                return Levels.plan(n, opened[n] ?: Levels.POOL.size).all { levelBoardDone(it.puzzleId, solved) }
             }
             val done = (opened.keys + solves.keys).filter { it >= 1 && isDone(it) }.toSet()
             val current = opened.keys.filter { it >= 1 && it !in done }.minOrNull() ?: ((done.maxOrNull() ?: 0) + 1)
@@ -121,6 +120,9 @@ data class LevelProgress(
         }
     }
 }
+
+/** Whether a level's board of [puzzleId] counts as done, given the level's [solved] puzzles: one gone from the registry does. */
+fun levelBoardDone(puzzleId: String, solved: Set<String>): Boolean = puzzleId in solved || PuzzleRegistry.byId(puzzleId) == null
 
 /**
  * A game left part-finished: the board plus everything the play screen would otherwise lose.
