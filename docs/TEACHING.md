@@ -102,7 +102,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | none on a generated board: the generator digs only while the tier's ladder finishes it (a year of daily boards per tier, and 300 a tier in `SudokuTeachingTest`; before that gate 0.5 / 6 / 34% of boards). Per board: naked single 0 / 1.7 / 1.1 steps, locked candidates 0 / 0 / 0.7, pairs 0 / 0 / 0.3, what-if 0 / 0 / 0.5 |
 | Kings | last square, locked to a line, would empty, N confined, what-if | none: the generator keeps a board only if the ladder finishes it from blank and the tier's gate holds (a year per tier, hints alone finish all) |
 | Mambo | pair, sandwich, link, quota, almost, what-if | none: the generator's ladder is the teacher's, and each tier is gated on the rung it needs (a year per tier and 500 boards a tier, hints alone finish all; almost-met 0 / 2.9 / 5.7 and what-if 0 / 0 / 4.1 steps a board; the fallback exists for boards not made here) |
-| Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
+| Pipes | border, set neighbour / whichever way it turns, no loop | 0: the generator ships only boards the reasoning settles (`PipesTeacher.settles`, which also proves one answer); 300 boards per tier, hints alone finish all, no-loop 0.6 / 0.8 / 0.8% of steps |
 | Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
 | Mosaic | finish, count fills against colours, biggest swallow, centre; fallback offers a proven fill | 1.5 / 9 / 12.5% |
 | Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
@@ -129,7 +129,7 @@ Adopting it, or changing a teacher — the lessons so far:
 
 - **Measure the fallback rate; don't assume it.** Test soundness against an independent solver.
 - **A mistake means "no legal answer keeps this", not "differs from the stored answer".** LITS and
-  Pipes have boards with several answers, and calling a correct move wrong is the PR #15 bug again.
+  Pipes had boards with several answers, and calling a correct move wrong is the PR #15 bug again.
 - **Check that a generator's stored answer obeys its own rules.** Atoms' did not on 4-35% of boards
   by tier, and every mistake judged against it was suspect.
 - **Fix a generator by rejecting and retrying after the existing attempts**, so the daily boards
