@@ -21,6 +21,9 @@ from a measurement or review, so you can check it is still true.
   and the calendar's day cells (sized from width, ~40dp at 360). The archive calendar's day cells size from both axes and
   are as large as the box allows: ~44dp at 375x537 and ~41dp on a phone on its side (844x390), where six weeks must fit
   under the title; dropping the "N days, all unlocked" line when the box is short would buy them about 5dp. *S each.*
+- [ ] **Screenshots show the old names.** Snap, Mambo, Tower and Pointers became Trail, Sun & Moon, Codebreaker and Arrows
+  (2026-10-25); `docs/screenshots/home.png` and the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
+  with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
@@ -38,11 +41,10 @@ from a measurement or review, so you can check it is still true.
   which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
-- [ ] **Regions: sparser boards, and README screenshots.** The ladder is three single-digit techniques, so boards carry
-  about 27 / 21 / 19% of squares as givens. A locked-candidate technique (a digit whose every place in a region touches
-  one square rules that square out) would let the generator take more back, but it ends in an elimination, not a
-  placement, and Regions has no pencil marks; it would need a step that explains one elimination and then a placement
-  (Inequality's `SIGN_BOUND` is the model). *M.*
+- [ ] **Regions: README screenshots.** (Its sparser boards came with the locked candidate.) *S.*
+- [ ] **Regions: Expert's fill is slow in the browser.** `randomBoard` is about 85 ms of a 9x9 draw on the JVM, and Expert
+  generation is 187 ms median, 0.8 s p95, 1.7 s worst in Chromium (it was as slow before the depth gate). A cheaper fill
+  (fewer restarts, or growing regions where the fill is already forced) would fix it; it moves every board. *M.*
 
 - [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
   together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
@@ -164,9 +166,8 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 
 - [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
-  - Regions (locked candidates): the ladder is too short; the technique comes first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
-- [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
+- [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain.
 - [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
   lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
   fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).

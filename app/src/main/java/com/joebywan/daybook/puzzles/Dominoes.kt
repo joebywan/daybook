@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +61,9 @@ import com.joebywan.daybook.ui.GLOW_ALPHA
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.graphics.drawscope.scale
+import com.joebywan.daybook.ui.hintRims
+import com.joebywan.daybook.ui.squareRim
+import com.joebywan.daybook.ui.rememberSettledFlags
 
 /**
  * Dominoes (`docs/DOMINO_SPEC.md`): an irregular board, some of it cut into coloured regions that each
@@ -656,22 +658,9 @@ object Dominoes : PuzzleType {
                     style = Stroke(u * if (strong) 0.08f else 0.05f),
                 )
             }
-            // A rim just inside the outline of each set, one stroke per side facing out of it.
-            fun rim(set: Set<Int>, width: Float, colour: Color) {
-                val h = width / 2
-                for (i in set) {
-                    if (i !in 0 until n || !s.open[i]) continue
-                    val r = rect(i)
-                    val c = i % w
-                    if (i - w !in set) drawLine(colour, Offset(r.left, r.top + h), Offset(r.right, r.top + h), width)
-                    if (i + w !in set) drawLine(colour, Offset(r.left, r.bottom - h), Offset(r.right, r.bottom - h), width)
-                    if (c == 0 || i - 1 !in set) drawLine(colour, Offset(r.left + h, r.top), Offset(r.left + h, r.bottom), width)
-                    if (c == w - 1 || i + 1 !in set) drawLine(colour, Offset(r.right - h, r.top), Offset(r.right - h, r.bottom), width)
-                }
+            hintRims(highlight, u, overlay.glow, overlay.pulse, paint.background) { set, width, colour ->
+                squareRim(set, width, colour, w, s.height, { rect(it) }, { s.open[it] })
             }
-            rim(highlight.soft - highlight.strong, u * 0.07f, overlay.glow.copy(alpha = 0.5f))
-            rim(highlight.strong, u * 0.2f, paint.background.copy(alpha = 0.9f * overlay.pulse))
-            rim(highlight.strong, u * 0.11f, overlay.glow.copy(alpha = overlay.pulse))
         }
 
         // The keyboard cursor.
@@ -749,7 +738,6 @@ object Dominoes : PuzzleType {
 
     // ---- the board ------------------------------------------------------------------------------
 
-    private const val SETTLE_MILLIS = 1000L
     private const val DOUBLE_TAP_MS = 300L
 
     private class Cell<T>(var v: T)
@@ -802,13 +790,7 @@ object Dominoes : PuzzleType {
 
         // Green at once when a covered region keeps its rule; red only once it has stayed broken for a second.
         val holds = BooleanArray(s.rules.size) { DominoLogic.regionHolds(s, it) }
-        val brokenNow = BooleanArray(s.rules.size) { DominoLogic.regionBroken(s, it) }
-        var settled by remember(s.open, s.tray) { mutableStateOf(brokenNow) }
-        LaunchedEffect(s.placed) {
-            delay(SETTLE_MILLIS)
-            settled = brokenNow
-        }
-        val broken = BooleanArray(s.rules.size) { brokenNow[it] && settled.getOrElse(it) { false } }
+        val broken = rememberSettledFlags(BooleanArray(s.rules.size) { DominoLogic.regionBroken(s, it) }, s.open to s.tray, s.placed)
         // A laid domino settles; a region it completes by its rule glows once.
         val feel = rememberMoveFeel(DominoLogic.pipsOf(s).toList(), s.layout.regionSquares) { holds[it] }
 

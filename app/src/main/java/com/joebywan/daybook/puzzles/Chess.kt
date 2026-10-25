@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
+import com.joebywan.daybook.core.union
 
 /**
  * A Mate puzzle in play: a position and the player's moves so far. Only the player's moves are stored; the
@@ -345,7 +346,7 @@ object Chess : PuzzleType {
                                     Offset(col(i, whiteBottom) * w, row(i, whiteBottom) * w),
                                     Size(w, w),
                                 )
-                                out = out?.let { o -> Rect(minOf(o.left, r.left), minOf(o.top, r.top), maxOf(o.right, r.right), maxOf(o.bottom, r.bottom)) } ?: r
+                                out = out?.union(r) ?: r
                             }
                             out
                         },

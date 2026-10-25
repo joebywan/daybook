@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.stats
 
+import com.joebywan.daybook.ui.card
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,14 +53,13 @@ fun StreakCalendar(played: Set<LocalDate>, today: LocalDate, modifier: Modifier 
     val month = LocalDate.fromEpochDays(shown).firstOfMonth()
 
     Column(
-        modifier.clip(RoundedCornerShape(16.dp)).background(scheme.surface).padding(14.dp),
+        modifier.card(scheme.surface).padding(14.dp),
     ) {
         MonthBar(
             month,
             back = month > firstMonth,
             forward = month < thisMonth,
-            onBack = { shown = month.minus(DatePeriod(months = 1)).toEpochDays() },
-            onForward = { shown = month.plus(DatePeriod(months = 1)).toEpochDays() },
+            onMonth = { shown = it.toEpochDays() },
         )
         Spacer(Modifier.height(6.dp))
         MonthGrid(month) { day, m -> DayCell(day, played, forgiven, today, m) }
@@ -125,9 +124,9 @@ private fun Arrow(glyph: String, enabled: Boolean, onClick: () -> Unit) {
 
 /** The month's name and year between a back and a forward arrow; an arrow past the bounds is dim and does nothing. */
 @Composable
-internal fun MonthBar(month: LocalDate, back: Boolean, forward: Boolean, onBack: () -> Unit, onForward: () -> Unit) {
+internal fun MonthBar(month: LocalDate, back: Boolean, forward: Boolean, onMonth: (LocalDate) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Arrow("‹", back, onBack)
+        Arrow("‹", back) { onMonth(month.minus(DatePeriod(months = 1))) }
         Text(
             month.month.name.lowercase().replaceFirstChar { it.uppercase() } + " " + month.year,
             style = MaterialTheme.typography.titleMedium,
@@ -135,7 +134,7 @@ internal fun MonthBar(month: LocalDate, back: Boolean, forward: Boolean, onBack:
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f),
         )
-        Arrow("›", forward, onForward)
+        Arrow("›", forward) { onMonth(month.plus(DatePeriod(months = 1))) }
     }
 }
 

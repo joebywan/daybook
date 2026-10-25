@@ -1,5 +1,11 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.digitsOf
+import com.joebywan.daybook.core.has
+
+
 /**
  * The Inequality square, reasoned a step at a time.
  *
@@ -53,23 +59,8 @@ internal object InequalityTeacher {
     /** Highlight index of digit [d]'s key under the board. */
     fun pad(d: Int): Int = 1000 + d
 
-    class Step(
-        val technique: String,
-        val cell: Int,
-        /** 0 for a clear (a mistake). */
-        val digit: Int,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
-
     // ---- what the player can see ------------------------------------------------------------------
 
-    private fun bit(d: Int) = 1 shl d
-    private fun has(mask: Int, d: Int) = mask and bit(d) != 0
-    private fun digitsOf(n: Int, mask: Int) = (1..n).filter { has(mask, it) }
-    private fun single(mask: Int) = mask != 0 && mask and (mask - 1) == 0
 
     /** Rows 0..n-1, then columns. */
     private fun lines(n: Int): List<List<Int>> = LINES[n]
@@ -154,7 +145,7 @@ internal object InequalityTeacher {
     private fun placedBy(n: Int, cells: List<Int>, sight: Sight, cut: IntArray): Triple<Int, Int, Int>? {
         if ((0 until n * n).any { cells[it] == 0 && cut[it] == 0 }) return null
         for (i in 0 until n * n) {
-            if (cells[i] == 0 && single(cut[i]) && !single(sight.cand[i])) return Triple(i, -1, cut[i].countTrailingZeroBits())
+            if (cells[i] == 0 && cut[i].countOneBits() == 1 && sight.cand[i].countOneBits() != 1) return Triple(i, -1, cut[i].countTrailingZeroBits())
         }
         for ((li, line) in lines(n).withIndex()) {
             for (d in 1..n) {
@@ -194,12 +185,12 @@ internal object InequalityTeacher {
             val empty = line.filter { cells[it] == 0 }
             if (empty.size == 1) {
                 val missing = InequalityLogic.fullMask(n) and line.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
-                if (single(missing)) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), li)
+                if (missing.countOneBits() == 1) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), li)
             }
         }
         // 2. A square whose row and column leave one digit.
         for (i in 0 until n * n) {
-            if (cells[i] == 0 && single(sight.base[i])) return Hit(ONLY_DIGIT, i, sight.base[i].countTrailingZeroBits(), -1)
+            if (cells[i] == 0 && sight.base[i].countOneBits() == 1) return Hit(ONLY_DIGIT, i, sight.base[i].countTrailingZeroBits(), -1)
         }
         // 3. A digit with one place left in a line.
         for ((li, line) in all.withIndex()) {
@@ -210,7 +201,7 @@ internal object InequalityTeacher {
         }
         // 4. A square the signs leave one digit.
         for (i in 0 until n * n) {
-            if (cells[i] == 0 && single(sight.cand[i])) return Hit(SIGN_BOUND, i, sight.cand[i].countTrailingZeroBits(), -1)
+            if (cells[i] == 0 && sight.cand[i].countOneBits() == 1) return Hit(SIGN_BOUND, i, sight.cand[i].countTrailingZeroBits(), -1)
         }
         // 5. A digit with one place left once the signs are counted.
         for ((li, line) in all.withIndex()) {
@@ -280,7 +271,7 @@ internal object InequalityTeacher {
             if (!sight.consistent) return null
             var placed = false
             for (i in 0 until n * n) {
-                if (cells[i] == 0 && single(sight.cand[i])) { cells[i] = sight.cand[i].countTrailingZeroBits(); placed = true }
+                if (cells[i] == 0 && sight.cand[i].countOneBits() == 1) { cells[i] = sight.cand[i].countTrailingZeroBits(); placed = true }
             }
             for (line in lines(n)) for (d in 1..n) {
                 val at = lonePlace(line, cells, sight.cand, d)
@@ -296,30 +287,30 @@ internal object InequalityTeacher {
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ------------------------
 
-    fun teach(s: InequalityState): Step? {
+    fun teach(s: InequalityState): PlacementStep? {
         if (s.solved) return null
         mistake(s)?.let { return it }
         return deduce(s.size, s.cells, s.signs) ?: fallback(s)
     }
 
-    private fun fallback(s: InequalityState): Step? {
+    private fun fallback(s: InequalityState): PlacementStep? {
         val i = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
         val d = s.solution[i]
-        return Step(
+        return PlacementStep(
             FALLBACK, i, d, setOf(i), emptySet(),
             "Try this square.",
             "No short reason found: the stored answer has a $d here.",
         )
     }
 
-    private fun mistake(s: InequalityState): Step? {
+    private fun mistake(s: InequalityState): PlacementStep? {
         val n = s.size
         val wrong = s.cells.indices.firstOrNull { s.cells[it] != 0 && !s.givens[it] && s.cells[it] != s.solution[it] }
             ?: return null
         val d = s.cells[wrong]
         val clear = "Select it and tap $d again to clear it."
         fun step(explanation: String, cited: Set<Int>) =
-            Step(MISTAKE, wrong, 0, setOf(wrong), cited, "Check this $d.", explanation)
+            PlacementStep(MISTAKE, wrong, 0, setOf(wrong), cited, "Check this $d.", explanation)
 
         for (line in lines(n)) {
             if (wrong !in line) continue
@@ -356,7 +347,7 @@ internal object InequalityTeacher {
     private fun holders(n: Int, cells: List<Int>, x: Int, digits: List<Int>): Set<Int> =
         digits.mapNotNull { d -> (0 until n * n).firstOrNull { cells[it] == d && (it / n == x / n || it % n == x % n) } }.toSet()
 
-    fun deduce(n: Int, cells: List<Int>, signs: List<Sign>): Step? {
+    fun deduce(n: Int, cells: List<Int>, signs: List<Sign>): PlacementStep? {
         val hit = findStep(n, cells, signs) ?: return null
         val sight = Sight(n, cells, signs)
         val x = hit.cell
@@ -365,7 +356,7 @@ internal object InequalityTeacher {
         return when (hit.technique) {
             LAST -> {
                 val name = lineName(n, hit.line)
-                Step(
+                PlacementStep(
                     LAST, x, d, all[hit.line].toSet(), all[hit.line].filter { cells[it] != 0 }.toSet(),
                     "Look at $name.",
                     "$name has every digit but $d, so its last empty square is a $d.",
@@ -373,7 +364,7 @@ internal object InequalityTeacher {
             }
             ONLY_DIGIT -> {
                 val seen = (1..n).filter { !has(sight.base[x], it) }
-                Step(
+                PlacementStep(
                     ONLY_DIGIT, x, d, setOf(x), holders(n, cells, x, seen),
                     "Which digits can this square still take?",
                     "Row ${x / n + 1} and column ${x % n + 1} already hold ${andList(seen)}, so only $d is left here.",
@@ -386,7 +377,7 @@ internal object InequalityTeacher {
                     (0 until n * n).firstOrNull { cells[it] == d && (it / n == o / n || it % n == o % n) }
                 }.toSet()
                 val across = if (hit.line < n) "column" else "row"
-                Step(
+                PlacementStep(
                     ONLY_PLACE, x, d, line.toSet(), blockers,
                     "Where can the ${d} go in ${lineName(n, hit.line)}?",
                     "${lineName(n, hit.line).replaceFirstChar { it.uppercase() }} still needs a $d, and every other empty square in it has a $d in its $across. This one is the only place.",
@@ -397,7 +388,7 @@ internal object InequalityTeacher {
             else -> {
                 val line = all[hit.line]
                 val signsHere = signs.indices.filter { signs[it].lo in line || signs[it].hi in line }.map { n * n + it }
-                Step(
+                PlacementStep(
                     SIGN_PLACE, x, d, line.toSet(), signsHere.toSet(),
                     "Count the signs along ${lineName(n, hit.line)}.",
                     "${lineName(n, hit.line).replaceFirstChar { it.uppercase() }} still needs a $d. With the signs counted, every other square in it is ruled out, so it goes here.",
@@ -406,8 +397,8 @@ internal object InequalityTeacher {
         }
     }
 
-    private fun pairStep(n: Int, cells: List<Int>, signs: List<Sign>, hit: Hit): Step {
-        val (a, b) = digitsOf(n, hit.pairDigits)
+    private fun pairStep(n: Int, cells: List<Int>, signs: List<Sign>, hit: Hit): PlacementStep {
+        val (a, b) = digitsOf(hit.pairDigits, n)
         val name = lineName(n, hit.pairLine)
         val cut = if (hit.technique == NAKED_PAIR) {
             "Two squares of $name can only be $a or $b, so they take both, and no other square there can."
@@ -423,14 +414,14 @@ internal object InequalityTeacher {
             else -> "$again leaves row $r as the only place for the ${hit.digit} in column $c."
         }
         val signsNear = if (hit.needsSigns) signs.indices.filter { signs[it].lo == hit.cell || signs[it].hi == hit.cell }.map { n * n + it } else emptyList()
-        return Step(
+        return PlacementStep(
             hit.technique, hit.cell, hit.digit, setOf(hit.cell) + hit.pair, hit.pair.toSet() + signsNear,
             if (hit.technique == NAKED_PAIR) "Two squares of $name share the same two digits." else "Where can the $a and the $b go in $name?",
             "$cut $close",
         )
     }
 
-    private fun signBound(n: Int, cells: List<Int>, signs: List<Sign>, sight: Sight, x: Int, d: Int): Step {
+    private fun signBound(n: Int, cells: List<Int>, signs: List<Sign>, sight: Sight, x: Int, d: Int): PlacementStep {
         val base = sight.base[x]
         val removed = base and bit(d).inv()
         // The signs at x, each with the digits it alone strikes from base given the neighbour's sight.
@@ -466,9 +457,9 @@ internal object InequalityTeacher {
         }
         val cited = chosen.flatMap { listOf(n * n + it.k, it.other) }.toSet() + holders(n, cells, x, (1..n).filter { !has(base, it) })
         val clause = chosen.joinToString(" and ") { it.text }
-        var text = "Its row and column leave ${orList(digitsOf(n, base))}, but it has to be $clause. That leaves only $d."
+        var text = "Its row and column leave ${orList(digitsOf(base, n))}, but it has to be $clause. That leaves only $d."
         if (text.length > MAX_EXPLANATION) text = "The signs leave only $d here: it has to be $clause."
-        return Step(
+        return PlacementStep(
             SIGN_BOUND, x, d, setOf(x) + chosen.map { n * n + it.k }, cited,
             "What do the signs next to this square allow?", text,
         )

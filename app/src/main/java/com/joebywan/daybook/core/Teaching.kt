@@ -42,14 +42,65 @@ class Deduction(
      * assume.
      */
     val fallback: Boolean = false,
-    private val applyTo: (PuzzleState) -> PuzzleState,
-    private val reachedBy: (PuzzleState) -> Boolean,
+    applyTo: (PuzzleState) -> PuzzleState,
+    reachedBy: (PuzzleState) -> Boolean,
 ) {
-    /** The board after the move, made on [state]. "Show me" — never applied without that tap. */
-    fun apply(state: PuzzleState): PuzzleState = applyTo(state)
+    /** The board after the move, made on the state given. "Show me" — never applied without that tap. */
+    val apply = applyTo
 
-    /** Whether [state] already contains this move's result, however the player got there. */
-    fun isReached(state: PuzzleState): Boolean = reachedBy(state)
+    /** Whether the state given already contains this move's result, however the player got there. */
+    val isReached = reachedBy
+}
+
+/**
+ * A teacher's step that puts [digit] on square [cell] (Sudoku, Cages, Inequality, Regions), or, for a
+ * mistake, takes the square's digit back ([digit] is then 0).
+ */
+class PlacementStep(
+    val technique: String,
+    val cell: Int,
+    val digit: Int,
+    val focus: Set<Int>,
+    val cited: Set<Int>,
+    val nudge: String,
+    val explanation: String,
+)
+
+/**
+ * The [Deduction] for a placement on [state]: "Show me" places the digit and selects the square (one
+ * state, so one undo entry, and the player sees where it went); a mistake is dealt with once that digit
+ * is gone, whatever replaced it. [valueAt] reads a square; [place] writes one and selects it.
+ */
+inline fun <reified S : PuzzleState> placementDeduction(
+    state: S,
+    step: PlacementStep,
+    mistake: Boolean,
+    fallback: Boolean,
+    targets: Set<Int> = setOf(step.cell),
+    crossinline valueAt: (S, Int) -> Int,
+    crossinline place: (S, Int, Int) -> S,
+): Deduction {
+    val cell = step.cell
+    val digit = step.digit
+    val wrong = valueAt(state, cell)
+    return Deduction(
+        technique = step.technique,
+        nudge = step.nudge,
+        explanation = step.explanation,
+        focus = step.focus,
+        cited = step.cited,
+        targets = targets,
+        mistake = mistake,
+        fallback = fallback,
+        applyTo = { now ->
+            val t = now as S
+            if (valueAt(t, cell) == digit) t else place(t, cell, digit)
+        },
+        reachedBy = { now ->
+            val t = now as S
+            if (mistake) valueAt(t, cell) != wrong else valueAt(t, cell) == digit
+        },
+    )
 }
 
 /**
