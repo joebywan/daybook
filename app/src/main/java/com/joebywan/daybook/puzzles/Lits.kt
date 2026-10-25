@@ -47,6 +47,7 @@ import com.joebywan.daybook.core.jvmHashSetOrder
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.drawWalls
 
 @Serializable
 data class LitsState(
@@ -1282,32 +1283,7 @@ object Lits : PuzzleType {
                 )
             }
 
-            for (i in 0 until PREVIEW_SIDE * PREVIEW_SIDE) {
-                val r = i / PREVIEW_SIDE
-                val c = i % PREVIEW_SIDE
-                if (c + 1 < PREVIEW_SIDE && previewRegions[i] != previewRegions[i + 1]) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset(origin.x + (c + 1) * step, origin.y + r * step),
-                        Offset(origin.x + (c + 1) * step, origin.y + (r + 1) * step),
-                        strokeWidth = wall,
-                    )
-                }
-                if (r + 1 < PREVIEW_SIDE && previewRegions[i] != previewRegions[i + PREVIEW_SIDE]) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset(origin.x + c * step, origin.y + (r + 1) * step),
-                        Offset(origin.x + (c + 1) * step, origin.y + (r + 1) * step),
-                        strokeWidth = wall,
-                    )
-                }
-            }
-            drawRect(
-                color = scheme.onBackground,
-                topLeft = Offset(origin.x + wall / 2f, origin.y + wall / 2f),
-                size = Size(side - wall, side - wall),
-                style = Stroke(width = wall),
-            )
+            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, step, wall, scheme.onBackground, origin, frameInset = wall / 2f) { previewRegions[it] }
         }
     }
 
@@ -1495,32 +1471,7 @@ object Lits : PuzzleType {
 
                 // Thick strokes wherever two different regions meet.
                 val edge = stepPx * 0.06f
-                for (i in 0 until s.width * s.height) {
-                    val r = i / s.width
-                    val c = i % s.width
-                    if (c + 1 < s.width && s.region[i] != s.region[i + 1]) {
-                        drawLine(
-                            scheme.onBackground,
-                            Offset((c + 1) * stepPx, r * stepPx),
-                            Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                            strokeWidth = edge,
-                        )
-                    }
-                    if (r + 1 < s.height && s.region[i] != s.region[i + s.width]) {
-                        drawLine(
-                            scheme.onBackground,
-                            Offset(c * stepPx, (r + 1) * stepPx),
-                            Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                            strokeWidth = edge,
-                        )
-                    }
-                }
-                drawRect(
-                    color = scheme.onBackground,
-                    topLeft = Offset.Zero,
-                    size = Size(stepPx * s.width, stepPx * s.height),
-                    style = Stroke(width = edge),
-                )
+                drawWalls(s.width, s.height, stepPx, edge, scheme.onBackground) { s.region[it] }
 
                 // Outlines last, on top of the walls: a glow that a wall half-covers is a glow the
                 // player has to hunt for.

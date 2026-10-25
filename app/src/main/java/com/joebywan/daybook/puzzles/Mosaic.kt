@@ -58,6 +58,7 @@ import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.drawWalls
 
 /** One fill: the cell tapped, and the colour poured into the area it belongs to. */
 data class MosaicMove(val cell: Int, val colour: Int)
@@ -1011,35 +1012,7 @@ object Mosaic : PuzzleType {
                 )
             }
 
-            val edge = stepPx * 0.1f
-            for (cell in PREVIEW_CELLS.indices) {
-                val r = cell / PREVIEW_SIDE
-                val c = cell % PREVIEW_SIDE
-                if (c + 1 < PREVIEW_SIDE && PREVIEW_CELLS[cell] != PREVIEW_CELLS[cell + 1]) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset((c + 1) * stepPx, r * stepPx),
-                        Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                        strokeWidth = edge,
-                    )
-                }
-                if (r + 1 < PREVIEW_SIDE &&
-                    PREVIEW_CELLS[cell] != PREVIEW_CELLS[cell + PREVIEW_SIDE]
-                ) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset(c * stepPx, (r + 1) * stepPx),
-                        Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                        strokeWidth = edge,
-                    )
-                }
-            }
-            drawRect(
-                color = scheme.onBackground,
-                topLeft = Offset.Zero,
-                size = Size(stepPx * PREVIEW_SIDE, stepPx * PREVIEW_SIDE),
-                style = Stroke(width = edge),
-            )
+            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, stepPx, stepPx * 0.1f, scheme.onBackground) { PREVIEW_CELLS[it] }
         }
     }
 
@@ -1151,33 +1124,7 @@ object Mosaic : PuzzleType {
 
                     // Heavy strokes only where the colour changes, so each area reads as one
                     // outlined shape rather than a grid of tiles.
-                    val edge = stepPx * 0.1f
-                    for (cell in s.cells.indices) {
-                        val r = cell / s.width
-                        val c = cell % s.width
-                        if (c + 1 < s.width && s.cells[cell] != s.cells[cell + 1]) {
-                            drawLine(
-                                scheme.onBackground,
-                                Offset((c + 1) * stepPx, r * stepPx),
-                                Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                                strokeWidth = edge,
-                            )
-                        }
-                        if (r + 1 < s.height && s.cells[cell] != s.cells[cell + s.width]) {
-                            drawLine(
-                                scheme.onBackground,
-                                Offset(c * stepPx, (r + 1) * stepPx),
-                                Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                                strokeWidth = edge,
-                            )
-                        }
-                    }
-                    drawRect(
-                        color = scheme.onBackground,
-                        topLeft = Offset.Zero,
-                        size = Size(stepPx * s.width, stepPx * s.height),
-                        style = Stroke(width = edge),
-                    )
+                    drawWalls(s.width, s.height, stepPx, stepPx * 0.1f, scheme.onBackground) { s.cells[it] }
 
                     if (!highlight.isEmpty) {
                         // Everything the hint does not name steps back, so the glow is findable on
