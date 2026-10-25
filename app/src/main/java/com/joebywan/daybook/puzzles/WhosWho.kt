@@ -87,7 +87,7 @@ object WhosWho : PuzzleType {
     override val id = "whoswho"
     override val displayName = "Who's Who"
     override val tagline = "Match everyone to everything from the clues"
-    override val accent = 0xFF65E7E7
+    override val accent = 0xFF4457A2
 
     override val rules = listOf(
         "Each row is a person and each column a category: their house, and one or two more. No two people share anything.",
@@ -284,7 +284,7 @@ object WhosWho : PuzzleType {
 
     private val HEADER = 22.dp
     private val PAD = 50.dp
-    private val MIN_CLUES = 86.dp
+    private val MIN_CLUES = 118.dp
     private val NAME_W = 50.dp
 
     /** The clue list's text size, and the line height the minimum strip is sized for. */
@@ -353,7 +353,7 @@ object WhosWho : PuzzleType {
                 val onClue = { k: Int -> onState(s.strike(k)) }
                 if (wide) {
                     val rowH = ((maxHeight - HEADER - PAD - 12.dp) / s.n).coerceIn(30.dp, 52.dp)
-                    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(Modifier.widthIn(max = 1000.dp).fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Column(Modifier.weight(0.55f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
                             Table(s, grid, rowH, selected, badCell, look, feel, interactive, onCell)
                             Spacer(Modifier.height(12.dp))
@@ -363,7 +363,7 @@ object WhosWho : PuzzleType {
                     }
                 } else {
                     val rowH = ((maxHeight - HEADER - PAD - MIN_CLUES - 12.dp) / s.n).coerceIn(30.dp, 48.dp)
-                    Column(Modifier.fillMaxSize().widthIn(max = 560.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.widthIn(max = 560.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                         Table(s, grid, rowH, selected, badCell, look, feel, interactive, onCell)
                         Clues(s, badClue, look, interactive, onClue, Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp))
                         Pad(s, grid, selected, tick, interactive, look, { tick = it }, onPad)
