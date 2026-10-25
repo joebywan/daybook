@@ -14,6 +14,7 @@ import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Regions
+import com.joebywan.daybook.puzzles.RegionsLogic
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.Shikaku
@@ -41,7 +42,7 @@ class LevelBoardsProvedTest {
         "shikaku" to Shikaku::generateVerified,
         "snap" to Snap::generateVerified,
         "inequality" to Inequality::generateVerified,
-        "regions" to { s, d -> Regions.generateVerified(s, d) },
+        "regions" to { s, d -> RegionsLogic.generateVerified(s, d) },
         "cipher" to Cipher::generateVerified,
         "wordwheel" to WordWheel::generateVerified,
         "tally" to Tally::generateVerified,

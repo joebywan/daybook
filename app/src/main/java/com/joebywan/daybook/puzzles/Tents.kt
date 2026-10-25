@@ -96,11 +96,7 @@ object Tents : PuzzleType {
     )
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: TentsLogic.lastResort(difficulty)
-
-    /** The board when its answer was proved, null otherwise. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): TentsState? =
-        TentsLogic.generateVerified(seed, difficulty)
+        TentsLogic.generateVerified(seed, difficulty) ?: TentsLogic.lastResort(difficulty)
 
     override fun teach(state: PuzzleState): Deduction? = TentsTeacher.deduction(state as TentsState)
 

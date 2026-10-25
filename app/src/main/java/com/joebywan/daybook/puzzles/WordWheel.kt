@@ -103,11 +103,7 @@ object WordWheel : PuzzleType {
     )
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: WordWheelLogic.lastResort(difficulty)
-
-    /** The board when one was laid and proved winnable without luck, null otherwise. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): WordWheelState? =
-        WordWheelLogic.generateVerified(seed, difficulty)
+        WordWheelLogic.generateVerified(seed, difficulty) ?: WordWheelLogic.lastResort(difficulty)
 
     override fun teach(state: PuzzleState): Deduction? = WordWheelTeacher.deduction(state as WordWheelState)
 

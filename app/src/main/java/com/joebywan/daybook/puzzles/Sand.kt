@@ -136,10 +136,7 @@ object Sand : PuzzleType {
     )
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: SandLogic.lastResort(difficulty)
-
-    /** The board when a sorting road was found for it, null otherwise. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): SandState? = SandLogic.generateVerified(seed, difficulty)
+        SandLogic.generateVerified(seed, difficulty) ?: SandLogic.lastResort(difficulty)
 
     override fun teach(state: PuzzleState): Deduction? = SandTeacher.deduction(state as SandState)
 

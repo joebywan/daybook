@@ -18,12 +18,16 @@ import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
+import com.joebywan.daybook.puzzles.RegionsLogic
 import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.Sand
+import com.joebywan.daybook.puzzles.SandLogic
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.WordWheel
+import com.joebywan.daybook.puzzles.WordWheelLogic
 import com.joebywan.daybook.puzzles.Tents
+import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.SnapState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -144,13 +148,13 @@ class FallbackTest {
     @Test
     fun `cipher proves every daily board of a year on every tier`() = assertYearProved(Cipher) { seed, d -> Cipher.generateVerified(seed, d) }
 
-    /** [WordWheel.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
+    /** [WordWheelLogic.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
     @Test
-    fun `wordwheel proves every daily board of a year on every tier`() = assertYearProved(WordWheel) { seed, d -> WordWheel.generateVerified(seed, d) }
+    fun `wordwheel proves every daily board of a year on every tier`() = assertYearProved(WordWheel) { seed, d -> WordWheelLogic.generateVerified(seed, d) }
 
-    /** [Sand.generateVerified] returns a board only when the search found a sorting road and the naive player does not always sort it. */
+    /** [SandLogic.generateVerified] returns a board only when the search found a sorting road and the naive player does not always sort it. */
     @Test
-    fun `sand proves every daily board of a year on every tier`() = assertYearProved(Sand) { seed, d -> Sand.generateVerified(seed, d) }
+    fun `sand proves every daily board of a year on every tier`() = assertYearProved(Sand) { seed, d -> SandLogic.generateVerified(seed, d) }
 
     /**
      * [Pointers.generateVerified] returns a board only when it covered the grid to the tier's density and the greedy
@@ -159,13 +163,13 @@ class FallbackTest {
     @Test
     fun `pointers proves every daily board of a year on every tier`() = assertYearProved(Pointers) { seed, d -> Pointers.generateVerified(seed, d) }
 
-    /** [Regions.generateVerified] returns a board only when logic finished it and a search proved one answer. */
+    /** [RegionsLogic.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test
-    fun `regions proves every daily board of a year on every tier`() = assertYearProved(Regions) { seed, d -> Regions.generateVerified(seed, d) }
+    fun `regions proves every daily board of a year on every tier`() = assertYearProved(Regions) { seed, d -> RegionsLogic.generateVerified(seed, d) }
 
-    /** [Tents.generateVerified] returns a board only when logic finished it and a search proved one answer. */
+    /** [TentsLogic.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test
-    fun `tents proves every daily board of a year on every tier`() = assertYearProved(Tents) { seed, d -> Tents.generateVerified(seed, d) }
+    fun `tents proves every daily board of a year on every tier`() = assertYearProved(Tents) { seed, d -> TentsLogic.generateVerified(seed, d) }
 
     @Test
     fun `lits never falls back to a single region`() {
@@ -199,7 +203,7 @@ class FallbackTest {
     }
 
     /**
-     * [Tally.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the tier's
+     * [TallyLogic.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the tier's
      * deepest step, and the count proved one answer. Also measures the redraws (printed): a draw is redrawn when a
      * line keeps all or none of its numbers, when the ladder does not finish it or needs the wrong depth, or when
      * it has several answers. Expert, which must need a what-if, redraws most.
@@ -209,7 +213,7 @@ class FallbackTest {
         val used = Difficulty.entries.associateWith { mutableListOf<Int>() }
         assertYearProved(Tally, onProved = { seed, d ->
             used.getValue(d) += 1 + (0 until TallyLogic.ATTEMPTS).first { TallyLogic.attempt(seed, d, it) != null }
-        }) { seed, d -> Tally.generateVerified(seed, d) }
+        }) { seed, d -> TallyLogic.generateVerified(seed, d) }
         for ((d, u) in used) {
             println("tally ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${TallyLogic.ATTEMPTS}")
             assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < TallyLogic.ATTEMPTS / 2)
