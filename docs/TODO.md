@@ -187,8 +187,7 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   (Lexicon headline words such as `vomit`: declined by the owner.)
 - [ ] **Lexicon teaching and repeats.** Rotate the opener hint by seed; the fallback says how its guess splits the words left;
   a no-repeat cycle for Daily (supersedes the item above).
-- [ ] **Cipher: cap repeated totals** (some totals recur many times a tier); **Target: count the roads** (Expert needs few
-  shortest answers, not only depth 5).
+- [ ] **Target: count the roads** (Expert needs few shortest answers, not only depth 5).
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
 - [ ] **Levels: a gentle first deck.** Levels 1-5 deal any of 25 (`Levels.STARTER`); deal deck 0 by `GENTLEST` band, with
@@ -245,7 +244,7 @@ below have a famous branded version; use the descriptive name).
 - [ ] **Cipher: other shapes need longer words.** Every tier is 4 + 4 = 5 because the leading carry is the foothold the no-trial ladder needs, and the
   answer lists stop at five letters. A screened six-letter answer list (SCOWL through `tools/words/build.py`, screened by hand as the others were) would
   allow 5 + 5 = 6, which would give Hard and Expert a different look. Measured without it: 5 + 5 = 5 gave one ladder board per 30 pairs, three addends none.
-- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 91 / 80 / 75% of steps (Standard / Hard /
+- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 89 / 80 / 75% of steps (Standard / Hard /
   Expert); most all-columns steps and nearly every two-column what-if still say "only X = d" in summary. Those need two columns combined as algebra
   ("U + O + carry is 11, and O is 1 + U + carry, so 2U ...") or a case split on a carry whose branches stall without a second split; tried, the second
   split ran every explanation past 260 characters. A hint in two parts (the carry first, then the letter) may be the shape that fits. *M–L.*

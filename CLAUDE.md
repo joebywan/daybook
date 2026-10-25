@@ -253,7 +253,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
   Measured: about a quarter of four-letter addend pairs have a five-letter total with one answer that the ladder finishes, out of 1,801 tried, ~45 ms a pair on
   a desktop JVM: far too slow to search on a phone. Two five-letter addends (no leading carry, no 6-letter list) gave one ladder board per 30 pairs, three
   addends none, though both have many one-answer sums: they need trial, not columns. So **every tier is 4 + 4 = 5**, and the tier is the hardest technique the
-  ladder needs (`CipherSumsBuildTest.tierOf`): Standard columns and pairs only, Hard all columns together, Expert a two-column what-if. 1,200 sums a tier,
+  ladder needs (`CipherSumsBuildTest.tierOf`): Standard columns and pairs only, Hard all columns together, Expert a two-column what-if. 1,200 sums a tier, no total more than three times in one (`MAX_PER_TOTAL`; uncapped, `cacao` made 42 of Standard; now 636 / 694 / 727 different totals),
   sorted; the list's order is a contract (`CipherWebParityTest` goes red on purpose when it moves). Rebuilding after a ladder change re-rates every sum.
 - **The device proves each board again:** `generateVerified` picks an entry with `Rng(seed + attempt)`, requires the ladder to finish it and
   `CipherLogic.prove` (column by column, no budget, sealed `Verdict` where only `ExactlyOne` carries an answer) to find one answer, which becomes the stored
@@ -272,7 +272,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
   which L has"), then the column as a sum with every other digit ruled out by name ("at most 1 + 9 + 1 = 11, so I is 0 or 1; T has 1"), else each
   other digit followed until it breaks. `deduce` picks, of the placements the first productive technique allows, the shortest it can show within
   `MAX_EXPLANATION` (260, more than other teachers: the popover scrolls beyond its room); the walk keeps `findStep`'s first, so tiers are unchanged. Shown
-  on 91 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
+  on 89 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
 - State: `words`, `solution`, `digits` (a digit per letter in alphabetical order, -1 for none) and `selected` (in state, as Inequality's; `withoutSelection`).
   The letter key row under the sum shows each letter's digit and selects it; keyboard: a letter key selects it, a digit sets it, Backspace clears, arrows walk the letters.
 ## Pointers (clear the arrows)
