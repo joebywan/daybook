@@ -294,7 +294,8 @@ object Nonogram : PuzzleType {
 
     /**
      * The squares, grid lines and hint dimming of [s], with the grid's top-left at the origin and
-     * [u] pixels a square. The play board draws this inside its zoom layer.
+     * [u] pixels a square. The play board draws this inside its zoom layer, [zoom] times larger, so
+     * the lines are drawn that much thinner to keep their width on screen.
      */
     private fun DrawScope.drawGrid(
         s: NonogramState,
@@ -304,6 +305,7 @@ object Nonogram : PuzzleType {
         overlay: HintGlow = HintGlow(),
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
+        zoom: Float = 1f,
     ) {
         val highlight = overlay.highlight
         val n = s.width * s.height
@@ -332,7 +334,7 @@ object Nonogram : PuzzleType {
         }
 
         // Grid lines, heavier every five squares so a 15-wide board can be counted.
-        val thin = maxOf(u * 0.03f, 1f)
+        val thin = maxOf(u * 0.03f, 1f) / zoom
         fun gridLine(i: Int, from: Offset, to: Offset) {
             val heavy = i % 5 == 0
             drawLine(if (heavy) scheme.onSurfaceVariant.copy(alpha = 0.7f) else scheme.outline, from, to, if (heavy) thin * 2f else thin)
@@ -490,7 +492,7 @@ object Nonogram : PuzzleType {
                                     translationY = view.value.offset.y
                                 }
                                 .penGrid(s, interactive, pen, g.u, sweep, cursor, scheme.primary, onState, sweeps = !view.value.zoomed)
-                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, Color(accent)) },
+                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, Color(accent), view.value.scale) },
                         )
                     }
                     if (view.value.zoomed) {

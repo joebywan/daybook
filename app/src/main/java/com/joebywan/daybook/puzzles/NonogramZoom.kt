@@ -12,6 +12,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -142,10 +143,13 @@ internal fun Modifier.gridZoom(view: MutableState<GridView>, gridAt: Offset, gri
                     val event = awaitPointerEvent(PointerEventPass.Initial)
                     if (event.changes.count { it.pressed } >= 2) pinching = true
                     if (pinching) {
-                        val focus = event.calculateCentroid() - gridAt
-                        view.value = view.value
-                            .zoomedBy(event.calculateZoom(), focus, grid)
-                            .pannedBy(event.calculatePan(), grid)
+                        // The last lift has no fingers down, so no centre: nothing to move.
+                        val centre = event.calculateCentroid()
+                        if (centre.isSpecified) {
+                            view.value = view.value
+                                .zoomedBy(event.calculateZoom(), centre - gridAt, grid)
+                                .pannedBy(event.calculatePan(), grid)
+                        }
                         event.changes.forEach { it.consume() }
                     } else if (view.value.zoomed) {
                         val change = event.changes.first()

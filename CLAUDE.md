@@ -152,6 +152,12 @@ into every seed: never rename it.
 - **The pen (Fill/Cross) is `rememberSaveable` in the board, not state.** A sweep is one state: it locks to the row or column
   of the larger move, a pen only writes over untouched squares, and an eraser only takes out the mark it started on.
   `onDragStart` uses the overload that receives the *down*, since the web's touch slop is wider than a 15x15 square.
+- **Hard and Expert zoom** (`NonogramZoom.kt`, the owner's design): pinch zooms (to 2.5x); zoomed in, one finger pans and a
+  tap still marks, so sweeping is for the whole board; a corner button (in the empty corner above the row clues) fits the
+  board again. Clues stay pinned to the edges and keep their size. The view (`GridView`) is `remember`, never state: a
+  hint glides to what it names, a solve to the whole board. Read on the Initial pass, so a second finger cancels a sweep
+  already begun (nothing is emitted before lift). Ctrl+wheel zooms on the web. Expert squares unzoomed were 16-19dp; a
+  12x18 board was rendered and dropped (bigger on tall phones, smaller on short ones and on its side).
 - **Colour is derived, never stored.** Filled squares blend diagonally between a pair from `PALETTES`, picked by hashing the
   board's picture, so each daily and each random board has its own and nothing is saved. A line whose runs match its clue turns
   green; a line no legal layout of its clue can hold (`lineImpossible`: too many, a run too long, no gap; crosses ignored, the
