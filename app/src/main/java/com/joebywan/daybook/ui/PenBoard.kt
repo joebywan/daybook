@@ -43,9 +43,9 @@ import com.joebywan.daybook.core.sweptCells
 /** A sweep in progress: where it began, where the finger is now, what it lays down and what was under its start. */
 class Sweep(val start: Int, val at: Int, val mark: Char, val startedOn: Char)
 
-/** This board as it would be if [sweep] (if any) lifted now. */
-fun <S : PenMarks<S>> S.swept(sweep: Sweep?): S =
-    sweep?.let { w -> sweep(sweptCells(w.start, w.at, penWidth), w.mark, w.startedOn) } ?: this
+/** This board as it would be if [current] (if any) lifted now. */
+fun <S : PenMarks<S>> S.swept(current: Sweep?): S =
+    current?.let { w -> sweep(sweptCells(w.start, w.at, penWidth), w.mark, w.startedOn) } ?: this
 
 /** Keys for the board: arrows move [cursor], [pens] maps letters to marks; one state per key. */
 @Composable

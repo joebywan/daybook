@@ -64,6 +64,7 @@ import androidx.compose.ui.geometry.Rect
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.rememberSettledFlags
+import com.joebywan.daybook.ui.HintGlow
 
 /** Each board draws its filled squares as a diagonal blend of two colours; the pair is the board's own. */
 private val PALETTES = listOf(
@@ -273,13 +274,6 @@ object Nonogram : PuzzleType {
         return clues.map { line -> (if (line.isEmpty()) listOf(0) else line).map { measurer.measure(it.toString(), style) } }
     }
 
-    /** What a [Board] draws besides the board's own marks; all of it optional. */
-    private class Overlay(
-        val highlight: BoardHighlight = BoardHighlight.None,
-        val glow: Color = Color.Unspecified,
-        val pulse: Float = 1f,
-    )
-
     /** [text], [done] and [bad] are per line, rows then columns. */
     private fun DrawScope.drawBoard(
         s: NonogramState,
@@ -289,7 +283,7 @@ object Nonogram : PuzzleType {
         scheme: androidx.compose.material3.ColorScheme,
         palette: Pair<Color, Color>,
         bad: BooleanArray = BooleanArray(s.height + s.width),
-        overlay: Overlay = Overlay(),
+        overlay: HintGlow = HintGlow(),
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
     ) {
@@ -431,7 +425,7 @@ object Nonogram : PuzzleType {
 
                 Box(g.box) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(shown, g, text, linesDone(shown, clues), scheme, palette, bad, Overlay(highlight, glow, pulse.value), feel, Color(accent))
+                        drawBoard(shown, g, text, linesDone(shown, clues), scheme, palette, bad, HintGlow(highlight, glow, pulse.value), feel, Color(accent))
                     }
                     // Taps and sweeps are read over the grid alone, in its own coordinates; the
                     // clues beside it are not part of the play area.

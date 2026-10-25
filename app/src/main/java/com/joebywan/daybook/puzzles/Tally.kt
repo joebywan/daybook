@@ -38,7 +38,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
@@ -64,6 +63,7 @@ import androidx.compose.ui.geometry.Rect
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.rememberSettledFlags
+import com.joebywan.daybook.ui.HintGlow
 
 /** X or R removes, K or O keeps; the other keys are every pen board's ([penKeyAction]). */
 private val TALLY_KEYS = mapOf(Key.X to TallyLogic.REMOVED, Key.R to TallyLogic.REMOVED, Key.K to TallyLogic.KEPT, Key.O to TallyLogic.KEPT)
@@ -247,13 +247,6 @@ object Tally : PuzzleType {
         )
     }
 
-    /** What a [Board] draws besides the board's own marks; all of it optional. */
-    private class Overlay(
-        val highlight: BoardHighlight = BoardHighlight.None,
-        val glow: Color = Color.Unspecified,
-        val pulse: Float = 1f,
-    )
-
     private fun DrawScope.drawBoard(
         s: TallyState,
         u: Float,
@@ -261,7 +254,7 @@ object Tally : PuzzleType {
         done: BooleanArray,
         bad: BooleanArray,
         scheme: ColorScheme,
-        overlay: Overlay = Overlay(),
+        overlay: HintGlow = HintGlow(),
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
     ) {
@@ -408,14 +401,14 @@ object Tally : PuzzleType {
                 // A line must stay impossible for a second, and be so now, before it turns red.
                 val bad = rememberSettledFlags(linesImpossible(shown, targets), s.digits, shown.marks)
 
-                Box(Modifier.size((unitsAcross(n) * unitPx).asDp(density), (unitsDown(n) * unitPx).asDp(density))) {
+                Box(Modifier.size(unit * unitsAcross(n), unit * unitsDown(n))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(shown, unitPx, texts, done, bad, scheme, Overlay(highlight, glow, pulse.value), feel, Color(accent))
+                        drawBoard(shown, unitPx, texts, done, bad, scheme, HintGlow(highlight, glow, pulse.value), feel, Color(accent))
                     }
                     // Taps and sweeps are read over the grid alone; the targets are not part of the play area.
                     Box(
                         Modifier
-                            .size((n * unitPx).asDp(density), (n * unitPx).asDp(density))
+                            .size(unit * n)
                             .penGrid(s, interactive, pen, unitPx, sweep, cursor, scheme.primary, onState),
                     )
                 }
@@ -431,8 +424,6 @@ object Tally : PuzzleType {
             }
         }
     }
-
-    private fun Float.asDp(density: Density): Dp = with(density) { this@asDp.toDp() }
 
     // ---- the home motif -------------------------------------------------------------------------
 
@@ -457,7 +448,7 @@ object Tally : PuzzleType {
             val unitPx = with(density) { unit.toPx() }
             val texts = remember(unitPx) { measure(measurer, motif, unitPx, density) }
             val done = remember { linesDone(motif, targets) }
-            Canvas(Modifier.size((unitsAcross(motif.size) * unitPx).asDp(density), (unitsDown(motif.size) * unitPx).asDp(density))) {
+            Canvas(Modifier.size(unit * unitsAcross(motif.size), unit * unitsDown(motif.size))) {
                 drawBoard(motif, unitPx, texts, done, BooleanArray(2 * motif.size), scheme)
             }
         }
