@@ -50,10 +50,7 @@ import com.joebywan.daybook.ui.stats.MonthGrid
 import com.joebywan.daybook.ui.stats.firstOfMonth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.minus
-import kotlinx.datetime.plus
 
 /** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
 private const val DAY_DATE = "EEE d MMM yyyy"
@@ -143,8 +140,7 @@ fun ArchiveScreen(
                         month,
                         back = month > ArchiveCalendar.firstMonth(),
                         forward = month < lastMonth,
-                        onBack = { shown = month.minus(DatePeriod(months = 1)).toEpochDays() },
-                        onForward = { shown = month.plus(DatePeriod(months = 1)).toEpochDays() },
+                        onMonth = { shown = it.toEpochDays() },
                     )
                     MonthGrid(month, cell, weeks = 6) { day, m ->
                         if (day < DailySeed.EPOCH) {
