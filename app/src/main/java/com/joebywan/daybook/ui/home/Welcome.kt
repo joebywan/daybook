@@ -68,7 +68,8 @@ internal fun Welcome(onStart: () -> Unit) {
                 )
                 Pointer(
                     { Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFE8A317), modifier = icon) },
-                    "Today's pick wears a gold ring and says “Try me!” Every puzzle has a one-minute walkthrough, " +
+                    "Today's three, over the grid, are a quick one, a longer one and a word or number one, the same for " +
+                        "everyone. Every puzzle has a one-minute walkthrough, " +
                         "under “How to play”.",
                 )
                 Pointer(

@@ -30,10 +30,4 @@ class PuzzleNotesTest {
         }
         assertNull(puzzleNote("no-such-puzzle", 1))
     }
-
-    @Test fun featuredIsDeterministicAndCoversEveryPuzzle() {
-        assertEquals(PuzzleRegistry.featured(20000).id, PuzzleRegistry.featured(20000).id)
-        val seen = (20000L until 20000L + PuzzleRegistry.all.size).map { PuzzleRegistry.featured(it).id }.toSet()
-        assertEquals(PuzzleRegistry.all.map { it.id }.toSet(), seen)
-    }
 }
