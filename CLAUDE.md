@@ -198,6 +198,20 @@ White (or Black) to play and mate in 2 / 3 / 4 by tier. Spec and decisions: `doc
 - Expert (mate in 4) hint search is measured on an emulator and the web (p95 94 ms, max 234 ms; `docs/TEACHING.md`); it runs off the main thread.
   `ChessSearchBenchTest` keeps the old search as an oracle: any search change must still agree with it.
 
+## Kings
+
+One king per row, column and colour region, no two touching. `puzzles/Kings.kt` (state, rules, carve, board, walkthrough),
+`KingsTeacher.kt`, `KingsKeys.kt`. `id = "kings"` is hashed into every seed: never rename it.
+
+- **Tiers: 7x7 / 8x8 / 9x9, and the depth the hints need from blank** (`Kings.fitsTier` on `KingsTeacher.depth`): Standard nothing
+  past would-empty; Hard a confinement of two colours in two lines, nothing wider or a what-if; Expert a confinement of three or
+  more, or a what-if. What-if alone for Expert was costed and dropped (2% of 9x9 draws, 0.7 s worst on the JVM). Draws a board
+  over a year: mean 2.4 / 5.7 / 14.6, most 13 / 41 / 94 of `ATTEMPTS` = 400; JVM p50 / p95 / max on Expert about 30 / 120 / 300 ms;
+  browser Expert 28 / 102 / 209 ms in Chromium, 39 / 142 / 290 in WebKit (Hard 70 / 101 ms worst). The gate also means the ladder finishes every shipped board, so hints never fall back.
+- **A board ships only if the carve proves one answer** (`countSolutions`, squares handed out one at a time, monotone) **and the
+  gate holds**. `lastResort` is the first seed from 1 whose first draw passes, so it is proved too; a year per tier never reaches it
+  (`FallbackTest`). Changing the ladder changes which draws pass (`WebParityTest` goes red on purpose).
+
 ## Tents
 
 Tents and trees: a tent beside every tree (orthogonal, one each), no two tents touching even diagonally, row and column counts given.
@@ -304,6 +318,12 @@ after a game show.
   Expert 1 large, exactly 5 (all six numbers). Targets are 100-999 and never a starting tile. Measured over a year of daily seeds per tier
   (`TargetRulesTest`, `build/reports/target-par-distribution.txt`): shortest-answer lengths 3/4 = 164/201 (mean 3.55), 4/5 = 285/80 (4.22), 5 = 365 (5.00); no fallback on any day;
   12-16 ms a board on a desktop JVM. Hard/Expert never ship a target reachable in one or two steps.
+- **Expert also caps the roads: at most 5 shortest answers** (`TargetLogic.Roads`, `Spec.maxRoads`). A road is the tree of an answer's operations: the order of
+  independent steps, of a step's two tiles, and which of two equal tiles was used do not count; `(3+4)+5` and `3+(4+5)` are two. Counted by a memoised count of
+  trees per group of tiles (a shortest answer of p steps uses exactly p + 1 tiles, every step feeding the target). Uncapped, Expert targets had a median of 13 roads
+  (p90 41, max 157); now 1/3/3/4/5 (min/p25/median/p75/max). `generateVerified` tries the tier's candidates in a shuffled order for one with few enough, else draws
+  new numbers; no fallback in a year. Expert generation on the JVM: median 5 / p95 14 / max 53 ms; Chromium 19 / 54 / 102 ms, WebKit 27 / 68 / 110 (Hard, uncapped, 14 / 30 / 117 and 19 / 42 / 64). Hard is not capped (12 roads turned 78% of its
+  targets four steps away into 87%: shorter, not harder). `TargetOracle.roads` writes every answer out as text, both operand orders tried, and agrees on a sample.
 - **`TargetLogic.table` is the proof**: depth-first over every order of every operation, no budget (so nothing truncated can pass for a proof), minimum depth per value.
   Equal tiles are tried once and `x1`, `/1` are skipped (they change nothing). `generateVerified` draws the numbers, takes the table, picks a target whose
   depth fits the tier (candidates walked in ascending order; no hash order reaches the `Rng`), retries up to 24 times; `lastResort` is a fixed board per tier, itself checked.

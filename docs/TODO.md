@@ -164,7 +164,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 
 - [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
-  - Kings: Standard no confined or what-if; Hard needs confined; Expert needs what-if (5% of draws: cost it first).
   - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
     or what-if, no fallback.
   - Tents: Hard needs one-spot; Expert needs shared or served (18% of draws).
@@ -175,7 +174,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   same `countTilings` proof.
 - [ ] **Pipes: a branchier tree.** `spanningTree` is a depth-first maze (long corridors); a random-edge spanning tree gives
   more junctions. (Counter-clockwise rotation and a lock mark: declined by the owner.)
-- [ ] **Target: count the roads** (Expert needs few shortest answers, not only depth 5).
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
 - [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).

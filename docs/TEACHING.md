@@ -100,7 +100,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | puzzle | teaches | fallback |
 |---|---|---|
 | Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | none on a generated board: the generator digs only while the tier's ladder finishes it (a year of daily boards per tier, and 300 a tier in `SudokuTeachingTest`; before that gate 0.5 / 6 / 34% of boards). Per board: naked single 0 / 1.7 / 1.1 steps, locked candidates 0 / 0 / 0.7, pairs 0 / 0 / 0.3, what-if 0 / 0 / 0.5 |
-| Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
+| Kings | last square, locked to a line, would empty, N confined, what-if | none: the generator keeps a board only if the ladder finishes it from blank and the tier's gate holds (a year per tier, hints alone finish all) |
 | Mambo | pair, sandwich, link, quota, almost, what-if | none: the generator's ladder is the teacher's, and each tier is gated on the rung it needs (a year per tier and 500 boards a tier, hints alone finish all; almost-met 0 / 2.9 / 5.7 and what-if 0 / 0 / 4.1 steps a board; the fallback exists for boards not made here) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
 | Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
@@ -155,9 +155,9 @@ board. No board changed (Mambo's rows are after its gate, below). Deepest techni
 | Sudoku (gated) | Standard | hidden-single-box 26, hidden-single-line 74 | 0 / 0 | 53 |
 |  | Hard | naked-single 100 | 0 / 0 | 53 |
 |  | Expert | locked-candidates 38, naked-pair 13, hidden-pair 5, what-if 44 | 0 / 0 | 53 |
-| Kings | Standard | last-square 1, locked-to-a-line 3, would-empty 58, confined 33, what-if 6 | 0.3 / 0.02 | 15 |
-|  | Hard | locked-to-a-line 2, would-empty 52, confined 41, what-if 6 | 0 / 0 | 16 |
-|  | Expert | last-square <1, locked-to-a-line 1, would-empty 39, confined 55, what-if 5 | 0.3 / 0.01 | 18 |
+| Kings | Standard | last-square <1, locked-to-a-line 4, would-empty 95 (gated: was 58, with confined 33, what-if 6) | 0 / 0 | 13 |
+|  | Hard | confined 100, every one two colours in two lines (gated: was would-empty 52, confined 41, what-if 6) | 0 / 0 | 18 |
+|  | Expert | confined 68 (all three or more colours), what-if 32 (gated: was would-empty 39, confined 55, what-if 5) | 0 / 0 | 20 |
 | Mambo | Standard | quota-met 100 | 0 / 0 | 30 |
 |  | Hard | quota-almost-met 100 | 0 / 0 | 56 |
 |  | Expert | what-if 100 | 0 / 0 | 87 |
@@ -195,9 +195,12 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   `Sudoku.generateVerified` digs symmetric pairs only while the tier's ladder finishes the board (singles in a unit / up to
   naked single / everything but the fallback) and redraws a board whose walk did not need the tier's technique (Hard a naked
   single, Expert locked candidates or deeper); the table above is the result, no tier overlaps another and nothing falls back.
-- **Kings: the tiers are the same depth.** would-empty / confined / what-if are 58/33/6, 52/41/6, 39/55/5% across the tiers;
-  only size differs. Standard: no confined or what-if (62% pass); Hard: needs confined; Expert: needs what-if (5% of draws,
-  so measure the cost of ~20 draws a board first). The ladder is long enough.
+- **Kings: gated (built 2026-10).** Before, would-empty / confined / what-if were 58/33/6, 52/41/6, 39/55/5% across the
+  tiers and only size differed. Now (`Kings.fitsTier`, on `KingsTeacher.depth`, the hint walk from blank): Standard needs
+  nothing past would-empty; Hard needs a confinement of two colours and nothing wider or a what-if; Expert needs a
+  confinement of three or more or a what-if. Expert on what-if alone was costed and dropped: 2% of 9x9 draws pass (a
+  9x9 carve fails about two times in three), a mean of 51 draws a board, 91 / 341 / 733 ms p50 / p95 / max on the JVM.
+  With the wide confinement too, 7% pass: draws a board mean 2.4 / 5.7 / 14.6, most 13 / 41 / 94 of 400 (`KingsRulesTest`). Expert in the browser, p50 / p95 / max: 28 / 102 / 209 ms in Chromium, 39 / 142 / 290 in WebKit.
 - **Mambo: gated (built).** It was one depth everywhere (quota-met 100 on every tier: the carver kept only boards the first
   four finish). The carver now takes clues back while the ladder up to the tier's rung still finishes the board, and the
   tier is redrawn unless the walk needs that rung: Standard the first four (its boards did not move), Hard almost-met and no
