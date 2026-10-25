@@ -229,12 +229,13 @@ object Sand : PuzzleType {
         val layerH = w * LAYER
         val bodyH = height * layerH + w * NECK
         val bottom = top + bodyH
-        val glass = RoundRect(
-            left, top, left + w, bottom,
-            topLeftCornerRadius = CornerRadius(w * 0.12f), topRightCornerRadius = CornerRadius(w * 0.12f),
-            bottomRightCornerRadius = CornerRadius(w * 0.5f), bottomLeftCornerRadius = CornerRadius(w * 0.5f),
+        // The glass, grown by [out] on every side (the glow rides outside it).
+        fun glass(out: Float) = RoundRect(
+            left - out, top - out, left + w + out, bottom + out,
+            topLeftCornerRadius = CornerRadius(w * 0.12f + out), topRightCornerRadius = CornerRadius(w * 0.12f + out),
+            bottomRightCornerRadius = CornerRadius(w * 0.5f + out), bottomLeftCornerRadius = CornerRadius(w * 0.5f + out),
         )
-        val path = Path().apply { addRoundRect(glass) }
+        val path = Path().apply { addRoundRect(glass(0f)) }
         drawPath(path, look.inside)
         val inset = w * 0.08f
         val floor = bottom - inset * 0.6f
@@ -270,21 +271,10 @@ object Sand : PuzzleType {
         }
         look.glow?.let { glow ->
             val out = look.glowWidth
-            drawPath(
-                Path().apply {
-                    addRoundRect(
-                        RoundRect(
-                            left - out, top - out, left + w + out, bottom + out,
-                            topLeftCornerRadius = CornerRadius(w * 0.12f + out), topRightCornerRadius = CornerRadius(w * 0.12f + out),
-                            bottomRightCornerRadius = CornerRadius(w * 0.5f + out), bottomLeftCornerRadius = CornerRadius(w * 0.5f + out),
-                        ),
-                    )
-                },
-                glow, style = Stroke(look.glowWidth),
-            )
+            drawPath(Path().apply { addRoundRect(glass(out)) }, glow, style = Stroke(look.glowWidth))
         }
         drawPath(path, look.outline, style = Stroke(look.outlineWidth))
-        if (t.size == height && t.all { it == t[0] }) {
+        if (SandLogic.finished(t, height)) {
             // The cap on a finished tube.
             val capH = w * 0.2f
             drawRoundRect(
@@ -372,7 +362,7 @@ object Sand : PuzzleType {
         val still = LocalReducedMotion.current
         // A tube finished by the rules (full, one colour) is ringed in the accent once. No settle: the pour is its own landing.
         val units = remember(s.tubes.size) { List(s.tubes.size) { intArrayOf(it) } }
-        val feel = rememberMoveFeel(s.tubes, units) { s.tubes[it].size == s.height && s.tubes[it].distinct().size == 1 }
+        val feel = rememberMoveFeel(s.tubes, units) { SandLogic.finished(s.tubes[it], s.height) }
 
         fun go(step: SandStep) {
             lifted = step.lifted
