@@ -87,7 +87,7 @@ internal object KingsTeacher {
         val names: List<String> = Kings.regionNames(n, region),
     ) {
         private val ruledOut = BooleanArray(n * n).also { out ->
-            for (k in kings) for (c in attacks(n, region, k)) out[c] = true
+            for (k in kings) for (c in Kings.attacks(n, region, k)) out[c] = true
         }
 
         /** Regions first: "purple" is the first thing a player reads a Kings board by. */
@@ -108,18 +108,6 @@ internal object KingsTeacher {
         fun withKing(cell: Int) = Sight(n, region, kings + cell, blocked, names)
 
         fun unsatisfied(kind: Kind) = houses.filter { it.kind == kind && !satisfied(it) }
-    }
-
-    /** Every square a king on [cell] rules out, itself included. Mirrors [KingsState.eliminatedBy]. */
-    private fun attacks(n: Int, region: List<Int>, cell: Int): List<Int> {
-        val r = cell / n
-        val c = cell % n
-        return region.indices.filter { i ->
-            val ri = i / n
-            val ci = i % n
-            ri == r || ci == c || region[i] == region[cell] ||
-                (kotlin.math.abs(ri - r) <= 1 && kotlin.math.abs(ci - c) <= 1)
-        }
     }
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ----------------------
@@ -147,14 +135,7 @@ internal object KingsTeacher {
         val blocked = BooleanArray(n * n) { s.marks[it] == Mark.BLOCKED && it !in s.solution }
 
         kings.firstOrNull { it !in s.solution }?.let { wrong ->
-            return Step(
-                technique = MISTAKE,
-                clears = listOf(wrong),
-                focus = setOf(wrong),
-                cited = emptySet(),
-                nudge = "Check this king.",
-                explanation = "",
-            ).let { base -> explainWrongKing(n, s.region, kings, correct, blocked, wrong, base) }
+            return explainWrongKing(n, s.region, kings, correct, blocked, wrong)
         }
 
         s.marks.indices.firstOrNull { s.marks[it] == Mark.BLOCKED && it in s.solution }?.let { cross ->
@@ -186,11 +167,10 @@ internal object KingsTeacher {
         correct: List<Int>,
         blocked: BooleanArray,
         wrong: Int,
-        base: Step,
     ): Step {
         fun step(explanation: String, cited: Set<Int>) = Step(
-            technique = base.technique, clears = base.clears, focus = base.focus,
-            cited = cited, nudge = base.nudge, explanation = explanation,
+            technique = MISTAKE, clears = listOf(wrong), focus = setOf(wrong),
+            cited = cited, nudge = "Check this king.", explanation = explanation,
         )
         val wr = wrong / n
         val wc = wrong % n
@@ -384,7 +364,7 @@ internal object KingsTeacher {
             val open = s.openIn(h)
             if (open.size >= bestSize) continue
             val attackers = s.region.indices.filter { x ->
-                s.isOpen(x) && x !in h.cells && attacks(s.n, s.region, x).containsAll(open)
+                s.isOpen(x) && x !in h.cells && Kings.attacks(s.n, s.region, x).containsAll(open)
             }
             if (attackers.isEmpty()) continue
             best = h to attackers
