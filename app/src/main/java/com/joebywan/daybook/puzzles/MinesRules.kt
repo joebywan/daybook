@@ -96,7 +96,7 @@ internal object MinesLogic {
     /**
      * [width] x [height] squares, [mines] of them mines, and the deepest step of the ladder ([nextFact]'s levels: 1 the
      * single numbers, 2 subset and pair, 3 the count and the what-if) a board must need: a draw needing more or less is
-     * redrawn.
+     * redrawn. At level 3 the walk must also use [MinesTeacher.EDGE] or [MinesTeacher.WHAT_IF] ([accepts]).
      */
     class Spec(val width: Int, val height: Int, val mines: Int, val needs: Int)
 
@@ -239,7 +239,7 @@ internal object MinesLogic {
             }
             if (sum == left) {
                 val rest = hidden.filter { !used[it] }
-                if (rest.isNotEmpty()) return Fact(MinesTeacher.COUNT, 3, rest, emptyList(), chosen.sorted(), left = left)
+                if (rest.isNotEmpty()) return Fact(MinesTeacher.EDGE, 3, rest, emptyList(), chosen.sorted(), left = left)
             }
         }
 
@@ -337,7 +337,11 @@ internal object MinesLogic {
     fun accepts(s: MinesState, spec: Spec): Boolean {
         val safe = s.mines.count { it == '0' }
         if (s.marks.count { it == OPEN } * 1000 > MAX_OPENING * safe) return false
-        return walk(s.width, s.height, s.mines, s.opening)?.depth == spec.needs
+        val walk = walk(s.width, s.height, s.mines, s.opening) ?: return false
+        if (walk.depth != spec.needs) return false
+        // The count alone at the very end (every mine found, a pocket no number touches left) is too slight to make an
+        // Expert board: it must need the count against the numbers or a what-if.
+        return spec.needs < 3 || MinesTeacher.EDGE in walk.used || MinesTeacher.WHAT_IF in walk.used
     }
 
     /** The opening square, then the mines: a shuffle of the squares outside the opening's 3x3, the first [Spec.mines]. */

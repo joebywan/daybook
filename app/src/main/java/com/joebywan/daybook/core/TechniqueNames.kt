@@ -175,6 +175,7 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "subset" to "one number's squares inside another's",
         "pair" to "two numbers that share squares",
         "count" to "counting the mines left",
+        "count-edge" to "the numbers needing every mine left",
         "what-if" to "a what-if",
     ),
     "dominoes" to linkedMapOf(

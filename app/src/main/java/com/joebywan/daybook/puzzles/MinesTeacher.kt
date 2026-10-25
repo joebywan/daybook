@@ -23,14 +23,15 @@ internal object MinesTeacher {
     const val SUBSET = "subset"
     const val PAIR = "pair"
     const val COUNT = "count"
+    const val EDGE = "count-edge"
     const val WHAT_IF = "what-if"
     const val FALLBACK = "fallback"
     const val MISTAKE = "mistake"
 
-    val TECHNIQUES = listOf(ALL_FOUND, ALL_MINES, SUBSET, PAIR, COUNT, WHAT_IF, FALLBACK)
+    val TECHNIQUES = listOf(ALL_FOUND, ALL_MINES, SUBSET, PAIR, COUNT, EDGE, WHAT_IF, FALLBACK)
 
     const val MAX_NUDGE = 70
-    const val MAX_EXPLANATION = 200
+    const val MAX_EXPLANATION = 230
 
     class Step(
         val technique: String,
@@ -118,6 +119,20 @@ internal object MinesTeacher {
 
     private fun plural(k: Int, word: String) = if (k == 1) "1 $word" else "$k ${word}s"
 
+    private fun others(k: Int) = if (k == 1) "other square" else "other $k squares"
+
+    /** Where square [b] lies from [a], on a board [w] wide: "above", "to the right", "up and to the left"... */
+    private fun where(w: Int, a: Int, b: Int): String {
+        val dr = b / w - a / w
+        val dc = b % w - a % w
+        val side = if (dc < 0) "to the left" else "to the right"
+        return when {
+            dc == 0 -> if (dr < 0) "above" else "below"
+            dr == 0 -> side
+            else -> "${if (dr < 0) "up" else "down"} and $side"
+        }
+    }
+
     /**
      * The first step the ladder gives that the board does not already show, or null when it has no more. [num] holds
      * each revealed square's number (-1 hidden), [hit] the mines revealed, [flags] the player's flags, [total] the mines.
@@ -147,7 +162,7 @@ internal object MinesTeacher {
             ALL_FOUND -> {
                 val i = f.cited[0]
                 val text = if (num[i] == 0) "This square has no mines around it, so every hidden square beside it is safe. $move"
-                else "This ${num[i]} already touches ${plural(num[i], "mine")} found, so every other hidden square around it is safe. $move"
+                else "This ${num[i]} already touches ${if (num[i] == 1) "its mine" else "its ${num[i]} mines"}, so every other hidden square around it is safe. $move"
                 Step(ALL_FOUND, safe, mines, cited, cited, "Look at this ${num[i]}.", text)
             }
             ALL_MINES -> {
@@ -161,28 +176,40 @@ internal object MinesTeacher {
                 val (a, b) = f.cited
                 val diff = need(b) - need(a)
                 val k = targets.size
-                val text = "The ${num[a]}'s hidden squares all touch the ${num[b]} too. The ${num[b]} needs ${need(b)} more, the ${num[a]} ${need(a)}, so the ${num[b]}'s other ${plural(k, "square")} hold ${diff}: ${if (diff == 0) "safe" else if (k == 1) "a mine" else "all mines"}. $move"
-                Step(SUBSET, safe, mines, cited, cited, "Compare these two numbers.", text)
+                val what = when {
+                    diff == 0 -> if (k == 1) "it is safe" else "they are safe"
+                    k == 1 -> "it is a mine"
+                    else -> "they are all mines"
+                }
+                val text = "This ${num[a]} needs ${need(a)} more ${if (need(a) == 1) "mine" else "mines"}, on squares that all touch the ${num[b]} ${where(w, a, b)}, " +
+                    "which needs ${need(b)}. So the ${num[b]}'s ${others(k)} ${if (k == 1) "holds" else "hold"} $diff: $what. $move"
+                Step(SUBSET, safe, mines, setOf(a), cited, "Compare this ${num[a]} with the ${num[b]} ${where(w, a, b)}.", text)
             }
             PAIR -> {
                 val (a, b) = f.cited
-                val text = "The ${num[b]} needs ${need(b)} more, and at most ${need(a)} can be on squares it shares with the ${num[a]}, so its other ${plural(mines.size, "square")} ${if (mines.size == 1) "is a mine" else "are mines"}. The ${num[a]} then has all its mines: its own other squares are safe."
-                Step(PAIR, safe, mines, cited, cited, "Compare these two numbers.", text)
+                val k = mines.size
+                val text = "The ${num[b]} ${where(w, a, b)} needs ${need(b)} more, and this ${num[a]} lets at most ${need(a)} sit on squares they share. " +
+                    "So the ${num[b]}'s ${others(k)} ${if (k == 1) "is a mine" else "are mines"}, and this ${num[a]}'s own other squares are safe."
+                Step(PAIR, safe, mines, setOf(a), cited, "Compare this ${num[a]} with the ${num[b]} ${where(w, a, b)}.", text)
             }
             COUNT -> {
-                val text = when {
-                    f.left == 0 -> "Every one of the $total mines is found, so every hidden square left is safe. $move"
-                    f.cited.isEmpty() -> "${plural(f.left, "mine")} ${if (f.left == 1) "is" else "are"} left and only ${plural(f.left, "hidden square")}, so ${if (f.left == 1) "it is a mine" else "they are all mines"}. $move"
-                    else -> "${plural(f.left, "mine")} ${if (f.left == 1) "is" else "are"} left, and the marked numbers need all ${f.left} on squares none of them share. No mine is left for any other hidden square. $move"
-                }
-                Step(COUNT, safe, mines, if (cited.isEmpty()) targets else cited, cited, "Count the mines left.", text)
+                val text = if (f.left == 0) "Every one of the $total mines is found, so every hidden square left is safe. $move"
+                else "${plural(f.left, "mine")} ${if (f.left == 1) "is" else "are"} left and only ${plural(f.left, "hidden square")}, so ${if (f.left == 1) "it is a mine" else "they are all mines"}. $move"
+                Step(COUNT, safe, mines, targets, cited, "Count the mines left.", text)
+            }
+            EDGE -> {
+                val text = "${plural(f.left, "mine")} ${if (f.left == 1) "is" else "are"} left, and the marked numbers need all ${f.left} on squares none of them share. " +
+                    "No mine is left for any other hidden square. $move"
+                Step(EDGE, safe, mines, cited, cited, "Count the mines left against these numbers.", text)
             }
             WHAT_IF -> {
                 val x = targets.first()
-                val links = f.chain.map { (i, m) -> "the ${num[i]} would ${if (m) "need all its last squares" else "have all its mines"}" }
-                val end = "the ${num[f.broke]} would have ${if (f.tooMany) "too many mines" else "too few squares left"}"
-                val all = links + end
-                val chain = if (all.size == 1) all[0] else all.dropLast(1).joinToString(", ") + " and " + all.last()
+                // The first number the supposition sets off touches it; each after that touches what the one before settled.
+                val said = f.chain.mapIndexed { k, (i, m) ->
+                    "${if (k == 0) "the ${num[i]} beside it" else "then a ${num[i]}"} ${if (m) "needs all its hidden squares" else "has all its mines"}"
+                }
+                val end = "${if (f.chain.isEmpty()) "the ${num[f.broke]} beside it" else "until a ${num[f.broke]}"} has ${if (f.tooMany) "too many mines" else "too few squares left"}"
+                val chain = (said + end).joinToString(", ")
                 val text = "Suppose this square ${if (safe.isNotEmpty()) "held a mine" else "were safe"}. Then $chain. So it is ${if (safe.isNotEmpty()) "safe" else "a mine"}."
                 Step(WHAT_IF, safe, mines, setOf(x), cited, "What if this square ${if (safe.isNotEmpty()) "held a mine" else "were safe"}?", text)
             }

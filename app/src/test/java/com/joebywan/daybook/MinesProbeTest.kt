@@ -50,6 +50,41 @@ class MinesProbeTest {
         }
     }
 
+    @Test fun variants() {
+        val boards = HashMap<String, Int>()
+        for (seed in 1L..300L) {
+            val s = com.joebywan.daybook.puzzles.Mines.generate(seed, com.joebywan.daybook.core.Difficulty.EXPERT) as com.joebywan.daybook.puzzles.MinesState
+            val n = s.width * s.height
+            val m = MinesLogic.openingMarks(s.width, s.height, s.mines, s.opening).toCharArray()
+            val num = IntArray(n) { -1 }; val st = IntArray(n)
+            fun rev(i: Int) { num[i] = s.number(i); st[i] = MinesLogic.SAFE }
+            for (i in 0 until n) if (m[i] == 'o') rev(i)
+            val kinds = HashSet<String>()
+            while (true) {
+                val f = MinesLogic.nextFact(s.width, s.height, num, st, s.total) ?: break
+                if (f.level == 3) kinds += if (f.technique == "count") (if (f.left == 0) "count-zero" else if (f.cited.isEmpty()) "count-all" else "count-edge") else "what-if"
+                for (i in f.mines) st[i] = MinesLogic.MINE
+                for (i in f.safe) for (j in MinesLogic.openInPlace(s.width, s.height, s.mines, m, i)) rev(j)
+            }
+            val key = kinds.sorted().joinToString("+")
+            boards[key] = (boards[key] ?: 0) + 1
+        }
+        println("VAR $boards")
+    }
+
+    @Test fun texts() {
+        val seen = HashMap<String, Int>()
+        for (seed in 1L..60L) for (t in com.joebywan.daybook.core.Difficulty.entries) {
+            var s = com.joebywan.daybook.puzzles.Mines.generate(seed, t) as com.joebywan.daybook.puzzles.MinesState
+            while (!s.solved) {
+                val st = com.joebywan.daybook.puzzles.MinesTeacher.teach(s)!!
+                val k = st.technique + (if (st.safe.isEmpty()) "-m" else "-s")
+                if ((seen[k] ?: 0) < 3) { seen[k] = (seen[k] ?: 0) + 1; println("TXT $k | ${st.nudge} | ${st.explanation}") }
+                s = com.joebywan.daybook.puzzles.MinesTeacher.apply(s, st)
+            }
+        }
+    }
+
     @Test fun probe() {
         val specs = (System.getenv("MINES_SPECS") ?: "8,8,10;8,10,16;8,12,22").split(";").map { it.split(",").map(String::toInt) }
         for (sp in specs) {

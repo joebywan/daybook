@@ -96,7 +96,7 @@ class TechniqueNamesTest {
             assertTrue("${p.id} $t took $took", took.inWholeMilliseconds < 500)
         }
         // Mines' Hard and Expert each gate on a level of two techniques: whichever the walk used.
-        val mines = listOf(setOf(null), setOf(MinesTeacher.SUBSET, MinesTeacher.PAIR), setOf(MinesTeacher.COUNT, MinesTeacher.WHAT_IF))
+        val mines = listOf(setOf(null), setOf(MinesTeacher.SUBSET, MinesTeacher.PAIR), setOf(MinesTeacher.EDGE, MinesTeacher.WHAT_IF))
         for (t in Difficulty.entries) for (seed in 1L..10L) {
             val got = Mines.neededTechnique(Mines.generate(seed, t))
             assertTrue("mines $t seed $seed: $got", got in mines[t.ordinal])

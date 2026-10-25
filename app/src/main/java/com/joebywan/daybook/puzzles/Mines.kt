@@ -109,7 +109,7 @@ object Mines : PuzzleType {
 
     override fun teach(state: PuzzleState): Deduction? = MinesTeacher.deduction(state as MinesState)
 
-    /** The hardest step the generator's walk needed: a subset or pair on Hard, the count or a what-if on Expert; null on Standard. */
+    /** The hardest step the generator's walk needed: a subset or pair on Hard, the count against the numbers or a what-if on Expert; null on Standard. */
     override fun neededTechnique(state: PuzzleState): String? {
         val s = state as MinesState
         val walk = MinesLogic.walk(s.width, s.height, s.mines, s.opening) ?: return null
@@ -119,7 +119,7 @@ object Mines : PuzzleType {
 
     private fun levelOf(technique: String) = when (technique) {
         MinesTeacher.SUBSET, MinesTeacher.PAIR -> 2
-        MinesTeacher.COUNT, MinesTeacher.WHAT_IF -> 3
+        MinesTeacher.COUNT, MinesTeacher.EDGE, MinesTeacher.WHAT_IF -> 3
         else -> 1
     }
 
