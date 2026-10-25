@@ -11,11 +11,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class TargetRulesTest {
-
-    private val start = LocalDate.of(2026, 1, 1)
 
     private fun board(day: Int, d: Difficulty) =
         Target.generateVerified(daySeed(day, Target.id, d), d)
