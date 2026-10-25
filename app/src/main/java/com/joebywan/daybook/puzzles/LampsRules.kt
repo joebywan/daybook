@@ -364,6 +364,20 @@ internal object LampsLogic {
         return finished(g, k) && broken(g, k) == null
     }
 
+    /** The deepest of [STARVE], [DARK] and [WHAT_IF] the ladder's walk from blank uses, or null when it needs none. */
+    fun deepest(s: LampsState): String? {
+        val g = Geo(s.size, s.walls)
+        val k = IntArray(s.size * s.size)
+        val order = listOf(STARVE, DARK, WHAT_IF)
+        var best = -1
+        while (true) {
+            val f = nextFact(g, k, WHAT_IF_RUNG) ?: break
+            best = maxOf(best, order.indexOf(f.technique))
+            apply(k, f)
+        }
+        return order.getOrNull(best)
+    }
+
     /** The lowest rung that finishes [s] from blank, or null when none does. */
     fun depth(s: LampsState): Int? {
         val g = Geo(s.size, s.walls)

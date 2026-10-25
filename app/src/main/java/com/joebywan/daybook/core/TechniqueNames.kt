@@ -177,6 +177,15 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "counting" to "counting the halves left in the tray",
         "what-if" to "a what-if",
     ),
+    "lamps" to linkedMapOf(
+        "zero" to "the squares beside a 0",
+        "done" to "a number with all its lamps",
+        "room" to "a number with just enough room",
+        "only-light" to "the one square that can light another",
+        "starve" to "a lamp that would starve a number",
+        "dark" to "a lamp that would leave a square dark",
+        "what-if" to "a what-if",
+    ),
 )
 
 /**
