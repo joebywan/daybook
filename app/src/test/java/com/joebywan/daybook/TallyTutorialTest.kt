@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.TallyLogic
@@ -115,13 +114,9 @@ class TallyTutorialTest {
 
     // ---- the hint glue --------------------------------------------------------------------------
 
-    private fun seeds(count: Int, difficulty: Difficulty) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 3, 1).plusDays(it.toLong()), "tally-glue", difficulty)
-    }
-
     @Test
     fun `a hint's move reaches its own goal, and one move is one undo entry`() {
-        for (d in Difficulty.entries) for (seed in seeds(6, d)) {
+        for (d in Difficulty.entries) for (seed in seeds(6, d, "tally-glue", LocalDate.of(2026, 3, 1))) {
             var s = Tally.generate(seed, d) as TallyState
             while (!s.solved) {
                 val deduction = Tally.teach(s)!!
@@ -137,7 +132,7 @@ class TallyTutorialTest {
     @Test
     fun `a hint is reached by the player's own taps, and not before the last`() {
         for (d in Difficulty.entries) {
-            val s = Tally.generate(seeds(1, d).single(), d) as TallyState
+            val s = Tally.generate(seeds(1, d, "tally-glue", LocalDate.of(2026, 3, 1)).single(), d) as TallyState
             val deduction = Tally.teach(s)!!
             val step = TallyTeacher.teach(s)!!
             val moves = step.stays.map { it to keep } + step.goes.map { it to remove }
@@ -152,7 +147,7 @@ class TallyTutorialTest {
 
     @Test
     fun `a mistake's hint is reached by clearing the square or by changing its mark`() {
-        val base = Tally.generate(seeds(1, Difficulty.STANDARD).single(), Difficulty.STANDARD) as TallyState
+        val base = Tally.generate(seeds(1, Difficulty.STANDARD, "tally-glue", LocalDate.of(2026, 3, 1)).single(), Difficulty.STANDARD) as TallyState
         val i = base.keep.indexOf('1')
         val wrong = base.tap(i, remove)
         val d = Tally.teach(wrong)!!

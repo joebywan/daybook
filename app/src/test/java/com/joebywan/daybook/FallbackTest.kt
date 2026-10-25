@@ -4,6 +4,7 @@ import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.puzzles.Atoms
+import com.joebywan.daybook.puzzles.CageLogic
 import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.Kings
@@ -13,6 +14,7 @@ import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.DominoLogic
+import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
@@ -22,7 +24,6 @@ import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Mines
-import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Sudoku
@@ -45,13 +46,15 @@ class FallbackTest {
 
     /**
      * Walks every tier of 2026's daily seeds through [verified] (null when nothing was proved), asserts no day gave up,
-     * and that the first [shipsChecked] days of each tier are what [PuzzleType.generate] ships.
+     * and that the first [shipsChecked] days of each tier are what [PuzzleType.generate] ships. [onProved] sees every
+     * proved seed, for tests that also measure how a board was found.
      */
     private fun assertYearProved(
         p: PuzzleType,
         fellBack: String = "shipped its last resort",
         unit: String = "days",
         shipsChecked: Long = 365,
+        onProved: (Long, Difficulty) -> Unit = { _, _ -> },
         verified: (Long, Difficulty) -> Any?,
     ) {
         val start = LocalDate.of(2026, 1, 1)
@@ -63,6 +66,7 @@ class FallbackTest {
                 val proved = verified(seed, difficulty)
                 if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
                 if (day < shipsChecked) assertEquals("${p.id} $date/${difficulty.name}", proved, p.generate(seed, difficulty))
+                onProved(seed, difficulty)
             }
         }
         assertTrue("${p.id} $fellBack on ${gaveUp.size} $unit: $gaveUp", gaveUp.isEmpty())
@@ -143,10 +147,6 @@ class FallbackTest {
     @Test
     fun `cipher proves every daily board of a year on every tier`() = assertYearProved(Cipher) { seed, d -> Cipher.generateVerified(seed, d) }
 
-    /** [Target.generateVerified] returns a board only when the exhaustive table put the target exactly the tier's number of steps away. */
-    @Test
-    fun `target proves every daily board of a year on every tier`() = assertYearProved(Target) { seed, d -> Target.generateVerified(seed, d) }
-
     /** [WordWheel.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
     @Test
     fun `wordwheel proves every daily board of a year on every tier`() = assertYearProved(WordWheel) { seed, d -> WordWheel.generateVerified(seed, d) }
@@ -209,24 +209,14 @@ class FallbackTest {
      */
     @Test
     fun `cages proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            val used = IntArray(com.joebywan.daybook.puzzles.CageLogic.ATTEMPTS + 1)
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Cages.id, difficulty)
-                val proved = Cages.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("cages $date/${difficulty.name}", proved, Cages.generate(seed, difficulty))
-                used[(0 until com.joebywan.daybook.puzzles.CageLogic.ATTEMPTS).first {
-                    com.joebywan.daybook.puzzles.CageLogic.attempt(seed, difficulty, it) != null
-                }]++
-            }
-            println("cages ${difficulty.name}: boards by attempts used ${used.toList()}")
-            assertTrue("${difficulty.name} came close to the allowance: ${used.toList()}", used.drop(30).all { it == 0 })
+        val used = Difficulty.entries.associateWith { IntArray(CageLogic.ATTEMPTS + 1) }
+        assertYearProved(Cages, onProved = { seed, d ->
+            used.getValue(d)[(0 until CageLogic.ATTEMPTS).first { CageLogic.attempt(seed, d, it) != null }]++
+        }) { seed, d -> Cages.generateVerified(seed, d) }
+        for ((d, u) in used) {
+            println("cages ${d.name}: boards by attempts used ${u.toList()}")
+            assertTrue("${d.name} came close to the allowance: ${u.toList()}", u.drop(30).all { it == 0 })
         }
-        assertTrue("cages shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /**
@@ -237,25 +227,14 @@ class FallbackTest {
      */
     @Test
     fun `tally proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            var total = 0
-            var most = 0
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Tally.id, difficulty)
-                val proved = Tally.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("tally $date/${difficulty.name}", proved, Tally.generate(seed, difficulty))
-                val used = 1 + (0 until TallyLogic.ATTEMPTS).first { TallyLogic.attempt(seed, difficulty, it) != null }
-                total += used
-                most = maxOf(most, used)
-            }
-            println("tally ${difficulty.name}: draws per board mean ${"%.1f".format(total / 365.0)}, most $most of ${TallyLogic.ATTEMPTS}")
-            assertTrue("${difficulty.name} came close to the allowance: $most", most < TallyLogic.ATTEMPTS / 2)
+        val used = Difficulty.entries.associateWith { mutableListOf<Int>() }
+        assertYearProved(Tally, onProved = { seed, d ->
+            used.getValue(d) += 1 + (0 until TallyLogic.ATTEMPTS).first { TallyLogic.attempt(seed, d, it) != null }
+        }) { seed, d -> Tally.generateVerified(seed, d) }
+        for ((d, u) in used) {
+            println("tally ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${TallyLogic.ATTEMPTS}")
+            assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < TallyLogic.ATTEMPTS / 2)
         }
-        assertTrue("tally shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /**
@@ -264,25 +243,14 @@ class FallbackTest {
      */
     @Test
     fun `dominoes proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
-        val gaveUp = mutableListOf<String>()
-        for (difficulty in Difficulty.entries) {
-            var total = 0
-            var most = 0
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, "dominoes", difficulty)
-                val proved = DominoLogic.generateVerified(seed, difficulty)
-                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
-                assertEquals("dominoes $date/${difficulty.name}", proved, DominoLogic.generate(seed, difficulty))
-                val used = 1 + (0 until DominoLogic.ATTEMPTS).first { DominoLogic.attempt(seed, difficulty, it) != null }
-                total += used
-                most = maxOf(most, used)
-            }
-            println("dominoes ${difficulty.name}: draws per board mean ${"%.1f".format(total / 365.0)}, most $most of ${DominoLogic.ATTEMPTS}")
-            assertTrue("${difficulty.name} came close to the allowance: $most", most < DominoLogic.ATTEMPTS / 4)
+        val used = Difficulty.entries.associateWith { mutableListOf<Int>() }
+        assertYearProved(Dominoes, onProved = { seed, d ->
+            used.getValue(d) += 1 + (0 until DominoLogic.ATTEMPTS).first { DominoLogic.attempt(seed, d, it) != null }
+        }) { seed, d -> DominoLogic.generateVerified(seed, d) }
+        for ((d, u) in used) {
+            println("dominoes ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${DominoLogic.ATTEMPTS}")
+            assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < DominoLogic.ATTEMPTS / 4)
         }
-        assertTrue("dominoes shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /**

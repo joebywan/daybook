@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Cipher
@@ -16,15 +15,12 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class CipherRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
     private fun board(day: Int, d: Difficulty) =
-        Cipher.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Cipher.id, d), d) as CipherState
+        Cipher.generate(daySeed(day, Cipher.id, d), d) as CipherState
 
     private fun state(words: List<String>, digits: List<Int>) =
         CipherState(words = words, solution = digits, digits = digits)
@@ -170,7 +166,7 @@ class CipherRulesTest {
             val counts = mutableMapOf<String, Int>()
             val times = mutableListOf<Double>()
             for (day in 0 until 365) {
-                val seed = DailySeed.seedFor(start.plusDays(day.toLong()), Cipher.id, d)
+                val seed = daySeed(day, Cipher.id, d)
                 val t0 = System.nanoTime()
                 val s = Cipher.generate(seed, d) as CipherState
                 times += (System.nanoTime() - t0) / 1e6
@@ -184,8 +180,7 @@ class CipherRulesTest {
             // What a tier asks: the share of steps that need more than one column on its own.
             (counts[CipherTeacher.PAIR] ?: 0) + 2 * (counts[CipherTeacher.CHAIN] ?: 0) + 4 * (counts[CipherTeacher.WHAT_IF] ?: 0)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/cipher-tiers.txt").writeText(report.toString())
+        writeReport("cipher-tiers.txt", report.toString())
         println(report)
         assertTrue("tiers ask more in order: $means", means[0] < means[1] && means[1] < means[2])
     }
