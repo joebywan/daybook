@@ -498,24 +498,11 @@ object Mambo : PuzzleType {
         return ok
     }
 
-    // ---- play ---------------------------------------------------------------------------------
-
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as MamboState
-        // A hint is asked for, so it may read the answer the live feedback must not.
-        val answer = answerFor(s)
-        val wrong = mistakes(s).firstOrNull()
-        if (wrong != null) return s.withCell(wrong, answer[wrong])
-        val blank = s.cells.indices.firstOrNull { s.cells[it] == Sym.NONE } ?: return null
-        return s.withCell(blank, answer[blank])
-    }
-
     // ---- teaching -----------------------------------------------------------------------------
 
     /**
-     * A mistake to take back or a step to reason out — see [MamboTeacher]. Replaces [hint], which
-     * copied a square straight out of [MamboState.solution] and taught nothing; [hint] stays only
-     * as the contract's fallback for a puzzle that does not teach.
+     * A mistake to take back or a step to reason out — see [MamboTeacher]. Non-null whenever a square
+     * is wrong or empty (the fallback names one from the answer), so `hint()` is never reached.
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as MamboState

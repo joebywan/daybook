@@ -257,22 +257,12 @@ object Sudoku : PuzzleType {
         return total
     }
 
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as SudokuState
-        val wrong = s.cells.indices.firstOrNull {
-            s.cells[it] != 0 && s.cells[it] != s.solution[it]
-        }
-        if (wrong != null) return s.withCell(wrong, s.solution[wrong])
-        val blank = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
-        return s.withCell(blank, s.solution[blank])
-    }
-
     // ---- teaching --------------------------------------------------------------------------
 
     /**
-     * A mistake to take back or a step to reason out — see [SudokuTeacher]. The old [hint] dropped
-     * a digit straight out of [SudokuState.solution] and taught nothing; it stays only as the
-     * contract's default path. The teacher reasons from the visible digits alone.
+     * A mistake to take back or a step to reason out — see [SudokuTeacher]. Never null on an unsolved
+     * board (the fallback names a digit from [SudokuState.solution]), so `hint()` is never reached.
+     * The teacher reasons from the visible digits alone.
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as SudokuState
