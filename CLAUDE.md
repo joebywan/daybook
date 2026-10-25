@@ -24,6 +24,8 @@ sounded. Do not turn it off.
 - `core/PuzzleType.kt` — the contract. Adding a puzzle is one file in `puzzles/` plus one line
   in `core/PuzzleRegistry.kt` (and its place in `PuzzleOrder.GENTLEST`, the new player's order); home grid, archive, streaks, stats, hints and saves pick it up.
   What every puzzle must have beyond that (tiers, proof, hints, walkthrough, tests): `docs/PUZZLE_STANDARDS.md`.
+- Four puzzles show players a different name from their code and `id`: Snap is **Trail**, Mambo **Sun & Moon**, Tower
+  **Codebreaker**, Pointers **Arrows** (`displayName`, the owner's choice, 2026-10-25). This file uses the code names.
 - `generate(seed, difficulty)` **must be pure**. Daily boards come from
   `hash(date, puzzleId, difficulty)`, so purity is what makes the whole archive free and offline.
 - `PuzzleState` is a sealed `@Serializable` interface living in `puzzles/` — Kotlin requires
@@ -145,7 +147,7 @@ into every seed: never rename it.
   from 21% to 7%), which is what the pass gate is for. Smoothing into blobs was tried earlier and failed the shape rules
   on 96% of 5x5 draws.
 
-## Mambo (Takuzu with = and x links)
+## Mambo (Takuzu with = and x links; shown to players as Sun & Moon)
 
 Two symbols, balanced in every line, never three alike together, printed `=`/`x` links honoured. `puzzles/Mambo.kt` (state, rules,
 generator, `countSolutions`), `MamboTeacher.kt` (the ladder and `depth`). `id = "mambo"` is hashed into every seed: never rename it.
@@ -384,7 +386,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
   on 89 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
 - State: `words`, `solution`, `digits` (a digit per letter in alphabetical order, -1 for none) and `selected` (in state, as Inequality's; `withoutSelection`).
   The letter key row under the sum shows each letter's digit and selects it; keyboard: a letter key selects it, a digit sets it, Backspace clears, arrows walk the letters.
-## Pointers (clear the arrows)
+## Pointers (clear the arrows; shown to players as Arrows)
 
 The board is covered in arrows, each a bent line of squares ending in a head. Tap one and it slides off the way its head points if
 nothing is in its way to the edge; if something is, it bumps (a shake, a warning flash) and a life goes. Clear every arrow; lose three

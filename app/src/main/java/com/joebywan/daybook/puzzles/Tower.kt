@@ -100,7 +100,7 @@ data class TowerState(
 object Tower : PuzzleType {
 
     override val id = "tower"
-    override val displayName = "Tower"
+    override val displayName = "Codebreaker"
     override val tagline = "Break the hidden colour code"
     override val accent = 0xFFD08A33
     override val rules = listOf(
