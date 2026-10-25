@@ -288,7 +288,7 @@ object Cipher : PuzzleType {
                         .then(if (selected == l) Modifier.border(2.5.dp, scheme.onBackground, RoundedCornerShape(8.dp)) else Modifier),
                     contentAlignment = Alignment.Center,
                 ) {
-                    val letter = sum.letters[l].uppercaseChar().toString()
+                    val letter = sum.name(l)
                     if (placed) {
                         // The letter in the corner, too small to read on the home grid's motif.
                         if (tile >= 28.dp) Text(
@@ -423,7 +423,7 @@ object Cipher : PuzzleType {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            Text(sum.letters[l].uppercaseChar().toString(), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
+                            Text(sum.name(l), style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
                             Text(
                                 if (s.digits[l] == EMPTY) "·" else s.digits[l].toString(),
                                 style = MaterialTheme.typography.titleMedium,
@@ -452,7 +452,7 @@ object Cipher : PuzzleType {
                             Text(digit.toString(), style = MaterialTheme.typography.titleMedium, color = if (owner != null) scheme.outline else scheme.onSurface)
                             if (owner != null) {
                                 Text(
-                                    sum.letters[owner].uppercaseChar().toString(),
+                                    sum.name(owner),
                                     Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
                                     fontSize = 10.sp,
                                     color = scheme.outline,

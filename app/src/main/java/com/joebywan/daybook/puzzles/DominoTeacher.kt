@@ -77,11 +77,11 @@ internal object DominoTeacher {
         val cited: Set<Int>,
         val nudge: String,
         val explanation: String,
-        val fallback: Boolean = false,
     ) {
         val targets: Set<Int>
             get() = (placement?.let { setOf(it.first, it.second) } ?: emptySet()) + (TRAY + domino)
         val mistake: Boolean get() = technique == MISTAKE
+        val fallback: Boolean get() = technique == FALLBACK
     }
 
     fun teach(s: DominoState): Step? {
@@ -100,11 +100,12 @@ internal object DominoTeacher {
     fun reached(s: DominoState, step: Step): Boolean {
         val now = s.placed.getOrNull(step.domino)
         val p = step.placement ?: return now == null
-        return now == p || (s.tray[step.domino].isDouble && now == Placement(p.second, p.first))
+        return now != null && same(s.tray[step.domino], now, p)
     }
 
     // ---- mistakes and the fallback ----------------------------------------------------------------
 
+    /** [a] and [b] lay [dom] the same: the same squares the same way round, or either way for a double. */
     private fun same(dom: Domino, a: Placement, b: Placement) =
         a == b || (dom.isDouble && a == Placement(b.second, b.first))
 
@@ -144,7 +145,6 @@ internal object DominoTeacher {
             nudge = "Try the ${words.domino(s.tray[d])}.",
             explanation = "No step I can explain from here, so this is the answer itself: the ${words.domino(s.tray[d])} goes here, " +
                 words.half(s.tray[d], p) + ".",
-            fallback = true,
         )
     }
 

@@ -117,7 +117,7 @@ data class AtomsState(
 
     private fun crosses(pair: Int): Boolean =
         pairs.indices.any { other ->
-            other != pair && counts[other] > 0 && Atoms.cross(this, pair, other)
+            other != pair && counts[other] > 0 && Atoms.crosses(atoms, pairs[pair], pairs[other])
         }
 }
 
@@ -312,18 +312,16 @@ object Atoms : PuzzleType {
         }
     }
 
-    /** True when the two bond lines intersect. */
-    fun cross(s: AtomsState, p: Int, q: Int): Boolean {
-        val one = s.pairs[p]
-        val two = s.pairs[q]
+    /** True when the two bond lines intersect. Takes plain positions, so the teacher needs no [AtomsState]. */
+    fun crosses(atoms: List<Atom>, one: Pair2, two: Pair2): Boolean {
         if (one.horizontal == two.horizontal) return false
         val (h, v) = if (one.horizontal) one to two else two to one
-        val hRow = s.atoms[h.a].row
-        val hLo = minOf(s.atoms[h.a].col, s.atoms[h.b].col)
-        val hHi = maxOf(s.atoms[h.a].col, s.atoms[h.b].col)
-        val vCol = s.atoms[v.a].col
-        val vLo = minOf(s.atoms[v.a].row, s.atoms[v.b].row)
-        val vHi = maxOf(s.atoms[v.a].row, s.atoms[v.b].row)
+        val hRow = atoms[h.a].row
+        val hLo = minOf(atoms[h.a].col, atoms[h.b].col)
+        val hHi = maxOf(atoms[h.a].col, atoms[h.b].col)
+        val vCol = atoms[v.a].col
+        val vLo = minOf(atoms[v.a].row, atoms[v.b].row)
+        val vHi = maxOf(atoms[v.a].row, atoms[v.b].row)
         return vCol in (hLo + 1) until hHi && hRow in (vLo + 1) until vHi
     }
 
@@ -342,21 +340,7 @@ object Atoms : PuzzleType {
         // search, only which of those pairs carry a bond, and re-deriving it at every node was most
         // of the cost of an Expert board.
         val crossing = Array(pairs.size) { index ->
-            val one = pairs[index]
-            pairs.indices.filter { other ->
-                other != index && run {
-                    val two = pairs[other]
-                    if (one.horizontal == two.horizontal) return@run false
-                    val (h, v) = if (one.horizontal) one to two else two to one
-                    val hRow = atoms[h.a].row
-                    val hLo = minOf(atoms[h.a].col, atoms[h.b].col)
-                    val hHi = maxOf(atoms[h.a].col, atoms[h.b].col)
-                    val vCol = atoms[v.a].col
-                    val vLo = minOf(atoms[v.a].row, atoms[v.b].row)
-                    val vHi = maxOf(atoms[v.a].row, atoms[v.b].row)
-                    vCol in (hLo + 1) until hHi && hRow in (vLo + 1) until vHi
-                }
-            }.toIntArray()
+            pairs.indices.filter { other -> other != index && crosses(atoms, pairs[index], pairs[other]) }.toIntArray()
         }
 
         fun crossesNow(index: Int): Boolean {

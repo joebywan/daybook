@@ -148,6 +148,14 @@ internal object AtomsTeacher {
             return (0 until n).filter { seen[it] }
         }
 
+        /** The lines out of [group] that could still take a bond, each once, in order. */
+        fun exits(group: List<Int>): List<Int> {
+            val inside = BooleanArray(n).also { m -> group.forEach { m[it] = true } }
+            return group.flatMap { a -> incident[a] }
+                .filter { p -> inside[pairs[p].a] != inside[pairs[p].b] && cap(p, WITH_ISOLATION) > 0 }
+                .distinct().sorted()
+        }
+
         /** Every group of joined atoms, each listed once, in order of its lowest atom. */
         fun components(): List<List<Int>> {
             val done = BooleanArray(n)
@@ -169,22 +177,9 @@ internal object AtomsTeacher {
     }
 
     private fun sightOf(atoms: List<Atom>, pairs: List<Pair2>, counts: List<Int>): Sight {
-        val crossing = pairs.indices.map { p -> pairs.indices.filter { q -> q != p && crosses(atoms, pairs[p], pairs[q]) } }
+        val crossing = pairs.indices.map { p -> pairs.indices.filter { q -> q != p && Atoms.crosses(atoms, pairs[p], pairs[q]) } }
         val incident = atoms.indices.map { a -> pairs.indices.filter { pairs[it].a == a || pairs[it].b == a } }
         return Sight(atoms, pairs, counts.toIntArray(), IntArray(pairs.size) { 2 }, crossing, incident)
-    }
-
-    /** Whether two lines intersect. Re-derived here so the teacher needs no [AtomsState]. */
-    private fun crosses(atoms: List<Atom>, one: Pair2, two: Pair2): Boolean {
-        if (one.horizontal == two.horizontal) return false
-        val (h, v) = if (one.horizontal) one to two else two to one
-        val row = atoms[h.a].row
-        val col = atoms[v.a].col
-        val cLo = minOf(atoms[h.a].col, atoms[h.b].col)
-        val cHi = maxOf(atoms[h.a].col, atoms[h.b].col)
-        val rLo = minOf(atoms[v.a].row, atoms[v.b].row)
-        val rHi = maxOf(atoms[v.a].row, atoms[v.b].row)
-        return col in (cLo + 1) until cHi && row in (rLo + 1) until rHi
     }
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ----------------------
@@ -469,14 +464,11 @@ internal object AtomsTeacher {
         if (s.components().size == 1) return null
         for (group in s.components()) {
             if (group.size < 2) continue // a lone atom is [ONE_NEIGHBOUR]'s case
-            val inside = BooleanArray(s.n).also { m -> group.forEach { m[it] = true } }
-            val exits = group.flatMap { a -> s.incident[a] }
-                .filter { p -> inside[s.pairs[p].a] != inside[s.pairs[p].b] && s.cap(p, WITH_ISOLATION) > 0 }
-                .distinct().sorted()
+            val exits = s.exits(group)
             if (exits.size != 1) continue
             val p = exits[0]
             val pr = s.pairs[p]
-            val from = if (inside[pr.a]) pr.a else pr.b
+            val from = if (pr.a in group) pr.a else pr.b
             val to = s.other(p, from)
             return Step(
                 technique = ONLY_WAY_OUT,
@@ -540,13 +532,7 @@ internal object AtomsTeacher {
         }
         val groups = s.components()
         if (groups.size > 1) {
-            for (g in groups) {
-                val inside = BooleanArray(s.n).also { m -> g.forEach { m[it] = true } }
-                val exits = g.flatMap { s.incident[it] }.any { p ->
-                    inside[s.pairs[p].a] != inside[s.pairs[p].b] && s.cap(p, WITH_ISOLATION) > 0
-                }
-                if (!exits) return Closed(g)
-            }
+            for (g in groups) if (s.exits(g).isEmpty()) return Closed(g)
         }
         return null
     }
@@ -591,13 +577,8 @@ internal object AtomsTeacher {
 
     // ---- words -----------------------------------------------------------------------------------
 
-    /** Where [to] sits, seen from [from]: "to its right", "above". */
-    private fun where(from: Atom, to: Atom): String = when {
-        to.row == from.row && to.col > from.col -> "to the right"
-        to.row == from.row -> "to the left"
-        to.row < from.row -> "above"
-        else -> "below"
-    }
+    /** Where [to] sits, seen from [from]: "to the right", "above". */
+    private fun where(from: Atom, to: Atom): String = way(from, to).let { if (it == "right" || it == "left") "to the $it" else it }
 
     /** The same, as one word for lists: "left", "above". */
     private fun way(from: Atom, to: Atom): String = when {

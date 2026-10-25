@@ -11,6 +11,8 @@ import com.joebywan.daybook.core.Rng
  * units. A tile is (row, column) with row 0 the first addend and the last row the total; its highlight
  * index is [tile].
  */
+private val PLACES = listOf("units", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands")
+
 internal class CipherSum(val words: List<String>) {
     val addends: List<String> = words.dropLast(1)
     val total: String = words.last()
@@ -29,6 +31,31 @@ internal class CipherSum(val words: List<String>) {
 
     /** Column [col]'s total letter. */
     val columnTotal: List<Int> = List(width) { letterAt(rows - 1, it) }
+
+    /** Column [col]'s letters, addends then total, each once. */
+    val columnLetters: List<List<Int>> = List(width) { c -> (columnAddends[c] + columnTotal[c]).distinct() }
+
+    /** A letter as the player sees it: "T". */
+    fun name(l: Int): String = letters[l].uppercaseChar().toString()
+
+    /** Column [c]'s place: "units", "tens" and so on. */
+    fun place(c: Int): String = PLACES[c]
+
+    fun columnName(c: Int): String = "${place(c)} column"
+
+    /**
+     * The carry into column [c] once every letter to its right is placed, else null. Nothing comes into the units
+     * and nothing leaves the top.
+     */
+    fun knownCarry(digits: List<Int>, c: Int): Int? {
+        if (c == width) return 0
+        var carry = 0
+        for (k in 0 until c) {
+            if (columnLetters[k].any { digits[it] == CipherLogic.EMPTY }) return null
+            carry = (columnAddends[k].sumOf { digits[it] } + carry) / 10
+        }
+        return carry
+    }
 
     /** Letters that start a word, as a mask over letter indices: none of them may be 0. */
     val leading: Int = words.fold(0) { m, w -> m or (1 shl letters.indexOf(w[0])) }
