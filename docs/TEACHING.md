@@ -101,12 +101,12 @@ What each teaches, and how often a player walking a board by hints alone reaches
 |---|---|---|
 | Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | none on a generated board: the generator digs only while the tier's ladder finishes it (a year of daily boards per tier, and 300 a tier in `SudokuTeachingTest`; before that gate 0.5 / 6 / 34% of boards). Per board: naked single 0 / 1.7 / 1.1 steps, locked candidates 0 / 0 / 0.7, pairs 0 / 0 / 0.3, what-if 0 / 0 / 0.5 |
 | Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
-| Mambo | pair, sandwich, link, quota, almost, what-if | 0 (boards are carved so the first four finish them) |
+| Mambo | pair, sandwich, link, quota, almost, what-if | none: the generator's ladder is the teacher's, and each tier is gated on the rung it needs (a year per tier and 500 boards a tier, hints alone finish all; almost-met 0 / 2.9 / 5.7 and what-if 0 / 0 / 4.1 steps a board; the fallback exists for boards not made here) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
 | Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
 | Mosaic | finish, count fills against colours, biggest swallow, centre; fallback offers a proven fill | 1.5 / 9 / 12.5% |
 | Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
-| Atoms | one neighbour, all forced, at least one, crossing, isolation, only way out, what-if | 0 / 0 / 0.5% |
+| Atoms | one neighbour, all forced, at least one, crossing, isolation, only way out, what-if | none on a generated board: a board ships only if hints finish it (the depth gate, below) |
 | Snap | walkthrough only: corners, dead ends, cutting back, rubbing out | no hints |
 | Pointers | walkthrough only: a free arrow leaving, a bump costing a life, the blocker cleared first | no hints (nothing to teach: a free arrow is visibly free and taking one never hurts) |
 | LITS | whole region, overlap, avoid 2x2 / letter clash, neighbour, what-if | 0 / 0 / 0% (300 boards per tier). It was 42 / 23 / 30% while 43 / 22 / 29% of boards had several answers under the win check; the generator now proves one (the test holds one-answer boards under 2%) |
@@ -148,7 +148,7 @@ Adopting it, or changing a teacher — the lessons so far:
 per tier (2026-01-01 on, seeds exactly as the daily makes them), walks each with its own teacher from the blank board to
 the end, applying every step, and writes `build/reports/tier-depth.txt`: the deepest technique each walk needed (in the
 ladder's order; fallback steps counted apart), fallback boards and steps, median steps, and each technique's mean steps a
-board. No board changed. Deepest technique, share of the year's boards (%):
+board. No board changed (Mambo's rows are after its gate, below). Deepest technique, share of the year's boards (%):
 
 | puzzle | tier | deepest technique (% of boards) | fallback boards / steps % | median steps |
 |---|---|---|---|---|
@@ -158,13 +158,15 @@ board. No board changed. Deepest technique, share of the year's boards (%):
 | Kings | Standard | last-square 1, locked-to-a-line 3, would-empty 58, confined 33, what-if 6 | 0.3 / 0.02 | 15 |
 |  | Hard | locked-to-a-line 2, would-empty 52, confined 41, what-if 6 | 0 / 0 | 16 |
 |  | Expert | last-square <1, locked-to-a-line 1, would-empty 39, confined 55, what-if 5 | 0.3 / 0.01 | 18 |
-| Mambo | all three | quota-met 100 (quota-almost-met and what-if: never, as steps or as deepest) | 0 / 0 | 30 / 55 / 85 |
+| Mambo | Standard | quota-met 100 | 0 / 0 | 30 |
+|  | Hard | quota-almost-met 100 | 0 / 0 | 56 |
+|  | Expert | what-if 100 | 0 / 0 | 87 |
 | Shikaku | Standard | only-fits 49, only-reaches 42, common-cells 5, what-if 4 | 1.4 / 0.15 | 13 |
 |  | Hard | only-fits 21, only-reaches 64, common-cells 7, what-if 7 | 4.1 / 0.26 | 20 |
 |  | Expert | only-fits 13, only-reaches 62, common-cells 15, what-if 11 | 3.6 / 0.16 | 23 |
-| Atoms | Standard | one-neighbour 4, all-forced 62, at-least-one 16, crossing 4, isolation 13, what-if 1 | 0 / 0 | 7 |
-|  | Hard | all-forced 40, at-least-one 18, crossing 14, isolation 25, what-if 3 | 0.3 / 0.02 | 12 |
-|  | Expert | all-forced 16, at-least-one 17, crossing 26, isolation 30, what-if 10 | 0.5 / 0.04 | 18 |
+| Atoms (gated) | Standard | one-neighbour 4, all-forced 80, at-least-one 16 | 0 / 0 | 7 |
+|  | Hard | crossing 58, isolation 42 | 0 / 0 | 15 |
+|  | Expert | isolation 76, what-if 24 | 0 / 0 | 24 |
 | Inequality | Standard | only-digit 1, sign-bound 43, sign-place 57 | 0 / 0 | 16 |
 |  | Hard | sign-bound 9, sign-place 91 | 0 / 0 | 24 |
 |  | Expert | sign-bound 4, sign-place 96 | 0 / 0 | 33 |
@@ -185,7 +187,7 @@ Nonogram's ladder says nothing (any line with a mark in it is `line-logic`), so 
 board, settle every row with what the board then holds, then every column, and count the passes until nothing changes
 (one pass is each line's overlap alone; more means the lines must keep handing each other squares).
 
-Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the walk needs its technique; none is built):
+Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the walk needs its technique; only Mambo's is built):
 
 - **Sudoku: gated (2026-10).** Before, Hard and Expert overlapped and Expert fell back: Standard hidden-single-box 93,
   hidden-single-line 6; Hard hidden singles 77, naked-single 12, locked or deeper 12, fallback 6.6% of boards; Expert hidden
@@ -196,14 +198,21 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
 - **Kings: the tiers are the same depth.** would-empty / confined / what-if are 58/33/6, 52/41/6, 39/55/5% across the tiers;
   only size differs. Standard: no confined or what-if (62% pass); Hard: needs confined; Expert: needs what-if (5% of draws,
   so measure the cost of ~20 draws a board first). The ladder is long enough.
-- **Mambo: one depth everywhere.** Every board of every tier is finished by pair, sandwich, link and quota, because the
-  carver keeps only boards the first four finish. Quota-almost-met and what-if are never needed, as a step or at all. A gate
-  needs the carver to run the whole ladder first (Expert: needs almost-met or what-if); size is the only difference today.
+- **Mambo: gated (built).** It was one depth everywhere (quota-met 100 on every tier: the carver kept only boards the first
+  four finish). The carver now takes clues back while the ladder up to the tier's rung still finishes the board, and the
+  tier is redrawn unless the walk needs that rung: Standard the first four (its boards did not move), Hard almost-met and no
+  what-if, Expert what-if. Draws a board over the year: 1.00 / 1.42 / 1.01 mean, 1 / 6 / 2 most. The rows above are
+  after the gate.
 - **Shikaku: overlapping, and it falls back.** Standard: no common-cells, what-if or fallback (90% pass); Hard: needs
   only-reaches, no fallback; Expert: needs common-cells or what-if, no fallback (at most 26%). Ladder long enough.
-- **Atoms: graded, but loosely.** 16% of Expert boards need nothing past all-forced; 14% of Standard boards need isolation
-  or what-if. Standard: at most at-least-one (82%); Hard: needs crossing or isolation (39%); Expert: needs isolation or
-  what-if (40%). only-way-out is never needed anywhere (it is shadowed by the rungs before it).
+- **Atoms: gated (2026-10).** Before, graded loosely: 16% of Expert boards needed nothing past all-forced and 14% of Standard
+  boards isolation or what-if. Now each new atom sprouts 2-6 squares away (2-4 before), Hard has 18 atoms (16) and Expert 28
+  (24), and the gate is Standard at most at-least-one, Hard crossing or isolation, Expert isolation or deeper, every walk
+  finished. Ungated, reach alone barely moved the depth (mean bond 2.7 to 3.1 squares; Expert crossing line pairs 4.0 to 4.9);
+  the extra atoms did (Expert 8.0 crossing pairs, crossing steps 0.9 to 1.9 a board). Gated, a year of daily seeds: steps a
+  board crossing 0 / 1.1 / 2.1, isolation 0 / 0.5 / 1.4, what-if 0 / 0 / 0.4; draws 1.9 / 5.5 / 10.9 mean, 10 / 39 / 71 most
+  of 2000; JVM generation 0.4 / 1.4 / 8.7 ms median, 2.3 / 8.8 / 37 ms p95, 39 / 26 / 89 ms worst (a loaded desktop).
+  Only-way-out stays shadowed (2 steps in 500 Expert boards).
 - **Inequality: the ladder is too short.** 91-96% of Hard and Expert boards top out at sign-place; size is the only
   difference. No gate is possible until there are deeper techniques (a pair in a line, a sign chain `a < b < c`).
 - **Tents: graded.** Hard: needs one-spot (36% today); Expert: needs shared or served (18%). The ladder is long enough;

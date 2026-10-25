@@ -149,42 +149,58 @@ object Mambo : PuzzleType {
         Difficulty.EXPERT -> 10
     }
 
+    /**
+     * The deepest rung of [MamboTeacher]'s ladder a tier's boards must need ([MamboTeacher.depth]):
+     * Standard is finished by the first four techniques, Hard must need [MamboTeacher.ALMOST] and
+     * not [MamboTeacher.WHAT_IF], Expert must need [MamboTeacher.WHAT_IF]. The carve may use the
+     * ladder up to the same rung, so it takes back every clue that rung can do without.
+     */
+    private fun rungFor(difficulty: Difficulty) = when (difficulty) {
+        Difficulty.STANDARD -> MamboTeacher.RUNG_SIMPLE
+        Difficulty.HARD -> MamboTeacher.RUNG_ALMOST
+        Difficulty.EXPERT -> MamboTeacher.RUNG_WHAT_IF
+    }
+
     /** Carving leaves exactly one seed cell; a second is there so the opening looks deliberate. */
     private const val MIN_GIVENS = 2
 
     /**
-     * Boards tried before giving up on a proof. The first is the board every seed has always had;
-     * the rest only run if it is somehow rejected, so no shipped board moves.
+     * Boards tried before giving up on a proof. Standard's first attempt has always passed (the
+     * board every seed has always had); Hard and Expert redraw until the walk needs their rung.
      */
-    private const val ATTEMPTS = 4
+    private const val ATTEMPTS = 40
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
         generateVerified(seed, difficulty) ?: lastResort(sizeFor(difficulty))
 
     /**
-     * A board the propagation solver has finished from its own clues, or null when no attempt in
-     * the budget produced one. Only a board that passes carries a [MamboState] out of here, so a
-     * test asserts on this rather than on [generate], which [lastResort] can also satisfy.
+     * A board the teacher's ladder finishes from its own clues, needing exactly its tier's rung,
+     * and that an exhaustive search ([countSolutions], no budget) proves has one answer; or null
+     * when no attempt in the budget produced one. Only a board that passes carries a [MamboState]
+     * out of here, so a test asserts on this rather than on [generate], which [lastResort] can
+     * also satisfy.
      *
-     * A grid the propagation solver completes has exactly one answer and needs no guess, which is
-     * the proof ([solvableByLogic] is re-run on the finished clues rather than trusted from the
-     * carve). The search for a full grid is exhaustive, so it finds one whenever one exists, and
-     * one always does for an even side: it came up empty on none of 1,461 daily seeds per tier or
-     * 1.8 million random ones, and cannot. Attempt 0 keeps the original second try on
-     * `Rng(seed + 1)`, drawn only after the first fails; later attempts use seeds that try never
-     * touched.
+     * The ladder is re-walked on the finished clues rather than trusted from the carve. The search
+     * for a full grid is exhaustive, so it finds one whenever one exists, and one always does for an
+     * even side. Attempt 0 keeps the original second try on `Rng(seed + 1)`, drawn only after the
+     * first fails; later attempts use seeds that try never touched.
      */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): MamboState? {
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): MamboState? = proved(seed, difficulty)?.first
+
+    /** [generateVerified]'s board with the attempt that made it (0 for the first), for tests that count draws. */
+    internal fun proved(seed: Long, difficulty: Difficulty): Pair<MamboState, Int>? {
         val n = sizeFor(difficulty)
+        val rung = rungFor(difficulty)
         for (attempt in 0 until ATTEMPTS) {
             val rng = Rng(if (attempt == 0) seed else seed + attempt + 1)
             val solution = fullGrid(rng, n)
                 ?: (if (attempt == 0) fullGrid(Rng(seed + 1), n) else null)
                 ?: continue
-            val (givens, links) = carve(rng, n, solution)
-            if (!solvableByLogic(n, givens, links, solution)) continue
+            val (givens, links) = carve(rng, n, solution, rung)
             val cells = solution.indices.map { if (givens[it]) solution[it] else Sym.NONE }
-            return MamboState(n, givens, cells, links, solution)
+            if (MamboTeacher.depth(n, cells, links, rung) != rung) continue
+            if (countSolutions(n, cells, links, cap = 2) != 1) continue
+            return MamboState(n, givens, cells, links, solution) to attempt
         }
         return null
     }
@@ -352,14 +368,17 @@ object Mambo : PuzzleType {
     /**
      * Reduces a full grid to a puzzle by stripping clues the rest of the board still implies.
      *
-     * Every candidate removal is tested with [solvableByLogic] rather than a solution count: a
-     * board can have exactly one answer and still offer no legal next move, which is what forced
-     * the owner to guess, and testing against propagation is what rules that out.
+     * Every candidate removal is tested by walking [MamboTeacher]'s ladder up to [rung] rather than
+     * by a solution count: a board can have exactly one answer and still offer no legal next move,
+     * which is what forced the owner to guess, and testing against the ladder rules that out.
      *
      * Cell clues are offered for removal before links so the links — the part of the board that
      * makes it a Mambo rather than a plain Takuzu — survive to carry the deduction.
      */
-    private fun carve(rng: Rng, n: Int, solution: List<Sym>): Pair<List<Boolean>, List<Link>> {
+    private fun carve(rng: Rng, n: Int, solution: List<Sym>, rung: Int): Pair<List<Boolean>, List<Link>> {
+        fun finishes(givens: List<Boolean>, links: List<Link>, max: Int) =
+            MamboTeacher.depth(n, solution.indices.map { if (givens[it]) solution[it] else Sym.NONE }, links, max) != null
+
         val givens = MutableList(n * n) { true }
         val allLinks = buildList {
             for (r in 0 until n) for (c in 0 until n) {
@@ -370,18 +389,24 @@ object Mambo : PuzzleType {
         }
         val kept = allLinks.toMutableList()
 
-        for (i in rng.shuffled((0 until n * n).toList())) {
-            givens[i] = false
-            if (!solvableByLogic(n, givens, kept, solution)) givens[i] = true
-        }
-        for (link in rng.shuffled(allLinks)) {
-            kept.remove(link)
-            if (!solvableByLogic(n, givens, kept, solution)) kept += link
+        // One pass per rung, cheapest first: the simple rules take back most clues for a fraction of
+        // the cost, and each deeper pass offers again only what the last one kept. A clue kept at
+        // its turn stays needed, since taking more away never makes the ladder stronger.
+        for (max in 0..rung) {
+            for (i in rng.shuffled((0 until n * n).filter { givens[it] })) {
+                givens[i] = false
+                if (!finishes(givens, kept, max)) givens[i] = true
+            }
+            for (link in rng.shuffled(if (max == 0) allLinks else kept.toList())) {
+                kept.remove(link)
+                if (!finishes(givens, kept, max)) kept += link
+            }
         }
 
         // Propagation needs a symbol to start from, so a board can never come out blank — but in
         // practice it needs exactly one, and a single lone square reads as an accident rather than
-        // an anchor. Extra clues only ever add deductions, so topping up keeps the board solvable.
+        // an anchor. Extra clues only ever add deductions, so topping up keeps the board solvable
+        // (it can make the tier's rung unnecessary, which the depth check then redraws).
         var short = MIN_GIVENS - givens.count { it }
         for (i in rng.shuffled((0 until n * n).toList())) {
             if (short <= 0) break
@@ -396,24 +421,42 @@ object Mambo : PuzzleType {
     // ---- solver -------------------------------------------------------------------------------
 
     /**
-     * True when the clues drive the board to a full grid by propagation alone.
-     *
-     * A unique solution is not the same as a solvable one. `countSolutions` could only promise
-     * that exactly one answer existed, not that a player could ever reach it: boards passed that
-     * test while offering no first move at all. Propagation makes only forced deductions from the
-     * clues, so a grid it completes is both unique *and* reachable without a single guess — and no
-     * search is needed to know it.
+     * How many legal full grids keep [cells] and [links], counting no further than [cap]. Each node
+     * runs [propagate], then a lookahead (a symbol on a blank that propagation refutes means the
+     * other symbol; to a fixpoint), then tries both symbols on the first blank. There is no budget,
+     * so the count is exact up to [cap] and a 1 is a proof of one answer. The lookahead only prunes:
+     * on a sparse Expert board plain branching took a second, and with it a board the ladder
+     * finishes needs no branch at all.
      */
-    private fun solvableByLogic(
-        n: Int,
-        givens: List<Boolean>,
-        links: List<Link>,
-        solution: List<Sym>,
-    ): Boolean {
-        val grid = Array(n * n) { if (givens[it]) solution[it] else Sym.NONE }
-        return propagate(n, grid, links) && grid.none { it == Sym.NONE } &&
-            isSolved(n, grid.toList(), links)
+    internal fun countSolutions(n: Int, cells: List<Sym>, links: List<Link>, cap: Int): Int {
+        var found = 0
+        fun walk(grid: Array<Sym>) {
+            if (found >= cap || !propagate(n, grid, links)) return
+            var changed = true
+            while (changed) {
+                changed = false
+                for (i in grid.indices) {
+                    if (grid[i] != Sym.NONE) continue
+                    for (sym in listOf(Sym.SUN, Sym.MOON)) {
+                        if (propagate(n, grid.copyOf().also { it[i] = sym }, links)) continue
+                        grid[i] = sym.other()
+                        if (!propagate(n, grid, links)) return
+                        changed = true
+                        break
+                    }
+                }
+            }
+            val blank = grid.indexOfFirst { it == Sym.NONE }
+            if (blank < 0) {
+                if (isSolved(n, grid.toList(), links)) found++
+                return
+            }
+            for (sym in listOf(Sym.SUN, Sym.MOON)) walk(grid.copyOf().also { it[blank] = sym })
+        }
+        walk(cells.toTypedArray())
+        return found
     }
+
 
     /**
      * Applies Mambo's three rules until nothing more can be deduced.
