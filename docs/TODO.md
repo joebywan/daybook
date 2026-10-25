@@ -186,10 +186,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 - [ ] **Pipes: a branchier tree.** `spanningTree` is a depth-first maze (long corridors); a random-edge spanning tree gives
   more junctions. (Counter-clockwise rotation and a lock mark: declined by the owner.)
 - [ ] **Mate: tier by rating.** `tools/chess/build.py` ignores Lichess `Rating`; band each tier by rating as well as N.
-- [ ] **Word content pass.** A lint in `tools/words/build.py` (capitalised names, sports, "in Britain/America" tags) and a
-  hand fix of what it finds (trivia: "or Taylor", "Sinatra"; US-only: "Baseball team's players"; dated: "tepee", "pagan");
-  interjections and archaisms out of Word Wheel's grid (`huh`, `ugh`, `hey`, `gee`, `thy`, `ken`, `sup`, `fro`).
-  (Lexicon headline words such as `vomit`: declined by the owner.)
 - [ ] **Lexicon teaching and repeats.** Rotate the opener hint by seed; the fallback says how its guess splits the words left;
   a no-repeat cycle for Daily (supersedes the item above).
 - [ ] **Cipher: cap repeated totals** (some totals recur many times a tier); **Target: count the roads** (Expert needs few
