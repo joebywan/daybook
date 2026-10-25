@@ -1,8 +1,10 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.digitsOf
 import com.joebywan.daybook.core.has
+import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.puzzles.CageLogic.Board
 import com.joebywan.daybook.puzzles.CageLogic.Group
 import com.joebywan.daybook.puzzles.CageLogic.Kind
@@ -58,12 +60,6 @@ internal object CageTeacher {
         u < 18 -> "row ${u - 8}"
         else -> "column ${u - 17}"
     }
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
-
-    /** "1", "1 and 2", "1, 2 and 4". */
-    private fun listed(digits: List<Int>) =
-        if (digits.size == 1) "${digits[0]}" else digits.dropLast(1).joinToString(", ") + " and " + digits.last()
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback -----------------------
 

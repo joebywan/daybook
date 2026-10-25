@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+
 /**
  * Sets, taught the way a person finds a set: pick two cards, and work out trait by trait what the
  * third must be.
@@ -277,6 +279,4 @@ internal object SetsTeacher {
         step.release.isNotEmpty() -> !s.selected.containsAll(step.release)
         else -> !(s.lastWrong && s.lastPick == step.rejected)
     }
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
 }

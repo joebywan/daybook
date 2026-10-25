@@ -2,9 +2,9 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.digitsOf
 import com.joebywan.daybook.core.has
-
 
 /**
  * Sudoku, reasoned the way a person reasons it, one named step at a time.
@@ -112,7 +112,6 @@ internal object SudokuTeacher {
     private fun boxOf(cell: Int) = cell / 9 / 3 * 3 + cell % 9 / 3
     private fun unitsOf(cell: Int): List<Unit> =
         listOf(units[boxOf(cell)], units[9 + cell / 9], units[18 + cell % 9])
-
 
     // ---- what the player can see -------------------------------------------------------------------
 
@@ -590,6 +589,4 @@ internal object SudokuTeacher {
     // ---- small helpers -----------------------------------------------------------------------------
 
     private fun lineOf(kind: Kind, cell: Int) = if (kind == Kind.ROW) cell / 9 else cell % 9
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
 }

@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
 
 /**
@@ -215,7 +217,7 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
         val adds = sum.columnAddends[c]
         val t = sum.columnTotal[c]
         val lhs = left(c, ins.singleOrNull())
-        if (open.isEmpty()) return "$lhs would make ${list(ins.map { adds.sumOf { l -> digits[l] } + it })}"
+        if (open.isEmpty()) return "$lhs would make ${listed(ins.map { adds.sumOf { l -> digits[l] } + it }, "or")}"
         val raw = ins.flatMap { a -> outs.flatMap { b -> fills(c, a, b, digits, strict = false) } }
         if (raw.isEmpty()) {
             val max = adds.sumOf { if (digits[it] != EMPTY) digits[it] else 9 } + ins.max()
@@ -232,7 +234,7 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
             val held = values.map { holder(it) }
             if (held.all { it != null }) {
                 val who = held.map { sum.name(it!!) }
-                return "${sum.name(y)} would be ${list(values)}, which ${list(who, "and")} ${if (who.size == 1) "has" else "have"}"
+                return "${sum.name(y)} would be ${listed(values, "or")}, which ${listed(who, "and")} ${if (who.size == 1) "has" else "have"}"
             }
             if (values == listOf(0) && leads(y)) return "${sum.name(y)} would be 0, but it starts a word"
             return null
@@ -249,7 +251,7 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
             if (held.isNotEmpty()) {
                 val parts = open.map { "${sum.name(it)} ${f[it]}" }
                 return "${parts.first().replace(" ", " would be ")}${if (parts.size > 1) " and " + parts.drop(1).joinToString(" and ") else ""}, " +
-                    "but ${list(held.map { "${sum.name(holder(f[it])!!)} has ${f[it]}" }, "and")}"
+                    "but ${listed(held.map { "${sum.name(holder(f[it])!!)} has ${f[it]}" }, "and")}"
             }
         }
         // Every way to make it uses digits already placed: "E and L would have to come from 0 and 1, and I and F have those".
@@ -257,8 +259,8 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
         if (used.size <= 3 && raw.all { f -> open.any { holder(f[it]) != null } }) {
             val held = used.mapNotNull { holder(it) }.distinct()
             if (held.size == used.size) {
-                return "${list(open.map { sum.name(it) }, "and")} would have to come from ${list(used, "and")}, " +
-                    "and ${list(held.map { sum.name(it) }, "and")} have those"
+                return "${listed(open.map { sum.name(it) }, "and")} would have to come from ${listed(used, "and")}, " +
+                    "and ${listed(held.map { sum.name(it) }, "and")} have those"
             }
         }
         return null
@@ -295,7 +297,7 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
                     val most = hiTerms.filter { it != 0 }.joinToString(" + ")
                     val bound = if (b == 1) "That is at least 10 and at most $most = $hi" else "That is at most $most = $hi"
                     val ruled = taken.joinToString(" and ") { e -> holder(e)?.let { "${sum.name(it)} has $e" } ?: "$xn starts a word" }
-                    return if (taken.isEmpty()) "$head. $bound, so $xn is $d." else "$head. $bound, so $xn is ${list(range)}; $ruled, so $xn is $d."
+                    return if (taken.isEmpty()) "$head. $bound, so $xn is $d." else "$head. $bound, so $xn is ${listed(range, "or")}; $ruled, so $xn is $d."
                 }
             }
         }
@@ -312,7 +314,7 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
             if (bad.isEmpty() || values.size > 4) return null
             val ruled = bad.map { e -> holder(e)?.let { "${sum.name(it)} has $e" } ?: if (e == 0 && leads(x)) "$xn starts a word" else return null }
             val whatever = if (a == null) ", whatever is carried" else ""
-            return "$head. Only $xn = ${list(values)} can do that$whatever; ${list(ruled, "and")}, so $xn is $d."
+            return "$head. Only $xn = ${listed(values, "or")} can do that$whatever; ${listed(ruled, "and")}, so $xn is $d."
         }
         return null
     }
@@ -345,13 +347,8 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
             if (reason != null) reasons += reason
         }
         if (reasons.isEmpty()) return null
-        return "$head: ${sum.name(p)} = ${list(pairs.map { it.first })} would make ${sum.name(q)} ${list(pairs.map { it.second })}. " +
-            "${reasons.distinct().joinToString(", ").replaceFirstChar { it.uppercase() }}, so ${sum.name(x)} is $d."
-    }
-
-    private fun <T> list(xs: List<T>, joiner: String = "or"): String = when (xs.size) {
-        1 -> "${xs[0]}"
-        else -> xs.dropLast(1).joinToString(", ") + " $joiner " + xs.last()
+        return "$head: ${sum.name(p)} = ${listed(pairs.map { it.first }, "or")} would make ${sum.name(q)} ${listed(pairs.map { it.second }, "or")}. " +
+            "${reasons.distinct().joinToString(", ").cap()}, so ${sum.name(x)} is $d."
     }
 
     /** The whole working for [x] = [d], from whichever of its columns can show it most briefly; null if none can. */

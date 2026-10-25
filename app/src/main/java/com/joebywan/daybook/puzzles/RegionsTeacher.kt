@@ -3,7 +3,7 @@ package com.joebywan.daybook.puzzles
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.bit
 import com.joebywan.daybook.core.has
-
+import com.joebywan.daybook.core.listed
 
 /**
  * Regions, reasoned a step at a time.
@@ -44,7 +44,6 @@ internal object RegionsTeacher {
     fun pad(d: Int): Int = 1000 + d
 
     // ---- what the player can see ------------------------------------------------------------------
-
 
     /** For each empty square the digits still possible there; 0 for a filled square. */
     private fun candidates(layout: RegionsLayout, cells: List<Int>): IntArray {
@@ -135,8 +134,6 @@ internal object RegionsTeacher {
 
     // ---- explaining ---------------------------------------------------------------------------------
 
-    private fun andList(ds: List<Int>) = if (ds.size < 2) ds.joinToString("") else ds.dropLast(1).joinToString(", ") + " and " + ds.last()
-
     fun deduce(layout: RegionsLayout, cells: List<Int>): PlacementStep? {
         val hit = findStep(layout, cells) ?: return null
         val x = hit.cell
@@ -156,10 +153,10 @@ internal object RegionsTeacher {
                 val touchDigits = touching.map { cells[it] }.sorted().distinct()
                 val why = when {
                     regionDigits.isNotEmpty() && touchDigits.isNotEmpty() ->
-                        "Its region already has ${andList(regionDigits)}, and the squares touching it have ${andList(touchDigits)}, so only $d is left."
-                    regionDigits.isNotEmpty() -> "Its region already has ${andList(regionDigits)}, so only $d is left."
+                        "Its region already has ${listed(regionDigits)}, and the squares touching it have ${listed(touchDigits)}, so only $d is left."
+                    regionDigits.isNotEmpty() -> "Its region already has ${listed(regionDigits)}, so only $d is left."
                     touchDigits.isEmpty() -> "Its region is one square, so it holds just a 1."
-                    else -> "The squares touching it have ${andList(touchDigits)}, so only $d is left."
+                    else -> "The squares touching it have ${listed(touchDigits)}, so only $d is left."
                 }
                 PlacementStep(
                     ONLY_DIGIT, x, d, setOf(x), (inRegion + touching.sorted().distinctBy { cells[it] }).toSet(),

@@ -1,5 +1,9 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.numberWord
+
 /**
  * Atoms, reasoned the way a person reasons it, one named step at a time.
  *
@@ -386,7 +390,7 @@ internal object AtomsTeacher {
         fun reasonsFor(short: Boolean): List<String> {
             fun who(b: Int) = "the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}"
             fun listed(bs: List<Int>, and: String = "and") =
-                if (short) join(bs.map { way(s.atoms[a], s.atoms[it]) }, and) else "to " + join(bs.map(::who), and)
+                if (short) listed(bs.map { way(s.atoms[a], s.atoms[it]) }, and) else "to " + listed(bs.map(::who), and)
             return buildList {
                 if (crossedTo.isNotEmpty()) {
                     add(if (short) "a bond crosses the line ${listed(crossedTo)}" else "a bond crosses the way ${listed(crossedTo)}")
@@ -420,7 +424,7 @@ internal object AtomsTeacher {
                 val goes = when {
                     f.need == 1 && s.degree(a) > 0 -> "its last bond goes there"
                     f.need == 1 -> "its bond goes there"
-                    s.degree(a) > 0 -> "its remaining ${numberWord(f.need)} go there"
+                    s.degree(a) > 0 -> "its remaining ${numberWord(f.need, upTo = 8)} go there"
                     else -> "${if (f.need == 2) "both" else "all"} its bonds go there"
                 }
                 if (reasons.isEmpty()) {
@@ -432,12 +436,12 @@ internal object AtomsTeacher {
             }
             ALL_FORCED -> {
                 val parts = f.raise.entries.sortedBy { it.key }.map { (p, to) ->
-                    "${numberWord(to - s.lo[p])} ${way(s.atoms[a], s.atoms[s.other(p, a)])}"
+                    "${numberWord(to - s.lo[p], upTo = 8)} ${way(s.atoms[a], s.atoms[s.other(p, a)])}"
                 }
                 val lead = "This $x $needWords and its neighbours can take just that"
-                val full = "$lead, so all are used: ${join(parts)}."
+                val full = "$lead, so all are used: ${listed(parts)}."
                 // The reason above can already have used most of the panel; "so all are used" goes first.
-                if (prefix.length + full.length <= MAX_EXPLANATION) full else "$lead: ${join(parts)}."
+                if (prefix.length + full.length <= MAX_EXPLANATION) full else "$lead: ${listed(parts)}."
             }
             else -> {
                 val spare = f.room - f.need
@@ -454,9 +458,9 @@ internal object AtomsTeacher {
                             "the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}"
                         }
                         if (names.size == 1) {
-                            "${names[0].cap()} can take ${numberWord(room)}, so it gets at least ${numberWord(owed)}."
+                            "${names[0].cap()} can take ${numberWord(room, upTo = 8)}, so it gets at least ${numberWord(owed, upTo = 8)}."
                         } else {
-                            "${join(names).cap()} can each take ${numberWord(room)}, so each gets at least ${numberWord(owed)}."
+                            "${listed(names).cap()} can each take ${numberWord(room, upTo = 8)}, so each gets at least ${numberWord(owed, upTo = 8)}."
                         }
                     }
                 }
@@ -466,11 +470,11 @@ internal object AtomsTeacher {
                     val (p, to) = targets[0]
                     val b = s.other(p, a)
                     "This $x $needWords, so the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])} gets at least " +
-                        "${numberWord(to - s.lo[p])}."
+                        "${numberWord(to - s.lo[p], upTo = 8)}."
                 } else {
                     // Likewise "so one is spare": the arithmetic still stands without it.
-                    val lead = "This $x $needWords and its neighbours can take ${numberWord(f.room)}"
-                    val withSpare = "$lead, so ${if (spare == 1) "one is" else "${numberWord(spare)} are"} spare. $tail"
+                    val lead = "This $x $needWords and its neighbours can take ${numberWord(f.room, upTo = 8)}"
+                    val withSpare = "$lead, so ${if (spare == 1) "one is" else "${numberWord(spare, upTo = 8)} are"} spare. $tail"
                     if (prefix.length + withSpare.length <= MAX_EXPLANATION) withSpare else "$lead. $tail"
                 }
             }
@@ -541,7 +545,7 @@ internal object AtomsTeacher {
             val steps = forced.map { f ->
                 val a = s.atoms[f.atom]
                 val where = f.raise.keys.sorted().map { way(a, s.atoms[s.other(it, f.atom)]) }
-                "the ${a.bonds} must bond ${join(where)}"
+                "the ${a.bonds} must bond ${listed(where)}"
             }
             val end = when (dead) {
                 is Short -> "the ${s.atoms[dead.atom].bonds} couldn't reach its number"
@@ -552,7 +556,7 @@ internal object AtomsTeacher {
                 }
             }
             val all = steps + end
-            val text = if (all.size == 1) all[0] else all.dropLast(1).joinToString(", ") + ", and then " + all.last()
+            val text = listed(all, "and then", oxford = true)
             return if (lead) text.cap() else text
         }
     }
@@ -621,17 +625,5 @@ internal object AtomsTeacher {
         else -> "below"
     }
 
-    private fun bondsWord(k: Int) = if (k == 1) "one bond" else "${numberWord(k)} bonds"
-
-    private fun join(words: List<String>, and: String = "and"): String = when (words.size) {
-        0 -> ""
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " $and " + words.last()
-    }
-
-    private fun numberWord(k: Int) =
-        listOf("zero", "one", "two", "three", "four", "five", "six", "seven", "eight")
-            .getOrElse(k) { k.toString() }
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
+    private fun bondsWord(k: Int) = if (k == 1) "one bond" else "${numberWord(k, upTo = 8)} bonds"
 }

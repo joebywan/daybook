@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.numberWord
+
 /**
  * Shikaku, reasoned the way a person reasons it, one named step at a time.
  *
@@ -231,7 +234,7 @@ internal object ShikakuTeacher {
         val explanation = if (reasons.isEmpty()) {
             "This $n needs ${numberWord(n)} squares, and there is only one way to lay them out here."
         } else {
-            "This $n needs ${numberWord(n)} squares. Any other rectangle would ${join(reasons, "or")}, " +
+            "This $n needs ${numberWord(n)} squares. Any other rectangle would ${listed(reasons, "or")}, " +
                 "so only this one fits."
         }
         return Step(
@@ -335,7 +338,7 @@ internal object ShikakuTeacher {
                 cited = cited + a,
                 targets = keep.cells(s.w).toSet(),
                 nudge = "What if the glowing $n went another way?",
-                explanation = "Suppose the $n took $which. That would ${join(phrases, "or")}. " +
+                explanation = "Suppose the $n took $which. That would ${listed(phrases, "or")}. " +
                     "So the $n takes this rectangle.",
             )
         }
@@ -343,14 +346,4 @@ internal object ShikakuTeacher {
     }
 
     // ---- words -----------------------------------------------------------------------------------
-
-    private fun join(words: List<String>, and: String = "and"): String = when (words.size) {
-        0 -> ""
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " $and " + words.last()
-    }
-
-    private fun numberWord(k: Int) =
-        listOf("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve")
-            .getOrElse(k) { k.toString() }
 }

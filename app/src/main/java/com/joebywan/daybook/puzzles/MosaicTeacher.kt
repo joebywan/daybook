@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.forEachBit
 
 /**
@@ -474,6 +475,4 @@ internal object MosaicTeacher {
     // ---- words ----------------------------------------------------------------------------------
 
     private fun fills(n: Int) = if (n == 1) "1 fill" else "$n fills"
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
 }

@@ -1,5 +1,9 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.numberWord
+
 /**
  * Tower (Mastermind), reasoned the way a person reasons it: from the scores already on the board.
  *
@@ -340,10 +344,10 @@ internal object TowerTeacher {
         private fun accountedText(g: Int, right: List<Int>, wrong: List<Int>, open: List<Int>, slot: Int): String {
             val guess = guesses[g]
             val f = feedback[g].exact
-            fun pegs(list: List<Int>) = join(list.map { "its ${colourNames[guess[it]]} in slot ${it + 1}" })
+            fun pegs(list: List<Int>) = listed(list.map { "its ${colourNames[guess[it]]} in slot ${it + 1}" })
             val parts = buildList {
                 if (right.isNotEmpty()) {
-                    add(pegs(right) + if (right.size == 1) " is one" else " are ${numberWord(right.size)} of them")
+                    add(pegs(right) + if (right.size == 1) " is one" else " are ${numberWord(right.size, zero = "no", upTo = 5)} of them")
                 }
                 if (wrong.isNotEmpty()) {
                     val reasons = wrong.map { whyClause(it, excluded(it, guess[it])!!) }.distinct()
@@ -352,7 +356,7 @@ internal object TowerTeacher {
                         wrong.size == 1 -> " one"
                         else -> " any"
                     }
-                    add(pegs(wrong) + " can't be$which (${join(reasons)})")
+                    add(pegs(wrong) + " can't be$which (${listed(reasons)})")
                 }
             }
             val rest = if (open.size == 1) "its last peg is right" else "its other pegs are right"
@@ -405,7 +409,7 @@ internal object TowerTeacher {
                 groups.getOrPut(key) { mutableListOf() } += r
             }
             val clauses = groups.values.map { group ->
-                val names = join(group.map { colourNames[it.first] }, "or")
+                val names = listed(group.map { colourNames[it.first] }, "or")
                 val why = group.map { it.second }
                 val rows = why.flatMap { it.rows }.distinct().sorted()
                 val guessesWord = guessList(rows)
@@ -420,7 +424,7 @@ internal object TowerTeacher {
                 }
                 "$names ($clause)"
             }
-            return "Slot ${slot + 1} can't be ${join(clauses, "or")}. That leaves ${colourNames[colour]}."
+            return "Slot ${slot + 1} can't be ${listed(clauses, "or")}. That leaves ${colourNames[colour]}."
         }
 
         /** A reason as a short clause, for inside brackets. */
@@ -518,7 +522,7 @@ internal object TowerTeacher {
                 }
                 if (f - right.size == open.size) {
                     open.forEach { known[it] = guess[it] }
-                    val where = (if (open.size == 1) "slot " else "slots ") + join(open.map { "${it + 1}" })
+                    val where = (if (open.size == 1) "slot " else "slots ") + listed(open.map { "${it + 1}" })
                     return "guess ${g + 1}'s filled pips would have to include $where" to g
                 }
             }
@@ -663,7 +667,7 @@ internal object TowerTeacher {
             targets = empty.map { CURRENT + it }.toSet(),
             nudge = "Nothing is scored yet. Any first guess tells you something.",
             explanation = "With nothing scored, every code is still possible. A few colours used twice " +
-                "each, like ${join(code.map { colourNames[it] })}, tells you a lot.",
+                "each, like ${listed(code.map { colourNames[it] })}, tells you a lot.",
         )
     }
 
@@ -677,7 +681,7 @@ internal object TowerTeacher {
         val fitting = space.filter { code -> placed.all { code[it] == current[it] } }
         val code = if (fitting.size <= 2) fitting.first() else bestSplit(fitting, colours)
         val empty = current.indices.filter { current[it] < 0 }
-        val names = join(code.map { colourNames[it] })
+        val names = listed(code.map { colourNames[it] })
         val only = fitting.size == 1
         return Step(
             technique = if (only) ONLY_CODE else CONSISTENT,
@@ -742,18 +746,7 @@ internal object TowerTeacher {
     private fun pips(fb: Feedback) = "${fb.exact} filled and ${fb.misplaced} hollow"
 
     private fun guessList(rows: List<Int>): String =
-        (if (rows.size == 1) "guess " else "guesses ") + join(rows.map { (it + 1).toString() })
+        (if (rows.size == 1) "guess " else "guesses ") + listed(rows.map { (it + 1).toString() })
 
-    private fun join(words: List<String>, last: String = "and"): String = when (words.size) {
-        0 -> ""
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " $last " + words.last()
-    }
-
-    private fun count(n: Int, noun: String) = "${numberWord(n)} $noun${if (n == 1) "" else "s"}"
-
-    private fun numberWord(k: Int) =
-        listOf("no", "one", "two", "three", "four", "five").getOrElse(k) { k.toString() }
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
+    private fun count(n: Int, noun: String) = "${numberWord(n, zero = "no", upTo = 5)} $noun${if (n == 1) "" else "s"}"
 }
