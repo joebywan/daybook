@@ -178,6 +178,26 @@ motif). `id = "regions"` is hashed into every seed: never rename it.
   digit keys `1000 + d`.
 - A locked-candidate technique (a digit whose only places in a region all touch one square rules that square out) would cut the givens further; not built,
   `docs/TODO.md`.
+## Sudoku
+
+The classic 9x9. `puzzles/Sudoku.kt` (state, rules, generator, `countSolutions`), `SudokuTeacher.kt`, `SudokuBoard.kt` (grid and pad,
+shared with Cage Sudoku), `SudokuKeys.kt`. `id = "sudoku"` is hashed into every seed: never rename it.
+
+- **Tiers are depth of the teacher's ladder, not clue counts** (`Sudoku.gate`): Standard is finished by singles in a unit (full house,
+  hidden singles); Hard must need a naked single and nothing past it; Expert must need locked candidates, a pair or a what-if, and
+  never the fallback. Clues fall where minimality leaves them: about 28 on every tier (22-33). The old 38 / 30 / 24 targets dug
+  for uniqueness alone, so Hard and Expert overlapped and a third of Expert boards fell back.
+- **A board ships only if the tier's ladder finishes it and `countSolutions` (exhaustive, no budget) proves one answer.** A fresh grid
+  per attempt (`Rng(seed + attempt)`) is dug in 180-degree pairs (the centre alone) in random order, keeping a removal only while both
+  hold, so the givens are symmetric and minimal for the tier's ladder; then the teacher's walk must have needed the tier's technique,
+  else the next grid. `finishes` is the dig's shortcut (singles settled with bitmasks, the teacher asked only where they stall;
+  `SudokuRulesTest` checks it gives the teacher's verdict). Attempts over a year: 1 / 4.5 / 5.6 mean, at most 1 / 25 / 38 of
+  `ATTEMPTS` = 100; `lastResort` is the board of one fixed seed, itself proved; a year never reaches it (`FallbackTest`). JVM 1.4 / 3.4 /
+  6.9 ms median, 7 / 16 / 25 ms p95. Changing the ladder changes every board (parity pins go red on purpose).
+- **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer.
+  The save holds givens, digits and the answer, so a board in progress never depends on the generator.
+- `fullGrid` is shared with Cage Sudoku: changing it moves every Cage board too.
+
 ## Cage Sudoku
 
 Sudoku plus dashed cages: the digits of a cage add up to the small number in its corner and never repeat. Not "Killer Sudoku" in
@@ -490,7 +510,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Cipher, Sand and Pointers (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand, Sudoku (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Cipher, Sand, Sudoku and Pointers (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
