@@ -468,7 +468,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
   Levels, nothing from within 28dp of a side. Decided by the pure `swipedTier` (`TierSwipeTest`); the detector watches on the Initial
   pass and consumes only once a move is plainly sideways (past slop, twice as far across as down, before the long-press timeout), so
   taps, the long-press tile drag and the list's scroll keep working. It calls the same `onDifficulty` as the tier row, whose pill slides
-  (`SegmentedControl`), and the new tier's name fades over the grid (`TierFlash`). Mouse drags count too (Compose's scroll ignores the mouse).
+  (`SegmentedControl`), and the new tier's name shows in a solid pill over the grid, then fades (`TierFlash`). Mouse drags count too (Compose's scroll ignores the mouse).
 
 ## Typography
 

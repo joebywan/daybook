@@ -4,7 +4,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,7 +78,7 @@ internal fun Modifier.tierSwipe(mode: () -> LaunchMode, tier: () -> Difficulty, 
     }
 
 /**
- * The new tier's name, faint over the grid for a moment after a swipe; [flash] is the tier and a count, so the same tier
+ * The new tier's name, in a solid pill over the grid for a moment after a swipe (it was once faint text, and went unseen); [flash] is the tier and a count, so the same tier
  * twice still shows. Drawn over everything and takes no touches, so it moves nothing. Under reduced motion it shows and
  * goes without the fade.
  */
@@ -87,21 +90,28 @@ internal fun TierFlash(flash: Pair<Difficulty, Int>?, modifier: Modifier) {
         if (flash == null) return@LaunchedEffect
         alpha.snapTo(FLASH_ALPHA)
         if (still) {
-            delay(FLASH_MS.toLong())
+            delay((FLASH_HOLD_MS + FLASH_MS).toLong())
             alpha.snapTo(0f)
         } else {
             alpha.animateTo(0f, tween(FLASH_MS, delayMillis = FLASH_HOLD_MS))
         }
     }
-    if (flash != null) Text(
-        flash.first.label,
-        style = MaterialTheme.typography.displaySmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onBackground,
+    if (flash != null) Surface(
         modifier = modifier.graphicsLayer { this.alpha = alpha.value },
-    )
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shadowElevation = 6.dp,
+    ) {
+        Text(
+            flash.first.label,
+            style = MaterialTheme.typography.displayMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 32.dp, vertical = 14.dp),
+        )
+    }
 }
 
-private const val FLASH_ALPHA = 0.4f
-private const val FLASH_HOLD_MS = 250
-private const val FLASH_MS = 700
+private const val FLASH_ALPHA = 0.95f
+private const val FLASH_HOLD_MS = 700
+private const val FLASH_MS = 500
