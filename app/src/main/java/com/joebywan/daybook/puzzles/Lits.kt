@@ -349,11 +349,14 @@ object Lits : PuzzleType {
      */
     private const val NODE_BUDGET = 400_000
 
-    /** Ceiling on uniqueness checks per board, which is what actually bounds generation time. */
-    private const val SEARCH_BUDGET = 4000
+    /**
+     * Ceiling on uniqueness checks per board, which is what actually bounds generation time. Tripled (with
+     * [ATTEMPTS]) for the tier gate: a board that fits inside the old budget is the board it always was.
+     */
+    private const val SEARCH_BUDGET = 12_000
 
     /** Piece layouts tried per board, and partitions carved per layout. */
-    private const val ATTEMPTS = 150
+    private const val ATTEMPTS = 450
     private const val WALL_TRIES = 2
 
     /**
@@ -375,7 +378,9 @@ object Lits : PuzzleType {
      */
     private const val LAYOUTS = 24
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = build(seed, difficulty).let { (proved, floor) ->
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = build(seed, difficulty).let { b ->
+        val proved = b.proved
+        val floor = b.floor
         // Nothing was *proved* unique inside the budget. The floor still obeys every rule and can
         // be finished, and a second legal answer is a blemish rather than a wrong-answer bug (the
         // win check is the rules, not a stored answer), so it beats shipping nothing. FallbackTest
@@ -387,10 +392,13 @@ object Lits : PuzzleType {
      * The board [generate] makes, or null when nothing was proved to have exactly one answer under
      * the win check's rules: what a test asserts, because [generate] would then ship a floor.
      */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): LitsState? = build(seed, difficulty).first
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): LitsState? = build(seed, difficulty).proved
 
-    /** The proved board if any, and the first legal-but-unproved candidate built along the way. */
-    private fun build(seed: Long, difficulty: Difficulty): kotlin.Pair<LitsState?, LitsState?> {
+    /**
+     * The proved board if any (the first that [score] says fits the tier, else the nearest), and the first
+     * legal-but-unproved candidate built along the way.
+     */
+    internal fun build(seed: Long, difficulty: Difficulty): Built {
         val (w, h) = shape(difficulty)
         val n = w * h
         val g = geometry(w, h)
@@ -404,6 +412,10 @@ object Lits : PuzzleType {
         // first and the regions drawn around it — so the first one built is kept as a floor. Only
         // its *uniqueness* is ever in doubt.
         var floor: LitsState? = null
+        // The proved board that came nearest the tier's gate, shipped when none meets it in MAX_DRAWS.
+        var best: LitsState? = null
+        var bestScore = -1
+        var proved = 0
 
         // Capped first. Should no board be provable under the cap, a proved board with one larger
         // region still beats the unproved floor, so the cap is dropped rather than the proof.
@@ -443,14 +455,52 @@ object Lits : PuzzleType {
                         // the next candidate.
                         searches++
                         if (search(g, options, connected = false) is Verdict.ExactlyOne) {
-                            return LitsState(w, h, region, List(n) { false }, verdict.shading) to floor
+                            val board = LitsState(w, h, region, List(n) { false }, verdict.shading)
+                            proved++
+                            val score = score(difficulty, LitsTeacher.depth(w, h, region))
+                            if (score == FITS) return Built(board, floor, proved)
+                            if (score > bestScore) { best = board; bestScore = score }
+                            if (difficulty == Difficulty.EXPERT && proved >= MAX_DRAWS) return Built(best, floor, proved)
                         }
                     }
                 }
             }
+            // A proved board under the cap beats a gated one with a larger region.
+            if (best != null) break
         }
 
-        return null to floor
+        return Built(best, floor, proved)
+    }
+
+    /** [build]'s result: the proved board if any, the floor, and how many proved boards the gate looked at. */
+    internal class Built(val proved: LitsState?, val floor: LitsState?, val draws: Int)
+
+    /**
+     * Proved boards Expert's gate may look at. Its what-if is needed by about one board in twenty, and each draw
+     * costs a carve (~15 ms on the JVM), so it keeps the deepest of these rather than drawing on: a year of Expert
+     * days is then what-if 35%, neighbour 64%, at a median of ~140 ms a board (16 draws: 37%, 177 ms).
+     */
+    private const val MAX_DRAWS = 8
+
+    private const val FITS = 2
+
+    /**
+     * How well a proved board meets its tier's gate, by the deepest [LitsTeacher.TECHNIQUES] rung a walk from blank
+     * needs ([LitsTeacher.depth]); [FITS] ships at once. Standard: no [LitsTeacher.NEIGHBOUR] or [LitsTeacher.WHAT_IF].
+     * Hard: any walk that finishes. Expert: [LitsTeacher.WHAT_IF], else (after [MAX_DRAWS]) [LitsTeacher.NEIGHBOUR].
+     */
+    internal fun score(difficulty: Difficulty, depth: Int?): Int {
+        if (depth == null) return 0
+        val t = LitsTeacher.TECHNIQUES
+        return when (difficulty) {
+            Difficulty.STANDARD -> if (depth < t.indexOf(LitsTeacher.NEIGHBOUR)) FITS else 0
+            Difficulty.HARD -> FITS
+            Difficulty.EXPERT -> when {
+                depth == t.indexOf(LitsTeacher.WHAT_IF) -> FITS
+                depth == t.indexOf(LitsTeacher.NEIGHBOUR) -> 1
+                else -> 0
+            }
+        }
     }
 
     /**

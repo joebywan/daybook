@@ -770,6 +770,8 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   finished candidate is proved again with no connectivity rule before it ships. Do not restore the
   connectivity rule to the win check to make uniqueness easier. `LitsUniquenessTest` asserts it
   with the independent `LitsOracle`; `FallbackTest` walks a year per tier through `generateVerified`.
+  Tiers are gated on the teacher's walk (`LitsTeacher.depth`, `Lits.score`): Standard never needs neighbour or what-if,
+  Expert takes what-if in its first eight proved draws, else neighbour (`docs/TEACHING.md`, Tier depth).
 - Screen readers are not a goal: these are visual puzzles a blind player could not play however the boards were
   exposed (the owner, 2026-10-22). Text size and colour-only signals were offered and left;
   reduced motion (following the system setting) was added at the owner's request, 2026-10-23.
