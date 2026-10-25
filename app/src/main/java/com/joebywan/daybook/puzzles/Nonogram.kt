@@ -65,6 +65,18 @@ import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.rememberSettledFlags
 import com.joebywan.daybook.ui.HintGlow
+import com.joebywan.daybook.ui.LocalReducedMotion
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ZoomOutMap
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
 
 /** Each board draws its filled squares as a diagonal blend of two colours; the pair is the board's own. */
 private val PALETTES = listOf(
@@ -100,6 +112,7 @@ object Nonogram : PuzzleType {
         "The numbers beside a row, or above a column, give the lengths of its runs of filled squares, in order.",
         "Two runs always have at least one empty square between them.",
         "Pick Fill or Cross under the board and tap squares. Drag along a row or column to sweep several at once.",
+        "On a big board, pinch to zoom in. Zoomed in, a drag moves around the board instead of sweeping, and the corner button shows the whole board again.",
         "A cross just means \"empty\": it is a note to yourself and never counts against you.",
         "Solved when every row and column shows its numbers. Every board can be worked out one line at a time, with no guessing.",
     )
@@ -200,7 +213,7 @@ object Nonogram : PuzzleType {
             ),
             TutorialFrame(
                 state = afterCross,
-                caption = "Your turn: finish the picture. Stuck? Hint shows you why.",
+                caption = "Your turn: finish the picture. Stuck? Hint shows you why. On bigger boards, pinch to zoom in.",
                 freePlay = true,
                 done = "Solved. Every board works out one line at a time.",
             ),
@@ -262,10 +275,15 @@ object Nonogram : PuzzleType {
         val u = with(density) { unit.toPx() }
         val gridX = left * u
         val gridY = top * u
+        val gridAt = Offset(gridX, gridY)
+        val gridSize = Size(s.width * u, s.height * u)
 
         /** The whole drawing, and the grid within it, in dp. */
         val box = Modifier.size(unit * across, unit * down)
         val grid = Modifier.offset(unit * left, unit * top).size(unit * s.width, unit * s.height)
+
+        /** The empty corner above the row clues and left of the column clues. */
+        val corner = Modifier.size(unit * left, unit * top)
     }
 
     /** The clue numbers of every row, then column, as measured text, one layout per number. */
@@ -274,31 +292,27 @@ object Nonogram : PuzzleType {
         return clues.map { line -> (if (line.isEmpty()) listOf(0) else line).map { measurer.measure(it.toString(), style) } }
     }
 
-    /** [text], [done] and [bad] are per line, rows then columns. */
-    private fun DrawScope.drawBoard(
+    /**
+     * The squares, grid lines and hint dimming of [s], with the grid's top-left at the origin and
+     * [u] pixels a square. The play board draws this inside its zoom layer.
+     */
+    private fun DrawScope.drawGrid(
         s: NonogramState,
-        g: Geometry,
-        text: List<List<TextLayoutResult>>,
-        done: BooleanArray,
+        u: Float,
         scheme: androidx.compose.material3.ColorScheme,
         palette: Pair<Color, Color>,
-        bad: BooleanArray = BooleanArray(s.height + s.width),
         overlay: HintGlow = HintGlow(),
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
     ) {
-        val u = g.u
         val highlight = overlay.highlight
-        val lit = !highlight.isEmpty
         val n = s.width * s.height
-
-        fun named(i: Int) = i in highlight.strong || i in highlight.soft
 
         // Squares.
         for (r in 0 until s.height) {
             for (c in 0 until s.width) {
-                val x = g.gridX + c * u
-                val y = g.gridY + r * u
+                val x = c * u
+                val y = r * u
                 drawRect(scheme.surface, Offset(x, y), Size(u, u))
                 feelSquare(feel, r * s.width + c, Offset(x, y), Size(u, u), accent) {
                     when (s.cells[r * s.width + c]) {
@@ -323,13 +337,49 @@ object Nonogram : PuzzleType {
             val heavy = i % 5 == 0
             drawLine(if (heavy) scheme.onSurfaceVariant.copy(alpha = 0.7f) else scheme.outline, from, to, if (heavy) thin * 2f else thin)
         }
-        for (i in 0..s.width) gridLine(i, Offset(g.gridX + i * u, g.gridY), Offset(g.gridX + i * u, g.gridY + s.height * u))
-        for (i in 0..s.height) gridLine(i, Offset(g.gridX, g.gridY + i * u), Offset(g.gridX + s.width * u, g.gridY + i * u))
+        for (i in 0..s.width) gridLine(i, Offset(i * u, 0f), Offset(i * u, s.height * u))
+        for (i in 0..s.height) gridLine(i, Offset(0f, i * u), Offset(s.width * u, i * u))
 
-        // Clues. A line that already shows its numbers fades, the way a ticked-off list does.
+        if (highlight.isEmpty) return
+
+        // Everything the hint does not name steps back, so a glowing line is findable on 225 squares.
+        for (i in 0 until n) {
+            if (i in highlight.strong || i in highlight.soft) continue
+            drawRect(scheme.background.copy(alpha = 0.55f), Offset((i % s.width) * u, (i / s.width) * u), Size(u, u))
+        }
+
+        hintRims(highlight, u, overlay.glow, overlay.pulse, scheme.background) { set, width, colour ->
+            squareRim(set, width, colour, s.width, s.height, { i -> Rect(Offset((i % s.width) * u, (i / s.width) * u), Size(u, u)) })
+        }
+    }
+
+    /**
+     * The clues, pinned to the grid's left and top edges: a row's numbers follow its row up and
+     * down as the grid is zoomed ([view]) and panned, but never leave the left; a column's follow it
+     * sideways along the top. They keep their unzoomed size. A line that already shows its numbers
+     * fades, the way a ticked-off list does. [text], [done] and [bad] are per line, rows then columns.
+     */
+    private fun DrawScope.drawClues(
+        s: NonogramState,
+        g: Geometry,
+        text: List<List<TextLayoutResult>>,
+        done: BooleanArray,
+        scheme: androidx.compose.material3.ColorScheme,
+        bad: BooleanArray = BooleanArray(s.height + s.width),
+        overlay: HintGlow = HintGlow(),
+        view: GridView = GridView(),
+    ) {
+        val u = g.u
+        val cu = u * view.scale
+        val gx = g.gridX + view.offset.x
+        val gy = g.gridY + view.offset.y
+        val highlight = overlay.highlight
+        val lit = !highlight.isEmpty
+        val n = s.width * s.height
+
         // [centre] places a number by how many numbers come after it in the line.
         fun clues(line: Int, band: Offset, bandSize: Size, centre: (after: Int) -> Offset) {
-            val lit1 = lit && named(n + line)
+            val lit1 = lit && (n + line in highlight.strong || n + line in highlight.soft)
             if (lit1) drawRoundRect(overlay.glow.copy(alpha = 0.16f * overlay.pulse), band, bandSize, CornerRadius(u * 0.2f))
             val tint = if (bad[line]) scheme.error else if (done[line]) scheme.primary else Color.Unspecified
             if (tint.isSpecified) drawRoundRect(tint.copy(alpha = 0.16f), band, bandSize, CornerRadius(u * 0.2f))
@@ -340,31 +390,19 @@ object Nonogram : PuzzleType {
                 drawText(layout, if (tint.isSpecified) tint.copy(alpha = alpha) else scheme.onSurface.copy(alpha = alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
             }
         }
-        for (r in 0 until s.height) {
-            clues(r, Offset(0f, g.gridY + r * u), Size(g.gridX, u)) { after ->
-                Offset(g.gridX - CLUE_GAP * u - after * SLOT_W * u - SLOT_W * u / 2f, g.gridY + (r + 0.5f) * u)
+        clipRect(0f, g.gridY, g.gridX, g.gridY + g.gridSize.height) {
+            for (r in 0 until s.height) {
+                clues(r, Offset(0f, gy + r * cu), Size(g.gridX, cu)) { after ->
+                    Offset(g.gridX - CLUE_GAP * u - after * SLOT_W * u - SLOT_W * u / 2f, gy + (r + 0.5f) * cu)
+                }
             }
         }
-        for (c in 0 until s.width) {
-            clues(s.height + c, Offset(g.gridX + c * u, 0f), Size(u, g.gridY)) { after ->
-                Offset(g.gridX + (c + 0.5f) * u, g.gridY - CLUE_GAP * u - after * SLOT_H * u - SLOT_H * u / 2f)
+        clipRect(g.gridX, 0f, g.gridX + g.gridSize.width, g.gridY) {
+            for (c in 0 until s.width) {
+                clues(s.height + c, Offset(gx + c * cu, 0f), Size(cu, g.gridY)) { after ->
+                    Offset(gx + (c + 0.5f) * cu, g.gridY - CLUE_GAP * u - after * SLOT_H * u - SLOT_H * u / 2f)
+                }
             }
-        }
-
-        if (!lit) return
-
-        // Everything the hint does not name steps back, so a glowing line is findable on 225 squares.
-        for (i in 0 until n) {
-            if (named(i)) continue
-            drawRect(
-                scheme.background.copy(alpha = 0.55f),
-                Offset(g.gridX + (i % s.width) * u, g.gridY + (i / s.width) * u),
-                Size(u, u),
-            )
-        }
-
-        hintRims(highlight, u, overlay.glow, overlay.pulse, scheme.background) { set, width, colour ->
-            squareRim(set, width, colour, s.width, s.height, { i -> Rect(Offset(g.gridX + (i % s.width) * u, g.gridY + (i / s.width) * u), Size(u, u)) })
         }
     }
 
@@ -423,13 +461,45 @@ object Nonogram : PuzzleType {
                 // The next change cancels the wait and starts it over.
                 val bad = rememberSettledFlags(linesImpossible(shown, clues), s.solution, shown.cells)
 
-                Box(g.box) {
+                // Zoom (NonogramZoom.kt): the screen's, reset for each board and never saved.
+                val zooms = interactive && s.width >= ZOOM_FROM_WIDTH
+                val view = remember(s.solution) { mutableStateOf(GridView()) }
+                val still = LocalReducedMotion.current
+                // A hint brings what it names into view; a solve shows the whole picture for its wave.
+                LaunchedEffect(highlight, g.u) {
+                    val (xs, ys) = highlightSpans(highlight, s.width, s.height, g.u) ?: return@LaunchedEffect
+                    view.glideTo(view.value.showing(xs, ys, g.gridSize), still)
+                }
+                LaunchedEffect(s.solved) { if (s.solved) view.glideTo(GridView(), still) }
+
+                Box(g.box.gridZoom(view, g.gridAt, g.gridSize, zooms)) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(shown, g, text, linesDone(shown, clues), scheme, palette, bad, HintGlow(highlight, glow, pulse.value), feel, Color(accent))
+                        drawClues(shown, g, text, linesDone(shown, clues), scheme, bad, HintGlow(highlight, glow, pulse.value), view.value)
                     }
-                    // Taps and sweeps are read over the grid alone, in its own coordinates; the
-                    // clues beside it are not part of the play area.
-                    Box(g.grid.penGrid(s, interactive, pen, g.u, sweep, cursor, scheme.primary, onState))
+                    // Taps and sweeps are read over the grid alone, in its own coordinates (the zoom
+                    // layer maps the finger back to them); the clues beside it are not part of the play area.
+                    Box(g.grid.clipToBounds()) {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    transformOrigin = TransformOrigin(0f, 0f)
+                                    scaleX = view.value.scale
+                                    scaleY = view.value.scale
+                                    translationX = view.value.offset.x
+                                    translationY = view.value.offset.y
+                                }
+                                .penGrid(s, interactive, pen, g.u, sweep, cursor, scheme.primary, onState, sweeps = !view.value.zoomed)
+                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, Color(accent)) },
+                        )
+                    }
+                    if (view.value.zoomed) {
+                        Box(g.corner, contentAlignment = Alignment.Center) {
+                            IconButton(onClick = { view.value = GridView() }) {
+                                Icon(Icons.Filled.ZoomOutMap, contentDescription = "Show the whole board", tint = scheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -469,7 +539,8 @@ object Nonogram : PuzzleType {
             val g = Geometry(motif, clues, maxWidth, maxHeight, density)
             val text = remember(g.u) { measureClues(measurer, clues, g.u * 0.52f, density) }
             Canvas(g.box) {
-                drawBoard(motif, g, text, done, scheme, paletteFor(motif))
+                translate(g.gridX, g.gridY) { drawGrid(motif, g.u, scheme, paletteFor(motif)) }
+                drawClues(motif, g, text, done, scheme)
             }
         }
     }
