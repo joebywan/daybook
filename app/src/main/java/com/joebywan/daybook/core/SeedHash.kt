@@ -11,11 +11,28 @@ package com.joebywan.daybook.core
 object SeedHash {
 
     fun daily(epochDay: Long, puzzleId: String, difficulty: Difficulty): Long {
+        if (puzzleId == "words" && epochDay >= LEXICON_CYCLE_FROM) {
+            return (LEXICON_CYCLE shl 32) or (difficulty.ordinal.toLong() shl 28) or (epochDay - LEXICON_CYCLE_FROM)
+        }
         var h = epochDay * 0x100000001B3L
         h = mix(h xor puzzleId.stableHash())
         h = mix(h xor (difficulty.ordinal + 1).toLong())
         return h
     }
+
+    /**
+     * Lexicon's daily words go round a cycle from this day on (2026-11-01), so a word cannot come back until its tier
+     * has used every other: a hashed seed gave even odds of a repeat within two months. The seed is then not a hash but
+     * the day itself, tagged ([lexiconCycleDay] reads it back), and `LexiconRules.newBoard` maps it through a fixed
+     * shuffle of the answer list. Days before keep their hashed seeds, so the archive, saved games and completions made
+     * before the change are untouched.
+     */
+    val LEXICON_CYCLE_FROM: Long = epochDay(2026, 11, 1)
+    private const val LEXICON_CYCLE = 0x4C784379L // "LxCy"
+
+    /** The cycle's day count (0 on [LEXICON_CYCLE_FROM]) of a Lexicon daily seed, or null for any other seed. */
+    fun lexiconCycleDay(seed: Long): Long? =
+        if (seed ushr 32 == LEXICON_CYCLE) seed and 0x0FFFFFFFL else null
 
     fun random(puzzleId: String, difficulty: Difficulty, nonce: Long): Long =
         mix(nonce xor puzzleId.stableHash() xor (difficulty.ordinal * 0x9E3779B9L))

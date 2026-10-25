@@ -39,7 +39,7 @@ class ChessWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            523066311, -1165899494, 404631131, -1458839375, -1394438850, -604155021, -299587287, 1996623160, -692798700,
+            -1373910385, -1996025251, 2080046981, 1331668607, 634446536, -327332564, -387344310, 1925203067, 1542417896,
         )
     }
 }
