@@ -36,21 +36,6 @@ object SeedHash {
     private const val LEVEL_PICK = 0x4C65766C50696B01L
 
     /**
-     * Days since 1970-01-01 in the proleptic Gregorian calendar — the same number
-     * `LocalDate.of(year, month, day).toEpochDay()` gives, which a JVM test checks day by day.
-     * Howard Hinnant's days-from-civil; [month] is 1-12.
-     */
-    fun epochDay(year: Int, month: Int, day: Int): Long {
-        val y = (if (month <= 2) year - 1 else year).toLong()
-        val era = y.floorDiv(400L)
-        val yoe = y - era * 400
-        val mp = (month + 9) % 12
-        val doy = (153 * mp + 2) / 5 + day - 1
-        val doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
-        return era * 146097 + doe - 719468
-    }
-
-    /**
      * [String.hashCode] is specified by the JDK, but this keeps seeding self-contained so puzzle
      * ids hash identically regardless of platform.
      */

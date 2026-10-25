@@ -503,7 +503,7 @@ Each puzzle `<N>`. "Template" is the file to copy.
 | Parity pins | boards identical on JVM and wasm | `BoardPinTest` + the dump (section 5) |
 | Notes | a short true tip per puzzle for the finished frame; a new puzzle needs entries in `core/PuzzleNotes.kt` (the test enforces it) | `PuzzleNotesTest` |
 | Technique names | every `TECHNIQUES` entry but mistake and fallback has a short name in `core/TechniqueNames.kt`, which the finished frame shows; a new teacher is added to the test's list | `TechniqueNamesTest` |
-| Seeding | untouched; pinned by `BoardPinTest` `epochDay agrees with LocalDate...` and `CompletionFormatTest` | n/a |
+| Seeding | untouched; pinned by `BoardPinTest` `the web route reaches the pinned boards` and `CompletionFormatTest` | n/a |
 
 A test that cannot fail is not a test: assert the property the *bug* violates, not a looser one the bug also
 satisfies. Run: `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` with Java 17 and `--no-daemon`

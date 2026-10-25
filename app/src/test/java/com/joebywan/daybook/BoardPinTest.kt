@@ -16,20 +16,10 @@ import java.time.LocalDate
  * a generator, a ladder it asks to finish the board, or a list's order moves boards and goes red here on purpose.
  * LITS's pins predate making its hash order explicit, so they also pin the Android boards from before that.
  *
- * The web build has no `java.time`, so it reaches the seed through [SeedHash.epochDay] and [SeedHash.daily]; every pinned
- * board is reached both ways.
+ * The web build has no `java.time`, so it reaches the seed through `kotlinx.datetime`'s epoch day and [SeedHash.daily]; every
+ * pinned board is reached both ways.
  */
 class BoardPinTest {
-
-    @Test
-    fun `epochDay agrees with LocalDate for every day across four centuries`() {
-        var date = LocalDate.of(1900, 1, 1)
-        val end = LocalDate.of(2300, 12, 31)
-        while (!date.isAfter(end)) {
-            assertEquals("epochDay($date)", date.toEpochDay(), SeedHash.epochDay(date.year, date.monthValue, date.dayOfMonth))
-            date = date.plusDays(1)
-        }
-    }
 
     @Test
     fun `every puzzle in the registry has pinned boards`() {
@@ -42,7 +32,7 @@ class BoardPinTest {
             val lines = DATES.flatMap { date ->
                 Difficulty.entries.map { tier ->
                     val seed = DailySeed.seedFor(date, type.id, tier)
-                    assertEquals(seed, SeedHash.daily(SeedHash.epochDay(date.year, date.monthValue, date.dayOfMonth), type.id, tier))
+                    assertEquals(seed, SeedHash.daily(date.toEpochDay(), type.id, tier))
                     ParityFingerprint.line(type, date.toString(), tier, seed)
                 }
             }
