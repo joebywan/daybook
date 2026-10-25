@@ -164,7 +164,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 
 - [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
-  - Kings: Standard no confined or what-if; Hard needs confined; Expert needs what-if (5% of draws: cost it first).
   - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
     or what-if, no fallback.
   - Tents: Hard needs one-spot; Expert needs shared or served (18% of draws).
