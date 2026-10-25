@@ -23,6 +23,7 @@ import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.Tents
+import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.SnapState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -67,7 +68,7 @@ class FallbackTest {
 
     /**
      * A whole year of real daily seeds on every tier, not the twenty probe seeds the others use.
-     * Before the strict attempts, 13 Expert days of 2026 (2026-01-09 the first) shipped the
+     * Before strict growth, 13 Expert days of 2026 (2026-01-09 the first) shipped the
      * three-atom chain — 3.6%, which twenty seeds miss about half the time. Run against that
      * generator, this test names all thirteen. It asserts on [Atoms.generateVerified], the path
      * that carries a proof, so no property the fallback happens to share can let it through.
@@ -77,7 +78,7 @@ class FallbackTest {
         assertYearProved(Atoms, fellBack = "fell back to the three-atom chain", unit = "boards") { seed, d -> Atoms.generateVerified(seed, d) }
 
     /**
-     * The tier names how many atoms a board has (10 / 16 / 24), and the growth loop used to give up
+     * The tier names how many atoms a board has (10 / 18 / 28), and the growth loop used to give up
      * early on a cramped seed and ship what it had: 2026-11-11 came out with 6 atoms and 2027-07-23
      * and 2027-11-19 with 9, all Standard, and still valid, still unique, so nothing else noticed.
      * Two years, since 2026 holds only one of them. The counts are written out here rather than read
@@ -85,7 +86,7 @@ class FallbackTest {
      */
     @Test
     fun `atoms boards always have the atom count their tier asks for`() {
-        val target = mapOf(Difficulty.STANDARD to 10, Difficulty.HARD to 16, Difficulty.EXPERT to 24)
+        val target = mapOf(Difficulty.STANDARD to 10, Difficulty.HARD to 18, Difficulty.EXPERT to 28)
         val start = LocalDate.of(2026, 1, 1)
         val light = mutableListOf<String>()
         for (difficulty in Difficulty.entries) {
@@ -166,6 +167,10 @@ class FallbackTest {
     /** [Tents.generateVerified] returns a board only when logic finished it and a search proved one answer. */
     @Test
     fun `tents proves every daily board of a year on every tier`() = assertYearProved(Tents) { seed, d -> Tents.generateVerified(seed, d) }
+
+    /** [Sudoku.generateVerified] returns a board only when the tier's ladder finished it and a search proved one answer. */
+    @Test
+    fun `sudoku proves every daily board of a year on every tier`() = assertYearProved(Sudoku) { seed, d -> Sudoku.generateVerified(seed, d) }
 
     @Test
     fun `lits never falls back to a single region`() {

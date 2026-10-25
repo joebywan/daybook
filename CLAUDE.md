@@ -98,6 +98,21 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
 - The typed row and the "Not in the word list" note are `remember` state, never `PuzzleState`; the note sits in
   the header line whose room is always reserved, so a refusal cannot move the board.
 
+## Atoms (bridges)
+
+Hashiwokakero as chemistry: bond atoms with single or double lines, no crossings, one molecule. `puzzles/Atoms.kt` (state, generator,
+`countSolutions`, board, walkthrough), `AtomsTeacher.kt`. `id = "atoms"` is hashed into every seed: never rename it.
+
+- **Tiers: 7x7 with 10 atoms / 9x9 with 18 / 11x11 with 28, and a depth gate** (`Atoms.specFor`, Tally's pattern): the deepest
+  technique of a hints-only walk from the empty board (`AtomsTeacher.depth`) must be at most at-least-one on Standard, crossing or
+  isolation on Hard, isolation or deeper on Expert, and every walk must finish, so hints never fall back on a generated board.
+  Only-way-out is shadowed by the rungs before it and almost never needed. Measured: `docs/TEACHING.md`, "Tier depth".
+- **Growth:** each new atom sprouts 2 to 6 squares off an existing one, never onto or across a bond (the old rule that let an atom
+  split a bond, and stored a broken answer on 4-35% of boards, is gone). Draw `a` is `Rng(seed + a)`, up to `ATTEMPTS` (2000); a
+  year's worst is 10 / 39 / 71 draws. A board ships only if the gate holds and `countSolutions` (exhaustive, no budget) proves one
+  answer; `AtomsTeachingTest` re-checks with its own atom-by-atom enumerator. `lastResort` is a three-atom chain no year reaches.
+- **`solved` checks the rules**; a mistake is a line with more bonds than the stored answer, sound because the answer is unique.
+
 ## Nonogram
 
 Run-length clues beside a grid; fill the squares that give every row and column its numbers. `puzzles/NonogramRules.kt`
@@ -122,6 +137,23 @@ into every seed: never rename it.
   stored picture never read) turns red once it has stayed so for a second. `NonogramRulesTest` brute-forces that rule.
 - The pictures are random noise, not drawings. Smoothing them into blobs made 5x5 boards fail the filter too often
   (4% passed the shape rules); see `docs/TODO.md`.
+
+## Mambo (Takuzu with = and x links)
+
+Two symbols, balanced in every line, never three alike together, printed `=`/`x` links honoured. `puzzles/Mambo.kt` (state, rules,
+generator, `countSolutions`), `MamboTeacher.kt` (the ladder and `depth`). `id = "mambo"` is hashed into every seed: never rename it.
+
+- **Tiers are size and ladder depth: 6x6 / 8x8 / 10x10.** Standard is finished by the first four techniques (pair, sandwich, link,
+  quota), Hard must need quota-almost-met and not what-if, Expert must need what-if (`MamboTeacher.depth`, `Mambo.rungFor`).
+- **The generator's ladder is the teacher's.** The carve takes back cells, then links, while the ladder up to the tier's rung still
+  finishes the board, one pass per rung, cheapest first; then the tier's draw is redrawn unless the walk needs exactly its rung, and
+  `countSolutions` (propagation plus a lookahead, then branching, no budget) proves one answer. Standard's boards are the ones it
+  always had. `depth`'s what-if is `whatIfAt` (looks only near each square; `MamboTeachingTest` holds it equal to the hint's
+  `whatIf`). Draws a board over a year: 1.00 / 1.42 / 1.01 mean, at most 1 / 6 / 2 of 40; JVM median / max 0.9 / 5, 4 / 23,
+  18 / 62 ms; Chromium median / p95 / max 1.4 / 1.7 / 2.4, 6.6 / 19 / 35, 29 / 41 / 78 ms, WebKit up to 3 / 49 / 91 ms
+  (before the lookahead in `countSolutions`, sparse Expert boards took over a second to count). `MamboRulesTest` walks the year per tier (with its own solver: three rules plus a one-deep supposition) and an
+  independent exhaustive count; `lastResort` (checkerboard, every link) is never reached.
+- **`solved` checks the rules**; a mistake is a symbol no legal answer keeps.
 
 ## Inequality (Futoshiki)
 
@@ -198,6 +230,28 @@ motif). `id = "regions"` is hashed into every seed: never rename it.
   digit keys `1000 + d`.
 - A locked-candidate technique (a digit whose only places in a region all touch one square rules that square out) would cut the givens further; not built,
   `docs/TODO.md`.
+## Sudoku
+
+The classic 9x9. `puzzles/Sudoku.kt` (state, rules, generator, `countSolutions`), `SudokuTeacher.kt`, `SudokuBoard.kt` (grid and pad,
+shared with Cage Sudoku), `SudokuKeys.kt`. `id = "sudoku"` is hashed into every seed: never rename it.
+
+- **Tiers are depth of the teacher's ladder, not clue counts** (`Sudoku.gate`): Standard is finished by singles in a unit (full house,
+  hidden singles); Hard must need a naked single and nothing past it; Expert must need locked candidates, a pair or a what-if, and
+  never the fallback. Clues fall where minimality leaves them: about 28 on every tier (22-33). The old 38 / 30 / 24 targets dug
+  for uniqueness alone, so Hard and Expert overlapped and a third of Expert boards fell back.
+- **A board ships only if the tier's ladder finishes it and `countSolutions` (exhaustive, no budget) proves one answer.** A fresh grid
+  per attempt (`Rng(seed + attempt)`) is dug in 180-degree pairs (the centre alone) in random order, keeping a removal only while both
+  hold, so the givens are symmetric and minimal for the tier's ladder; then the teacher's walk must have needed the tier's technique,
+  else the next grid. `finishes` is the dig's shortcut (singles settled with bitmasks, the teacher asked only where they stall;
+  `SudokuRulesTest` checks it gives the teacher's verdict). Attempts over a year: 1 / 4.5 / 5.6 mean, at most 1 / 25 / 38 of
+  `ATTEMPTS` = 100; `lastResort` is the board of one fixed seed, itself proved; a year never reaches it (`FallbackTest`). JVM 1.4 / 3.4 /
+  6.9 ms median, 7 / 16 / 25 ms p95; Chromium 2 / 6 / 13 ms median, 3 / 27 / 45 p95, 7 / 57 / 85 max; WebKit Expert 19 / 62 / 147.
+  The teacher's what-if chain keeps arrays, not lists, because the dig asks it on every board (same steps, checked on 34k).
+  Changing the ladder changes every board (parity pins go red on purpose).
+- **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer.
+  The save holds givens, digits and the answer, so a board in progress never depends on the generator.
+- `fullGrid` is shared with Cage Sudoku: changing it moves every Cage board too.
+
 ## Cage Sudoku
 
 Sudoku plus dashed cages: the digits of a cage add up to the small number in its corner and never repeat. Not "Killer Sudoku" in
@@ -363,8 +417,11 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   `rememberSaveable` count that reorders the display only; one accepted word is one state. The gesture is keyed on the wheel and reads
   the board through `rememberUpdatedState` (Snap's lesson). The notice uses the header line, whose room is always kept.
 - **Teacher:** `PINNED` (an empty slot whose length, crossing letters and the wheel leave one grid word, found and bonus words excluded:
-  reads the public grid list, never a slot's word; given as that word's clue, as Lexicon's hints are: only "Show me" types it) then `CLUE` (the slot with the fewest words that fit, given as its word's clue: reads
-  the stored word, so it is the fallback). No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
+  reads the public grid list, never a slot's word; given as that word's clue, as Lexicon's hints are: only "Show me" types it), then `CROSSING` (of the words that fit an empty slot,
+  only one leaves every empty slot crossing it a different word that fits and agrees at the crossing; same list, same clue), then `CLUE` (the slot with the fewest words that fit, given as its word's clue: reads
+  the stored word, so it is the fallback: 33 / 37 / 33% of steps over a year a tier, and an exhaustive search of every consistent filling
+  pins only 0.1-0.2 points more, so the rest is honestly open). The generator's `walk` keeps the old ladder (`crossings = false`) so a
+  stronger teacher never moves a board. No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
   `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.
 
 ## Tally (keep the numbers that make every sum)
@@ -515,7 +572,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Cipher, Sand and Pointers (none ever falls back); Sets and Mambo have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand, Sudoku (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Cipher, Sand, Sudoku and Pointers (none ever falls back); Sets and Mambo have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
