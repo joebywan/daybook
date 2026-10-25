@@ -1,6 +1,6 @@
-- Tower: tapping a colour puts it in the next empty peg, as typing its number does.
-- A hint's next step is the Hint button's alone, so "Show me" no longer shows twice.
-- Mosaic: out of fills, the board stays put and the line says Undo or a hint will find the fill that lost it.
-- The first-visit walkthrough line now says what each puzzle is about.
-- Tower moves to the end of a new player's home grid.
-- Clearer word clues, and no interjections or old words in Word Wheel's grids.
+- Tower: tapping a colour fills the next empty peg. Tower now comes last for new players.
+- "Show me" no longer appears twice while a hint is open.
+- Mosaic: running out of fills no longer moves the board; Undo, or a hint finds the fill that lost it.
+- The first-visit walkthrough line says what each puzzle is about.
+- Lexicon's first hint changes from board to board, and later hints say how their word splits the words left.
+- From 1 November a daily Lexicon word never comes back until every other has had its day.
