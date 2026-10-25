@@ -98,7 +98,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 
 | puzzle | teaches | fallback |
 |---|---|---|
-| Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | 0.5 / 6 / 34% (1% of Expert steps: Expert is dug for uniqueness, not rated) |
+| Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | none on a generated board: the generator digs only while the tier's ladder finishes it (a year of daily boards per tier, and 300 a tier in `SudokuTeachingTest`; before that gate 0.5 / 6 / 34% of boards). Per board: naked single 0 / 1.7 / 1.1 steps, locked candidates 0 / 0 / 0.7, pairs 0 / 0 / 0.3, what-if 0 / 0 / 0.5 |
 | Kings | last square, locked to a line, would empty, N confined, what-if | 0.5 / 0 / 0.5% |
 | Mambo | pair, sandwich, link, quota, almost, what-if | 0 (boards are carved so the first four finish them) |
 | Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
@@ -151,9 +151,9 @@ board. No board changed. Deepest technique, share of the year's boards (%):
 
 | puzzle | tier | deepest technique (% of boards) | fallback boards / steps % | median steps |
 |---|---|---|---|---|
-| Sudoku | Standard | hidden-single-box 93, hidden-single-line 6, naked-single <1, locked-candidates <1, what-if <1 | 0.5 / 0.01 | 43 |
-|  | Hard | hidden-single-box 29, hidden-single-line 48, naked-single 12, locked-candidates 3, naked-pair 1, hidden-pair 1, what-if 7 | 6.6 / 0.18 | 51 |
-|  | Expert | hidden-single-box 3, hidden-single-line 31, naked-single 24, locked-candidates 16, naked-pair 10, hidden-pair 5, what-if 13 | 32.3 / 1.02 | 57 |
+| Sudoku (gated) | Standard | hidden-single-box 26, hidden-single-line 74 | 0 / 0 | 53 |
+|  | Hard | naked-single 100 | 0 / 0 | 53 |
+|  | Expert | locked-candidates 38, naked-pair 13, hidden-pair 5, what-if 44 | 0 / 0 | 53 |
 | Kings | Standard | last-square 1, locked-to-a-line 3, would-empty 58, confined 33, what-if 6 | 0.3 / 0.02 | 15 |
 |  | Hard | locked-to-a-line 2, would-empty 52, confined 41, what-if 6 | 0 / 0 | 16 |
 |  | Expert | last-square <1, locked-to-a-line 1, would-empty 39, confined 55, what-if 5 | 0.3 / 0.01 | 18 |
@@ -186,10 +186,12 @@ board, settle every row with what the board then holds, then every column, and c
 
 Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the walk needs its technique; none is built):
 
-- **Sudoku: Hard and Expert overlap; Expert falls back.** 34% of Expert boards need nothing past hidden singles, 11% of
-  Hard boards need locked candidates or more. Gate Hard on "needs a naked single, finished without what-if or fallback";
-  Expert on "needs locked candidates or a pair, finished without fallback" (at most 42% of today's draws, fewer once those that fall back are excluded). The ladder
-  is long enough; Expert's fallback is a generator that digs for uniqueness and never asks the ladder.
+- **Sudoku: gated (2026-10).** Before, Hard and Expert overlapped and Expert fell back: Standard hidden-single-box 93,
+  hidden-single-line 6; Hard hidden singles 77, naked-single 12, locked or deeper 12, fallback 6.6% of boards; Expert hidden
+  singles 34, naked-single 24, locked / pairs / what-if 44, fallback 32.3% (1.02% of steps); median steps 43 / 51 / 57. Now
+  `Sudoku.generateVerified` digs symmetric pairs only while the tier's ladder finishes the board (singles in a unit / up to
+  naked single / everything but the fallback) and redraws a board whose walk did not need the tier's technique (Hard a naked
+  single, Expert locked candidates or deeper); the table above is the result, no tier overlaps another and nothing falls back.
 - **Kings: the tiers are the same depth.** would-empty / confined / what-if are 58/33/6, 52/41/6, 39/55/5% across the tiers;
   only size differs. Standard: no confined or what-if (62% pass); Hard: needs confined; Expert: needs what-if (5% of draws,
   so measure the cost of ~20 draws a board first). The ladder is long enough.

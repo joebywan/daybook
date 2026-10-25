@@ -193,7 +193,9 @@ shared with Cage Sudoku), `SudokuKeys.kt`. `id = "sudoku"` is hashed into every 
   else the next grid. `finishes` is the dig's shortcut (singles settled with bitmasks, the teacher asked only where they stall;
   `SudokuRulesTest` checks it gives the teacher's verdict). Attempts over a year: 1 / 4.5 / 5.6 mean, at most 1 / 25 / 38 of
   `ATTEMPTS` = 100; `lastResort` is the board of one fixed seed, itself proved; a year never reaches it (`FallbackTest`). JVM 1.4 / 3.4 /
-  6.9 ms median, 7 / 16 / 25 ms p95. Changing the ladder changes every board (parity pins go red on purpose).
+  6.9 ms median, 7 / 16 / 25 ms p95; Chromium 2 / 6 / 13 ms median, 3 / 27 / 45 p95, 7 / 57 / 85 max; WebKit Expert 19 / 62 / 147.
+  The teacher's what-if chain keeps arrays, not lists, because the dig asks it on every board (same steps, checked on 34k).
+  Changing the ladder changes every board (parity pins go red on purpose).
 - **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer.
   The save holds givens, digits and the answer, so a board in progress never depends on the generator.
 - `fullGrid` is shared with Cage Sudoku: changing it moves every Cage board too.

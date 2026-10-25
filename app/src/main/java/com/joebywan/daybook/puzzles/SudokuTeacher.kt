@@ -37,7 +37,8 @@ package com.joebywan.daybook.puzzles
  * for a single left 95 Expert boards needing the fallback somewhere: the 24-clue Expert boards are
  * dug for uniqueness, not rated, and many need chains no four-line hint can carry. A step cannot
  * leave eliminations behind for the next one, so every step has to end in a placement, and that
- * is the ceiling here.
+ * is the ceiling here. Since 2026-10 the generator digs only while this ladder finishes the board
+ * ([depth], `Sudoku.generateVerified`), so no generated board reaches the fallback.
  *
  * Orders never come from a hash: every loop walks cells, units or digits in index order, so the same
  * board gets the same hint on every platform (CLAUDE.md, "Hash iteration order").
