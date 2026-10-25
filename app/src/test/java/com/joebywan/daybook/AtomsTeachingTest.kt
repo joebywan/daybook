@@ -138,6 +138,40 @@ class AtomsTeachingTest {
         }
     }
 
+    /**
+     * The tier gate, read from the outside: a year of daily boards per tier, walked by hints alone through
+     * the public [Atoms.teach], must never fall back, and the deepest technique each walk needs must be the
+     * tier's (written out here, not read from the generator): Standard nothing past at-least-one, Hard
+     * crossing or isolation, Expert isolation, only-way-out or what-if.
+     */
+    @Test
+    fun `every daily board of a year needs its tier's technique and never falls back`() {
+        val ladder = listOf("one-neighbour", "all-forced", "at-least-one", "crossing", "isolation", "only-way-out", "what-if")
+        val allowed = mapOf(
+            Difficulty.STANDARD to setOf("one-neighbour", "all-forced", "at-least-one"),
+            Difficulty.HARD to setOf("crossing", "isolation"),
+            Difficulty.EXPERT to setOf("isolation", "only-way-out", "what-if"),
+        )
+        val wrong = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            for (day in 0 until 365L) {
+                val date = LocalDate.of(2026, 1, 1).plusDays(day)
+                var s = Atoms.generate(DailySeed.seedFor(date, Atoms.id, difficulty), difficulty) as AtomsState
+                var deepest = -1
+                var guard = 0
+                while (!s.solved && guard++ < 300) {
+                    val d = Atoms.teach(s)!!
+                    if (d.fallback || d.mistake) wrong += "$date/$difficulty: ${d.technique}"
+                    deepest = maxOf(deepest, ladder.indexOf(d.technique))
+                    s = d.apply(s) as AtomsState
+                }
+                val top = ladder.getOrNull(deepest)
+                if (!s.solved || top !in allowed.getValue(difficulty)) wrong += "$date/$difficulty: deepest $top"
+            }
+        }
+        assertTrue("${wrong.size} boards off their tier: ${wrong.take(20)}", wrong.isEmpty())
+    }
+
     // ---- soundness on real boards ---------------------------------------------------------------
 
     @Test
