@@ -94,7 +94,7 @@ history already satisfies one sees it earned in the list and is never told, so t
   low-contrast silhouette of the same outline, no glyph. The Achievements screen is a 3-column grid in definition order
   (so badges keep their place), title and description under each. Home header has a rosette button (`MedalIcon`) that opens
   it; back returns to wherever it was opened from (`Route.Achievements.fromHome`). The header buttons are 36dp and the
-  title 24sp so four fit at 360dp.
+  title 24sp so they fit at 360dp. Statistics has no button: the streak badge opens it (a chart icon on its left).
 - `streakOf` is only monotone when the new play is the newest day; an archive play can in rare cases split a run, so
   a streak achievement could in theory read unearned again. The diff never announces an already-earned one.
 

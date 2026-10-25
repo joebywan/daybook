@@ -353,14 +353,13 @@ private fun Header(
             if (compact) {
                 Spacer(Modifier.width(14.dp))
                 HeaderDate(today, oneLine = true, Modifier.weight(1f))
-                StreakBadge(streak)
+                StreakBadge(streak, onStats)
                 Spacer(Modifier.width(10.dp))
             }
             // Each button's touch target is 48dp (Material's minimum) around its 36dp circle; neighbours overlap by
             // the 6dp between circles, and the offset puts the last circle back at the margin, so the title keeps its room at 360dp.
             Row(Modifier.offset(x = HeaderTouchInset), horizontalArrangement = Arrangement.spacedBy(-HeaderTouchInset)) {
                 HeaderButton("Archive", onArchive) { Icon(Icons.Default.History, it, tint = scheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
-                HeaderButton("Statistics", onStats) { Icon(Icons.Default.InsertChart, it, tint = scheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
                 HeaderButton("Achievements", onAchievements) { MedalIcon(Modifier.size(22.dp), scheme.onSurfaceVariant, it) }
                 HeaderButton("Settings", onSettings) { Icon(Icons.Default.Settings, it, tint = scheme.onSurfaceVariant, modifier = Modifier.size(22.dp)) }
             }
@@ -370,7 +369,7 @@ private fun Header(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HeaderDate(today, oneLine = false, Modifier.weight(1f))
-            StreakBadge(streak)
+            StreakBadge(streak, onStats)
         }
     }
 }
@@ -387,7 +386,7 @@ private fun HeaderDate(today: LocalDate, oneLine: Boolean, modifier: Modifier) {
     )
 }
 
-/** Four of them share the header with the title, so each is a little under the 40dp the three used to be. */
+/** They share the header with the title, so each is a little under the 40dp they once were. */
 private val HeaderButtonSize = 36.dp
 
 /** The touch target's margin round the circle: (48 - 36) / 2. */
@@ -411,15 +410,19 @@ private fun HeaderButton(label: String, onClick: () -> Unit, icon: @Composable (
 }
 
 @Composable
-private fun StreakBadge(streak: Streak) {
+private fun StreakBadge(streak: Streak, onStats: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
+    // The badge is the way to the statistics (it was a header button of its own): the chart says it can be tapped.
     Row(
         Modifier
             .clip(RoundedCornerShape(50))
             .background(scheme.surface)
+            .clickable(onClickLabel = "Statistics", onClick = onStats)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Icon(Icons.Default.InsertChart, null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
         // Never a bare 0 (docs/REWARDS.md). An unseen, zero-width number holds the badge, and so the header, at the
         // height it has with one, so the first solve moves nothing.
         if (!streak.alive) {
