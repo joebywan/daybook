@@ -1,16 +1,13 @@
 package com.joebywan.daybook.ui.stats
 
-import androidx.compose.foundation.background
+import com.joebywan.daybook.ui.card
+import com.joebywan.daybook.ui.TitledScreen
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -49,16 +46,12 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.KeptCard
 import com.joebywan.daybook.data.Stats
-import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.BackupControls
 import com.joebywan.daybook.platform.OFFERS_BACKUP
 import com.joebywan.daybook.platform.formatClock
 import kotlinx.datetime.LocalDate
 
-/**
- * Lifetime numbers. There is no back control on the screen: the system back button is the way out,
- * which is why the title sits on the same margin as the cards below it rather than behind an arrow.
- */
+/** Lifetime numbers, with a share of today's dailies once one is solved. */
 @Composable
 fun StatsScreen(
     today: LocalDate,
@@ -75,50 +68,24 @@ fun StatsScreen(
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     fun keyOf(c: KeptCard) = "${c.puzzleId}|${c.difficulty.name}|${c.best}"
     keptCards.firstOrNull { keyOf(it) == open }?.let { SharePreview(it.card) { open = null } }
+    val streak = Stats.streak(completions, today)
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(scheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            // Nothing on Android, where the system back button is the way out.
-            BackButton(onBack)
-            Column(
-                Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)
-            ) {
-                Text(
-                    "Statistics",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = scheme.onBackground,
-                )
-                Text(
-                    "All time, on this device.",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
-            // Only once a daily is solved today. The title's two lines are taller than the button, so it moves nothing.
-            val card = remember(completions, today) {
-                dayShareCard(
-                    PuzzleRegistry.all.map { it.id }, completions, today, formatDate(today, "d MMM"),
-                    Stats.streak(completions, today).current,
-                )
-            }
-            // Saveable, so turning the device keeps the preview open.
-            var sharing by rememberSaveable { mutableStateOf(sharePreviewOpen) }
-            if (card != null) {
-                TextButton(onClick = { sharing = true }, Modifier.padding(end = 8.dp)) {
-                    Icon(Icons.Default.Share, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Share today")
-                }
-                if (sharing) SharePreview(card) { sharing = false }
-            }
+    TitledScreen("Statistics", "All time, on this device.", onBack, trailing = {
+        // Only once a daily is solved today. The title's two lines are taller than the button, so it moves nothing.
+        val card = remember(completions, today) {
+            dayShareCard(PuzzleRegistry.all.map { it.id }, completions, today, formatDate(today, "d MMM"), streak.current)
         }
-
+        // Saveable, so turning the device keeps the preview open.
+        var sharing by rememberSaveable { mutableStateOf(sharePreviewOpen) }
+        if (card != null) {
+            TextButton(onClick = { sharing = true }, Modifier.padding(end = 8.dp)) {
+                Icon(Icons.Default.Share, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Share today")
+            }
+            if (sharing) SharePreview(card) { sharing = false }
+        }
+    }) {
         // A phone's width at most: the calendar's square days would otherwise run a tablet's width and off its foot.
         LazyColumn(
             Modifier.widthIn(max = 640.dp).fillMaxWidth(),
@@ -126,7 +93,6 @@ fun StatsScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item {
-                val streak = Stats.streak(completions, today)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Tile("Solved", completions.size.toString(), Modifier.weight(1f))
                     Tile(
@@ -141,8 +107,7 @@ fun StatsScreen(
             item {
                 val got = earnedAchievements(completions, today).size
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(scheme.surface)
-                        .clickable(onClick = onAchievements).padding(14.dp),
+                    Modifier.fillMaxWidth().card(scheme.surface).clickable(onClick = onAchievements).padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("Achievements", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface, modifier = Modifier.weight(1f))
@@ -182,7 +147,7 @@ private fun PuzzleStats(
 ) {
     val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
-    Column(modifier.clip(RoundedCornerShape(16.dp)).background(scheme.surface).padding(14.dp)) {
+    Column(modifier.card(scheme.surface).padding(14.dp)) {
         Text(puzzle.displayName, style = MaterialTheme.typography.titleMedium, color = accent, maxLines = 1)
         Difficulty.entries.forEach { difficulty ->
             val best = Stats.bestTime(completions, puzzle.id, difficulty)
@@ -207,10 +172,7 @@ private fun PuzzleStats(
 private fun Tile(label: String, value: String, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
     Column(
-        modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(scheme.surface)
-            .padding(vertical = 18.dp),
+        modifier.card(scheme.surface).padding(vertical = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(value, style = MaterialTheme.typography.displaySmall, color = scheme.onSurface)

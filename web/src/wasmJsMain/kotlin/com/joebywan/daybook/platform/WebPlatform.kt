@@ -1,5 +1,7 @@
 package com.joebywan.daybook.platform
 
+import com.joebywan.daybook.ui.card
+import com.joebywan.daybook.ui.CardText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -217,16 +219,10 @@ fun BackupControls() {
         Modifier
             .fillMaxWidth()
             .padding(top = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(scheme.surface)
+            .card(scheme.surface)
             .padding(14.dp),
     ) {
-        Text("Backup", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-        Text(
-            "Progress lives in this browser only. Keep a copy, or move it to another device.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant,
-        )
+        CardText("Backup", "Progress lives in this browser only. Keep a copy, or move it to another device.")
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BackupButton("Export", Modifier.weight(1f)) {
@@ -272,17 +268,14 @@ fun GetTheAppCard() {
         Modifier
             .fillMaxWidth()
             .padding(top = 18.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(scheme.surface)
+            .card(scheme.surface)
             .padding(14.dp),
     ) {
         if (device == 'a') {
-            Text("Get the Android app", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-            Text(
+            CardText(
+                "Get the Android app",
                 "The same daily puzzles, installed. It asks for no permissions at all, not even the internet, " +
                     "so there is no tracking and nothing to sign up for. No ads, free, works offline.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -290,13 +283,11 @@ fun GetTheAppCard() {
                 BackupButton("F-Droid", Modifier.weight(1f)) { uri.openUri(FDROID_URL) }
             }
         } else {
-            Text("Add Daybook to your Home Screen", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-            Text(
+            CardText(
+                "Add Daybook to your Home Screen",
                 "Tap Share, then Add to Home Screen. It opens full screen like an app and works offline, and " +
                     "your progress is safer: Safari can clear a website's data after a week unused, " +
                     "but not a Home Screen app's.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
             )
         }
     }
