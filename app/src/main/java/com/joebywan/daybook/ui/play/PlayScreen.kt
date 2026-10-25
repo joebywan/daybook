@@ -109,6 +109,7 @@ import com.joebywan.daybook.platform.formatDate
 import com.joebywan.daybook.platform.generateBoard
 import com.joebywan.daybook.platform.readyBoard
 import com.joebywan.daybook.puzzles.PointersState
+import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.LocalHaptics
 import com.joebywan.daybook.ui.LocalBoardArrives
@@ -401,7 +402,8 @@ private fun PlayBoard(
         when {
             next.solved -> Unit
             step == PlayLog.WRONG.toString() ||
-                (next is PointersState && prev is PointersState && next.bumps.size > prev.bumps.size) -> haptics.bump()
+                (next is PointersState && prev is PointersState && next.bumps.size > prev.bumps.size) ||
+                (next is MinesState && prev is MinesState && next.bumps.size > prev.bumps.size) -> haptics.bump()
             step.isNotEmpty() -> haptics.tick()
         }
     }
