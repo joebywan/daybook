@@ -62,6 +62,9 @@ import com.joebywan.daybook.ui.penKeys
 import com.joebywan.daybook.ui.penGrid
 import com.joebywan.daybook.ui.PenRow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.geometry.Rect
+import com.joebywan.daybook.ui.hintRims
+import com.joebywan.daybook.ui.squareRim
 
 /** Each board draws its filled squares as a diagonal blend of two colours; the pair is the board's own. */
 private val PALETTES = listOf(
@@ -370,26 +373,9 @@ object Nonogram : PuzzleType {
             )
         }
 
-        // A rim just inside the outline of each set, one stroke per square side facing out of it.
-        fun rim(set: Set<Int>, width: Float, colour: Color) {
-            val h = width / 2
-            for (i in set) {
-                if (i >= n) continue
-                val r = i / s.width
-                val c = i % s.width
-                val x0 = g.gridX + c * u
-                val y0 = g.gridY + r * u
-                val x1 = x0 + u
-                val y1 = y0 + u
-                if (r == 0 || i - s.width !in set) drawLine(colour, Offset(x0, y0 + h), Offset(x1, y0 + h), width)
-                if (r == s.height - 1 || i + s.width !in set) drawLine(colour, Offset(x0, y1 - h), Offset(x1, y1 - h), width)
-                if (c == 0 || i - 1 !in set) drawLine(colour, Offset(x0 + h, y0), Offset(x0 + h, y1), width)
-                if (c == s.width - 1 || i + 1 !in set) drawLine(colour, Offset(x1 - h, y0), Offset(x1 - h, y1), width)
-            }
+        hintRims(highlight, u, overlay.glow, overlay.pulse, scheme.background) { set, width, colour ->
+            squareRim(set, width, colour, s.width, s.height, { i -> Rect(Offset(g.gridX + (i % s.width) * u, g.gridY + (i / s.width) * u), Size(u, u)) })
         }
-        rim(highlight.soft - highlight.strong, u * 0.07f, overlay.glow.copy(alpha = 0.5f))
-        rim(highlight.strong, u * 0.2f, scheme.background.copy(alpha = 0.9f * overlay.pulse))
-        rim(highlight.strong, u * 0.11f, overlay.glow.copy(alpha = overlay.pulse))
     }
 
     /** Which lines (rows, then columns) show their clue. */

@@ -62,6 +62,8 @@ import com.joebywan.daybook.ui.GLOW_ALPHA
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.graphics.drawscope.scale
+import com.joebywan.daybook.ui.hintRims
+import com.joebywan.daybook.ui.squareRim
 
 /**
  * Dominoes (`docs/DOMINO_SPEC.md`): an irregular board, some of it cut into coloured regions that each
@@ -656,22 +658,9 @@ object Dominoes : PuzzleType {
                     style = Stroke(u * if (strong) 0.08f else 0.05f),
                 )
             }
-            // A rim just inside the outline of each set, one stroke per side facing out of it.
-            fun rim(set: Set<Int>, width: Float, colour: Color) {
-                val h = width / 2
-                for (i in set) {
-                    if (i !in 0 until n || !s.open[i]) continue
-                    val r = rect(i)
-                    val c = i % w
-                    if (i - w !in set) drawLine(colour, Offset(r.left, r.top + h), Offset(r.right, r.top + h), width)
-                    if (i + w !in set) drawLine(colour, Offset(r.left, r.bottom - h), Offset(r.right, r.bottom - h), width)
-                    if (c == 0 || i - 1 !in set) drawLine(colour, Offset(r.left + h, r.top), Offset(r.left + h, r.bottom), width)
-                    if (c == w - 1 || i + 1 !in set) drawLine(colour, Offset(r.right - h, r.top), Offset(r.right - h, r.bottom), width)
-                }
+            hintRims(highlight, u, overlay.glow, overlay.pulse, paint.background) { set, width, colour ->
+                squareRim(set, width, colour, w, s.height, { rect(it) }, { s.open[it] })
             }
-            rim(highlight.soft - highlight.strong, u * 0.07f, overlay.glow.copy(alpha = 0.5f))
-            rim(highlight.strong, u * 0.2f, paint.background.copy(alpha = 0.9f * overlay.pulse))
-            rim(highlight.strong, u * 0.11f, overlay.glow.copy(alpha = overlay.pulse))
         }
 
         // The keyboard cursor.

@@ -62,6 +62,7 @@ import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.hintRims
 
 /**
  * Tents. The board is one canvas: a row of column counts across the top, a column of row counts down the
@@ -275,16 +276,13 @@ object Tents : PuzzleType {
         for (r in 0 until n) clue(s.rowCounts[r], s.rowTents(r), r in overlay.badRows, n * n + r, rectOf(n * n + r, n, u))
         for (c in 0 until n) clue(s.colCounts[c], s.colTents(c), c in overlay.badCols, n * n + n + c, rectOf(n * n + n + c, n, u))
 
-        fun rim(indices: Set<Int>, width: Float, color: Color) {
-            for (i in indices) {
-                val rect = rectOf(i, n, u)
-                drawRoundRect(color, rect.topLeft + Offset(width / 2, width / 2), Size(rect.width - width, rect.height - width), CornerRadius(u * 0.15f), style = Stroke(width))
-            }
-        }
         if (lit) {
-            rim(hl.soft - hl.strong, u * 0.07f, overlay.glow.copy(alpha = 0.5f))
-            rim(hl.strong, u * 0.2f, scheme.background.copy(alpha = 0.9f * overlay.pulse))
-            rim(hl.strong, u * 0.11f, overlay.glow.copy(alpha = overlay.pulse))
+            hintRims(hl, u, overlay.glow, overlay.pulse, scheme.background) { indices, width, color ->
+                for (i in indices) {
+                    val rect = rectOf(i, n, u)
+                    drawRoundRect(color, rect.topLeft + Offset(width / 2, width / 2), Size(rect.width - width, rect.height - width), CornerRadius(u * 0.15f), style = Stroke(width))
+                }
+            }
         }
     }
 

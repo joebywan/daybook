@@ -62,6 +62,9 @@ import com.joebywan.daybook.ui.swept
 import com.joebywan.daybook.ui.penKeys
 import com.joebywan.daybook.ui.penGrid
 import com.joebywan.daybook.ui.PenRow
+import androidx.compose.ui.geometry.Rect
+import com.joebywan.daybook.ui.hintRims
+import com.joebywan.daybook.ui.squareRim
 
 /** How long a line must stay impossible before its target turns red, so a sweep passing through is not shouted at. */
 private const val SETTLE_MILLIS = 1000L
@@ -352,26 +355,9 @@ object Tally : PuzzleType {
             drawRect(scheme.background.copy(alpha = 0.55f), Offset((i % n) * u, (i / n) * u), Size(u, u))
         }
 
-        // A rim just inside the outline of each set, one stroke per square side facing out of it.
-        fun rim(set: Set<Int>, width: Float, colour: Color) {
-            val h = width / 2
-            for (i in set) {
-                if (i >= n * n) continue
-                val r = i / n
-                val c = i % n
-                val x0 = c * u
-                val y0 = r * u
-                val x1 = x0 + u
-                val y1 = y0 + u
-                if (r == 0 || i - n !in set) drawLine(colour, Offset(x0, y0 + h), Offset(x1, y0 + h), width)
-                if (r == n - 1 || i + n !in set) drawLine(colour, Offset(x0, y1 - h), Offset(x1, y1 - h), width)
-                if (c == 0 || i - 1 !in set) drawLine(colour, Offset(x0 + h, y0), Offset(x0 + h, y1), width)
-                if (c == n - 1 || i + 1 !in set) drawLine(colour, Offset(x1 - h, y0), Offset(x1 - h, y1), width)
-            }
+        hintRims(highlight, u, overlay.glow, overlay.pulse, scheme.background) { set, width, colour ->
+            squareRim(set, width, colour, n, n, { i -> Rect(Offset((i % n) * u, (i / n) * u), Size(u, u)) })
         }
-        rim(highlight.soft - highlight.strong, u * 0.07f, overlay.glow.copy(alpha = 0.5f))
-        rim(highlight.strong, u * 0.2f, scheme.background.copy(alpha = 0.9f * overlay.pulse))
-        rim(highlight.strong, u * 0.11f, overlay.glow.copy(alpha = overlay.pulse))
     }
 
     /** Which lines (rows then columns) add up to their target now. */
