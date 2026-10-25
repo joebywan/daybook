@@ -86,7 +86,7 @@ internal object CodewordLogic {
     /** The rules and nothing else: every number a letter, no letter twice, every run a word. */
     fun isSolved(size: Int, numbers: List<Int>, letters: List<Int>): Boolean {
         if (letters.any { it !in 0..25 } || letters.distinct().size != letters.size) return false
-        return runs(size, numbers).all { run -> CodewordWords.isWord(String(CharArray(run.size) { 'a' + letters[numbers[run[it]] - 1] })) }
+        return runs(size, numbers).all { run -> CodewordWords.isWord(CharArray(run.size) { 'a' + letters[numbers[run[it]] - 1] }.concatToString()) }
     }
 
     /** What breaks a rule so far: numbers sharing a letter, and runs that no word can be any more. */
@@ -173,7 +173,7 @@ internal object CodewordLogic {
                 val run = runs[r]
                 val list = words(run.size)
                 if (run.all { assign[it] != EMPTY }) {
-                    if (list.words.binarySearch(String(CharArray(run.size) { 'a' + assign[run[it]] }))  < 0) return
+                    if (list.words.binarySearch(CharArray(run.size) { 'a' + assign[run[it]] }.concatToString()) < 0) return
                     continue
                 }
                 val limit = bestWords?.size ?: Int.MAX_VALUE

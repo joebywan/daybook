@@ -86,10 +86,10 @@ data class CodewordState(
     fun select(number: Int): CodewordState = if (number in given) this else copy(selected = number)
 }
 
-private val NUMBER_KEY_HEIGHT = 40.dp
-private val LETTER_KEY_HEIGHT = 44.dp
-private val ROW_GAP = 4.dp
-private val GAP = 10.dp
+private val NUMBER_KEY_HEIGHT = 32.dp
+private val LETTER_KEY_HEIGHT = 40.dp
+private val ROW_GAP = 3.dp
+private val GAP = 6.dp
 private val MAX_SQUARE = 52.dp
 
 /** Letters a row on the letter keys: A to M, then N to Z. */
@@ -293,7 +293,7 @@ object Codeword : PuzzleType {
         val cells = s.numbers.map { if (it == 0) null else s.letters[it - 1] }
         val feel = rememberMoveFeel(cells, runs) { r ->
             val word = runs[r].map { s.letters[s.numbers[it] - 1] }
-            word.none { it == EMPTY } && CodewordWords.isWord(String(CharArray(word.size) { 'a' + word[it] }))
+            word.none { it == EMPTY } && CodewordWords.isWord(CharArray(word.size) { 'a' + word[it] }.concatToString())
         }
         val holder = IntArray(26) { 0 }.also { h -> s.letters.forEachIndexed { i, l -> if (l != EMPTY) h[l] = i + 1 } }
 
@@ -367,11 +367,11 @@ object Codeword : PuzzleType {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
                             ) {
-                                Text(n.toString(), fontSize = 10.sp, lineHeight = 11.sp, color = scheme.onSurfaceVariant)
+                                Text(n.toString(), fontSize = 9.sp, lineHeight = 10.sp, color = scheme.onSurfaceVariant)
                                 Text(
                                     if (l == EMPTY) "·" else up(l),
-                                    fontSize = 16.sp,
-                                    lineHeight = 18.sp,
+                                    fontSize = 14.sp,
+                                    lineHeight = 16.sp,
                                     fontWeight = if (given) FontWeight.Bold else FontWeight.Medium,
                                     color = when {
                                         n in shown.numbers -> scheme.error
