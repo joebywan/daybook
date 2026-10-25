@@ -11,4 +11,4 @@ curl -O https://database.lichess.org/lichess_db_puzzle.csv.zst
 
 Takes about 20 minutes on 32 cores (mate-in-4 proofs dominate). Output is deterministic: same dump, same file, byte for
 byte. A different dump moves every later daily board, so `ChessPositions.kt` changes on purpose only. Tuning knobs
-(`POOL`, `CAP`, `TARGET`) are at the top of the script; changing them has the same effect.
+(`BANDS`, `MAX_RD`, `QUIET`, `POOL`, `CAP`, `TARGET`) are at the top of the script; changing them has the same effect.
