@@ -80,11 +80,11 @@ internal fun Welcome(onStart: () -> Unit) {
                     {
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Icon(Icons.Default.History, null, tint = scheme.onSurfaceVariant, modifier = small)
-                            Icon(Icons.Default.InsertChart, null, tint = scheme.onSurfaceVariant, modifier = small)
                             MedalIcon(small, scheme.onSurfaceVariant, "")
+                            Icon(Icons.Default.InsertChart, null, tint = scheme.onSurfaceVariant, modifier = small)
                         }
                     },
-                    "The buttons by the title open the archive of every past day, your stats and your achievements.",
+                    "The buttons by the title open the archive of every past day and your achievements. Tap your streak for your stats.",
                 )
                 Pointer(
                     { Icon(Icons.Default.OpenWith, null, tint = scheme.secondary, modifier = icon) },
