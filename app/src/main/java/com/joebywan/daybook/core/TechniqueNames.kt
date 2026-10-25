@@ -108,6 +108,8 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "only-place" to "a digit's only place in a line",
         "sign-bound" to "a square the signs leave one digit",
         "sign-place" to "a digit's only place, signs counted",
+        "naked-pair" to "two squares sharing two digits",
+        "hidden-pair" to "two digits with only two places",
     ),
     "chess" to linkedMapOf(
         "mate-in-one" to "a mate in one",
