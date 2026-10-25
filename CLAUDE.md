@@ -104,11 +104,14 @@ Run-length clues beside a grid; fill the squares that give every row and column 
 (state, rules, line solver, generator), `NonogramTeacher.kt`, `Nonogram.kt` (board, walkthrough, motif). `id = "nonogram"` is hashed
 into every seed: never rename it.
 
-- **Tiers are size alone: 5x5 / 10x10 / 15x15**, all at 55% filled. The same line logic and a longer way to carry it.
+- **Tiers: 5x5 / 10x10 / 15x15, and the fewest line passes a board needs: 2 / 3 / 4** (`Spec.minPasses`, `NonogramLogic.linePasses`:
+  passes over every row and column from a blank board until lines alone finish it). About 53 / 56 / 58% filled.
 - **A board ships only if lines alone finish it** (`NonogramLogic.lineSolvable`: per line, the squares every legal layout of
   the clue agrees on, to a fixpoint). That also makes the answer unique, and `NonogramRulesTest` checks it with an
-  independent oracle that tries every arrangement of every row. About 50-80% of random pictures pass, so 400 draws per seed
-  never fall back (a year per tier is tested); `lastResort` is a fixed diagonal, itself proved line-solvable.
+  independent oracle that tries every arrangement of every row. Of the draws with no blank or full line, 95 / 90 / 92% are
+  line-solvable; with the pass gate a year's worst seed needs 101 / 56 / 160 of the 400 draws and none falls back (a year per
+  tier is tested); `lastResort` is a fixed diagonal, itself proved line-solvable. Expert takes 1.6 ms median, 18 ms worst on
+  the JVM.
 - **`solved` checks the clues, not the stored picture.** Crosses are notes and never count.
 - **Hints cannot fall back**, so there is no fallback to measure: if the player's marks are right, some line always has a
   square to settle (settled squares only ever help). The mistake is a mark the stored picture disagrees with, sound because the
@@ -120,8 +123,10 @@ into every seed: never rename it.
   board's picture, so each daily and each random board has its own and nothing is saved. A line whose runs match its clue turns
   green; a line no legal layout of its clue can hold (`lineImpossible`: too many, a run too long, no gap; crosses ignored, the
   stored picture never read) turns red once it has stayed so for a second. `NonogramRulesTest` brute-forces that rule.
-- The pictures are random noise, not drawings. Smoothing them into blobs made 5x5 boards fail the filter too often
-  (4% passed the shape rules); see `docs/TODO.md`.
+- **Pictures are mirrored**: random squares reflected left to right, top to bottom or both (chosen per draw), so a finished
+  board looks drawn rather than noise. Mirrored pictures are easier (half of 5x5 boards took one pass, Expert's 4+ fell
+  from 21% to 7%), which is what the pass gate is for. Smoothing into blobs was tried earlier and failed the shape rules
+  on 96% of 5x5 draws.
 
 ## Inequality (Futoshiki)
 

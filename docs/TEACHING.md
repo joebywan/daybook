@@ -170,9 +170,9 @@ board. No board changed. Deepest technique, share of the year's boards (%):
 | Tents | Standard | line-full 89, one-spot 10, shared 1, served 1 | 0 / 0 | 10 |
 |  | Hard | line-full 64, one-spot 28, shared 4, served 4 | 0 / 0 | 14 |
 |  | Expert | line-full 39, one-spot 43, shared 7, served 12 | 0 / 0 | 19 |
-| Nonogram | Standard | overlap 4, line-logic 96; line passes 1: 13, 2: 65, 3: 20, 4+: 2 | 0 / 0 | 12 |
-|  | Hard | line-logic 100; passes 1: <1, 2: 46, 3: 42, 4+: 12 | 0 / 0 | 35 |
-|  | Expert | line-logic 100; passes 2: 25, 3: 54, 4+: 21 | 0 / 0 | 69 |
+| Nonogram | Standard | line-logic 100; line passes 2: 95, 3: 5, 4+: <1 | 0 / 0 | 10 |
+|  | Hard | line-logic 100; passes 3: 79, 4+: 21 | 0 / 0 | 36 |
+|  | Expert | line-logic 100; passes 4: 79, 5+: 21 | 0 / 0 | 73 |
 | LITS | Standard | avoid-2x2 1, letter-clash 48, neighbour 47, what-if 4 | 0 / 0 | 15 |
 |  | Hard | avoid-2x2 1, letter-clash 62, neighbour 35, what-if 2 | 0 / 0 | 21 |
 |  | Expert | letter-clash 35, neighbour 60, what-if 5 | 0 / 0 | 28 |
@@ -205,9 +205,10 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   difference. No gate is possible until there are deeper techniques (a pair in a line, a sign chain `a < b < c`).
 - **Tents: graded.** Hard: needs one-spot (36% today); Expert: needs shared or served (18%). The ladder is long enough;
   `touch` is never needed.
-- **Nonogram: Hard and Expert overlap in passes** (3+ passes: 54% / 75%); the size gap (35 against 69 steps) already
-  separates them. Optional: Expert needs 4+ passes (21% pass, cheap to redraw). Deeper than that needs a technique line logic
-  lacks (a what-if across two lines), so no gate is needed for now.
+- **Nonogram: gated since the pictures became mirrored** (2026-10). Before, on noise, Hard and Expert overlapped in passes
+  (3+: 54% / 75%) and 13% of Standard boards took one pass. Mirrored pictures are shallower (one pass on half of Standard,
+  4+ on 7% of Expert), so a board must need 2 / 3 / 4 passes by tier (`Spec.minPasses`); the rows above are with the gate.
+  Deeper than that needs a technique line logic lacks (a what-if across two lines).
 - **LITS: the tiers are the same depth** (neighbour or what-if 51 / 37 / 65%). Standard: no neighbour or what-if (49%);
   Expert: needs what-if (5%; LITS proving is slow, so measure the cost first). Ladder long enough.
 - **Regions: the ladder is too short.** 97% of Expert and 81% of Hard need only-place; size is the only difference. Needs

@@ -184,6 +184,47 @@ class NonogramRulesTest {
         assertTrue("clue counts $clueCount", clueCount[0] < clueCount[1] && clueCount[1] < clueCount[2])
     }
 
+    /** Passes over every line to finish [s] from blank, each line settled by [NonogramOracle.bruteForced]; null if stuck. */
+    private fun brutePasses(s: NonogramState): Int? {
+        val rows = NonogramLogic.rowClues(s)
+        val cols = NonogramLogic.colClues(s)
+        val grid = IntArray(s.width * s.height)
+        var passes = 0
+        while (true) {
+            var changed = false
+            for (line in 0 until s.height + s.width) {
+                val at = if (line < s.height) List(s.width) { line * s.width + it } else List(s.height) { it * s.width + line - s.height }
+                val found = NonogramOracle.bruteForced(if (line < s.height) rows[line] else cols[line - s.height], IntArray(at.size) { grid[at[it]] })!!
+                for (x in at.indices) if (found[x] != NonogramLogic.UNKNOWN) { grid[at[x]] = found[x]; changed = true }
+            }
+            if (!changed) break
+            passes++
+        }
+        return if (grid.any { it == NonogramLogic.UNKNOWN }) null else passes
+    }
+
+    @Test
+    fun `generated pictures are mirrored and need their tier's line passes`() {
+        for ((d, count) in listOf(Difficulty.STANDARD to 365, Difficulty.HARD to 60, Difficulty.EXPERT to 15)) {
+            val n = NonogramLogic.specFor(d).side
+            var bothWays = 0
+            for (seed in seeds(count, d)) {
+                val s = NonogramLogic.generateVerified(seed, d)!!
+                val p = pictureOf(s)
+                val across = p.all { it == it.reversed() }
+                val down = p == p.reversed()
+                assertTrue("$d/$seed is not mirrored", across || down)
+                if (across && down) bothWays++
+                val passes = brutePasses(s)
+                assertNotNull("$d/$seed is not finished by lines", passes)
+                assertTrue("$d/$seed needs only $passes passes", passes!! >= NonogramLogic.specFor(d).minPasses)
+                assertEquals(passes, NonogramLogic.linePasses(n, n, s.solution))
+            }
+            // Some boards are mirrored both ways, but not all: the axes are chosen per draw.
+            assertTrue("$d: $bothWays of $count mirrored both ways", bothWays in 1 until count)
+        }
+    }
+
     @Test
     fun `no generated line is blank or full`() {
         for (d in Difficulty.entries) for (seed in seeds(60, d)) {
