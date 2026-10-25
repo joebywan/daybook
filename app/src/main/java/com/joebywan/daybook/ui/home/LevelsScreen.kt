@@ -132,7 +132,7 @@ internal fun LevelGrid(
                 )
             } else {
                 val (puzzle, tier) = board
-                PuzzleTile(puzzle, puzzle.id in solved, isPick = false, inProgress, previewSize, { onPlay(puzzle.id) }, modifier) { accent ->
+                PuzzleTile(puzzle, puzzle.id in solved, inProgress, previewSize, { onPlay(puzzle.id) }, modifier) { accent ->
                     TileFooter(if (tier == Difficulty.STANDARD) "" else tier.label, accent)
                 }
             }

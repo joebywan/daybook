@@ -601,6 +601,18 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
   taps, the long-press tile drag and the list's scroll keep working. It calls the same `onDifficulty` as the tier row, whose pill slides
   (`SegmentedControl`), and the new tier's name shows in a solid pill over the grid, then fades (`TierFlash`). Mouse drags count too (Compose's scroll ignores the mouse).
 
+## Daily flow (Today's three, Next puzzle today)
+
+Details: `docs/REWARDS.md` (Today's three; the finished frame).
+- **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
+  through its own list), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
+  The home row is always laid out at one height (unseen in Levels), so it never moves the grid.
+- **"Next puzzle today"** (`nextToday`, `NextKind.TODAY`) is offered only on today's daily opened from Home, and opens the next
+  board as from Home, so back from it is Home, as from the board solved. Not on an archive board (its back is its own archive).
+- Set share cards (`threeShareCard`, `levelShareCard`) are derived from completions and `level_solves`; nothing new is stored.
+  Share cards say what was done, never what is left (`REWARDS.md`).
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
