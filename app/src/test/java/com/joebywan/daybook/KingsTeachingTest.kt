@@ -28,28 +28,6 @@ class KingsTeachingTest {
     private fun touching(n: Int, a: Int, b: Int) =
         kotlin.math.abs(a / n - b / n) <= 1 && kotlin.math.abs(a % n - b % n) <= 1
 
-    /** Every legal placement, by plain enumeration of one column per row. */
-    private fun allSolutions(n: Int, region: List<Int>, cap: Int = 5000): List<Set<Int>> {
-        val out = mutableListOf<Set<Int>>()
-        val cols = IntArray(n)
-        fun walk(row: Int) {
-            if (out.size >= cap) return
-            if (row == n) {
-                val kings = (0 until n).map { it * n + cols[it] }
-                if (kings.map { region[it] }.toSet().size == n) out += kings.toSet()
-                return
-            }
-            for (c in 0 until n) {
-                if ((0 until row).any { cols[it] == c }) continue
-                if (row > 0 && kotlin.math.abs(cols[row - 1] - c) <= 1) continue
-                cols[row] = c
-                walk(row + 1)
-            }
-        }
-        walk(0)
-        return out
-    }
-
     /** Squares a king on [k] rules out, re-derived rather than borrowed from KingsState. */
     private fun ruledOutBy(n: Int, region: List<Int>, k: Int): Set<Int> =
         (0 until n * n).filter { it / n == k / n || it % n == k % n || region[it] == region[k] || touching(n, it, k) }
@@ -149,7 +127,7 @@ class KingsTeachingTest {
         while (boards < 150) {
             val n = 5 + rng.nextInt(3)
             val region = looseBoard(rng, n)
-            val answers = allSolutions(n, region)
+            val answers = KingsOracle.allSolutions(n, region)
             if (answers.size < 2) continue
             boards++
             var marks = List(n * n) { Mark.EMPTY }
@@ -366,7 +344,7 @@ class KingsTeachingTest {
 
     @Test
     fun `the walkthrough board has exactly one answer, and it is the stored one`() {
-        val answers = allSolutions(5, Kings.TUTORIAL_REGIONS)
+        val answers = KingsOracle.allSolutions(5, Kings.TUTORIAL_REGIONS)
         assertEquals(listOf(Kings.TUTORIAL_SOLUTION), answers)
     }
 
