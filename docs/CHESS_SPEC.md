@@ -57,7 +57,7 @@ change the encoding but must keep this surface:
 ```kotlin
 class ChessPosition { /* 64 squares, side, castling, ep */
     companion object { fun fromFen(fen: String): ChessPosition }
-    fun toFen(): String
+    fun toFen(): String                               // test sources only (ChessFen.kt)
     val whiteToMove: Boolean
     fun pieceAt(sq: Int): Int
 }

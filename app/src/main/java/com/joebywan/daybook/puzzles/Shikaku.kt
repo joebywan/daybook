@@ -324,14 +324,6 @@ object Shikaku : PuzzleType {
         return found
     }
 
-    // ---- play ---------------------------------------------------------------------------------
-
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as ShikakuState
-        val missing = s.solution.firstOrNull { it !in s.blocks } ?: return null
-        return s.place(missing)
-    }
-
     // ---- walkthrough --------------------------------------------------------------------------
 
     /**
@@ -450,8 +442,8 @@ object Shikaku : PuzzleType {
     // ---- teaching -----------------------------------------------------------------------------
 
     /**
-     * A mistake to take back or a step to reason out — see [ShikakuTeacher]. Replaces [hint] on the
-     * play screen, which drew a rectangle straight out of [ShikakuState.solution] and taught nothing.
+     * A mistake to take back or a step to reason out — see [ShikakuTeacher]. Never null on an unsolved
+     * board (the fallback draws a rectangle from [ShikakuState.solution]), so `hint()` is never reached.
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as ShikakuState
