@@ -159,9 +159,10 @@ class ChessRulesGameTest {
 
     @Test
     fun `the defence policy is pinned, because saved games replay it`() {
-        // Standard 0: white mates in two; every reply loses, so the defender plays the slowest, ties by move order.
-        for ((i, expect) in PINNED_REPLIES.withIndex()) {
-            val s0 = entry(Difficulty.STANDARD, i)
+        // Fixed positions, Standard's first six before the rating bands, so a list change cannot move the pin:
+        // mate in two, every reply loses, so the defender plays the slowest, ties by move order.
+        for ((e, expect) in PINNED_REPLIES) {
+            val s0 = Chess.fromEntry(e, 2)
             assertEquals(expect, ChessRules.uci(s0.play(keyOf(s0)).replay().reply))
         }
         // A defender that can avoid the mate always does: after a wasted move the reply leaves no forced mate.
@@ -213,6 +214,13 @@ class ChessRulesGameTest {
 
     private companion object {
         /** UCI replies to the key on the first positions of the Standard list (the saved-game contract). */
-        val PINNED_REPLIES = listOf("d8d1", "g1h2", "f2e1", "c1d1", "e8f8", "a3f8")
+        val PINNED_REPLIES = listOf(
+            "1B1Rnk2/5ppB/2q1p3/p7/P7/7R/6PP/7K b - - d1d8" to "d8d1",
+            "1B2q1k1/1QR5/5b1p/6p1/8/4P2b/PP4p1/2R3K1 b - - a7b7" to "g1h2",
+            "1N4r1/1p2k3/p1n1p3/2p2p2/P4n2/3P1N2/1PP2KPP/3R1R2 b - - d7b8" to "f2e1",
+            "1Q1B2k1/pb4bp/6p1/2p2p2/P7/1P6/2pqNPPP/2R3K1 b - - g3b8" to "c1d1",
+            "1Q2K3/8/4k3/3q2p1/6P1/8/8/8 b - - d8e8" to "e8f8",
+            "1Q2b2k/1p3pp1/1q5p/3n3P/8/b1PB1P2/rPK5/1R6 w - - d7e8" to "a3f8",
+        )
     }
 }

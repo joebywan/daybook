@@ -183,13 +183,10 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   same `countTilings` proof.
 - [ ] **Pipes: a branchier tree.** `spanningTree` is a depth-first maze (long corridors); a random-edge spanning tree gives
   more junctions. (Counter-clockwise rotation and a lock mark: declined by the owner.)
-- [ ] **Mate: tier by rating.** `tools/chess/build.py` ignores Lichess `Rating`; band each tier by rating as well as N.
 - [ ] **Cipher: cap repeated totals** (some totals recur many times a tier); **Target: count the roads** (Expert needs few
   shortest answers, not only depth 5).
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
-- [ ] **Levels: a gentle first deck.** Levels 1-5 deal any of 25 (`Levels.STARTER`); deal deck 0 by `GENTLEST` band, with
-  a plan version on newly opened levels so opened ones never move.
 - [ ] **Stats: this week.** A seven-day strip and a per-puzzle time trend, against the player's own history only.
 - [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
 - [ ] **Teacher upgrades already listed:** Word Wheel's "two slots, two words", Cage Sudoku naming the cage chain, Regions'
