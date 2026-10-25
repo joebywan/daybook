@@ -184,22 +184,6 @@ below have a famous branded version; use the descriptive name).
 
 ### Asked for by the owner
 
-- [ ] **Nonogram: pinch to zoom.** Expert's squares are small: 19.3dp at 390x844, 15.8 at 375x537, 17.3 at 844x390 (web
-  renders, 2026-10-25). A board reshaped to fit was rendered and dropped: 12x18 grew squares to 24dp on a tall phone but
-  shrank them to 13 / 14dp on a short phone and a phone on its side, and it moves every Expert board. Narrower clue slots
-  and a cap of 5 runs a line gained under 1dp. Zoom helps every screen and changes no board. Design agreed with the owner:
-  - Pinch zooms about the fingers (up to about 2.5x); there is no two-finger pan to learn.
-  - Zoomed: one finger taps to mark and drags to pan (past touch slop it is a pan, never a mark). Whole board: as now
-    (tap marks, drag sweeps). The owner mostly taps single squares on Expert, so losing the sweep while zoomed is fine.
-  - A second finger drops a sweep already started (the sweep is `remember` until lift, so nothing reaches undo).
-  - Clues stay pinned: row clues on the left scroll only up and down with the grid, column clues on the top only sideways.
-  - A "fit" button shows in a corner only while zoomed; pinching out also returns to the whole board. No double-tap zoom
-    (every fill tap would wait ~300 ms).
-  - A hint pans to its line, and solving zooms out for the solve wave. The zoom is `remember` state, never saved.
-  - Web: Ctrl+wheel (and trackpad pinch) zooms, a mouse drag pans. Check that the page itself does not zoom, in Chromium
-    and WebKit, and on the emulator.
-  - How-to-play text and walkthrough get a line about zoom. It is a feature a player notices: bump `version.txt`'s middle
-    number and write "What's new". *M.*
 - [ ] **Nonogram and Lexicon: short phone screens on the emulator.** Both were driven on the Android emulator
   (1080x2160 and 1080x2400, 2026-10-03): the Lexicon hint popover over a highlighted row and keys, its nine-frame
   walkthrough, hardware keys, and a Nonogram 5x5 swept by touch drag to the finish frame all work, and a save made on
