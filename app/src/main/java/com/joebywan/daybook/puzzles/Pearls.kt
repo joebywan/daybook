@@ -370,9 +370,16 @@ object Pearls : PuzzleType {
             val c = centre(q)
             feelSquare(feel, q, Offset((q % n) * u, (q / n) * u), Size(u, u), accent) {
                 val bad = q in broken.squares
+                for (d in 0 until 4) {
+                    val e = g.edge(q, d)
+                    if (e < 0 || s.edges[e] != PearlsLogic.LINE_MARK) continue
+                    val colour = if (e in broken.edges) scheme.error else ink
+                    drawLine(colour, c, mid(e), lineW, StrokeCap.Round)
+                }
+                // The pearl over its own half-lines, so the line runs into it and never hides it.
                 val pearl = s.pearls[q]
                 if (pearl != '.') {
-                    val r = u * 0.3f
+                    val r = u * 0.28f
                     // Black and white whatever the scheme: the rules name the colours. Each has a rim of the
                     // other, so a black pearl still reads on a dark board and a white one on a light board.
                     val ring = Stroke(maxOf(u * 0.06f, 1.5f))
@@ -383,12 +390,6 @@ object Pearls : PuzzleType {
                         drawCircle(PEARL_WHITE, r, c)
                         drawCircle(PEARL_BLACK, r, c, style = ring)
                     }
-                }
-                for (d in 0 until 4) {
-                    val e = g.edge(q, d)
-                    if (e < 0 || s.edges[e] != PearlsLogic.LINE_MARK) continue
-                    val colour = if (e in broken.edges) scheme.error else ink
-                    drawLine(colour, c, mid(e), lineW, StrokeCap.Round)
                 }
                 if (bad) drawCircle(scheme.error, u * 0.38f, c, style = Stroke(maxOf(u * 0.08f, 2f)))
             }

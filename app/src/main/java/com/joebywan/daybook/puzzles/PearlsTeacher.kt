@@ -102,7 +102,7 @@ internal object PearlsTeacher {
             val wrongLine = s.edges[e] == PearlsLogic.LINE_MARK && s.loop[e] == '0'
             val wrongCross = s.edges[e] == PearlsLogic.CROSS_MARK && s.loop[e] == '1'
             if (!wrongLine && !wrongCross) continue
-            val where = "between ${at(n, g.endA[e])} and ${squareName(n, g.endB[e])}"
+            val where = "between ${squareName(n, g.endA[e])} and ${squareName(n, g.endB[e])}"
             return Step(
                 technique = MISTAKE,
                 clears = listOf(e),
