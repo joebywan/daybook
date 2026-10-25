@@ -125,6 +125,25 @@ class TentsRulesTest {
         assertTrue(checked > 100)
     }
 
+    /** The tier gate's redraws over a year of daily seeds, against the budget; prints draws and JVM time a board. */
+    @Test
+    fun `the tier gate's redraws stay well inside the budget`() {
+        val first = com.joebywan.daybook.core.SeedHash.epochDay(2026, 1, 1)
+        for (d in Difficulty.entries) {
+            val ms = ArrayList<Double>()
+            val draws = (0 until 365).map { day ->
+                val seed = com.joebywan.daybook.core.SeedHash.daily(first + day, "tents", d)
+                val t0 = System.nanoTime()
+                val used = (0 until TentsLogic.ATTEMPTS).first { TentsLogic.attempt(seed, d, it) != null } + 1
+                ms += (System.nanoTime() - t0) / 1e6
+                used
+            }.sorted()
+            ms.sort()
+            println("tents ${d.name}: draws mean ${"%.1f".format(draws.average())}, p95 ${draws[346]}, most ${draws.last()} of ${TentsLogic.ATTEMPTS}; ms p50 ${"%.1f".format(ms[182])} p95 ${"%.1f".format(ms[346])} max ${"%.1f".format(ms.last())}")
+            assertTrue("tents/${d.name} came close to the budget: ${draws.last()}", draws.last() < TentsLogic.ATTEMPTS / 4)
+        }
+    }
+
     @Test
     fun `the last resort has one answer on every size`() {
         for (d in Difficulty.entries) {
