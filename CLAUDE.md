@@ -135,7 +135,8 @@ generator, `countSolutions`), `MamboTeacher.kt` (the ladder and `depth`). `id = 
   `countSolutions` (propagation plus a lookahead, then branching, no budget) proves one answer. Standard's boards are the ones it
   always had. `depth`'s what-if is `whatIfAt` (looks only near each square; `MamboTeachingTest` holds it equal to the hint's
   `whatIf`). Draws a board over a year: 1.00 / 1.42 / 1.01 mean, at most 1 / 6 / 2 of 40; JVM median / max 0.9 / 5, 4 / 23,
-  18 / 62 ms. `MamboRulesTest` walks the year per tier (with its own solver: three rules plus a one-deep supposition) and an
+  18 / 62 ms; Chromium median / p95 / max 1.4 / 1.7 / 2.4, 6.6 / 19 / 35, 29 / 41 / 78 ms, WebKit up to 3 / 49 / 91 ms
+  (before the lookahead in `countSolutions`, sparse Expert boards took over a second to count). `MamboRulesTest` walks the year per tier (with its own solver: three rules plus a one-deep supposition) and an
   independent exhaustive count; `lastResort` (checkerboard, every link) is never reached.
 - **`solved` checks the rules**; a mistake is a symbol no legal answer keeps.
 
