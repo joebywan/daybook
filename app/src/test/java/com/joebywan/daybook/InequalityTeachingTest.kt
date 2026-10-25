@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -13,14 +12,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class InequalityTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        Inequality.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Inequality.id, d), d) as InequalityState
+        Inequality.generate(daySeed(day, Inequality.id, d), d) as InequalityState
 
     /** Follows the teacher's steps from [s] to the end, applying each. Fails on a step that disagrees with the answer. */
     private fun walk(s: InequalityState, onStep: (String) -> Unit = {}): InequalityState {
@@ -63,8 +59,7 @@ class InequalityTeachingTest {
             if (d == Difficulty.HARD) assertTrue(d.name, counts.getValue(InequalityTeacher.NAKED_PAIR) >= 200)
             if (d == Difficulty.EXPERT) assertTrue(d.name, counts.getValue(InequalityTeacher.HIDDEN_PAIR) >= 200)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/inequality-teaching-coverage.txt").writeText(report.toString())
+        writeReport("inequality-teaching-coverage.txt", report.toString())
     }
 
     @Test

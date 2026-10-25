@@ -448,7 +448,7 @@ private fun StreakBadge(streak: Streak, onStats: () -> Unit) {
             Text(
                 "${streak.current}",
                 style = MaterialTheme.typography.titleMedium,
-                color = if (streak.alive) scheme.secondary else scheme.onSurfaceVariant,
+                color = scheme.secondary,
             )
             Spacer(Modifier.width(6.dp))
             Text("day streak", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)

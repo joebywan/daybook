@@ -2,7 +2,6 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.DominoRulesTest.Companion.oracle
 import com.joebywan.daybook.DominoRulesTest.Companion.planted
-import com.joebywan.daybook.DominoRulesTest.Companion.seeds
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.DominoLogic
@@ -14,7 +13,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The Dominoes hint solver. On generated boards every step must be the answer's (the answer is
@@ -133,7 +131,7 @@ class DominoTeachingTest {
     @Test
     fun `a board the ladder cannot finish gets the honest fallback, never a guess`() {
         // Strip every rule from a generated board but keep its answer: not ours, several answers.
-        val s = DominoLogic.generateVerified(seeds(1, Difficulty.HARD).first(), Difficulty.HARD)!!
+        val s = DominoLogic.generateVerified(seeds(1, Difficulty.HARD, "dominoes").first(), Difficulty.HARD)!!
         val bare = s.copy(regionOf = List(s.regionOf.size) { -1 }, rules = emptyList())
         val step = DominoTeacher.teach(bare)!!
         assertTrue(step.fallback)
@@ -198,7 +196,6 @@ class DominoTeachingTest {
             }
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/dominoes-teaching-coverage.txt").writeText(report.toString())
+        writeReport("dominoes-teaching-coverage.txt", report.toString())
     }
 }

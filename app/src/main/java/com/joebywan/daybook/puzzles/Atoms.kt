@@ -20,7 +20,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -140,10 +139,20 @@ object Atoms : PuzzleType {
         "Or drag from one atom towards another to bond them.",
     )
 
-    private fun shape(difficulty: Difficulty) = when (difficulty) {
-        Difficulty.STANDARD -> 7 to 10
-        Difficulty.HARD -> 9 to 16
-        Difficulty.EXPERT -> 11 to 24
+    /**
+     * Lattice side, atoms, the farthest a new atom may sprout from the one it bonds to, and the
+     * depths a board must need: the deepest step of a hints-only walk ([AtomsTeacher.depth], an index
+     * into [AtomsTeacher.TECHNIQUES]). Standard needs nothing past at-least-one, Hard needs crossing or
+     * isolation (no what-if), Expert needs isolation or more; every tier is finished by the ladder, so
+     * hints never fall back on a generated board. Reach 6 (2-4 before) lengthened the bonds and Expert's
+     * 28 atoms (24 before) doubled its crossings; numbers in docs/TEACHING.md, "Tier depth".
+     */
+    internal class Spec(val n: Int, val atoms: Int, val reach: Int, val needs: IntRange)
+
+    internal fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
+        Difficulty.STANDARD -> Spec(7, 10, 6, 0..2)
+        Difficulty.HARD -> Spec(9, 18, 6, 3..4)
+        Difficulty.EXPERT -> Spec(11, 28, 6, 4..6)
     }
 
     /**
@@ -172,67 +181,47 @@ object Atoms : PuzzleType {
         Triple(1, 3, 1),
     )
 
-    /**
-     * The first attempts grow molecules exactly as the generator always has, including letting an
-     * atom land on a bond already laid; the answers that breaks are rejected rather than prevented,
-     * so every board that was already sound keeps its seed's attempt and so its layout. Only boards
-     * that used to be broken, or that used to fall back to the three-atom chain (3% of Expert),
-     * reach the strict attempts after them, which never put an atom on a bond.
-     */
-    private const val LEGACY_ATTEMPTS = 200
-    private const val ATTEMPTS = 600
+    /** Draws tried per seed before [generateVerified] gives up. */
+    internal const val ATTEMPTS = 2000
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
         generateVerified(seed, difficulty) ?: lastResort()
 
     /**
-     * The real generator: a board whose one answer [countSolutions] has *proved* (its search is
-     * exhaustive, with no node budget to run out), or null when no attempt produced one.
+     * The real generator: a board of the tier's depth whose one answer [countSolutions] has *proved*
+     * (its search is exhaustive, with no node budget to run out), or null when no draw produced one.
      *
-     * Split out from [generate] so the two paths cannot be mistaken for each other. Before the
-     * strict attempts existed, 13 Expert days of 2026 quietly shipped the three-atom chain, and the
-     * `FallbackTest` of the time sampled too few seeds to see it; it now asserts, over a whole
-     * year of daily seeds on every tier, that this never returns null.
+     * Split out from [generate] so the two paths cannot be mistaken for each other. 13 Expert days of
+     * 2026 once quietly shipped the three-atom chain, and the `FallbackTest` of the time sampled too few
+     * seeds to see it; it now asserts, over a whole year of daily seeds on every tier, that this never
+     * returns null.
      */
     fun generateVerified(seed: Long, difficulty: Difficulty): AtomsState? {
-        val (n, wanted) = shape(difficulty)
-
-        repeat(ATTEMPTS) { attempt ->
-            val rng = Rng(seed + attempt)
-            val built = grow(rng, n, wanted, strict = attempt >= LEGACY_ATTEMPTS) ?: return@repeat
-            val (atoms, bonds) = built
-            // The growth loop gives up after a fixed number of tries, so a cramped seed can end with
-            // fewer atoms than the tier asks for (over 2026-2027, three Standard days: one board of
-            // 6 atoms, two of 9, where the tier asks for 10). Such a board is a valid puzzle, but an
-            // easier one than the tier promises, so it is rejected like any other bad attempt: a
-            // board that already had its full count keeps its attempt, and only these three move.
-            if (atoms.size < wanted) return@repeat
-            val pairs = pairsFor(atoms, n)
-            val solution = pairs.map { p ->
-                bonds[p.a to p.b] ?: bonds[p.b to p.a] ?: 0
-            }
-            if (solution.sum() == 0) return@repeat
-            // In the legacy attempts a new atom can land in the middle of a bond laid earlier,
-            // which splits it: [pairsFor] no longer sees that line, so the bond falls out of the
-            // solution while both its ends still count it in their numbers. Unchecked, 4% of
-            // Standard, 14% of Hard and 35% of Expert boards stored an answer that broke the rules,
-            // and the unique answer the solver proved was some other bonding. See [LEGACY_ATTEMPTS].
-            if (atoms.indices.any { a ->
-                    pairs.indices.sumOf { if (pairs[it].a == a || pairs[it].b == a) solution[it] else 0 } != atoms[a].bonds
-                }
-            ) return@repeat
-            if (countSolutions(atoms, pairs) != 1) return@repeat
-            return AtomsState(n, atoms, pairs, List(pairs.size) { 0 }, solution)
-        }
+        for (a in 0 until ATTEMPTS) attempt(seed, difficulty, a)?.let { return it }
         return null
+    }
+
+    /** Draw number [a] for [seed], if it is accepted. Internal so tests can count the redraws. */
+    internal fun attempt(seed: Long, difficulty: Difficulty, a: Int): AtomsState? {
+        val spec = specFor(difficulty)
+        val (atoms, bonds) = grow(Rng(seed + a), spec) ?: return null
+        val pairs = pairsFor(atoms, spec.n)
+        val solution = pairs.map { p -> bonds[p.a to p.b] ?: bonds[p.b to p.a] ?: 0 }
+        // A guard on the stored answer, which hints judge mistakes by: an old growth rule let an atom
+        // land on a bond and split it, and 4-35% of boards stored an answer that broke the rules.
+        if (atoms.indices.any { at ->
+                pairs.indices.sumOf { if (pairs[it].a == at || pairs[it].b == at) solution[it] else 0 } != atoms[at].bonds
+            }
+        ) return null
+        if (AtomsTeacher.depth(atoms, pairs) !in spec.needs) return null
+        if (countSolutions(atoms, pairs) != 1) return null
+        return AtomsState(spec.n, atoms, pairs, List(pairs.size) { 0 }, solution)
     }
 
     /**
      * A three-atom chain, which trivially has one answer. It exists only so [generate] is total — a
-     * daily puzzle must never throw — and is not a puzzle anyone should be handed. Unreachable in
-     * practice: over two years of daily seeds, a tenth of Expert boards need the strict attempts
-     * and each strict attempt is proved unique about 40% of the time, so four hundred of them all
-     * failing is astronomically unlikely. `FallbackTest` pins that [generateVerified] never gives up.
+     * daily puzzle must never throw — and is not a puzzle anyone should be handed. `FallbackTest`
+     * pins that [generateVerified] never gives up over a year of daily seeds on every tier.
      */
     private fun lastResort(): AtomsState {
         val atoms = listOf(Atom(0, 0, 1), Atom(0, 2, 2), Atom(2, 2, 1))
@@ -241,8 +230,12 @@ object Atoms : PuzzleType {
         return AtomsState(3, atoms, pairs, List(pairs.size) { 0 }, solution)
     }
 
-    /** Grows a connected molecule by sprouting new atoms off existing ones. */
-    private fun grow(rng: Rng, n: Int, wanted: Int, strict: Boolean): kotlin.Pair<List<Atom>, Map<kotlin.Pair<Int, Int>, Int>>? {
+    /**
+     * Grows a connected molecule of exactly [Spec.atoms] atoms by sprouting each new one 2 to
+     * [Spec.reach] squares off an existing one, never onto or across a bond; null when it gets stuck.
+     */
+    private fun grow(rng: Rng, spec: Spec): kotlin.Pair<List<Atom>, Map<kotlin.Pair<Int, Int>, Int>>? {
+        val n = spec.n
         val occupied = HashMap<kotlin.Pair<Int, Int>, Int>()   // cell -> atom index
         val positions = mutableListOf<kotlin.Pair<Int, Int>>()
         val bonds = HashMap<kotlin.Pair<Int, Int>, Int>()
@@ -253,16 +246,15 @@ object Atoms : PuzzleType {
         occupied[start] = 0
 
         var guard = 0
-        while (positions.size < wanted && guard++ < wanted * 60) {
+        while (positions.size < spec.atoms && guard++ < spec.atoms * 60) {
             val from = rng.nextInt(positions.size)
             val (r, c) = positions[from]
             val (dr, dc) = rng.pick(listOf(-1 to 0, 1 to 0, 0 to -1, 0 to 1))
-            val distance = rng.nextInt(2, 4)
+            val distance = rng.nextInt(2, spec.reach)
             val nr = r + dr * distance
             val nc = c + dc * distance
             if (nr !in 0 until n || nc !in 0 until n) continue
-            if (occupied.containsKey(nr to nc)) continue
-            if (strict && (nr to nc) in used) continue
+            if (occupied.containsKey(nr to nc) || (nr to nc) in used) continue
 
             // The line between must be clear of atoms and of bonds running the other way.
             val between = (1 until distance).map { step -> (r + dr * step) to (c + dc * step) }
@@ -274,8 +266,7 @@ object Atoms : PuzzleType {
             between.forEach { used += it }
             bonds[from to index] = rng.nextInt(1, 2)
         }
-
-        if (positions.size < 4) return null
+        if (positions.size < spec.atoms) return null
 
         // The only walk over a hashed collection here, and a sum, so its order cannot matter. The
         // three hash containers are otherwise only probed, never iterated, which is what keeps the
@@ -285,8 +276,6 @@ object Atoms : PuzzleType {
             degrees[pair.first] += count
             degrees[pair.second] += count
         }
-        if (degrees.any { it == 0 || it > 8 }) return null
-
         val atoms = positions.mapIndexed { i, (r, c) -> Atom(r, c, degrees[i]) }
         return atoms to bonds
     }
