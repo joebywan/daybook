@@ -40,7 +40,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
@@ -326,8 +325,6 @@ object Tents : PuzzleType {
         val style = TextStyle(fontSize = with(density) { fontPx.toSp() }, fontWeight = FontWeight.SemiBold)
         return (0..n).map { measurer.measure(it.toString(), style) }
     }
-
-    private fun Float.asDp(density: Density): Dp = with(density) { this@asDp.toDp() }
 
     // ---- the home motif -----------------------------------------------------------------------
 

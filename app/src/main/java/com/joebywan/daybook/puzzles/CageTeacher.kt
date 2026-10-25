@@ -253,7 +253,6 @@ internal object CageTeacher {
     // ---- the cage totals, one group at a time ------------------------------------------------------
 
     private fun lead(s: Sight, g: Group): String {
-        val board = s.board
         return when (g.kind) {
             Kind.CAGE -> {
                 val open = s.open(g)
@@ -276,7 +275,7 @@ internal object CageTeacher {
                 "${sc.name.cap()} ${if (sc.unitCount == 1) "holds" else "hold"} $whole, but the cages touching " +
                     "${if (sc.unitCount == 1) "it" else "them"} add up to ${g.sum + whole}, so the squares outside total ${g.sum}."
             }
-        }.also { board.hashCode() }
+        }
     }
 
     /** CAGE_COMBO for [Kind.CAGE]; FORTY_FIVE for [Kind.INNIE] (and the outies). */

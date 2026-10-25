@@ -89,8 +89,6 @@ internal object ChessTeacher {
         return Line(pos, s.mateIn - s.played.size, false, -1, null, 0, null, 0)
     }
 
-    fun isSolved(s: ChessState): Boolean = s.played.size <= s.mateIn && replay(s)?.mated == true
-
     // ---- the whole hint ----------------------------------------------------------------------------------
 
     fun teach(s: ChessState): Deduction? {

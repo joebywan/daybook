@@ -57,7 +57,7 @@ object Levels {
 A plan depends on the pool, and adding a puzzle changes the pool. So:
 
 - `POOL` is **append-only**: a new puzzle goes on the end and nothing is removed or reordered. A test pins it against a
-  copied list, the way `LexiconWebParityTest` pins its list.
+  copied list, the way `BoardPinTest` pins Lexicon's list.
 - Each level the player opens records the `poolSize` it was opened with (see Storage). Replaying it later uses the same size,
   so the same five boards come back. Levels not yet opened use the full pool, so new puzzles appear from the next new level.
 - A puzzle removed from the registry (it has never happened) would leave old plans naming it. That board shows as finished,

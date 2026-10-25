@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Tower
@@ -8,7 +7,6 @@ import com.joebywan.daybook.puzzles.TowerState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.math.ceil
 import kotlin.math.ln
 
@@ -52,7 +50,7 @@ class TowerBalanceTest {
     }
 
     private fun seedFor(difficulty: Difficulty, day: Int) =
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(day.toLong()), "tower", difficulty)
+        daySeed(day, "tower", difficulty)
 
     @Test
     fun `a harder board never gets fewer guesses than an easier one`() {

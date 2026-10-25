@@ -19,8 +19,8 @@ adb shell settings put global auto_time 0
 adb shell settings put global auto_time_zone 0
 adb shell setprop persist.sys.timezone UTC
 adb shell date 100712002026.00 >/dev/null     # MMDDhhmmYYYY.ss: Wed 7 Oct 2026, noon
-# Today's pick is epoch day mod the puzzle count (PuzzleRegistry.featured): with 25 puzzles this day it is Snap, on the
-# first screen. Adding a puzzle moves it, so re-pick the date then (day % count == 8 keeps it on Snap).
+# Today's three come from the date (core/TodaysThree.kt): this day, Sets, Cage Sudoku and Cipher. A chip's name matches
+# before its tile's, so tap() opens those three from the row; it is the same daily either way.
 adb shell settings put global hide_error_dialogs 1   # a slow CI emulator ANRs the launcher after the clock jump
 sleep 10
 adb shell wm size 1080x1920
