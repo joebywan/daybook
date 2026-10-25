@@ -175,17 +175,11 @@ class SudokuTeachingTest {
                 )
             }
             report.appendLine("  longest explanation, ${longest.length} characters: $longest")
-            // Measured, not hoped for: Standard 0 boards, Hard 15/300, Expert 114/300 (1.1% of steps).
-            // Expert's 24-clue boards are dug for uniqueness, not rated, and many need chains longer
-            // than a hint can carry — see SudokuTeacher's class comment. The bounds sit just above
-            // those numbers so a regression shows.
+            // Every tier is dug only while the teacher's ladder finishes it (Sudoku.generateVerified), so no
+            // generated board reaches the fallback. Before that gate: Hard 15/300, Expert 114/300.
             val fallbackBoards = boardCounts.getValue(SudokuTeacher.FALLBACK)
             val fallbackSteps = stepCounts.getValue(SudokuTeacher.FALLBACK)
-            val boardLimit = when (difficulty) {
-                Difficulty.STANDARD -> 0
-                Difficulty.HARD -> perTier / 10
-                Difficulty.EXPERT -> perTier * 45 / 100
-            }
+            val boardLimit = 0
             failures += listOfNotNull(
                 "$difficulty: an explanation too long for the panel: $longest"
                     .takeIf { longest.length > SudokuTeacher.MAX_EXPLANATION },

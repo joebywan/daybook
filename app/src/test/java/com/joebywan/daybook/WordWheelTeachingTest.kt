@@ -33,16 +33,42 @@ class WordWheelTeachingTest {
         }
     }
 
+    /**
+     * Whether the empty slots of [s] can all be filled with [slot] holding [word]: each a different grid word that fits it as
+     * the player sees it ([fitting]) and agrees with every slot it crosses. Reading order, no pruning beyond that.
+     */
+    private fun fillable(s: WordWheelState, slot: Int, word: String): Boolean {
+        val empty = s.slots.indices.filter { !s.filled(it) }
+        val cells = s.slots.map { it.cells(s.width) }
+        val words = HashMap<Int, String>()
+        fun agrees(k: Int, w: String) = words.all { (o, v) ->
+            v != w && cells[k].indices.all { i -> cells[o].indexOf(cells[k][i]).let { j -> j < 0 || v[j] == w[i] } }
+        }
+        fun go(n: Int): Boolean {
+            if (n == empty.size) return true
+            val k = empty[n]
+            for (w in if (k == slot) listOf(word) else fitting(s, k)) {
+                if (!agrees(k, w)) continue
+                words[k] = w
+                if (go(n + 1)) return true
+                words.remove(k)
+            }
+            return false
+        }
+        return go(0)
+    }
+
     @Test
     fun `coverage - which techniques boards need, per difficulty`() {
-        val report = StringBuilder("Word Wheel hints alone, 200 daily boards per tier from 2026-01-01\n")
+        val report = StringBuilder("Word Wheel hints alone, 365 daily boards per tier from 2026-01-01\n")
         for (d in Difficulty.entries) {
             var pinned = 0
+            var crossed = 0
             var clued = 0
             var noClue = 0
             var choices = 0
             var worst = 0
-            for (day in 0 until 200) {
+            for (day in 0 until 365) {
                 var s = board(day, d)
                 var boardClues = 0
                 while (!s.solved) {
@@ -52,6 +78,11 @@ class WordWheelTeachingTest {
                         clued++
                         boardClues++
                         assertEquals(WordWheelTeacher.CLUE, step.technique)
+                    } else if (step.technique == WordWheelTeacher.CROSSING) {
+                        crossed++
+                        val t = WordWheelTeacher.teach(s)!!
+                        assertEquals(s.slots[t.slot].word, t.word)
+                        for (w in fitting(s, t.slot)) assertEquals("day $day ${d.name} $w", w == t.word, fillable(s, t.slot, w))
                     } else {
                         pinned++
                         assertEquals(WordWheelTeacher.PINNED, step.technique)
@@ -66,10 +97,11 @@ class WordWheelTeachingTest {
                 choices += walk.maxChoice
                 worst = maxOf(worst, walk.maxChoice)
             }
+            val steps = pinned + crossed + clued
             report.append(
-                "${d.name}: ${pinned + clued} steps, pinned ${"%.0f".format(100.0 * pinned / (pinned + clued))}%, clue (fallback) " +
-                    "${"%.0f".format(100.0 * clued / (pinned + clued))}%; boards needing no clue $noClue/200; " +
-                    "most words fitting a clued slot: mean ${"%.1f".format(choices / 200.0)}, worst $worst\n",
+                "${d.name}: $steps steps, pinned ${"%.0f".format(100.0 * pinned / steps)}%, crossing ${"%.0f".format(100.0 * crossed / steps)}%, " +
+                    "clue (fallback) ${"%.1f".format(100.0 * clued / steps)}%; boards needing no clue $noClue/365; " +
+                    "most words fitting a clued slot (generator's walk): mean ${"%.1f".format(choices / 365.0)}, worst $worst\n",
             )
         }
         writeReport("wordwheel-teaching-coverage.txt", report.toString())
@@ -93,6 +125,10 @@ class WordWheelTeachingTest {
                 val fits = fitting(s, step.slot)
                 if (step.technique == WordWheelTeacher.PINNED) {
                     assertEquals("day $day ${d.name}", listOf(step.word), fits)
+                } else if (step.technique == WordWheelTeacher.CROSSING) {
+                    // Every other word that fits leaves no way to fill the grid: checked by a search of every filling.
+                    assertTrue(step.word in fits && fits.size > 1)
+                    for (w in fits) assertEquals("day $day ${d.name} $w", w == step.word, fillable(s, step.slot, w))
                 } else {
                     assertEquals(fits.size, step.choices)
                     // A clue is offered only when no empty slot is pinned.

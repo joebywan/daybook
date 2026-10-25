@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -92,6 +94,8 @@ fun StatsScreen(
             contentPadding = PaddingValues(18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            item { WeekStrip(completions, today, Modifier.fillMaxWidth()) }
+
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Tile("Solved", completions.size.toString(), Modifier.weight(1f))
@@ -122,8 +126,9 @@ fun StatsScreen(
 
             // Two a row, in the home grid's order (the player's own, or most played first).
             items(puzzles.chunked(2), key = { it.first().id }) { pair ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    pair.forEach { PuzzleStats(it, completions, keptCards, Modifier.weight(1f)) { c -> open = keyOf(c) } }
+                // Equal heights, so a trend under one card leaves its neighbour matching rather than short.
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    pair.forEach { PuzzleStats(it, completions, keptCards, today, Modifier.weight(1f).fillMaxHeight()) { c -> open = keyOf(c) } }
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
@@ -142,6 +147,7 @@ private fun PuzzleStats(
     puzzle: PuzzleType,
     completions: List<Completion>,
     keptCards: List<KeptCard>,
+    today: LocalDate,
     modifier: Modifier,
     onOpen: (KeptCard) -> Unit,
 ) {
@@ -165,6 +171,7 @@ private fun PuzzleStats(
                 ShareLink("Last", kept(false), accent, onOpen)
             }
         }
+        remember(completions, today, puzzle.id) { ThisWeek.trend(completions, puzzle.id, today) }?.let { TrendLine(it, accent) }
     }
 }
 

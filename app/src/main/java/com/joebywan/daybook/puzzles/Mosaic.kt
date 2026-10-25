@@ -28,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -1167,48 +1168,53 @@ object Mosaic : PuzzleType {
                 }
             }
 
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = 4.dp).keepClear(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-            ) {
-                repeat(s.colours) { colour ->
-                    val chosen = selected == colour
-                    // The ring is drawn outside the swatch with a gap rather than as a thick
-                    // border on it: a border eats into the colour, and which swatch is selected
-                    // has to be readable at a glance while the colour itself stays true.
-                    Box(
-                        Modifier
-                            .size(52.dp)
-                            .clickable(enabled = live) { selected = colour }
-                            .border(
-                                if (chosen) 3.dp else 0.dp,
-                                if (chosen) scheme.onBackground else Color.Transparent,
-                                RoundedCornerShape(16.dp),
+            // A lost board says so in the palette's own box (its swatches can do nothing then), so the board above
+            // never moves: the swatches stay laid out, unseen, and come back with an Undo.
+            Box(Modifier.fillMaxWidth().padding(bottom = 4.dp).keepClear(), contentAlignment = Alignment.Center) {
+                Row(
+                    Modifier.fillMaxWidth().alpha(if (s.failed) 0f else 1f),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                ) {
+                    repeat(s.colours) { colour ->
+                        val chosen = selected == colour
+                        // The ring is drawn outside the swatch with a gap rather than as a thick
+                        // border on it: a border eats into the colour, and which swatch is selected
+                        // has to be readable at a glance while the colour itself stays true.
+                        Box(
+                            Modifier
+                                .size(52.dp)
+                                .clickable(enabled = live) { selected = colour }
+                                .border(
+                                    if (chosen) 3.dp else 0.dp,
+                                    if (chosen) scheme.onBackground else Color.Transparent,
+                                    RoundedCornerShape(16.dp),
+                                )
+                                .padding(6.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(palette[colour])
+                                .border(1.dp, scheme.outline, RoundedCornerShape(11.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                (colour + 1).toString(),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = BoardHues.onFill(palette[colour]),
                             )
-                            .padding(6.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(palette[colour])
-                            .border(1.dp, scheme.outline, RoundedCornerShape(11.dp)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            (colour + 1).toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = BoardHues.onFill(palette[colour]),
-                        )
+                        }
                     }
                 }
-            }
 
-            if (s.failed) {
-                Text(
-                    "Out of fills — restart to take another run at it.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.error,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                )
+                if (s.failed) {
+                    Text(
+                        "Out of fills. Undo, or tap Hint to find the fill that lost it.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.error,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }

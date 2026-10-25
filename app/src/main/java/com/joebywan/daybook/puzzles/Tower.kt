@@ -103,7 +103,7 @@ object Tower : PuzzleType {
     override val accent = 0xFFD08A33
     override val rules = listOf(
         "A secret row of coloured pegs is hidden at the top.",
-        "Tap a colour, then tap a slot to place it. Submit a full row to score it.",
+        "Tap a colour to put it in the next empty slot, or tap a slot to put the chosen colour there. Submit a full row to score it.",
         "A filled pip means one peg is the right colour in the right slot.",
         "A hollow pip means one peg is the right colour in the wrong slot.",
         "Pips are not aligned with the pegs — working out which is which is the puzzle.",
@@ -352,13 +352,13 @@ object Tower : PuzzleType {
             TutorialFrame(
                 state = tutorialBoard(3),
                 caption = "Guesses 2 and 3 differ only in slot 1 and scored the same, so slot 1 is neither " +
-                    "blue nor gold. Teal is out, so it's brown. Tap brown, then slot 1.",
+                    "blue nor gold. Teal is out, so it's brown. Tap brown: it fills the first empty slot.",
                 highlight = BoardHighlight(
                     strong = setOf(sw + 2, c + 0),
                     soft = setOf(TowerTeacher.peg(TUTORIAL_SLOTS, 1, 0), TowerTeacher.peg(TUTORIAL_SLOTS, 2, 0)),
                 ),
                 accepts = only(3, brown),
-                retry = "Tap brown below first, then the glowing slot.",
+                retry = "Tap brown below.",
                 done = "Slot 1 is brown.",
             ),
             TutorialFrame(
@@ -533,7 +533,11 @@ object Tower : PuzzleType {
                                     scheme.onBackground,
                                     RoundedCornerShape(10.dp),
                                 )
-                                .clickable(enabled = interactive) { selectedColour = colour },
+                                .clickable(enabled = interactive) {
+                                    // As the keyboard's digit: chosen, and into the next empty peg (one state); a full row only chooses.
+                                    selectedColour = colour
+                                    s.applyKey(TowerKeyAction.Colour(colour))?.let(onState)
+                                },
                             contentAlignment = Alignment.Center,
                         ) { PegDigit(colour, 16) }
                     }
