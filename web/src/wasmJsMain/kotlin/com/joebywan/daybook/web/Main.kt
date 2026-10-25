@@ -62,7 +62,7 @@ private fun query(): Map<String, String> =
         if (eq < 0) it to "" else it.substring(0, eq) to it.substring(eq + 1)
     }
 
-/** The dates every web parity test in app/ pins. */
+/** The dates `BoardPinTest` in app/ pins. */
 private val PARITY_DAYS = listOf(LocalDate(2026, 1, 1), LocalDate(2026, 9, 30), LocalDate(2027, 2, 28))
 
 private fun fingerprint(type: PuzzleType, day: LocalDate, tier: Difficulty): String =

@@ -2,7 +2,7 @@
 """Diff the browser's boards against the JVM's, in Chromium and WebKit.
 
 The web build compiles the same generators as Android (CLAUDE.md, "Web build"), and a board that
-differs between the two engines is a bug that nothing else catches: the per-puzzle parity tests pin
+differs between the two engines is a bug that nothing else catches: `BoardPinTest` pins
 only a few boards. This loads the built wasm distribution with `?dump&range=N&puzzle=<id>`, collects
 the `RANGE <fingerprint>` console lines until `DUMP DONE`, and compares them with the JVM's
 `WebParityDumpTest` output, line for line.
@@ -24,36 +24,16 @@ Needs `pip install playwright` and `python -m playwright install chromium webkit
 """
 import argparse
 import asyncio
-import functools
-import http.server
-import socketserver
 import sys
-import threading
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "render"))
+from render import Server  # noqa: E402 - the static server render.py already has, .wasm MIME type and all
 
 TIERS = 3  # Standard, Hard, Expert: the order the JVM file and the page both use
 LEVELS = "levels"  # the pseudo-puzzle: levels 1..days, LEVEL_SIZE boards each (`&puzzle=levels`)
 LEVEL_SIZE = 5
-
-
-class Handler(http.server.SimpleHTTPRequestHandler):
-    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".wasm": "application/wasm"}
-
-    def log_message(self, *args):  # keep the report readable
-        pass
-
-
-def serve(directory: Path) -> tuple[socketserver.TCPServer, int]:
-    class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
-        daemon_threads = True
-
-        def handle_error(self, request, client_address):  # a page closed mid-download: not news
-            pass
-
-    server = Server(("127.0.0.1", 0), functools.partial(Handler, directory=str(directory)))
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    return server, server.server_address[1]
 
 
 def read_expected(path: Path) -> dict[str, list[str]]:
@@ -149,17 +129,14 @@ async def check_browser(pw, name: str, base: str, expected: dict[str, list[str]]
 async def main_async(args, expected: dict[str, list[str]], days: int) -> int:
     from playwright.async_api import async_playwright
 
-    server, port = serve(args.dist)
-    base = f"http://127.0.0.1:{port}"
     problems: list[str] = []
-    try:
+    with Server(args.dist) as server:
+        base = server.url.rstrip("/")
         async with async_playwright() as pw:
             # One browser at a time: twelve wasm pages already saturate a CI runner's cores, and
             # two browsers at once would only make both slower and the timeout less meaningful.
             for name in args.browsers:
                 problems += await check_browser(pw, name, base, expected, days, args.timeout, args.show)
-    finally:
-        server.shutdown()
     if problems:
         print("\nWEB PARITY FAILED\n", file=sys.stderr)
         print("\n".join(problems), file=sys.stderr)

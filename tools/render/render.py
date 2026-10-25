@@ -102,12 +102,17 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+class _QuietServer(http.server.ThreadingHTTPServer):
+    def handle_error(self, request, client_address):  # a page closed mid-download: not news
+        pass
+
+
 class Server:
     """http.server on 127.0.0.1, port chosen by the OS, torn down on exit."""
 
     def __init__(self, directory: Path):
         handler = functools.partial(QuietHandler, directory=str(directory))
-        self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        self.httpd = _QuietServer(("127.0.0.1", 0), handler)
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
 
     @property
