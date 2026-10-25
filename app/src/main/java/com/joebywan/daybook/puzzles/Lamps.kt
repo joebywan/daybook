@@ -228,7 +228,12 @@ object Lamps : PuzzleType {
         fun named(i: Int) = i in hl.strong || i in hl.soft
         val lit = s.lit()
 
-        drawRoundRect(scheme.surface, Offset.Zero, Size(n * u, n * u), CornerRadius(u * 0.12f))
+        // Walls are the darkest thing on the board in both schemes: ink on the light card; in dark, the background's
+        // ink under squares raised to surfaceVariant, so a wall never reads as a white square.
+        val square = if (dark) scheme.surfaceVariant else scheme.surface
+        val wall = if (dark) scheme.background else scheme.onSurface
+        val wallText = if (dark) scheme.onSurface else scheme.surface
+        drawRoundRect(square, Offset.Zero, Size(n * u, n * u), CornerRadius(u * 0.12f))
         for (r in 0 until n) for (c in 0 until n) {
             val i = r * n + c
             val x = c * u
@@ -237,11 +242,12 @@ object Lamps : PuzzleType {
                 val fade = if (dim && !named(i)) 0.45f else 1f
                 if (s.isWall(i)) {
                     val want = s.numberAt(i)
-                    val met = want >= 0 && s.lampsBeside(i) == want
+                    // A 0 is met from the start, so only a number with lamps to find turns green when it has them.
+                    val met = want > 0 && s.lampsBeside(i) == want
                     val block = when {
                         i in overlay.badWalls -> scheme.error
                         met -> scheme.primary
-                        else -> scheme.onSurface
+                        else -> wall
                     }
                     drawRect(block.copy(alpha = fade), Offset(x, y), Size(u, u))
                     if (want >= 0) {
@@ -249,7 +255,7 @@ object Lamps : PuzzleType {
                         val ink = when {
                             i in overlay.badWalls -> scheme.onError
                             met -> scheme.onPrimary
-                            else -> scheme.surface
+                            else -> wallText
                         }
                         drawText(layout, ink.copy(alpha = fade), Offset(x + u / 2 - layout.size.width / 2f, y + u / 2 - layout.size.height / 2f))
                     }
