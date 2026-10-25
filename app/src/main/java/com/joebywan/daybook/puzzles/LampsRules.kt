@@ -131,6 +131,8 @@ internal object LampsLogic {
         val number = IntArray(n * n) { walls[it].let { ch -> if (ch in '0'..'4') ch - '0' else -1 } }
         val numbered: IntArray = (0 until n * n).filter { number[it] >= 0 }.toIntArray()
         val beside: Array<IntArray> = Array(n * n) { orth(n, it).filter { j -> white[j] }.toIntArray() }
+        val whites: IntArray = (0 until n * n).filter { white[it] }.toIntArray()
+        val numbersBeside: Array<IntArray> = Array(n * n) { orth(n, it).filter { j -> number[j] >= 0 }.toIntArray() }
     }
 
     // ---- the rules ----------------------------------------------------------------------------
@@ -214,15 +216,18 @@ internal object LampsLogic {
 
     // Two lamps never light each other here: every lamp the ladder puts down is on a candidate (unlit), and the
     // candidates beside one wall never share a sight line, so a clash cannot arise and is not checked.
-    private fun broken(g: Geo, k: IntArray, lit: BooleanArray): Broken? {
-        for (w in g.numbered) {
+    private fun broken(g: Geo, k: IntArray, lit: BooleanArray): Broken? = broken(g, k, lit, g.numbered, g.whites)
+
+    /** [broken] looking only at the numbered [walls] and white [squares] given (each ascending). */
+    private fun broken(g: Geo, k: IntArray, lit: BooleanArray, walls: IntArray, squares: IntArray): Broken? {
+        for (w in walls) {
             var on = 0
             var free = 0
             for (j in g.beside[w]) if (k[j] == LAMP) on++ else if (candidate(g, k, lit, j)) free++
             if (on > g.number[w]) return Broken(OVER, w)
             if (on + free < g.number[w]) return Broken(SHORT, w)
         }
-        for (y in k.indices) if (g.white[y] && !lit[y] && !hasSource(g, k, lit, y)) return Broken(UNLIT, y)
+        for (y in squares) if (!lit[y] && !hasSource(g, k, lit, y)) return Broken(UNLIT, y)
         return null
     }
 
@@ -243,8 +248,11 @@ internal object LampsLogic {
     }
 
     /** The first fact of the ladder up to [rung] that [k] does not yet hold, or null when it has none. */
-    fun nextFact(g: Geo, k: IntArray, rung: Int): Fact? {
-        val lit = litBy(g, k)
+    fun nextFact(g: Geo, k: IntArray, rung: Int): Fact? = nextFact(g, k, rung, litBy(g, k))
+
+    /** [nextFact] with [lit] already worked out from [k]. */
+    /** The first direct fact among the numbered [walls] and white [squares] given (each ascending), in the ladder's order. */
+    private fun directFact(g: Geo, k: IntArray, lit: BooleanArray, walls: IntArray, squares: IntArray): Fact? {
         fun cands(w: Int) = g.beside[w].filter { candidate(g, k, lit, it) }
         fun on(w: Int): Int {
             var c = 0
@@ -257,18 +265,29 @@ internal object LampsLogic {
             return c
         }
 
-        for (w in g.numbered) if (g.number[w] == 0 && free(w) > 0) return Fact(ZERO, NO, cands(w), wall = w)
-        for (w in g.numbered) if (g.number[w] > 0 && on(w) == g.number[w] && free(w) > 0) return Fact(DONE, NO, cands(w), wall = w)
-        for (w in g.numbered) {
+        for (w in walls) if (g.number[w] == 0 && free(w) > 0) return Fact(ZERO, NO, cands(w), wall = w)
+        for (w in walls) if (g.number[w] > 0 && on(w) == g.number[w] && free(w) > 0) return Fact(DONE, NO, cands(w), wall = w)
+        for (w in walls) {
             val need = g.number[w] - on(w)
             if (need > 0 && free(w) == need) return Fact(ROOM, LAMP, cands(w), wall = w)
         }
-        for (y in k.indices) {
-            if (!g.white[y] || lit[y]) continue
+        for (y in squares) {
+            if (lit[y]) continue
             val s = onlySource(g, k, lit, y)
             if (s >= 0) return Fact(ONLY_LIGHT, LAMP, listOf(s), seen = y)
         }
+        return null
+    }
+
+    private fun nextFact(g: Geo, k: IntArray, rung: Int, lit: BooleanArray): Fact? {
+        directFact(g, k, lit, g.numbered, g.whites)?.let { return it }
         if (rung < LOOKAHEAD) return null
+        fun cands(w: Int) = g.beside[w].filter { candidate(g, k, lit, it) }
+        fun on(w: Int): Int {
+            var c = 0
+            for (j in g.beside[w]) if (k[j] == LAMP) c++
+            return c
+        }
 
         // What a lamp on x would light, as a stamp per square (x itself included).
         val stamp = IntArray(k.size) { -1 }
@@ -317,30 +336,64 @@ internal object LampsLogic {
         for (i in f.targets) k[i] = f.value
     }
 
-    /** The supposition [assume] at [square], followed at most [maxLinks] direct facts; null when it breaks nothing. */
-    fun whatIf(g: Geo, k: IntArray, square: Int, assume: Int, maxLinks: Int = MAX_LINKS): WhatIf? {
+    /**
+     * The supposition [assume] at [square], followed at most [maxLinks] direct facts; null when it breaks nothing.
+     *
+     * [k] (lit as [lit]) must hold no direct fact and break no rule, as it does wherever the ladder reaches a what-if.
+     * Then only a number or a square the supposition has touched (a square whose knowledge or light changed, or one that
+     * sees it) can break or yield a fact, so only those are looked at, in the ladder's own order: the same chain as a
+     * scan of the whole board, for a fraction of the work.
+     */
+    private fun whatIf(g: Geo, k: IntArray, lit: BooleanArray, square: Int, assume: Int, maxLinks: Int): WhatIf? {
         val t = k.copyOf()
-        t[square] = assume
+        val l = lit.copyOf()
+        val touched = BooleanArray(k.size)
+        val wallMark = BooleanArray(k.size)
+        val squareMark = BooleanArray(k.size)
+        val walls = ArrayList<Int>()
+        val squares = ArrayList<Int>()
+        fun touch(i: Int) {
+            if (touched[i]) return
+            touched[i] = true
+            for (w in g.numbersBeside[i]) if (!wallMark[w]) { wallMark[w] = true; walls.add(w) }
+            if (!squareMark[i]) { squareMark[i] = true; squares.add(i) }
+            for (j in g.sight[i]) if (!squareMark[j]) { squareMark[j] = true; squares.add(j) }
+        }
+        fun set(i: Int, v: Int) {
+            t[i] = v
+            touch(i)
+            if (v == LAMP) {
+                l[i] = true
+                for (j in g.sight[i]) if (!l[j]) { l[j] = true; touch(j) }
+            }
+        }
+        set(square, assume)
         val links = ArrayList<Fact>()
         while (true) {
-            broken(g, t)?.let { return WhatIf(square, assume, links, it) }
+            val ws = walls.toIntArray().also { it.sort() }
+            val ys = squares.toIntArray().also { it.sort() }
+            broken(g, t, l, ws, ys)?.let { return WhatIf(square, assume, links, it) }
             if (links.size == maxLinks) return null
-            val f = nextFact(g, t, DIRECT) ?: return null
-            apply(t, f)
+            val f = directFact(g, t, l, ws, ys) ?: return null
+            for (i in f.targets) set(i, f.value)
             links.add(f)
         }
     }
 
-    /** The what-if with the shortest chain over every candidate (a lamp tried before none), reading order on a tie. */
+    /**
+     * The what-if with the shortest chain over every candidate (a lamp tried before none), reading order on a tie. Only
+     * where no direct fact is left (the ladder's order guarantees it); null on a board that already breaks a rule.
+     */
     fun firstWhatIf(g: Geo, k: IntArray): WhatIf? {
         val lit = litBy(g, k)
+        if (broken(g, k, lit) != null) return null
         var best: WhatIf? = null
         for (x in k.indices) {
             if (!candidate(g, k, lit, x)) continue
             for (assume in intArrayOf(LAMP, NO)) {
                 val limit = best?.links?.size?.minus(1) ?: MAX_LINKS
                 if (limit < 0) return best
-                val w = whatIf(g, k, x, assume, limit) ?: continue
+                val w = whatIf(g, k, lit, x, assume, limit) ?: continue
                 best = w
             }
         }
