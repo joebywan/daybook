@@ -1,6 +1,5 @@
-- Swipe left or right on the home screen to change the difficulty.
-- Tap your streak on the home screen to open Statistics.
-- Share it again later: Statistics keeps your best result and your last random board for every puzzle and tier.
-- Share today's progress from Statistics: every daily you've solved today, per difficulty.
-- Word Wheel's share says how many bonus words you found.
-- Tower's pips sit in a square beside each guess, so they no longer look tied to the peg above.
+- Tower: tapping a colour puts it in the next empty peg, as typing its number does.
+- A hint's next step is the Hint button's alone, so "Show me" no longer shows twice.
+- Mosaic: out of fills, the board stays put and the line says Undo or a hint will find the fill that lost it.
+- The first-visit walkthrough line now says what each puzzle is about.
+- Tower moves to the end of a new player's home grid.

@@ -564,11 +564,14 @@ private fun PlayBoard(
             )
             if (teaches && offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
                 Box(Modifier.matchParentSize().background(scheme.background), contentAlignment = Alignment.Center) {
+                    // What the puzzle is about, then the offer: two small lines at most (the longest tagline wraps at
+                    // 375dp), inside the clock row's height and its padding, so the board never moves.
                     Text(
-                        "New to ${puzzle.displayName}? One-minute walkthrough",
-                        style = MaterialTheme.typography.bodyMedium,
+                        "${puzzle.tagline} · One-minute walkthrough",
+                        style = MaterialTheme.typography.bodySmall,
                         color = Color(puzzle.accent),
-                        maxLines = 1,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
                         modifier = Modifier
                             .requiredHeight(40.dp)
                             .clip(RoundedCornerShape(12.dp))
@@ -634,7 +637,7 @@ private fun PlayBoard(
         Box {
             if (wide && hintSession.active && !state.solved) {
                 HintPanel(
-                    hintSession, Color(puzzle.accent), ::onHint,
+                    hintSession, Color(puzzle.accent),
                     modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth(),
                     fill = false,
                 )
@@ -721,7 +724,6 @@ private fun PlayBoard(
             boardTop = boardTop,
             toolbarTop = toolbarTop,
             windowHeight = with(LocalDensity.current) { screenHeight.toPx() },
-            onAction = ::onHint,
         )
     }
     }

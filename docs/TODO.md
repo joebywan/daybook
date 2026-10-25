@@ -164,10 +164,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 - [ ] **Accent rule: perceptual distance, not hue.** Replace `docs/COLOUR.md`'s 25-degree hue rule with a CIEDE2000 floor
   between every pair of accents (both schemes, colour-blind modes included), pinned by one test, the floor set at today's
   closest pair so nothing changes. Unblocks any 26th puzzle (see "Accents are crowded").
-- [ ] **Play-screen fixes.** Mosaic's "Out of fills" line is unreserved under a height-sized board (`Mosaic.kt` `s.failed`)
-  and says "restart" when Undo works; Cage Sudoku shows two "Show me" buttons while the popover is open; a Tower colour tap
-  should fill the next empty peg (as the keyboard does); the first-visit offer line should carry the puzzle's tagline;
-  Tower moves to the end of `PuzzleOrder.GENTLEST` (redundant with Lexicon).
 - [ ] **Measure tier depth.** A report (env-gated test, no board change): for a year of daily seeds per tier, the deepest
   teacher technique each board needs, for Sudoku, Kings, Mambo, Shikaku, Atoms, Inequality, Tents, Nonogram, LITS, Regions.
   Decides which tiers overlap and so which get a depth gate. Also measure whether a Snap teacher reasoning over the whole
