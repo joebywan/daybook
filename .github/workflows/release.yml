@@ -74,19 +74,9 @@ jobs:
 
       # -PrequireSigning turns "no key, so quietly emit app-release-unsigned.apk" into a hard
       # failure. Without it a green build says nothing about whether the APK was signed.
-      - name: Build signed release
-        env:
-          DAYBOOK_KEYSTORE: ${{ runner.temp }}/release.jks
-          DAYBOOK_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          DAYBOOK_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          DAYBOOK_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          DAYBOOK_VERSION_CODE: ${{ steps.version.outputs.code }}
-          DAYBOOK_VERSION_NAME: ${{ steps.version.outputs.name }}
-        run: ./gradlew assembleRelease -PrequireSigning=true
-
       # Play distributes bundles, not APKs, so both are built from the same signed inputs: the
       # APK is what gets sideloaded from the Release page, the AAB is what goes to Play.
-      - name: Build signed bundle
+      - name: Build signed release and bundle
         env:
           DAYBOOK_KEYSTORE: ${{ runner.temp }}/release.jks
           DAYBOOK_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -94,7 +84,7 @@ jobs:
           DAYBOOK_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           DAYBOOK_VERSION_CODE: ${{ steps.version.outputs.code }}
           DAYBOOK_VERSION_NAME: ${{ steps.version.outputs.name }}
-        run: ./gradlew bundleRelease -PrequireSigning=true
+        run: ./gradlew assembleRelease bundleRelease -PrequireSigning=true
 
       - name: Verify the artifacts before publishing
         run: |
