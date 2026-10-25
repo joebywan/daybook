@@ -123,6 +123,12 @@ internal object LampsTeacher {
 
     private fun plural(k: Int, one: String, many: String = one + "s") = if (k == 1) "1 $one" else "$k $many"
 
+    private fun its(num: Int) = when (num) {
+        1 -> "its lamp"
+        2 -> "both its lamps"
+        else -> "all $num of its lamps"
+    }
+
     private fun explain(g: LampsLogic.Geo, f: Fact): Step {
         val t = f.targets.toSet()
         val num = if (f.wall >= 0) g.number[f.wall] else 0
@@ -135,7 +141,7 @@ internal object LampsTeacher {
             DONE -> Step(
                 DONE, NO, t, t + f.wall, setOf(f.wall) + g.beside[f.wall].filter { it !in t },
                 "Count the lamps around this $num.",
-                "The $num already has ${if (num == 1) "its lamp" else "all $num of its lamps"}, so the other squares beside it hold none: cross them out.",
+                "The $num already has ${its(num)}, so the other squares beside it hold none: cross them out.",
             )
             ROOM -> Step(
                 ROOM, LAMP, t, t + f.wall, setOf(f.wall),
@@ -181,7 +187,7 @@ internal object LampsTeacher {
             when (link.technique) {
                 ROOM -> "the $num would need ${if (link.targets.size == 1) "its last free square" else "its last ${link.targets.size} squares"}"
                 ONLY_LIGHT -> "a square would have one lamp left to light it"
-                else -> "the $num would have all its lamps"
+                else -> "the $num would have ${its(num)}, ruling out its other squares"
             }
         }
         cited += w.broken.at

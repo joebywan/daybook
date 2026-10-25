@@ -15,6 +15,8 @@ import com.joebywan.daybook.puzzles.DominoTeacher
 import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.KingsTeacher
+import com.joebywan.daybook.puzzles.Lamps
+import com.joebywan.daybook.puzzles.LampsTeacher
 import com.joebywan.daybook.puzzles.LexiconTeacher
 import com.joebywan.daybook.puzzles.LitsTeacher
 import com.joebywan.daybook.puzzles.MamboTeacher
@@ -47,7 +49,7 @@ class TechniqueNamesTest {
         "inequality" to InequalityTeacher.TECHNIQUES, "chess" to ChessTeacher.TECHNIQUES, "tents" to TentsTeacher.TECHNIQUES,
         "regions" to RegionsTeacher.TECHNIQUES, "cages" to CageTeacher.TECHNIQUES, "target" to TargetTeacher.TECHNIQUES,
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
-        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
+        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 

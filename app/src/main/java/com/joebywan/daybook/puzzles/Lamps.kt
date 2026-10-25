@@ -77,7 +77,7 @@ object Lamps : PuzzleType {
     override val id = "lamps"
     override val displayName = "Lamps"
     override val tagline = "Light every square, no lamp seeing another"
-    override val accent = 0xFF3C28BD
+    override val accent = 0xFF9D4881
     override val rules = listOf(
         "A lamp lights its own square and its whole row and column, up to a wall or the edge.",
         "Light every white square. No lamp may light another lamp.",
