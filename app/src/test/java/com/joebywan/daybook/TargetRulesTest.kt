@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.TargetLogic
@@ -12,15 +11,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class TargetRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
-
     private fun board(day: Int, d: Difficulty) =
-        Target.generateVerified(DailySeed.seedFor(start.plusDays(day.toLong()), Target.id, d), d)
+        Target.generateVerified(daySeed(day, Target.id, d), d)
             ?: error("no proved board for day $day ${d.name}")
 
     @Test
@@ -136,7 +131,7 @@ class TargetRulesTest {
             var gaveUp = 0
             val t0 = System.nanoTime()
             for (day in 0 until 365) {
-                val seed = DailySeed.seedFor(start.plusDays(day.toLong()), Target.id, d)
+                val seed = daySeed(day, Target.id, d)
                 val s = Target.generateVerified(seed, d)
                 if (s == null) { gaveUp++; continue }
                 assertEquals(s, Target.generate(seed, d))
@@ -157,8 +152,7 @@ class TargetRulesTest {
             report.appendLine(line)
             assertEquals("${d.name} shipped its last resort", 0, gaveUp)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/target-par-distribution.txt").writeText(report.toString())
+        writeReport("target-par-distribution.txt", report.toString())
         assertTrue("the tiers get harder in the order they are offered: $means", means[0] < means[1] && means[1] < means[2])
     }
 

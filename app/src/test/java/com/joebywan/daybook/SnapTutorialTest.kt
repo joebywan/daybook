@@ -12,8 +12,8 @@ import org.junit.Test
 /**
  * Snap's walkthrough, checked against an enumerator written out again here.
  *
- * The enumerator is the naive thing, as in `SnapCluesTest`: every line from 1 through every
- * square, no pruning, with the numbers checked only once a whole line exists. It checks the rule
+ * The enumerator is [SnapOracle], the naive thing: every line from 1 through every square, no
+ * pruning, with the numbers checked only once a whole line exists. It checks the rule
  * the win check uses (numbers in order, all of them), which is looser than the caption's "ending
  * on the highest number", so a board unique under it is unique under both.
  *
@@ -36,25 +36,7 @@ class SnapTutorialTest {
     }
 
     /** Every finished line that begins with [prefix] and obeys the numbers. */
-    private fun answers(prefix: List<Int>): List<List<Int>> {
-        val out = mutableListOf<List<Int>>()
-        val trail = prefix.toMutableList()
-        fun walk() {
-            if (trail.size == n) {
-                val order = trail.mapNotNull { c -> marks[c].takeIf { it > 0 } }
-                if (order == (1..marks.count { it > 0 }).toList()) out += trail.toList()
-                return
-            }
-            for (next in neighbours(trail.last())) {
-                if (next in trail) continue
-                trail += next
-                walk()
-                trail.removeAt(trail.lastIndex)
-            }
-        }
-        walk()
-        return out
-    }
+    private fun answers(prefix: List<Int>) = SnapOracle.answers(w, w, marks, prefix)
 
     private fun board(path: List<Int>) = SnapState(w, w, marks, path)
 

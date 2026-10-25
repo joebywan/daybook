@@ -124,7 +124,7 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
 - [ ] **Dependencies still behind after the toolchain majors.** The `androidx` libraries (Compose BOM
-  2025.09 -> 2026.09, lifecycle, activity, navigation, datastore, core-ktx) and kotlinx-serialization 1.11
+  2025.09 -> 2026.09, activity, datastore, core-ktx) and kotlinx-serialization 1.11
   are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
   17 too); Gradle 9 would run on newer, so moving the JDK is its own change (`renovate.json` holds it at 17).
 - [ ] **`compileSdk` 36 -> 37 before `core-ktx` 1.19.** `androidx.core:core-ktx` 1.19.1 requires `compileSdk` 37
@@ -171,10 +171,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
   same `countTilings` proof.
-- [ ] **Pipes: a branchier tree.** `spanningTree` is a depth-first maze (long corridors); a random-edge spanning tree gives
-  more junctions. (Counter-clockwise rotation and a lock mark: declined by the owner.)
-- [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
-  derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
 - [ ] **Screen RETARD and CRIPPLE out of the 6/7-letter grid lists** (`tools/words/exclude.txt`'s own section for those
   lengths). Word Wheel's `GRID_6`/`GRID_7` hold them; Codeword's builder skips them (`CodewordGridsBuildTest.SKIP`) rather
   than change the lists, which would move Word Wheel's boards. Rebuild both puzzles' lists in the same change.

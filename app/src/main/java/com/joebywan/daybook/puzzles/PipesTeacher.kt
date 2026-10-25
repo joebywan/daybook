@@ -27,8 +27,8 @@ package com.joebywan.daybook.puzzles
  *
  * Measured in PipesTeachingTest: the border and the neighbours pin every tile of all but a few
  * boards in a thousand, and [NO_LOOP] finishes those — two-wide corridors of bends that only a loop
- * tells apart. What is left is the odd board the generator made with two answers, where no reasoning
- * can pick and [FALLBACK] says so. "Last way out" and "would seal a network off" were written and
+ * tells apart. The generator ships only boards this settles ([settles]), so [FALLBACK] is left for
+ * boards not made here, such as one with two answers, where no reasoning can pick and it says so. "Last way out" and "would seal a network off" were written and
  * measured too; neither ever fired once these had had their say, so they are not carried — a
  * technique no board needs is one no test can check.
  *
@@ -127,8 +127,8 @@ internal object PipesTeacher {
 
     private fun mistake(s: PipesState, net: Net, solution: List<Int>): Step? {
         val wet = Pipes.filled(s)
-        // A handful of generated boards have more than one answer, so a tile that differs from the
-        // one [solve] found is only wrong if no answer at all turns it that way.
+        // A board not made here can have more than one answer (generated ones have one), so a tile
+        // that differs from the one [solve] found is only wrong if no answer at all turns it that way.
         val wrong = s.cells.indices.filter {
             it in s.turned && it in wet && s.cells[it] != solution[it] &&
                 solve(s.width, s.height, s.cells, it to s.cells[it]) == null
@@ -197,6 +197,14 @@ internal object PipesTeacher {
     fun deduce(width: Int, height: Int, cells: List<Int>): Step? =
         next(Net(width, height, cells).also { it.run() }, cells)
 
+    /**
+     * Whether the reasoning alone settles every tile of [cells] (shapes only, as [deduce]). Every
+     * step is sound for every answer, so a settled board has exactly one answer and hints finish it
+     * without [FALLBACK]: the generator ships only these.
+     */
+    fun settles(width: Int, height: Int, cells: List<Int>): Boolean =
+        Net(width, height, cells).also { it.run() }.let { !it.broken && it.settled }
+
     /** Every tile the reasoning pins down, in the order it does, as cell to turn. For tests. */
     fun forcedOrder(width: Int, height: Int, cells: List<Int>): List<Pair<Int, Int>> =
         Net(width, height, cells).also { it.run() }.forced.map { it.cell to it.mask }
@@ -238,8 +246,7 @@ internal object PipesTeacher {
             if (why.rule == NO_LOOP) {
                 loop = true
                 cited += why.cited
-                parts += "it is already joined to the tile ${towards[d]} the long way round, so " +
-                    "joining them directly would close a loop"
+                parts += "it already reaches the tile ${towards[d]} another way, so a direct join would close a loop"
                 continue
             }
             // A side this tile settled for itself is a consequence, not a reason.

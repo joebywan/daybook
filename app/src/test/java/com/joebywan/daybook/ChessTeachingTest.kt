@@ -11,7 +11,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The Mate teacher. Its checks never use the prover's search: [mateWithin] is a plain recursive minimax (no ordering,
@@ -296,8 +295,7 @@ class ChessTeachingTest {
             out.appendLine("  e.g. [mistake] " + ChessTeacher.teach(e.state(listOf(ChessRules.uci(bad))))!!.explanation)
         }
         println(out)
-        File("build/reports").mkdirs()
-        File("build/reports/chess-teaching-coverage.txt").writeText(out.toString())
+        writeReport("chess-teaching-coverage.txt", out.toString())
     }
 
     @Test
@@ -315,7 +313,6 @@ class ChessTeachingTest {
             out.appendLine("$name: ${all.size} positions, first hint ms: median ${pct(times, 0.5)}, p95 ${pct(times, 0.95)}, max ${times.last()}")
         }
         println(out)
-        File("build/reports").mkdirs()
-        File("build/reports/chess-teaching-timing.txt").writeText(out.toString())
+        writeReport("chess-teaching-timing.txt", out.toString())
     }
 }

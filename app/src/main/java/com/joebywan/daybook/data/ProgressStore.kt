@@ -464,11 +464,6 @@ data class PuzzleTechniques(val puzzleId: String, val techniques: List<MetTechni
 /** Derived numbers for the stats screen. Pure, so it is trivially testable. */
 object Stats {
 
-    fun totalSolved(all: List<Completion>): Int = all.size
-
-    fun solvedToday(all: List<Completion>, today: LocalDate): Int =
-        all.count { it.day == today }
-
     /** Streak over the days a daily puzzle was solved (practice games have no day). See [streakOf]. */
     fun streak(all: List<Completion>, today: LocalDate): Streak =
         streakOf(all.mapNotNull { it.day }.toSet(), today)
@@ -517,22 +512,6 @@ object PuzzleOrder {
     private fun playCounts(all: List<Completion>, today: LocalDate): Map<String, Int> {
         val from = today.toEpochDays() - WINDOW_DAYS
         return all.filter { it.day == null || it.day.toEpochDays() >= from }.groupingBy { it.puzzleId }.eachCount()
-    }
-
-    /** How many of the most played puzzles today's pick never lands on. */
-    const val PICK_SKIPS_TOP = 5
-
-    /**
-     * Today's pick ("Try me!"): [PuzzleRegistry.featured]'s rotation, stepped forward past the player's [PICK_SKIPS_TOP]
-     * most played puzzles (by [mostPlayed]'s counts, whatever the grid's order; only puzzles with a counted solve), so it
-     * points at something they play less. A new player gets the plain rotation. Pure: the caller passes the once-a-day basis.
-     */
-    fun pick(all: List<Completion>, today: LocalDate): String {
-        val counts = playCounts(all, today)
-        val ids = PuzzleRegistry.all.map { it.id }
-        val skip = mostPlayed(all, today, gentlest(ids)).filter { (counts[it] ?: 0) > 0 }.take(PICK_SKIPS_TOP).toSet()
-        val start = ids.indexOf(PuzzleRegistry.featured(today.toEpochDays()).id)
-        return ids.indices.map { ids[(start + it) % ids.size] }.firstOrNull { it !in skip } ?: ids[start]
     }
 
     /**
