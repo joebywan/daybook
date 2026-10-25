@@ -121,7 +121,7 @@ internal object RegionsTeacher {
                     if (cells[x] != 0 || layout.region[x] == r || !has(base[x], d)) continue
                     if (places.any { p -> x !in layout.around[p] }) continue
                     val left = base[x] and bit(d).inv()
-                    if (single(left)) return Hit(LOCKED, x, left.countTrailingZeroBits(), r, x, d, places)
+                    if (left.countOneBits() == 1) return Hit(LOCKED, x, left.countTrailingZeroBits(), r, x, d, places)
                     // Only x changed, so only its own region's d can have come down to one place.
                     val cut = base.copyOf().also { it[x] = left }
                     val at = lonePlace(layout.members[layout.region[x]], cells, cut, d)
@@ -162,7 +162,7 @@ internal object RegionsTeacher {
             val base = candidates(layout, cells)
             if (cells.indices.any { cells[it] == 0 && base[it] == 0 }) return null
             var placed = false
-            for (i in cells.indices) if (cells[i] == 0 && single(base[i])) { cells[i] = base[i].countTrailingZeroBits(); placed = true }
+            for (i in cells.indices) if (cells[i] == 0 && base[i].countOneBits() == 1) { cells[i] = base[i].countTrailingZeroBits(); placed = true }
             for (members in layout.members) for (d in 1..members.size) {
                 val at = lonePlace(members, cells, base, d)
                 if (at >= 0) { cells[at] = d; placed = true }
@@ -249,7 +249,7 @@ internal object RegionsTeacher {
                     "${at(hit.struck)}, so it is not a ${hit.lockDigit}."
                 val then = if (hit.byPlace) "That leaves ${at(x)} as its region's only place for a $d."
                 else "That leaves it only $d."
-                Step(
+                PlacementStep(
                     LOCKED, x, d, members.toSet() + hit.struck, hit.places.toSet() + hit.struck + x,
                     "Where can the ${hit.lockDigit} go in this region?", "$why $then",
                 )
