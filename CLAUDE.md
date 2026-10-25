@@ -98,6 +98,21 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
 - The typed row and the "Not in the word list" note are `remember` state, never `PuzzleState`; the note sits in
   the header line whose room is always reserved, so a refusal cannot move the board.
 
+## Atoms (bridges)
+
+Hashiwokakero as chemistry: bond atoms with single or double lines, no crossings, one molecule. `puzzles/Atoms.kt` (state, generator,
+`countSolutions`, board, walkthrough), `AtomsTeacher.kt`. `id = "atoms"` is hashed into every seed: never rename it.
+
+- **Tiers: 7x7 with 10 atoms / 9x9 with 18 / 11x11 with 28, and a depth gate** (`Atoms.specFor`, Tally's pattern): the deepest
+  technique of a hints-only walk from the empty board (`AtomsTeacher.depth`) must be at most at-least-one on Standard, crossing or
+  isolation on Hard, isolation or deeper on Expert, and every walk must finish, so hints never fall back on a generated board.
+  Only-way-out is shadowed by the rungs before it and almost never needed. Measured: `docs/TEACHING.md`, "Tier depth".
+- **Growth:** each new atom sprouts 2 to 6 squares off an existing one, never onto or across a bond (the old rule that let an atom
+  split a bond, and stored a broken answer on 4-35% of boards, is gone). Draw `a` is `Rng(seed + a)`, up to `ATTEMPTS` (2000); a
+  year's worst is 10 / 39 / 71 draws. A board ships only if the gate holds and `countSolutions` (exhaustive, no budget) proves one
+  answer; `AtomsTeachingTest` re-checks with its own atom-by-atom enumerator. `lastResort` is a three-atom chain no year reaches.
+- **`solved` checks the rules**; a mistake is a line with more bonds than the stored answer, sound because the answer is unique.
+
 ## Nonogram
 
 Run-length clues beside a grid; fill the squares that give every row and column its numbers. `puzzles/NonogramRules.kt`
