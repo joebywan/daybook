@@ -19,7 +19,12 @@ import androidx.compose.ui.unit.dp
  */
 class RateLink(val title: String, val detail: String, val open: () -> Unit)
 
-const val GITHUB_URL = "https://github.com/joebywan/daybook"
+/** Where no store takes ratings (F-Droid, a downloaded APK, the web): a star on GitHub, opened through [openUri]. */
+fun githubRateLink(openUri: (String) -> Unit) = RateLink(
+    title = "Star Daybook on GitHub",
+    detail = "Daybook is open source. If it has earned it, a star on GitHub helps other puzzlers find it.",
+    open = { openUri("https://github.com/joebywan/daybook") },
+)
 
 /** The same rounded row as a setting, but the whole row is one button that opens [link]. */
 @Composable
