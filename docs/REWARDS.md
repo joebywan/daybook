@@ -148,7 +148,9 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   walks the list). It sits last in `finishPraise`, in place of the bare "No hints needed.", so it only shows on a no-hint
   solve that earned no achievement, record, percentile or board-needed line; a solve with hints keeps its hint line. At most 64 characters.
   Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
-- **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added. Its
+- **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added; `PuzzleOrder.pick` steps that rotation forward past
+  the player's five most played puzzles (play counts, whatever the grid's order; only puzzles with a solve), so it suggests
+  something they play less, and a new player gets the plain rotation. Its
   home tile, while unsolved, gets a thin gold ring, a frame of twinkling gold sparkles (`ui/home/FeaturedMark.kt`; one infinite
   transition read only in the draw phase) and "Try me!" tilted across the thumbnail with a halo, content description
   "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved or

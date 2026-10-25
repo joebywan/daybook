@@ -174,6 +174,7 @@ fun HomeScreen(
     onStats: () -> Unit,
     onAchievements: () -> Unit,
     onSettings: () -> Unit,
+    pick: String,
     puzzles: List<PuzzleType>,
     inProgress: () -> Set<String>,
     customOrder: Boolean,
@@ -257,7 +258,7 @@ fun HomeScreen(
                     difficulty = difficulty,
                     // Today's dailies in either mode: a random solve never marks a tile, so Random keeps the daily marks.
                     doneToday = doneToday,
-                    pick = PuzzleRegistry.featured(today.toEpochDays()).id,
+                    pick = pick,
                     height = gridHeight,
                     // The Continue row takes room from the first screen, not from the grid's own sizing.
                     shownHeight = gridHeight - with(density) { (if (resumeShown != null) resumeHeight else 0).toDp() },

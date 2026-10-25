@@ -1,6 +1,6 @@
 - Tap your streak on the home screen to open Statistics.
+- Tower's pips sit in a square beside each guess, so they no longer look tied to the peg above.
 - Share it again later: Statistics keeps your best result and your last random board for every puzzle and tier.
 - Share today's progress from Statistics: every daily you've solved today, per difficulty.
 - Word Wheel's share says how many bonus words you found.
 - Cipher hints show their working: the carries, and why each other digit can't fit.
-- Drag a domino from the tray onto the board.
