@@ -49,7 +49,6 @@ internal object CipherTeacher {
     private const val ALL = (1 shl 10) - 1
 
 
-    private fun single(m: Int) = m != 0 && m and (m - 1) == 0
 
     /**
      * Candidates for every letter and every carry, derived from the digits placed. `carry[c]` is the carry
@@ -136,7 +135,7 @@ internal object CipherTeacher {
         fun allDifferent(): Int {
             var changed = 0
             for (i in 0 until n) {
-                if (!single(cand[i])) continue
+                if (cand[i].countOneBits() != 1) continue
                 for (j in 0 until n) {
                     if (j == i || cand[j] and cand[i] == 0) continue
                     cand[j] = cand[j] and cand[i].inv()
@@ -148,7 +147,7 @@ internal object CipherTeacher {
                 for (d in 0..9) {
                     val holders = (0 until n).filter { cand[it] and (1 shl d) != 0 }
                     if (holders.isEmpty()) return -1
-                    if (holders.size == 1 && !single(cand[holders[0]])) { cand[holders[0]] = 1 shl d; changed = 1 }
+                    if (holders.size == 1 && cand[holders[0]].countOneBits() != 1) { cand[holders[0]] = 1 shl d; changed = 1 }
                 }
             }
             return changed
@@ -210,7 +209,7 @@ internal object CipherTeacher {
             knownCarry(sum, digits, c)?.let { s.carry[c] = 1 shl it }
             if (s.revise(c) < 0) continue
             for (l in (sum.columnAddends[c] + sum.columnTotal[c]).distinct()) {
-                if (digits[l] == EMPTY && single(s.cand[l])) add(Hit(COLUMN, l, s.cand[l].countTrailingZeroBits(), c, s.carry))
+                if (digits[l] == EMPTY && s.cand[l].countOneBits() == 1) add(Hit(COLUMN, l, s.cand[l].countTrailingZeroBits(), c, s.carry))
             }
         }
         if (hits.isNotEmpty()) return hits
@@ -229,7 +228,7 @@ internal object CipherTeacher {
             knownCarry(sum, digits, c)?.let { s.carry[c] = 1 shl it }
             if (!s.settle(c, c + 1)) continue
             for (l in (sum.columnAddends[c] + sum.columnTotal[c] + sum.columnAddends[c + 1] + sum.columnTotal[c + 1]).distinct()) {
-                if (digits[l] == EMPTY && single(s.cand[l])) add(Hit(PAIR, l, s.cand[l].countTrailingZeroBits(), c, s.carry))
+                if (digits[l] == EMPTY && s.cand[l].countOneBits() == 1) add(Hit(PAIR, l, s.cand[l].countTrailingZeroBits(), c, s.carry))
             }
         }
         if (hits.isNotEmpty()) return hits
@@ -237,7 +236,7 @@ internal object CipherTeacher {
         val all = base.copy()
         if (!all.settle()) return emptyList()
         for (l in 0 until base.n) {
-            if (digits[l] == EMPTY && single(all.cand[l])) add(Hit(CHAIN, l, all.cand[l].countTrailingZeroBits(), -1, all.carry))
+            if (digits[l] == EMPTY && all.cand[l].countOneBits() == 1) add(Hit(CHAIN, l, all.cand[l].countTrailingZeroBits(), -1, all.carry))
         }
         if (hits.isNotEmpty()) return hits
         // 6. On top of that, every choice for two neighbouring columns tried at once.
@@ -245,7 +244,7 @@ internal object CipherTeacher {
             val s = all.copy()
             if (s.reviseJoint(c) < 0 || !s.settle()) continue
             for (l in 0 until base.n) {
-                if (digits[l] == EMPTY && single(s.cand[l])) add(Hit(WHAT_IF, l, s.cand[l].countTrailingZeroBits(), c, s.carry))
+                if (digits[l] == EMPTY && s.cand[l].countOneBits() == 1) add(Hit(WHAT_IF, l, s.cand[l].countTrailingZeroBits(), c, s.carry))
             }
         }
         return hits

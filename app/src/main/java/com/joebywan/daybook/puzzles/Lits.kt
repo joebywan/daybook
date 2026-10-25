@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -47,6 +46,11 @@ import com.joebywan.daybook.core.jvmHashSetOrder
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.drawWalls
+import com.joebywan.daybook.ui.drawHintRings
+import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
 
 @Serializable
 data class LitsState(
@@ -1083,7 +1087,6 @@ object Lits : PuzzleType {
         Piece.S to BoardHues.ink(330f, false),
     )
 
-    private fun colourOf(piece: Piece): Color = palette.getValue(piece)
 
     /**
      * Shaded, but not yet anything: the puzzle's own accent, which is what every shaded square
@@ -1270,7 +1273,7 @@ object Lits : PuzzleType {
                     // otherwise the home grid would advertise a board that no longer exists. The
                     // letter itself is left off: at a 20dp cell the glyph is a smudge, and the tile
                     // has to read as LITS from across a grid, not be read word by word.
-                    color = if (previewShaded[i]) colourOf(Piece.L) else scheme.surfaceVariant,
+                    color = if (previewShaded[i]) palette.getValue(Piece.L) else scheme.surfaceVariant,
                     topLeft = at,
                     size = Size(step, step),
                 )
@@ -1282,32 +1285,7 @@ object Lits : PuzzleType {
                 )
             }
 
-            for (i in 0 until PREVIEW_SIDE * PREVIEW_SIDE) {
-                val r = i / PREVIEW_SIDE
-                val c = i % PREVIEW_SIDE
-                if (c + 1 < PREVIEW_SIDE && previewRegions[i] != previewRegions[i + 1]) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset(origin.x + (c + 1) * step, origin.y + r * step),
-                        Offset(origin.x + (c + 1) * step, origin.y + (r + 1) * step),
-                        strokeWidth = wall,
-                    )
-                }
-                if (r + 1 < PREVIEW_SIDE && previewRegions[i] != previewRegions[i + PREVIEW_SIDE]) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset(origin.x + c * step, origin.y + (r + 1) * step),
-                        Offset(origin.x + (c + 1) * step, origin.y + (r + 1) * step),
-                        strokeWidth = wall,
-                    )
-                }
-            }
-            drawRect(
-                color = scheme.onBackground,
-                topLeft = Offset(origin.x + wall / 2f, origin.y + wall / 2f),
-                size = Size(side - wall, side - wall),
-                style = Stroke(width = wall),
-            )
+            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, step, wall, scheme.onBackground, origin, frameInset = wall / 2f) { previewRegions[it] }
         }
     }
 
@@ -1365,14 +1343,10 @@ object Lits : PuzzleType {
             }.padding(18.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
+            val step = fitStep(s.width, s.height)
             val stepPx = with(LocalDensity.current) { step.toPx() }
 
-            fun cellAt(offset: Offset): Int {
-                val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
-                val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
-                return r * s.width + c
-            }
+            fun cellAt(offset: Offset) = gridCellAt(offset, stepPx, s.width, s.height)
 
             Canvas(
                 Modifier
@@ -1421,7 +1395,7 @@ object Lits : PuzzleType {
                             color = when {
                                 !shown.shaded[i] -> scheme.surfaceVariant
                                 piece == null -> inProgress
-                                else -> colourOf(piece)
+                                else -> palette.getValue(piece)
                             },
                             topLeft = at,
                             size = Size(stepPx, stepPx),
@@ -1438,7 +1412,7 @@ object Lits : PuzzleType {
                     if (piece != null) {
                         // The glyph is the channel a colour-blind player is left with, so its colour is computed
                         // per fill for 4.5:1 (BoardHues.onFill), at full alpha.
-                        val glyph = BoardHues.onFill(colourOf(piece))
+                        val glyph = BoardHues.onFill(palette.getValue(piece))
                         val layout = measurer.measure(
                             piece.name,
                             TextStyle(
@@ -1482,64 +1456,15 @@ object Lits : PuzzleType {
 
                 // Dimming goes over the marks but under the walls, so the regions stay readable
                 // however much of the board has stepped back.
-                if (!highlight.isEmpty) {
-                    for (i in 0 until s.width * s.height) {
-                        if (i in highlight.strong || i in highlight.soft) continue
-                        drawRect(
-                            color = dim.copy(alpha = 0.62f),
-                            topLeft = Offset((i % s.width) * stepPx, (i / s.width) * stepPx),
-                            size = Size(stepPx, stepPx),
-                        )
-                    }
-                }
+                drawHintDim(highlight, s.width, s.height, stepPx, dim)
 
                 // Thick strokes wherever two different regions meet.
                 val edge = stepPx * 0.06f
-                for (i in 0 until s.width * s.height) {
-                    val r = i / s.width
-                    val c = i % s.width
-                    if (c + 1 < s.width && s.region[i] != s.region[i + 1]) {
-                        drawLine(
-                            scheme.onBackground,
-                            Offset((c + 1) * stepPx, r * stepPx),
-                            Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                            strokeWidth = edge,
-                        )
-                    }
-                    if (r + 1 < s.height && s.region[i] != s.region[i + s.width]) {
-                        drawLine(
-                            scheme.onBackground,
-                            Offset(c * stepPx, (r + 1) * stepPx),
-                            Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                            strokeWidth = edge,
-                        )
-                    }
-                }
-                drawRect(
-                    color = scheme.onBackground,
-                    topLeft = Offset.Zero,
-                    size = Size(stepPx * s.width, stepPx * s.height),
-                    style = Stroke(width = edge),
-                )
+                drawWalls(s.width, s.height, stepPx, edge, scheme.onBackground) { s.region[it] }
 
                 // Outlines last, on top of the walls: a glow that a wall half-covers is a glow the
                 // player has to hunt for.
-                val strongWidth = 4.dp.toPx()
-                val softWidth = 1.5.dp.toPx()
-                val radius = CornerRadius(4.dp.toPx())
-                for (i in 0 until s.width * s.height) {
-                    val strong = i in highlight.strong
-                    if (!strong && i !in highlight.soft) continue
-                    val stroke = if (strong) strongWidth else softWidth
-                    val inset = edge / 2f + stroke / 2f
-                    drawRoundRect(
-                        color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                        topLeft = Offset((i % s.width) * stepPx + inset, (i / s.width) * stepPx + inset),
-                        size = Size(stepPx - inset * 2f, stepPx - inset * 2f),
-                        cornerRadius = radius,
-                        style = Stroke(stroke),
-                    )
-                }
+                drawHintRings(highlight, s.width, s.height, stepPx, glow, pulse.value, inset = edge / 2f)
             }
         }
     }

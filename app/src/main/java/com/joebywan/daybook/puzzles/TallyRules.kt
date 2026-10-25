@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PenMarks
 import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
 
@@ -22,50 +23,19 @@ data class TallyState(
     val keep: String,
     val marks: String = TallyLogic.UNMARKED.toString().repeat(size * size),
     override val moves: Int = 0,
-) : PuzzleState {
+) : PuzzleState, PenMarks<TallyState> {
 
     /** Solved when what is left in every row and column adds up to its target. The rules, not [keep]. */
     override val solved: Boolean get() = TallyLogic.isSolved(this)
 
     fun digitAt(index: Int): Int = digits[index] - '0'
 
-    /** [mark] on every square of [indices] that is not already it; one state, one move per square. */
-    fun paint(indices: Collection<Int>, mark: Char): TallyState {
-        val next = marks.toCharArray()
-        var changed = 0
-        for (i in indices) {
-            if (next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        return if (changed == 0) this else copy(marks = next.concatToString(), moves = moves + changed)
-    }
+    override val penMarks get() = marks
+    override val penWidth get() = size
+    override val penHeight get() = size
+    override val pens get() = "${TallyLogic.REMOVED}${TallyLogic.KEPT}"
 
-    /** A tap with the Remove or Keep pen: that mark, or an untouched square if it already has it. */
-    fun tap(index: Int, pen: Char): TallyState =
-        paint(listOf(index), if (marks[index] == pen) TallyLogic.UNMARKED else pen)
-
-    /** What a sweep that starts on [index] with [pen] lays down: the pen's mark, or erasing if it is already there. */
-    fun sweepMark(index: Int, pen: Char): Char = if (marks[index] == pen) TallyLogic.UNMARKED else pen
-
-    /**
-     * A sweep: [mark] along [indices], but a pen only writes over untouched squares and an eraser
-     * only takes out the mark it started on (Nonogram's rule), so dragging Remove across a circled
-     * square leaves the circle alone.
-     */
-    fun sweep(indices: Collection<Int>, mark: Char, startedOn: Char): TallyState {
-        val next = marks.toCharArray()
-        var changed = 0
-        for (i in indices) {
-            val ok = if (mark == TallyLogic.UNMARKED) next[i] == startedOn else next[i] == TallyLogic.UNMARKED
-            if (ok && next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        return if (changed == 0) this else copy(marks = next.concatToString(), moves = moves + changed)
-    }
+    override fun withPenMarks(marks: String, changed: Int) = copy(marks = marks, moves = moves + changed)
 }
 
 /** What an exhaustive count found. Only [ExactlyOne] carries an answer, so nothing else can be shipped as one. */

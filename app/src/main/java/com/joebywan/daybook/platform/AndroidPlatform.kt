@@ -39,7 +39,7 @@ import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.preferencesFile
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.Haptics
-import com.joebywan.daybook.ui.settings.GITHUB_URL
+import com.joebywan.daybook.ui.settings.githubRateLink
 import com.joebywan.daybook.ui.settings.RateLink
 import com.joebywan.daybook.ui.theme.withFamily
 import kotlinx.coroutines.CoroutineScope
@@ -288,7 +288,7 @@ fun rememberHaptics(enabled: Boolean): Haptics {
  * F-Droid or a downloaded APK, has no store that takes ratings, so the link is a star on GitHub instead.
  */
 @Composable
-fun rememberRateLink(): RateLink? {
+fun rememberRateLink(): RateLink {
     val context = LocalContext.current
     return remember(context) {
         if (installerOf(context) == "com.android.vending") {
@@ -301,11 +301,7 @@ fun rememberRateLink(): RateLink? {
                 },
             )
         } else {
-            RateLink(
-                title = "Star Daybook on GitHub",
-                detail = "Daybook is open source. If it has earned it, a star on GitHub helps other puzzlers find it.",
-                open = { openUri(context, GITHUB_URL) },
-            )
+            githubRateLink { openUri(context, it) }
         }
     }
 }

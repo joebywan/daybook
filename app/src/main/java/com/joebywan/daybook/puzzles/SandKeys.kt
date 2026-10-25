@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.core.digitKey
 
 /** What a physical key asks of a Sand board. */
 sealed interface SandKeyAction {
@@ -12,20 +13,9 @@ sealed interface SandKeyAction {
 }
 
 /** The action for [key], or null. */
-fun sandKeyAction(key: Key): SandKeyAction? = when (key) {
-    Key.One, Key.NumPad1 -> SandKeyAction.Tube(0)
-    Key.Two, Key.NumPad2 -> SandKeyAction.Tube(1)
-    Key.Three, Key.NumPad3 -> SandKeyAction.Tube(2)
-    Key.Four, Key.NumPad4 -> SandKeyAction.Tube(3)
-    Key.Five, Key.NumPad5 -> SandKeyAction.Tube(4)
-    Key.Six, Key.NumPad6 -> SandKeyAction.Tube(5)
-    Key.Seven, Key.NumPad7 -> SandKeyAction.Tube(6)
-    Key.Eight, Key.NumPad8 -> SandKeyAction.Tube(7)
-    Key.Nine, Key.NumPad9 -> SandKeyAction.Tube(8)
-    Key.Zero, Key.NumPad0 -> SandKeyAction.Tube(9)
-    Key.Escape -> SandKeyAction.PutDown
-    else -> null
-}
+fun sandKeyAction(key: Key): SandKeyAction? =
+    if (key == Key.Escape) SandKeyAction.PutDown
+    else digitKey(key)?.let { SandKeyAction.Tube((it + 9) % 10) }
 
 /**
  * What one tap or key did: the tube lifted after it (transient, `remember` in the board, never [PuzzleState]), the board

@@ -478,7 +478,7 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
 A square of digits 1-9 with a target beside every row and under every column; remove numbers until what is left in every line adds
 up to its target. Exactly one answer. The genre is published as Rullo and as "Number Sums"; neither name (nor "Kakuro", a different
 puzzle) appears anywhere the player sees. `puzzles/TallyRules.kt` (state, `TallyLogic`: line logic, what-if, exhaustive count with a
-`TallyVerdict`, generator), `TallyTeacher.kt`, `TallyKeys.kt`, `Tally.kt` (object `Tally`, board, walkthrough, motif). `id = "tally"`
+`TallyVerdict`, generator), `TallyTeacher.kt`, `Tally.kt` (object `Tally`, board, keys, walkthrough, motif; the pen stack it shares with Nonogram is `core/PenMarks.kt` and `ui/PenBoard.kt`). `id = "tally"`
 is hashed into every seed: never rename it.
 
 - **Marks:** untouched, removed (`x`, faded and struck: it no longer counts) and kept (`o`, circled: a note that the player is sure,
