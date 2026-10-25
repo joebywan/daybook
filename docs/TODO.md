@@ -170,7 +170,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   - Sudoku first: Hard needs a naked single and finishes without what-if or fallback; Expert needs locked candidates or a
     pair and finishes without fallback (32% of Expert boards fall back today). Also 180-degree symmetric givens.
   - Kings: Standard no confined or what-if; Hard needs confined; Expert needs what-if (5% of draws: cost it first).
-  - Mambo: the carver must run the whole ladder first (almost-met and what-if are never needed today); then Expert needs one.
   - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
     or what-if, no fallback.
   - Atoms: Standard at most at-least-one; Hard needs crossing or isolation; Expert needs isolation or what-if. Also reaches
