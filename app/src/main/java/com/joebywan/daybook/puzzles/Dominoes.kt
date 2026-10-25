@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +63,7 @@ import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.graphics.drawscope.scale
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
+import com.joebywan.daybook.ui.rememberSettledFlags
 
 /**
  * Dominoes (`docs/DOMINO_SPEC.md`): an irregular board, some of it cut into coloured regions that each
@@ -738,7 +738,6 @@ object Dominoes : PuzzleType {
 
     // ---- the board ------------------------------------------------------------------------------
 
-    private const val SETTLE_MILLIS = 1000L
     private const val DOUBLE_TAP_MS = 300L
 
     private class Cell<T>(var v: T)
@@ -791,13 +790,7 @@ object Dominoes : PuzzleType {
 
         // Green at once when a covered region keeps its rule; red only once it has stayed broken for a second.
         val holds = BooleanArray(s.rules.size) { DominoLogic.regionHolds(s, it) }
-        val brokenNow = BooleanArray(s.rules.size) { DominoLogic.regionBroken(s, it) }
-        var settled by remember(s.open, s.tray) { mutableStateOf(brokenNow) }
-        LaunchedEffect(s.placed) {
-            delay(SETTLE_MILLIS)
-            settled = brokenNow
-        }
-        val broken = BooleanArray(s.rules.size) { brokenNow[it] && settled.getOrElse(it) { false } }
+        val broken = rememberSettledFlags(BooleanArray(s.rules.size) { DominoLogic.regionBroken(s, it) }, s.open to s.tray, s.placed)
         // A laid domino settles; a region it completes by its rule glows once.
         val feel = rememberMoveFeel(DominoLogic.pipsOf(s).toList(), s.layout.regionSquares) { holds[it] }
 

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -63,6 +62,7 @@ import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.hintRims
+import com.joebywan.daybook.ui.rememberSettled
 
 /**
  * Tents. The board is one canvas: a row of column counts across the top, a column of row counts down the
@@ -197,8 +197,6 @@ object Tents : PuzzleType {
     }
 
     // ---- drawing ------------------------------------------------------------------------------
-
-    private const val SETTLE_MILLIS = 1000L
 
     /** What the board draws on top: the highlight, and who is bad (already debounced). */
     private class Overlay(
@@ -395,11 +393,7 @@ object Tents : PuzzleType {
             (0 until n).filterTo(mutableSetOf()) { s.rowTents(it) > s.rowCounts[it] },
             (0 until n).filterTo(mutableSetOf()) { s.colTents(it) > s.colCounts[it] },
         )
-        var settled by remember(s.solution) { mutableStateOf(bad) }
-        LaunchedEffect(s.marks) {
-            delay(SETTLE_MILLIS)
-            settled = bad
-        }
+        val settled = rememberSettled(bad, s.solution, s.marks)
 
         // A row or column is finished when it has its count of tents, none touching another.
         val units = remember(n) { lineUnits(n, n) }

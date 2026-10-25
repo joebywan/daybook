@@ -16,7 +16,6 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +48,6 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
-import kotlinx.coroutines.delay
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
@@ -65,9 +63,7 @@ import com.joebywan.daybook.ui.PenRow
 import androidx.compose.ui.geometry.Rect
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
-
-/** How long a line must stay impossible before its target turns red, so a sweep passing through is not shouted at. */
-private const val SETTLE_MILLIS = 1000L
+import com.joebywan.daybook.ui.rememberSettledFlags
 
 /** X or R removes, K or O keeps; the other keys are every pen board's ([penKeyAction]). */
 private val TALLY_KEYS = mapOf(Key.X to TallyLogic.REMOVED, Key.R to TallyLogic.REMOVED, Key.K to TallyLogic.KEPT, Key.O to TallyLogic.KEPT)
@@ -410,13 +406,7 @@ object Tally : PuzzleType {
                 val feel = rememberMoveFeel(s.marks.toList(), units) { handed[it] }
 
                 // A line must stay impossible for a second, and be so now, before it turns red.
-                val impossible = linesImpossible(shown, targets)
-                var settled by remember(s.digits) { mutableStateOf(impossible) }
-                LaunchedEffect(shown.marks) {
-                    delay(SETTLE_MILLIS)
-                    settled = impossible
-                }
-                val bad = BooleanArray(2 * n) { impossible[it] && settled[it] }
+                val bad = rememberSettledFlags(linesImpossible(shown, targets), s.digits, shown.marks)
 
                 Box(Modifier.size((unitsAcross(n) * unitPx).asDp(density), (unitsDown(n) * unitPx).asDp(density))) {
                     Canvas(Modifier.fillMaxSize()) {

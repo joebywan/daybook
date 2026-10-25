@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,7 +28,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.lerp
-import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalDensity
@@ -65,6 +63,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.geometry.Rect
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
+import com.joebywan.daybook.ui.rememberSettledFlags
 
 /** Each board draws its filled squares as a diagonal blend of two colours; the pair is the board's own. */
 private val PALETTES = listOf(
@@ -72,9 +71,6 @@ private val PALETTES = listOf(
     0xFF3FA55A to 0xFF2F9CC8, 0xFFD6A026 to 0xFFC0453F, 0xFF8A55C8 to 0xFF30B0A0,
     0xFFCF4F7A to 0xFF3E7CB1,
 )
-
-/** How long a line must stay impossible before it turns red, so a sweep passing through is not shouted at. */
-private const val SETTLE_MILLIS = 1000L
 
 /** F fills, X crosses; the other keys are every pen board's ([penKeyAction]). */
 private val NONOGRAM_KEYS = mapOf(Key.F to NonogramLogic.FILLED, Key.X to NonogramLogic.CROSSED)
@@ -431,13 +427,7 @@ object Nonogram : PuzzleType {
 
                 // A line must stay impossible for a second, and be so now, before it turns red.
                 // The next change cancels the wait and starts it over.
-                val impossible = linesImpossible(shown, clues)
-                var settled by remember(s.solution) { mutableStateOf(impossible) }
-                LaunchedEffect(shown.cells) {
-                    delay(SETTLE_MILLIS)
-                    settled = impossible
-                }
-                val bad = BooleanArray(clues.size) { impossible[it] && settled[it] }
+                val bad = rememberSettledFlags(linesImpossible(shown, clues), s.solution, shown.cells)
 
                 Box(g.box) {
                     Canvas(Modifier.fillMaxSize()) {
