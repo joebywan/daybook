@@ -1,6 +1,6 @@
+- Mate's difficulties follow puzzle ratings as well as moves; some Expert boards start with a quiet move.
 - Tower: tapping a colour fills the next empty peg. Tower now comes last for new players.
 - "Show me" no longer appears twice while a hint is open.
 - Mosaic: out of fills, the board stays put; Undo, or a hint finds the fill that lost it.
-- The first-visit walkthrough line says what each puzzle is about.
-- Lexicon's first hint varies by board; later hints say how their word splits the words left.
-- From 1 November a daily Lexicon word never repeats until every other has had its day.
+- The walkthrough offer says what each puzzle is about.
+- Lexicon's first hint varies by board; a daily word never repeats until every other has had its day.
