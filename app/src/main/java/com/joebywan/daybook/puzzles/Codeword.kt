@@ -256,7 +256,7 @@ object Codeword : PuzzleType {
             val (hueA, hueB) = BoardHues.HUE_PAIRS[1]
             Grid(
                 s, square,
-                tint = { i -> if (s.numbers[i] == PREVIEW_PICK) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.4f).compositeOver(scheme.surface) else scheme.surface },
+                tint = { i -> if (s.numbers[i] == PREVIEW_PICK) BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.4f).compositeOver(scheme.surfaceVariant) else scheme.surfaceVariant },
                 letterColour = { n -> if (n in s.given) scheme.onSurface else BoardHues.ink(hueB, dark) },
             )
         }
