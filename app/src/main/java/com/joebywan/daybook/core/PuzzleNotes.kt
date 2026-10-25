@@ -129,6 +129,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Work from the units: each column tells the next its carry.",
         "No word starts with 0, so 0 hides in a word's later letters.",
     ),
+    "codeword" to listOf(
+        "A number twice in one word is a double letter: EE, LL, OO, SS.",
+        "Short words have the fewest look-alikes once a letter is in.",
+        "Q is almost always followed by U.",
+        "A letter already used is greyed: no other number can have it.",
+        "Every square is in two words: a crossing checks both.",
+    ),
     "wordwheel" to listOf(
         "The longest slot always uses every letter on the wheel.",
         "A crossing letter cuts a slot down to a handful of words.",

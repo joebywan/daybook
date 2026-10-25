@@ -85,6 +85,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Mines | Minefield, no guessing | Reveal every square without a mine; each number counts the mines touching it, the board opens with a clear patch, and a mine costs one of three lives |
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
 | Lamps | Lamp placement | Light every white square with lamps that shine along their row and column to a wall; no lamp may light another, and a numbered wall touches that many lamps |
+| Codeword | Codeword (number crossword) | A filled crossword in which every letter is a number: work out which letter each number stands for |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -170,6 +171,12 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   starve a number or leave a square dark, then a short what-if) still finishes the board. A board ships only if it needs
   exactly its tier's rung, and an exhaustive search proves one answer; an independent solver that walks the rows' runs with
   no propagation confirms it in the tests.
+- **Codeword** — every grid is a dense crossword fill (every square in a word across and a word down) from the same
+  screened lists as Word Wheel, built offline (`CodewordGridsBuildTest`) because a fill is a backtracking search whose
+  cost varies wildly. Letters are given back only while the hint ladder (a word only one word fits, a letter every
+  fitting word shares, a number cut by every word it is in, every word worked through together) still finishes the
+  grid; the device numbers the letters from the seed and proves the one answer again with an exhaustive search, and an
+  independent solver that walks the alphabet letter by letter confirms it in the tests.
 - **Codebreaker and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by

@@ -49,6 +49,7 @@ object Levels {
         "tower", "words", "nonogram", "inequality", "chess", "tents", "regions", "cages", "target",
         "cipher", "wordwheel", "tally", "sand", "pointers", "dominoes",
         "mines", "lamps",
+        "codeword",
     )
 
     /** Deck 0, levels 1-5: the first this many pool ids, every one with a walkthrough. Never change it. */

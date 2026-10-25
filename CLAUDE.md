@@ -629,6 +629,45 @@ to a wall), no lamp lights another, and a numbered wall touches exactly that man
   Keyboard: L or Enter lamp, X or Space cross, Backspace clears. Highlight indices are squares (`highlightGrid`).
 - The accent, `0xFF9D4881`, is `AccentSpacingTest`'s pick once Mines held its first choice (`0xFF3C28BD`).
 
+## Codeword (a crossword with numbers for letters)
+
+A filled crossword grid in which every letter is a number 1..k; the same number is the same letter, a few letters are given,
+and every across and down run must be a word. Spec and decisions: `docs/CODEWORD_SPEC.md`. `puzzles/CodewordRules.kt`
+(`CodewordWords`: the lists with each word's shape; `CodewordLogic`: rules, conflicts, the exhaustive proof, the pick),
+`CodewordTeacher.kt`, `CodewordKeys.kt`, `Codeword.kt` (state, board, walkthrough, motif), `CodewordGrids.kt` (generated).
+`id = "codeword"` is hashed into every seed: never rename it.
+
+- **Grids are built offline** (`CodewordGridsBuildTest`, env-gated, reproducible: draw `i` of a tier uses its own `Rng`): a
+  dense fill is a backtracking search per pattern whose cost varies wildly (most 11x11 patterns give up within the budget).
+  The pattern maker and the filler are `test/CrosswordFill.kt`, free of anything Codeword-specific, for the mini crossword
+  that may follow. Grids are **fully checked** (every white square in an across and a down word, words 3-7 letters, no
+  two-letter words), symmetric under a half-turn, connected, no word twice; words are Word Wheel's grid lists
+  (`WheelWords.grid`, Lexicon's answer screening). Scattering the black squares (no
+  2x2 block) interlocked the grid so tightly that almost no fill existed; blocks are allowed. The lists' order is a contract
+  (`BoardPinTest` goes red on purpose when it moves).
+- **Numbers are not stored in the list:** the device numbers a grid's letters 1..k by a shuffle from the board's `Rng`.
+- **Tiers: size and ladder depth.** Standard 7x7, finished one run at a time (a run only one word fits, a letter every
+  fitting word shares); Hard 9x9, must need a number cut by every run it is in; Expert 11x11, must need every word worked
+  through together. Givens are minimal for the tier's ladder (taken back in a random order while it still finishes, at
+  least one kept): about 1.8 / 1.1 / 1.0 a board. From one given letter the lists are so tight that the shallow steps
+  finish most boards, so Hard and Expert are cut by what they need, not by their givens (Tally's `Spec.needs` precedent).
+  A what-if technique was built and dropped: no board kept needed it.
+- **A board ships only if the ladder finishes it from its givens and `CodewordLogic.solve` (branch on the run with fewest
+  fitting words, no budget, sealed `Verdict`) finds one answer**; the builder also proves it with Word Wheel's `BONUS`
+  words added, so a less common real word cannot open a second answer. `CodewordOracle` (test: letter by letter over the
+  alphabet, no word index) is the independent check. `lastResort` is each list's first entry, proved by a test.
+- **`solved` checks the rules** (every number a letter, none twice, every run a grid word); a mistake is a number whose letter
+  differs from the stored answer, sound because the board has one. Red, after a 1 s settle held in `remember`: numbers
+  sharing a letter, and runs no word can be any more (shape, placed letters, letters other numbers hold). Never refused.
+- **Selection is a number, in the state** (Cipher's precedent; `withoutSelection`). A given number cannot be selected or
+  changed. The key under the grid shows each number's letter and picks it; the A-Z keys under that grey a letter another
+  number holds, with its number. Keyboard: with a number picked, a letter types it (again clears), Backspace clears, arrows
+  walk the open numbers; with none picked letters are left to the play screen, so H still asks for a hint.
+- **Teacher:** candidates per number derived on every call; a run's fitting words are those of its shape whose letters
+  its numbers can take. `ONE_WORD`, `RUN_AGREES`, `CROSSING`, `ALL_WORDS` (named as Cipher's chain is). No "only number
+  for a letter": a grid uses part of the alphabet. Highlight indices: squares `0 until size*size`, number key
+  `CodewordLogic.key(n)` = 1000 + n, letter key `CodewordLogic.letterKey(l)` = 2000 + l.
+
 ## Pipes
 
 Rotate tiles until every opening meets another and the pipework is one network. `puzzles/Pipes.kt` (state, generator, board,
@@ -717,7 +756,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines and Lamps (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps and Codeword (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
