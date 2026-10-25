@@ -14,6 +14,7 @@ import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Nonogram
 import com.joebywan.daybook.puzzles.Mambo
+import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Sets
@@ -61,6 +62,7 @@ object PuzzleRegistry {
         Sand,
         Pointers,
         Dominoes,
+        Mines,
         Lamps,
     )
 

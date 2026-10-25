@@ -15,6 +15,7 @@ import com.joebywan.daybook.puzzles.MosaicState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
 import com.joebywan.daybook.puzzles.PointersState
+import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.RegionsState
 import com.joebywan.daybook.puzzles.TallyState
@@ -33,7 +34,7 @@ import com.joebywan.daybook.puzzles.WordWheelState
 /**
  * One line per generated board, identical on the JVM and in the browser, so the two can be diffed:
  * `<id> <yyyy-mm-dd> <TIER> seed=<seed> <body>`. The body is whatever pins that puzzle's board and
- * answer; it is the format each puzzle's web parity test pins. The web build prints these under
+ * answer; it is the format `BoardPinTest` pins. The web build prints these under
  * `?dump`, and `WebParityDumpTest` writes the JVM's side.
  */
 object ParityFingerprint {
@@ -86,6 +87,7 @@ object ParityFingerprint {
             "tray=${s.tray.joinToString(",") { "${it.a}${it.b}" }} answer=${s.answer.joinToString(",") { "${it.first}-${it.second}" }}"
         is SandState -> "c=${s.colours} h=${s.height} tubes=${s.tubes.joinToString("/") { t -> t.joinToString("") }}"
         is PointersState -> "${s.width}x${s.height} arrows=" + s.arrows.joinToString(",") { it.joinToString(".") }
+        is MinesState -> "${s.width}x${s.height} opening=${s.opening} mines=${s.mines} marks=${s.marks}"
         is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer} opener=${s.opener}"
         is CipherState -> "words=${s.words.joinToString(",")} solution=${s.solution.joinToString("")}"
         is WordWheelState -> "wheel=${s.wheel} ${s.width}x${s.height} slots=" +

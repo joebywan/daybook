@@ -50,11 +50,11 @@ A puzzle is done when all of these are true:
 | `hint(state)` | no | Legacy "move goes straight on the board", used only when `teach` returns null. Six boards still define it (`Lits`, `Mambo`, `Mosaic`, `Sets`, `Shikaku`, `Sudoku`) as a fallback; a new puzzle should not write one. |
 | `tutorial: List<TutorialFrame>` | yes | Section 8. |
 | `offersHints` | default true | `false` only for Snap and Pointers (section 7). Hides the Hint button in `PlayScreen` and the walkthrough's free-play frame. |
-| `offersUndo` | default true | `false` only for Pointers (the owner's call: a cleared arrow never needs to come back, so undo could only hand back a life). Hides the Undo button and Ctrl/Cmd+Z in `PlayScreen`, in both layouts. |
+| `offersUndo` | default true | `false` only for Pointers and Mines (the owner's call: a cleared arrow never needs to come back, and a Mines reveal is never wrong but on a mine, so undo could only hand back a life). Hides the Undo button and Ctrl/Cmd+Z in `PlayScreen`, in both layouts. |
 
 `PuzzleState` (`puzzles/PuzzleState.kt`): `solved` (computed), `moves`, optional `failed`
-(computed; only `MosaicState`, `TowerState` and `PointersState` override it, and only their own boards draw the lost
-state: `PlayScreen` never reads it. Pointers, having no undo, draws its own Try again, one state that restores the
+(computed; only `MosaicState`, `TowerState`, `PointersState` and `MinesState` override it, and only their own boards draw the lost
+state: `PlayScreen` never reads it. Pointers and Mines, having no undo, draw their own Try again, one state that restores the
 board and its lives).
 
 Registry line: `core/PuzzleRegistry.kt` `all` is the archive picker's order; the home grid starts from `PuzzleOrder.GENTLEST`. Today's three (`core/TodaysThree.kt`) puts a new puzzle in its mid-weight slot unless it is listed as quick or word/number.
@@ -95,6 +95,7 @@ What varies, as built:
 | Cipher | hardest technique the ladder needs (every tier is two four-letter words and a five-letter total) | columns and pairs / all columns together / a two-column what-if (`CipherSumsBuildTest.tierOf`; `CipherRulesTest` `a year of daily boards - the tiers get harder`) |
 | Word Wheel | wheel letters, words, box | 5 letters, 4-6 words, 6x6 / 6, 6-8, 7x7 / 7, 8-11, 8x8 with a six besides the root (`WordWheelLogic.specFor`; `WordWheelRulesTest` `a year of daily boards ...` asserts the mean word count rises) |
 | Sand | colours (height 4 and two spare tubes on every tier) | 5 / 7 / 8 colours (`SandLogic.specFor`; `SandBalanceTest` `the tiers get harder in the order they are offered`: over a year a naive pourer sorts 79 / 44 / 27% of tries, a careful one 84 / 52 / 33%, the solver's median search is 21 / 30 / 37 positions; 8x4 is clearly harder than 7x4, so Expert kept height 4). Deals redrawn for giving the board away: 15 / 14 / 10% of attempts; the difficulty filter (a random pourer sorts it six times out of six) redraws about half of Standard's deals, 3% of Hard's, none of Expert's. Generation on the JVM, median / p95 / max ms: 0.7 / 2.1 / 8, 0.2 / 1.2 / 1.8, 0.2 / 1.4 / 3.1 |
+| Mines | height, mines, and the deepest step of the ladder a board must need (8 wide on every tier: a mis-tap costs a life) | 8x8 with 10, single numbers only / 8x10 with 16, needs a subset or pair / 8x12 with 22, needs the count against the numbers or a what-if (`MinesLogic.specFor`, `accepts`; `MinesRulesTest` `a year of daily boards - ... the tiers get harder`) |
 | Pointers | grid, arrow length and bends | 6x7, 2-4 squares / 12x12, 3-7 / 14x17, 3-9 (`PointersLogic.specFor`; `PointersRulesTest` `the tiers get bigger and more tangled in the order they are offered`, by mean depth) |
 | Lamps | side, and the rung of the ladder a board must need (walls about a quarter, half-turn symmetric) | 7x7 direct facts only / 10x10 needs a look-ahead (a lamp that would starve a number or leave a square dark) / 12x12 needs a what-if (`LampsLogic.specFor`; `LampsRulesTest` `a year of daily boards - every tier needs exactly its rung`) |
 | Dominoes | box and tray, rule kinds, and the deepest step of the ladder a board must need | 5x5 with 6-7 dominoes, sums, bounds and =, needs a region-value step / 6x6 with 9-10, adds all-different, needs counting / 7x7 with 12-14, needs a what-if (`DominoLogic.specFor`; `DominoRulesTest` `the tiers get harder in the order they are offered`) |
@@ -123,7 +124,7 @@ Rules for the tiers:
 ## 4. Generation
 
 **Seeding.** `core/DailySeed.seedFor(date, puzzleId, difficulty)` -> `core/SeedHash.daily` for the daily
-board; `randomSeed` for random boards. Use only `core/Rng` (splitmix64, hand-rolled so it cannot drift): never
+board; `SeedHash.random` for random boards. Use only `core/Rng` (splitmix64, hand-rolled so it cannot drift): never
 `kotlin.random`, `java.util.Random`, `Math.random`, clocks or counters. Retry with `Rng(seed + attempt)` so a
 board that needs three attempts still depends only on its seed (`Kings.generateVerified`).
 
@@ -504,7 +505,7 @@ Each puzzle `<N>`. "Template" is the file to copy.
 | Parity pins | boards identical on JVM and wasm | `BoardPinTest` + the dump (section 5) |
 | Notes | a short true tip per puzzle for the finished frame; a new puzzle needs entries in `core/PuzzleNotes.kt` (the test enforces it) | `PuzzleNotesTest` |
 | Technique names | every `TECHNIQUES` entry but mistake and fallback has a short name in `core/TechniqueNames.kt`, which the finished frame shows; a new teacher is added to the test's list | `TechniqueNamesTest` |
-| Seeding | untouched; pinned by `BoardPinTest` `epochDay agrees with LocalDate...` and `CompletionFormatTest` | n/a |
+| Seeding | untouched; pinned by `BoardPinTest` `the web route reaches the pinned boards` and `CompletionFormatTest` | n/a |
 
 A test that cannot fail is not a test: assert the property the *bug* violates, not a looser one the bug also
 satisfies. Run: `./gradlew :app:compileDebugKotlin :app:testDebugUnitTest` with Java 17 and `--no-daemon`
@@ -555,6 +556,7 @@ Y = yes, P = partial, N = no.
 | Regions | Y side | Y `generateVerified` (partition and fill built together, a board ships only if the ladder finishes it, then `countSolutions` == 1; `lastResort` is one fixed seed's proved board), year test | Y `RegionsLogic.isSolved` (rules, not the stored digits) | Y `RegionsOracle` (naive reading-order search, counts every answer), `RegionsTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares + digit-key indices | Y | Y | Y 200 / 70 |
 | Cage Sudoku | Y givens, cage size | Y `generateVerified` (ladder finishes it, then `CageLogic.solutions` == `ExactlyOne`; `lastResort` proved unique), year test | Y `CageLogic.isSolved` (rules, not the stored answer) | Y `CageOracle` (fills one cage at a time, no inference), `CageTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares, Sudoku's anchors + keepClear | Y | Y | Y 200 / 70 |
 | Tally | Y side, ladder depth | Y `generateVerified` (internal; the tier's ladder finishes it needing exactly its deepest step, then `countSolutions` == `TallyVerdict.ExactlyOne`; `lastResort` a fixed board per tier, accepted by a test), year test | Y `TallyLogic.isSolved` (every line's sum, not the stored answer) | Y `TallyOracle` (every column's subsets, no lookahead), `TallyTeachingTest` | Y no fallback exists | Y 5 | Y grid + target indices | Y | Y | Y 200 / 70 |
+| Mines | Y height, mines, ladder depth | Y `generateVerified` (internal; the ladder walked from the given opening reveals every safe square needing exactly the tier's deepest step, which forces every mine; `lastResort` the first seed the tier accepts, checked), year test | Y `MinesState.solved` (every safe square open, flags ignored) | Y `MinesOracle` (every layout the numbers and the total allow, no inference), `MinesTeachingTest` | Y no fallback on generated boards; `offersUndo = false` | Y 5 | Y grid | Y | Y | Y 230 / 70 |
 | Pointers | Y size, length, bends | n/a many orders win; `generateVerified` (built acyclic, density checked, cleared greedily; `lastResort` rows pointing right, checked), year test | Y `PointersState.solved` (every arrow gone) | Y `PointersRulesTest` (own heading arithmetic, greedy player, DFS cycle check, monotone removal) | N by design (`offersHints = false`, and `offersUndo = false`) | Y 6 | n/a no hints (arrow indices for the walkthrough) | Y | Y | Y 170 |
 | Target | Y large numbers, steps | n/a many answers; `generateVerified` (exhaustive table puts the target a tier-specific number of steps away; `lastResort` fixed and checked), year test | Y `TargetState.solved` (a tile is the target) | Y `TargetOracle` (breadth-first over positions) | Y a search of the visible tiles, no fallback exists | Y 6 | Y tile / operator / target anchors + keepClear | Y | Y | Y 200 / 70 |
 | Cipher | Y technique depth | Y a bundled list of real-word sums (`CipherSums`, built offline), each re-proved on the device: ladder finishes it, then `CipherLogic.prove` == `ExactlyOne`; `lastResort` proved, year test | Y `CipherLogic.isSolved` (rules, not the stored answer) | Y `CipherOracle` (every digit for every letter, no columns), `CipherTeachingTest` | Y no fallback on generated boards | Y 7 | Y tiles via `reportHighlight` + key and digit anchors + keepClear | Y | Y | Y 200 / 70 |

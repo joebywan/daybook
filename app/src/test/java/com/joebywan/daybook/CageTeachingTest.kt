@@ -58,6 +58,11 @@ class CageTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
             assertEquals(0, counts.getValue(CageTeacher.FALLBACK))
+            // Measured 2026-10 (200 boards): Expert linked totals 614, cage chain 673 of 16,200 steps (the chain was 1,287).
+            if (d == Difficulty.EXPERT) {
+                assertTrue("linked totals too rare: $counts", counts.getValue(CageTeacher.LINKED_TOTALS) >= 2 * boards)
+                assertTrue("cage chain too common: $counts", counts.getValue(CageTeacher.CAGE_CHAIN) * 100 <= steps * 6)
+            }
         }
         writeReport("cages-teaching-coverage.txt", report.toString())
     }
@@ -121,7 +126,8 @@ class CageTeachingTest {
                 while (!cur.solved && guard++ < 90) {
                     val step = CageTeacher.teach(cur)!!
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= 70)
-                    assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= CageTeacher.MAX_EXPLANATION)
+                    val limit = if (step.technique == CageTeacher.LINKED_TOTALS) CageTeacher.MAX_LINKED_EXPLANATION else CageTeacher.MAX_EXPLANATION
+                    assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= limit)
                     longest = maxOf(longest, step.explanation.length)
                     nudge = maxOf(nudge, step.nudge.length)
                     cur = Cages.teach(cur)!!.apply(cur) as CageState
@@ -143,6 +149,33 @@ class CageTeachingTest {
             assertEquals(a.cell, b.cell)
             assertEquals(a.digit, b.digit)
         }
+    }
+
+    /**
+     * A linked-totals step names a digit no single group gives: [CageOracle] (cage by cage over every filling, no inference)
+     * must find that digit in every answer of the board as it stands, and at least one answer.
+     */
+    @Test
+    fun `linked totals hold in every answer the oracle finds`() {
+        var checked = 0
+        for (d in listOf(Difficulty.HARD, Difficulty.EXPERT)) for (day in 0 until 30) {
+            var now = board(day, d)
+            var guard = 0
+            var here = 0
+            while (!now.solved && guard++ < 90 && here < 2) {
+                val step = CageTeacher.teach(now)!!
+                if (step.technique == CageTeacher.LINKED_TOTALS) {
+                    val answers = CageOracle.all(now.cageOf, now.sums, now.cells, limit = 5)
+                    assertTrue(answers.isNotEmpty())
+                    for (a in answers) assertEquals("${d.name} day $day: ${step.explanation}", a[step.cell], step.digit)
+                    checked++
+                    here++
+                }
+                now = Cages.teach(now)!!.apply(now) as CageState
+            }
+        }
+        println("linked totals checked against the oracle: $checked")
+        assertTrue("only $checked linked steps checked", checked >= 30)
     }
 
     /** Boards the generator did not make, with several answers: every non-fallback step holds in every answer. */

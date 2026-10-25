@@ -13,6 +13,8 @@ import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.CipherTeacher
 import com.joebywan.daybook.puzzles.DominoTeacher
 import com.joebywan.daybook.puzzles.Dominoes
+import com.joebywan.daybook.puzzles.Mines
+import com.joebywan.daybook.puzzles.MinesTeacher
 import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.KingsTeacher
 import com.joebywan.daybook.puzzles.Lamps
@@ -49,7 +51,8 @@ class TechniqueNamesTest {
         "inequality" to InequalityTeacher.TECHNIQUES, "chess" to ChessTeacher.TECHNIQUES, "tents" to TentsTeacher.TECHNIQUES,
         "regions" to RegionsTeacher.TECHNIQUES, "cages" to CageTeacher.TECHNIQUES, "target" to TargetTeacher.TECHNIQUES,
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
-        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
+        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
+        "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 
@@ -97,6 +100,12 @@ class TechniqueNamesTest {
                 assertEquals("${p.id} $t seed $seed", want[t.ordinal], got)
             }
             assertTrue("${p.id} $t took $took", took.inWholeMilliseconds < 500)
+        }
+        // Mines' Hard and Expert each gate on a level of two techniques: whichever the walk used.
+        val mines = listOf(setOf(null), setOf(MinesTeacher.SUBSET, MinesTeacher.PAIR), setOf(MinesTeacher.EDGE, MinesTeacher.WHAT_IF))
+        for (t in Difficulty.entries) for (seed in 1L..10L) {
+            val got = Mines.neededTechnique(Mines.generate(seed, t))
+            assertTrue("mines $t seed $seed: $got", got in mines[t.ordinal])
         }
     }
 }

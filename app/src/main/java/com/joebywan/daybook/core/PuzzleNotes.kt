@@ -154,6 +154,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Follow a blocked arrow's line to find what to clear first.",
         "An arrow on the edge pointing outwards is always free.",
     ),
+    "mines" to listOf(
+        "A number with all its mines found: the rest around it are safe.",
+        "Two numbers sharing squares: compare what each still needs.",
+        "Near the end, count the mines left against the hidden squares.",
+        "A flag keeps its square from being revealed by mistake.",
+    ),
     "dominoes" to listOf(
         "A square with one free neighbour must pair with it.",
         "A one-square region tells you that square's pips outright.",

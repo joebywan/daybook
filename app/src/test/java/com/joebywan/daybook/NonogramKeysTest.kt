@@ -1,9 +1,8 @@
 package com.joebywan.daybook
 
 import androidx.compose.ui.input.key.Key
-import com.joebywan.daybook.puzzles.NonogramKeyAction
+import com.joebywan.daybook.core.PenKeyAction
 import com.joebywan.daybook.puzzles.NonogramState
-import com.joebywan.daybook.puzzles.applyKey
 import com.joebywan.daybook.puzzles.nonogramKeyAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -16,9 +15,9 @@ class NonogramKeysTest {
 
     @Test
     fun keysMapAndShiftOnlyMovesAndLays() {
-        assertEquals(NonogramKeyAction.Pen('#'), nonogramKeyAction(Key.F, false))
-        assertEquals(NonogramKeyAction.Pen('x'), nonogramKeyAction(Key.X, false))
-        assertEquals(NonogramKeyAction.Move(0, 1, true), nonogramKeyAction(Key.DirectionRight, true))
+        assertEquals(PenKeyAction.Pen('#'), nonogramKeyAction(Key.F, false))
+        assertEquals(PenKeyAction.Pen('x'), nonogramKeyAction(Key.X, false))
+        assertEquals(PenKeyAction.Move(0, 1, true), nonogramKeyAction(Key.DirectionRight, true))
         assertNull(nonogramKeyAction(Key.F, true))
         assertNull(nonogramKeyAction(Key.Q, false))
     }

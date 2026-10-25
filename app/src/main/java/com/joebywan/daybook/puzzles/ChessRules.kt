@@ -150,7 +150,8 @@ internal object ChessRules {
         return out
     }
 
-    private fun kingSq(b: IntArray, white: Boolean): Int {
+    /** The square of [white]'s king, or -1 when it has none. */
+    internal fun kingSq(b: IntArray, white: Boolean): Int {
         val k = if (white) 6 else -6
         for (s in 0..63) if (b[s] == k) return s
         return -1
@@ -260,7 +261,7 @@ internal object ChessRules {
         for (s in 0..63) if (b[s] * sg > 0) n = genPiece(b, p.whiteToMove, p.castling, p.ep, s, buf, n)
         var k = 0
         for (i in 0 until n) {
-            val child = apply(p, buf[i])
+            val child = play(p, buf[i])
             if (!checked(child.sq, p.whiteToMove)) buf[k++] = buf[i]
         }
         return buf.copyOf(k)
@@ -274,13 +275,13 @@ internal object ChessRules {
         val sg = if (p.whiteToMove) 1 else -1
         for (s in 0..63) if (b[s] * sg > 0) {
             val n = genPiece(b, p.whiteToMove, p.castling, p.ep, s, buf, 0)
-            for (i in 0 until n) if (!checked(apply(p, buf[i]).sq, p.whiteToMove)) return true
+            for (i in 0 until n) if (!checked(play(p, buf[i]).sq, p.whiteToMove)) return true
         }
         return false
     }
 
     /** Applies a pseudo-legal move (no legality check). */
-    private fun apply(p: ChessPosition, m: Int): ChessPosition {
+    fun play(p: ChessPosition, m: Int): ChessPosition {
         val b = p.sq.copyOf()
         val f = from(m); val t = ChessRules.to(m); val pr = promo(m)
         val pc = b[f]
@@ -296,22 +297,25 @@ internal object ChessRules {
         if (kind == 6 && (t - f == 2 || f - t == 2)) {
             if (t > f) { b[t - 1] = b[t + 1]; b[t + 1] = 0 } else { b[t + 1] = b[t - 2]; b[t - 2] = 0 }
         }
-        var c = p.castling
-        for (s in intArrayOf(f, t)) c = c and when (s) {
-            0 -> 2.inv(); 7 -> 1.inv(); 4 -> 3.inv(); 56 -> 8.inv(); 63 -> 4.inv(); 60 -> 12.inv(); else -> -1
-        }
-        // keep the en passant square only when a pawn could actually take (canonical FEN)
-        if (ep >= 0) {
-            val er = ep / 8; val ef = ep % 8
-            val opp = if (white) -1 else 1
-            val pr2 = if (white) er + 1 else er - 1
-            val ok = (ef > 0 && b[pr2 * 8 + ef - 1] == opp) || (ef < 7 && b[pr2 * 8 + ef + 1] == opp)
-            if (!ok) ep = -1
-        }
-        return ChessPosition(b, !p.whiteToMove, c, ep)
+        return ChessPosition(b, !p.whiteToMove, castleMask(p.castling, f, t), keepEp(b, ep, white))
     }
 
-    fun play(p: ChessPosition, m: Int): ChessPosition = apply(p, m)
+    /** Castling rights [c] once a move leaves [f] for [t]: a king or rook that moves, or a rook taken at home, loses its side's. */
+    private fun castleMask(c: Int, f: Int, t: Int): Int = c and lost(f) and lost(t)
+
+    private fun lost(s: Int): Int = when (s) {
+        0 -> 2.inv(); 7 -> 1.inv(); 4 -> 3.inv(); 56 -> 8.inv(); 63 -> 4.inv(); 60 -> 12.inv(); else -> -1
+    }
+
+    /** The en passant square [ep] left by [white]'s double step, kept only when a pawn could actually take (canonical FEN). */
+    private fun keepEp(b: IntArray, ep: Int, white: Boolean): Int {
+        if (ep < 0) return -1
+        val er = ep / 8; val ef = ep % 8
+        val opp = if (white) -1 else 1
+        val pr2 = if (white) er + 1 else er - 1
+        val ok = (ef > 0 && b[pr2 * 8 + ef - 1] == opp) || (ef < 7 && b[pr2 * 8 + ef + 1] == opp)
+        return if (ok) ep else -1
+    }
 
     fun isCheckmate(p: ChessPosition): Boolean = inCheck(p) && !hasLegal(p)
     fun isStalemate(p: ChessPosition): Boolean = !inCheck(p) && !hasLegal(p)
@@ -351,7 +355,7 @@ internal object ChessRules {
             sb.append(name(t))
             if (promo(m) != 0) sb.append('=').append(ChessPosition.LETTERS[promo(m)])
         }
-        val child = apply(p, m)
+        val child = play(p, m)
         if (inCheck(child)) sb.append(if (hasLegal(child)) '+' else '#')
         return sb.toString()
     }
@@ -465,17 +469,8 @@ internal object ChessRules {
                     h = h xor Z[(rk + 6) * 64 + rf] xor Z[(rk + 6) * 64 + rt]
                 }
             }
-            var c = cast
-            for (s in 0..1) c = c and when (if (s == 0) f else t) {
-                0 -> 2.inv(); 7 -> 1.inv(); 4 -> 3.inv(); 56 -> 8.inv(); 63 -> 4.inv(); 60 -> 12.inv(); else -> -1
-            }
-            if (nep >= 0) {
-                val er = nep / 8; val ef = nep % 8
-                val opp = if (w) -1 else 1
-                val pr2 = if (w) er + 1 else er - 1
-                val ok = (ef > 0 && b[pr2 * 8 + ef - 1] == opp) || (ef < 7 && b[pr2 * 8 + ef + 1] == opp)
-                if (!ok) nep = -1
-            }
+            val c = castleMask(cast, f, t)
+            nep = keepEp(b, nep, w)
             cast = c; ep = nep
             h = h xor Z[Z_CASTLE + c] xor Z[Z_SIDE]
             if (nep >= 0) h = h xor Z[Z_EP + nep % 8]
@@ -717,7 +712,7 @@ internal object ChessRules {
         var best: Int? = null
         var bestLen = 0
         for (r in legalArray(p)) {
-            val len = when (val res = forcedMate(apply(p, r), remaining, Int.MAX_VALUE)) {
+            val len = when (val res = forcedMate(play(p, r), remaining, Int.MAX_VALUE)) {
                 is Mate.Forced -> res.inMoves
                 else -> return r
             }

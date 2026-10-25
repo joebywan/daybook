@@ -29,12 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,7 +47,11 @@ import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.HintLook
+import com.joebywan.daybook.ui.dimmed
+import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.ring
 import kotlinx.coroutines.delay
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -287,43 +286,6 @@ object Lexicon : PuzzleType {
 
     // ---- drawing -----------------------------------------------------------------------------------
 
-    /**
-     * What [LocalBoardHighlight] asks of one element. [dim] steps everything unnamed back so the
-     * named tiles read without hunting; keys glow when named but never dim, because the move a hint
-     * asks for is made with them.
-     */
-    private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
-
-    private fun BoardHighlight.look(index: Int, dims: Boolean): Look {
-        val strong = index in this.strong
-        val soft = !strong && index in this.soft
-        return Look(strong, soft, dims && !strong && !soft)
-    }
-
-    /**
-     * A ring drawn just outside the element, so its own colour is untouched: breathing in [glow]
-     * for strong, a quiet fixed line for soft. Read in the draw phase so the pulse repaints without
-     * recomposing. Apply before the element's own `clip`, or the ring is clipped away.
-     */
-    private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>): Modifier =
-        if (!look.strong && !look.soft) this
-        else drawWithContent {
-            drawContent()
-            val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
-            val gap = 1.dp.toPx()
-            val colour = if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f)
-            val out = gap + w / 2
-            drawRoundRect(
-                colour,
-                topLeft = Offset(-out, -out),
-                size = Size(size.width + 2 * out, size.height + 2 * out),
-                cornerRadius = CornerRadius(6.dp.toPx() + out),
-                style = Stroke(w),
-            )
-        }
-
-    private fun Modifier.dimmed(look: Look): Modifier = if (look.dim) alpha(0.3f) else this
-
     /** The best clue the board holds for each letter, a..z: a [LexiconMark], or -1 for a letter not yet tried. */
     private fun keyMarks(s: LexiconState): IntArray {
         val best = IntArray(26) { -1 }
@@ -492,7 +454,7 @@ object Lexicon : PuzzleType {
         mark: Int?,
         typed: Boolean,
         cell: Dp,
-        look: Look,
+        look: HintLook,
         glow: Color,
         pulse: State<Float>,
         absent: Color,
@@ -505,7 +467,7 @@ object Lexicon : PuzzleType {
                 .size(cell)
                 .then(modifier)
                 .padding(2.dp)
-                .ring(look, glow, pulse)
+                .ring(look, glow, pulse, 6.dp, outside = true)
                 .dimmed(look)
                 .clip(shape)
                 .then(
@@ -546,7 +508,7 @@ object Lexicon : PuzzleType {
             modifier
                 .height(KEY_HEIGHT * scale)
                 .highlightAnchor(index)
-                .ring(highlight.look(index, dims = false), glow, pulse)
+                .ring(highlight.look(index, dims = false), glow, pulse, 6.dp, outside = true)
                 .clip(shape)
                 .background(fill)
                 .clickable(enabled = enabled, onClick = onClick),

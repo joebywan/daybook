@@ -18,7 +18,7 @@ internal class RegionsLayout(val n: Int, val region: List<Int>) {
     val sizeOf: IntArray = IntArray(n * n) { members[region[it]].size }
 
     /** The up to eight squares touching each square, edge or corner, in index order. */
-    val around: List<IntArray> = List(n * n) { RegionsLogic.aroundOf(n, it).toIntArray() }
+    val around: List<IntArray> = List(n * n) { TentsLogic.around(n, it).toIntArray() }
 
     /** Everything a digit in a square must differ from: its region-mates and the squares touching it. */
     val peers: List<IntArray> = List(n * n) { i ->
@@ -91,7 +91,7 @@ internal object RegionsLogic {
     // ---- generator ---------------------------------------------------------------------------------
 
     /** Retries with `Rng(seed + attempt)`; `FallbackTest` walks a year to see whether one is ever needed. */
-    const val ATTEMPTS = 8
+    const val ATTEMPTS = 40
 
     private fun orth(n: Int, i: Int): List<Int> = buildList {
         if (i / n > 0) add(i - n)
@@ -151,7 +151,7 @@ internal object RegionsLogic {
             val c = cells[at]
             for (d in rng.shuffled((1..k).toList())) {
                 if (used and (1 shl d) != 0) continue
-                if (aroundOf(n, c).any { digit[it] == d }) continue
+                if (TentsLogic.around(n, c).any { digit[it] == d }) continue
                 digit[c] = d
                 if (place(cells, at + 1, used or (1 shl d))) return true
             }
@@ -182,24 +182,13 @@ internal object RegionsLogic {
         return region.map { r -> if (renumber[r] < 0) renumber[r] = k++; renumber[r] } to digit.toList()
     }
 
-    /** The up to eight squares touching [i], edge or corner, in index order. */
-    fun aroundOf(n: Int, i: Int): List<Int> = buildList {
-        for (dr in -1..1) for (dc in -1..1) {
-            val r = i / n + dr
-            val c = i % n + dc
-            if ((dr != 0 || dc != 0) && r in 0 until n && c in 0 until n) add(r * n + c)
-        }
-    }
-
-    private fun single(m: Int) = m and (m - 1) == 0
-
     /** Strikes every settled digit from its peers, to a fixpoint. False when some square is left with no digit. */
     private fun settle(layout: RegionsLayout, c: IntArray): Boolean {
         do {
             var changed = false
             for (i in c.indices) {
                 if (c[i] == 0) return false
-                if (!single(c[i])) continue
+                if (c[i].countOneBits() > 1) continue
                 for (j in layout.peers[i]) {
                     if (c[j] and c[i] == 0) continue
                     c[j] = c[j] and c[i].inv()
@@ -214,20 +203,44 @@ internal object RegionsLogic {
     /** The unsettled square with fewest digits left, or -1 if every square is settled. */
     private fun squarest(c: IntArray): Int {
         var best = -1
-        for (i in c.indices) if (!single(c[i]) && (best < 0 || c[i].countOneBits() < c[best].countOneBits())) best = i
+        for (i in c.indices) if (c[i].countOneBits() > 1 && (best < 0 || c[i].countOneBits() < c[best].countOneBits())) best = i
         return best
     }
 
-    /** Null when nothing was proved. Pure in (seed, difficulty); only lists reach the `Rng`. [attempts] is for tests that count redraws. */
-    fun generateVerified(seed: Long, difficulty: Difficulty, attempts: Int = ATTEMPTS): RegionsState? {
-        val n = sizeFor(difficulty)
-        for (attempt in 0 until attempts) {
-            val rng = Rng(seed + attempt)
-            val (region, solution) = randomBoard(n, rng) ?: continue
-            val layout = RegionsLayout(n, region)
-            val cells = MutableList(n * n) { 0 }
-            fun finishes() = RegionsTeacher.solvesByLogic(layout, cells)
+    /**
+     * The ladder a tier may use ([deepest], a rung of [RegionsTeacher.TECHNIQUES]) and how many locked-candidate steps its
+     * walk must take ([needs]), as Tally's `Spec.needs`: a board whose walk takes fewer is redrawn.
+     */
+    class Spec(val deepest: Int, val needs: Int)
 
+    fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
+        Difficulty.STANDARD -> Spec(RegionsTeacher.rung(RegionsTeacher.ONLY_PLACE), 0)
+        Difficulty.HARD -> Spec(RegionsTeacher.DEEPEST, HARD_LOCKED)
+        Difficulty.EXPERT -> Spec(RegionsTeacher.DEEPEST, EXPERT_LOCKED)
+    }
+
+    private const val HARD_LOCKED = 2
+    private const val EXPERT_LOCKED = 6
+
+    /** Digs of one fill before it is redrawn. */
+    private const val DIGS = 4
+
+    /** Null when nothing was proved. Pure in (seed, difficulty); only lists reach the `Rng`. [attempts] is for tests that count redraws. */
+    fun generateVerified(seed: Long, difficulty: Difficulty, attempts: Int = ATTEMPTS): RegionsState? =
+        (0 until attempts).firstNotNullOfOrNull { draw(seed + it, sizeFor(difficulty), specFor(difficulty)) }
+
+    /** One attempt: a board drawn from `Rng(seed)` that meets [spec] and is proved, or null. */
+    fun draw(seed: Long, n: Int, spec: Spec): RegionsState? {
+        val rng = Rng(seed)
+        val (region, solution) = randomBoard(n, rng) ?: return null
+        val layout = RegionsLayout(n, region)
+        val cells = MutableList(n * n) { 0 }
+        fun finishes() = RegionsTeacher.solvesByLogic(layout, cells, spec.deepest)
+
+        // The fill is the costly part (about 85 ms of a 9x9 draw), so a dig that misses the gate is dug again, from
+        // nothing and in a new order, before the fill is thrown away.
+        for (dig in 0 until DIGS) {
+            cells.fill(0)
             // Digits only until the ladder finishes (all of them at worst).
             if (!finishes()) {
                 for (i in rng.shuffled((0 until n * n).toList())) {
@@ -240,16 +253,17 @@ internal object RegionsLogic {
                 cells[i] = 0
                 if (!finishes()) cells[i] = solution[i]
             }
-            if (countSolutions(layout, cells) != 1) continue
-            return RegionsState(
-                size = n,
-                region = region,
-                givens = cells.map { it != 0 },
-                cells = cells.toList(),
-                solution = solution,
-            )
+            if (spec.needs == 0 || (RegionsTeacher.lockedSteps(layout, cells, spec.deepest) ?: 0) >= spec.needs) break
+            if (dig == DIGS - 1) return null
         }
-        return null
+        if (countSolutions(layout, cells) != 1) return null
+        return RegionsState(
+            size = n,
+            region = region,
+            givens = cells.map { it != 0 },
+            cells = cells.toList(),
+            solution = solution,
+        )
     }
 
     /** The seed [lastResort] draws from. */

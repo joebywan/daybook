@@ -203,15 +203,15 @@ internal object DominoLogic {
     }
 
     /** Region [r] is fully covered and keeps its rule (the green badge). */
-    fun regionHolds(s: DominoState, r: Int): Boolean {
-        val (covered, open) = regionView(s.layout.regionSquares[r], pipsOf(s))
-        return open == 0 && ruleHolds(s.rules[r], covered)
+    fun regionHolds(layout: Layout, pips: IntArray, r: Int): Boolean {
+        val (covered, open) = regionView(layout.regionSquares[r], pips)
+        return open == 0 && ruleHolds(layout.rules[r], covered)
     }
 
     /** Region [r] can no longer keep its rule whatever goes on its empty squares (the red badge). */
-    fun regionBroken(s: DominoState, r: Int): Boolean {
-        val (covered, open) = regionView(s.layout.regionSquares[r], pipsOf(s))
-        return ruleBroken(s.rules[r], covered, open)
+    fun regionBroken(layout: Layout, pips: IntArray, r: Int): Boolean {
+        val (covered, open) = regionView(layout.regionSquares[r], pips)
+        return ruleBroken(layout.rules[r], covered, open)
     }
 
     /** Every domino down on two neighbouring open squares, none overlapping, and every region's rule kept. */
@@ -367,29 +367,31 @@ internal object DominoLogic {
     // ---- generation -------------------------------------------------------------------------------
 
     /**
-     * A tier: the box, how many dominoes, how big a region may be drawn, what share of squares the cut
-     * leaves in no region, which rule kinds may appear, and the ladder levels: a board must need at
-     * least [minLevel] (one needing less is redrawn) and at most [needs] (loosening never goes past it).
+     * A tier: the box, how many dominoes, how big a region may be drawn, whether all-different may appear,
+     * and the ladder level a board must need: exactly [needs] (one needing less is redrawn, and loosening
+     * never goes past it).
      */
     class Spec(
         val width: Int,
         val height: Int,
         val minDominoes: Int,
         val maxDominoes: Int,
-        val minRegion: Int,
         val maxRegion: Int,
-        val unruledPermille: Int,
-        val bounds: Boolean,
         val different: Boolean,
-        val minLevel: Int,
         val needs: Int,
     )
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
-        Difficulty.STANDARD -> Spec(5, 5, 6, 7, 1, 3, 150, bounds = true, different = false, minLevel = DominoTeacher.LEVEL_REGION_VALUE, needs = DominoTeacher.LEVEL_REGION_VALUE)
-        Difficulty.HARD -> Spec(6, 6, 9, 10, 1, 4, 150, bounds = true, different = true, minLevel = DominoTeacher.LEVEL_COUNTING, needs = DominoTeacher.LEVEL_COUNTING)
-        Difficulty.EXPERT -> Spec(7, 7, 12, 14, 1, 4, 150, bounds = true, different = true, minLevel = DominoTeacher.LEVEL_WHAT_IF, needs = DominoTeacher.LEVEL_WHAT_IF)
+        Difficulty.STANDARD -> Spec(5, 5, 6, 7, 3, different = false, needs = DominoTeacher.LEVEL_REGION_VALUE)
+        Difficulty.HARD -> Spec(6, 6, 9, 10, 4, different = true, needs = DominoTeacher.LEVEL_COUNTING)
+        Difficulty.EXPERT -> Spec(7, 7, 12, 14, 4, different = true, needs = DominoTeacher.LEVEL_WHAT_IF)
     }
+
+    /** The smallest region the cut draws, on every tier. */
+    private const val MIN_REGION = 1
+
+    /** The share of squares, in thousandths, the cut leaves in no region, on every tier. */
+    private const val UNRULED_PERMILLE = 150
 
     /** Draws tried per seed before [generateVerified] gives up. */
     const val ATTEMPTS = 200
@@ -456,7 +458,7 @@ internal object DominoLogic {
         cut.loosen(rng, tray)
         val layout = cut.layout(tray)
         val level = DominoTeacher.solveLevel(layout, spec.needs) ?: return null
-        if (level < spec.minLevel) return null
+        if (level < spec.needs) return null
         val verdict = solutions(layout)
         if (verdict !is Verdict.ExactlyOne || verdict.placements != answer) return null
         return DominoState(w, h, openList, layout.regionOf, layout.rules, tray, List(tray.size) { null }, answer)
@@ -529,8 +531,8 @@ internal object DominoLogic {
             for (i in 0 until n) {
                 if (!open[i] || cut[i]) continue
                 cut[i] = true
-                if (rng.nextInt(1000) < spec.unruledPermille) continue
-                val size = rng.nextInt(spec.minRegion, spec.maxRegion)
+                if (rng.nextInt(1000) < UNRULED_PERMILLE) continue
+                val size = rng.nextInt(MIN_REGION, spec.maxRegion)
                 val grown = arrayListOf(i)
                 while (grown.size < size) {
                     val frontier = grown.flatMap { neighbours(it).toList() }.filter { !cut[it] }.distinct().sorted()
@@ -587,7 +589,8 @@ internal object DominoLogic {
             val merges = rules.indices.filter { it != id && rules[it] != null }.map { intArrayOf(MERGE, id, it) }
             val bounds = ArrayList<IntArray>()
             if (rule.kind == RuleKind.SUM) {
-                if (spec.bounds) { bounds.add(intArrayOf(TO_LESS, id)); bounds.add(intArrayOf(TO_MORE, id)) }
+                bounds.add(intArrayOf(TO_LESS, id))
+                bounds.add(intArrayOf(TO_MORE, id))
                 if (spec.different) bounds.add(intArrayOf(TO_DIFFERENT, id))
             }
             return listOf(intArrayOf(DROP, id)) + rng.shuffled(merges) + rng.shuffled(bounds)

@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.puzzles.LampsLogic.Fact
 import com.joebywan.daybook.puzzles.LampsLogic.LAMP
 import com.joebywan.daybook.puzzles.LampsLogic.NO
@@ -120,8 +121,6 @@ internal object LampsTeacher {
             if (!shown) return explain(g, f)
         }
     }
-
-    private fun plural(k: Int, one: String, many: String = one + "s") = if (k == 1) "1 $one" else "$k $many"
 
     private fun its(num: Int) = when (num) {
         1 -> "its lamp"

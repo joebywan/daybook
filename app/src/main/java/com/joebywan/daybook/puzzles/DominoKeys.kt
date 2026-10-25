@@ -156,13 +156,9 @@ fun DominoState.applyKey(cursor: Int?, pick: DominoPick, action: DominoKeyAction
             val move = if (sel != null) tapTray(p, sel) else if (cursor != null) flipAt(p, cursor) else DominoMove(p)
             DominoKeyResult(cursor, move.pick, move.board)
         }
-        DominoKeyAction.Enter -> {
-            if (cursor == null) return DominoKeyResult(null, p)
-            val move = tapSquare(p, cursor)
-            DominoKeyResult(cursor, move.pick, move.board)
-        }
-        DominoKeyAction.Lift -> {
-            if (cursor == null || DominoLogic.dominoAt(this, cursor) < 0) return DominoKeyResult(cursor, p)
+        DominoKeyAction.Enter, DominoKeyAction.Lift -> {
+            // Lift is a tap that only acts on a laid domino.
+            if (cursor == null || action == DominoKeyAction.Lift && DominoLogic.dominoAt(this, cursor) < 0) return DominoKeyResult(cursor, p)
             val move = tapSquare(p, cursor)
             DominoKeyResult(cursor, move.pick, move.board)
         }

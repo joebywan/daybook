@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.core.isEnterKey
+import com.joebywan.daybook.core.isEraseKey
 
 /** What a physical key asks of the Lamps square under the cursor (arrows are the board's). */
 enum class LampsKeyAction {
@@ -15,10 +17,12 @@ enum class LampsKeyAction {
 }
 
 fun lampsKeyAction(key: Key): LampsKeyAction? = when (key) {
-    Key.L, Key.Enter, Key.NumPadEnter -> LampsKeyAction.Lamp
     Key.X, Key.Spacebar -> LampsKeyAction.Cross
-    Key.Backspace, Key.Delete -> LampsKeyAction.Clear
-    else -> null
+    else -> when {
+        key == Key.L || isEnterKey(key) -> LampsKeyAction.Lamp
+        isEraseKey(key) -> LampsKeyAction.Clear
+        else -> null
+    }
 }
 
 /** A lamp on [cell], or taken back if one is there. `this` on a wall. */

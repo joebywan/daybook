@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PenMarks
 import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
 
@@ -23,52 +24,17 @@ data class NonogramState(
     val solution: String,
     val cells: String = NonogramLogic.UNMARKED.toString().repeat(width * height),
     override val moves: Int = 0,
-) : PuzzleState {
+) : PuzzleState, PenMarks<NonogramState> {
 
     /** Solved when the filled squares give every row and column the clue it was dealt. */
     override val solved: Boolean get() = NonogramLogic.isSolved(this)
 
-    fun markAt(index: Int): Char = cells[index]
+    override val penMarks get() = cells
+    override val penWidth get() = width
+    override val penHeight get() = height
+    override val pens get() = "${NonogramLogic.FILLED}${NonogramLogic.CROSSED}"
 
-    /** [mark] on every square of [indices] that is not already it; one state, one move per square. */
-    fun paint(indices: Collection<Int>, mark: Char): NonogramState {
-        val next = cells.toCharArray()
-        var changed = 0
-        for (i in indices) {
-            if (next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        return if (changed == 0) this else copy(cells = next.concatToString(), moves = moves + changed)
-    }
-
-    /**
-     * A tap with the fill or cross pen: that mark, or a clean square if it already has it. Tapping
-     * the other pen's mark replaces it, so a player never has to rub out to change their mind.
-     */
-    fun tap(index: Int, pen: Char): NonogramState = paint(listOf(index), sweepMark(index, pen))
-
-    /** What a sweep that starts on [index] with [pen] lays down: the pen's mark, or erasing if it is already there. */
-    fun sweepMark(index: Int, pen: Char): Char = if (cells[index] == pen) NonogramLogic.UNMARKED else pen
-
-    /**
-     * A sweep: [mark] along [indices], but a pen only writes over untouched squares and an eraser
-     * only takes out the mark it started on, so dragging a fill across a crossed square leaves the
-     * cross alone, and rubbing out a run of fills does not take the crosses with it.
-     */
-    fun sweep(indices: Collection<Int>, mark: Char, startedOn: Char): NonogramState {
-        val next = cells.toCharArray()
-        var changed = 0
-        for (i in indices) {
-            val ok = if (mark == NonogramLogic.UNMARKED) next[i] == startedOn else next[i] == NonogramLogic.UNMARKED
-            if (ok && next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        return if (changed == 0) this else copy(cells = next.concatToString(), moves = moves + changed)
-    }
+    override fun withPenMarks(marks: String, changed: Int) = copy(cells = marks, moves = moves + changed)
 }
 
 /**
@@ -127,6 +93,9 @@ internal object NonogramLogic {
         return List(s.width) { c -> runs(BooleanArray(s.height) { r -> p[r][c] }) }
     }
 
+    /** Every line's clue: rows first, then columns (as [lineCells] numbers them). */
+    fun clues(s: NonogramState): List<List<Int>> = rowClues(s) + colClues(s)
+
     /** The squares of row [r], then of column [c], as indices into the board. */
     fun rowCells(width: Int, r: Int): List<Int> = List(width) { r * width + it }
 
@@ -147,15 +116,12 @@ internal object NonogramLogic {
      * Whether the filled squares give every line its clue. The rules, not a comparison with
      * [NonogramState.solution]: a board whose clues several pictures satisfy accepts any of them.
      */
-    fun isSolved(s: NonogramState): Boolean {
-        val filled = Array(s.height) { r -> BooleanArray(s.width) { c -> s.cells[r * s.width + c] == FILLED } }
-        val rows = rowClues(s)
-        val cols = colClues(s)
-        for (r in 0 until s.height) if (runs(filled[r]) != rows[r]) return false
-        for (c in 0 until s.width) {
-            if (runs(BooleanArray(s.height) { r -> filled[r][c] }) != cols[c]) return false
-        }
-        return true
+    fun isSolved(s: NonogramState): Boolean = clues(s).withIndex().all { (line, clue) -> lineDone(s, line, clue) }
+
+    /** Whether the filled squares of [line] (rows first, then columns) make exactly [clue]. */
+    fun lineDone(s: NonogramState, line: Int, clue: List<Int>): Boolean {
+        val at = lineCells(s.width, s.height, line)
+        return runs(BooleanArray(at.size) { s.cells[at[it]] == FILLED }) == clue
     }
 
     // ---- the line solver ------------------------------------------------------------------

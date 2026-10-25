@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -51,6 +50,10 @@ import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
+import com.joebywan.daybook.ui.hintRims
+import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -89,12 +92,7 @@ object Lamps : PuzzleType {
         "Arrows move, L or Enter places a lamp, X or Space a cross, Backspace clears.",
     )
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: LampsLogic.lastResort(difficulty)
-
-    /** The board when its answer was proved, null otherwise. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): LampsState? =
-        LampsLogic.generateVerified(seed, difficulty)
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = LampsLogic.generate(seed, difficulty)
 
     override fun teach(state: PuzzleState): Deduction? = LampsTeacher.deduction(state as LampsState)
 
@@ -182,8 +180,6 @@ object Lamps : PuzzleType {
     }
 
     // ---- drawing ------------------------------------------------------------------------------
-
-    private const val SETTLE_MILLIS = 1000L
 
     /** The light, the bulbs: Amber. The crosses: Blue. Fixed, so a lamp always reads as a lamp. */
     private const val HUE_LIGHT = 34f
@@ -274,15 +270,12 @@ object Lamps : PuzzleType {
             drawLine(scheme.outline, Offset(0f, i * u), Offset(n * u, i * u), thin)
         }
         if (dim) {
-            fun rim(indices: Set<Int>, width: Float, color: Color) {
+            hintRims(hl, u, overlay.glow, overlay.pulse, scheme.background) { indices, width, color ->
                 for (i in indices) {
                     val tl = Offset((i % n) * u + width / 2, (i / n) * u + width / 2)
                     drawRoundRect(color, tl, Size(u - width, u - width), CornerRadius(u * 0.15f), style = Stroke(width))
                 }
             }
-            rim(hl.soft - hl.strong, u * 0.07f, overlay.glow.copy(alpha = 0.5f))
-            rim(hl.strong, u * 0.2f, scheme.background.copy(alpha = 0.9f * overlay.pulse))
-            rim(hl.strong, u * 0.11f, overlay.glow.copy(alpha = overlay.pulse))
         }
     }
 
@@ -375,11 +368,7 @@ object Lamps : PuzzleType {
 
         // Wrong now, and still wrong a second on: lamps lighting each other, numbers over or out of reach. Derived.
         val bad = s.clashes() to badNumbers(s)
-        var settled by remember(s.walls) { mutableStateOf(bad) }
-        LaunchedEffect(s.marks) {
-            delay(SETTLE_MILLIS)
-            settled = bad
-        }
+        val settled = rememberSettled(bad, s.walls, s.marks)
 
         // A numbered wall's squares glow once when its count is met.
         val units = remember(base.walls) {
@@ -404,7 +393,7 @@ object Lamps : PuzzleType {
             }.padding(14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val unit = if (constraints.hasBoundedHeight) minOf(maxWidth / n, maxHeight / n) else maxWidth / n
+            val unit = fitStep(n, n)
             val unitPx = with(density) { unit.toPx() }
             val digits = remember(unitPx) { digitLayouts(measurer, unitPx * 0.55f, density) }
             val overlay = Overlay(highlight, glow, pulse.value, bad.first.intersect(settled.first), bad.second.intersect(settled.second))
@@ -416,7 +405,7 @@ object Lamps : PuzzleType {
                     .gridCursor(cursor.takeIf { interactive }, n, n, scheme.primary)
                     .pointerInput(interactive) {
                         if (!interactive) return@pointerInput
-                        fun cellAt(o: Offset) = (o.y / unitPx).toInt().coerceIn(0, n - 1) * n + (o.x / unitPx).toInt().coerceIn(0, n - 1)
+                        fun cellAt(o: Offset) = gridCellAt(o, unitPx, n, n)
                         detectDragGestures(
                             onDragStart = { o ->
                                 // Any tap still held rides along as the sweep's base.
@@ -443,9 +432,7 @@ object Lamps : PuzzleType {
                     .pointerInput(interactive, unitPx) {
                         if (!interactive) return@pointerInput
                         detectTapGestures { offset ->
-                            val r = (offset.y / unitPx).toInt().coerceIn(0, n - 1)
-                            val c = (offset.x / unitPx).toInt().coerceIn(0, n - 1)
-                            val i = r * n + c
+                            val i = gridCellAt(offset, unitPx, n, n)
                             val held = pending?.takeIf { it.base === latest.v }
                             commit.v?.cancel()
                             if ((held?.after ?: latest.v).marks[i] == LampsLogic.LAMP_MARK) { // taking a lamp back is one tap

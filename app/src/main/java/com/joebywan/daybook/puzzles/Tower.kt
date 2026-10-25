@@ -32,17 +32,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.ui.dimmed
+import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
@@ -100,7 +98,7 @@ data class TowerState(
 object Tower : PuzzleType {
 
     override val id = "tower"
-    override val displayName = "Tower"
+    override val displayName = "Codebreaker"
     override val tagline = "Break the hidden colour code"
     override val accent = 0xFFD08A33
     override val rules = listOf(
@@ -237,34 +235,34 @@ object Tower : PuzzleType {
                                 .background(palette[colour])
                         )
                     }
-                    PreviewPips(Modifier.weight(1f), feedback)
+                    Pips(Modifier.weight(1f).aspectRatio(1f).padding(1.5.dp), feedback, guess.size, preview = true)
                 }
             }
         }
     }
 
+    /**
+     * The score as pips: filled for an exact peg, ringed for a misplaced one. Two rows, read in
+     * reading order. The [preview] tile's pips share out the square they are given; a guess row's are a fixed size.
+     */
     @Composable
-    private fun PreviewPips(modifier: Modifier, feedback: Feedback) {
+    private fun Pips(modifier: Modifier, feedback: Feedback, slots: Int, preview: Boolean) {
         val scheme = MaterialTheme.colorScheme
-        Column(modifier.aspectRatio(1f).padding(1.5.dp)) {
-            repeat(2) { row ->
-                Row(Modifier.weight(1f).fillMaxWidth()) {
-                    repeat(2) { column ->
-                        val pip = row * 2 + column
+        Column(modifier, verticalArrangement = Arrangement.Center) {
+            (0 until slots).chunked((slots + 1) / 2).forEach { line ->
+                Row(if (preview) Modifier.weight(1f).fillMaxWidth() else Modifier) {
+                    line.forEach { pip ->
                         Box(
-                            Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .padding(0.5.dp)
+                            (if (preview) Modifier.weight(1f).fillMaxHeight().padding(0.5.dp) else Modifier.padding(1.5.dp).size(10.dp))
                                 .clip(CircleShape)
                                 .then(
                                     when {
-                                        pip < feedback.exact ->
-                                            Modifier.background(scheme.onSurface)
+                                        pip < feedback.exact -> Modifier.background(scheme.onSurface)
                                         pip < feedback.exact + feedback.misplaced ->
-                                            Modifier.border(1.2.dp, scheme.onSurface, CircleShape)
-                                        else ->
-                                            Modifier.background(scheme.outline.copy(alpha = 0.55f))
+                                            Modifier.border(if (preview) 1.2.dp else 1.5.dp, scheme.onSurface, CircleShape)
+                                        else -> Modifier.background(
+                                            if (preview) scheme.outline.copy(alpha = 0.55f) else scheme.surfaceVariant,
+                                        )
                                     }
                                 )
                         )
@@ -384,9 +382,8 @@ object Tower : PuzzleType {
         if (s.solved || s.failed) return null
         val feedback = s.guesses.map(s::score)
         val step = TowerTeacher.deduce(s.slots, s.colours, s.guesses, feedback, s.current) ?: return null
-        val base = s
-        fun fits(code: List<Int>) = TowerTeacher.consistent(code, base.guesses, feedback, base.colours)
-        fun newGuesses(now: TowerState) = now.guesses.drop(base.guesses.size)
+        fun fits(code: List<Int>) = TowerTeacher.consistent(code, s.guesses, feedback, s.colours)
+        fun newGuesses(now: TowerState) = now.guesses.drop(s.guesses.size)
         return Deduction(
             technique = step.technique,
             nudge = step.nudge,
@@ -406,7 +403,7 @@ object Tower : PuzzleType {
                     is TowerTeacher.Move.Fill ->
                         (t.ready && fits(t.current)) || newGuesses(t).any(::fits)
                     is TowerTeacher.Move.Clear ->
-                        m.slots.any { t.current[it] != base.current[it] } || newGuesses(t).isNotEmpty()
+                        m.slots.any { t.current[it] != s.current[it] } || newGuesses(t).isNotEmpty()
                     TowerTeacher.Move.Submit -> newGuesses(t).isNotEmpty()
                 }
             },
@@ -427,47 +424,6 @@ object Tower : PuzzleType {
     }
 
     // ---- drawing -------------------------------------------------------------------------
-
-    /**
-     * What [LocalBoardHighlight] asks of one element. [dim] steps everything unnamed back so the
-     * named pegs read without hunting; controls (swatches, Submit) glow when named but never dim,
-     * because the move a hint asks for is made with them.
-     */
-    private class Look(val strong: Boolean, val soft: Boolean, val dim: Boolean)
-
-    private fun BoardHighlight.look(index: Int, dims: Boolean = true): Look {
-        val strong = index in this.strong
-        val soft = !strong && index in this.soft
-        return Look(strong, soft, dims && !isEmpty && !strong && !soft)
-    }
-
-    /**
-     * A ring drawn just outside the element, so the peg's own colour is untouched: breathing in
-     * [glow] for strong, a quiet fixed line for soft. Read in the draw phase so the pulse repaints
-     * without recomposing. Apply before the element's own `clip`, or the ring is clipped away.
-     */
-    private fun Modifier.ring(look: Look, glow: Color, pulse: State<Float>, round: Boolean): Modifier =
-        if (!look.strong && !look.soft) this
-        else drawWithContent {
-            drawContent()
-            val w = (if (look.strong) 2.5.dp else 1.5.dp).toPx()
-            val gap = 1.dp.toPx()
-            val colour = if (look.strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f)
-            val out = gap + w / 2
-            if (round) {
-                drawCircle(colour, radius = size.minDimension / 2 + out, style = Stroke(w))
-            } else {
-                drawRoundRect(
-                    colour,
-                    topLeft = Offset(-out, -out),
-                    size = Size(size.width + 2 * out, size.height + 2 * out),
-                    cornerRadius = CornerRadius(8.dp.toPx() + out),
-                    style = Stroke(w),
-                )
-            }
-        }
-
-    private fun Modifier.dimmed(look: Look): Modifier = if (look.dim) alpha(0.3f) else this
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
@@ -529,7 +485,7 @@ object Tower : PuzzleType {
                                 .padding(horizontal = 4.dp, vertical = 3.dp)
                                 .size(34.dp)
                                 .highlightAnchor(TowerTeacher.CURRENT + slot)
-                                .ring(look, glow, pulse, round = true)
+                                .ring(look, glow, pulse, 8.dp, round = true)
                                 .dimmed(look)
                                 .clip(CircleShape)
                                 .background(
@@ -549,7 +505,7 @@ object Tower : PuzzleType {
                         color = if (s.ready) scheme.primary else scheme.outline,
                         modifier = Modifier
                             .highlightAnchor(TowerTeacher.SUBMIT_BUTTON)
-                            .ring(highlight.look(TowerTeacher.SUBMIT_BUTTON, dims = false), glow, pulse, round = false)
+                            .ring(highlight.look(TowerTeacher.SUBMIT_BUTTON, dims = false), glow, pulse, 8.dp, outside = true)
                             .clip(RoundedCornerShape(10.dp))
                             .clickable(enabled = interactive && s.ready) { onState(s.submit()) }
                             .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -568,7 +524,7 @@ object Tower : PuzzleType {
                                 .weight(1f)
                                 .height(40.dp)
                                 .highlightAnchor(TowerTeacher.SWATCH + colour)
-                                .ring(highlight.look(TowerTeacher.SWATCH + colour, dims = false), glow, pulse, round = false)
+                                .ring(highlight.look(TowerTeacher.SWATCH + colour, dims = false), glow, pulse, 8.dp, outside = true)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(palette[colour])
                                 .border(
@@ -645,7 +601,7 @@ object Tower : PuzzleType {
                 Box(
                     Modifier.padding(horizontal = 4.dp, vertical = 2.dp).size(26.dp)
                         .highlightAnchor(TowerTeacher.peg(slots, index, slot))
-                        .ring(pegs[slot], glow, pulse, round = true)
+                        .ring(pegs[slot], glow, pulse, 8.dp, round = true)
                         .dimmed(pegs[slot])
                         .clip(CircleShape)
                         .background(palette[colour]),
@@ -654,32 +610,14 @@ object Tower : PuzzleType {
             }
             Spacer(Modifier.weight(1f))
             // A grid, not a row: pips strung out beside the pegs read as belonging to the peg above,
-            // and they count matches without saying which. Two rows, read in reading order: 2x2 for four pegs, 3 over 2 for five.
-            val columns = (slots + 1) / 2
-            Column(
+            // and they count matches without saying which. 2x2 for four pegs, 3 over 2 for five.
+            Pips(
                 Modifier
                     .highlightAnchor(TowerTeacher.PIPS + index)
-                    .ring(pips, glow, pulse, round = false)
+                    .ring(pips, glow, pulse, 8.dp, outside = true)
                     .dimmed(pips),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                (0 until slots).chunked(columns).forEach { line ->
-                    Row {
-                        line.forEach { pip ->
-                            Box(
-                                Modifier.padding(1.5.dp).size(10.dp).clip(CircleShape).then(
-                                    when {
-                                        pip < feedback.exact -> Modifier.background(scheme.onSurface)
-                                        pip < feedback.exact + feedback.misplaced ->
-                                            Modifier.border(1.5.dp, scheme.onSurface, CircleShape)
-                                        else -> Modifier.background(scheme.surfaceVariant)
-                                    }
-                                )
-                            )
-                        }
-                    }
-                }
-            }
+                feedback, slots, preview = false,
+            )
         }
     }
 }

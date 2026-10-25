@@ -70,6 +70,7 @@ class LevelsTest {
 
     @Test
     fun `the plans of levels 1 to 50 are pinned for each deal`() {
+        // Pinned at the pool of 25: a level opened then keeps that plan however the pool grows (the test below).
         fun got(deal: Int) = (1..50).map { n -> Levels.plan(n, pinnedPool.size, deal).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
         assertEquals(GOLDEN, got(1))
         assertEquals(GOLDEN_2, got(2))

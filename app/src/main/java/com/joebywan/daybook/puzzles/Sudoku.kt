@@ -26,6 +26,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
+import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
@@ -379,29 +380,12 @@ object Sudoku : PuzzleType {
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as SudokuState
         val step = SudokuTeacher.teach(s) ?: return null
-        val cell = step.cell
-        val digit = step.digit
-        val mistake = step.technique == SudokuTeacher.MISTAKE
-        val wrong = s.cells[cell]
-        return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = setOf(cell),
-            mistake = mistake,
+        return placementDeduction(
+            s, step,
+            mistake = step.technique == SudokuTeacher.MISTAKE,
             fallback = step.technique == SudokuTeacher.FALLBACK,
-            // One state, so one undo entry; the cell is selected so the player sees where it went.
-            applyTo = { now ->
-                val t = now as SudokuState
-                if (t.cells[cell] == digit) t else t.withCell(cell, digit).select(cell)
-            },
-            reachedBy = { now ->
-                val t = now as SudokuState
-                // A mistake is dealt with once that digit is gone, whatever replaced it.
-                if (mistake) t.cells[cell] != wrong else t.cells[cell] == digit
-            },
+            valueAt = { t, cell -> t.cells[cell] },
+            place = { t, cell, digit -> t.withCell(cell, digit).select(cell) },
         )
     }
 

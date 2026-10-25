@@ -527,6 +527,9 @@ internal object LampsLogic {
     /** Draws tried per seed before the generator gives up and falls back. */
     const val ATTEMPTS = 400
 
+    fun generate(seed: Long, difficulty: Difficulty): LampsState = generateVerified(seed, difficulty) ?: lastResort(difficulty)
+
+    /** The board when its answer was proved, null otherwise. */
     fun generateVerified(seed: Long, difficulty: Difficulty): LampsState? {
         for (a in 0 until ATTEMPTS) attempt(seed, difficulty, a)?.let { return it }
         return null
