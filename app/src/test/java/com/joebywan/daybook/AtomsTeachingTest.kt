@@ -13,7 +13,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The Atoms hint solver, checked against an enumerator written out again here on a different
@@ -295,8 +294,7 @@ class AtomsTeachingTest {
             )
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/atoms-teaching-coverage.txt").writeText(report.toString())
+        writeReport("atoms-teaching-coverage.txt", report.toString())
     }
 
     // ---- mistakes -------------------------------------------------------------------------------

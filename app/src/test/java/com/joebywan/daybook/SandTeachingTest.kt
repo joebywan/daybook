@@ -14,7 +14,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 
 /**
@@ -66,8 +65,7 @@ class SandTeachingTest {
             println(line)
             report.appendLine(line)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/sand-teaching-coverage.txt").writeText(report.toString())
+        writeReport("sand-teaching-coverage.txt", report.toString())
     }
 
     /** Random legal pours from a daily board: where a real player might stand, sortable or not. */
@@ -126,8 +124,7 @@ class SandTeachingTest {
             assertEquals("a hint's search ran out of budget", 0, unsure)
             assertTrue("the sample must hold both kinds", sortable > 20 && mistakes + stuck > 20)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/sand-teaching-mistakes.txt").writeText(report.toString())
+        writeReport("sand-teaching-mistakes.txt", report.toString())
     }
 
     @Test

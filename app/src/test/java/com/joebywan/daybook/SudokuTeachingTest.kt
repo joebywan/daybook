@@ -12,7 +12,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The Sudoku hint solver, checked against an enumerator written out again here on a different
@@ -197,8 +196,7 @@ class SudokuTeachingTest {
             )
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/sudoku-teaching-coverage.txt").writeText(report.toString())
+        writeReport("sudoku-teaching-coverage.txt", report.toString())
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 

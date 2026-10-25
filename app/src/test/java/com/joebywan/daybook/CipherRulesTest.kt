@@ -15,7 +15,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class CipherRulesTest {
 
@@ -181,8 +180,7 @@ class CipherRulesTest {
             // What a tier asks: the share of steps that need more than one column on its own.
             (counts[CipherTeacher.PAIR] ?: 0) + 2 * (counts[CipherTeacher.CHAIN] ?: 0) + 4 * (counts[CipherTeacher.WHAT_IF] ?: 0)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/cipher-tiers.txt").writeText(report.toString())
+        writeReport("cipher-tiers.txt", report.toString())
         println(report)
         assertTrue("tiers ask more in order: $means", means[0] < means[1] && means[1] < means[2])
     }

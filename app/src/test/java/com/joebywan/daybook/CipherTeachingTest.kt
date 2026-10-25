@@ -15,7 +15,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class CipherTeachingTest {
 
@@ -54,8 +53,7 @@ class CipherTeachingTest {
             // Measured 91 / 80 / 75%: the rest are the all-columns and what-if steps, still given as a summary.
             assertTrue("${d.name}: working shown on $shown of $steps steps", shown >= steps * minShown.getValue(d))
         }
-        File("build/reports").mkdirs()
-        File("build/reports/cipher-teaching-coverage.txt").writeText(report.toString())
+        writeReport("cipher-teaching-coverage.txt", report.toString())
         println(report)
     }
 

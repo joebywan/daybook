@@ -11,7 +11,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Tower's hint solver, checked against a scorer and a code enumerator written out again here.
@@ -281,8 +280,7 @@ class TowerTeachingTest {
             assertTrue("$difficulty: the facts never fire", turnsPinnedTaught > 0)
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/tower-teaching-coverage.txt").writeText(report.toString())
+        writeReport("tower-teaching-coverage.txt", report.toString())
     }
 
     // ---- mistakes -------------------------------------------------------------------------------

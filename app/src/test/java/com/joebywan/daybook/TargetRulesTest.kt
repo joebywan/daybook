@@ -11,7 +11,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 
 class TargetRulesTest {
@@ -131,8 +130,7 @@ class TargetRulesTest {
             report.appendLine(line)
             assertEquals("${d.name} shipped its last resort", 0, gaveUp)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/target-par-distribution.txt").writeText(report.toString())
+        writeReport("target-par-distribution.txt", report.toString())
         assertTrue("the tiers get harder in the order they are offered: $means", means[0] < means[1] && means[1] < means[2])
     }
 

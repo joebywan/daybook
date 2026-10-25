@@ -13,7 +13,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The Mambo hint solver, checked against an enumerator written out again here on a different
@@ -226,8 +225,7 @@ class MamboTeachingTest {
             assertEquals("$difficulty: the fallback was reached", 0, boardCounts.getValue(MamboTeacher.FALLBACK))
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/mambo-teaching-coverage.txt").writeText(report.toString())
+        writeReport("mambo-teaching-coverage.txt", report.toString())
     }
 
     // ---- mistakes -------------------------------------------------------------------------------

@@ -10,7 +10,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 import kotlin.random.Random
 
@@ -365,8 +364,7 @@ class MosaicTeachingTest {
             }
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/mosaic-teaching-coverage.txt").writeText(report.toString())
+        writeReport("mosaic-teaching-coverage.txt", report.toString())
     }
 
     // ---- the walkthrough ------------------------------------------------------------------------

@@ -12,7 +12,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The Shikaku hint solver, checked against an enumerator written out again here on a different
@@ -218,8 +217,7 @@ class ShikakuTeachingTest {
             )
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/shikaku-teaching-coverage.txt").writeText(report.toString())
+        writeReport("shikaku-teaching-coverage.txt", report.toString())
     }
 
     /**

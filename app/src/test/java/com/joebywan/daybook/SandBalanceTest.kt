@@ -7,7 +7,6 @@ import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.SandLogic
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Sand's tiers, measured as `LexiconBalanceTest` measures Lexicon's: two players over a year of daily boards per tier.
@@ -77,8 +76,7 @@ class SandBalanceTest {
             "${d.name} ${spec.colours}x${spec.height}: naive wins ${"%.3f".format(t.naive)}, careful ${"%.3f".format(t.careful)}, solver positions median ${t.nodes}"
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/sand-balance.txt").writeText(report + "\n")
+        writeReport("sand-balance.txt", report + "\n")
         val (s, h, e) = Difficulty.entries.map { tiers.getValue(it) }
         assertTrue("naive: $report", s.naive > h.naive + 0.1 && h.naive > e.naive + 0.1)
         assertTrue("careful: $report", s.careful > h.careful && h.careful > e.careful)

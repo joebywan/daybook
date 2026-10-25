@@ -15,7 +15,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class CageTeachingTest {
 
@@ -60,8 +59,7 @@ class CageTeachingTest {
             assertEquals("${d.name} fell back", 0, fellBack)
             assertEquals(0, counts.getValue(CageTeacher.FALLBACK))
         }
-        File("build/reports").mkdirs()
-        File("build/reports/cages-teaching-coverage.txt").writeText(report.toString())
+        writeReport("cages-teaching-coverage.txt", report.toString())
     }
 
     @Test

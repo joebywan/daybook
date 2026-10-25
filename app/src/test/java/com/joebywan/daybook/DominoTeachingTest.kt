@@ -13,7 +13,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The Dominoes hint solver. On generated boards every step must be the answer's (the answer is
@@ -197,7 +196,6 @@ class DominoTeachingTest {
             }
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/dominoes-teaching-coverage.txt").writeText(report.toString())
+        writeReport("dominoes-teaching-coverage.txt", report.toString())
     }
 }

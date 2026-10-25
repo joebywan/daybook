@@ -10,7 +10,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The hints, checked against the lists read again here. A pinned step must name the stored word of its slot (the stored
@@ -73,8 +72,7 @@ class WordWheelTeachingTest {
                     "most words fitting a clued slot: mean ${"%.1f".format(choices / 200.0)}, worst $worst\n",
             )
         }
-        File("build/reports").mkdirs()
-        File("build/reports/wordwheel-teaching-coverage.txt").writeText(report.toString())
+        writeReport("wordwheel-teaching-coverage.txt", report.toString())
         println(report)
     }
 

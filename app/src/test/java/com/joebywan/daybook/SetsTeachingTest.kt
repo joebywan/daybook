@@ -14,7 +14,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import kotlin.random.Random
 
 /**
@@ -213,8 +212,7 @@ class SetsTeachingTest {
             report.appendLine("  longest explanation, ${longest.length} characters: $longest")
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/sets-teaching-coverage.txt").writeText(report.toString())
+        writeReport("sets-teaching-coverage.txt", report.toString())
     }
 
     // ---- the panel's four lines -----------------------------------------------------------------

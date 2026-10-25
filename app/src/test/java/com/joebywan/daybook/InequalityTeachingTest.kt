@@ -12,7 +12,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class InequalityTeachingTest {
 
@@ -54,8 +53,7 @@ class InequalityTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/inequality-teaching-coverage.txt").writeText(report.toString())
+        writeReport("inequality-teaching-coverage.txt", report.toString())
     }
 
     @Test

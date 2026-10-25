@@ -10,7 +10,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The Tally hint solver. As for Nonogram and Kings: on real boards every step must agree with the
@@ -376,7 +375,6 @@ class TallyTeachingTest {
             }
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/tally-teaching-coverage.txt").writeText(report.toString())
+        writeReport("tally-teaching-coverage.txt", report.toString())
     }
 }

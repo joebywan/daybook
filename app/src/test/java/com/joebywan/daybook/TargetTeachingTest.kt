@@ -18,7 +18,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 
 class TargetTeachingTest {
@@ -75,8 +74,7 @@ class TargetTeachingTest {
             println(line)
             report.appendLine(line)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/target-teaching-coverage.txt").writeText(report.toString())
+        writeReport("target-teaching-coverage.txt", report.toString())
     }
 
     @Test

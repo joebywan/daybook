@@ -11,7 +11,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class TentsTeachingTest {
 
@@ -55,8 +54,7 @@ class TentsTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/tents-teaching-coverage.txt").writeText(report.toString())
+        writeReport("tents-teaching-coverage.txt", report.toString())
     }
 
     @Test

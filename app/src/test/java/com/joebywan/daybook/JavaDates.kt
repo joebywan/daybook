@@ -23,3 +23,9 @@ fun daySeed(day: Int, puzzleId: String, difficulty: Difficulty, start: LocalDate
 /** [count] daily seeds from [start], salted with [salt] so each test draws its own sample. */
 fun seeds(count: Int, difficulty: Difficulty, salt: String, start: LocalDate = TEST_START): List<Long> =
     (0 until count).map { daySeed(it, salt, difficulty, start) }
+
+/** Writes [text] to `app/build/reports/[name]`, where the measuring tests leave their numbers. */
+fun writeReport(name: String, text: String) {
+    java.io.File("build/reports").mkdirs()
+    java.io.File("build/reports", name).writeText(text)
+}

@@ -11,7 +11,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The LITS hint solver, checked against [LitsOracle] — an exhaustive enumerator written apart from
@@ -261,8 +260,7 @@ class LitsTeachingTest {
             )
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/lits-teaching-coverage.txt").writeText(report.toString())
+        writeReport("lits-teaching-coverage.txt", report.toString())
     }
 
     // ---- mistakes -------------------------------------------------------------------------------

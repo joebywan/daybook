@@ -15,7 +15,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class WordWheelRulesTest {
 
@@ -125,8 +124,7 @@ class WordWheelRulesTest {
                     "sizes $sizes\n",
             )
         }
-        File("build/reports").mkdirs()
-        File("build/reports/wordwheel-generation.txt").writeText(report.toString())
+        writeReport("wordwheel-generation.txt", report.toString())
         println(report)
         assertTrue("the tiers get harder in the order they are offered: $means", means[0] < means[1] && means[1] < means[2])
     }
@@ -145,8 +143,7 @@ class WordWheelRulesTest {
             }
             report.append("${d.name}: attempts used ${attempts.withIndex().filter { it.value > 0 }.joinToString { "${it.index}x${it.value}" }}\n")
         }
-        File("build/reports").mkdirs()
-        File("build/reports/wordwheel-attempts.txt").writeText(report.toString())
+        writeReport("wordwheel-attempts.txt", report.toString())
         println(report)
     }
 

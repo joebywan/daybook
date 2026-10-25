@@ -334,8 +334,7 @@ class DominoRulesTest {
             assertTrue("$d median ${ms[ms.size / 2]} ms", ms[ms.size / 2] < 60)
         }
         println(report)
-        java.io.File("build/reports").mkdirs()
-        java.io.File("build/reports/dominoes-generation.txt").writeText(report.toString())
+        writeReport("dominoes-generation.txt", report.toString())
     }
 
     @Test

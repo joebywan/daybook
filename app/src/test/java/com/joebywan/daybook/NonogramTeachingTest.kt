@@ -11,7 +11,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * The Nonogram hint solver. Soundness is checked two ways, as for Kings: on real boards every step
@@ -376,7 +375,6 @@ class NonogramTeachingTest {
             }
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/nonogram-teaching-coverage.txt").writeText(report.toString())
+        writeReport("nonogram-teaching-coverage.txt", report.toString())
     }
 }
