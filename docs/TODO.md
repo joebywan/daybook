@@ -180,7 +180,7 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 - [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
 - [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
-  lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
+  lives as Pointers', no undo), Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
   fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
 
 ## Future puzzle candidates
@@ -241,7 +241,9 @@ and Battleships is close to Tents.
   with a unique shortest ladder to keep it provable. *M after the lists exist.*
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
-  prototype the input before committing. *L.*
+  prototype the input before committing. *L.* Pearls (built) has a loop's machinery to reuse: the loop rule, the
+  exhaustive count, edge hit testing (`Pearls.edgeNear`) and crosses as notes; its loop runs through squares, this one
+  along their edges.
 - [ ] **Mines, no guessing.** Minesweeper rules: tap reveals, long-press flags. Ship only boards logic clears from the
   first reveal (a solver proves it, as the Tents and Tally ladders do); a hint names the deduction ("this 2 already
   touches two flags, so the rest are safe"). Tiers: size and density. A mine loses the board, as Pointers' lives do. *M.*
@@ -252,8 +254,6 @@ and Battleships is close to Tents.
   Latin-square rules, generator and prover carry over; only the clue type is new. *S–M.*
 - [ ] **Hitori.** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.
   Tap-only; the connectivity proof is LITS's shape. *M.*
-- [ ] **Pearl loop (Masyu rules).** One closed loop through squares: it turns on black pearls, goes straight through
-  white ones. Drawn through squares, not along edges, so Snap's drag works and the edge-tapping problem goes away. *L.*
 - [ ] **Dominosa.** A pip grid holds each domino 0-0..N-N once; find where each lies. Tap between two squares to
   place one. Pairs well with the domino-placement idea above. *M.*
 - [ ] **Galaxies.** Cut the grid into regions, each symmetric under a half-turn about its dot. Shikaku's input,

@@ -20,7 +20,7 @@ class LevelsTest {
     private val pinnedPool = listOf(
         "sudoku", "kings", "mambo", "pipes", "shikaku", "mosaic", "sets", "atoms", "snap", "lits",
         "tower", "words", "nonogram", "inequality", "chess", "tents", "regions", "cages", "target",
-        "cipher", "wordwheel", "tally", "sand", "pointers", "dominoes",
+        "cipher", "wordwheel", "tally", "sand", "pointers", "dominoes", "pearls",
     )
 
     /** Deal 2's gentlest-first order, copied: `PuzzleOrder.GENTLEST` on 2026-10-25. It must never change. */
@@ -67,17 +67,19 @@ class LevelsTest {
 
     @Test
     fun `the plans of levels 1 to 50 are pinned for each deal`() {
-        fun got(deal: Int) = (1..50).map { n -> Levels.plan(n, Levels.POOL.size, deal).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
+        // Pinned at the pool of 25, the size the first levels were opened with: a puzzle appended since plans new levels
+        // differently (as it should), and `appending to the pool never changes a plan at an older pool size` guards the rest.
+        fun got(deal: Int) = (1..50).map { n -> Levels.plan(n, GOLDEN_POOL, deal).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
         assertEquals(GOLDEN, got(1))
         assertEquals(GOLDEN_2, got(2))
         assertEquals("the default is the latest deal", Levels.plan(7, Levels.POOL.size, Levels.LATEST), Levels.plan(7))
         assertEquals(
             listOf(-3215747372223080039L, 6085545774054540416L, -4480082772839746525L, -8359627411479413995L, 7328236594175289981L),
-            Levels.plan(1, Levels.POOL.size, 1).map { it.seed },
+            Levels.plan(1, GOLDEN_POOL, 1).map { it.seed },
         )
         assertEquals(
             listOf(7688255564085075123L, -4094480006933299752L, -224227637783284087L, -7924503025723838927L, 6766780658332473636L),
-            Levels.plan(500, Levels.POOL.size, 1).map { it.seed },
+            Levels.plan(500, GOLDEN_POOL, 1).map { it.seed },
         )
     }
 
@@ -179,6 +181,8 @@ class LevelsTest {
     }
 
     private companion object {
+        const val GOLDEN_POOL = 25
+
         /**
          * Deal 2: levels 1-5 differ. Deck 1 on is shuffled as in deal 1 and its repair reads deck 0's last ten, which
          * could differ; today neither deal's tail clashes with deck 1's start, so levels 6 on are deal 1's.

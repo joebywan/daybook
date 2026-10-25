@@ -144,7 +144,10 @@ internal object PearlsTeacher {
         PearlsLogic.smallLoop(g, pearls, st, firstOnly = true)?.let { f ->
             return if (f.contradiction) null else loopStep(g, st, f)
         }
-        val w = PearlsLogic.bestWhatIf(g, pearls, st) ?: return null
+        // A short what-if, as the generator's ladder uses. Its round cap is not monotone (a player's own order of moves
+        // can leave a board whose short what-ifs are gone while longer ones remain), so when none is short enough the
+        // shortest of any length is taken: still sound, still named, and it keeps the hints from running out.
+        val w = PearlsLogic.bestWhatIf(g, pearls, st) ?: PearlsLogic.bestWhatIf(g, pearls, st, cap = Int.MAX_VALUE) ?: return null
         return whatIfStep(g, pearls, w)
     }
 
@@ -162,7 +165,7 @@ internal object PearlsTeacher {
                 val why = (0 until 2).mapNotNull { axis -> blackAxis(g, pearls, st, s, axis) }.joinToString(" ")
                 step(
                     BLACK_PEARL, "Look at the black pearl $place.",
-                    "A black pearl turns, and runs straight on through the next square each way. $why",
+                    "A black pearl turns and runs straight on two squares each way. $why",
                     setOf(s) + touched,
                 )
             }
@@ -281,9 +284,9 @@ internal object PearlsTeacher {
             backEdge >= 0 && st[backEdge] == PearlsLogic.OPEN
         if (!settles) return null
         return if (has(arm)) {
-            "Its line goes ${DIRS[arm]}, so it carries straight on and can't go ${DIRS[back]}."
+            "Its line runs ${DIRS[arm]}, so it carries on and can't go ${DIRS[back]}."
         } else {
-            "It can't go ${DIRS[back]} (${blackReason(g, pearls, st, p, back)}), so it goes ${DIRS[arm]} for two squares."
+            "It can't go ${DIRS[back]} (${blackReason(g, pearls, st, p, back)}), so it runs ${DIRS[arm]}."
         }
     }
 
@@ -292,7 +295,7 @@ internal object PearlsTeacher {
         if (out < 0) return "the edge of the board"
         if (st[out] == PearlsLogic.CROSS) return "crossed"
         val q = g.next(p, d)
-        if (pearls[q] == PearlsLogic.BLACK) return "the black pearl there would have to go straight"
+        if (pearls[q] == PearlsLogic.BLACK) return "another black pearl there"
         val on = g.edge(q, d)
         if (on < 0) return "no room to run on"
         if (st[on] == PearlsLogic.CROSS) return "it couldn't run on"

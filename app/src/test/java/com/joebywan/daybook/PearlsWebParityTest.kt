@@ -39,7 +39,9 @@ class PearlsWebParityTest {
         )
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
-        val FINGERPRINTS = listOf<Int>(
+        val FINGERPRINTS = listOf(
+            672395596, -1511815620, -2025702688, -2064892808, -1217400564, -1030434868,
+            746684397, 590224807, 1297606291,
         )
     }
 }

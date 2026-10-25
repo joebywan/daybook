@@ -490,15 +490,15 @@ internal object PearlsLogic {
 
     /**
      * The what-if with the fewest rounds over every open edge (a line tried before a cross), the first in
-     * edge order on a tie; with [first] the first found at all. Null when none settles anything.
+     * edge order on a tie; with [first] the first found at all. At most [cap] rounds. Null when none settles anything.
      */
-    fun bestWhatIf(g: PearlsGrid, pearls: String, st: IntArray, first: Boolean = false): WhatIf? {
+    fun bestWhatIf(g: PearlsGrid, pearls: String, st: IntArray, first: Boolean = false, cap: Int = MAX_ROUNDS): WhatIf? {
         var best: WhatIf? = null
         for (e in 0 until g.edgeCount) {
             if (st[e] != OPEN) continue
             for (assume in intArrayOf(LINE, CROSS)) {
                 // Strictly fewer rounds than the best so far, so a tie keeps the earlier edge.
-                val w = whatIf(g, pearls, st, e, assume, best?.rounds ?: MAX_ROUNDS) ?: continue
+                val w = whatIf(g, pearls, st, e, assume, best?.rounds ?: cap) ?: continue
                 if (first || w.rounds == 0) return w
                 best = w
             }

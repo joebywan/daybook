@@ -140,7 +140,102 @@ object Pearls : PuzzleType {
 
     // ---- the walkthrough ------------------------------------------------------------------------
 
-    override val tutorial: List<TutorialFrame> get() = emptyList()
+    /**
+     * Five by five, one loop (the border), finished by the pearls' and squares' rules alone: black pearls in three
+     * corners, a white pearl on the left edge and one on the bottom edge.
+     */
+    internal const val TUTORIAL_PEARLS = "b...b" + "....." + "....." + "w...." + ".w..b"
+    private const val TUTORIAL_N = 5
+    internal val TUTORIAL_LOOP = listOf(0, 1, 2, 3, 4, 9, 14, 19, 24, 23, 22, 21, 20, 15, 10, 5)
+
+    private fun tutorialEdges(lines: List<Pair<Int, Int>>, crosses: List<Pair<Int, Int>> = emptyList()): String {
+        val g = PearlsGrid.of(TUTORIAL_N)
+        val edges = CharArray(g.edgeCount) { PearlsLogic.OPEN_MARK }
+        lines.forEach { (a, b) -> edges[g.between(a, b)] = PearlsLogic.LINE_MARK }
+        crosses.forEach { (a, b) -> edges[g.between(a, b)] = PearlsLogic.CROSS_MARK }
+        return edges.concatToString()
+    }
+
+    internal fun tutorialBoard(lines: List<Pair<Int, Int>> = emptyList(), crosses: List<Pair<Int, Int>> = emptyList()): PearlsState {
+        val loop = tutorialEdges(TUTORIAL_LOOP.indices.map { TUTORIAL_LOOP[it] to TUTORIAL_LOOP[(it + 1) % TUTORIAL_LOOP.size] })
+        return PearlsState(TUTORIAL_N, TUTORIAL_PEARLS, loop.map { if (it == PearlsLogic.LINE_MARK) '1' else '0' }.joinToString(""), tutorialEdges(lines, crosses))
+    }
+
+    /** Accepts exactly [expected]'s edges, so a stray stroke cannot slip through. */
+    private fun only(expected: PearlsState): (PuzzleState) -> Boolean = { next -> next is PearlsState && next.edges == expected.edges }
+
+    private fun edgeAt(a: Int, b: Int) = TUTORIAL_N * TUTORIAL_N + PearlsGrid.of(TUTORIAL_N).between(a, b)
+
+    override val tutorial: List<TutorialFrame> by lazy {
+        val loop = TUTORIAL_LOOP.indices.map { TUTORIAL_LOOP[it] to TUTORIAL_LOOP[(it + 1) % TUTORIAL_LOOP.size] }
+        val black = listOf(10 to 5, 5 to 0, 0 to 1, 1 to 2)
+        val white = black + listOf(20 to 21, 21 to 22)
+        val cross = listOf(1 to 6)
+        val slip = white + listOf(15 to 16)
+        val solved = tutorialBoard(loop)
+        val empty = tutorialBoard()
+        val afterBlack = tutorialBoard(black)
+        val afterWhite = tutorialBoard(white)
+        val afterCross = tutorialBoard(white, cross)
+        val afterSlip = tutorialBoard(slip, cross)
+        listOf(
+            TutorialFrame(
+                state = solved,
+                caption = "Draw one loop through the middles of squares that passes every pearl. On a black pearl it turns; " +
+                    "on a white pearl it goes straight.",
+                highlight = BoardHighlight(strong = setOf(0, 15)),
+            ),
+            TutorialFrame(
+                state = empty,
+                caption = "A black pearl turns, then runs straight on two squares each way. In the corner it can only go " +
+                    "down and right: drag from two below it, through it, to two right of it.",
+                highlight = BoardHighlight(strong = setOf(0, 10, 2), soft = setOf(5, 1)),
+                accepts = only(afterBlack),
+                retry = "Drag along the glowing squares in one stroke, through the pearl.",
+                done = "Drawn. A black pearl's arms always run two squares straight.",
+            ),
+            TutorialFrame(
+                state = afterBlack,
+                caption = "A white pearl goes straight through. This one sits on the bottom edge, so it can't go up and down: " +
+                    "drag across it, from its left to its right.",
+                highlight = BoardHighlight(strong = setOf(21, 20, 22)),
+                accepts = only(afterWhite),
+                retry = "Drag along the glowing squares, straight through the white pearl.",
+                done = "Straight through. It turns at the corner just before it, as a white pearl must on one side.",
+            ),
+            TutorialFrame(
+                state = afterWhite,
+                caption = "The square after a black pearl runs straight on, so no line leaves it sideways. " +
+                    "Tap the glowing edge to cross it out.",
+                highlight = BoardHighlight(strong = setOf(edgeAt(1, 6)), soft = setOf(0, 1)),
+                accepts = only(afterCross),
+                retry = "Tap once on the glowing edge, between the two squares.",
+                done = "Crossed. A cross is a note: no line here.",
+            ),
+            TutorialFrame(
+                state = afterCross,
+                caption = "What if the white pearl on the left turned? Drag from it one square right and see.",
+                highlight = BoardHighlight(strong = setOf(15, 16)),
+                accepts = only(afterSlip),
+                retry = "Drag from the glowing white pearl one square right.",
+                done = "It can't: a white pearl goes straight, so it turns red.",
+            ),
+            TutorialFrame(
+                state = afterSlip,
+                caption = "Drag back along that line, from the pearl's right to the pearl, to rub it out.",
+                highlight = BoardHighlight(strong = setOf(16, 15), warning = true),
+                accepts = only(afterCross),
+                retry = "Drag back along the red line, in one stroke.",
+                done = "Rubbed out. Dragging along a line takes it away.",
+            ),
+            TutorialFrame(
+                state = afterCross,
+                caption = "Your turn: finish the loop. Stuck? Hint shows you why.",
+                freePlay = true,
+                done = "Solved. That's Pearls.",
+            ),
+        )
+    }
 
     // ---- teaching -------------------------------------------------------------------------------
 
