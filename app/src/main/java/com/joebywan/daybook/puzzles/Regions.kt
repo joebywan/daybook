@@ -111,11 +111,7 @@ object Regions : PuzzleType {
     override val keyboardHelp = listOf("Arrows move, 1-5 place a digit, Backspace clears.")
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: RegionsLogic.lastResort(difficulty)
-
-    /** The board when its answer was proved, null otherwise. What `FallbackTest` asserts on. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): RegionsState? =
-        RegionsLogic.generateVerified(seed, difficulty)
+        RegionsLogic.generateVerified(seed, difficulty) ?: RegionsLogic.lastResort(difficulty)
 
     // ---- colour ------------------------------------------------------------------------------
 

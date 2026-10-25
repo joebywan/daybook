@@ -126,6 +126,17 @@ internal object TowerTeacher {
     // ---- why a colour is ruled out of a slot -----------------------------------------------------
 
     private sealed interface Why {
+        /** The guesses this reason cites. */
+        val rows: List<Int>
+            get() = when (this) {
+                is Nothing -> listOf(g)
+                is Complete -> listOf(g)
+                is NoFilled -> listOf(g)
+                is SameScore -> listOf(a, b)
+                is Accounted -> listOf(g)
+                is Known -> emptyList()
+            }
+
         /** Guess [g] scored no pips at all, so none of its colours is in the code. */
         data class Nothing(val g: Int) : Why
 
@@ -309,7 +320,7 @@ internal object TowerTeacher {
                         if (known[j] != null) continue
                         val text = accountedText(g, right, wrong, open, j)
                         if (text.length > MAX_EXPLANATION) continue
-                        val reasonRows = wrong.mapNotNull { excluded(it, guess[it]) }.flatMap(::whyRows)
+                        val reasonRows = wrong.mapNotNull { excluded(it, guess[it]) }.flatMap { it.rows }
                         add(
                             Fact(
                                 j, guess[j], ACCOUNTED,
@@ -360,7 +371,7 @@ internal object TowerTeacher {
                 val reasons = (0 until colours).filter { it != colour }.map { it to excluded(i, it)!! }
                 val text = onlyLeftText(i, colour, reasons)
                 if (text.length > MAX_EXPLANATION) continue
-                val rows = reasons.flatMap { whyRows(it.second) }.distinct().sorted()
+                val rows = reasons.flatMap { it.second.rows }.distinct().sorted()
                 add(
                     Fact(
                         i, colour, ONLY_LEFT,
@@ -396,7 +407,7 @@ internal object TowerTeacher {
             val clauses = groups.values.map { group ->
                 val names = join(group.map { colourNames[it.first] }, "or")
                 val why = group.map { it.second }
-                val rows = why.flatMap(::whyRows).distinct().sorted()
+                val rows = why.flatMap { it.rows }.distinct().sorted()
                 val guessesWord = guessList(rows)
                 val clause = when (val w = why[0]) {
                     is Why.Nothing -> "$guessesWord scored nothing"
@@ -410,16 +421,6 @@ internal object TowerTeacher {
                 "$names ($clause)"
             }
             return "Slot ${slot + 1} can't be ${join(clauses, "or")}. That leaves ${colourNames[colour]}."
-        }
-
-        /** The guesses a reason cites. */
-        fun whyRows(w: Why): List<Int> = when (w) {
-            is Why.Nothing -> listOf(w.g)
-            is Why.Complete -> listOf(w.g)
-            is Why.NoFilled -> listOf(w.g)
-            is Why.SameScore -> listOf(w.a, w.b)
-            is Why.Accounted -> listOf(w.g)
-            is Why.Known -> emptyList()
         }
 
         /** A reason as a short clause, for inside brackets. */
@@ -592,7 +593,7 @@ internal object TowerTeacher {
                 listOf(i),
                 nudge = "Check this peg.",
                 explanation = k.whySentence(i, current[i], why) + " Change it.",
-                rows = k.whyRows(why),
+                rows = why.rows,
             )
         }
 

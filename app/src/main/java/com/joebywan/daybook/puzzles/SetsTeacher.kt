@@ -262,21 +262,10 @@ internal object SetsTeacher {
 
     /** "Show me": claim the set, or let go of the picked cards. One state, so one undo entry. */
     fun apply(s: SetsState, step: Step): SetsState = when {
-        step.claim.isNotEmpty() -> if (step.claim in s.found) s else s.copy(
-            found = s.found + listOf(step.claim),
-            selected = emptyList(),
-            lastWrong = false,
-            lastRepeat = false,
-            lastPick = emptyList(),
-            moves = s.moves + 1,
-        )
-        step.release.isNotEmpty() -> if (s.selected.none { it in step.release }) s else s.copy(
-            selected = s.selected - step.release.toSet(),
-            lastWrong = false,
-            lastRepeat = false,
-            lastPick = emptyList(),
-            moves = s.moves + 1,
-        )
+        step.claim.isNotEmpty() -> if (step.claim in s.found) s else
+            (Sets.withoutSelection(s) as SetsState).copy(found = s.found + listOf(step.claim), moves = s.moves + 1)
+        step.release.isNotEmpty() -> if (s.selected.none { it in step.release }) s else
+            (Sets.withoutSelection(s) as SetsState).copy(selected = s.selected - step.release.toSet(), moves = s.moves + 1)
         // A rejected pick has already been undone by the board; there is nothing to take back, and
         // handing back the same state keeps "Show me" from costing an undo entry.
         else -> s

@@ -71,7 +71,7 @@ class SandRulesTest {
     @Test
     fun `a Solvable verdict carries a path that replays to sorted by the test's own rules`() {
         for (d in Difficulty.entries) for (day in 0 until 60) {
-            val s = Sand.generateVerified(daySeed(day, Sand.id, d), d)!!
+            val s = SandLogic.generateVerified(daySeed(day, Sand.id, d), d)!!
             val v = SandLogic.solve(s.tubes, s.height, SandLogic.GEN_BUDGET)
             assertTrue(v is SandLogic.Verdict.Solvable)
             assertTrue("${d.name} day $day", SandSupport.replays(s.tubes, s.height, (v as SandLogic.Verdict.Solvable).path))
@@ -140,7 +140,7 @@ class SandRulesTest {
         assertTrue("a run anywhere in the tube, not only on top", SandLogic.givesAway(listOf(listOf(1, 1, 1, 0)), 4))
         assertFalse(SandLogic.givesAway(listOf(listOf(1, 1, 0, 0), listOf(0, 1, 0, 1)), 4))
         for (d in Difficulty.entries) for (day in 0 until 365) {
-            val s = Sand.generateVerified(daySeed(day, Sand.id, d), d)!!
+            val s = SandLogic.generateVerified(daySeed(day, Sand.id, d), d)!!
             val spec = SandLogic.specFor(d)
             assertEquals(spec.colours + 2, s.tubes.size)
             assertEquals(listOf(emptyList<Int>(), emptyList()), s.tubes.takeLast(2))
@@ -177,7 +177,7 @@ class SandRulesTest {
     fun `no board the naive player always sorts is shipped`() {
         for (d in Difficulty.entries) for (day in 0 until 60) {
             val seed = daySeed(day, Sand.id, d)
-            val s = Sand.generateVerified(seed, d)!!
+            val s = SandLogic.generateVerified(seed, d)!!
             val attempt = (0 until 40).first { SandLogic.deal(seed, it, SandLogic.specFor(d)) == s.tubes }
             assertFalse(SandLogic.trivial(s.tubes, s.height, seed + attempt))
         }

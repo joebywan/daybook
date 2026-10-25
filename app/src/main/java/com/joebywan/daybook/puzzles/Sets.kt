@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -285,7 +286,7 @@ object Sets : PuzzleType {
             "$difficulty wants $wanted sets from $size cards, which hold at most ${maxSets(size)}"
         }
         for (draw in 0..DRAWS) {
-            val board = Rng(if (draw == 0) seed else seed + draw).shuffled(deck).take(size)
+            val board = Rng(seed + draw).shuffled(deck).take(size)
             val sets = allSets(board)
             if (sets.size == wanted) return SetsState(board, sets.size, emptyList(), emptyList())
         }
@@ -308,30 +309,14 @@ object Sets : PuzzleType {
     internal fun lastResort(seed: Long, difficulty: Difficulty): SetsState {
         val (size, wanted) = shape(difficulty)
         val order = Rng(seed).shuffled(deck)
-        val ids = order.map { it.count * 27 + it.shape * 9 + it.shading * 3 + it.colour }
         val picked = IntArray(size)
-
-        // The trait-wise third card of a and b, as an id: each digit is whatever makes all-same or all-different.
-        fun third(a: Int, b: Int): Int {
-            var out = 0
-            var place = 27
-            var x = a
-            var y = b
-            repeat(4) {
-                out += ((6 - x / place - y / place) % 3) * place
-                x %= place
-                y %= place
-                place /= 3
-            }
-            return out
-        }
 
         fun search(depth: Int, from: Int, sets: Int): Boolean {
             if (depth == size) return sets == wanted
-            for (i in from until ids.size) {
+            for (i in from until order.size) {
                 var made = 0
                 for (p in 0 until depth) for (q in p + 1 until depth) {
-                    if (third(ids[picked[p]], ids[picked[q]]) == ids[i]) made++
+                    if (isSet(order[picked[p]], order[picked[q]], order[i])) made++
                 }
                 // `made` counts the pairs already chosen whose third card is this one: the sets it adds.
                 if (sets + made > wanted) continue
@@ -370,7 +355,7 @@ object Sets : PuzzleType {
      * selection without the wrong-answer flash.
      */
     fun tap(s: SetsState, index: Int): SetsState {
-        val stepped = s.copy(lastWrong = false, lastRepeat = false, lastPick = emptyList(), moves = s.moves + 1)
+        val stepped = (withoutSelection(s) as SetsState).copy(selected = s.selected, moves = s.moves + 1)
         if (index in s.selected) return stepped.copy(selected = s.selected - index)
 
         val picked = s.selected + index
@@ -580,9 +565,7 @@ object Sets : PuzzleType {
 
         Column(
             Modifier.fillMaxWidth().boardKeys(interactive) { key, _, repeat ->
-                val cols = boardColumns(s.cards.size)
-                val rows = (s.cards.size + cols - 1) / cols
-                movedCursor(cursor, key, rows, cols)?.let { cursor = it.coerceAtMost(s.cards.lastIndex); return@boardKeys true }
+                movedCursor(cursor, key, boardRows(s.cards.size), boardColumns(s.cards.size))?.let { cursor = it.coerceAtMost(s.cards.lastIndex); return@boardKeys true }
                 val at = cursor ?: return@boardKeys false
                 if (!setsPickKey(key)) return@boardKeys false
                 if (!repeat) {
@@ -617,8 +600,8 @@ object Sets : PuzzleType {
                 val columns = boardColumns(s.cards.size)
                 Column(
                     Modifier
-                        .highlightGrid(columns, (s.cards.size + columns - 1) / columns)
-                        .gridCursor(cursor.takeIf { interactive }, columns, (s.cards.size + columns - 1) / columns, scheme.primary, gapPx),
+                        .highlightGrid(columns, boardRows(s.cards.size))
+                        .gridCursor(cursor.takeIf { interactive }, columns, boardRows(s.cards.size), scheme.primary, gapPx),
                     verticalArrangement = Arrangement.spacedBy(CARD_GAP),
                 ) {
                     s.cards.chunked(columns).forEachIndexed { rowIndex, row ->
@@ -709,24 +692,13 @@ object Sets : PuzzleType {
                     when (look) {
                         // Inside the selection border rather than over it, so a glowing card that
                         // is also picked still shows both.
-                        Look.STRONG -> Modifier.drawWithContent {
+                        Look.STRONG, Look.SOFT -> Modifier.drawWithContent {
                             drawContent()
-                            val w = 4.dp.toPx()
+                            val strong = look == Look.STRONG
+                            val w = (if (strong) 4.dp else 1.5.dp).toPx()
                             val inset = 3.dp.toPx() + w / 2
                             drawRoundRect(
-                                glow.copy(alpha = pulse.value),
-                                topLeft = Offset(inset, inset),
-                                size = Size(size.width - inset * 2, size.height - inset * 2),
-                                cornerRadius = CornerRadius(9.dp.toPx()),
-                                style = Stroke(w),
-                            )
-                        }
-                        Look.SOFT -> Modifier.drawWithContent {
-                            drawContent()
-                            val w = 1.5.dp.toPx()
-                            val inset = 3.dp.toPx() + w / 2
-                            drawRoundRect(
-                                glow.copy(alpha = 0.5f),
+                                glow.copy(alpha = if (strong) pulse.value else 0.5f),
                                 topLeft = Offset(inset, inset),
                                 size = Size(size.width - inset * 2, size.height - inset * 2),
                                 cornerRadius = CornerRadius(9.dp.toPx()),
@@ -900,12 +872,5 @@ object Sets : PuzzleType {
                 drawPath(path, colour, style = Stroke(width = height * 0.09f))
             }
         }
-    }
-
-    private fun DrawScope.clipPath(path: Path, block: DrawScope.() -> Unit) {
-        drawContext.canvas.save()
-        drawContext.canvas.clipPath(path)
-        block()
-        drawContext.canvas.restore()
     }
 }

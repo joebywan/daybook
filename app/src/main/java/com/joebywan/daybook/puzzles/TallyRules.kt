@@ -365,20 +365,23 @@ internal object TallyLogic {
     // ---- generation -------------------------------------------------------------------------
 
     /**
-     * Side, the share of squares kept (per mille), and the deepest step a board must need: [SHORTCUTS]
+     * Side and the deepest step a board must need: [SHORTCUTS]
      * (the shortcuts may finish it), [WAYS] (they must not; the ways of single lines must) or
      * [WHAT_IF] (single lines must not; a what-if must be needed at least once).
      */
-    class Spec(val side: Int, val keepPermille: Int, val needs: Int)
+    class Spec(val side: Int, val needs: Int)
+
+    /** The share of squares kept, per mille, on every tier. */
+    private const val KEEP_PERMILLE = 580
 
     const val SHORTCUTS = 0
     const val WAYS = 1
     const val WHAT_IF = 2
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
-        Difficulty.STANDARD -> Spec(5, 580, SHORTCUTS)
-        Difficulty.HARD -> Spec(6, 580, WAYS)
-        Difficulty.EXPERT -> Spec(7, 580, WHAT_IF)
+        Difficulty.STANDARD -> Spec(5, SHORTCUTS)
+        Difficulty.HARD -> Spec(6, WAYS)
+        Difficulty.EXPERT -> Spec(7, WHAT_IF)
     }
 
     /** The deepest step [s] needs from a blank board ([SHORTCUTS], [WAYS] or [WHAT_IF]), or null when the ladder does not finish it. */
@@ -411,7 +414,7 @@ internal object TallyLogic {
     /** Draw number [a] for [seed], if it is accepted. Public to tests so they can count the redraws. */
     fun attempt(seed: Long, difficulty: Difficulty, a: Int): TallyState? {
         val spec = specFor(difficulty)
-        val s = draw(Rng(seed + a), spec.side, spec.keepPermille) ?: return null
+        val s = draw(Rng(seed + a), spec.side) ?: return null
         return s.takeIf { accepts(it, spec) }
     }
 
@@ -426,9 +429,9 @@ internal object TallyLogic {
      * Random digits 1..9 and a random keep mask, rejected when some line keeps nothing or removes
      * nothing (a line where every number stays, or none does, gives itself away).
      */
-    private fun draw(rng: Rng, n: Int, keepPermille: Int): TallyState? {
+    private fun draw(rng: Rng, n: Int): TallyState? {
         val digits = CharArray(n * n) { '0' + rng.nextInt(1, 9) }
-        val keep = CharArray(n * n) { if (rng.nextInt(1000) < keepPermille) '1' else '0' }
+        val keep = CharArray(n * n) { if (rng.nextInt(1000) < KEEP_PERMILLE) '1' else '0' }
         for (line in 0 until 2 * n) {
             val kept = lineCells(n, line).count { keep[it] == '1' }
             if (kept == 0 || kept == n) return null

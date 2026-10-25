@@ -190,16 +190,8 @@ internal object WordWheelTeacher {
     private fun clueFor(word: String) = "\u201C${WheelWords.clue(word)}\u201D (${word.length})"
 
     /** The wheel letters that spell [word], first unused copy of each letter, as highlight indices. */
-    fun letters(wheel: String, word: String): Set<Int> {
-        val used = BooleanArray(wheel.length)
-        val out = mutableSetOf<Int>()
-        for (c in word) {
-            val i = wheel.indices.firstOrNull { !used[it] && wheel[it] == c } ?: continue
-            used[i] = true
-            out += WHEEL + i
-        }
-        return out
-    }
+    fun letters(wheel: String, word: String): Set<Int> =
+        word.fold(emptyList<Int>()) { picked, c -> typeWheelLetter(wheel, picked, c) ?: picked }.map { WHEEL + it }.toSet()
 
     /** What a hints-alone walk of a board meets: steps by technique, and the most words that fit the slot a clue names. */
     class Walk(val pinned: Int, val clued: Int, val maxChoice: Int)

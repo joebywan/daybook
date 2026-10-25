@@ -153,7 +153,7 @@ internal object RegionsTeacher {
                 val inRegion = members.filter { it != x && cells[it] != 0 }
                 val regionDigits = inRegion.map { cells[it] }.sorted()
                 val touching = layout.around[x].filter { cells[it] != 0 && cells[it] <= members.size && cells[it] !in regionDigits }
-                val touchDigits = touching.map { cells[it] }.distinctSorted()
+                val touchDigits = touching.map { cells[it] }.sorted().distinct()
                 val why = when {
                     regionDigits.isNotEmpty() && touchDigits.isNotEmpty() ->
                         "Its region already has ${andList(regionDigits)}, and the squares touching it have ${andList(touchDigits)}, so only $d is left."
@@ -162,7 +162,7 @@ internal object RegionsTeacher {
                     else -> "The squares touching it have ${andList(touchDigits)}, so only $d is left."
                 }
                 PlacementStep(
-                    ONLY_DIGIT, x, d, setOf(x), (inRegion + touching.firstPerDigit(cells)).toSet(),
+                    ONLY_DIGIT, x, d, setOf(x), (inRegion + touching.sorted().distinctBy { cells[it] }).toSet(),
                     "Which digits can this square still take?", why,
                 )
             }
@@ -177,19 +177,5 @@ internal object RegionsTeacher {
                 )
             }
         }
-    }
-
-    private fun List<Int>.distinctSorted(): List<Int> {
-        val out = mutableListOf<Int>()
-        for (v in sorted()) if (v !in out) out += v
-        return out
-    }
-
-    /** One square per digit among [this], the first in index order. */
-    private fun List<Int>.firstPerDigit(cells: List<Int>): List<Int> {
-        val seen = mutableListOf<Int>()
-        val out = mutableListOf<Int>()
-        for (i in sorted()) if (cells[i] !in seen) { seen += cells[i]; out += i }
-        return out
     }
 }
