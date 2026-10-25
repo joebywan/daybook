@@ -16,7 +16,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.KeptCard
@@ -228,7 +227,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     /** Opens [level] (recording its pool size the first time) and plays [puzzleId], or its first unsolved board. */
     fun playLevel(level: Int, puzzleId: String?) {
         scope.launch {
-            val plan = Levels.plan(level, store.openLevel(level))
+            val plan = store.openLevel(level)
             val solved = levels.solved(level)
             val board = plan.firstOrNull { it.puzzleId == puzzleId }
                 ?: plan.firstOrNull { it.puzzleId !in solved && PuzzleRegistry.byId(it.puzzleId) != null }

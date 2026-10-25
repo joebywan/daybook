@@ -40,7 +40,7 @@ object ParityFingerprint {
     fun line(type: PuzzleType, date: String, tier: Difficulty, seed: Long): String =
         "${type.id} $date ${tier.name} seed=$seed ${body(type.generate(seed, tier))}"
 
-    /** A level's five boards at today's pool, one line each: `levels <id> L<n> <TIER> seed=<seed> <body>`. */
+    /** A level's five boards at today's pool and the latest deal, one line each: `levels <id> L<n> <TIER> seed=<seed> <body>`. */
     fun levelLines(level: Int): List<String> = Levels.plan(level).map { b ->
         "levels " + line(PuzzleRegistry.byId(b.puzzleId)!!, "L$level", b.difficulty, b.seed)
     }

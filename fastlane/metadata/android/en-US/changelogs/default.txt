@@ -3,4 +3,5 @@
 - Share it again later: Statistics keeps your best result and your last random board for every puzzle and tier.
 - Share today's progress from Statistics: every daily you've solved today, per difficulty.
 - Word Wheel's share says how many bonus words you found.
-- Tower's pips sit in a square beside each guess, so they no longer look tied to the peg above.
+- Tower's pips sit in a square beside each guess.
+- New to Levels? The first ones now deal the gentlest puzzles.
