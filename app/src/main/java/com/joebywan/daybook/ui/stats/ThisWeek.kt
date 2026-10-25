@@ -127,12 +127,12 @@ internal fun WeekStrip(all: List<Completion>, today: LocalDate, modifier: Modifi
 internal fun TrendLine(trend: ThisWeek.Trend, accent: Color) {
     val scheme = MaterialTheme.colorScheme
     Spacer(Modifier.height(10.dp))
-    Text(
-        "${trend.difficulty.label}: recent median ${formatClock(trend.recent)}",
-        style = MaterialTheme.typography.bodySmall,
-        color = scheme.onSurfaceVariant,
-        maxLines = 1,
-    )
+    // Two lines: half a phone's width has no room for the tier, the words and the time together.
+    Text("Your recent median", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 1)
+    Row(Modifier.fillMaxWidth()) {
+        Text(trend.difficulty.label, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        Text(formatClock(trend.recent), style = MaterialTheme.typography.bodySmall, color = scheme.onSurface)
+    }
     Spacer(Modifier.height(4.dp))
     Canvas(Modifier.fillMaxWidth().height(22.dp)) {
         val points = trend.medians.withIndex().filter { it.value != null }

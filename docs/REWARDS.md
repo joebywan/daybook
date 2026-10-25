@@ -215,8 +215,8 @@ until Home is entered again or the tier or mode changes, so it never appears or 
 The top card of the stats screen: a circle for today and each of the six days before (filled and numbered with the boards solved
 that day, today outlined), then "N days played, M daily boards solved.", or "A fresh week: today's boards are ready." when the
 week is empty; never a count of what is missing. Under each puzzle's tiers, once its most solved tier (the easier on a tie) has a
-solve in 3 of the last 8 weeks, a line through each week's median time (gaps bridged) and "Hard: recent median 2:31" (the latest
-week with a solve). No axis, no "faster" or "slower": the line is the player's own times and says nothing about them.
+solve in 3 of the last 8 weeks, "Your recent median" with that tier and time (the latest
+week with a solve), then a line through each week's median (gaps bridged). No axis, no "faster" or "slower": the line is the player's own times and says nothing about them.
 Decision: **only dated completions count.** A `Completion` holds the day of the board it solved and no time of play, so practice
 and level solves (`day == null`) cannot be put in a week; an archive board counts on its own day. Weeks end today, so none splits
 at a month or year. Pure and tested: `ThisWeek.days`, `summary`, `weeklyMedians`, `trend` (`ThisWeekTest`). Static: nothing animates.
