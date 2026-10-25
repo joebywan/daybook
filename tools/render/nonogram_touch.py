@@ -61,6 +61,9 @@ def find_layout(png, n):
             start = y
         prev = y
     bands.append((start, prev))
+    # the grid's heavy bottom line (u * 0.06 thick: ~7px on Standard's big squares) pokes past `bottom`;
+    # the pen row and toolbar are 46dp+ tall, so anything under 10dp is not one of them
+    bands = [b for b in bands if b[1] - b[0] > 10 * SCALE]
     pen, bar = bands[0], bands[-1]
     return dict(gx=left / SCALE, gy=top / SCALE, u=u / SCALE, pen_y=(pen[0] + pen[1]) / 2 / SCALE,
                 bar_y=(bar[0] + bar[1]) / 2 / SCALE, W=W / SCALE)
@@ -235,7 +238,7 @@ def main():
             br = R.launch(p, b)
             for (w, h) in a.size or [R.parse_size(s) for s in R.DEFAULT_SIZES]:
                 for scheme in a.scheme or R.SCHEMES:
-                    for tier in a.tier or ["hard", "expert"]:
+                    for tier in a.tier or list(N):
                         ctx = br.new_context(viewport={"width": w, "height": h}, device_scale_factor=SCALE,
                                              has_touch=True, color_scheme=scheme, locale="en-US",
                                              service_workers="block")
