@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
@@ -58,6 +57,9 @@ import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.drawWalls
+import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.gridCellAt
 
 /** One fill: the cell tapped, and the colour poured into the area it belongs to. */
 data class MosaicMove(val cell: Int, val colour: Int)
@@ -200,8 +202,6 @@ object Mosaic : PuzzleType {
         BoardHues.fill(215f, false),
     )
 
-    /** Digit ink for a fill: whichever of ink, white or black reads at 4.5:1. */
-    private fun glyphInk(fill: Color) = BoardHues.onFill(fill)
 
     /**
      * Search nodes before the solver gives up. Generation rejects a board it cannot prove inside
@@ -1011,35 +1011,7 @@ object Mosaic : PuzzleType {
                 )
             }
 
-            val edge = stepPx * 0.1f
-            for (cell in PREVIEW_CELLS.indices) {
-                val r = cell / PREVIEW_SIDE
-                val c = cell % PREVIEW_SIDE
-                if (c + 1 < PREVIEW_SIDE && PREVIEW_CELLS[cell] != PREVIEW_CELLS[cell + 1]) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset((c + 1) * stepPx, r * stepPx),
-                        Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                        strokeWidth = edge,
-                    )
-                }
-                if (r + 1 < PREVIEW_SIDE &&
-                    PREVIEW_CELLS[cell] != PREVIEW_CELLS[cell + PREVIEW_SIDE]
-                ) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset(c * stepPx, (r + 1) * stepPx),
-                        Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                        strokeWidth = edge,
-                    )
-                }
-            }
-            drawRect(
-                color = scheme.onBackground,
-                topLeft = Offset.Zero,
-                size = Size(stepPx * PREVIEW_SIDE, stepPx * PREVIEW_SIDE),
-                style = Stroke(width = edge),
-            )
+            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, stepPx, stepPx * 0.1f, scheme.onBackground) { PREVIEW_CELLS[it] }
         }
     }
 
@@ -1107,9 +1079,7 @@ object Mosaic : PuzzleType {
                         .pointerInput(s, live, selected) {
                             if (!live) return@pointerInput
                             detectTapGestures { offset: Offset ->
-                                val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
-                                val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
-                                val cell = r * s.width + c
+                                val cell = gridCellAt(offset, stepPx, s.width, s.height)
                                 cursor = cell
                                 // Silence rather than a wasted fill when the area is already this
                                 // colour: no state out means no move spent and no undo entry.
@@ -1138,7 +1108,7 @@ object Mosaic : PuzzleType {
                         val fill = palette[s.cells[cell]]
                         val layout = measurer.measure(
                             (s.cells[cell] + 1).toString(),
-                            TextStyle(color = glyphInk(fill), fontSize = (stepPx * 0.34f).toSp(), fontWeight = FontWeight.Bold),
+                            TextStyle(color = BoardHues.onFill(fill), fontSize = (stepPx * 0.34f).toSp(), fontWeight = FontWeight.Bold),
                         )
                         drawText(
                             layout,
@@ -1151,45 +1121,12 @@ object Mosaic : PuzzleType {
 
                     // Heavy strokes only where the colour changes, so each area reads as one
                     // outlined shape rather than a grid of tiles.
-                    val edge = stepPx * 0.1f
-                    for (cell in s.cells.indices) {
-                        val r = cell / s.width
-                        val c = cell % s.width
-                        if (c + 1 < s.width && s.cells[cell] != s.cells[cell + 1]) {
-                            drawLine(
-                                scheme.onBackground,
-                                Offset((c + 1) * stepPx, r * stepPx),
-                                Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                                strokeWidth = edge,
-                            )
-                        }
-                        if (r + 1 < s.height && s.cells[cell] != s.cells[cell + s.width]) {
-                            drawLine(
-                                scheme.onBackground,
-                                Offset(c * stepPx, (r + 1) * stepPx),
-                                Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                                strokeWidth = edge,
-                            )
-                        }
-                    }
-                    drawRect(
-                        color = scheme.onBackground,
-                        topLeft = Offset.Zero,
-                        size = Size(stepPx * s.width, stepPx * s.height),
-                        style = Stroke(width = edge),
-                    )
+                    drawWalls(s.width, s.height, stepPx, stepPx * 0.1f, scheme.onBackground) { s.cells[it] }
 
                     if (!highlight.isEmpty) {
                         // Everything the hint does not name steps back, so the glow is findable on
                         // a 160-cell board full of outlines.
-                        for (cell in s.cells.indices) {
-                            if (cell in highlight.strong || cell in highlight.soft) continue
-                            drawRect(
-                                color = scheme.background.copy(alpha = 0.62f),
-                                topLeft = Offset((cell % s.width) * stepPx, (cell / s.width) * stepPx),
-                                size = Size(stepPx, stepPx),
-                            )
-                        }
+                        drawHintDim(highlight, s.width, s.height, stepPx, scheme.background)
 
                         // A rim just inside the outline of a set of cells: one stroke per cell side
                         // that faces out of the set, inset by half its width so a neighbour's dimming
@@ -1258,7 +1195,7 @@ object Mosaic : PuzzleType {
                             (colour + 1).toString(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = glyphInk(palette[colour]),
+                            color = BoardHues.onFill(palette[colour]),
                         )
                     }
                 }
