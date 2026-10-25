@@ -1,10 +1,12 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.KeptCard
 import com.joebywan.daybook.data.KeptCards
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.ProgressStore
+import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.ui.play.Mark
 import com.joebywan.daybook.ui.play.ShareCard
 import com.joebywan.daybook.ui.play.ShareLine
@@ -29,6 +31,19 @@ class KeptCardsTest {
         KeptCard(puzzle, tier, best, seconds, hints, card("$seconds/$hints"))
 
     private fun List<KeptCard>.slot(best: Boolean) = single { it.puzzleId == "sudoku" && it.difficulty == Difficulty.STANDARD && it.best == best }
+
+    @Test
+    fun `the stats best time is the Best card's solve, not the fastest`() {
+        val solves = listOf(
+            Completion("tents", Difficulty.EXPERT, null, 67, 2),
+            Completion("tents", Difficulty.EXPERT, null, 146, 0),
+            Completion("tents", Difficulty.EXPERT, null, 200, 0),
+        )
+        assertEquals(146, Stats.bestTime(solves, "tents", Difficulty.EXPERT))
+        var all = emptyList<KeptCard>()
+        solves.forEach { all = KeptCards.keep(all, kept(true, it.seconds, it.hints, "tents", Difficulty.EXPERT)) }
+        assertEquals(146, all.single().seconds)
+    }
 
     @Test
     fun `a best is replaced only when beaten`() {

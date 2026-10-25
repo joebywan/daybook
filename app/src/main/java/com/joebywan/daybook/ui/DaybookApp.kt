@@ -366,6 +366,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             today = today,
             completions = completions,
             keptCards = store.keptCards.collectAsState(initial = emptyList()).value,
+            puzzles = puzzles,
             onAchievements = { route = Route.Achievements() },
             onBack = { route = Route.Home },
         )
