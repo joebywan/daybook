@@ -369,7 +369,7 @@ object WordWheel : PuzzleType {
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SideButton("↻", "Shuffle", playable) { shuffles++ }
+                    SideButton("↻", playable) { shuffles++ }
                     Canvas(
                         Modifier
                             .size(wheelSize)
@@ -420,7 +420,7 @@ object WordWheel : PuzzleType {
                     ) {
                         drawWheel(s, order, picked, finger, highlight, glow, pulse.value, hueA, dark, scheme.surface, measurer)
                     }
-                    SideButton("✕", "Clear", playable && picked.isNotEmpty()) { picked = emptyList() }
+                    SideButton("✕", playable && picked.isNotEmpty()) { picked = emptyList() }
                 }
 
                 Text(
@@ -436,9 +436,9 @@ object WordWheel : PuzzleType {
         }
     }
 
-    /** A round button beside the wheel: a glyph, with its name for a screen reader to come. */
+    /** A round button beside the wheel, showing a glyph. */
     @Composable
-    private fun SideButton(glyph: String, @Suppress("UNUSED_PARAMETER") name: String, enabled: Boolean, onClick: () -> Unit) {
+    private fun SideButton(glyph: String, enabled: Boolean, onClick: () -> Unit) {
         val scheme = MaterialTheme.colorScheme
         Box(
             Modifier

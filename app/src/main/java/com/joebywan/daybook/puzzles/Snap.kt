@@ -53,8 +53,6 @@ data class SnapState(
 
     override val solved: Boolean
         get() = Snap.obeysRules(this, path)
-
-    fun reset(): SnapState = copy(path = emptyList(), moves = moves + 1)
 }
 
 /**
