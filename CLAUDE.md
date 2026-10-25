@@ -571,6 +571,7 @@ pen row, walkthrough, motif). `id = "mines"` is hashed into every seed: never re
   press the other tool. Keys: arrows, Space/Enter reveal, F flag. A mine hit shakes and rings in `scheme.error` (the ring alone
   under reduced motion) with `PlayScreen`'s bump haptic. Colours: hue A tiles the hidden squares, hue B inks flags; numbers 1-6
   each a hue (Blue, Teal, Violet, Amber, Rose, Gold) and always a digit. Share card: Pointers' hearts, a red square after hints.
+
 ## Pipes
 
 Rotate tiles until every opening meets another and the pipework is one network. `puzzles/Pipes.kt` (state, generator, board,
