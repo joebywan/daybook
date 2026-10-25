@@ -3,7 +3,6 @@ package com.joebywan.daybook.ui.teach
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.mutableFloatStateOf
@@ -56,17 +54,6 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.LocalReducedMotion
 import kotlinx.coroutines.delay
-
-/**
- * Height of the walkthrough's fixed slot under its board (the play screen has no slot: its hint is
- * a popover, [HintPopover]). Sized for the longest hint text:
- *
- * Five lines of body text plus a row of buttons: at 390dp that holds about 210 characters, which
- * covers every explanation the teachers produce bar Pipes' and Atoms' longest (measured, up to
- * 230). Those few scroll inside the slot rather than being cut off, with a fade to say there is
- * more. Four lines (132dp) clipped at about 145 characters, and half the teachers run past that.
- */
-val HintSlotHeight = 156.dp
 
 /** How long "That's it" stays before the hint clears itself. */
 private const val CONFIRM_MS = 1400L
@@ -108,7 +95,7 @@ class HintSession internal constructor(restoring: HintStage? = null) {
     }
 
     fun explain() {
-        if (deduction != null) stage = HintStage.EXPLAIN
+        stage = HintStage.EXPLAIN
     }
 
     fun confirm() {
@@ -165,17 +152,14 @@ class HintSession internal constructor(restoring: HintStage? = null) {
                 onOpened(next)
             }
             stage == HintStage.NUDGE -> explain()
-            else -> showMe(state, onApply)
+            // "Show me": the move, made on the board as it is now. Clears at once, with no "that's it".
+            else -> {
+                clear()
+                val next = d.apply(state)
+                if (next !== state) onApply(next)
+            }
         }
         return true
-    }
-
-    /** "Show me": the move, made on the board as it is now. Clears at once — no "that's it". */
-    fun showMe(state: PuzzleState, onApply: (PuzzleState) -> Unit) {
-        val d = deduction ?: return
-        clear()
-        val next = d.apply(state)
-        if (next !== state) onApply(next)
     }
 
     /** Puts back the hint a rotation interrupted, at the stage it had reached. */
@@ -391,7 +375,7 @@ fun HintPopover(
     // while the popover is at full size, so shrinking it cannot feed back into the choice.
     var natural by remember(session.deduction, session.stage) { mutableFloatStateOf(0f) }
     val h = natural
-    val hl = highlight?.let { Rect(it.left - pad, it.top - pad, it.right + pad, it.bottom + pad) }
+    val hl = highlight?.inflate(pad)
     // Everything below is in window coordinates; the overlay's own origin is taken off at the end.
     val minTop = safeTop + gap
     val maxBottom = toolbarTop - gap
