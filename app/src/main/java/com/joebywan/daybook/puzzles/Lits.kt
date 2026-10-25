@@ -193,18 +193,11 @@ object Lits : PuzzleType {
         val n = width * height
         if (region.size != n || shaded.size != n || n == 0) return false
 
-        // Every region needs its own four squares: a region left blank is not "not yet wrong".
-        val quads = HashMap<Int, MutableList<Int>>()
-        for (cell in 0 until n) if (shaded[cell]) quads.getOrPut(region[cell]) { mutableListOf() } += cell
-        if (quads.size != region.toHashSet().size) return false
-
-        val letters = arrayOfNulls<Piece>(n)
-        for (quad in quads.values) {
-            if (quad.size != 4) return false
-            if (!isConnected(quad, width, height)) return false
-            val piece = classify(quad, width) ?: return false   // null is the banned 2x2 block
-            quad.forEach { letters[it] = piece }
-        }
+        // Every region needs its own four squares (a region left blank is not "not yet wrong"), in one
+        // legal tetromino: exactly the squares [letters] names.
+        if ((0 until n).filter { shaded[it] }.map { region[it] }.toSet().size != region.toSet().size) return false
+        val letters = letters(width, height, region, shaded)
+        if ((0 until n).any { shaded[it] && letters[it] == null }) return false
 
         for (r in 0 until height - 1) for (c in 0 until width - 1) {
             val i = r * width + c
@@ -293,52 +286,7 @@ object Lits : PuzzleType {
         val n = width * height
         if (region.size != n || shaded.size != n) return emptySet()
 
-        val letters = letters(width, height, region, shaded)
-        val members = HashMap<Int, MutableList<Int>>()
-        for (cell in 0 until n) members.getOrPut(region[cell]) { mutableListOf() } += cell
-
-        /** Would this cover, standing on the shading already down, fill a 2x2 anywhere? */
-        fun fillsBlock(quad: List<Int>): Boolean = quad.any { cell ->
-            val r = cell / width
-            val c = cell % width
-            (-1..0).any { dr ->
-                (-1..0).any { dc ->
-                    val rr = r + dr
-                    val cc = c + dc
-                    rr >= 0 && cc >= 0 && rr + 1 < height && cc + 1 < width &&
-                        listOf(
-                            rr * width + cc, rr * width + cc + 1,
-                            (rr + 1) * width + cc, (rr + 1) * width + cc + 1,
-                        ).all { it in quad || shaded[it] }
-                }
-            }
-        }
-
-        /** Would this cover sit its letter against a region that has already settled on it? */
-        fun clashes(quad: List<Int>, piece: Piece): Boolean = quad.any { cell ->
-            neighbours(cell, width, height).any { next ->
-                next !in quad && shaded[next] && letters[next] == piece
-            }
-        }
-
-        val covers = HashMap<Int, List<kotlin.Pair<List<Int>, Piece>>>()
-        val out = mutableSetOf<Int>()
-        for (cell in 0 until n) {
-            if (shaded[cell]) continue
-            val id = region[cell]
-            val cells = members.getValue(id)
-            val forced = cells.filter { shaded[it] } + cell
-            if (forced.size > 4) {
-                out += cell
-                continue
-            }
-            val fits = covers.getOrPut(id) { tetrominoes(cells, width, height) }
-                .filter { it.first.containsAll(forced) }
-            if (fits.isEmpty() || fits.all { (quad, piece) -> fillsBlock(quad) || clashes(quad, piece) }) {
-                out += cell
-            }
-        }
-        return out
+        return LitsTeacher.impossible(width, height, region, shaded)
     }
 
     // ---- generation ---------------------------------------------------------------------------
