@@ -134,6 +134,19 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
 - Render it: `render.py --finish N [--togo]` (docs/WEB_BUILD.md); with `-p ID`, `--query taught=TECHNIQUE` shows a hint
   solve's technique line and `--query needed` a no-hint one (of the seed-1 board).
 
+## Techniques (`ui/stats/TechniquesScreen.kt`, `TechniquesMet` in `data/ProgressStore.kt`)
+
+- A record, not practice: per puzzle that teaches, its praised techniques (`praisedTechniquesOf`, in `TechniqueNames.kt`'s
+  order), with a tick on each a hint has explained. The rest are plain, never greyed, locked or counted "of" a total; the
+  owner declined a per-technique practice mode, so nothing here starts a drill. Pointers and Snap (no teacher) and Target
+  (its steps are not skills) have no list.
+- Opened from a row on Statistics under Achievements ("N shown" once any is), back returns to Statistics; route `techniques`.
+- Stored as its own key set, `techniques_met` (`"puzzleId|technique"`), written when a hint opens a deduction (mistakes
+  left out), so a hint on an unfinished board counts too. `SavedGame.taught` is cleared with the save on a solve, so the
+  page starts from nothing on the build that added it and says so ("Techniques you've been shown in hints"). No serialised
+  class changed; the web backup carries the key because it copies every entry of the store, and an older backup without
+  it imports as nothing met.
+
 ## Calendar (`ui/stats/StreakCalendar.kt`)
 
 A month grid card on the stats screen, under the tiles: filled circle = day played, ring = a missed day the

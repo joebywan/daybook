@@ -36,7 +36,9 @@ sounded. Do not turn it off.
 All puzzles teach (Snap and Pointers through their walkthrough only; Pointers has no undo either). Shared code: `core/Teaching.kt`, `ui/teach/Hints.kt`,
 `ui/tutorial/TutorialRunner.kt`, `ui/play/PlayScreen.kt`. How to write a teacher: `docs/PUZZLE_STANDARDS.md`
 section 7. The settled play-screen UX (popover, finish frame, solve sound) and the measured fallback table:
-`docs/TEACHING.md`. Keep that table current when a teacher changes. What must not be broken:
+`docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
+praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
+never a drill): `docs/REWARDS.md` (Techniques). What must not be broken:
 
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the panel confirms
   when `isReached` sees it. Only an explicit "Show me" applies it. **One hint is counted per deduction opened.**
