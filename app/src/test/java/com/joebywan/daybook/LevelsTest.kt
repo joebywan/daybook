@@ -127,10 +127,12 @@ class LevelsTest {
     @Test
     fun `every puzzle appears in any ten levels in a row`() {
         for (deal in deals) {
-            val plans = (1..510).map { ids(Levels.plan(it, Levels.POOL.size, deal)) }
+            // At the pool of 25 (every level opened before Pearls joined), ten levels hold every puzzle.
+            val plans = (1..510).map { ids(Levels.plan(it, GOLDEN_POOL, deal)) }
+            val first = pinnedPool.take(GOLDEN_POOL).toSet()
             for (start in 0..500) {
                 val seen = plans.subList(start, start + 10).flatten().toSet()
-                assertEquals("levels ${start + 1}-${start + 10} miss ${pinnedPool - seen}", pinnedPool.toSet(), seen)
+                assertEquals("levels ${start + 1}-${start + 10} miss ${first - seen}", first, seen)
             }
             // A bigger pool stretches the window to about 2 * size / 5 levels (see Levels).
             for (size in listOf(26, 30, 40, 60)) {

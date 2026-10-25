@@ -229,7 +229,7 @@ class PearlsTeachingTest {
                 val e = (step.lines + step.crosses).single()
                 val opposite = view.copyOf().also { it[e] = if (e in step.lines) PearlsLogic.CROSS else PearlsLogic.LINE }
                 assertNotNull(PearlsLogic.propagate(g, s.pearls, opposite, loop = true).contradiction)
-                assertTrue(step.explanation, step.explanation.startsWith("If "))
+                assertTrue(step.explanation, step.explanation.startsWith("With "))
             }
         }
         assertTrue("barely saw any: $seen", seen > 10)

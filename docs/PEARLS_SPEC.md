@@ -95,5 +95,15 @@ rule is the solve.
 
 ## Measured
 
-Filled in by the PR that builds it (draws per board, generation times on the JVM, Chromium and WebKit, the teaching
-coverage).
+- **Why the loop is grown greedily.** A loop grown at random, with every pearl it allows, had two answers on 37 of 39
+  six-by-six draws: pearl-free stretches (turns beside turns, long straights) and empty squares let a second loop through.
+  Growing the face region by the face whose loop allows the most pearls (95% of steps; any face otherwise) made most draws
+  unique before any pearl is taken back.
+- **Draws per board** over a year of daily seeds (`FallbackTest`): mean 2.5 / 4.3 / 5.1, most 15 / 20 / 31, of
+  `ATTEMPTS` = 200. No day reaches `lastResort`.
+- **Generation on a desktop JVM** (a year per tier, `PearlsRulesTest`): median / p95 / max 0.4 / 1.3 / 2.6 ms, 3.4 / 11.7 /
+  19.4 ms, 25 / 87 / 419 ms. Browser numbers: see the PR.
+- **Pearls per board**: about 8 / 13 / 20.
+- **Teaching** (200 boards a tier, by hints alone): 20.7 / 41.1 / 69.9 steps a board; small loop 0 / 2.1 / 2.7 and
+  what-if 0 / 0 / 3.7 a board. No fallback exists. A hint takes well under a millisecond median on Expert (max 0.6 ms).
+- **The independent oracle** (`PearlsOracle`) agrees on 60 / 40 / 25 sampled boards, slowest 16 ms / 53 ms / 2.1 s.

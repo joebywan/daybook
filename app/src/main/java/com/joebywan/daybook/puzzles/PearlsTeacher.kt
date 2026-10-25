@@ -245,20 +245,20 @@ internal object PearlsTeacher {
             PearlsLogic.C_THREE -> "${squareName(n, c)} would need three lines"
             PearlsLogic.C_DEAD_LINE -> "the line would run into a dead end at ${squareName(n, c)}"
             PearlsLogic.C_PEARL_SHUT -> "the pearl at ${squareName(n, c)} would be left without two ways in"
-            PearlsLogic.C_BLACK -> "the black pearl at ${squareName(n, c)} could not turn with a straight arm each way"
-            PearlsLogic.C_WHITE -> "the white pearl at ${squareName(n, c)} could not go straight with a turn beside it"
+            PearlsLogic.C_BLACK -> "the black pearl at ${squareName(n, c)} could not keep its rule"
+            PearlsLogic.C_WHITE -> "the white pearl at ${squareName(n, c)} could not keep its rule"
             else -> "the line would close a loop that leaves something out"
         }
-        val rounds = if (w.rounds <= 1) "" else ", following the rules ${w.rounds} steps on,"
-        val suppose = if (line) "If there were a line $where" else "If the loop did not pass $where"
+        val rounds = if (w.rounds <= 1) "" else " (${w.rounds} steps on)"
+        val suppose = if (line) "With a line $where" else "With no line $where"
         return Step(
             WHAT_IF,
             lines = if (line) emptyList() else listOf(e),
             crosses = if (line) listOf(e) else emptyList(),
             focus = setOf(a, b, edgeIndex(n, e)),
             cited = setOf(a, b, c),
-            nudge = "Suppose the loop ${if (line) "ran" else "did not run"} $where.",
-            explanation = "$suppose$rounds $broke. So ${if (line) "it doesn't: cross it" else "it does: draw it"}.",
+            nudge = "Suppose ${if (line) "a line" else "no line"} ran $where.",
+            explanation = "$suppose$rounds, $broke. So ${if (line) "there is none: cross it" else "there is one: draw it"}.",
         )
     }
 

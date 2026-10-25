@@ -669,7 +669,7 @@ internal object PearlsLogic {
     }
 
     /** Draws tried per seed before the generator gives up and falls back. */
-    const val ATTEMPTS = 60
+    const val ATTEMPTS = 200
 
     /**
      * A board for [seed] that its tier's rungs finish, needing exactly the deepest, and the count proves,
