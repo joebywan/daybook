@@ -133,6 +133,12 @@ internal object WhosWhoLogic {
     /** How many steps a what-if may follow before the contradiction: the sentence has to carry them. */
     const val MAX_LINKS = 3
 
+    /**
+     * The teacher's longer what-if, for a board the player has marked their own way: the steps a what-if follows are
+     * taken first come, so a board with more marked can lead a short chain astray. Never used by the generator.
+     */
+    const val LONG_LINKS = 12
+
     // ---- the visible board ----------------------------------------------------------------------
 
     /** What the reasoning may see: the size, the columns and the clues. No answer. */
@@ -476,13 +482,13 @@ internal object WhosWhoLogic {
      * [WHAT_IF]: over every slot still open (people, columns, slots in order), suppose a tick there and follow the
      * simpler steps; the shortest road to a contradiction, first in order on a tie, crosses that slot.
      */
-    fun whatIfStep(p: Puzzle, g: Grid): Step? {
+    fun whatIfStep(p: Puzzle, g: Grid, maxLinks: Int = MAX_LINKS): Step? {
         var best: Step? = null
         for (c in 0 until p.n * p.columns) {
             if (g.placed[c] >= 0) continue
             for (s in 0 until p.n) {
                 if (g.cand[c] shr s and 1 == 0) continue
-                val limit = best?.chain?.size?.minus(1) ?: MAX_LINKS
+                val limit = best?.chain?.size?.minus(1) ?: maxLinks
                 val found = suppose(p, g, c * p.n + s, limit) ?: continue
                 best = found
                 if (found.chain.isEmpty()) return found
@@ -511,8 +517,8 @@ internal object WhosWhoLogic {
 
     /** [g] taken by the ladder up to [level] as far as it goes. False when it reaches a contradiction. */
     fun settle(p: Puzzle, g: Grid, level: Int): Boolean {
+        // Every step is sound, so a grid of a board with an answer never breaks on the way; checked once, at the end.
         while (!g.finished) {
-            if (broken(p, g) != null) return false
             val step = deduce(p, g, level) ?: return true
             apply(g, step)
         }
@@ -652,7 +658,7 @@ internal object WhosWhoLogic {
         val answer = groups.map { rng.shuffled((0 until n).toList()) }
         val pool = cluePool(n, groups, answer, spec).map { rng.shuffled(it) }.map { ArrayDeque(it) }
 
-        // Add clues until one answer is proved and the tier's ladder finishes it.
+        // Add clues until the tier's ladder finishes it: every step being sound, that leaves one answer (the count proves it below).
         val chosen = ArrayList<WhoClue>()
         while (true) {
             val kinds = pool.indices.filter { pool[it].isNotEmpty() && spec.weights[it] > 0 }
@@ -661,19 +667,27 @@ internal object WhosWhoLogic {
             val kind = kinds.first { r -= spec.weights[it]; r < 0 }
             chosen.add(pool[kind].removeFirst())
             val puzzle = Puzzle(n, groups.size, chosen)
-            if (count(puzzle) is Verdict.ExactlyOne && finishes(puzzle, spec.needs)) break
+            if (finishes(puzzle, spec.needs)) break
         }
+        // The order they are shown in, which the ladder reads in (its first step wins), so it is fixed before the checks.
+        val shown = rng.shuffled(chosen.toList()).toMutableList()
         // Take back every clue the rest already implies.
-        for (clue in rng.shuffled(chosen.toList())) {
-            val without = chosen.filter { it !== clue }
-            val puzzle = Puzzle(n, groups.size, without)
-            if (count(puzzle) is Verdict.ExactlyOne && finishes(puzzle, spec.needs)) chosen.remove(clue)
-        }
-        val puzzle = Puzzle(n, groups.size, chosen.toList())
+        // Again until none goes: the what-if is not monotone, so a clue needed by a larger set can be spare in a smaller one.
+        do {
+            var removed = false
+            for (clue in rng.shuffled(shown.toList())) {
+                val puzzle = Puzzle(n, groups.size, shown.filter { it != clue })
+                if (finishes(puzzle, spec.needs)) {
+                    shown.remove(clue)
+                    removed = true
+                }
+            }
+        } while (removed)
+        val puzzle = Puzzle(n, groups.size, shown.toList())
         if (depth(puzzle) != spec.needs) return null
         val proof = count(puzzle) as? Verdict.ExactlyOne ?: return null
         if (proof.answer != answer) return null
-        return WhosWhoState(names, groups, items, rng.shuffled(chosen.toList()), answer)
+        return WhosWhoState(names, groups, items, shown.toList(), answer)
     }
 
     /**

@@ -18,6 +18,8 @@ import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.TallyLogic
+import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Target
@@ -240,6 +242,40 @@ class FallbackTest {
             assertTrue("${difficulty.name} came close to the allowance: $most", most < TallyLogic.ATTEMPTS / 2)
         }
         assertTrue("tally shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
+     * [WhosWhoLogic.generateVerified] returns a board only when the count proved one answer, every clue is needed and
+     * the tier's ladder finishes it at exactly the tier's depth. Also measures the redraws and the time (printed).
+     */
+    @Test
+    fun `whoswho proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            var total = 0
+            var most = 0
+            val times = ArrayList<Double>()
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, WhosWho.id, difficulty)
+                val t0 = System.nanoTime()
+                val proved = WhosWho.generateVerified(seed, difficulty)
+                times += (System.nanoTime() - t0) / 1e6
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("whoswho $date/${difficulty.name}", proved, WhosWho.generate(seed, difficulty))
+                val used = 1 + (0 until WhosWhoLogic.ATTEMPTS).first { WhosWhoLogic.attempt(seed, difficulty, it) != null }
+                total += used
+                most = maxOf(most, used)
+            }
+            times.sort()
+            println(
+                "whoswho ${difficulty.name}: draws per board mean ${"%.2f".format(total / 365.0)}, most $most of ${WhosWhoLogic.ATTEMPTS}; " +
+                    "ms median ${"%.1f".format(times[182])} p95 ${"%.1f".format(times[346])} max ${"%.1f".format(times.last())}",
+            )
+            assertTrue("${difficulty.name} came close to the allowance: $most", most < WhosWhoLogic.ATTEMPTS / 4)
+        }
+        assertTrue("whoswho shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /**

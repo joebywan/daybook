@@ -162,8 +162,8 @@ private val NOTES: Map<String, List<String>> = mapOf(
     ),
     "whoswho" to listOf(
         "A tick rules that item out for everyone else in its column.",
-        "A clue between two things says nothing until one of them is placed.",
-        "Somewhere left of rules the last house out for the one on the left.",
+        "If the baker has the cat, whoever can't own it isn't the baker.",
+        "Left of means the last house can't be the one on the left.",
         "Strike a clue once it can tell you nothing more.",
     ),
 )

@@ -104,7 +104,7 @@ internal object WhosWhoTeacher {
         val puzzle = WhosWhoLogic.puzzleOf(s)
         val grid = WhosWhoLogic.gridOf(s.n, s.columns, marks)
         if (WhosWhoLogic.broken(puzzle, grid) != null) return null
-        val step = WhosWhoLogic.deduce(puzzle, grid) ?: return null
+        val step = WhosWhoLogic.deduce(puzzle, grid) ?: WhosWhoLogic.whatIfStep(puzzle, grid, WhosWhoLogic.LONG_LINKS) ?: return null
         return lesson(s, grid, step)
     }
 
@@ -244,7 +244,10 @@ internal object WhosWhoTeacher {
             else -> {
                 val supposed = step.supposed
                 val who = person(s, supposed)
-                val chain = step.chain.map { link(s, it) }
+                val chain = if (step.chain.size <= WhosWhoLogic.MAX_LINKS) step.chain.map { link(s, it) } else {
+                    val clues = step.chain.mapNotNull { if (it.clue >= 0) it.clue + 1 else null }.distinct().sorted()
+                    listOf("following clues " + list(clues.map { "$it" }) + " and what they leave")
+                }
                 val end = when (val b = step.broke) {
                     is Break.EmptyCell -> "${s.names[b.person]} has no ${WhosWhoWords.NOUNS[s.groups[b.column]]} left"
                     is Break.NoHolder -> "nobody can ${WhosWhoLogic.base(s, (b.column + 1) * n + b.slot)}"

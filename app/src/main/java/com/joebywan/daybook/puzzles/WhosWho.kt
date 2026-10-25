@@ -3,7 +3,7 @@ package com.joebywan.daybook.puzzles
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -43,7 +45,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -86,7 +87,7 @@ object WhosWho : PuzzleType {
     override val id = "whoswho"
     override val displayName = "Who's Who"
     override val tagline = "Match everyone to everything from the clues"
-    override val accent = 0xFFB0246F
+    override val accent = 0xFF65E7E7
 
     override val rules = listOf(
         "Each row is a person and each column a category: their house, and one or two more. No two people share anything.",
@@ -296,7 +297,7 @@ object WhosWho : PuzzleType {
         val dark: Boolean,
         val highlight: BoardHighlight,
         val glow: Color,
-        val pulse: Float,
+        val pulse: State<Float>,
     ) {
         val lit get() = !highlight.isEmpty
         fun named(i: Int) = i in highlight.strong || i in highlight.soft
@@ -313,7 +314,7 @@ object WhosWho : PuzzleType {
         val highlight = LocalBoardHighlight.current
         val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         val (hueA, hueB) = BoardHues.pair(s.answer.hashCode())
-        val look = Look(scheme, hueA, hueB, BoardHues.isDark(scheme), highlight, if (highlight.warning) scheme.error else scheme.onBackground, pulse.value)
+        val look = Look(scheme, hueA, hueB, BoardHues.isDark(scheme), highlight, if (highlight.warning) scheme.error else scheme.onBackground, pulse)
 
         val grid = WhosWhoLogic.gridOf(s.n, s.columns, s.marks)
         val cellsNow = badCells(s, grid)
@@ -344,27 +345,27 @@ object WhosWho : PuzzleType {
         ) {
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.TopCenter) {
                 val wide = maxWidth > maxHeight * 1.3f && maxWidth >= 520.dp
-                val onCell = { c: Int -> if (interactive) selected = c }
+                val onCell = { c: Int -> selected = c }
                 val onPad = { slot: Int ->
                     val c = selected
-                    if (interactive && c != null) onState(s.mark(c / s.columns, c % s.columns, slot, tick))
+                    if (c != null) onState(s.mark(c / s.columns, c % s.columns, slot, tick))
                 }
-                val onClue = { k: Int -> if (interactive) onState(s.strike(k)) }
+                val onClue = { k: Int -> onState(s.strike(k)) }
                 if (wide) {
                     val rowH = ((maxHeight - HEADER - PAD - 12.dp) / s.n).coerceIn(30.dp, 52.dp)
                     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Column(Modifier.weight(0.55f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
-                            Table(s, grid, rowH, selected, badCell, look, feel, onCell)
+                            Table(s, grid, rowH, selected, badCell, look, feel, interactive, onCell)
                             Spacer(Modifier.height(12.dp))
                             Pad(s, grid, selected, tick, interactive, look, { tick = it }, onPad)
                         }
-                        Clues(s, badClue, look, onClue, Modifier.weight(0.45f).fillMaxHeight())
+                        Clues(s, badClue, look, interactive, onClue, Modifier.weight(0.45f).fillMaxHeight())
                     }
                 } else {
                     val rowH = ((maxHeight - HEADER - PAD - MIN_CLUES - 12.dp) / s.n).coerceIn(30.dp, 48.dp)
                     Column(Modifier.fillMaxSize().widthIn(max = 560.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Table(s, grid, rowH, selected, badCell, look, feel, onCell)
-                        Clues(s, badClue, look, onClue, Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp))
+                        Table(s, grid, rowH, selected, badCell, look, feel, interactive, onCell)
+                        Clues(s, badClue, look, interactive, onClue, Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp))
                         Pad(s, grid, selected, tick, interactive, look, { tick = it }, onPad)
                     }
                 }
@@ -384,6 +385,7 @@ object WhosWho : PuzzleType {
         bad: BooleanArray,
         look: Look,
         feel: MoveFeel,
+        interactive: Boolean,
         onCell: (Int) -> Unit,
     ) {
         val scheme = look.scheme
@@ -418,7 +420,7 @@ object WhosWho : PuzzleType {
                     }
                     for (column in 0 until s.columns) {
                         val c = p * s.columns + column
-                        Cell(s, grid, c, selected == c, bad[c], look, feel, Modifier.weight(weights[column]).fillMaxHeight(), onCell)
+                        Cell(s, grid, c, selected == c, bad[c], look, feel, interactive, Modifier.weight(weights[column]).fillMaxHeight(), onCell)
                     }
                 }
             }
@@ -434,6 +436,7 @@ object WhosWho : PuzzleType {
         isBad: Boolean,
         look: Look,
         feel: MoveFeel,
+        interactive: Boolean,
         modifier: Modifier,
         onCell: (Int) -> Unit,
     ) {
@@ -455,15 +458,9 @@ object WhosWho : PuzzleType {
                 )
                 .border(0.5.dp, scheme.outline)
                 .then(if (isSelected) Modifier.border(2.dp, accent) else Modifier)
-                .then(
-                    when {
-                        look.lit && c in look.highlight.strong -> Modifier.border(3.dp, look.glow.copy(alpha = look.pulse))
-                        look.lit && c in look.highlight.soft -> Modifier.border(2.dp, look.glow.copy(alpha = 0.5f))
-                        else -> Modifier
-                    },
-                )
+                .glow(look, c, 0.dp)
                 .moveFeel(feel, c, accent)
-                .pointerInput(c) { detectTapGestures { onCell(c) } }
+                .clickable(enabled = interactive) { onCell(c) }
                 .alpha(if (dim) 0.45f else 1f),
             contentAlignment = Alignment.Center,
         ) {
@@ -492,7 +489,7 @@ object WhosWho : PuzzleType {
     }
 
     @Composable
-    private fun Clues(s: WhosWhoState, bad: BooleanArray, look: Look, onClue: (Int) -> Unit, modifier: Modifier) {
+    private fun Clues(s: WhosWhoState, bad: BooleanArray, look: Look, interactive: Boolean, onClue: (Int) -> Unit, modifier: Modifier) {
         val scheme = look.scheme
         val list = rememberLazyListState()
         val hinted = s.clues.indices.firstOrNull { look.named(WhosWhoTeacher.CLUE_BASE + it) }
@@ -509,15 +506,9 @@ object WhosWho : PuzzleType {
                         .highlightAnchor(index)
                         .padding(vertical = 1.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .then(
-                            when {
-                                strong -> Modifier.border(2.5.dp, look.glow.copy(alpha = look.pulse), RoundedCornerShape(8.dp))
-                                soft -> Modifier.border(1.5.dp, look.glow.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                else -> Modifier
-                            },
-                        )
+                        .glow(look, index, 8.dp)
                         .background(if (bad[k]) scheme.error.copy(alpha = 0.14f) else Color.Transparent)
-                        .pointerInput(k) { detectTapGestures { onClue(k) } }
+                        .clickable(enabled = interactive) { onClue(k) }
                         .padding(horizontal = 6.dp, vertical = 3.dp)
                         .alpha(if (look.lit && !strong && !soft) 0.45f else 1f),
                 ) {
@@ -571,7 +562,7 @@ object WhosWho : PuzzleType {
                         .clip(RoundedCornerShape(12.dp))
                         .background(if (chosen) accent.copy(alpha = 0.22f) else scheme.surface)
                         .border(if (chosen) 2.dp else 1.dp, if (chosen) accent else scheme.outline, RoundedCornerShape(12.dp))
-                        .pointerInput(pen, interactive) { if (interactive) detectTapGestures { onPen(pen) } },
+                        .clickable(enabled = interactive) { onPen(pen) },
                     contentAlignment = Alignment.Center,
                 ) {
                     Canvas(Modifier.size(18.dp)) { if (pen) drawTick(scheme.onSurface, 1f) else drawCross(scheme.onSurface, 1f) }
@@ -598,7 +589,7 @@ object WhosWho : PuzzleType {
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (mark == WhosWhoLogic.TICK) BoardHues.fill(look.hueB, look.dark) else scheme.surface)
                             .border(1.dp, scheme.outline, RoundedCornerShape(10.dp))
-                            .pointerInput(selected, slot, interactive) { if (interactive) detectTapGestures { onSlot(slot) } },
+                            .clickable(enabled = interactive) { onSlot(slot) },
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -618,6 +609,24 @@ object WhosWho : PuzzleType {
     }
 
     /** A tick in the square of side [w] at [at]. */
+    /** The hint's ring on a highlighted cell or clue, read in the draw phase so the pulse does not recompose the board. */
+    private fun Modifier.glow(look: Look, index: Int, corner: Dp): Modifier {
+        if (!look.lit) return this
+        val strong = index in look.highlight.strong
+        if (!strong && index !in look.highlight.soft) return this
+        return drawWithContent {
+            drawContent()
+            val w = (if (strong) 3.dp else 2.dp).toPx()
+            drawRoundRect(
+                look.glow.copy(alpha = if (strong) look.pulse.value else 0.5f),
+                Offset(w / 2, w / 2),
+                Size(size.width - w, size.height - w),
+                CornerRadius(corner.toPx()),
+                style = Stroke(w),
+            )
+        }
+    }
+
     private fun DrawScope.drawTick(colour: Color, alpha: Float, at: Offset = Offset.Zero, w: Float = size.width) {
         val stroke = maxOf(w * 0.16f, 1.5f)
         val p = { x: Float, y: Float -> Offset(at.x + w * x, at.y + w * y) }

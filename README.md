@@ -83,6 +83,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
 | Pointers | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
+| Who's Who | Logic grid | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house" |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -158,6 +159,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   values, counting, a short what-if) finishes it, then loosened while it still does. A board ships only if it needs its tier's
   deepest step, and an exhaustive search proves one answer; an independent solver that fills squares in reading order with
   no pruning confirms it in the tests.
+- **Who's Who** — a random answer, then clues true of it drawn at random and added until an exhaustive count finds one
+  answer and the hint ladder (a clue naming someone, the one item left, two things a clue ties together, the houses each
+  side allows, and on Expert a short what-if) finishes it; then every clue the rest already implies is taken back. A board
+  ships only if it needs its tier's deepest step; an independent solver that tries every combination confirms it in the tests.
 - **Tower and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by
