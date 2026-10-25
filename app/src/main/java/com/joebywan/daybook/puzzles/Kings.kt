@@ -81,21 +81,7 @@ data class KingsState(
     override val solved: Boolean get() = Kings.isSolved(size, region, marks)
 
     /** Kings that break a rule, for live feedback. */
-    fun conflicts(): Set<Int> {
-        val kings = marks.indices.filter { marks[it] == Mark.KING }
-        val bad = mutableSetOf<Int>()
-        for (a in kings) for (b in kings) {
-            if (a >= b) continue
-            val ra = a / size; val ca = a % size
-            val rb = b / size; val cb = b % size
-            val touching = kotlin.math.abs(ra - rb) <= 1 && kotlin.math.abs(ca - cb) <= 1
-            if (ra == rb || ca == cb || region[a] == region[b] || touching) {
-                bad += a
-                bad += b
-            }
-        }
-        return bad
-    }
+    fun conflicts(): Set<Int> = Kings.conflicts(size, region, marks)
 
     /**
      * A single tap: pencil the square out, or rub the pencilling away.
@@ -121,22 +107,7 @@ data class KingsState(
         copy(marks = marks.toMutableList().also { it[index] = mark }, moves = moves + 1)
 
     /** Every cell a king on [index] rules out, the square it stands on included. */
-    fun eliminatedBy(index: Int): Set<Int> {
-        val r = index / size
-        val c = index % size
-        val out = mutableSetOf<Int>()
-        for (k in 0 until size) {
-            out += r * size + k
-            out += k * size + c
-        }
-        marks.indices.filterTo(out) { region[it] == region[index] }
-        for (dr in -1..1) for (dc in -1..1) {
-            val nr = r + dr
-            val nc = c + dc
-            if (nr in 0 until size && nc in 0 until size) out += nr * size + nc
-        }
-        return out
-    }
+    fun eliminatedBy(index: Int): Set<Int> = Kings.attacks(size, region, index).toSet()
 
     /**
      * Derived from the kings on the board rather than written into [marks] on placement: stored
@@ -355,26 +326,29 @@ object Kings : PuzzleType {
      * in a column, which a check written twice could have caught but a check written nowhere could
      * not.
      */
-    fun isSolved(n: Int, region: List<Int>, marks: List<Mark>): Boolean {
+    fun isSolved(n: Int, region: List<Int>, marks: List<Mark>): Boolean =
+        marks.count { it == Mark.KING } == n && conflicts(n, region, marks).isEmpty()
+
+    /** Kings that break a rule: two in a row, a column or a region, or touching. */
+    fun conflicts(n: Int, region: List<Int>, marks: List<Mark>): Set<Int> {
         val kings = marks.indices.filter { marks[it] == Mark.KING }
-        if (kings.size != n) return false
-        val rows = BooleanArray(n)
-        val cols = BooleanArray(n)
-        val regions = HashSet<Int>()
-        for (k in kings) {
-            val r = k / n
-            val c = k % n
-            if (rows[r] || cols[c] || !regions.add(region[k])) return false
-            rows[r] = true
-            cols[c] = true
-        }
+        val bad = mutableSetOf<Int>()
         for (a in kings) for (b in kings) {
             if (a >= b) continue
-            val touching = kotlin.math.abs(a / n - b / n) <= 1 && kotlin.math.abs(a % n - b % n) <= 1
-            if (touching) return false
+            if (attack(n, region, a, b)) {
+                bad += a
+                bad += b
+            }
         }
-        return true
+        return bad
     }
+
+    /** Every square a king on [cell] rules out, itself included: its row, column, region and neighbours. */
+    fun attacks(n: Int, region: List<Int>, cell: Int): List<Int> = region.indices.filter { attack(n, region, cell, it) }
+
+    private fun attack(n: Int, region: List<Int>, a: Int, b: Int): Boolean =
+        a / n == b / n || a % n == b % n || region[a] == region[b] ||
+            (kotlin.math.abs(a / n - b / n) <= 1 && kotlin.math.abs(a % n - b % n) <= 1)
 
     // ---- generation ----------------------------------------------------------------------
 

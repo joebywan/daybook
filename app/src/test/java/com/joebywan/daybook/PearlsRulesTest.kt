@@ -162,7 +162,7 @@ class PearlsRulesTest {
             for (day in 0 until 365) {
                 val seed = DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(day.toLong()), Pearls.id, difficulty)
                 val t0 = System.nanoTime()
-                assertNotNull(Pearls.generateVerified(seed, difficulty))
+                assertNotNull(PearlsLogic.generateVerified(seed, difficulty))
                 times += (System.nanoTime() - t0) / 1e6
             }
             times.sort()

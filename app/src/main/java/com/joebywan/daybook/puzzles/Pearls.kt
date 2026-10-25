@@ -63,7 +63,7 @@ object Pearls : PuzzleType {
     override val id = "pearls"
     override val displayName = "Pearls"
     override val tagline = "One loop through every pearl"
-    override val accent = 0xFF3C28BD
+    override val accent = 0xFFC7C785
 
     override val rules = listOf(
         "Draw one closed loop through the middles of squares, moving up, down, left or right. It never crosses or branches.",
@@ -77,11 +77,7 @@ object Pearls : PuzzleType {
         "Arrows move, Shift+arrow draws or rubs out the line that way, X then an arrow crosses that edge.",
     )
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: PearlsLogic.lastResort(difficulty)
-
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): PearlsState? =
-        PearlsLogic.generateVerified(seed, difficulty)
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = PearlsLogic.generate(seed, difficulty)
 
     /** The loop rule or a what-if, as the tier demands ([PearlsLogic.depth]); null for the local rules alone. */
     override fun neededTechnique(state: PuzzleState): String? = when (PearlsLogic.depth(state as PearlsState)) {

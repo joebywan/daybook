@@ -28,7 +28,7 @@ class PearlsTeachingTest {
         DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
     }
 
-    private fun board(seed: Long, d: Difficulty) = Pearls.generateVerified(seed, d)!!
+    private fun board(seed: Long, d: Difficulty) = PearlsLogic.generateVerified(seed, d)!!
 
     /** [s] with [step] laid on, as Show me does. */
     private fun applied(s: PearlsState, step: PearlsTeacher.Step) = Pearls.applyStep(s, step)

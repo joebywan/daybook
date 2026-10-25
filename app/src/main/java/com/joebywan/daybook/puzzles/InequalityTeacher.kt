@@ -2,9 +2,11 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.digitsOf
 import com.joebywan.daybook.core.has
-
+import com.joebywan.daybook.core.lineName
+import com.joebywan.daybook.core.listed
 
 /**
  * The Inequality square, reasoned a step at a time.
@@ -61,7 +63,6 @@ internal object InequalityTeacher {
 
     // ---- what the player can see ------------------------------------------------------------------
 
-
     /** Rows 0..n-1, then columns. */
     private fun lines(n: Int): List<List<Int>> = LINES[n]
 
@@ -76,8 +77,6 @@ internal object InequalityTeacher {
         }
         return at
     }
-
-    private fun lineName(n: Int, line: Int) = if (line < n) "row ${line + 1}" else "column ${line - n + 1}"
 
     private class Sight(val n: Int, val cells: List<Int>, val signs: List<Sign>) {
         val base = IntArray(n * n)
@@ -332,9 +331,6 @@ internal object InequalityTeacher {
 
     // ---- explaining ---------------------------------------------------------------------------------
 
-    private fun orList(ds: List<Int>) = if (ds.size < 2) ds.joinToString("") else ds.dropLast(1).joinToString(", ") + " or " + ds.last()
-    private fun andList(ds: List<Int>) = if (ds.size < 2) ds.joinToString("") else ds.dropLast(1).joinToString(", ") + " and " + ds.last()
-
     /** Where [other] sits relative to [x]. */
     private fun where(n: Int, x: Int, other: Int) = when (other - x) {
         1 -> "on its right"
@@ -367,7 +363,7 @@ internal object InequalityTeacher {
                 PlacementStep(
                     ONLY_DIGIT, x, d, setOf(x), holders(n, cells, x, seen),
                     "Which digits can this square still take?",
-                    "Row ${x / n + 1} and column ${x % n + 1} already hold ${andList(seen)}, so only $d is left here.",
+                    "Row ${x / n + 1} and column ${x % n + 1} already hold ${listed(seen)}, so only $d is left here.",
                 )
             }
             ONLY_PLACE -> {
@@ -380,7 +376,7 @@ internal object InequalityTeacher {
                 PlacementStep(
                     ONLY_PLACE, x, d, line.toSet(), blockers,
                     "Where can the ${d} go in ${lineName(n, hit.line)}?",
-                    "${lineName(n, hit.line).replaceFirstChar { it.uppercase() }} still needs a $d, and every other empty square in it has a $d in its $across. This one is the only place.",
+                    "${lineName(n, hit.line).cap()} still needs a $d, and every other empty square in it has a $d in its $across. This one is the only place.",
                 )
             }
             SIGN_BOUND -> signBound(n, cells, signs, sight, x, d)
@@ -391,7 +387,7 @@ internal object InequalityTeacher {
                 PlacementStep(
                     SIGN_PLACE, x, d, line.toSet(), signsHere.toSet(),
                     "Count the signs along ${lineName(n, hit.line)}.",
-                    "${lineName(n, hit.line).replaceFirstChar { it.uppercase() }} still needs a $d. With the signs counted, every other square in it is ruled out, so it goes here.",
+                    "${lineName(n, hit.line).cap()} still needs a $d. With the signs counted, every other square in it is ruled out, so it goes here.",
                 )
             }
         }
@@ -457,7 +453,7 @@ internal object InequalityTeacher {
         }
         val cited = chosen.flatMap { listOf(n * n + it.k, it.other) }.toSet() + holders(n, cells, x, (1..n).filter { !has(base, it) })
         val clause = chosen.joinToString(" and ") { it.text }
-        var text = "Its row and column leave ${orList(digitsOf(base, n))}, but it has to be $clause. That leaves only $d."
+        var text = "Its row and column leave ${listed(digitsOf(base, n), "or")}, but it has to be $clause. That leaves only $d."
         if (text.length > MAX_EXPLANATION) text = "The signs leave only $d here: it has to be $clause."
         return PlacementStep(
             SIGN_BOUND, x, d, setOf(x) + chosen.map { n * n + it.k }, cited,

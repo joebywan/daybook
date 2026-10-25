@@ -129,6 +129,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Work from the units: each column tells the next its carry.",
         "No word starts with 0, so 0 hides in a word's later letters.",
     ),
+    "codeword" to listOf(
+        "A number twice in one word is a double letter: EE, LL, OO, SS.",
+        "Short words have the fewest look-alikes once a letter is in.",
+        "Q is almost always followed by U.",
+        "A letter already used is greyed: no other number can have it.",
+        "Every square is in two words: a crossing checks both.",
+    ),
     "wordwheel" to listOf(
         "The longest slot always uses every letter on the wheel.",
         "A crossing letter cuts a slot down to a handful of words.",
@@ -154,11 +161,23 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Follow a blocked arrow's line to find what to clear first.",
         "An arrow on the edge pointing outwards is always free.",
     ),
+    "mines" to listOf(
+        "A number with all its mines found: the rest around it are safe.",
+        "Two numbers sharing squares: compare what each still needs.",
+        "Near the end, count the mines left against the hidden squares.",
+        "A flag keeps its square from being revealed by mistake.",
+    ),
     "dominoes" to listOf(
         "A square with one free neighbour must pair with it.",
         "A one-square region tells you that square's pips outright.",
         "The tray holds one of each domino: count what is left.",
         "A big total over two squares needs big halves on both.",
+    ),
+    "lamps" to listOf(
+        "A 4, or a 3 against the edge, fills every square beside it.",
+        "A square boxed in by walls has to light itself.",
+        "No lamp where it would light both of a 1's last two squares.",
+        "Crosses help: a crossed square can still be lit from afar.",
     ),
     "pearls" to listOf(
         "A black pearl on the edge of the board runs two squares inward.",

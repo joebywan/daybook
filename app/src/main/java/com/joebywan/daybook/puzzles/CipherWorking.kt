@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
 
 /**
@@ -14,18 +16,14 @@ import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
  */
 internal class CipherWorking(private val sum: CipherSum, private val digits: List<Int>, private val carry: IntArray) {
 
-    private val places = listOf("units", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands")
-
-    private fun name(l: Int) = sum.letters[l].uppercaseChar().toString()
     private fun leads(l: Int) = sum.leading and (1 shl l) != 0
-    private fun columnLetters(c: Int) = (sum.columnAddends[c] + sum.columnTotal[c]).distinct()
 
     /** Who holds digit [d] already, as "T has 1"; null when nobody does. */
     private fun holder(d: Int): Int? = digits.indexOf(d).takeIf { it >= 0 }
 
     /** Every way column [c] adds up with carry [a] in and [b] out, from [v]. Strict: free digits, all different, no leading 0. */
     private fun fills(c: Int, a: Int, b: Int, v: List<Int>, strict: Boolean): List<List<Int>> {
-        val open = columnLetters(c).filter { v[it] == EMPTY }
+        val open = sum.columnLetters[c].filter { v[it] == EMPTY }
         val out = mutableListOf<List<Int>>()
         val w = v.toMutableList()
         fun go(k: Int) {
@@ -46,17 +44,6 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
         return out
     }
 
-    /** A carry the player can work out without thinking about it: none into the units or out of the top, or all placed to its right. */
-    private fun plainCarry(k: Int): Int? {
-        if (k == 0 || k == sum.width) return 0
-        var cy = 0
-        for (c in 0 until k) {
-            if (columnLetters(c).any { digits[it] == EMPTY }) return null
-            cy = (sum.columnAddends[c].sumOf { digits[it] } + cy) / 10
-        }
-        return cy
-    }
-
     private class Carry(val values: List<Int>, val why: List<String> = emptyList(), val columns: Set<Int> = emptySet())
 
     /** The working as said, and the columns it reads. */
@@ -64,7 +51,7 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
 
     /** Carry [k]: plain, explained (with the sentences that explain it), or either value. [away] is the direction to look for a reason. */
     private fun carryAt(k: Int, away: Int, depth: Int): Carry {
-        plainCarry(k)?.let { return Carry(listOf(it)) }
+        sum.knownCarry(digits, k)?.let { return Carry(listOf(it)) }
         val m = carry[k]
         if (depth > 0 && m != 0 && m and (m - 1) == 0) {
             val v = m.countTrailingZeroBits()
@@ -78,7 +65,7 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
     private fun supposeCarry(k: Int, v: Int): Carry? {
         val cy = IntArray(sum.width + 1) { -1 }.also { it[0] = 0; it[sum.width] = 0; it[k] = 1 - v }
         val (trace, columns) = follow(digits.toMutableList(), cy) ?: return null
-        val who = "the ${places[k - 1]}"
+        val who = "the ${sum.place(k - 1)}"
         val conclusion = if (v == 1) "so they carry 1" else "so they carry nothing"
         val hypothesis = if (v == 1) "If $who carried nothing" else "If $who carried 1"
         return Carry(listOf(v), listOf("$hypothesis, $trace, $conclusion."), columns + (k - 1) + minOf(k, sum.width - 1))
@@ -102,15 +89,15 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
         }
         fun place(l: Int, d: Int, c: Int): Pair<String, Set<Int>>? {
             read += c
-            if (d !in 0..9) return told("${name(l)} would have to be $d")
-            if (d == 0 && leads(l)) return told("${name(l)} would be 0, which can't start a word")
+            if (d !in 0..9) return told("${sum.name(l)} would have to be $d")
+            if (d == 0 && leads(l)) return told("${sum.name(l)} would be 0, which can't start a word")
             val who = v.indexOf(d)
             if (who >= 0) {
-                val by = if (digits[who] != EMPTY) "which ${name(who)} has" else "the same as ${name(who)}"
-                return told("${name(l)} would be $d, $by")
+                val by = if (digits[who] != EMPTY) "which ${sum.name(who)} has" else "the same as ${sum.name(who)}"
+                return told("${sum.name(l)} would be $d, $by")
             }
             v[l] = d
-            found += "${name(l)} would be $d"
+            found += "${sum.name(l)} would be $d"
             return null
         }
         var changed = true
@@ -119,14 +106,14 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
             for (c in 0 until sum.width) {
                 val adds = sum.columnAddends[c]
                 val t = sum.columnTotal[c]
-                val open = columnLetters(c).filter { v[it] == EMPTY }
+                val open = sum.columnLetters[c].filter { v[it] == EMPTY }
                 val cin = cy[c]
                 val cout = cy[c + 1]
                 if (adds.isEmpty()) {
                     // The total's first letter is the carry into it.
                     if (cin >= 0 && v[t] == EMPTY) { place(t, cin, c)?.let { return it }; changed = true }
                     else if (cin < 0 && v[t] != EMPTY) { cy[c] = v[t]; changed = true }
-                    else if (cin >= 0 && v[t] != cin) { read += c; return told("${name(t)} would have to be $cin") }
+                    else if (cin >= 0 && v[t] != cin) { read += c; return told("${sum.name(t)} would have to be $cin") }
                     continue
                 }
                 val known = adds.filter { v[it] != EMPTY }.sumOf { v[it] }
@@ -136,12 +123,12 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
                         val s = known + cin
                         if (s % 10 != total || (cout >= 0 && s / 10 != cout)) {
                             read += c
-                            return told(if (s % 10 != total) "the ${places[c]} would make $s, not ending in $total" else "the ${places[c]} would carry ${s / 10}")
+                            return told(if (s % 10 != total) "the ${sum.place(c)} would make $s, not ending in $total" else "the ${sum.place(c)} would carry ${s / 10}")
                         }
                         if (cout < 0) { cy[c + 1] = s / 10; changed = true }
                     } else if (cout >= 0) {
                         val need = total + 10 * cout - known
-                        if (need !in 0..1) { read += c; return told("the ${places[c]} couldn't add up") }
+                        if (need !in 0..1) { read += c; return told("the ${sum.place(c)} couldn't add up") }
                         cy[c] = need
                         changed = true
                     }
@@ -153,7 +140,7 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
                 when {
                     l == t && times == 0 -> {
                         val s = known + cin
-                        if (cout >= 0 && s / 10 != cout) { read += c; return told("the ${places[c]} would carry ${s / 10}") }
+                        if (cout >= 0 && s / 10 != cout) { read += c; return told("the ${sum.place(c)} would carry ${s / 10}") }
                         place(l, s % 10, c)?.let { return it }
                         cy[c + 1] = s / 10
                     }
@@ -183,12 +170,12 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
     private fun explainCarry(k: Int, v: Int, away: Int, col: Int, other: Carry): Carry? {
         val (ins, outs) = if (away < 0) other.values to listOf(1 - v) else listOf(1 - v) to other.values
         if (ins.any { a -> outs.any { b -> fills(col, a, b, digits, strict = true).isNotEmpty() } }) return null
-        val conclusion = if (v == 1) "the ${places[k - 1]} carry 1" else "the ${places[k - 1]} carry nothing"
+        val conclusion = if (v == 1) "the ${sum.place(k - 1)} carry 1" else "the ${sum.place(k - 1)} carry nothing"
         val t = sum.columnTotal[col]
         // The total's extra first letter is the carry itself.
         if (sum.columnAddends[col].isEmpty()) {
             if (digits[t] == EMPTY) return null
-            return Carry(listOf(v), other.why + "${name(t)} is ${digits[t]}, so $conclusion.", other.columns + col)
+            return Carry(listOf(v), other.why + "${sum.name(t)} is ${digits[t]}, so $conclusion.", other.columns + col)
         }
         val hypothesis = if (away < 0) {
             if (v == 1) "Carrying nothing" else "Carrying 1"
@@ -198,16 +185,16 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
         val o = other.values.singleOrNull()
         val lhs = if (away < 0) equation(col, o, null) else equation(col, null, o)
         // Everything in the column is placed: the sum itself shows the carry.
-        if (columnLetters(col).all { digits[it] != EMPTY }) {
-            return Carry(listOf(v), other.why + "In the ${places[col]}, $lhs, so $conclusion.", other.columns + col)
+        if (sum.columnLetters[col].all { digits[it] != EMPTY }) {
+            return Carry(listOf(v), other.why + "In the ${sum.place(col)}, $lhs, so $conclusion.", other.columns + col)
         }
         val reason = failure(col, ins, outs) ?: return null
-        return Carry(listOf(v), other.why + "In the ${places[col]}, $lhs. $hypothesis, $reason, so $conclusion.", other.columns + col)
+        return Carry(listOf(v), other.why + "In the ${sum.place(col)}, $lhs. $hypothesis, $reason, so $conclusion.", other.columns + col)
     }
 
     /** Column [c] as the player reads it; a null carry is written "carry" ([a], in) or left as "ends in" ([b], out). */
     private fun equation(c: Int, a: Int?, b: Int?, v: List<Int> = digits): String {
-        fun term(l: Int) = if (v[l] != EMPTY) v[l].toString() else name(l)
+        fun term(l: Int) = if (v[l] != EMPTY) v[l].toString() else sum.name(l)
         val t = sum.columnTotal[c]
         val left = sum.columnAddends[c].map(::term) + when (a) {
             null -> listOf("carry")
@@ -226,11 +213,11 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
 
     /** Why column [c] cannot add up with any carry in [ins] and out [outs] and the digits placed, as a clause; null if it is not short. */
     private fun failure(c: Int, ins: List<Int>, outs: List<Int>): String? {
-        val open = columnLetters(c).filter { digits[it] == EMPTY }
+        val open = sum.columnLetters[c].filter { digits[it] == EMPTY }
         val adds = sum.columnAddends[c]
         val t = sum.columnTotal[c]
         val lhs = left(c, ins.singleOrNull())
-        if (open.isEmpty()) return "$lhs would make ${list(ins.map { adds.sumOf { l -> digits[l] } + it })}"
+        if (open.isEmpty()) return "$lhs would make ${listed(ins.map { adds.sumOf { l -> digits[l] } + it }, "or")}"
         val raw = ins.flatMap { a -> outs.flatMap { b -> fills(c, a, b, digits, strict = false) } }
         if (raw.isEmpty()) {
             val max = adds.sumOf { if (digits[it] != EMPTY) digits[it] else 9 } + ins.max()
@@ -246,25 +233,25 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
             val values = raw.map { it[y] }.distinct().sorted()
             val held = values.map { holder(it) }
             if (held.all { it != null }) {
-                val who = held.map { name(it!!) }
-                return "${name(y)} would be ${list(values)}, which ${list(who, "and")} ${if (who.size == 1) "has" else "have"}"
+                val who = held.map { sum.name(it!!) }
+                return "${sum.name(y)} would be ${listed(values, "or")}, which ${listed(who, "and")} ${if (who.size == 1) "has" else "have"}"
             }
-            if (values == listOf(0) && leads(y)) return "${name(y)} would be 0, but it starts a word"
+            if (values == listOf(0) && leads(y)) return "${sum.name(y)} would be 0, but it starts a word"
             return null
         }
         // Two open letters forced equal: "I + 0 is T" with nothing carried makes T the same as I.
         if (open.size == 2 && raw.all { it[open[0]] == it[open[1]] }) {
             val (p, q) = if (open[1] == t) open[1] to open[0] else open[0] to open[1]
-            return "${name(p)} would be the same digit as ${name(q)}"
+            return "${sum.name(p)} would be the same digit as ${sum.name(q)}"
         }
         // One way only, and it needs a digit already placed: "A would be 9 and P 0, which E has".
         if (raw.size == 1) {
             val f = raw[0]
             val held = open.filter { holder(f[it]) != null }
             if (held.isNotEmpty()) {
-                val parts = open.map { "${name(it)} ${f[it]}" }
+                val parts = open.map { "${sum.name(it)} ${f[it]}" }
                 return "${parts.first().replace(" ", " would be ")}${if (parts.size > 1) " and " + parts.drop(1).joinToString(" and ") else ""}, " +
-                    "but ${list(held.map { "${name(holder(f[it])!!)} has ${f[it]}" }, "and")}"
+                    "but ${listed(held.map { "${sum.name(holder(f[it])!!)} has ${f[it]}" }, "and")}"
             }
         }
         // Every way to make it uses digits already placed: "E and L would have to come from 0 and 1, and I and F have those".
@@ -272,8 +259,8 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
         if (used.size <= 3 && raw.all { f -> open.any { holder(f[it]) != null } }) {
             val held = used.mapNotNull { holder(it) }.distinct()
             if (held.size == used.size) {
-                return "${list(open.map { name(it) }, "and")} would have to come from ${list(used, "and")}, " +
-                    "and ${list(held.map { name(it) }, "and")} have those"
+                return "${listed(open.map { sum.name(it) }, "and")} would have to come from ${listed(used, "and")}, " +
+                    "and ${listed(held.map { sum.name(it) }, "and")} have those"
             }
         }
         return null
@@ -288,11 +275,11 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
         if (vals != listOf(d)) return null
         val a = cin.singleOrNull()
         val b = cout.singleOrNull()
-        val open = columnLetters(c).filter { digits[it] == EMPTY && it != x }
+        val open = sum.columnLetters[c].filter { digits[it] == EMPTY && it != x }
         val adds = sum.columnAddends[c]
         val t = sum.columnTotal[c]
-        val head = "In the ${places[c]}, ${equation(c, a, b)}"
-        val xn = name(x)
+        val head = "In the ${sum.place(c)}, ${equation(c, a, b)}"
+        val xn = sum.name(x)
         if (adds.isEmpty()) return null
         // Plain arithmetic: everything else in the column is known.
         if (open.isEmpty() && a != null) return "$head, so $xn is $d."
@@ -309,8 +296,8 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
                 if (taken.all { holder(it) != null || (it == 0 && leads(x)) }) {
                     val most = hiTerms.filter { it != 0 }.joinToString(" + ")
                     val bound = if (b == 1) "That is at least 10 and at most $most = $hi" else "That is at most $most = $hi"
-                    val ruled = taken.joinToString(" and ") { e -> holder(e)?.let { "${name(it)} has $e" } ?: "$xn starts a word" }
-                    return if (taken.isEmpty()) "$head. $bound, so $xn is $d." else "$head. $bound, so $xn is ${list(range)}; $ruled, so $xn is $d."
+                    val ruled = taken.joinToString(" and ") { e -> holder(e)?.let { "${sum.name(it)} has $e" } ?: "$xn starts a word" }
+                    return if (taken.isEmpty()) "$head. $bound, so $xn is $d." else "$head. $bound, so $xn is ${listed(range, "or")}; $ruled, so $xn is $d."
                 }
             }
         }
@@ -325,9 +312,9 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
             val values = cin.flatMap { ai -> cout.flatMap { bo -> fills(c, ai, bo, v, strict = false).map { it[x] } } }.distinct().sorted()
             val bad = values.filter { it != d }
             if (bad.isEmpty() || values.size > 4) return null
-            val ruled = bad.map { e -> holder(e)?.let { "${name(it)} has $e" } ?: if (e == 0 && leads(x)) "$xn starts a word" else return null }
+            val ruled = bad.map { e -> holder(e)?.let { "${sum.name(it)} has $e" } ?: if (e == 0 && leads(x)) "$xn starts a word" else return null }
             val whatever = if (a == null) ", whatever is carried" else ""
-            return "$head. Only $xn = ${list(values)} can do that$whatever; ${list(ruled, "and")}, so $xn is $d."
+            return "$head. Only $xn = ${listed(values, "or")} can do that$whatever; ${listed(ruled, "and")}, so $xn is $d."
         }
         return null
     }
@@ -351,27 +338,22 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
         for ((pd, qd) in pairs) {
             val xd = if (p == x) pd else qd
             val reason = when {
-                qd == pd -> "${name(p)} = $pd would make ${name(q)} $pd too"
-                holder(qd) != null -> "${name(holder(qd)!!)} has $qd"
-                qd == 0 && leads(q) -> "${name(q)} can't be 0"
+                qd == pd -> "${sum.name(p)} = $pd would make ${sum.name(q)} $pd too"
+                holder(qd) != null -> "${sum.name(holder(qd)!!)} has $qd"
+                qd == 0 && leads(q) -> "${sum.name(q)} can't be 0"
                 else -> null
             }
             if (reason == null && xd != d) return null
             if (reason != null) reasons += reason
         }
         if (reasons.isEmpty()) return null
-        return "$head: ${name(p)} = ${list(pairs.map { it.first })} would make ${name(q)} ${list(pairs.map { it.second })}. " +
-            "${reasons.distinct().joinToString(", ").replaceFirstChar { it.uppercase() }}, so ${name(x)} is $d."
-    }
-
-    private fun <T> list(xs: List<T>, joiner: String = "or"): String = when (xs.size) {
-        1 -> "${xs[0]}"
-        else -> xs.dropLast(1).joinToString(", ") + " $joiner " + xs.last()
+        return "$head: ${sum.name(p)} = ${listed(pairs.map { it.first }, "or")} would make ${sum.name(q)} ${listed(pairs.map { it.second }, "or")}. " +
+            "${reasons.distinct().joinToString(", ").cap()}, so ${sum.name(x)} is $d."
     }
 
     /** The whole working for [x] = [d], from whichever of its columns can show it most briefly; null if none can. */
     fun explain(x: Int, d: Int): Working? =
-        (0 until sum.width).filter { x in columnLetters(it) }.flatMap { c ->
+        (0 until sum.width).filter { x in sum.columnLetters[it] }.flatMap { c ->
             // Each carry either explained or left open: the column may settle the letter whatever is carried, more briefly.
             val open = Carry(listOf(0, 1))
             val ins = listOf(carryAt(c, -1, DEPTH), open).distinctBy { it.values }
@@ -389,13 +371,13 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
     private fun suppose(x: Int, d: Int): Working? {
         val columns = mutableSetOf<Int>()
         val cases = (0..9).filter { it != d && it !in digits && !(it == 0 && leads(x)) }.map { xd ->
-            val cy = IntArray(sum.width + 1) { plainCarry(it) ?: -1 }
+            val cy = IntArray(sum.width + 1) { sum.knownCarry(digits, it) ?: -1 }
             val (trace, read) = follow(digits.toMutableList().also { it[x] = xd }, cy) ?: return null
             columns += read
-            "If ${name(x)} were $xd, $trace."
+            "If ${sum.name(x)} were $xd, $trace."
         }
         if (cases.size > 4) return null
-        return Working((cases + "So ${name(x)} is $d.").joinToString(" "), columns)
+        return Working((cases + "So ${sum.name(x)} is $d.").joinToString(" "), columns)
     }
 
     private companion object {

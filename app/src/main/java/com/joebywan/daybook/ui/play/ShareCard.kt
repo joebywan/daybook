@@ -2,13 +2,16 @@ package com.joebywan.daybook.ui.play
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.puzzles.ChessState
 import com.joebywan.daybook.puzzles.LexiconMark
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.PointersLogic
+import com.joebywan.daybook.puzzles.MinesLogic
 import com.joebywan.daybook.puzzles.PointersState
+import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.SetsState
 import com.joebywan.daybook.puzzles.TargetState
@@ -124,8 +127,6 @@ data class ShareCard(
         }
 }
 
-private fun plural(n: Int, one: String, many: String = one + "s") = "$n ${if (n == 1) one else many}"
-
 /** Worst first: a hint, then a taken-back move, then a claim that was not a set. */
 private fun PlayLog.Played.mark() = when {
     hinted -> Mark.RED
@@ -233,6 +234,13 @@ fun shareCard(
             lines = listOf(ShareLine(List(state.lives) { Mark.HEART } + List(lost) { Mark.LOST }))
             key = listOf(Mark.HEART to "life left", Mark.LOST to "life lost")
             own = if (lost == 0) "Not a single bump." else "${plural(lost, "bump")}. None $next?"
+        }
+        // No undo either: the lives, and a red square when hints were used.
+        is MinesState -> {
+            val lost = MinesLogic.LIVES - state.lives
+            lines = listOf(ShareLine(List(state.lives) { Mark.HEART } + List(lost) { Mark.LOST }, hinted = hints > 0))
+            key = listOf(Mark.HEART to "life left", Mark.LOST to "life lost") + if (hints > 0) listOf(Mark.RED to "hint") else emptyList()
+            own = if (lost == 0) "Not a single mine." else "${plural(lost, "mine")} found the hard way. None $next?"
         }
         else -> {
             lines = listOf(ShareLine(strip(moves)))

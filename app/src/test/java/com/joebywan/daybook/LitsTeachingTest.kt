@@ -209,6 +209,8 @@ class LitsTeachingTest {
             var choiceSteps = 0
             var chainSteps = 0
             var slowest = 0L
+            var deeper = 0
+            var whatIfs = 0
             for (seed in seeds(perTier, difficulty, "lits-coverage")) {
                 var s = Lits.generate(seed, difficulty) as LitsState
                 val unique = LitsOracle.answers(s.width, s.height, s.region, cap = 2).size == 1
@@ -231,6 +233,11 @@ class LitsTeachingTest {
                     s = d.apply(s) as LitsState
                 }
                 if (unique && LitsTeacher.FALLBACK in used) uniqueFallback++
+                // The tier gate (Lits.score), seen from the hint panel rather than the generator's own walk.
+                val deep = LitsTeacher.NEIGHBOUR in used || LitsTeacher.WHAT_IF in used
+                if (deep) deeper++
+                if (LitsTeacher.WHAT_IF in used) whatIfs++
+                if (difficulty == Difficulty.STANDARD) assertFalse("$seed: Standard needed $used", deep)
                 used.forEach { boardCounts[it] = boardCounts.getValue(it) + 1 }
             }
             report.appendLine()
@@ -254,6 +261,12 @@ class LitsTeachingTest {
             // Measured at zero on every tier when this was written: on a board with one answer the
             // techniques always finish. More than one in fifty would mean they had stopped covering
             // what the generator makes.
+            report.appendLine("  needing neighbour or what-if: $deeper/$perTier boards, what-if $whatIfs")
+            if (difficulty == Difficulty.EXPERT) {
+                // Measured 2026-10 on a year: 99.5% neighbour or deeper (a budget-cut day can miss), what-if 32%.
+                assertTrue("Expert: only $deeper/$perTier need neighbour or what-if", deeper * 100 >= perTier * 98)
+                assertTrue("Expert: only $whatIfs/$perTier need what-if", whatIfs * 5 >= perTier)
+            }
             assertTrue(
                 "$difficulty: the fallback is reached on $uniqueFallback one-answer boards",
                 uniqueFallback * 50 <= perTier - several,

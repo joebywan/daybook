@@ -78,11 +78,7 @@ object Target : PuzzleType {
     )
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: TargetLogic.lastResort(difficulty)
-
-    /** The board when its target was proved reachable in the tier's number of steps, null otherwise. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): TargetState? =
-        TargetLogic.generateVerified(seed, difficulty)
+        TargetLogic.generateVerified(seed, difficulty) ?: TargetLogic.lastResort(difficulty)
 
     override fun teach(state: PuzzleState): Deduction? = TargetTeacher.deduction(state as TargetState)
 

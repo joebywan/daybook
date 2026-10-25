@@ -55,6 +55,7 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.forEachBit
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -453,47 +454,175 @@ object Mosaic : PuzzleType {
      * cascade — swallow a neighbour, then that neighbour's same-coloured neighbours, and so on —
      * and with it, one pass over the flooded group's own neighbours is the whole of a merge.
      */
-    private class Position(
+    internal class Position(
         val member: LongArray,
         val nbr: LongArray,
         val hue: IntArray,
         val alive: Long,
         val count: Int,
-    )
+    ) {
+        /** The groups touching [group] that wear [colour]: what pouring [colour] into it swallows. */
+        fun eaten(group: Int, colour: Int): Long {
+            var out = 0L
+            nbr[group].forEachBit { if (hue[it] == colour) out = out or (1L shl it) }
+            return out
+        }
 
-    /** Labels the board's areas and lifts them into a [Position], or null past the 64-area ceiling. */
-    private fun positionOf(state: MosaicState): Pair<Position, IntArray>? {
-        val w = state.width
-        val n = state.cells.size
+        /** How many colours the live groups wear. */
+        fun colours(): Int {
+            var present = 0L
+            alive.forEachBit { present = present or (1L shl hue[it]) }
+            return present.countOneBits()
+        }
+
+        /** The board after pouring [colour] into group [group], neighbours in that colour merged in. */
+        fun play(group: Int, colour: Int): Position {
+            val eaten = eaten(group, colour)
+            val member = this.member.copyOf()
+            val nbr = this.nbr.copyOf()
+            val hue = this.hue.copyOf()
+
+            var grown = member[group]
+            var touching = nbr[group]
+            eaten.forEachBit { j ->
+                grown = grown or member[j]
+                touching = touching or nbr[j]
+            }
+            touching = touching and (eaten or (1L shl group)).inv()
+
+            member[group] = grown
+            nbr[group] = touching
+            hue[group] = colour
+            // Only the blob's own neighbours can have been pointing at something it swallowed.
+            touching.forEachBit { k -> nbr[k] = (nbr[k] and eaten.inv()) or (1L shl group) }
+            return Position(member, nbr, hue, alive and eaten.inv(), count - eaten.countOneBits())
+        }
+    }
+
+    /**
+     * The single-colour areas of [cells], labelled in reading order (area k is the k-th area whose
+     * first cell is met), and the board lifted into a root [Position]; null past [max] areas.
+     * Shared by the generator's search and [MosaicTeacher].
+     */
+    internal fun areas(width: Int, height: Int, cells: List<Int>, max: Int): Pair<IntArray, Position>? {
+        val n = cells.size
         val label = IntArray(n) { -1 }
-        val firstCell = ArrayList<Int>()
+        val queue = IntArray(n)
+        var count = 0
         for (i in 0 until n) {
             if (label[i] >= 0) continue
-            if (firstCell.size >= 64) return null
-            firstCell += i
-            for (cell in state.area(i)) label[cell] = firstCell.size - 1
+            if (count == max) return null
+            var head = 0
+            var tail = 0
+            label[i] = count
+            queue[tail++] = i
+            while (head < tail) {
+                val x = queue[head++]
+                val r = x / width
+                val c = x % width
+                for (y in intArrayOf(
+                    if (r > 0) x - width else -1,
+                    if (r < height - 1) x + width else -1,
+                    if (c > 0) x - 1 else -1,
+                    if (c < width - 1) x + 1 else -1,
+                )) {
+                    if (y >= 0 && label[y] < 0 && cells[y] == cells[x]) {
+                        label[y] = count
+                        queue[tail++] = y
+                    }
+                }
+            }
+            count++
         }
-        val count = firstCell.size
         val nbr = LongArray(count)
-        for (cell in 0 until n) {
-            val c = cell % w
-            if (c < w - 1 && label[cell] != label[cell + 1]) {
-                nbr[label[cell]] = nbr[label[cell]] or (1L shl label[cell + 1])
-                nbr[label[cell + 1]] = nbr[label[cell + 1]] or (1L shl label[cell])
-            }
-            if (cell / w < state.height - 1 && label[cell] != label[cell + w]) {
-                nbr[label[cell]] = nbr[label[cell]] or (1L shl label[cell + w])
-                nbr[label[cell + w]] = nbr[label[cell + w]] or (1L shl label[cell])
+        for (x in 0 until n) {
+            val right = if (x % width < width - 1) x + 1 else -1
+            val down = if (x / width < height - 1) x + width else -1
+            for (y in intArrayOf(right, down)) {
+                if (y < 0 || label[x] == label[y]) continue
+                nbr[label[x]] = nbr[label[x]] or (1L shl label[y])
+                nbr[label[y]] = nbr[label[y]] or (1L shl label[x])
             }
         }
-        val position = Position(
+        val hue = IntArray(count)
+        for (x in 0 until n) hue[label[x]] = cells[x]
+        val root = Position(
             LongArray(count) { 1L shl it },
             nbr,
-            IntArray(count) { state.cells[firstCell[it]] },
+            hue,
             if (count == 64) -1L else (1L shl count) - 1,
             count,
         )
-        return position to firstCell.toIntArray()
+        return label to root
+    }
+
+    /**
+     * The searches' lower bound, with the scratch for its sweeps: positions of up to [size] groups.
+     * One per search, never shared between threads.
+     */
+    internal class Bound(size: Int) {
+        private val dist = IntArray(size)
+        private val queue = IntArray(size)
+
+        /** BFS from [from] over the live groups; returns the farthest one (high half) and its distance (low half). */
+        fun sweep(pos: Position, from: Int): Long {
+            dist.fill(-1)
+            var head = 0
+            var tail = 0
+            dist[from] = 0
+            queue[tail++] = from
+            var far = from
+            var best = 0
+            while (head < tail) {
+                val u = queue[head++]
+                pos.nbr[u].forEachBit { v ->
+                    if (dist[v] < 0) {
+                        dist[v] = dist[u] + 1
+                        if (dist[v] > best) {
+                            best = dist[v]
+                            far = v
+                        }
+                        queue[tail++] = v
+                    }
+                }
+            }
+            return (far.toLong() shl 32) or best.toLong()
+        }
+
+        /**
+         * A lower bound on the fills still needed. Admissible, so IDA* built on it returns a
+         * genuine optimum rather than a good-looking line.
+         *
+         * Two bounds, whichever is larger:
+         *
+         * - **Colours.** A fill recolours one group, so it retires a colour only when that group
+         *   was the last one wearing it — at most one colour per fill. One colour must remain,
+         *   hence `distinct - 1`.
+         * - **Distance.** A fill contracts a group and its same-coloured neighbours into one node.
+         *   That set is a star centred on the flooded group, so it has diameter two, and
+         *   contracting a set of diameter two shortens no path by more than two. The board ends as
+         *   a single node at distance zero, so a spread of `s` needs `ceil(s / 2)` fills.
+         *
+         * The spread comes from a double sweep (BFS from anywhere, then BFS from the farthest node
+         * found) rather than all-pairs. That is a lower bound on the true diameter, which is what
+         * keeps the whole thing admissible, and it costs two BFS per node instead of one per group.
+         *
+         * A radius bound is tempting here and is wrong: two blobs can grow from opposite ends of
+         * the board and only meet on the last fill, so nothing forces the line to spread out of a
+         * single centre.
+         *
+         * Past [cutoff] the exact value stops mattering — the caller only asks whether the bound
+         * exceeds what is left — so a colour count already over it is returned without the two
+         * sweeps. That changes no answer, only how often the sweeps run.
+         */
+        fun of(pos: Position, cutoff: Int = Int.MAX_VALUE): Int {
+            if (pos.count <= 1) return 0
+            val byColour = pos.colours() - 1
+            if (byColour > cutoff) return byColour
+            val first = sweep(pos, pos.alive.countTrailingZeroBits())
+            val spread = sweep(pos, (first ushr 32).toInt()).toInt()
+            return maxOf(byColour, (spread + 1) / 2)
+        }
     }
 
     /**
@@ -510,8 +639,7 @@ object Mosaic : PuzzleType {
      */
     private class Search(private val areas: Int, private val colours: Int, private val budget: Int) {
 
-        private val dist = IntArray(areas)
-        private val queue = IntArray(areas)
+        private val bounds = Bound(areas)
         private val gain = IntArray(colours)
         private val bucket = IntArray(areas + 1)
         private val path = IntArray(areas)
@@ -555,17 +683,9 @@ object Mosaic : PuzzleType {
             val score = IntArray(out.size)
             var top = 0
             var k = 0
-            var bits = pos.alive
-            while (bits != 0L) {
-                val i = bits.countTrailingZeroBits()
-                bits = bits and (bits - 1)
+            pos.alive.forEachBit { i ->
                 gain.fill(0)
-                var near = pos.nbr[i]
-                while (near != 0L) {
-                    val j = near.countTrailingZeroBits()
-                    near = near and (near - 1)
-                    gain[pos.hue[j]]++
-                }
+                pos.nbr[i].forEachBit { j -> gain[pos.hue[j]]++ }
                 for (colour in 0 until colours) {
                     if (colour == pos.hue[i]) continue
                     out[k] = (i shl 4) or colour
@@ -588,117 +708,6 @@ object Mosaic : PuzzleType {
             return sorted
         }
 
-        /** The board after pouring [colour] into group [group], neighbours in that colour merged in. */
-        private fun play(pos: Position, group: Int, colour: Int): Position {
-            var eaten = 0L
-            var near = pos.nbr[group]
-            while (near != 0L) {
-                val j = near.countTrailingZeroBits()
-                near = near and (near - 1)
-                if (pos.hue[j] == colour) eaten = eaten or (1L shl j)
-            }
-
-            val member = pos.member.copyOf()
-            val nbr = pos.nbr.copyOf()
-            val hue = pos.hue.copyOf()
-
-            var grown = pos.member[group]
-            var touching = pos.nbr[group]
-            var bits = eaten
-            while (bits != 0L) {
-                val j = bits.countTrailingZeroBits()
-                bits = bits and (bits - 1)
-                grown = grown or pos.member[j]
-                touching = touching or pos.nbr[j]
-            }
-            touching = touching and (eaten or (1L shl group)).inv()
-
-            member[group] = grown
-            nbr[group] = touching
-            hue[group] = colour
-            // Only the blob's own neighbours can have been pointing at something it swallowed.
-            var rim = touching
-            while (rim != 0L) {
-                val k = rim.countTrailingZeroBits()
-                rim = rim and (rim - 1)
-                nbr[k] = (nbr[k] and eaten.inv()) or (1L shl group)
-            }
-            return Position(
-                member, nbr, hue,
-                pos.alive and eaten.inv(),
-                pos.count - eaten.countOneBits(),
-            )
-        }
-
-        /** BFS from [from] over the live groups; returns the farthest one and its distance. */
-        private fun sweep(pos: Position, from: Int): Long {
-            dist.fill(-1)
-            var head = 0
-            var tail = 0
-            dist[from] = 0
-            queue[tail++] = from
-            var far = from
-            var best = 0
-            while (head < tail) {
-                val u = queue[head++]
-                var bits = pos.nbr[u]
-                while (bits != 0L) {
-                    val v = bits.countTrailingZeroBits()
-                    bits = bits and (bits - 1)
-                    if (dist[v] >= 0) continue
-                    dist[v] = dist[u] + 1
-                    if (dist[v] > best) {
-                        best = dist[v]
-                        far = v
-                    }
-                    queue[tail++] = v
-                }
-            }
-            return (far.toLong() shl 32) or best.toLong()
-        }
-
-        /**
-         * A lower bound on the fills still needed. Admissible, so IDA* built on it returns a
-         * genuine optimum rather than a good-looking line.
-         *
-         * Two bounds, whichever is larger:
-         *
-         * - **Colours.** A fill recolours one group, so it retires a colour only when that group
-         *   was the last one wearing it — at most one colour per fill. One colour must remain,
-         *   hence `distinct - 1`.
-         * - **Distance.** A fill contracts a group and its same-coloured neighbours into one node.
-         *   That set is a star centred on the flooded group, so it has diameter two, and
-         *   contracting a set of diameter two shortens no path by more than two. The board ends as
-         *   a single node at distance zero, so a spread of `s` needs `ceil(s / 2)` fills.
-         *
-         * The spread comes from a double sweep (BFS from anywhere, then BFS from the farthest node
-         * found) rather than all-pairs. That is a lower bound on the true diameter, which is what
-         * keeps the whole thing admissible, and it costs two BFS per node instead of one per group.
-         *
-         * A radius bound is tempting here and is wrong: two blobs can grow from opposite ends of
-         * the board and only meet on the last fill, so nothing forces the line to spread out of a
-         * single centre.
-         *
-         * Past [cutoff] the exact value stops mattering — the caller only asks whether the bound
-         * exceeds what is left — so a colour count already over it is returned without the two
-         * sweeps. That changes no answer, only how often the sweeps run.
-         */
-        private fun bound(pos: Position, cutoff: Int = Int.MAX_VALUE): Int {
-            if (pos.count <= 1) return 0
-            var present = 0L
-            var bits = pos.alive
-            while (bits != 0L) {
-                val j = bits.countTrailingZeroBits()
-                bits = bits and (bits - 1)
-                present = present or (1L shl pos.hue[j])
-            }
-            val byColour = present.countOneBits() - 1
-            if (byColour > cutoff) return byColour
-            val first = sweep(pos, pos.alive.countTrailingZeroBits())
-            val spread = sweep(pos, (first ushr 32).toInt()).toInt()
-            return maxOf(byColour, (spread + 1) / 2)
-        }
-
         /**
          * Order-independent hash of a position, for [failedAt].
          *
@@ -713,10 +722,7 @@ object Mosaic : PuzzleType {
          */
         private fun fingerprint(pos: Position): Long {
             var sum = 0L
-            var bits = pos.alive
-            while (bits != 0L) {
-                val j = bits.countTrailingZeroBits()
-                bits = bits and (bits - 1)
+            pos.alive.forEachBit { j ->
                 var z = pos.member[j] xor (pos.hue[j].toLong() * 0x517CC1B727220A95L)
                 z = (z xor (z ushr 33)) * -0x7ee3623a03d3c83fL
                 z = (z xor (z ushr 29)) * -0x3b314601e57a13adL
@@ -733,12 +739,12 @@ object Mosaic : PuzzleType {
             }
             if (spent++ > budget) return false
             val remaining = ceiling - depth
-            if (bound(pos, remaining) > remaining) return false
+            if (bounds.of(pos, remaining) > remaining) return false
             val key = fingerprint(pos)
             if ((failedAt[key] ?: -1) >= remaining) return false
             for (move in candidates(pos)) {
                 path[depth] = move
-                if (descend(play(pos, move ushr 4, move and 15), depth + 1, ceiling)) return true
+                if (descend(pos.play(move ushr 4, move and 15), depth + 1, ceiling)) return true
                 if (spent > budget) return false
             }
             failedAt[key] = remaining
@@ -747,7 +753,7 @@ object Mosaic : PuzzleType {
 
         /** Runs the iterative deepening. Null means the budget ran out, never "no solution". */
         fun run(root: Position, firstCell: IntArray): List<MosaicMove>? {
-            var ceiling = bound(root)
+            var ceiling = bounds.of(root)
             // Flooding any area with a neighbour's colour eats at least that neighbour, so this
             // many fills always suffice and the ceiling can never run away.
             val worst = root.count - 1
@@ -781,8 +787,10 @@ object Mosaic : PuzzleType {
      * it actually constrain play rather than merely be reachable.
      */
     fun solve(state: MosaicState, budget: Int = SOLVE_BUDGET): List<MosaicMove>? {
-        val (root, firstCell) = positionOf(state) ?: return null
+        val (label, root) = areas(state.width, state.height, state.cells, 64) ?: return null
         if (root.count <= 1) return emptyList()
+        val firstCell = IntArray(root.count)
+        for (i in label.indices.reversed()) firstCell[label[i]] = i
         return Search(root.count, state.colours, budget).run(root, firstCell)
     }
 

@@ -57,7 +57,7 @@ class SandBalanceTest {
         val nodes = mutableListOf<Int>()
         for (day in 0 until 365) {
             val seed = daySeed(day, Sand.id, d)
-            val s = Sand.generateVerified(seed, d) ?: error("no board ${d.name} day $day")
+            val s = SandLogic.generateVerified(seed, d) ?: error("no board ${d.name} day $day")
             for (k in 0 until 5) {
                 if (play(s.tubes, s.height, Rng(seed * 31 + k), careful = false)) naive++
                 if (play(s.tubes, s.height, Rng(seed * 37 + k), careful = true)) careful++

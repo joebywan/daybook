@@ -1,5 +1,9 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.numberWord
+
 /**
  * Kings, reasoned the way a person reasons it, one named step at a time.
  *
@@ -88,7 +92,7 @@ internal object KingsTeacher {
         /** Each region's colour, by name, as the board paints it. */
         val names: List<String> = Kings.regionNames(n, region),
         /** `reach[x][c]`: a king on x rules out c. Worked out once a board and shared by [withKing]. */
-        val reach: Array<BooleanArray> = Array(n * n) { x -> BooleanArray(n * n).also { r -> attacks(n, region, x).forEach { r[it] = true } } },
+        val reach: Array<BooleanArray> = Array(n * n) { x -> BooleanArray(n * n).also { r -> Kings.attacks(n, region, x).forEach { r[it] = true } } },
     ) {
         private val ruledOut = BooleanArray(n * n).also { out ->
             for (k in kings) for (c in out.indices) if (reach[k][c]) out[c] = true
@@ -112,18 +116,6 @@ internal object KingsTeacher {
         fun withKing(cell: Int) = Sight(n, region, kings + cell, blocked, names, reach)
 
         fun unsatisfied(kind: Kind) = houses.filter { it.kind == kind && !satisfied(it) }
-    }
-
-    /** Every square a king on [cell] rules out, itself included. Mirrors [KingsState.eliminatedBy]. */
-    private fun attacks(n: Int, region: List<Int>, cell: Int): List<Int> {
-        val r = cell / n
-        val c = cell % n
-        return region.indices.filter { i ->
-            val ri = i / n
-            val ci = i % n
-            ri == r || ci == c || region[i] == region[cell] ||
-                (kotlin.math.abs(ri - r) <= 1 && kotlin.math.abs(ci - c) <= 1)
-        }
     }
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ----------------------
@@ -151,14 +143,7 @@ internal object KingsTeacher {
         val blocked = BooleanArray(n * n) { s.marks[it] == Mark.BLOCKED && it !in s.solution }
 
         kings.firstOrNull { it !in s.solution }?.let { wrong ->
-            return Step(
-                technique = MISTAKE,
-                clears = listOf(wrong),
-                focus = setOf(wrong),
-                cited = emptySet(),
-                nudge = "Check this king.",
-                explanation = "",
-            ).let { base -> explainWrongKing(n, s.region, kings, correct, blocked, wrong, base) }
+            return explainWrongKing(n, s.region, kings, correct, blocked, wrong)
         }
 
         s.marks.indices.firstOrNull { s.marks[it] == Mark.BLOCKED && it in s.solution }?.let { cross ->
@@ -190,11 +175,10 @@ internal object KingsTeacher {
         correct: List<Int>,
         blocked: BooleanArray,
         wrong: Int,
-        base: Step,
     ): Step {
         fun step(explanation: String, cited: Set<Int>) = Step(
-            technique = base.technique, clears = base.clears, focus = base.focus,
-            cited = cited, nudge = base.nudge, explanation = explanation,
+            technique = MISTAKE, clears = listOf(wrong), focus = setOf(wrong),
+            cited = cited, nudge = "Check this king.", explanation = explanation,
         )
         val wr = wrong / n
         val wc = wrong % n
@@ -349,15 +333,15 @@ internal object KingsTeacher {
                     crosses = crosses,
                     focus = group.flatMap { it.cells }.toSet(),
                     cited = open.toSet(),
-                    nudge = if (k == 1) "Look at ${group[0].name}." else "Look at ${join(group.map { it.name })} together.",
+                    nudge = if (k == 1) "Look at ${group[0].name}." else "Look at ${listed(group.map { it.name })} together.",
                     explanation = if (k == 1) {
                         val line = lineHouses[0].name
                         "Every open square of ${group[0].name} is in $line, so $line's king must be " +
                             "${group[0].name}. The rest of $line can be crossed out."
                     } else {
-                        val names = join(group.map { it.name })
+                        val names = listed(group.map { it.name })
                         val where = linesPhrase(lineKind, lines)
-                        "$names only fit in $where, so those ${numberWord(k)} kings are theirs. " +
+                        "$names only fit in $where, so those ${numberWord(k, upTo = 9)} kings are theirs. " +
                             "Nothing else in $where can hold a king."
                     },
                     width = if (k == 1) 0 else k,
@@ -392,8 +376,8 @@ internal object KingsTeacher {
                             "$line. The rest of ${colours[0]} can be crossed out."
                     } else {
                         val where = linesPhrase(lineKind, lines.sorted())
-                        "${where.cap()} only reach ${join(colours)}, so those ${numberWord(k)} colours' kings " +
-                            "are in them. The rest of ${join(colours)} can be crossed out."
+                        "${where.cap()} only reach ${listed(colours)}, so those ${numberWord(k, upTo = 9)} colours' kings " +
+                            "are in them. The rest of ${listed(colours)} can be crossed out."
                     },
                     width = if (k == 1) 0 else k,
                 )
@@ -492,19 +476,7 @@ internal object KingsTeacher {
     private fun lineOf(n: Int, kind: Kind, cell: Int) = if (kind == Kind.ROW) cell / n else cell % n
 
     private fun linesPhrase(kind: Kind, lines: List<Int>): String =
-        (if (kind == Kind.ROW) "rows " else "columns ") + join(lines.map { (it + 1).toString() })
-
-    private fun join(words: List<String>): String = when (words.size) {
-        0 -> ""
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " and " + words.last()
-    }
-
-    private fun numberWord(k: Int) =
-        listOf("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine")
-            .getOrElse(k) { k.toString() }
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
+        (if (kind == Kind.ROW) "rows " else "columns ") + listed(lines.map { (it + 1).toString() })
 
     /** Every [k]-sized subset of [items], in lexicographic index order. */
     private fun <T> combinations(items: List<T>, k: Int): Sequence<List<T>> = sequence {

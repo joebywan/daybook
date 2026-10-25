@@ -717,6 +717,8 @@ internal object PearlsLogic {
      * or null when none of [ATTEMPTS] draws was. Draw `a` uses `Rng(seed + a)`, so a board that needed
      * three draws still depends on its seed alone.
      */
+    fun generate(seed: Long, difficulty: Difficulty): PearlsState = generateVerified(seed, difficulty) ?: lastResort(difficulty)
+
     fun generateVerified(seed: Long, difficulty: Difficulty): PearlsState? {
         for (a in 0 until ATTEMPTS) attempt(seed, difficulty, a)?.let { return it }
         return null

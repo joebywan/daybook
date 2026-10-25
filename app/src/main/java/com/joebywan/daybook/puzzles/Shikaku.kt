@@ -58,6 +58,9 @@ data class Block(val r0: Int, val c0: Int, val r1: Int, val c1: Int) {
     fun contains(r: Int, c: Int) = r in r0..r1 && c in c0..c1
     fun overlaps(other: Block) =
         r0 <= other.r1 && other.r0 <= r1 && c0 <= other.c1 && other.c0 <= c1
+
+    /** The squares inside, in reading order, on a grid [width] squares wide. */
+    fun cells(width: Int): List<Int> = buildList { for (r in r0..r1) for (c in c0..c1) add(r * width + c) }
 }
 
 @Serializable
@@ -75,9 +78,7 @@ data class ShikakuState(
 
     /** Adds a block, evicting anything it overlaps. Rejects blocks that hold other than one clue. */
     fun place(block: Block): ShikakuState {
-        val cluesInside = (block.r0..block.r1).sumOf { r ->
-            (block.c0..block.c1).count { c -> clues[r * width + c] != null }
-        }
+        val cluesInside = block.cells(width).count { clues[it] != null }
         val kept = blocks.filterNot { it.overlaps(block) }
         // A block with no clue just clears the area; a block with two or more is never legal.
         val next = if (cluesInside == 1) kept + block else kept
@@ -118,8 +119,7 @@ object Shikaku : PuzzleType {
             if (b.r0 < 0 || b.c0 < 0 || b.r1 >= height || b.c1 >= width || b.r1 < b.r0 || b.c1 < b.c0) return false
             var numbered = 0
             var number = 0
-            for (r in b.r0..b.r1) for (c in b.c0..b.c1) {
-                val i = r * width + c
+            for (i in b.cells(width)) {
                 if (owner[i]) return false
                 owner[i] = true
                 clues[i]?.let { numbered++; number = it }
@@ -286,10 +286,7 @@ object Shikaku : PuzzleType {
                             if (r1 >= h || c1 >= w) continue
                             val block = Block(r0, c0, r1, c1)
                             // A rectangle may never swallow a second clue.
-                            val clueCount = (r0..r1).sumOf { r ->
-                                (c0..c1).count { c -> clues[r * w + c] != null }
-                            }
-                            if (clueCount == 1) add(block)
+                            if (block.cells(w).count { clues[it] != null } == 1) add(block)
                         }
                     }
                 }
@@ -299,16 +296,9 @@ object Shikaku : PuzzleType {
         val owner = IntArray(w * h) { -1 }
         var found = 0
 
-        fun fits(block: Block): Boolean {
-            for (r in block.r0..block.r1) for (c in block.c0..block.c1) {
-                if (owner[r * w + c] != -1) return false
-            }
-            return true
-        }
+        fun fits(block: Block) = block.cells(w).all { owner[it] == -1 }
 
-        fun mark(block: Block, value: Int) {
-            for (r in block.r0..block.r1) for (c in block.c0..block.c1) owner[r * w + c] = value
-        }
+        fun mark(block: Block, value: Int) = block.cells(w).forEach { owner[it] = value }
 
         fun place(placed: Int) {
             if (found >= 2) return
@@ -380,7 +370,7 @@ object Shikaku : PuzzleType {
     private fun tutorialBoard(vararg blocks: Block) =
         ShikakuState(TUTORIAL_SIZE, TUTORIAL_SIZE, TUTORIAL_CLUES, blocks.toList(), TUTORIAL_SOLUTION)
 
-    private fun cellsOf(b: Block) = (b.r0..b.r1).flatMap { r -> (b.c0..b.c1).map { c -> r * TUTORIAL_SIZE + c } }.toSet()
+    private fun cellsOf(b: Block) = b.cells(TUTORIAL_SIZE).toSet()
 
     /**
      * Accepts a board holding exactly [blocks] and nothing else. Strict on purpose: each frame's board

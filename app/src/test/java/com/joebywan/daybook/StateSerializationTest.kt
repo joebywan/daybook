@@ -8,6 +8,7 @@ import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.DominoState
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.CipherState
+import com.joebywan.daybook.puzzles.CodewordState
 import com.joebywan.daybook.puzzles.CageState
 import com.joebywan.daybook.puzzles.ChessPosition
 import com.joebywan.daybook.puzzles.ChessRules
@@ -20,6 +21,8 @@ import com.joebywan.daybook.puzzles.MamboState
 import com.joebywan.daybook.puzzles.MosaicState
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.RegionsState
+import com.joebywan.daybook.puzzles.LampsLogic
+import com.joebywan.daybook.puzzles.LampsState
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.PearlsState
@@ -31,6 +34,7 @@ import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
 import com.joebywan.daybook.puzzles.PointersState
+import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsState
@@ -120,10 +124,14 @@ class StateSerializationTest {
             state.select(cell).withCell(cell, 5).toggleNote(noted, 3)
         }
         is CipherState -> state.select(1).withDigit(1, 7).withDigit(0, 3)
+        is CodewordState -> (1..state.letters.size).first { it !in state.given }.let { state.select(it).withLetter(it, 25) }
         is ChessState -> state.play(ChessRules.legalMoves(ChessPosition.fromFen(state.start)).first())
         is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is RegionsState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is TallyState -> state.tap(0, TallyLogic.REMOVED).tap(1, TallyLogic.KEPT)
+        is LampsState -> state.walls.indexOf(LampsLogic.WHITE).let {
+            state.withMark(it, LampsLogic.LAMP_MARK).withMark(state.walls.indexOf(LampsLogic.WHITE, it + 1), LampsLogic.CROSS)
+        }
         is PearlsState -> state.drag(listOf(0, 1, 1 + state.size)).tap(state.size * (state.size - 1))
         is DominoState -> DominoLogic.flip(DominoLogic.place(DominoLogic.place(state, 0, state.answer[0]), 1, state.answer[1]), 1)
         is TargetState -> state.combine(0, TargetOp.Add, 1)!!
@@ -141,6 +149,13 @@ class StateSerializationTest {
             val free = state.arrows.indices.first { state.blocker(it) < 0 }
             val stuck = state.arrows.indices.first { state.blocker(it) >= 0 }
             state.tap(state.arrows[free][0])!!.tap(state.arrows[stuck][0])!!
+        }
+        // A flag, a reveal and a mine hit, so the marks and the lives must survive.
+        is MinesState -> {
+            val hidden = state.marks.indices.filter { state.marks[it] == '.' }
+            val mine = hidden.first { state.isMine(it) }
+            val safe = hidden.first { !state.isMine(it) }
+            state.flag(hidden.first { it != mine && it != safe })!!.reveal(safe)!!.reveal(mine)!!
         }
         is SetsState -> state.copy(
             found = listOf(Sets.allSets(state.cards).first()),

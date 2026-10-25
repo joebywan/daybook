@@ -42,6 +42,7 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.forEachBit
 import com.joebywan.daybook.core.jvmHashSetOrder
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
@@ -193,18 +194,11 @@ object Lits : PuzzleType {
         val n = width * height
         if (region.size != n || shaded.size != n || n == 0) return false
 
-        // Every region needs its own four squares: a region left blank is not "not yet wrong".
-        val quads = HashMap<Int, MutableList<Int>>()
-        for (cell in 0 until n) if (shaded[cell]) quads.getOrPut(region[cell]) { mutableListOf() } += cell
-        if (quads.size != region.toHashSet().size) return false
-
-        val letters = arrayOfNulls<Piece>(n)
-        for (quad in quads.values) {
-            if (quad.size != 4) return false
-            if (!isConnected(quad, width, height)) return false
-            val piece = classify(quad, width) ?: return false   // null is the banned 2x2 block
-            quad.forEach { letters[it] = piece }
-        }
+        // Every region needs its own four squares (a region left blank is not "not yet wrong"), in one
+        // legal tetromino: exactly the squares [letters] names.
+        if ((0 until n).filter { shaded[it] }.map { region[it] }.toSet().size != region.toSet().size) return false
+        val letters = letters(width, height, region, shaded)
+        if ((0 until n).any { shaded[it] && letters[it] == null }) return false
 
         for (r in 0 until height - 1) for (c in 0 until width - 1) {
             val i = r * width + c
@@ -293,52 +287,7 @@ object Lits : PuzzleType {
         val n = width * height
         if (region.size != n || shaded.size != n) return emptySet()
 
-        val letters = letters(width, height, region, shaded)
-        val members = HashMap<Int, MutableList<Int>>()
-        for (cell in 0 until n) members.getOrPut(region[cell]) { mutableListOf() } += cell
-
-        /** Would this cover, standing on the shading already down, fill a 2x2 anywhere? */
-        fun fillsBlock(quad: List<Int>): Boolean = quad.any { cell ->
-            val r = cell / width
-            val c = cell % width
-            (-1..0).any { dr ->
-                (-1..0).any { dc ->
-                    val rr = r + dr
-                    val cc = c + dc
-                    rr >= 0 && cc >= 0 && rr + 1 < height && cc + 1 < width &&
-                        listOf(
-                            rr * width + cc, rr * width + cc + 1,
-                            (rr + 1) * width + cc, (rr + 1) * width + cc + 1,
-                        ).all { it in quad || shaded[it] }
-                }
-            }
-        }
-
-        /** Would this cover sit its letter against a region that has already settled on it? */
-        fun clashes(quad: List<Int>, piece: Piece): Boolean = quad.any { cell ->
-            neighbours(cell, width, height).any { next ->
-                next !in quad && shaded[next] && letters[next] == piece
-            }
-        }
-
-        val covers = HashMap<Int, List<kotlin.Pair<List<Int>, Piece>>>()
-        val out = mutableSetOf<Int>()
-        for (cell in 0 until n) {
-            if (shaded[cell]) continue
-            val id = region[cell]
-            val cells = members.getValue(id)
-            val forced = cells.filter { shaded[it] } + cell
-            if (forced.size > 4) {
-                out += cell
-                continue
-            }
-            val fits = covers.getOrPut(id) { tetrominoes(cells, width, height) }
-                .filter { it.first.containsAll(forced) }
-            if (fits.isEmpty() || fits.all { (quad, piece) -> fillsBlock(quad) || clashes(quad, piece) }) {
-                out += cell
-            }
-        }
-        return out
+        return LitsTeacher.impossible(width, height, region, shaded)
     }
 
     // ---- generation ---------------------------------------------------------------------------
@@ -353,11 +302,14 @@ object Lits : PuzzleType {
      */
     private const val NODE_BUDGET = 400_000
 
-    /** Ceiling on uniqueness checks per board, which is what actually bounds generation time. */
-    private const val SEARCH_BUDGET = 4000
+    /**
+     * Ceiling on uniqueness checks per board, which is what actually bounds generation time. Tripled (with
+     * [ATTEMPTS]) for the tier gate: a board that fits inside the old budget is the board it always was.
+     */
+    private const val SEARCH_BUDGET = 12_000
 
     /** Piece layouts tried per board, and partitions carved per layout. */
-    private const val ATTEMPTS = 150
+    private const val ATTEMPTS = 450
     private const val WALL_TRIES = 2
 
     /**
@@ -379,7 +331,9 @@ object Lits : PuzzleType {
      */
     private const val LAYOUTS = 24
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = build(seed, difficulty).let { (proved, floor) ->
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = build(seed, difficulty).let { b ->
+        val proved = b.proved
+        val floor = b.floor
         // Nothing was *proved* unique inside the budget. The floor still obeys every rule and can
         // be finished, and a second legal answer is a blemish rather than a wrong-answer bug (the
         // win check is the rules, not a stored answer), so it beats shipping nothing. FallbackTest
@@ -391,10 +345,13 @@ object Lits : PuzzleType {
      * The board [generate] makes, or null when nothing was proved to have exactly one answer under
      * the win check's rules: what a test asserts, because [generate] would then ship a floor.
      */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): LitsState? = build(seed, difficulty).first
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): LitsState? = build(seed, difficulty).proved
 
-    /** The proved board if any, and the first legal-but-unproved candidate built along the way. */
-    private fun build(seed: Long, difficulty: Difficulty): kotlin.Pair<LitsState?, LitsState?> {
+    /**
+     * The proved board if any (the first that [score] says fits the tier, else the nearest), and the first
+     * legal-but-unproved candidate built along the way.
+     */
+    internal fun build(seed: Long, difficulty: Difficulty): Built {
         val (w, h) = shape(difficulty)
         val n = w * h
         val g = geometry(w, h)
@@ -408,6 +365,10 @@ object Lits : PuzzleType {
         // first and the regions drawn around it — so the first one built is kept as a floor. Only
         // its *uniqueness* is ever in doubt.
         var floor: LitsState? = null
+        // The proved board that came nearest the tier's gate, shipped when none meets it in MAX_DRAWS.
+        var best: LitsState? = null
+        var bestScore = -1
+        var proved = 0
 
         // Capped first. Should no board be provable under the cap, a proved board with one larger
         // region still beats the unproved floor, so the cap is dropped rather than the proof.
@@ -447,14 +408,52 @@ object Lits : PuzzleType {
                         // the next candidate.
                         searches++
                         if (search(g, options, connected = false) is Verdict.ExactlyOne) {
-                            return LitsState(w, h, region, List(n) { false }, verdict.shading) to floor
+                            val board = LitsState(w, h, region, List(n) { false }, verdict.shading)
+                            proved++
+                            val score = score(difficulty, LitsTeacher.depth(w, h, region))
+                            if (score == FITS) return Built(board, floor, proved)
+                            if (score > bestScore) { best = board; bestScore = score }
+                            if (difficulty == Difficulty.EXPERT && proved >= MAX_DRAWS) return Built(best, floor, proved)
                         }
                     }
                 }
             }
+            // A proved board under the cap beats a gated one with a larger region.
+            if (best != null) break
         }
 
-        return null to floor
+        return Built(best, floor, proved)
+    }
+
+    /** [build]'s result: the proved board if any, the floor, and how many proved boards the gate looked at. */
+    internal class Built(val proved: LitsState?, val floor: LitsState?, val draws: Int)
+
+    /**
+     * Proved boards Expert's gate may look at. Its what-if is needed by about one board in twenty, and each draw
+     * costs a carve (~15 ms on the JVM), so it keeps the deepest of these rather than drawing on: a year of Expert
+     * days is then what-if 35%, neighbour 64%, at a median of ~140 ms a board (16 draws: 37%, 177 ms).
+     */
+    private const val MAX_DRAWS = 8
+
+    private const val FITS = 2
+
+    /**
+     * How well a proved board meets its tier's gate, by the deepest [LitsTeacher.TECHNIQUES] rung a walk from blank
+     * needs ([LitsTeacher.depth]); [FITS] ships at once. Standard: no [LitsTeacher.NEIGHBOUR] or [LitsTeacher.WHAT_IF].
+     * Hard: any walk that finishes. Expert: [LitsTeacher.WHAT_IF], else (after [MAX_DRAWS]) [LitsTeacher.NEIGHBOUR].
+     */
+    internal fun score(difficulty: Difficulty, depth: Int?): Int {
+        if (depth == null) return 0
+        val t = LitsTeacher.TECHNIQUES
+        return when (difficulty) {
+            Difficulty.STANDARD -> if (depth < t.indexOf(LitsTeacher.NEIGHBOUR)) FITS else 0
+            Difficulty.HARD -> FITS
+            Difficulty.EXPERT -> when {
+                depth == t.indexOf(LitsTeacher.WHAT_IF) -> FITS
+                depth == t.indexOf(LitsTeacher.NEIGHBOUR) -> 1
+                else -> 0
+            }
+        }
     }
 
     /**
@@ -514,7 +513,7 @@ object Lits : PuzzleType {
         var claimed = 0L
         masks.forEachIndexed { index, m ->
             claimed = claimed or m
-            forEachBit(m) { region[it] = index }
+            m.forEachBit { region[it] = index }
         }
         val sizes = IntArray(placed.size) { 4 }
         val opts = Array(placed.size) { g.tetrominoesIn(masks[it]) }
@@ -532,7 +531,7 @@ object Lits : PuzzleType {
             val frontier = g.spread(claimed) and claimed.inv()
             if (frontier == 0L) break
             var open = frontier
-            if (intact) forEachBit(frontier) { cell ->
+            if (intact) frontier.forEachBit { cell ->
                 if (hostBits(g, cell, region) and refused[cell].inv() == 0L) {
                     open = open and (1L shl cell).inv()
                 }
@@ -709,14 +708,6 @@ object Lits : PuzzleType {
         return rest.countTrailingZeroBits()
     }
 
-    private inline fun forEachBit(bits: Long, action: (Int) -> Unit) {
-        var rest = bits
-        while (rest != 0L) {
-            action(rest.countTrailingZeroBits())
-            rest = rest and (rest - 1)
-        }
-    }
-
     /**
      * A w x h grid (at most 64 squares) worked out once for the generator: squares as bits of a
      * `Long`, and every four-square connected placement, the 2x2 block included, as an id with its
@@ -833,7 +824,7 @@ object Lits : PuzzleType {
         fun tetrominoesIn(cells: Long): IntArray {
             var size = 0
             var buffer = IntArray(40)
-            forEachBit(cells) { cell ->
+            cells.forEachBit { cell ->
                 for (q in byLowest[cell]) {
                     if (mask[q] and cells.inv() != 0L) continue
                     if (size == buffer.size) buffer = buffer.copyOf(size * 2)

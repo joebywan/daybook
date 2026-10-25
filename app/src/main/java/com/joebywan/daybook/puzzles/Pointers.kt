@@ -89,11 +89,8 @@ object Pointers : PuzzleType {
      */
     override val offersUndo = false
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = PointersLogic.generate(seed, difficulty)
-
-    /** The board when it covered the grid to the tier's density and cleared, null otherwise. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): PointersState? =
-        PointersLogic.generateVerified(seed, difficulty)
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        PointersLogic.generateVerified(seed, difficulty) ?: PointersLogic.lastResort(difficulty)
 
     // ---- walkthrough --------------------------------------------------------------------------
 
@@ -231,8 +228,8 @@ object Pointers : PuzzleType {
                 val r = cell / s.width
                 val c = cell % s.width
                 for (d in 0 until 4) {
-                    val nr = r + PointersLogic.rowStep(d)
-                    val nc = c + PointersLogic.colStep(d)
+                    val nr = r + PointersLogic.DR[d]
+                    val nc = c + PointersLogic.DC[d]
                     if (nr !in 0 until s.height || nc !in 0 until s.width) continue
                     val o = owner[nr * s.width + nc]
                     if (o in 0 until i) used[out[o]] = true
@@ -253,7 +250,7 @@ object Pointers : PuzzleType {
         val d = PointersLogic.dirOf(arrow, w)
         val out = arrow.map { Offset(centreX(it, w), centreY(it, w)) }.toMutableList()
         val head = out.last()
-        for (k in 1..beyond) out += Offset(head.x + k * PointersLogic.colStep(d), head.y + k * PointersLogic.rowStep(d))
+        for (k in 1..beyond) out += Offset(head.x + k * PointersLogic.DC[d], head.y + k * PointersLogic.DR[d])
         return out
     }
 
@@ -285,8 +282,8 @@ object Pointers : PuzzleType {
         drawPath(path, colour, style = Stroke(width * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
         if (!head) return
         val d = PointersLogic.dirOf(arrow, w)
-        val fx = PointersLogic.colStep(d).toFloat()
-        val fy = PointersLogic.rowStep(d).toFloat()
+        val fx = PointersLogic.DC[d].toFloat()
+        val fy = PointersLogic.DR[d].toFloat()
         val tip = end + Offset(fx, fy) * (0.36f * unit)
         val base = end - Offset(fx, fy) * (0.1f * unit)
         val side = Offset(-fy, fx) * (0.27f * unit)
@@ -317,7 +314,7 @@ object Pointers : PuzzleType {
     }
 
     @Composable
-    private fun Hearts(lives: Int, modifier: Modifier) {
+    internal fun Hearts(lives: Int, modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
         Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             repeat(PointersLogic.LIVES) { k ->

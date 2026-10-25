@@ -2,9 +2,9 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.digitsOf
 import com.joebywan.daybook.core.has
-
 
 /**
  * Sudoku, reasoned the way a person reasons it, one named step at a time.
@@ -112,7 +112,6 @@ internal object SudokuTeacher {
     private fun boxOf(cell: Int) = cell / 9 / 3 * 3 + cell % 9 / 3
     private fun unitsOf(cell: Int): List<Unit> =
         listOf(units[boxOf(cell)], units[9 + cell / 9], units[18 + cell % 9])
-
 
     // ---- what the player can see -------------------------------------------------------------------
 
@@ -269,26 +268,35 @@ internal object SudokuTeacher {
         return null
     }
 
-    /** With [kind] BOX, boxes only; with null, rows and columns. */
-    private fun hiddenSingle(s: Sight, kind: Kind?): PlacementStep? {
+    private class Hidden(val unit: Unit, val cell: Int, val digit: Int)
+
+    /** The first digit with one place in a unit: with [kind] BOX, boxes only; with null, rows and columns. */
+    private fun findHidden(s: Sight, kind: Kind?): Hidden? {
         for (u in units) {
             if ((kind == Kind.BOX) != (u.kind == Kind.BOX)) continue
             for (d in 1..9) {
                 if (s.holds(u, d)) continue
                 val places = s.places(u, d)
-                if (places.size != 1) continue
-                val cell = places[0]
-                return PlacementStep(
-                    if (u.kind == Kind.BOX) HIDDEN_SINGLE_BOX else HIDDEN_SINGLE_LINE, cell, d,
-                    focus = u.cells.toSet(),
-                    cited = u.cells.toSet() + blockers(s, u, d, cell),
-                    nudge = "Look at ${u.name}.",
-                    explanation = "Every other empty cell in ${u.name} already sees a $d in its row, " +
-                        "column or box. So ${u.name}'s $d goes in the glowing cell.",
-                )
+                if (places.size == 1) return Hidden(u, places[0], d)
             }
         }
         return null
+    }
+
+    /** The first empty cell, in reading order, with one candidate left. */
+    private fun findNaked(s: Sight): Int? = (0 until 81).firstOrNull { s.cells[it] == 0 && s.cand[it].countOneBits() == 1 }
+
+    private fun hiddenSingle(s: Sight, kind: Kind?): PlacementStep? = findHidden(s, kind)?.let { h ->
+        val u = h.unit
+        val d = h.digit
+        PlacementStep(
+            if (u.kind == Kind.BOX) HIDDEN_SINGLE_BOX else HIDDEN_SINGLE_LINE, h.cell, d,
+            focus = u.cells.toSet(),
+            cited = u.cells.toSet() + blockers(s, u, d, h.cell),
+            nudge = "Look at ${u.name}.",
+            explanation = "Every other empty cell in ${u.name} already sees a $d in its row, " +
+                "column or box. So ${u.name}'s $d goes in the glowing cell.",
+        )
     }
 
     /** The visible [d]s that rule [d] out of the other empty cells of [u], one per cell, lowest first. */
@@ -298,20 +306,16 @@ internal object SudokuTeacher {
             .sorted()
             .toSet()
 
-    private fun nakedSingle(s: Sight): PlacementStep? {
-        for (cell in 0 until 81) {
-            if (s.cells[cell] != 0 || s.cand[cell].countOneBits() != 1) continue
-            val d = digitsOf(s.cand[cell])[0]
-            return PlacementStep(
-                NAKED_SINGLE, cell, d,
-                focus = setOf(cell),
-                cited = Sudoku.peers(cell).filter { s.cells[it] != 0 }.toSet(),
-                nudge = "What can go in the glowing cell?",
-                explanation = "Its row, column and box already hold every digit except $d, so $d is " +
-                    "the only one left for it.",
-            )
-        }
-        return null
+    private fun nakedSingle(s: Sight): PlacementStep? = findNaked(s)?.let { cell ->
+        val d = digitsOf(s.cand[cell])[0]
+        PlacementStep(
+            NAKED_SINGLE, cell, d,
+            focus = setOf(cell),
+            cited = Sudoku.peers(cell).filter { s.cells[it] != 0 }.toSet(),
+            nudge = "What can go in the glowing cell?",
+            explanation = "Its row, column and box already hold every digit except $d, so $d is " +
+                "the only one left for it.",
+        )
     }
 
     // ---- eliminations, each carried through to the single it makes ---------------------------------
@@ -585,6 +589,4 @@ internal object SudokuTeacher {
     // ---- small helpers -----------------------------------------------------------------------------
 
     private fun lineOf(kind: Kind, cell: Int) = if (kind == Kind.ROW) cell / 9 else cell % 9
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
 }
