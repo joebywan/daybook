@@ -3,3 +3,4 @@
 - Mosaic: out of fills, the board stays put and the line says Undo or a hint will find the fill that lost it.
 - The first-visit walkthrough line now says what each puzzle is about.
 - Tower moves to the end of a new player's home grid.
+- Clearer word clues, and no interjections or old words in Word Wheel's grids.
