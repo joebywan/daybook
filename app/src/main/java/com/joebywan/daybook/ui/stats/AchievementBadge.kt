@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.stats
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -37,7 +38,7 @@ internal val BADGE_GLYPHS: Map<String, String> = mapOf(
     "streak60" to "60", "streak100" to "100", "streak365" to "365",
     "puzzleStreak7" to "7", "puzzleStreak30" to "30",
     "firstTop" to "#star", "cleanTop" to "#crown",
-    "oneOfEach" to "#star", "fullSet" to "3/3", "allPuzzles" to "All",
+    "oneOfEach" to "#star", "fullSet" to "3/3", "todaysThree" to "3", "allPuzzles" to "All",
 )
 
 private fun colourOf(c: AchievementCategory, dark: Boolean) = when (c) {
@@ -55,7 +56,7 @@ private fun colourOf(c: AchievementCategory, dark: Boolean) = when (c) {
 fun AchievementBadge(id: String, earned: Boolean, modifier: Modifier = Modifier) {
     val a = ACHIEVEMENTS.first { it.id == id }
     val scheme = MaterialTheme.colorScheme
-    val dark = scheme.background.luminance() < 0.5f
+    val dark = BoardHues.isDark(scheme)
     val fill = colourOf(a.category, dark)
     val glyph = BADGE_GLYPHS.getValue(id)
     val ink = if (fill.luminance() > 0.35f) Color(0xFF11201C) else Color.White

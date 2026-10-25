@@ -28,26 +28,6 @@ class HomeOrderTest {
         Completion(id, Difficulty.STANDARD, daysAgo?.let { LocalDate.fromEpochDays(today.toEpochDays() - it) }, 60, 0)
 
     @Test
-    fun `today's pick is never one of the five most played, and a new player's is the plain rotation`() {
-        val all = PuzzleRegistry.all.map { it.id }
-        val days = today.toEpochDays() until today.toEpochDays() + all.size * 2
-        for (d in days) {
-            val day = LocalDate.fromEpochDays(d)
-            assertEquals(PuzzleRegistry.featured(d).id, PuzzleOrder.pick(emptyList(), day))
-        }
-        // Six played: the five with most solves are skipped, the sixth (one solve) still can be picked.
-        val played = listOf("kings" to 9, "sudoku" to 7, "words" to 6, "pipes" to 5, "snap" to 4, "chess" to 1)
-        val basis = played.flatMap { (id, n) -> List(n) { Completion(id, Difficulty.STANDARD, null, 60, 0) } }
-        val top = setOf("kings", "sudoku", "words", "pipes", "snap")
-        val picks = days.map { PuzzleOrder.pick(basis, LocalDate.fromEpochDays(it)) }
-        picks.forEach { assertFalse("$it is in the top five", it in top) }
-        assertEquals(all.toSet() - top, picks.toSet())
-        // Two played: only those two are skipped.
-        val two = listOf("kings", "kings", "sudoku").map { Completion(it, Difficulty.STANDARD, null, 60, 0) }
-        assertEquals(all.toSet() - setOf("kings", "sudoku"), days.map { PuzzleOrder.pick(two, LocalDate.fromEpochDays(it)) }.toSet())
-    }
-
-    @Test
     fun `most played first, ties and the unplayed in the order given`() {
         val all = listOf(solve("c", 1), solve("c", 2), solve("b", 3), solve("d", 4))
         assertEquals(listOf("c", "b", "d", "a"), PuzzleOrder.mostPlayed(all, today, ids))

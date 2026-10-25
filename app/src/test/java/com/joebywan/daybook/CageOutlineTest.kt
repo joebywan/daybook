@@ -1,13 +1,11 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.CageLogic
 import com.joebywan.daybook.puzzles.Cages
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.math.abs
 
 /** The dashed outlines must close up: every corner of a cage's outline is met by exactly two pieces. */
@@ -51,7 +49,7 @@ class CageOutlineTest {
     fun `every generated cage and the walkthrough's close`() {
         assertClosed(CageLogic.dominoes(), 9, "dominoes")
         for (d in Difficulty.entries) for (i in 0 until 30) {
-            val s = CageLogic.generateVerified(DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(i.toLong()), Cages.id, d), d)!!
+            val s = CageLogic.generateVerified(daySeed(i, Cages.id, d), d)!!
             assertClosed(s.cageOf, 9, "${d.name} day $i")
         }
     }

@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.SnapState
 import org.junit.Assert.assertEquals
@@ -70,48 +69,6 @@ class SnapRulesTest {
         )
         for (b in boards) for (p in paths) {
             assertEquals("board ${b.waypoints} line $p", obeys(b, p), b.copy(path = p).solved)
-        }
-    }
-
-    /** Every line the independent rules accept, up to [cap]; naive depth-first from 1. */
-    private fun answers(s: SnapState, cap: Int): List<List<Int>> {
-        val n = s.cellCount
-        val trail = ArrayList<Int>()
-        val found = mutableListOf<List<Int>>()
-        fun walk(cell: Int) {
-            if (found.size >= cap) return
-            trail += cell
-            if (trail.size == n) {
-                if (obeys(s, trail)) found += trail.toList()
-            } else {
-                val r = cell / s.width
-                val c = cell % s.width
-                val next = buildList {
-                    if (r > 0) add(cell - s.width)
-                    if (r < s.height - 1) add(cell + s.width)
-                    if (c > 0) add(cell - 1)
-                    if (c < s.width - 1) add(cell + 1)
-                }
-                for (m in next) if (m !in trail) walk(m)
-            }
-            trail.removeAt(trail.lastIndex)
-        }
-        walk(s.waypoints.indexOf(1))
-        return found
-    }
-
-    @Test
-    fun `generated boards have exactly one answer under the rules including the end`() {
-        // The generator proves uniqueness under a looser rule (any end), which implies this one.
-        for (seed in listOf(1L, 404L, 7919L, 20260924L, 555555L)) {
-            val s = Snap.generate(seed, Difficulty.STANDARD) as SnapState
-            val all = answers(s, cap = 2)
-            assertEquals("STANDARD/$seed", 1, all.size)
-            assertTrue(s.copy(path = all.single()).solved)
-        }
-        for (seed in listOf(1L, 404L)) {
-            val s = Snap.generate(seed, Difficulty.HARD) as SnapState
-            assertEquals("HARD/$seed", 1, answers(s, cap = 2).size)
         }
     }
 

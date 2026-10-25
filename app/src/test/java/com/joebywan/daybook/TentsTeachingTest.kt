@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.TentsLogic
@@ -12,14 +11,11 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class TentsTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        TentsLogic.generateVerified(DailySeed.seedFor(start.plusDays(day.toLong()), "tents", d), d)
+        TentsLogic.generateVerified(daySeed(day, "tents", d), d)
             ?: error("no proved board for day $day ${d.name}")
 
     /** Every step's conclusion must hold in the (unique) answer; applies each until solved. */
@@ -50,16 +46,24 @@ class TentsTeachingTest {
             var steps = 0
             for (day in 0 until 200) {
                 var used = false
-                walk(board(day, d)) { t -> counts[t] = counts.getValue(t) + 1; steps++; if (t == TentsTeacher.FALLBACK) used = true }
+                val seen = mutableSetOf<String>()
+                walk(board(day, d)) { t -> counts[t] = counts.getValue(t) + 1; steps++; seen += t; if (t == TentsTeacher.FALLBACK) used = true }
                 if (used) fellBack++
+                // The tier gate, seen through the play screen's own hint path.
+                val deep = TentsTeacher.SHARED in seen || TentsTeacher.SERVED in seen
+                val fits = when (d) {
+                    Difficulty.STANDARD -> true
+                    Difficulty.HARD -> deep || TentsTeacher.ONE_SPOT in seen
+                    Difficulty.EXPERT -> deep
+                }
+                assertTrue("${d.name} day $day: techniques $seen do not fit the tier", fits)
             }
             val line = "${d.name}: boards fell back $fellBack/200, steps $steps (${steps / 200.0}/board), $counts"
             println(line)
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/tents-teaching-coverage.txt").writeText(report.toString())
+        writeReport("tents-teaching-coverage.txt", report.toString())
     }
 
     @Test

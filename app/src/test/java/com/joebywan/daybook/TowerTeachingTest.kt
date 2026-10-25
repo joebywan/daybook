@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Feedback
@@ -12,8 +11,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 /**
  * Tower's hint solver, checked against a scorer and a code enumerator written out again here.
@@ -25,10 +22,6 @@ import java.time.LocalDate
  * a blind spot.
  */
 class TowerTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     // ---- independent rules --------------------------------------------------------------------
 
@@ -287,8 +280,7 @@ class TowerTeachingTest {
             assertTrue("$difficulty: the facts never fire", turnsPinnedTaught > 0)
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/tower-teaching-coverage.txt").writeText(report.toString())
+        writeReport("tower-teaching-coverage.txt", report.toString())
     }
 
     // ---- mistakes -------------------------------------------------------------------------------

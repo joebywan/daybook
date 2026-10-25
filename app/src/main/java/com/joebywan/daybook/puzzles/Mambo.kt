@@ -25,11 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
@@ -64,6 +61,8 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.hintOutline
+import com.joebywan.daybook.ui.gridCellAt
 
 /** Empty, or one of the two symbols. */
 @Serializable
@@ -120,7 +119,7 @@ data class MamboState(
 object Mambo : PuzzleType {
 
     override val id = "mambo"
-    override val displayName = "Mambo"
+    override val displayName = "Sun & Moon"
     override val tagline = "Balance two symbols, never three alike in a line"
     override val accent = 0xFF6E8FD8
 
@@ -287,10 +286,8 @@ object Mambo : PuzzleType {
      * the stored one. Propagation first, then a guess on the first blank; boards the generator
      * made need no guess at all.
      */
-    internal fun completion(n: Int, clues: List<Sym>, links: List<Link>): List<Sym>? {
-        val grid = clues.toTypedArray()
-        return completeFrom(n, grid, links)
-    }
+    internal fun completion(n: Int, clues: List<Sym>, links: List<Link>): List<Sym>? =
+        completeFrom(n, clues.toTypedArray(), links)
 
     private fun completeFrom(n: Int, grid: Array<Sym>, links: List<Link>): List<Sym>? {
         if (!propagate(n, grid, links)) return null
@@ -541,24 +538,11 @@ object Mambo : PuzzleType {
         return ok
     }
 
-    // ---- play ---------------------------------------------------------------------------------
-
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as MamboState
-        // A hint is asked for, so it may read the answer the live feedback must not.
-        val answer = answerFor(s)
-        val wrong = mistakes(s).firstOrNull()
-        if (wrong != null) return s.withCell(wrong, answer[wrong])
-        val blank = s.cells.indices.firstOrNull { s.cells[it] == Sym.NONE } ?: return null
-        return s.withCell(blank, answer[blank])
-    }
-
     // ---- teaching -----------------------------------------------------------------------------
 
     /**
-     * A mistake to take back or a step to reason out — see [MamboTeacher]. Replaces [hint], which
-     * copied a square straight out of [MamboState.solution] and taught nothing; [hint] stays only
-     * as the contract's fallback for a puzzle that does not teach.
+     * A mistake to take back or a step to reason out — see [MamboTeacher]. Non-null whenever a square
+     * is wrong or empty (the fallback names one from the answer), so `hint()` is never reached.
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as MamboState
@@ -1079,18 +1063,9 @@ object Mambo : PuzzleType {
                         .pointerInput(s, interactive, cellPx) {
                             if (!interactive) return@pointerInput
                             detectTapGestures { offset: Offset ->
-                                val c = (offset.x / cellPx).toInt().coerceIn(0, s.size - 1)
-                                val r = (offset.y / cellPx).toInt().coerceIn(0, s.size - 1)
-                                val i = r * s.size + c
+                                val i = gridCellAt(offset, cellPx, s.size, s.size)
                                 cursor = i
-                                if (!s.givens[i]) {
-                                    val next = when (s.cells[i]) {
-                                        Sym.NONE -> Sym.MOON
-                                        Sym.MOON -> Sym.SUN
-                                        Sym.SUN -> Sym.NONE
-                                    }
-                                    onState(s.withCell(i, next))
-                                }
+                                s.applyKey(i, MamboKeyAction.Cycle)?.let(onState)
                             }
                         }
                 ) {
@@ -1209,23 +1184,7 @@ object Mambo : PuzzleType {
                 .clip(shape)
                 .background(fill)
                 .then(if (ringed) Modifier.border(2.dp, scheme.error, shape) else Modifier)
-                .then(
-                    when (look) {
-                        Look.STRONG -> Modifier.drawWithContent {
-                            drawContent()
-                            val w = 3.dp.toPx()
-                            drawRoundRect(
-                                glow.copy(alpha = pulse()),
-                                topLeft = Offset(w / 2, w / 2),
-                                size = Size(size.width - w, size.height - w),
-                                cornerRadius = CornerRadius(size.minDimension * 0.22f),
-                                style = Stroke(w),
-                            )
-                        }
-                        Look.SOFT -> Modifier.border(1.5.dp, glow.copy(alpha = 0.5f), shape)
-                        else -> Modifier
-                    }
-                ),
+                .hintOutline(look == Look.STRONG, look == Look.SOFT, glow, pulse, 3.dp, shape),
             contentAlignment = Alignment.Center,
         ) {
             if (sym != Sym.NONE) {

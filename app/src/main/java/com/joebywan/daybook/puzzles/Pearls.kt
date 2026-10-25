@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,14 +41,12 @@ import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.theme.BoardHues
-import kotlinx.coroutines.delay
 import androidx.compose.ui.geometry.Rect
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
-/** How long a break must last before it turns red, so a line drawn through a passing state is not shouted at. */
-private const val SETTLE_MILLIS = 1000L
 
 /**
  * Pearls: draw one closed loop through the middles of squares, passing every pearl. On a black pearl
@@ -469,11 +466,7 @@ object Pearls : PuzzleType {
 
         val shown = if (path.size >= 2) s.drag(path) else s
         val broken = breaks(shown)
-        var settled by remember(s.pearls) { mutableStateOf(broken) }
-        LaunchedEffect(shown.edges) {
-            delay(SETTLE_MILLIS)
-            settled = broken
-        }
+        val settled = rememberSettled(broken, s.pearls, shown.edges)
         val red = Breaks(broken.squares.intersect(settled.squares), broken.edges.intersect(settled.edges))
         // A square's look is its pearl and which of its edges are lines.
         val g = PearlsGrid.of(n)

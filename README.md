@@ -13,7 +13,7 @@ No ads. No subscription. No accounts. No network permission in the manifest at a
 
 | Every puzzle, every day | Sudoku | Cage Sudoku | Word Wheel |
 |---|---|---|---|
-| ![The home screen on day one: today's puzzles, the first nine in view, Snap marked as today's pick](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Hard Cage Sudoku board with a hint open](docs/screenshots/cage-sudoku.png) | ![A Word Wheel board](docs/screenshots/word-wheel.png) |
+| ![The home screen on day one: today's three over the grid of puzzles, the first nine in view](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Hard Cage Sudoku board with a hint open](docs/screenshots/cage-sudoku.png) | ![A Word Wheel board](docs/screenshots/word-wheel.png) |
 
 ![On a tablet the board sits beside the title, hints and tools: a Cage Sudoku with a hint open](docs/screenshots/tablet-cage-sudoku.png)
 
@@ -60,15 +60,15 @@ Each is a classic, published puzzle genre, implemented from its rules.
 |---|---|---|
 | Sudoku | Sudoku | 1–9 once per row, column and box |
 | Kings | Star Battle / Queens family | One king per row, column and region, none touching |
-| Mambo | Takuzu / Binairo | Two symbols, balanced lines, never three alike, `=` and `x` links |
+| Sun & Moon | Takuzu / Binairo | Two symbols, balanced lines, never three alike, `=` and `x` links |
 | Pipes | Net | Rotate tiles until every pipe joins into one network |
 | Shikaku | Shikaku (Nikoli) | Cut the grid into rectangles, one number each, number = area |
 | Mosaic | Flood-fill (Kami family) | Recolour an area, merging it with its neighbours, until the board is one colour |
 | Sets | SET | Triples that are all-alike or all-different in four traits |
 | Atoms | Hashiwokakero (Bridges) | Bond atoms into one molecule, no crossings |
-| Snap | Hamiltonian path | One line through every square, numbers in ascending order |
+| Trail | Hamiltonian path | One line through every square, numbers in ascending order |
 | LITS | LITS (Nikoli) | One L/I/T/S tetromino per region, no 2×2, no same letter touching |
-| Tower | Mastermind | Break the hidden colour code from scored guesses |
+| Codebreaker | Mastermind | Break the hidden colour code from scored guesses |
 | Lexicon | Mastermind for words | Find the hidden word; each guess marks every letter green, yellow or grey |
 | Nonogram | Nonogram | Fill squares to match the run lengths beside each row and column and a picture appears |
 | Inequality | Futoshiki | 1 to N once per row and column, `<` and `>` signs between some neighbours |
@@ -81,7 +81,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Word Wheel | Letter-wheel crossword | Spell words from a wheel of letters to fill a small crossword; other real words count as bonus words |
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
-| Pointers | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
+| Arrows | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
 | Pearls | Masyu (pearl loop) | One closed loop through square middles and every pearl: it turns on black pearls (running straight on either side) and goes straight through white ones (turning beside them) |
 
@@ -94,7 +94,7 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
 
 - **Sudoku, Shikaku, Atoms** — carve or grow a board, then count solutions with a backtracking
   solver and reject anything with two.
-- **Mambo** — a stricter bar: clues are stripped only while the board stays solvable by
+- **Sun & Moon** — a stricter bar: clues are stripped only while the board stays solvable by
   *propagation alone*, so it never requires a guess. Mosaic once held this bar too, before it
   turned out to be the wrong puzzle entirely.
 - **Mosaic** — the move limit is the proven optimum, found by an exact search over every legal
@@ -106,7 +106,7 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   rewritten after players hit boards the generator had never actually vetted. LITS additionally
   caps regions at seven squares, keeping the densest of 24 piece layouts per attempt, after about
   one region in six came out at eight or more.
-- **Snap** — a Hamiltonian path is generated, then numbers are added until no other path obeys
+- **Trail** — a Hamiltonian path is generated, then numbers are added until no other path obeys
   them, and then **taken back off again**: every number the rest of the board already implies is
   removed, and a board still over its clue budget is abandoned for a different seed. Stopping at
   the first forced board, which is what this used to do, left every redundant clue on the grid and
@@ -154,7 +154,7 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   Lexicon), and its crossword is laid from the words it spells. A board ships only if, solving it from the hints alone,
   no slot ever has more than six words that fit it; an independent checker re-reads every row and column of the
   squares to prove no two words touch and no word was made by accident.
-- **Pointers** — arrows are laid one at a time, each only where "is in the way of" stays free of cycles, so some order always
+- **Arrows** — arrows are laid one at a time, each only where "is in the way of" stays free of cycles, so some order always
   clears the board, and since taking an arrow away only ever opens a way out, no order of free taps can strand you. The
   finished board is cleared greedily before it ships, and the tests check a year of boards with an independent cycle check.
 - **Dominoes** — a shape is grown a domino at a time (that tiling is the answer), dominoes from the double-six set are
@@ -162,7 +162,7 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   values, counting, a short what-if) finishes it, then loosened while it still does. A board ships only if it needs its tier's
   deepest step, and an exhaustive search proves one answer; an independent solver that fills squares in reading order with
   no pruning confirms it in the tests.
-- **Tower and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
+- **Codebreaker and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by
   `tools/words/build.py`.
@@ -171,15 +171,15 @@ Two things make that harder than it sounds, and both have gone wrong here:
 
 **A bounded search that gives up must say so.** A solver with a node budget that returns quietly
 looks exactly like a solver that finished, so "I ran out of time" gets read as "exactly one
-answer". Snap's solver returns a verdict whose give-up case is a *name*, not a number a caller can
+answer". Trail's solver returns a verdict whose give-up case is a *name*, not a number a caller can
 misread, and only the proved case may ship. Mosaic reseeds rather than trusting a truncated search
 for its move limit. LITS shipped the bug before either did.
 
 **An assertion has to be able to fail.** `app/src/test/.../FallbackTest.kt` exists to catch a
 generator quietly degrading to its safety fallback, which would otherwise pass every solvability
 test. It has twice needed tightening after passing on boards that were plainly broken — once when
-LITS fell back on every single board, and once when it asserted only that Snap numbered *fewer than
-every* square while Snap was numbering 39 of 42.
+LITS fell back on every single board, and once when it asserted only that Trail numbered *fewer than
+every* square while Trail was numbering 39 of 42.
 
 Generation is not always instant: LITS takes roughly 0.1–0.5s and up to 2s on a bad seed, so boards
 are generated off the main thread behind a dealing animation.

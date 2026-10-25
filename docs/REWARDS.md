@@ -76,14 +76,15 @@ The rule is told once, under the stats calendar: "Play on 5 of any 7 days to kee
 
 ## Achievements (`core/Achievements.kt`, `ui/stats/AchievementsScreen.kt`)
 
-17 of them, all derived from the completion history; nothing is stored. Each is a predicate over the history; a solve
+18 of them, all derived from the completion history; nothing is stored. Each is a predicate over the history; a solve
 *earns* one when it is false over the history before and true with the solve added (`newlyEarned`). An old player whose
 history already satisfies one sees it earned in the list and is never told, so there is no flood on update.
 - Solves: first solve; 100 solves. Days: play on 30 different days.
 - Streak (best run ever, so it never goes away): 3, 7, 14, 30, 60, 100, 365 days. Per puzzle (that puzzle's own played
   days through `streakOf`): 7 and 30 days.
 - Top tier (Expert): first solve; a solve with no hints.
-- One of each puzzle; all three difficulties of one puzzle's daily on the same day; every puzzle's daily on one day.
+- One of each puzzle; all three difficulties of one puzzle's daily on the same day; every puzzle's daily on one day;
+  today's three on one tier on the day (see "Today's three").
   The last two and "one of each" read the ids from `PuzzleRegistry`, so they scale; adding a puzzle makes them unearned
   until it is played (nothing is stored to keep them). Tests pass a fake id list.
 - Finished frame: see "The finished frame" below. `Praise.achievements` is the list this solve earned (id, title,
@@ -127,12 +128,37 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
   yet: A and B."), today's say "today" ("Only Hard on Kings left for all done today!", "...left for a clean sweep today!").
   Covers streaks (current run, only while it is alive, so never a lapsed one), per-puzzle streaks, 100 solves, 30 days, one
   of each, full set and clean sweep. Null for earned ones, first solve and top tier. Positive wording only; never a loss.
+- **Next puzzle today.** On today's own daily opened from Home (not an archive day), the frame's first button, filled as
+  the main one and the pill's way on, is "Next puzzle" with the puzzle named under it (`nextToday` in `ui/play/NextSteps.kt`): the first of today's
+  three not yet solved at this tier, else the first unsolved daily at this tier in the home grid's order; none once every
+  daily at the tier is done. It opens that board as from Home, so back (and Done) from it goes Home, where the board just
+  solved was opened from. An archive board does not offer it: its back is its own puzzle's archive, which another puzzle's
+  board could not keep.
+- **A set's share card.** Beside Share, a second chip when the solve finished a set: "Share level" on a level's fifth board
+  (`levelShareCard`: "Daybook · Level 14 · 5/5", a mark per board, green unaided, red with hints, then the total time and
+  hints, from the stored `level_solves` plus this solve; nothing new is stored), or "Share three" on the third of today's
+  three at a tier. Not on a reopened board (the home row shares the three at any time).
+- **The day's card never counts what is left.** `dayShareCard`'s nudge is "Every Standard board done. A clean sweep." on a
+  full tier, else "Well played. Same time tomorrow?".
 - **Tap to hide.** Tapping anywhere that is not a button (a full-screen scrim under the frame, so the open centre and the board, and the
   banner) hides the frame; a floating row at the same spot takes its place: "Show results", the first non-Done
   next step, and Done. The hidden state (`resultsHidden`) is `rememberSaveable`, never `PuzzleState`; the board is not
   resized or moved either way, and the confetti is not interactive.
 - Render it: `render.py --finish N [--togo]` (docs/WEB_BUILD.md); with `-p ID`, `--query taught=TECHNIQUE` shows a hint
   solve's technique line and `--query needed` a no-hint one (of the seed-1 board).
+
+## Techniques (`ui/stats/TechniquesScreen.kt`, `TechniquesMet` in `data/ProgressStore.kt`)
+
+- A record, not practice: per puzzle that teaches, its praised techniques (`praisedTechniquesOf`, in `TechniqueNames.kt`'s
+  order), with a tick on each a hint has explained. The rest are plain, never greyed, locked or counted "of" a total; the
+  owner declined a per-technique practice mode, so nothing here starts a drill. Pointers and Snap (no teacher) and Target
+  (its steps are not skills) have no list.
+- Opened from a row on Statistics under Achievements ("N shown" once any is), back returns to Statistics; route `techniques`.
+- Stored as its own key set, `techniques_met` (`"puzzleId|technique"`), written when a hint opens a deduction (mistakes
+  left out), so a hint on an unfinished board counts too. `SavedGame.taught` is cleared with the save on a solve, so the
+  page starts from nothing on the build that added it and says so ("Techniques you've been shown in hints"). No serialised
+  class changed; the web backup carries the key because it copies every entry of the store, and an older backup without
+  it imports as nothing met.
 
 ## Calendar (`ui/stats/StreakCalendar.kt`)
 
@@ -142,26 +168,30 @@ future. Monday-first; previous/next stop at the first month with a play and the 
 that ended a run is not ringed, but earlier misses of a run that later died stay ringed, because they were
 forgiven when they happened. `StreakCalendar(played, today)` takes the played-day set, so other screens can reuse it.
 
-## Daily variety (`core/PuzzleNotes.kt`, `PuzzleRegistry.featured`)
+## Daily variety (`core/PuzzleNotes.kt`, `core/TodaysThree.kt`)
 
 - **Note.** A short hand-checked technique tip per puzzle id, picked by `puzzleNote(id, epochDay)` (pure: the day plus the id
   walks the list). It sits last in `finishPraise`, in place of the bare "No hints needed.", so it only shows on a no-hint
   solve that earned no achievement, record, percentile or board-needed line; a solve with hints keeps its hint line. At most 64 characters.
   Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
-- **Today's pick.** `PuzzleRegistry.featured(epochDay)` rotates through the registry, so it scales as puzzles are added; `PuzzleOrder.pick` steps that rotation forward past
-  the player's five most played puzzles (play counts, whatever the grid's order; only puzzles with a solve), so it suggests
-  something they play less, and a new player gets the plain rotation. Its
-  home tile, while unsolved, gets a thin gold ring, a frame of twinkling gold sparkles (`ui/home/FeaturedMark.kt`; one infinite
-  transition read only in the draw phase) and "Try me!" tilted across the thumbnail with a halo, content description
-  "Today's pick". The text overlays the thumbnail, so the tile's height is unchanged; nothing animates once it is solved or
-  started, and under reduced motion the sparkles are drawn still. It is for the day, not the tier: once any tier of the pick
-  is solved today, no tier shows it. If the player's own order puts the pick below the first screen, it is shown in that
-  screen's last square for the day (rows counted from the grid's height, less the Continue row, at one line of name); a drag of another tile
-  stores the pick back at its own place. Nothing is stored.
+- **Today's three** (`core/TodaysThree.kt`, `ui/home/TodaysThreeRow.kt`). One quick puzzle, one mid-weight, one word or
+  number puzzle, from the date alone (each slot steps one place a day through its own list: quick 9, words 5, mid-weight
+  everything else, 11), so it is the same for everyone and a shared card means the same three. It replaced today's pick
+  (`PuzzleRegistry.featured`, stepped past the player's five most played): a per-player pick could not be the shared set,
+  and two daily highlights would compete, so the pick's gold ring and sparkles moved onto the three. Home shows it as one
+  row over the grid: "Today's three" and, once one is solved today at the grid's tier, a Share button; then a chip per
+  puzzle (motif and name), tinted and ticked when solved today at the grid's tier, the first unsolved one in the sparkle
+  frame (still under reduced motion; nothing animates once all three are done). A tap opens that daily at the grid's tier,
+  in Daily or Random mode. Always laid out at the same height (the Share button sits in a caption line of fixed height), and
+  laid out unseen in Levels, so it never moves the grid. "Try me!" and the grid's pick square are gone; nothing is stored.
+  Its share card (`threeShareCard`): "Daybook · 25 Oct · Today's three · Standard", a mark per puzzle and "2/3", the solved
+  boards' time and hints, the streak. An achievement, "Today's three" (all three on one tier, on the day), reads the
+  registry's lists, so changing a list (or adding a puzzle) can make an old day's read unearned, as with the other
+  registry-wide ones.
 - **In progress.** A tile whose board at the grid's tier and mode (today's daily; in Random, the tier's current random board)
-  has a saved game that is unsolved and has a move in it says "In progress", tilted with the same halo as "Try me!" but in the
+  has a saved game that is unsolved and has a move in it says "In progress", tilted across the thumbnail with a halo, in the
   scheme's moss on its surface (`InProgressLabel`). That is exactly the game `PlayScreen` keeps: a restart, or only a selection,
-  clears the save. A pick in progress shows only "In progress", no ring or sparkles. `ProgressStore.inProgress` reads each save
+  clears the save. `ProgressStore.inProgress` reads each save
   only as far as its key and decodes in full just the boards the tiles would open; it follows the store, so a game saved on the
   way out of the play screen shows at once.
 
@@ -194,7 +224,7 @@ would rather let people rearrange than hide.
 ## Welcome (`ui/home/Welcome.kt`)
 
 One calm screen shown in place of the grid, once, to a new player: one line on what Daybook is (new boards every day, free,
-no ads, no account, offline), then four pointers with small icons: today's pick and the one-minute walkthrough under "How to play";
+no ads, no account, offline), then four pointers with small icons: today's three and the one-minute walkthrough under "How to play";
 Daily / Levels / Random and the three tiers; the archive, stats and achievements buttons; press and hold to move a puzzle.
 One button, Start. No question, no pages, nothing drawn over the grid (the owner's call). `LaunchPreferences.needsWelcome`:
 only when the launch file has no `welcomed` key and `ProgressStore.hasPlayed()` is false (the timer default's rule); a
@@ -234,7 +264,7 @@ kept is the best until beaten, and Best can be slower than the best time beside 
 
 - **Reduced motion** follows the system: Android's "Remove animations" (animator duration scale 0), the web's
   `prefers-reduced-motion: reduce`. Both are watched, so a change applies at once. `rememberReducedMotion` is read once
-  in `DaybookApp` and handed down as `LocalReducedMotion`. Under it: no confetti; the Today's-pick sparkles drawn still (no
+  in `DaybookApp` and handed down as `LocalReducedMotion`. Under it: no confetti; Today's three's sparkles drawn still (no
   infinite transition runs); the hint glow steady at full strength (`rememberHintPulse`, which every board uses); Pointers'
   arrow simply goes and a bump flashes red without the shake; Sand has no pour stream and no refusal shake (the refused tube's red tint, shown always, is held 400 ms
   instead of fading), and a lifted tube rises at once; a Pipes tile shows its new turn; the hint popover jumps rather than slides. Fades (the finished frame's

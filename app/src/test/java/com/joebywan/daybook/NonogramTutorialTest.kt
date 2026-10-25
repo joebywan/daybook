@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Nonogram
@@ -114,13 +113,9 @@ class NonogramTutorialTest {
 
     // ---- the hint glue --------------------------------------------------------------------------
 
-    private fun seeds(count: Int, difficulty: Difficulty) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 3, 1).plusDays(it.toLong()), "nonogram-glue", difficulty)
-    }
-
     @Test
     fun `a hint's move reaches its own goal, and one move is one undo entry`() {
-        for (d in Difficulty.entries) for (seed in seeds(6, d)) {
+        for (d in Difficulty.entries) for (seed in seeds(6, d, "nonogram-glue", LocalDate.of(2026, 3, 1))) {
             var s = Nonogram.generate(seed, d) as NonogramState
             while (!s.solved) {
                 val deduction = Nonogram.teach(s)!!
@@ -136,7 +131,7 @@ class NonogramTutorialTest {
     @Test
     fun `a hint is reached by the player's own moves, one square at a time, and not before the last`() {
         for (d in Difficulty.entries) {
-            val s = Nonogram.generate(seeds(1, d).single(), d) as NonogramState
+            val s = Nonogram.generate(seeds(1, d, "nonogram-glue", LocalDate.of(2026, 3, 1)).single(), d) as NonogramState
             val deduction = Nonogram.teach(s)!!
             val step = NonogramTeacher.teach(s)!!
             val moves = step.fills.map { it to fill } + step.crosses.map { it to cross }
@@ -151,7 +146,7 @@ class NonogramTutorialTest {
 
     @Test
     fun `a mistake's hint is reached by clearing the square or by changing it to the right mark`() {
-        val base = Nonogram.generate(seeds(1, Difficulty.STANDARD).single(), Difficulty.STANDARD) as NonogramState
+        val base = Nonogram.generate(seeds(1, Difficulty.STANDARD, "nonogram-glue", LocalDate.of(2026, 3, 1)).single(), Difficulty.STANDARD) as NonogramState
         val i = base.solution.indexOf('0')
         val wrong = base.tap(i, fill)
         val d = Nonogram.teach(wrong)!!

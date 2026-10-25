@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -47,6 +46,10 @@ import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.drawHintRings
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
+import androidx.compose.ui.graphics.drawscope.DrawScope
 
 /**
  * Pipe shapes are direction bitmasks: bit 0 up, 1 right, 2 down, 3 left. Rotating a piece is a
@@ -157,54 +160,73 @@ object Pipes : PuzzleType {
         Difficulty.EXPERT -> 8 to 11
     }
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
-        val rng = Rng(seed)
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        generateVerified(seed, difficulty) ?: lastResort(difficulty)
+
+    /** Trees tried per seed before [generateVerified] gives up. */
+    internal const val ATTEMPTS = 40
+
+    /**
+     * A board the hints' reasoning settles tile by tile ([PipesTeacher.settles], which also proves it
+     * has one answer), or null when none of [ATTEMPTS] trees was. Attempt `a` uses `Rng(seed + a)`,
+     * so a board depends on its seed alone.
+     */
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): PipesState? {
         val (w, h) = shape(difficulty)
-        // The tree is grown outwards from here, so this cell is the natural mains inlet: every
-        // other tile is downstream of it in the solution.
-        val source = rng.nextInt(w * h)
-        val solved = spanningTree(rng, w, h, source)
-
-        // Scramble. Re-scramble in the unlikely event the board lands already solved.
-        var cells: List<Int>
-        do {
-            cells = solved.map { mask ->
-                var m = mask
-                repeat(rng.nextInt(4)) { m = rotateCw(m) }
-                m
-            }
-        } while (cells == solved && solved.any { it != 0 })
-
-        return PipesState(w, h, cells, source)
+        for (attempt in 0 until ATTEMPTS) {
+            val rng = Rng(seed + attempt)
+            // The mains inlet: in a tree every other tile is downstream of it, wherever it is.
+            val source = rng.nextInt(w * h)
+            val solved = spanningTree(rng, w, h)
+            if (!PipesTeacher.settles(w, h, solved)) continue
+            // Scramble. Re-scramble in the unlikely event the board lands already solved.
+            var cells: List<Int>
+            do {
+                cells = solved.map { mask ->
+                    var m = mask
+                    repeat(rng.nextInt(4)) { m = rotateCw(m) }
+                    m
+                }
+            } while (cells == solved)
+            return PipesState(w, h, cells, source)
+        }
+        return null
     }
 
-    /** Randomised depth-first spanning tree; each cell records the edges it keeps. */
-    private fun spanningTree(rng: Rng, w: Int, h: Int, start: Int): List<Int> {
-        val masks = MutableList(w * h) { 0 }
-        val seen = BooleanArray(w * h)
-        val stack = ArrayDeque<Int>()
-        seen[start] = true
-        stack.addLast(start)
+    /** Only when no tree of [ATTEMPTS] was settled, which a year per tier never reaches (`FallbackTest`): seed 1's board, proved by the same test. */
+    internal fun lastResort(difficulty: Difficulty): PipesState = generateVerified(1L, difficulty)!!
 
-        while (stack.isNotEmpty()) {
-            val current = stack.last()
-            val r = current / w
-            val c = current % w
-            val options = buildList {
-                if (r > 0 && !seen[current - w]) add(UP to (current - w))
-                if (r < h - 1 && !seen[current + w]) add(DOWN to (current + w))
-                if (c > 0 && !seen[current - 1]) add(LEFT to (current - 1))
-                if (c < w - 1 && !seen[current + 1]) add(RIGHT to (current + 1))
+    /**
+     * Randomised Kruskal: every edge of the grid in a shuffled order, each kept when it joins two
+     * pieces not yet joined. Each cell records the edges it keeps. A depth-first maze (the first
+     * generator) made long corridors with few junctions; this branches everywhere, so boards have
+     * about twice the T-junctions and some crosses.
+     */
+    private fun spanningTree(rng: Rng, w: Int, h: Int): List<Int> {
+        val masks = MutableList(w * h) { 0 }
+        val parent = IntArray(w * h) { it }
+        fun root(i: Int): Int {
+            var x = i
+            while (parent[x] != x) {
+                parent[x] = parent[parent[x]]
+                x = parent[x]
             }
-            if (options.isEmpty()) {
-                stack.removeLast()
-                continue
+            return x
+        }
+        val edges = buildList {
+            for (i in 0 until w * h) {
+                if (i % w < w - 1) add(i to RIGHT)
+                if (i / w < h - 1) add(i to DOWN)
             }
-            val (direction, next) = rng.pick(options)
-            masks[current] = masks[current] or direction
-            masks[next] = masks[next] or opposite(direction)
-            seen[next] = true
-            stack.addLast(next)
+        }
+        for ((i, direction) in rng.shuffled(edges)) {
+            val j = if (direction == RIGHT) i + 1 else i + w
+            val a = root(i)
+            val b = root(j)
+            if (a == b) continue
+            parent[a] = b
+            masks[i] = masks[i] or direction
+            masks[j] = masks[j] or opposite(direction)
         }
         return masks
     }
@@ -241,9 +263,7 @@ object Pipes : PuzzleType {
         val start = s.source
         if (start !in s.cells.indices) return emptySet()
 
-        val seen = BooleanArray(s.cells.size)
         val stack = ArrayDeque<Int>()
-        seen[start] = true
         stack.addLast(start)
         val reached = mutableSetOf(start)
 
@@ -255,9 +275,7 @@ object Pipes : PuzzleType {
 
             fun flowTo(opening: Int, inBounds: Boolean, j: Int) {
                 if (!inBounds || mask and opening == 0) return
-                if (s.cells[j] and opposite(opening) == 0 || seen[j]) return
-                seen[j] = true
-                reached += j
+                if (s.cells[j] and opposite(opening) == 0 || !reached.add(j)) return
                 stack.addLast(j)
             }
 
@@ -467,23 +485,50 @@ object Pipes : PuzzleType {
 
         Canvas(modifier) {
             val cellPx = size.minDimension / PREVIEW_BOARD.width
-            val stroke = cellPx * PIPE_WIDTH
-            val reach = cellPx * 0.5f + JOIN_BLEED_PX
             for (i in PREVIEW_BOARD.cells.indices) {
-                val r = i / PREVIEW_BOARD.width
-                val c = i % PREVIEW_BOARD.width
-                val cx = (c + 0.5f) * cellPx
-                val cy = (r + 0.5f) * cellPx
-                val mask = PREVIEW_BOARD.cells[i]
                 val isSource = i == PREVIEW_BOARD.source
-                val pipeColour = if (i in PREVIEW_FILLED) wet else dry
+                drawTile(i, PREVIEW_BOARD.width, cellPx, PREVIEW_BOARD.cells[i], isSource, if (i in PREVIEW_FILLED) wet else dry, wet, scheme.surface)
+            }
+        }
+    }
 
-                drawRect(
-                    color = if (isSource) wet.copy(alpha = 0.16f) else scheme.surface,
-                    topLeft = Offset(c * cellPx + 1f, r * cellPx + 1f),
-                    size = Size(cellPx - 2f, cellPx - 2f),
-                )
+    /**
+     * Tile [i] of a grid [width] tiles across: its ground, its pipes turned by [spin] degrees and, if it is
+     * the inlet, the inlet. The board and the home-grid motif both draw through this.
+     */
+    private fun DrawScope.drawTile(
+        i: Int,
+        width: Int,
+        cellPx: Float,
+        mask: Int,
+        isSource: Boolean,
+        pipeColour: Color,
+        wet: Color,
+        ground: Color,
+        spin: Float = 0f,
+    ) {
+        val r = i / width
+        val c = i % width
+        val cx = (c + 0.5f) * cellPx
+        val cy = (r + 0.5f) * cellPx
+        val stroke = cellPx * PIPE_WIDTH
+        val reach = cellPx * 0.5f + JOIN_BLEED_PX
 
+        drawRect(
+            color = if (isSource) wet.copy(alpha = 0.16f) else ground,
+            topLeft = Offset(c * cellPx + 1f, r * cellPx + 1f),
+            size = Size(cellPx - 2f, cellPx - 2f),
+        )
+
+        if (mask != 0) {
+            // A single-ended pipe is an endpoint: the run stops here, and the knob is
+            // what says so.
+            val endpoint = mask.countOneBits() == 1
+            rotate(degrees = spin, pivot = Offset(cx, cy)) {
+                // Butt caps stop the stroke dead on the cell edge. A round cap would
+                // instead push half a pipe width past it and into the neighbour, so
+                // two joined arms overlapped by a full width — the "overlapping rather
+                // than joining" the board reads as.
                 fun arm(dx: Float, dy: Float) {
                     drawLine(
                         color = pipeColour,
@@ -497,22 +542,29 @@ object Pipes : PuzzleType {
                 if (mask and DOWN != 0) arm(0f, 1f)
                 if (mask and LEFT != 0) arm(-1f, 0f)
                 if (mask and RIGHT != 0) arm(1f, 0f)
+
+                // Square-ended arms leave a notch on the outside of a bend, so the hub
+                // stands in for the round join the stroke no longer draws itself: at
+                // exactly half the pipe width it rounds the corner off without the
+                // junction swelling wider than the run passing through it.
                 drawCircle(
                     color = pipeColour,
-                    radius = if (mask.countOneBits() == 1) cellPx * 0.20f else stroke * 0.5f,
+                    radius = if (endpoint) cellPx * 0.20f else stroke * 0.5f,
                     center = Offset(cx, cy),
                 )
-
-                if (isSource) {
-                    drawCircle(color = wet, radius = cellPx * 0.17f, center = Offset(cx, cy))
-                    drawCircle(
-                        color = wet,
-                        radius = cellPx * 0.31f,
-                        center = Offset(cx, cy),
-                        style = Stroke(width = stroke * 0.5f),
-                    )
-                }
             }
+        }
+
+        // The inlet does not turn with its tile: it marks a fixed point on the board,
+        // and a ring that spun would read as just another pipe.
+        if (isSource) {
+            drawCircle(color = wet, radius = cellPx * 0.17f, center = Offset(cx, cy))
+            drawCircle(
+                color = wet,
+                radius = cellPx * 0.31f,
+                center = Offset(cx, cy),
+                style = Stroke(width = stroke * 0.5f),
+            )
         }
     }
 
@@ -588,7 +640,7 @@ object Pipes : PuzzleType {
             }.padding(16.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
+            val cell = fitStep(s.width, s.height)
             val cellPx = with(LocalDensity.current) { cell.toPx() }
             Canvas(
                 Modifier
@@ -599,76 +651,14 @@ object Pipes : PuzzleType {
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
                         detectTapGestures { offset: Offset ->
-                            val c = (offset.x / cellPx).toInt().coerceIn(0, s.width - 1)
-                            val r = (offset.y / cellPx).toInt().coerceIn(0, s.height - 1)
-                            cursor = r * s.width + c
-                            onState(s.rotate(r * s.width + c))
+                            val i = gridCellAt(offset, cellPx, s.width, s.height)
+                            cursor = i
+                            onState(s.rotate(i))
                         }
                     }
             ) {
-                val stroke = cellPx * PIPE_WIDTH
-                val reach = cellPx * 0.5f + JOIN_BLEED_PX
                 for (i in s.cells.indices) {
-                    val r = i / s.width
-                    val c = i % s.width
-                    val cx = (c + 0.5f) * cellPx
-                    val cy = (r + 0.5f) * cellPx
-                    val mask = s.cells[i]
-                    val isSource = i == s.source
-                    val pipeColour = if (i in wetCells) wet else dry
-
-                    drawRect(
-                        color = if (isSource) wet.copy(alpha = 0.16f) else scheme.surface,
-                        topLeft = Offset(c * cellPx + 1f, r * cellPx + 1f),
-                        size = Size(cellPx - 2f, cellPx - 2f),
-                    )
-
-                    if (mask != 0) {
-                        // A single-ended pipe is an endpoint: the run stops here, and the knob is
-                        // what says so.
-                        val endpoint = mask.countOneBits() == 1
-                        rotate(degrees = spins[i].value, pivot = Offset(cx, cy)) {
-                            // Butt caps stop the stroke dead on the cell edge. A round cap would
-                            // instead push half a pipe width past it and into the neighbour, so
-                            // two joined arms overlapped by a full width — the "overlapping rather
-                            // than joining" the board reads as.
-                            fun arm(dx: Float, dy: Float) {
-                                drawLine(
-                                    color = pipeColour,
-                                    start = Offset(cx, cy),
-                                    end = Offset(cx + dx * reach, cy + dy * reach),
-                                    strokeWidth = stroke,
-                                    cap = StrokeCap.Butt,
-                                )
-                            }
-                            if (mask and UP != 0) arm(0f, -1f)
-                            if (mask and DOWN != 0) arm(0f, 1f)
-                            if (mask and LEFT != 0) arm(-1f, 0f)
-                            if (mask and RIGHT != 0) arm(1f, 0f)
-
-                            // Square-ended arms leave a notch on the outside of a bend, so the hub
-                            // stands in for the round join the stroke no longer draws itself: at
-                            // exactly half the pipe width it rounds the corner off without the
-                            // junction swelling wider than the run passing through it.
-                            drawCircle(
-                                color = pipeColour,
-                                radius = if (endpoint) cellPx * 0.20f else stroke * 0.5f,
-                                center = Offset(cx, cy),
-                            )
-                        }
-                    }
-
-                    // The inlet does not turn with its tile: it marks a fixed point on the board,
-                    // and a ring that spun would read as just another pipe.
-                    if (isSource) {
-                        drawCircle(color = wet, radius = cellPx * 0.17f, center = Offset(cx, cy))
-                        drawCircle(
-                            color = wet,
-                            radius = cellPx * 0.31f,
-                            center = Offset(cx, cy),
-                            style = Stroke(width = stroke * 0.5f),
-                        )
-                    }
+                    drawTile(i, s.width, cellPx, s.cells[i], i == s.source, if (i in wetCells) wet else dry, wet, scheme.surface, spins[i].value)
 
                     // Everything a hint does not name steps back, so the named tiles read without
                     // hunting for their outlines. A veil in the page colour rather than a fainter
@@ -676,30 +666,14 @@ object Pipes : PuzzleType {
                     if (!highlight.isEmpty && i !in highlight.strong && i !in highlight.soft) {
                         drawRect(
                             color = scheme.background.copy(alpha = 0.62f),
-                            topLeft = Offset(c * cellPx, r * cellPx),
+                            topLeft = Offset((i % s.width) * cellPx, (i / s.width) * cellPx),
                             size = Size(cellPx, cellPx),
                         )
                     }
                 }
 
                 // Outlines last, so a neighbour drawn later never paints over half of one.
-                if (!highlight.isEmpty) {
-                    val strongW = 4.dp.toPx()
-                    val softW = 1.5.dp.toPx()
-                    val corner = CornerRadius(4.dp.toPx())
-                    for (i in s.cells.indices) {
-                        val strong = i in highlight.strong
-                        if (!strong && i !in highlight.soft) continue
-                        val w = if (strong) strongW else softW
-                        drawRoundRect(
-                            color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                            topLeft = Offset((i % s.width) * cellPx + w / 2, (i / s.width) * cellPx + w / 2),
-                            size = Size(cellPx - w, cellPx - w),
-                            cornerRadius = corner,
-                            style = Stroke(w),
-                        )
-                    }
-                }
+                drawHintRings(highlight, s.width, s.height, cellPx, glow, pulse.value)
             }
         }
     }

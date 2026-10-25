@@ -1,72 +1,32 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
-import com.joebywan.daybook.core.boardKeys
-import com.joebywan.daybook.core.keepClear
-import com.joebywan.daybook.core.highlightGrid
-import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
+import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
@@ -410,49 +370,22 @@ object Sudoku : PuzzleType {
         return count(0)
     }
 
-    override fun hint(state: PuzzleState): PuzzleState? {
-        val s = state as SudokuState
-        val wrong = s.cells.indices.firstOrNull {
-            s.cells[it] != 0 && s.cells[it] != s.solution[it]
-        }
-        if (wrong != null) return s.withCell(wrong, s.solution[wrong])
-        val blank = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
-        return s.withCell(blank, s.solution[blank])
-    }
-
     // ---- teaching --------------------------------------------------------------------------
 
     /**
-     * A mistake to take back or a step to reason out — see [SudokuTeacher]. The old [hint] dropped
-     * a digit straight out of [SudokuState.solution] and taught nothing; it stays only as the
-     * contract's default path. The teacher reasons from the visible digits alone.
+     * A mistake to take back or a step to reason out — see [SudokuTeacher]. Never null on an unsolved
+     * board (the fallback names a digit from [SudokuState.solution]), so `hint()` is never reached.
+     * The teacher reasons from the visible digits alone.
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as SudokuState
         val step = SudokuTeacher.teach(s) ?: return null
-        val cell = step.cell
-        val digit = step.digit
-        val mistake = step.technique == SudokuTeacher.MISTAKE
-        val wrong = s.cells[cell]
-        return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = setOf(cell),
-            mistake = mistake,
+        return placementDeduction(
+            s, step,
+            mistake = step.technique == SudokuTeacher.MISTAKE,
             fallback = step.technique == SudokuTeacher.FALLBACK,
-            // One state, so one undo entry; the cell is selected so the player sees where it went.
-            applyTo = { now ->
-                val t = now as SudokuState
-                if (t.cells[cell] == digit) t else t.withCell(cell, digit).select(cell)
-            },
-            reachedBy = { now ->
-                val t = now as SudokuState
-                // A mistake is dealt with once that digit is gone, whatever replaced it.
-                if (mistake) t.cells[cell] != wrong else t.cells[cell] == digit
-            },
+            valueAt = { t, cell -> t.cells[cell] },
+            place = { t, cell, digit -> t.withCell(cell, digit).select(cell) },
         )
     }
 
@@ -575,9 +508,6 @@ object Sudoku : PuzzleType {
             ),
         )
     }
-
-    // ---- drawing ------------------------------------------------------------------------------
-
 
     // ---- home-grid motif ----------------------------------------------------------------------
 

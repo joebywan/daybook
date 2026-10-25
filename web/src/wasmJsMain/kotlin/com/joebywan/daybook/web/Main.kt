@@ -2,11 +2,21 @@ package com.joebywan.daybook.web
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
+import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.ParityFingerprint
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
-import com.joebywan.daybook.core.SeedHash
+import com.joebywan.daybook.platform.currentDate
+import com.joebywan.daybook.platform.dateOverride
+import com.joebywan.daybook.core.TodaysThree
+import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.data.LevelSolve
+import com.joebywan.daybook.platform.formatClock
+import com.joebywan.daybook.platform.formatDate
+import com.joebywan.daybook.ui.play.levelShareCard
+import com.joebywan.daybook.ui.play.threeShareCard
+import kotlinx.datetime.LocalDate
 import com.joebywan.daybook.ui.play.EarnedAchievement
 import com.joebywan.daybook.ui.play.Praise
 import com.joebywan.daybook.ui.play.finishPreview
@@ -16,13 +26,6 @@ import com.joebywan.daybook.ui.play.techniqueLine
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.WordWheelState
 import kotlin.time.TimeSource
-
-/**
- * The device's local calendar date as yyyymmdd, read from one `Date` so the three fields cannot
- * straddle midnight. Local, not UTC, because the app's `LocalDate.now()` is the phone's local date.
- */
-private fun localDateCode(): Int =
-    js("(() => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); })()")
 
 private fun locationSearch(): String = js("window.location.search")
 
@@ -60,37 +63,6 @@ private fun focusCanvas(): Unit = js("""(() => {
     requestAnimationFrame(tryFocus);
 })()""")
 
-/** A calendar date the way the app's `LocalDate` would print it, for the parity dump. */
-private data class Day(val year: Int, val month: Int, val day: Int) {
-    val epochDay: Long get() = SeedHash.epochDay(year, month, day)
-    override fun toString(): String =
-        "$year-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}"
-
-    companion object {
-        fun parse(text: String): Day? {
-            val parts = text.split('-').map { it.toIntOrNull() ?: return null }
-            if (parts.size != 3 || parts[1] !in 1..12 || parts[2] !in 1..31) return null
-            return Day(parts[0], parts[1], parts[2])
-        }
-
-        fun today(): Day = localDateCode().let { Day(it / 10000, it / 100 % 100, it % 100) }
-
-        /** The inverse of [SeedHash.epochDay] (Hinnant's civil-from-days). */
-        fun ofEpochDay(epochDay: Long): Day {
-            val z = epochDay + 719468
-            val era = z.floorDiv(146097L)
-            val doe = z - era * 146097
-            val yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365
-            val doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
-            val mp = (5 * doy + 2) / 153
-            val d = (doy - (153 * mp + 2) / 5 + 1).toInt()
-            val m = (if (mp < 10) mp + 3 else mp - 9).toInt()
-            val y = (yoe + era * 400 + if (m <= 2) 1 else 0).toInt()
-            return Day(y, m, d)
-        }
-    }
-}
-
 private fun query(): Map<String, String> =
     locationSearch().removePrefix("?").split('&').filter { it.isNotEmpty() }.associate {
         val eq = it.indexOf('=')
@@ -98,10 +70,10 @@ private fun query(): Map<String, String> =
     }
 
 /** The dates every web parity test in app/ pins. */
-private val PARITY_DAYS = listOf(Day(2026, 1, 1), Day(2026, 9, 30), Day(2027, 2, 28))
+private val PARITY_DAYS = listOf(LocalDate(2026, 1, 1), LocalDate(2026, 9, 30), LocalDate(2027, 2, 28))
 
-private fun fingerprint(type: PuzzleType, day: Day, tier: Difficulty): String =
-    ParityFingerprint.line(type, day.toString(), tier, SeedHash.daily(day.epochDay, type.id, tier))
+private fun fingerprint(type: PuzzleType, day: LocalDate, tier: Difficulty): String =
+    ParityFingerprint.line(type, day.toString(), tier, DailySeed.seedFor(day, type.id, tier))
 
 /**
  * `?dump`: every puzzle's board, one [ParityFingerprint] line each, on the console — `PARITY` for
@@ -112,7 +84,7 @@ private fun fingerprint(type: PuzzleType, day: Day, tier: Difficulty): String =
  * <tier> <ms>` line per board, for a distribution rather than only the mean and worst. `&puzzle=levels`
  * prints levels 1..N instead (five `RANGE levels ...` lines each), which `check.py` diffs as one more page.
  */
-private fun dump(params: Map<String, String>, today: Day, tier: Difficulty) {
+private fun dump(params: Map<String, String>, today: LocalDate, tier: Difficulty) {
     val levelsOnly = params["puzzle"] == "levels"
     val only = params["puzzle"]?.let(PuzzleRegistry::byId)
     val types = if (levelsOnly) emptyList() else if (only != null) listOf(only) else PuzzleRegistry.all
@@ -120,14 +92,14 @@ private fun dump(params: Map<String, String>, today: Day, tier: Difficulty) {
     for (type in types) println("TODAY ${fingerprint(type, today, tier)}")
     val range = params["range"]?.toIntOrNull() ?: 0
     val times = "times" in params
-    val start = Day(2026, 1, 1).epochDay
+    val start = LocalDate(2026, 1, 1).toEpochDays()
     for (type in types) {
         val worst = LongArray(Difficulty.entries.size)
         val total = LongArray(Difficulty.entries.size)
         for (i in 0 until range) {
             for (t in Difficulty.entries) {
                 val began = TimeSource.Monotonic.markNow()
-                val day = Day.ofEpochDay(start + i)
+                val day = LocalDate.fromEpochDays(start + i)
                 val line = fingerprint(type, day, t)
                 val elapsed = began.elapsedNow()
                 val ms = elapsed.inWholeMilliseconds
@@ -173,9 +145,10 @@ private fun sampleShare(id: String?, tier: Difficulty) = (id?.let(PuzzleRegistry
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     val params = query()
-    val day = params["date"]?.let(Day::parse) ?: Day.today()
+    dateOverride = params["date"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    val day = currentDate()
     val tier = params["tier"]?.let { Difficulty.fromKey(it.uppercase()) } ?: Difficulty.STANDARD
-    println("daybook: date=$day epochDay=${day.epochDay}")
+    println("daybook: date=$day epochDay=${day.toEpochDays()}")
     if ("dump" in params) dump(params, day, tier)
     // Render harness: `?finish=N` (0-3 achievements) shows the finished frame over the board; `&togo` adds the to-go line;
     // `&taught=ID` or `&needed` shows the technique line (sampleLine).
@@ -191,6 +164,19 @@ fun main() {
             big = n > 0, streak = if (n > 0) 7 else 0, lines = listOf(sampleLine(params, tier)),
             achievements = all.take(n), toGo = if ("togo" in params) "Only Hard on Kings left for all done today!" else null,
             share = sampleShare(params["puzzle"], tier),
+            // `&leveldone` also shows the level's card, `&threedone` today's three's (sample solves, never stored).
+            setShare = when {
+                "leveldone" in params -> (params["level"]?.toIntOrNull() ?: 1).let { n ->
+                    val ids = listOf("sudoku", "kings", "pipes", "words", "sand")
+                    levelShareCard(n, ids, ids.mapIndexed { i, id -> LevelSolve(n, id, 200 + 60 * i, if (i == 1) 1 else 0) }, ::formatClock)
+                }
+                "threedone" in params -> day.let { today ->
+                    val three = TodaysThree.of(today)
+                    threeShareCard(three, three.map { Completion(it, tier, today, 300, 0) }, today, tier, formatDate(today, "d MMM"), 4, ::formatClock)
+                }
+                else -> null
+            },
+            setShareLabel = if ("leveldone" in params) "Share level" else "Share three",
         )
         // `&share` opens the share preview over the frame.
         sharePreviewOpen = "share" in params
@@ -199,7 +185,7 @@ fun main() {
     if (params["screen"] == "stats") sharePreviewOpen = "share" in params
 
     ComposeViewport(viewportContainerId = "app") {
-        DaybookWebApp(params["date"], params["tier"], params["puzzle"], params)
+        DaybookWebApp(params)
     }
     removeLoadingNote()
     nudgeFirstFrame()

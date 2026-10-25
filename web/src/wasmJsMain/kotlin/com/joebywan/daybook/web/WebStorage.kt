@@ -41,8 +41,8 @@ private val StringList = ListSerializer(String.serializer())
  */
 class LocalStorageKeyValueStore(private val name: String) : KeyValueStore {
 
-    /** Bumped on every write, which is what makes the flows below re-read. */
-    private val version = MutableStateFlow(0)
+    /** Bumped on every write (and by [WebStores.reloadAll]), which is what makes the flows below re-read. */
+    internal val version = MutableStateFlow(0)
 
     private fun storageKey(key: String) = "$name.$key"
 
@@ -76,25 +76,21 @@ class LocalStorageKeyValueStore(private val name: String) : KeyValueStore {
         lsSet(storageKey(key), value)
         version.value++
     }
-
-    /** Re-reads everything, after a backup has been restored underneath the store. */
-    fun reload() {
-        version.value++
-    }
 }
 
 /** One store per file for the whole page, so the screens and the backup see the same one. */
 object WebStores {
     private val stores = HashMap<String, LocalStorageKeyValueStore>()
 
-    fun get(name: String): LocalStorageKeyValueStore = stores.getOrPut(name) { LocalStorageKeyValueStore(name) }
-
-    fun init() {
+    init {
         requestPersistence()
     }
 
+    fun get(name: String): LocalStorageKeyValueStore = stores.getOrPut(name) { LocalStorageKeyValueStore(name) }
+
+    /** Re-reads everything, after a backup has been restored underneath the stores. */
     internal fun reloadAll() {
-        stores.values.forEach { it.reload() }
+        stores.values.forEach { it.version.value++ }
     }
 }
 

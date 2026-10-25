@@ -2,7 +2,6 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -24,10 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -56,6 +52,10 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.hintOutline
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
+import androidx.compose.foundation.layout.BoxScope
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -106,11 +106,7 @@ data class KingsState(
      * stray finger cost a king, which is the mistake the old three-step cycle made in reverse by
      * charging two taps for every mark.
      */
-    fun toggleMark(index: Int): KingsState = when (marks[index]) {
-        Mark.EMPTY -> withMark(index, Mark.BLOCKED)
-        Mark.BLOCKED -> withMark(index, Mark.EMPTY)
-        Mark.KING -> this
-    }
+    fun toggleMark(index: Int): KingsState = sweepMark(index)?.let { withMark(index, it) } ?: this
 
     /**
      * A double tap: crown the square, or take the crown back.
@@ -283,10 +279,10 @@ object Kings : PuzzleType {
      * pair of *touching* regions look further apart, or, at the same closest pair, the touching
      * pairs further apart in total. A local search, not an exhaustive one: on a year of Expert
      * boards it lifts the median colour-blind distance between neighbours from 11 to about 17.
+     * [n] is at most the colours there are (nine, Expert's size).
      */
     internal fun regionPalette(n: Int, region: List<Int>): IntArray {
         val count = regionColours.size
-        if (n > count) return IntArray(n) { it % count }
         // Touching pairs in a fixed order, from a matrix rather than a hash set, so the result
         // cannot depend on the platform's iteration order.
         val touching = Array(n) { BooleanArray(n) }
@@ -383,17 +379,32 @@ object Kings : PuzzleType {
     // ---- generation ----------------------------------------------------------------------
 
     /**
-     * King layouts tried per board.
-     *
-     * A single carve completes between a third and two thirds of the time depending on the grid,
-     * and each failure is independent, so forty is a wide margin against ever reaching the
-     * unproved [lastResort] — not a budget that is expected to be spent. Boards cost a couple of
-     * carves on average, which at 9x9 is single-digit milliseconds.
+     * Draws tried per board. A draw is a layout carved into a proved-unique board and then held to the tier gate
+     * ([fitsTier]); about 40 / 17 / 7% of draws pass on Standard / Hard / Expert (a 9x9 carve fails about two times in
+     * three), and a year of daily seeds needs at most 13 / 41 / 94 (`KingsRulesTest`). Four hundred is a margin, not a
+     * budget expected to be spent.
      */
-    private const val ATTEMPTS = 40
+    private const val ATTEMPTS = 400
+
+    /**
+     * The tier gate, on how deep the hints go from blank (null: they get stuck, never shipped). Standard needs nothing
+     * past would-empty; Hard needs a confinement of two colours, and nothing wider or a what-if; Expert needs a
+     * confinement of three or more, or a what-if. Without it the tiers were one depth and only size differed
+     * (docs/TEACHING.md, "Tier depth"). Expert was to need a what-if alone, but only 2% of 9x9 draws do (a mean of 51
+     * draws a board, 0.7 s at worst on the JVM), so the wide confinement, the rung below, counts too.
+     */
+    internal fun fitsTier(difficulty: Difficulty, depth: KingsTeacher.Depth?): Boolean {
+        if (depth == null) return false
+        val t = KingsTeacher.TECHNIQUES
+        return when (difficulty) {
+            Difficulty.STANDARD -> depth.deepest <= t.indexOf(KingsTeacher.WOULD_EMPTY)
+            Difficulty.HARD -> depth.deepest == t.indexOf(KingsTeacher.CONFINED) && depth.widest == 2
+            Difficulty.EXPERT -> depth.deepest == t.indexOf(KingsTeacher.WHAT_IF) || depth.widest >= 3
+        }
+    }
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: lastResort(seed, sizeFor(difficulty))
+        generateVerified(seed, difficulty) ?: lastResort(difficulty)
 
     /**
      * The real generator: a board whose uniqueness has been *proved*, or null when no layout in
@@ -405,33 +416,32 @@ object Kings : PuzzleType {
      * players actually got.
      */
     fun generateVerified(seed: Long, difficulty: Difficulty): KingsState? {
-        val n = sizeFor(difficulty)
-        for (attempt in 0 until ATTEMPTS) {
-            val rng = Rng(seed + attempt)
-            val layout = randomLayout(rng, n) ?: continue
-            val regions = carve(rng, n, layout) ?: continue
-            return KingsState(
-                n, regions, List(n * n) { Mark.EMPTY },
-                layout.mapIndexed { r, c -> r * n + c }.toSet(),
-            )
-        }
+        for (a in 0 until ATTEMPTS) attempt(seed, difficulty, a)?.let { return it }
         return null
     }
 
-    /**
-     * Only reachable if every layout in the budget failed to carve, which has not been observed.
-     * It exists so [generate] is total — a daily puzzle must never throw — and it is deliberately
-     * the only path that ships a board without a proof of uniqueness. KingsRulesTest pins that it
-     * never fires. Winning is judged by the rules now, so even here a second answer would be a
-     * blemish rather than an unwinnable board.
-     */
-    private fun lastResort(seed: Long, n: Int): KingsState {
-        val layout = randomLayout(Rng(seed), n) ?: staircaseLayout(n)
+    /** Draw number [a] for [seed], if it carved and fits the tier. Internal so tests can count the redraws. */
+    internal fun attempt(seed: Long, difficulty: Difficulty, a: Int): KingsState? =
+        draw(seed, difficulty, a)?.takeIf { fitsTier(difficulty, KingsTeacher.depth(it.size, it.region)) }
+
+    /** Draw number [a], carved and proved unique but not yet held to the tier. */
+    internal fun draw(seed: Long, difficulty: Difficulty, a: Int): KingsState? {
+        val n = sizeFor(difficulty)
+        val rng = Rng(seed + a)
+        val layout = randomLayout(rng, n) ?: return null
+        val regions = carve(rng, n, layout) ?: return null
         return KingsState(
-            n, growRegions(Rng(seed), n, layout), List(n * n) { Mark.EMPTY },
+            n, regions, List(n * n) { Mark.EMPTY },
             layout.mapIndexed { r, c -> r * n + c }.toSet(),
         )
     }
+
+    /**
+     * Only reachable if no draw in the budget passed, which a year of daily seeds never does (`FallbackTest`). A fixed
+     * board per tier, the first seed counting from 1 whose first draw passes, so it is proved and gated like any other.
+     */
+    internal fun lastResort(difficulty: Difficulty): KingsState =
+        generateSequence(1L) { it + 1 }.firstNotNullOf { attempt(it, difficulty, 0) }
 
     /** A column per row: all distinct, and never within one column of the row above. */
     private fun randomLayout(rng: Rng, n: Int): List<Int>? {
@@ -451,18 +461,6 @@ object Kings : PuzzleType {
             return false
         }
         return if (place(0)) cols.toList() else null
-    }
-
-    /**
-     * Even columns top to bottom, then odd ones: distinct for every n, which `(r * 2) % n` was
-     * not. That expression repeated columns whenever n was even — at 8x8 it read 0,2,4,6,0,2,4,6 —
-     * so the fallback it fed stored an answer with two kings in a column, which no player could
-     * ever reach. Consecutive rows differ by two within each half and by n-2 or more across the
-     * join, so no two kings touch.
-     */
-    private fun staircaseLayout(n: Int): List<Int> {
-        val evens = (n + 1) / 2
-        return (0 until n).map { r -> if (r < evens) r * 2 else (r - evens) * 2 + 1 }
     }
 
     /**
@@ -555,36 +553,6 @@ object Kings : PuzzleType {
             if (c > 0) cell - 1 else null,
             if (c < n - 1) cell + 1 else null,
         )
-    }
-
-    /**
-     * Flood-grows one region from each king until the board is covered. Every region is connected
-     * and holds exactly one king by construction — but nothing here looks at how many layouts the
-     * result admits, which is why only [lastResort] still uses it.
-     */
-    private fun growRegions(rng: Rng, n: Int, layout: List<Int>): List<Int> {
-        val region = MutableList(n * n) { -1 }
-        layout.forEachIndexed { r, c -> region[r * n + c] = r }
-
-        val frontier = mutableListOf<Int>()
-        fun pushNeighbours(index: Int) {
-            neighbours(index, n).forEach { if (region[it] == -1) frontier += it }
-        }
-        (0 until n * n).filter { region[it] != -1 }.forEach(::pushNeighbours)
-
-        while (frontier.isNotEmpty()) {
-            val pick = rng.nextInt(frontier.size)
-            val cell = frontier.removeAt(pick)
-            if (region[cell] != -1) continue
-            val owners = hostsOf(cell, n, region).sorted()
-            if (owners.isEmpty()) {
-                frontier += cell
-                continue
-            }
-            region[cell] = rng.pick(owners)
-            pushNeighbours(cell)
-        }
-        return region
     }
 
     /**
@@ -834,15 +802,7 @@ object Kings : PuzzleType {
                 for (r in 0 until MOTIF_SIZE) {
                     for (c in 0 until MOTIF_SIZE) {
                         val i = r * MOTIF_SIZE + c
-                        Box(
-                            Modifier
-                                .padding(start = cell * c, top = cell * r)
-                                .size(cell)
-                                .padding(1.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color(regionColours[motifRegions[i]])),
-                            contentAlignment = Alignment.Center,
-                        ) {
+                        Tile(cell, r, c, Color(regionColours[motifRegions[i]])) {
                             when (motifMarks[i]) {
                                 Mark.KING -> Crown(cell, MarkInk)
                                 Mark.BLOCKED -> BlockedCross(cell)
@@ -966,14 +926,10 @@ object Kings : PuzzleType {
             }.padding(14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val cell = if (constraints.hasBoundedHeight) minOf(maxWidth / s.size, maxHeight / s.size) else maxWidth / s.size
+            val cell = fitStep(s.size, s.size)
             val cellPx = with(LocalDensity.current) { cell.toPx() }
 
-            fun cellAt(offset: Offset): Int {
-                val r = (offset.y / cellPx).toInt().coerceIn(0, s.size - 1)
-                val c = (offset.x / cellPx).toInt().coerceIn(0, s.size - 1)
-                return r * s.size + c
-            }
+            fun cellAt(offset: Offset) = gridCellAt(offset, cellPx, s.size, s.size)
 
             // One tap: a mark now, or a king if its partner arrives in time.
             //
@@ -1082,38 +1038,13 @@ object Kings : PuzzleType {
                         // read without having to hunt for their outlines. The tiles are opaque, so
                         // stepping back means fading toward the page rather than going see-through.
                         val dim = !(highlight.isEmpty || strong || soft)
-                        Box(
-                            Modifier
-                                .padding(start = cell * c, top = cell * r)
-                                .size(cell)
-                                .moveFeel(feel, i, Color(accent))
-                                .padding(1.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(
-                                    Color(regionColours[palette[s.region[i]]]).let {
-                                        if (dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
-                                    }
-                                )
-                                .then(
-                                    when {
-                                        strong -> Modifier.drawWithContent {
-                                            drawContent()
-                                            val w = 4.dp.toPx()
-                                            drawRoundRect(
-                                                glow.copy(alpha = pulse.value),
-                                                topLeft = Offset(w / 2, w / 2),
-                                                size = Size(size.width - w, size.height - w),
-                                                cornerRadius = CornerRadius(4.dp.toPx()),
-                                                style = Stroke(w),
-                                            )
-                                        }
-                                        soft -> Modifier.border(
-                                            1.5.dp, glow.copy(alpha = 0.5f), RoundedCornerShape(4.dp),
-                                        )
-                                        else -> Modifier
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center,
+                        Tile(
+                            cell, r, c,
+                            Color(regionColours[palette[s.region[i]]]).let {
+                                if (dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
+                            },
+                            feel = Modifier.moveFeel(feel, i, Color(accent)),
+                            outline = Modifier.hintOutline(strong, soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
                         ) {
                             when (mark) {
                                 // A clashing crown is filled in the error colour, which on a red
@@ -1133,6 +1064,31 @@ object Kings : PuzzleType {
                 }
             }
         }
+    }
+
+    /** Square (r, c) of a grid of [cell]-sized tiles, in [fill]: the board's tile and the motif's. */
+    @Composable
+    private fun Tile(
+        cell: Dp,
+        r: Int,
+        c: Int,
+        fill: Color,
+        feel: Modifier = Modifier,
+        outline: Modifier = Modifier,
+        mark: @Composable BoxScope.() -> Unit,
+    ) {
+        Box(
+            Modifier
+                .padding(start = cell * c, top = cell * r)
+                .size(cell)
+                .then(feel)
+                .padding(1.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(fill)
+                .then(outline),
+            contentAlignment = Alignment.Center,
+            content = mark,
+        )
     }
 
     /**

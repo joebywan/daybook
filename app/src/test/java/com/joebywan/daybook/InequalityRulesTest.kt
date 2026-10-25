@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.InequalityLogic
@@ -11,13 +10,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class InequalityRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        Inequality.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Inequality.id, d), d) as InequalityState
+        Inequality.generate(daySeed(day, Inequality.id, d), d) as InequalityState
 
     /** Independent of the code under test: every row and column a permutation, every sign true. */
     private fun legal(s: InequalityState, cells: List<Int>): Boolean {
@@ -69,23 +66,43 @@ class InequalityRulesTest {
             for (day in 0 until 100) {
                 val s = board(day, d)
                 val n = s.size
+                val deepest = InequalityLogic.specFor(d).deepest
                 squares = n * n
                 pairs = InequalityLogic.neighbours(n).size
                 givens += s.givens.count { it }
                 signs += s.signs.size
-                // Irredundant: take back any one given or sign and the logic no longer finishes it.
+                // Irredundant: take back any one given or sign and the tier's ladder no longer finishes it.
                 for (i in 0 until n * n) if (s.givens[i]) {
                     val fewer = s.cells.toMutableList().also { it[i] = 0 }
-                    assertFalse("${d.name} day $day given $i is redundant", InequalityTeacher.solvesByLogic(n, fewer, s.signs))
+                    assertFalse("${d.name} day $day given $i is redundant", InequalityTeacher.solvesByLogic(n, fewer, s.signs, deepest))
                 }
                 for (k in s.signs.indices) {
                     val fewer = s.signs.filterIndexed { j, _ -> j != k }
-                    assertFalse("${d.name} day $day sign $k is redundant", InequalityTeacher.solvesByLogic(n, s.cells, fewer))
+                    assertFalse("${d.name} day $day sign $k is redundant", InequalityTeacher.solvesByLogic(n, s.cells, fewer, deepest))
                 }
             }
             println("%-9s %5.1f/%d        %5.1f/%d".format(d.name, givens / 100, squares, signs / 100, pairs))
             assertTrue("${d.name} gives away too many squares", givens / 100 <= squares * 0.15)
             assertTrue("${d.name} shows too many signs", signs / 100 <= pairs * 0.35)
+        }
+    }
+
+    @Test
+    fun `the generator's quick walk agrees with the hints' walk`() {
+        // pairDepth places every single at once; it must stop where the hints do and take the same pair steps.
+        // Checked on shipped boards and on the boards one sign or given short of them, which mostly stick.
+        val pair = InequalityTeacher.rung(InequalityTeacher.NAKED_PAIR)
+        for (d in Difficulty.entries) for (day in 0 until 40) {
+            val s = board(day, d)
+            val n = s.size
+            val boards = listOf(s.cells to s.signs) +
+                s.signs.indices.map { k -> s.cells to s.signs.filterIndexed { j, _ -> j != k } } +
+                s.cells.indices.filter { s.givens[it] }.map { i -> s.cells.toMutableList().also { it[i] = 0 } to s.signs }
+            for ((cells, signs) in boards) for (deepest in listOf(InequalityTeacher.rung(InequalityTeacher.SIGN_PLACE), pair, InequalityTeacher.DEEPEST)) {
+                val slow = InequalityTeacher.depth(n, cells, signs, deepest)
+                val fast = InequalityTeacher.pairDepth(n, cells, signs, deepest)
+                assertEquals("${d.name} day $day", slow?.let { if (it >= pair) it else -1 }, fast)
+            }
         }
     }
 

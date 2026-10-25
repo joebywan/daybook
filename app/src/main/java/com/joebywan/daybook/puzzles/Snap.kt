@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +38,14 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.rememberHintPulse
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.drawHintRings
+import com.joebywan.daybook.ui.fitStep
+import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.Path
 
 @Serializable
 data class SnapState(
@@ -54,8 +61,6 @@ data class SnapState(
 
     override val solved: Boolean
         get() = Snap.obeysRules(this, path)
-
-    fun reset(): SnapState = copy(path = emptyList(), moves = moves + 1)
 }
 
 /**
@@ -67,7 +72,7 @@ data class SnapState(
 object Snap : PuzzleType {
 
     override val id = "snap"
-    override val displayName = "Snap"
+    override val displayName = "Trail"
     override val tagline = "One line, every square, numbers in order"
     override val accent = 0xFFD9584C
     override val rules = listOf(
@@ -632,7 +637,7 @@ object Snap : PuzzleType {
                 caption = "Your turn: finish the line. Every square once, 2 then 3, ending on 4. " +
                     "Watch for squares down to two ways in.",
                 freePlay = true,
-                done = "Solved. That's Snap.",
+                done = "Solved. That's Trail.",
             ),
         )
     }
@@ -644,57 +649,70 @@ object Snap : PuzzleType {
 
         Canvas(modifier) {
             val side = minOf(size.width, size.height)
-            val origin = Offset((size.width - side) / 2f, (size.height - side) / 2f)
             val step = side / PREVIEW_SIDE
-            // The board's flat 2px gutter between squares; kept in device pixels so the squares
-            // stay squares rather than growing a proportionally fat gap at this scale.
-            val gutter = maxOf(step * 0.025f, 1f)
-
-            fun centre(cell: Int) = Offset(
-                origin.x + (cell % PREVIEW_SIDE + 0.5f) * step,
-                origin.y + (cell / PREVIEW_SIDE + 0.5f) * step,
+            drawSnap(
+                PREVIEW_SIDE, step, Offset((size.width - side) / 2f, (size.height - side) / 2f), previewPath, previewWaypoints,
+                // The board's flat 2px gutter between squares; kept in device pixels so the squares
+                // stay squares rather than growing a proportionally fat gap at this scale.
+                gutter = maxOf(step * 0.025f, 1f),
+                corner = step * 0.32f,
+                join = StrokeJoin.Round,
+                numberSize = (step * 0.32f).toSp(),
+                measurer = measurer,
+                scheme = scheme,
             )
+        }
+    }
 
-            for (cell in 0 until PREVIEW_SIDE * PREVIEW_SIDE) {
-                drawRoundRect(
-                    color = scheme.surfaceVariant,
-                    topLeft = Offset(
-                        origin.x + (cell % PREVIEW_SIDE) * step + gutter,
-                        origin.y + (cell / PREVIEW_SIDE) * step + gutter,
-                    ),
-                    size = Size(step - 2 * gutter, step - 2 * gutter),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(step * 0.32f),
-                )
-            }
+    /**
+     * The squares, the line along [path] and the numbered [waypoints] of a grid [cols] squares wide, each
+     * square [step] across, from [origin]. The board and the home-grid motif both draw through this.
+     */
+    private fun DrawScope.drawSnap(
+        cols: Int,
+        step: Float,
+        origin: Offset,
+        path: List<Int>,
+        waypoints: List<Int>,
+        gutter: Float,
+        corner: Float,
+        join: StrokeJoin,
+        numberSize: TextUnit,
+        measurer: TextMeasurer,
+        scheme: ColorScheme,
+    ) {
+        fun centre(cell: Int) = Offset(
+            origin.x + (cell % cols + 0.5f) * step,
+            origin.y + (cell / cols + 0.5f) * step,
+        )
 
-            val line = androidx.compose.ui.graphics.Path()
-            previewPath.forEachIndexed { i, cell ->
+        for (cell in waypoints.indices) {
+            drawRoundRect(
+                color = scheme.surfaceVariant,
+                topLeft = Offset(origin.x + (cell % cols) * step + gutter, origin.y + (cell / cols) * step + gutter),
+                size = Size(step - 2 * gutter, step - 2 * gutter),
+                cornerRadius = CornerRadius(corner),
+            )
+        }
+
+        if (path.size >= 2) {
+            val line = Path()
+            path.forEachIndexed { i, cell ->
                 val at = centre(cell)
                 if (i == 0) line.moveTo(at.x, at.y) else line.lineTo(at.x, at.y)
             }
-            drawPath(
-                line,
-                Color(accent),
-                style = Stroke(width = step * 0.26f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-            )
+            drawPath(line, Color(accent), style = Stroke(width = step * 0.26f, cap = StrokeCap.Round, join = join))
+        }
 
-            previewWaypoints.forEachIndexed { cell, number ->
-                if (number == 0) return@forEachIndexed
-                val at = centre(cell)
-                drawCircle(scheme.onBackground, radius = step * 0.30f, center = at)
-                val layout = measurer.measure(
-                    number.toString(),
-                    TextStyle(
-                        color = scheme.background,
-                        fontSize = (step * 0.32f).toSp(),
-                        fontWeight = FontWeight.Bold,
-                    ),
-                )
-                drawText(
-                    layout,
-                    topLeft = Offset(at.x - layout.size.width / 2f, at.y - layout.size.height / 2f),
-                )
-            }
+        waypoints.forEachIndexed { cell, number ->
+            if (number == 0) return@forEachIndexed
+            val at = centre(cell)
+            drawCircle(scheme.onBackground, radius = step * 0.30f, center = at)
+            val layout = measurer.measure(
+                number.toString(),
+                TextStyle(color = scheme.background, fontSize = numberSize, fontWeight = FontWeight.Bold),
+            )
+            drawText(layout, topLeft = Offset(at.x - layout.size.width / 2f, at.y - layout.size.height / 2f))
         }
     }
 
@@ -719,7 +737,7 @@ object Snap : PuzzleType {
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
         BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-            val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
+            val step = fitStep(s.width, s.height)
             val stepPx = with(LocalDensity.current) { step.toPx() }
 
             Canvas(
@@ -755,79 +773,17 @@ object Snap : PuzzleType {
                         )
                     }
             ) {
-                for (r in 0 until s.height) {
-                    for (c in 0 until s.width) {
-                        drawRoundRect(
-                            color = scheme.surfaceVariant,
-                            topLeft = Offset(c * stepPx + 2f, r * stepPx + 2f),
-                            size = Size(stepPx - 4f, stepPx - 4f),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(stepPx * 0.16f),
-                        )
-                    }
-                }
+                drawSnap(
+                    s.width, stepPx, Offset.Zero, s.path, s.waypoints,
+                    gutter = 2f, corner = stepPx * 0.16f, join = StrokeJoin.Miter, numberSize = (step.value * 0.30f).sp,
+                    measurer = measurer, scheme = scheme,
+                )
 
-                if (s.path.size >= 2) {
-                    val line = androidx.compose.ui.graphics.Path()
-                    s.path.forEachIndexed { i, cell ->
-                        val x = (cell % s.width + 0.5f) * stepPx
-                        val y = (cell / s.width + 0.5f) * stepPx
-                        if (i == 0) line.moveTo(x, y) else line.lineTo(x, y)
-                    }
-                    drawPath(
-                        line,
-                        Color(accent),
-                        style = Stroke(width = stepPx * 0.26f, cap = StrokeCap.Round),
-                    )
-                }
-
-                for (cell in 0 until s.cellCount) {
-                    val number = s.waypoints[cell]
-                    if (number == 0) continue
-                    val cx = (cell % s.width + 0.5f) * stepPx
-                    val cy = (cell / s.width + 0.5f) * stepPx
-                    drawCircle(scheme.onBackground, radius = stepPx * 0.30f, center = Offset(cx, cy))
-                    val layout = measurer.measure(
-                        number.toString(),
-                        TextStyle(
-                            color = scheme.background,
-                            fontSize = (step.value * 0.30f).sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                    )
-                    drawText(
-                        layout,
-                        topLeft = Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f),
-                    )
-                }
-
-                if (!highlight.isEmpty) {
-                    // Everything the highlight does not name steps back under a veil in the page
-                    // colour, line and numbers included, so the named squares read at once.
-                    for (cell in 0 until s.cellCount) {
-                        if (cell in highlight.strong || cell in highlight.soft) continue
-                        drawRect(
-                            color = scheme.background.copy(alpha = 0.62f),
-                            topLeft = Offset((cell % s.width) * stepPx, (cell / s.width) * stepPx),
-                            size = Size(stepPx, stepPx),
-                        )
-                    }
-                    // Outlines last, so a neighbour drawn later never paints over half of one.
-                    val strongW = 4.dp.toPx()
-                    val softW = 1.5.dp.toPx()
-                    val corner = CornerRadius(stepPx * 0.16f)
-                    for (cell in 0 until s.cellCount) {
-                        val strong = cell in highlight.strong
-                        if (!strong && cell !in highlight.soft) continue
-                        val w = if (strong) strongW else softW
-                        drawRoundRect(
-                            color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                            topLeft = Offset((cell % s.width) * stepPx + w / 2, (cell / s.width) * stepPx + w / 2),
-                            size = Size(stepPx - w, stepPx - w),
-                            cornerRadius = corner,
-                            style = Stroke(w),
-                        )
-                    }
-                }
+                // Everything the highlight does not name steps back under a veil in the page
+                // colour, line and numbers included, so the named squares read at once.
+                drawHintDim(highlight, s.width, s.height, stepPx, scheme.background)
+                // Outlines last, so a neighbour drawn later never paints over half of one.
+                drawHintRings(highlight, s.width, s.height, stepPx, glow, pulse.value, CornerRadius(stepPx * 0.16f))
             }
         }
     }

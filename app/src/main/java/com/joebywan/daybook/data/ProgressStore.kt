@@ -5,7 +5,9 @@ import com.joebywan.daybook.core.LevelBoard
 import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.Streak
+import com.joebywan.daybook.core.praisedTechniquesOf
 import com.joebywan.daybook.core.streakOf
+import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.platform.currentTimeMillis
 import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -126,8 +128,7 @@ data class LevelProgress(
             val solves = levelSolves.mapNotNull(LevelSolve::decode).filter { it.level >= 1 }.groupBy { it.level }
             fun isDone(n: Int): Boolean {
                 val solved = solves[n].orEmpty().map { it.puzzleId }.toSet()
-                return Levels.plan(n, opened[n] ?: Levels.POOL.size, playerDeal)
-                    .all { it.puzzleId in solved || PuzzleRegistry.byId(it.puzzleId) == null }
+                return Levels.plan(n, opened[n] ?: Levels.POOL.size, playerDeal).all { levelBoardDone(it.puzzleId, solved) }
             }
             val done = (opened.keys + solves.keys).filter { it >= 1 && isDone(it) }.toSet()
             val current = opened.keys.filter { it >= 1 && it !in done }.minOrNull() ?: ((done.maxOrNull() ?: 0) + 1)
@@ -135,6 +136,9 @@ data class LevelProgress(
         }
     }
 }
+
+/** Whether a level's board of [puzzleId] counts as done, given the level's [solved] puzzles: one gone from the registry does. */
+fun levelBoardDone(puzzleId: String, solved: Set<String>): Boolean = puzzleId in solved || PuzzleRegistry.byId(puzzleId) == null
 
 /**
  * A game left part-finished: the board plus everything the play screen would otherwise lose.
@@ -346,6 +350,14 @@ class ProgressStore(private val store: KeyValueStore) {
         return added
     }
 
+    /** Every technique a hint has explained, as `puzzleId|technique` ([TechniquesMet]); an older store has none. */
+    val techniquesMet: Flow<Set<String>> = store.stringSet(KEY_TECHNIQUES_MET)
+
+    /** Records that a hint on [puzzleId] explained [technique] (`Deduction.technique`). Once each: a set. */
+    suspend fun recordTechniqueMet(puzzleId: String, technique: String) {
+        store.updateStringSet(KEY_TECHNIQUES_MET) { it + TechniquesMet.encode(puzzleId, technique) }
+    }
+
     /** The game in progress on this board, if one was left behind. */
     suspend fun savedGame(key: String): SavedGame? =
         SavedGames.find(store.stringSet(KEY_SAVED).first().savedGames(), key)
@@ -425,16 +437,34 @@ class ProgressStore(private val store: KeyValueStore) {
         const val KEY_LEVELS = "levels"
         const val KEY_LEVEL_SOLVES = "level_solves"
         const val KEY_CARDS = "share_cards"
+        const val KEY_TECHNIQUES_MET = "techniques_met"
     }
 }
 
+/**
+ * The techniques page (`ui/stats/TechniquesScreen.kt`): per puzzle with a teacher, its praised techniques in
+ * `TechniqueNames.kt`'s order, each marked once a hint has explained it. Recorded from the first build that had the
+ * page (`techniques_met`); hints opened before it left nothing to read back.
+ */
+object TechniquesMet {
+    fun encode(puzzleId: String, technique: String): String = "$puzzleId|$technique"
+
+    /** [puzzleIds] (the home grid's order) that have a teacher, each with its techniques. Unknown entries are ignored. */
+    fun of(raw: Set<String>, puzzleIds: List<String>): List<PuzzleTechniques> =
+        puzzleIds.mapNotNull { id ->
+            val praised = praisedTechniquesOf(id)
+            val names = techniqueNamesOf(id).filterKeys { it in praised }
+            if (names.isEmpty()) null
+            else PuzzleTechniques(id, names.map { (technique, name) -> MetTechnique(name, encode(id, technique) in raw) })
+        }
+}
+
+data class MetTechnique(val name: String, val met: Boolean)
+
+data class PuzzleTechniques(val puzzleId: String, val techniques: List<MetTechnique>)
+
 /** Derived numbers for the stats screen. Pure, so it is trivially testable. */
 object Stats {
-
-    fun totalSolved(all: List<Completion>): Int = all.size
-
-    fun solvedToday(all: List<Completion>, today: LocalDate): Int =
-        all.count { it.day == today }
 
     /** Streak over the days a daily puzzle was solved (practice games have no day). See [streakOf]. */
     fun streak(all: List<Completion>, today: LocalDate): Streak =
@@ -484,22 +514,6 @@ object PuzzleOrder {
     private fun playCounts(all: List<Completion>, today: LocalDate): Map<String, Int> {
         val from = today.toEpochDays() - WINDOW_DAYS
         return all.filter { it.day == null || it.day.toEpochDays() >= from }.groupingBy { it.puzzleId }.eachCount()
-    }
-
-    /** How many of the most played puzzles today's pick never lands on. */
-    const val PICK_SKIPS_TOP = 5
-
-    /**
-     * Today's pick ("Try me!"): [PuzzleRegistry.featured]'s rotation, stepped forward past the player's [PICK_SKIPS_TOP]
-     * most played puzzles (by [mostPlayed]'s counts, whatever the grid's order; only puzzles with a counted solve), so it
-     * points at something they play less. A new player gets the plain rotation. Pure: the caller passes the once-a-day basis.
-     */
-    fun pick(all: List<Completion>, today: LocalDate): String {
-        val counts = playCounts(all, today)
-        val ids = PuzzleRegistry.all.map { it.id }
-        val skip = mostPlayed(all, today, gentlest(ids)).filter { (counts[it] ?: 0) > 0 }.take(PICK_SKIPS_TOP).toSet()
-        val start = ids.indexOf(PuzzleRegistry.featured(today.toEpochDays()).id)
-        return ids.indices.map { ids[(start + it) % ids.size] }.firstOrNull { it !in skip } ?: ids[start]
     }
 
     /**

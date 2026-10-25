@@ -24,6 +24,9 @@ data class Praise(
     val toGo: String? = null,
     /** What the Share button previews and sends ([shareCard]); null hides the button. */
     val share: ShareCard? = null,
+    /** A second Share button, [setShareLabel], for the set this solve finished: a level, or today's three. */
+    val setShare: ShareCard? = null,
+    val setShareLabel: String = "",
     /**
      * The full show (all the confetti) rather than a light flourish: the first daily solve of today, an Expert solve, a
      * personal record, a streak milestone or an earned achievement. True by default, so a frame nobody judged stays loud.
@@ -99,7 +102,7 @@ fun finishPraise(
     val sorted = tier.map { it.seconds }.sorted()
     val long = s >= LONG_SECONDS || (sorted.size >= MIN_SAMPLES && s >= LONG_FLOOR && s >= 2 * sorted[sorted.size / 2])
     if (long) personal += "That one fought back, and you stuck with it."
-    if (sorted.size >= MIN_SAMPLES && personal.none { it.startsWith("Your fastest") }) {
+    if (sorted.size >= MIN_SAMPLES && !record) {
         val pct = 100 * sorted.count { it > s } / sorted.size
         if (pct >= PERCENT_FLOOR) personal += "Faster than $pct% of your own ${solve.difficulty.label} solves."
     }

@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.Tents
@@ -9,13 +8,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class TentsRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        Tents.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Tents.id, d), d) as TentsState
+        Tents.generate(daySeed(day, Tents.id, d), d) as TentsState
 
     private fun withTents(s: TentsState, tents: List<Boolean>) =
         s.copy(marks = tents.map { if (it) TentsLogic.TENT else 0 })
@@ -123,6 +120,25 @@ class TentsRulesTest {
             checked++
         }
         assertTrue(checked > 100)
+    }
+
+    /** The tier gate's redraws over a year of daily seeds, against the budget; prints draws and JVM time a board. */
+    @Test
+    fun `the tier gate's redraws stay well inside the budget`() {
+        val first = com.joebywan.daybook.core.SeedHash.epochDay(2026, 1, 1)
+        for (d in Difficulty.entries) {
+            val ms = ArrayList<Double>()
+            val draws = (0 until 365).map { day ->
+                val seed = com.joebywan.daybook.core.SeedHash.daily(first + day, "tents", d)
+                val t0 = System.nanoTime()
+                val used = (0 until TentsLogic.ATTEMPTS).first { TentsLogic.attempt(seed, d, it) != null } + 1
+                ms += (System.nanoTime() - t0) / 1e6
+                used
+            }.sorted()
+            ms.sort()
+            println("tents ${d.name}: draws mean ${"%.1f".format(draws.average())}, p95 ${draws[346]}, most ${draws.last()} of ${TentsLogic.ATTEMPTS}; ms p50 ${"%.1f".format(ms[182])} p95 ${"%.1f".format(ms[346])} max ${"%.1f".format(ms.last())}")
+            assertTrue("tents/${d.name} came close to the budget: ${draws.last()}", draws.last() < TentsLogic.ATTEMPTS / 4)
+        }
     }
 
     @Test

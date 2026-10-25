@@ -6,7 +6,6 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.platform.currentDate
-import com.joebywan.daybook.platform.dateOverride
 import com.joebywan.daybook.ui.DaybookApp
 import com.joebywan.daybook.ui.Route
 import com.joebywan.daybook.ui.home.LaunchMode
@@ -16,27 +15,27 @@ import kotlinx.datetime.LocalDate
  * The whole app, as on Android: `DaybookApp` and every screen are app/'s own files, with storage,
  * dates, back navigation and board generation supplied by `platform/WebPlatform.kt`.
  *
- * The three parameters are the page's query: `?date=` is the day the app believes it is, `?tier=`
+ * [params] is the page's query: `?date=` is the day the app believes it is (set by `main`), `?tier=`
  * the difficulty the home grid is set to (it persists, as a tap would), and `?puzzle=<id>` opens
  * that puzzle's daily board at that difficulty instead of the home grid.
  *
  * For the render harness: `?mode=levels` (or `random`) opens home in that mode, `?screen=levels` the levels
  * list, `&level=N` with it that level's boards, and `?puzzle=<id>&level=N` that board of level N;
  * `?screen=archive&puzzle=<id>` that puzzle's archive, with `&day=` that day selected; `?screen=stats` the statistics
- * (`&share` with it opens the day's share preview, once a daily is solved).
+ * (`&share` with it opens the day's share preview, once a daily is solved); `?screen=techniques` the techniques page.
  */
 @Composable
-fun DaybookWebApp(dateParam: String?, tierParam: String?, puzzleParam: String?, params: Map<String, String> = emptyMap()) {
+fun DaybookWebApp(params: Map<String, String>) {
     val start = remember {
-        WebStores.init()
-        dateOverride = dateParam?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val puzzleParam = params["puzzle"]
         val launch = WebStores.get(KeyValueStore.LAUNCH)
-        tierParam?.let { key -> launch.write("difficulty", Difficulty.fromKey(key.uppercase()).name) }
+        params["tier"]?.let { key -> launch.write("difficulty", Difficulty.fromKey(key.uppercase()).name) }
         val tier = Difficulty.fromKey(launch.read("difficulty").orEmpty())
         val level = params["level"]?.toIntOrNull()?.takeIf { it >= 1 }
         when {
             params["screen"] == "levels" -> Route.Levels(level)
             params["screen"] == "stats" -> Route.Stats
+            params["screen"] == "techniques" -> Route.Techniques
             params["screen"] == "archive" && puzzleParam != null ->
                 Route.Archive(puzzleParam, params["day"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() })
             else -> puzzleParam?.let(PuzzleRegistry::byId)?.let {

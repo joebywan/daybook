@@ -1,5 +1,8 @@
 package com.joebywan.daybook.ui
 
+import com.joebywan.daybook.core.SeedHash
+import kotlinx.coroutines.flow.Flow
+import com.joebywan.daybook.data.levelBoardDone
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +28,7 @@ import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.data.ProgressStore
 import com.joebywan.daybook.data.PuzzleOrder
 import com.joebywan.daybook.data.Stats
+import com.joebywan.daybook.data.TechniquesMet
 import com.joebywan.daybook.data.savedGameKey
 import com.joebywan.daybook.platform.PlatformBackHandler
 import com.joebywan.daybook.platform.currentDate
@@ -51,10 +55,15 @@ import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.play.finishPraise
 import com.joebywan.daybook.ui.play.levelNextOptions
 import com.joebywan.daybook.ui.play.nextOptions
+import com.joebywan.daybook.ui.play.nextToday
+import com.joebywan.daybook.ui.play.levelShareCard
+import com.joebywan.daybook.ui.play.threeShareCard
+import com.joebywan.daybook.core.TodaysThree
 import com.joebywan.daybook.ui.play.shareCard
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import com.joebywan.daybook.ui.settings.SettingsScreen
 import com.joebywan.daybook.ui.stats.AchievementsScreen
+import com.joebywan.daybook.ui.stats.TechniquesScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import com.joebywan.daybook.ui.theme.Appearance
 import com.joebywan.daybook.ui.theme.DaybookTheme
@@ -80,6 +89,8 @@ sealed interface Route {
     data object Settings : Route
     /** [fromHome]: back returns to where it was opened from. */
     data class Achievements(val fromHome: Boolean = false) : Route
+    /** The techniques hints have explained, opened from Statistics. */
+    data object Techniques : Route
     /** [day]: the day last played from it, which the list opens at. */
     data class Archive(val puzzleId: String, val day: LocalDate? = null) : Route
     /** The levels list; [level] shows that level's five boards instead. */
@@ -101,6 +112,7 @@ sealed interface Route {
 /** Where back goes from [r]: the screen it was opened from. One level's boards go back to the list of levels. */
 internal fun backFrom(r: Route): Route = when {
     r is Route.Achievements && !r.fromHome -> Route.Stats
+    r is Route.Techniques -> Route.Stats
     r is Route.Play && r.fromArchive -> Route.Archive(r.puzzleId, r.day)
     r is Route.Levels && r.level != null -> Route.Levels()
     else -> Route.Home
@@ -115,6 +127,7 @@ internal fun encodeRoute(r: Route): String =
         Route.Home -> "home"
         Route.Stats -> "stats"
         Route.Settings -> "settings"
+        Route.Techniques -> "techniques"
         is Route.Achievements -> "achievements|${r.fromHome}"
         is Route.Archive -> "archive|${r.puzzleId}|${r.day ?: ""}"
         is Route.Levels -> "levels|${r.level ?: ""}"
@@ -126,6 +139,7 @@ internal fun decodeRoute(text: String): Route {
     return when (f[0]) {
         "stats" -> Route.Stats
         "settings" -> Route.Settings
+        "techniques" -> Route.Techniques
         "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
         // The fields after the first few came later: a string saved before them still decodes.
         "archive" -> Route.Archive(f[1], f.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse))
@@ -161,7 +175,7 @@ fun DaybookApp(startAt: Route = Route.Home, startMode: LaunchMode = LaunchMode.D
     LaunchedEffect(Unit) { if (appearance == null) appearance = launchPrefs.appearance.first() }
     val current = appearance ?: return
     DaybookTheme(current) {
-        DaybookScreens(startAt, startMode, current) { picked ->
+        DaybookScreens(startAt, startMode, launchPrefs, current) { picked ->
             appearance = picked
             scope.launch { launchPrefs.setAppearance(picked) }
         }
@@ -169,7 +183,13 @@ fun DaybookApp(startAt: Route = Route.Home, startMode: LaunchMode = LaunchMode.D
 }
 
 @Composable
-private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Appearance, onAppearance: (Appearance) -> Unit) {
+private fun DaybookScreens(
+    startAt: Route,
+    startMode: LaunchMode,
+    launchPrefs: LaunchPreferences,
+    appearance: Appearance,
+    onAppearance: (Appearance) -> Unit,
+) {
     val progressFile = rememberKeyValueStore(KeyValueStore.PROGRESS)
     val store = remember(progressFile) { ProgressStore(progressFile) }
     val scope = rememberCoroutineScope()
@@ -188,31 +208,17 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
 
     // The home grid's two selectors live here, not on the home screen: navigating into a puzzle
     // destroys that screen, and a difficulty that reset after every game would be worse than the
-    // per-card pills it replaced.
-    val launchFile = rememberKeyValueStore(KeyValueStore.LAUNCH)
-    val launchPrefs = remember(launchFile) { LaunchPreferences(launchFile) }
-    val storedDifficulty by launchPrefs.difficulty.collectAsState(initial = null)
-    // A tap has to win over the store immediately. Reading the selection back out of DataStore
-    // would leave a window — however short — in which the grid is still set to the old tier and a
-    // tapped tile starts the wrong puzzle.
-    var pickedDifficulty by remember { mutableStateOf<Difficulty?>(null) }
-    val difficulty = pickedDifficulty ?: storedDifficulty ?: Difficulty.STANDARD
-    // Same reasoning as the difficulty: a flip of the switch shows at once, not after the store answers.
-    val storedShowTimer by launchPrefs.showTimer.collectAsState(initial = false)
+    // per-card pills it replaced. The settings are read here too (rememberPref: a tap wins over the store at once).
+    val (difficulty, setDifficulty) = rememberPref(launchPrefs.difficulty, Difficulty.STANDARD, launchPrefs::setDifficulty)
+    val (showTimer, setShowTimer) = rememberPref(launchPrefs.showTimer, false, launchPrefs::setShowTimer)
     LaunchedEffect(Unit) { launchPrefs.settleShowTimer { store.hasPlayed() } }
     // Null until known, so a returning player never sees a frame of the welcome and a new one never sees the grid first.
     var welcome by remember { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(Unit) { welcome = launchPrefs.needsWelcome { store.hasPlayed() } }
-    var pickedShowTimer by remember { mutableStateOf<Boolean?>(null) }
-    val showTimer = pickedShowTimer ?: storedShowTimer
-    val storedPlaySound by launchPrefs.playSound.collectAsState(initial = true)
-    var pickedPlaySound by remember { mutableStateOf<Boolean?>(null) }
-    val playSound = pickedPlaySound ?: storedPlaySound
+    val (playSound, setPlaySound) = rememberPref(launchPrefs.playSound, true, launchPrefs::setPlaySound)
     // Armed while the switch is on (the web wakes its audio on the first taps); a no-op when off.
     val playSolveSound = rememberSolveSoundPlayer(playSound)
-    val storedVibrate by launchPrefs.vibrate.collectAsState(initial = true)
-    var pickedVibrate by remember { mutableStateOf<Boolean?>(null) }
-    val vibrate = pickedVibrate ?: storedVibrate
+    val (vibrate, setVibrate) = rememberPref(launchPrefs.vibrate, true, launchPrefs::setVibrate)
     val haptics = rememberHaptics(vibrate)
     val reducedMotion = rememberReducedMotion()
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
@@ -230,7 +236,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             val plan = store.openLevel(level)
             val solved = levels.solved(level)
             val board = plan.firstOrNull { it.puzzleId == puzzleId }
-                ?: plan.firstOrNull { it.puzzleId !in solved && PuzzleRegistry.byId(it.puzzleId) != null }
+                ?: plan.firstOrNull { !levelBoardDone(it.puzzleId, solved) }
                 ?: plan.first()
             mode = LaunchMode.LEVELS
             route = Route.Play(board.puzzleId, board.difficulty, null, level = level)
@@ -242,17 +248,15 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
     val ids = remember { PuzzleOrder.gentlest(PuzzleRegistry.all.map { it.id }) }
     val playedBasis by produceState<List<Completion>?>(null, today) { value = store.completions.first() }
     val mostPlayed = remember(playedBasis, today) { PuzzleOrder.mostPlayed(playedBasis.orEmpty(), today, ids) }
-    val pick = remember(playedBasis, today) { PuzzleOrder.pick(playedBasis.orEmpty(), today) }
-    val storedOrder by launchPrefs.puzzleOrder.collectAsState(initial = emptyList())
-    var pickedOrder by remember { mutableStateOf<List<String>?>(null) }
-    val customOrder = pickedOrder ?: storedOrder
+    // Today's three (TodaysThree): the date alone, the same for everyone.
+    val three = remember(today) { TodaysThree.of(today) }
+    val doneToday = remember(completions, today) { completions.filter { it.day == today }.mapTo(HashSet()) { it.puzzleId to it.difficulty } }
+    val (customOrder, setOrder) = rememberPref(launchPrefs.puzzleOrder, emptyList(), launchPrefs::setPuzzleOrder)
     val puzzles = remember(customOrder, mostPlayed) {
         (if (customOrder.isEmpty()) mostPlayed else PuzzleOrder.arranged(customOrder, ids)).mapNotNull(PuzzleRegistry::byId)
     }
-    fun setOrder(order: List<String>) {
-        pickedOrder = order
-        scope.launch { launchPrefs.setPuzzleOrder(order) }
-    }
+    val metRaw by store.techniquesMet.collectAsState(initial = emptySet())
+    val techniquesMet = remember(metRaw, puzzles) { TechniquesMet.of(metRaw, puzzles.map { it.id }) }
 
     // Roll the date over without needing the app to be restarted at midnight.
     LaunchedEffect(Unit) {
@@ -301,7 +305,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                     levelBoards.orEmpty().associate { savedGameKey(it.puzzleId, it.difficulty, it.seed) to it.puzzleId }
                 } else PuzzleRegistry.all.mapNotNull { p ->
                     val seed = when (mode) {
-                        LaunchMode.RANDOM -> DailySeed.randomSeed(
+                        LaunchMode.RANDOM -> SeedHash.random(
                             p.id, difficulty, store.currentRandomNonce(p.id, difficulty) ?: return@mapNotNull null,
                         )
                         else -> DailySeed.seedFor(today, p.id, difficulty)
@@ -311,7 +315,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             }
             val savesInProgress by remember(tileKeys) { store.inProgress(tileKeys.keys) }.collectAsState(initial = emptySet())
             // Handed down as a state read in the tile itself: passed as a plain set it reached the tile stale on the web
-            // about half the time when it landed during the first frames (the pick kept "Try me!" over its saved game).
+            // about half the time when it landed during the first frames (a tile kept its old label over its saved game).
             val inProgress = remember { derivedStateOf { savesInProgress.mapNotNull(tileKeys::get).toSet() } }
             // The most recently saved of them, for the "Continue" row; a key's second field is its tier (savedGameKey).
             val resume = remember {
@@ -328,10 +332,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                 today = today,
                 completions = completions,
                 difficulty = difficulty,
-                onDifficulty = { picked ->
-                    pickedDifficulty = picked
-                    scope.launch { launchPrefs.setDifficulty(picked) }
-                },
+                onDifficulty = setDifficulty,
                 mode = mode,
                 onMode = { mode = it },
                 onLaunch = { puzzleId ->
@@ -350,11 +351,17 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                 onStats = { route = Route.Stats },
                 onAchievements = { route = Route.Achievements(fromHome = true) },
                 onSettings = { route = Route.Settings },
-                pick = pick,
+                three = three.mapNotNull(PuzzleRegistry::byId),
+                // Today's dailies, whatever the mode: the three are dailies, and back from one is Home.
+                onThree = { puzzleId -> route = Route.Play(puzzleId, difficulty, today) },
+                threeCard = threeShareCard(
+                    three, completions, today, difficulty, formatDate(today, SHARE_DATE),
+                    Stats.streak(completions, today).current, ::formatClock,
+                ),
                 puzzles = puzzles,
                 inProgress = { inProgress.value },
                 customOrder = customOrder.isNotEmpty(),
-                onOrder = ::setOrder,
+                onOrder = setOrder,
                 resume = { resume.value },
             )
             }
@@ -367,7 +374,14 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
             keptCards = store.keptCards.collectAsState(initial = emptyList()).value,
             puzzles = puzzles,
             onAchievements = { route = Route.Achievements() },
+            techniques = techniquesMet,
+            onTechniques = { route = Route.Techniques },
             onBack = { route = Route.Home },
+        )
+
+        Route.Techniques -> TechniquesScreen(
+            techniques = techniquesMet,
+            onBack = { route = backFrom(current) },
         )
 
         is Route.Achievements -> AchievementsScreen(
@@ -378,20 +392,11 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
 
         Route.Settings -> SettingsScreen(
             showTimer = showTimer,
-            onShowTimer = { show ->
-                pickedShowTimer = show
-                scope.launch { launchPrefs.setShowTimer(show) }
-            },
+            onShowTimer = setShowTimer,
             playSound = playSound,
-            onPlaySound = { play ->
-                pickedPlaySound = play
-                scope.launch { launchPrefs.setPlaySound(play) }
-            },
+            onPlaySound = setPlaySound,
             vibrate = vibrate,
-            onVibrate = { on ->
-                pickedVibrate = on
-                scope.launch { launchPrefs.setVibrate(on) }
-            },
+            onVibrate = setVibrate,
             appearance = appearance,
             onAppearance = onAppearance,
             customOrder = customOrder.isNotEmpty(),
@@ -437,7 +442,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                 val seed = when {
                     levelBoard != null -> levelBoard.seed
                     current.day != null -> DailySeed.seedFor(current.day, puzzle.id, difficulty)
-                    else -> DailySeed.randomSeed(puzzle.id, difficulty, current.nonce)
+                    else -> SeedHash.random(puzzle.id, difficulty, current.nonce)
                 }
                 val gameKey = savedGameKey(puzzle.id, difficulty, seed)
                 val options = if (level != null) {
@@ -445,7 +450,12 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                     levelNextOptions(level, levels.plan(level), levels.solved(level), puzzle.id, levels.current)
                 } else {
                     // Only what the store already holds, for the same reason.
-                    nextOptions(daily = current.day != null, tier = difficulty, doneTiers = tiersDoneOn(completions, puzzle.id, current.day))
+                    // "Next puzzle today" on today's own daily opened from Home only, so back from the next board (Home) is
+                    // where this one was opened from; an archive board's back is its own puzzle's archive.
+                    val next = if (current.day == today && !current.fromArchive) {
+                        nextToday(three, puzzles.map { it.id }, difficulty, doneToday, puzzle.id)
+                    } else null
+                    nextOptions(daily = current.day != null, tier = difficulty, doneTiers = tiersDoneOn(completions, puzzle.id, current.day), today = next)
                 }
                 // Keyed on the board: a level's next step goes straight to another puzzle, and PlayScreen's
                 // produced board would otherwise be the old puzzle's state for a frame (a ClassCastException in Board).
@@ -515,9 +525,24 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                             store.keepCard(kept)
                             if (current.day == null && level == null) store.keepCard(kept.copy(best = false))
                         }
+                        val levelDone = level != null && levelFinishedBy(levels, level, puzzle.id)
+                        // The set this solve finished, from what is stored plus this solve (the store records it a moment later).
+                        val setShare = when {
+                            level != null && levelDone -> levelShareCard(
+                                level, levels.plan(level).map { it.puzzleId },
+                                levels.solves[level].orEmpty().filter { it.puzzleId != puzzle.id } + LevelSolve(level, puzzle.id, seconds, hints),
+                                ::formatClock,
+                            )
+                            current.day == today && puzzle.id in three ->
+                                threeShareCard(three, completions + solve, today, difficulty, formatDate(today, SHARE_DATE), streak, ::formatClock)
+                                    ?.takeIf { three.all { id -> id == puzzle.id || (id to difficulty) in doneToday } }
+                            else -> null
+                        }
                         praise.copy(
-                            title = if (level != null && levelFinishedBy(levels, level, puzzle.id)) "Level $level done" else praise.title,
+                            title = if (levelDone) "Level $level done" else praise.title,
                             share = card,
+                            setShare = setShare,
+                            setShareLabel = if (level != null) "Share level" else "Share three",
                         )
                     },
                     options = options,
@@ -525,6 +550,9 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                         val tier = option.difficulty
                         when {
                             option.kind == NextKind.LEVEL -> playLevel(option.level ?: levels.current, option.puzzleId)
+                            // Opened as from Home (fromArchive false): back from it is Home, as from the board just solved.
+                            option.kind == NextKind.TODAY && tier != null && option.puzzleId != null ->
+                                route = Route.Play(option.puzzleId, tier, today)
                             tier == null -> route = backFrom(current)
                             // The same date, so on an archive day it is that past date's board (and back is still the archive).
                             option.kind == NextKind.DAILY -> route = current.copy(difficulty = tier)
@@ -538,6 +566,7 @@ private fun DaybookScreens(startAt: Route, startMode: LaunchMode, appearance: Ap
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
                     showTimer = showTimer,
                     level = level,
+                    onTaught = { technique -> scope.launch { store.recordTechniqueMet(puzzle.id, technique) } },
                     onBack = { route = backFrom(current) },
                 )
                 } }
@@ -555,5 +584,19 @@ private const val ROUTE_FADE_MS = 200
 internal fun levelFinishedBy(progress: LevelProgress, level: Int, puzzleId: String): Boolean {
     if (level in progress.done) return false
     val solved = progress.solved(level) + puzzleId
-    return progress.plan(level).all { it.puzzleId in solved || PuzzleRegistry.byId(it.puzzleId) == null }
+    return progress.plan(level).all { levelBoardDone(it.puzzleId, solved) }
+}
+
+/**
+ * A stored preference and its setter. A tap has to win over the store immediately: reading the choice back out of
+ * the store would leave a window, however short, in which the grid is still set to the old tier and a tapped tile
+ * starts the wrong puzzle (or a switch shows its old position).
+ */
+@Composable
+private fun <T> rememberPref(stored: Flow<T>, initial: T, save: suspend (T) -> Unit): Pair<T, (T) -> Unit> {
+    val fromStore by stored.collectAsState(initial)
+    var picked by remember { mutableStateOf<T?>(null) }
+    val scope = rememberCoroutineScope()
+    val set = remember { { value: T -> picked = value; scope.launch { save(value) }; Unit } }
+    return (picked ?: fromStore) to set
 }

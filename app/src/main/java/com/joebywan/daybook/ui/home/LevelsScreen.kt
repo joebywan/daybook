@@ -1,5 +1,9 @@
 package com.joebywan.daybook.ui.home
 
+import com.joebywan.daybook.data.levelBoardDone
+import com.joebywan.daybook.ui.card
+import com.joebywan.daybook.ui.CardText
+import com.joebywan.daybook.ui.TitledScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,17 +12,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -42,13 +43,12 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.LevelProgress
-import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.formatClock
 
 /** How many boards of [level] are solved; a puzzle no longer in the registry counts, as it shows finished. */
 fun solvedCount(progress: LevelProgress, level: Int): Int {
     val solved = progress.solved(level)
-    return progress.plan(level).count { it.puzzleId in solved || PuzzleRegistry.byId(it.puzzleId) == null }
+    return progress.plan(level).count { levelBoardDone(it.puzzleId, solved) }
 }
 
 /**
@@ -132,7 +132,7 @@ internal fun LevelGrid(
                 )
             } else {
                 val (puzzle, tier) = board
-                PuzzleTile(puzzle, puzzle.id in solved, isPick = false, inProgress, previewSize, { onPlay(puzzle.id) }, modifier) { accent ->
+                PuzzleTile(puzzle, puzzle.id in solved, inProgress, previewSize, { onPlay(puzzle.id) }, modifier) { accent ->
                     TileFooter(if (tier == Difficulty.STANDARD) "" else tier.label, accent)
                 }
             }
@@ -161,31 +161,16 @@ fun LevelsScreen(
     val scheme = MaterialTheme.colorScheme
     val current = progress.current
     val level = selected?.takeIf(progress::isUnlocked)
-    Column(
-        Modifier.fillMaxSize().background(scheme.background).windowInsetsPadding(WindowInsets.safeDrawing),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    TitledScreen(
+        if (level == null) "Levels" else "Level $level",
+        if (level == null) "Finish all five boards to open the next." else levelLine(progress, level),
+        onBack,
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            // Nothing on Android, where the system back button is the way out.
-            BackButton(onBack)
-            Column(Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)) {
-                Text(
-                    if (level == null) "Levels" else "Level $level",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = scheme.onBackground,
-                )
-                Text(
-                    if (level == null) "Finish all five boards to open the next." else levelLine(progress, level),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
-        }
         if (level != null) {
             Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp)) {
                 LevelGrid(progress, level, onPlay = { onPlay(level, it) }, onAllLevels = null, note = Levels.summary(progress.plan(level)))
             }
-            return@Column
+            return@TitledScreen
         }
         val finished = progress.done.sortedDescending()
         LazyColumn(
@@ -229,7 +214,7 @@ private fun LevelRow(progress: LevelProgress, level: Int, onClick: () -> Unit, t
     val scheme = MaterialTheme.colorScheme
     val solved = progress.solved(level)
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(scheme.surface).clickable(onClick = onClick)
+        Modifier.fillMaxWidth().card(scheme.surface).clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -240,7 +225,7 @@ private fun LevelRow(progress: LevelProgress, level: Int, onClick: () -> Unit, t
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 progress.plan(level).forEach { b ->
                     val accent = PuzzleRegistry.byId(b.puzzleId)?.let { Color(it.accent) } ?: scheme.outline
-                    val done = b.puzzleId in solved || PuzzleRegistry.byId(b.puzzleId) == null
+                    val done = levelBoardDone(b.puzzleId, solved)
                     Box(Modifier.size(10.dp).clip(CircleShape).background(if (done) accent else scheme.outline.copy(alpha = 0.3f)))
                 }
             }
@@ -254,13 +239,12 @@ private fun LevelRow(progress: LevelProgress, level: Int, onClick: () -> Unit, t
 private fun LockedRow(level: Int, current: Int) {
     val scheme = MaterialTheme.colorScheme
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(scheme.surface.copy(alpha = 0.5f))
+        Modifier.fillMaxWidth().card(scheme.surface.copy(alpha = 0.5f))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Level $level", style = MaterialTheme.typography.titleMedium, color = scheme.onSurfaceVariant)
-            Text("Finish $current to open", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+            CardText("Level $level", "Finish $current to open", titleColor = scheme.onSurfaceVariant)
         }
         Icon(Icons.Default.Lock, "Locked", tint = scheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
     }
