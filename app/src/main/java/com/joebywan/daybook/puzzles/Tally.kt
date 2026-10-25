@@ -2,11 +2,6 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -17,12 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,7 +23,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -38,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
@@ -47,7 +38,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
@@ -55,20 +45,31 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
-import com.joebywan.daybook.core.boardKeys
-import com.joebywan.daybook.core.gridCursor
-import com.joebywan.daybook.core.highlightGrid
-import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
-import kotlinx.coroutines.delay
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
+import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.core.PenKeyAction
+import com.joebywan.daybook.core.penKeyAction
+import com.joebywan.daybook.ui.Sweep
+import com.joebywan.daybook.ui.swept
+import com.joebywan.daybook.ui.penKeys
+import com.joebywan.daybook.ui.penGrid
+import com.joebywan.daybook.ui.PenRow
+import androidx.compose.ui.geometry.Rect
+import com.joebywan.daybook.ui.hintRims
+import com.joebywan.daybook.ui.squareRim
+import com.joebywan.daybook.ui.rememberSettledFlags
+import com.joebywan.daybook.ui.HintGlow
 
-/** How long a line must stay impossible before its target turns red, so a sweep passing through is not shouted at. */
-private const val SETTLE_MILLIS = 1000L
+/** X or R removes, K or O keeps; the other keys are every pen board's ([penKeyAction]). */
+private val TALLY_KEYS = mapOf(Key.X to TallyLogic.REMOVED, Key.R to TallyLogic.REMOVED, Key.K to TallyLogic.KEPT, Key.O to TallyLogic.KEPT)
+
+/** What a physical key asks of a Tally board. */
+internal fun tallyKeyAction(key: Key, shift: Boolean): PenKeyAction? = penKeyAction(key, shift, TALLY_KEYS)
 
 /**
  * Tally: a square of digits with a target at the end of every row and under every column. Remove
@@ -221,20 +222,8 @@ object Tally : PuzzleType {
     }
 
     /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
-    private fun applyStep(s: TallyState, step: TallyTeacher.Step): TallyState {
-        val next = s.marks.toCharArray()
-        var changed = 0
-        fun set(i: Int, mark: Char) {
-            if (next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        step.clears.forEach { set(it, TallyLogic.UNMARKED) }
-        step.stays.forEach { set(it, TallyLogic.KEPT) }
-        step.goes.forEach { set(it, TallyLogic.REMOVED) }
-        return if (changed == 0) s else s.copy(marks = next.concatToString(), moves = s.moves + changed)
-    }
+    private fun applyStep(s: TallyState, step: TallyTeacher.Step): TallyState =
+        s.paint(step.clears, TallyLogic.UNMARKED).paint(step.stays, TallyLogic.KEPT).paint(step.goes, TallyLogic.REMOVED)
 
     // ---- drawing --------------------------------------------------------------------------------
 
@@ -258,13 +247,6 @@ object Tally : PuzzleType {
         )
     }
 
-    /** What a [Board] draws besides the board's own marks; all of it optional. */
-    private class Overlay(
-        val highlight: BoardHighlight = BoardHighlight.None,
-        val glow: Color = Color.Unspecified,
-        val pulse: Float = 1f,
-    )
-
     private fun DrawScope.drawBoard(
         s: TallyState,
         u: Float,
@@ -272,7 +254,7 @@ object Tally : PuzzleType {
         done: BooleanArray,
         bad: BooleanArray,
         scheme: ColorScheme,
-        overlay: Overlay = Overlay(),
+        overlay: HintGlow = HintGlow(),
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
     ) {
@@ -362,26 +344,9 @@ object Tally : PuzzleType {
             drawRect(scheme.background.copy(alpha = 0.55f), Offset((i % n) * u, (i / n) * u), Size(u, u))
         }
 
-        // A rim just inside the outline of each set, one stroke per square side facing out of it.
-        fun rim(set: Set<Int>, width: Float, colour: Color) {
-            val h = width / 2
-            for (i in set) {
-                if (i >= n * n) continue
-                val r = i / n
-                val c = i % n
-                val x0 = c * u
-                val y0 = r * u
-                val x1 = x0 + u
-                val y1 = y0 + u
-                if (r == 0 || i - n !in set) drawLine(colour, Offset(x0, y0 + h), Offset(x1, y0 + h), width)
-                if (r == n - 1 || i + n !in set) drawLine(colour, Offset(x0, y1 - h), Offset(x1, y1 - h), width)
-                if (c == 0 || i - 1 !in set) drawLine(colour, Offset(x0 + h, y0), Offset(x0 + h, y1), width)
-                if (c == n - 1 || i + 1 !in set) drawLine(colour, Offset(x1 - h, y0), Offset(x1 - h, y1), width)
-            }
+        hintRims(highlight, u, overlay.glow, overlay.pulse, scheme.background) { set, width, colour ->
+            squareRim(set, width, colour, n, n, { i -> Rect(Offset((i % n) * u, (i / n) * u), Size(u, u)) })
         }
-        rim(highlight.soft - highlight.strong, u * 0.07f, overlay.glow.copy(alpha = 0.5f))
-        rim(highlight.strong, u * 0.2f, scheme.background.copy(alpha = 0.9f * overlay.pulse))
-        rim(highlight.strong, u * 0.11f, overlay.glow.copy(alpha = overlay.pulse))
     }
 
     /** Which lines (rows then columns) add up to their target now. */
@@ -390,22 +355,6 @@ object Tally : PuzzleType {
     /** Which lines no choice of their open squares can bring to the target any more. */
     private fun linesImpossible(s: TallyState, targets: List<Int>) =
         BooleanArray(2 * s.size) { TallyLogic.lineImpossible(s, it, targets[it]) }
-
-    /** A sweep in progress: where it began, where the finger is now, and what it lays down. */
-    private class Sweep(val start: Int, val at: Int, val mark: Char, val startedOn: Char)
-
-    /** The squares a sweep covers: the straight line from where it began toward where the finger is. */
-    private fun sweptCells(sweep: Sweep, n: Int): List<Int> {
-        val r0 = sweep.start / n
-        val c0 = sweep.start % n
-        val r1 = sweep.at / n
-        val c1 = sweep.at % n
-        return if (kotlin.math.abs(c1 - c0) >= kotlin.math.abs(r1 - r0)) {
-            (minOf(c0, c1)..maxOf(c0, c1)).map { r0 * n + it }
-        } else {
-            (minOf(r0, r1)..maxOf(r0, r1)).map { it * n + c0 }
-        }
-    }
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
@@ -418,8 +367,8 @@ object Tally : PuzzleType {
         // The pen, the sweep and the keyboard cursor are conveniences of the screen, not the board:
         // the play screen pushes an undo entry for every state it is handed.
         var pen by rememberSaveable(s.digits) { mutableStateOf(TallyLogic.REMOVED) }
-        var sweep by remember(s.digits) { mutableStateOf<Sweep?>(null) }
-        var cursor by remember(s.digits) { mutableStateOf<Int?>(null) }
+        val sweep = remember(s.digits) { mutableStateOf<Sweep?>(null) }
+        val cursor = remember(s.digits) { mutableStateOf<Int?>(null) }
         val targets = remember(s.digits, s.keep) { TallyLogic.targets(s) }
 
         val highlight = LocalBoardHighlight.current
@@ -430,15 +379,7 @@ object Tally : PuzzleType {
             Modifier
                 .fillMaxSize()
                 .padding(horizontal = 14.dp)
-                .boardKeys(interactive, shift = true) { key, shift, repeat ->
-                    val action = tallyKeyAction(key, shift) ?: return@boardKeys false
-                    if (!repeat || action is TallyKeyAction.Move) {
-                        val result = s.applyKey(cursor, action)
-                        cursor = result.cursor
-                        if (result.board !== s) onState(result.board)
-                    }
-                    true
-                },
+                .penKeys(s, interactive, TALLY_KEYS, cursor, onState),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             BoxWithConstraints(
@@ -450,7 +391,7 @@ object Tally : PuzzleType {
                 val unitPx = with(density) { unit.toPx() }
                 val texts = remember(s.digits, s.keep, unitPx) { measure(measurer, s, unitPx, density) }
 
-                val shown = sweep?.let { w -> s.sweep(sweptCells(w, n), w.mark, w.startedOn) } ?: s
+                val shown = s.swept(sweep.value)
                 val done = linesDone(shown, targets)
                 // Lines that add up, on the board as handed (not the sweep still under the finger).
                 val units = remember(n) { lineUnits(n, n) }
@@ -458,110 +399,27 @@ object Tally : PuzzleType {
                 val feel = rememberMoveFeel(s.marks.toList(), units) { handed[it] }
 
                 // A line must stay impossible for a second, and be so now, before it turns red.
-                val impossible = linesImpossible(shown, targets)
-                var settled by remember(s.digits) { mutableStateOf(impossible) }
-                LaunchedEffect(shown.marks) {
-                    delay(SETTLE_MILLIS)
-                    settled = impossible
-                }
-                val bad = BooleanArray(2 * n) { impossible[it] && settled[it] }
+                val bad = rememberSettledFlags(linesImpossible(shown, targets), s.digits, shown.marks)
 
-                fun cellAt(offset: Offset): Int {
-                    val c = (offset.x / unitPx).toInt().coerceIn(0, n - 1)
-                    val r = (offset.y / unitPx).toInt().coerceIn(0, n - 1)
-                    return r * n + c
-                }
-
-                Box(Modifier.size((unitsAcross(n) * unitPx).asDp(density), (unitsDown(n) * unitPx).asDp(density))) {
+                Box(Modifier.size(unit * unitsAcross(n), unit * unitsDown(n))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(shown, unitPx, texts, done, bad, scheme, Overlay(highlight, glow, pulse.value), feel, Color(accent))
+                        drawBoard(shown, unitPx, texts, done, bad, scheme, HintGlow(highlight, glow, pulse.value), feel, Color(accent))
                     }
                     // Taps and sweeps are read over the grid alone; the targets are not part of the play area.
                     Box(
                         Modifier
-                            .size((n * unitPx).asDp(density), (n * unitPx).asDp(density))
-                            .highlightGrid(n, n)
-                            .gridCursor(cursor.takeIf { interactive }, n, n, scheme.primary)
-                            .pointerInput(s, interactive, pen) {
-                                if (!interactive) return@pointerInput
-                                detectTapGestures { offset ->
-                                    cursor = cellAt(offset)
-                                    onState(s.tap(cellAt(offset), pen))
-                                }
-                            }
-                            .pointerInput(s, interactive, pen) {
-                                if (!interactive) return@pointerInput
-                                // The overload that hands over the *down* (the web's touch slop is wide).
-                                detectDragGestures(
-                                    orientationLock = null,
-                                    onDragStart = { down, _, _ ->
-                                        val start = cellAt(down.position)
-                                        sweep = Sweep(start, start, s.sweepMark(start, pen), s.marks[start])
-                                    },
-                                    onDrag = { change, _ ->
-                                        change.consume()
-                                        sweep = sweep?.let { Sweep(it.start, cellAt(change.position), it.mark, it.startedOn) }
-                                    },
-                                    onDragEnd = { _ ->
-                                        val w = sweep
-                                        sweep = null
-                                        if (w != null) {
-                                            val next = s.sweep(sweptCells(w, n), w.mark, w.startedOn)
-                                            if (next !== s) onState(next)
-                                        }
-                                    },
-                                    onDragCancel = { sweep = null },
-                                )
-                            },
+                            .size(unit * n)
+                            .penGrid(s, interactive, pen, unitPx, sweep, cursor, scheme.primary, onState),
                     )
                 }
             }
 
-            PenRow(pen, enabled = interactive, onPen = { pen = it })
-        }
-    }
-
-    private fun Float.asDp(density: Density): Dp = with(density) { this@asDp.toDp() }
-
-    /** Remove or Keep. Kept clear of the hint popover: the player reaches for it to make a hinted move. */
-    @Composable
-    private fun PenRow(pen: Char, enabled: Boolean, onPen: (Char) -> Unit) {
-        val scheme = MaterialTheme.colorScheme
-        Row(
-            Modifier.fillMaxWidth().padding(bottom = 6.dp).keepClear(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-        ) {
-            for (option in listOf(TallyLogic.REMOVED, TallyLogic.KEPT)) {
-                val chosen = pen == option
-                Row(
-                    Modifier
-                        .width(124.dp)
-                        .height(46.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(if (chosen) Color(accent).copy(alpha = 0.22f) else scheme.surface)
-                        .border(
-                            if (chosen) 2.dp else 1.dp,
-                            if (chosen) Color(accent) else scheme.outline,
-                            RoundedCornerShape(14.dp),
-                        )
-                        .clickable(enabled = enabled) { onPen(option) },
-                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Canvas(Modifier.size(20.dp)) {
-                        val ink = scheme.onSurface.copy(alpha = 0.85f)
-                        if (option == TallyLogic.REMOVED) {
-                            val a = size.width * 0.2f
-                            drawLine(ink, Offset(a, size.height - a), Offset(size.width - a, a), 3f, StrokeCap.Round)
-                        } else {
-                            drawCircle(Color(accent), size.width * 0.4f, style = Stroke(3f))
-                        }
-                    }
-                    Text(
-                        if (option == TallyLogic.REMOVED) "Remove" else "Keep",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = scheme.onSurface,
-                    )
+            PenRow(s.pens, pen, interactive, Color(accent), { if (it == TallyLogic.REMOVED) "Remove" else "Keep" }, { pen = it }) { option ->
+                if (option == TallyLogic.REMOVED) {
+                    val a = size.width * 0.2f
+                    drawLine(scheme.onSurface.copy(alpha = 0.85f), Offset(a, size.height - a), Offset(size.width - a, a), 3f, StrokeCap.Round)
+                } else {
+                    drawCircle(Color(accent), size.width * 0.4f, style = Stroke(3f))
                 }
             }
         }
@@ -590,7 +448,7 @@ object Tally : PuzzleType {
             val unitPx = with(density) { unit.toPx() }
             val texts = remember(unitPx) { measure(measurer, motif, unitPx, density) }
             val done = remember { linesDone(motif, targets) }
-            Canvas(Modifier.size((unitsAcross(motif.size) * unitPx).asDp(density), (unitsDown(motif.size) * unitPx).asDp(density))) {
+            Canvas(Modifier.size(unit * unitsAcross(motif.size), unit * unitsDown(motif.size))) {
                 drawBoard(motif, unitPx, texts, done, BooleanArray(2 * motif.size), scheme)
             }
         }
