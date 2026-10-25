@@ -215,10 +215,7 @@ object WordWheel : PuzzleType {
             // The wheel.
             val centre = Offset(ox + u * 2.5f, oy + u * 3.85f)
             drawCircle(ring, radius = u * 1.7f, center = centre)
-            val spots = List(5) { k ->
-                val a = -PI / 2 + k * 2 * PI / 5
-                Offset(centre.x + (u * 1.1f * cos(a)).toFloat(), centre.y + (u * 1.1f * sin(a)).toFloat())
-            }
+            val spots = List(5) { k -> WheelGeometry.spot(centre, u * 1.1f, k, 5) }
             drawLine(stroke, spots[0], spots[2], strokeWidth = u * 0.18f, cap = StrokeCap.Round)
             drawLine(stroke, spots[2], spots[4], strokeWidth = u * 0.18f, cap = StrokeCap.Round)
             spots.forEachIndexed { k, p -> drawCircle(if (k % 2 == 0) stroke else disc, radius = u * 0.42f, center = p) }
@@ -458,10 +455,7 @@ object WordWheel : PuzzleType {
         val orbit = side * 0.34f
         val disc = side * if (count >= 7) 0.115f else 0.14f
 
-        fun spot(p: Int): Offset {
-            val a = -PI / 2 + p * 2 * PI / count
-            return Offset(centre.x + (orbit * cos(a)).toFloat(), centre.y + (orbit * sin(a)).toFloat())
-        }
+        fun spot(p: Int): Offset = spot(centre, orbit, p, count)
 
         /** The position under [at], or null. A little generous, since fingers are bigger than discs. */
         fun hit(at: Offset): Int? = (0 until count).firstOrNull { p ->
@@ -470,6 +464,14 @@ object WordWheel : PuzzleType {
         }
 
         fun inMiddle(at: Offset): Boolean = hypot(at.x - centre.x, at.y - centre.y) <= orbit - disc * 1.2f
+
+        companion object {
+            /** Place [p] of [count] round a circle of radius [orbit] about [centre], the first at the top. */
+            fun spot(centre: Offset, orbit: Float, p: Int, count: Int): Offset {
+                val a = -PI / 2 + p * 2 * PI / count
+                return Offset(centre.x + (orbit * cos(a)).toFloat(), centre.y + (orbit * sin(a)).toFloat())
+            }
+        }
     }
 
     private fun DrawScope.drawGrid(
