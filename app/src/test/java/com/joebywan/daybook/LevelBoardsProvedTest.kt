@@ -16,13 +16,18 @@ import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.RegionsLogic
 import com.joebywan.daybook.puzzles.Sand
+import com.joebywan.daybook.puzzles.SandLogic
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Tally
+import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.Target
+import com.joebywan.daybook.puzzles.TargetLogic
 import com.joebywan.daybook.puzzles.Tents
+import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.WordWheel
+import com.joebywan.daybook.puzzles.WordWheelLogic
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -44,12 +49,12 @@ class LevelBoardsProvedTest {
         "inequality" to Inequality::generateVerified,
         "regions" to { s, d -> RegionsLogic.generateVerified(s, d) },
         "cipher" to Cipher::generateVerified,
-        "wordwheel" to WordWheel::generateVerified,
-        "tally" to Tally::generateVerified,
-        "sand" to Sand::generateVerified,
-        "tents" to Tents::generateVerified,
+        "wordwheel" to WordWheelLogic::generateVerified,
+        "tally" to TallyLogic::generateVerified,
+        "sand" to SandLogic::generateVerified,
+        "tents" to TentsLogic::generateVerified,
         "pointers" to Pointers::generateVerified,
-        "target" to Target::generateVerified,
+        "target" to TargetLogic::generateVerified,
         "cages" to Cages::generateVerified,
         "nonogram" to NonogramLogic::generateVerified,
         "dominoes" to DominoLogic::generateVerified,
