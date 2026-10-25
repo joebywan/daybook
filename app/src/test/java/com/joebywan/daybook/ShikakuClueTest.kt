@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Block
 import com.joebywan.daybook.puzzles.Shikaku
@@ -8,7 +7,6 @@ import com.joebywan.daybook.puzzles.ShikakuState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * Shikaku's smallest clue, and what it costs to have banned it.
@@ -35,7 +33,7 @@ import java.time.LocalDate
 class ShikakuClueTest {
 
     private val seeds = (0 until 60).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), "shikaku", Difficulty.STANDARD)
+        daySeed(it, "shikaku", Difficulty.STANDARD)
     }
 
     // ---- the rule -------------------------------------------------------------------------------
@@ -75,9 +73,7 @@ class ShikakuClueTest {
     @Test
     fun `tilings are not only guillotine cuts`() {
         for (difficulty in Difficulty.entries) {
-            val boards = (0 until 60L).map {
-                Shikaku.generate(DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it), "shikaku", difficulty), difficulty) as ShikakuState
-            }
+            val boards = (0 until 60).map { Shikaku.generate(daySeed(it, "shikaku", difficulty), difficulty) as ShikakuState }
             val pinwheels = boards.count { !guillotine(it.solution, 0, 0, it.height - 1, it.width - 1) }
             assertTrue("$difficulty: only $pinwheels of ${boards.size} boards are non-guillotine", pinwheels * 4 >= boards.size)
         }

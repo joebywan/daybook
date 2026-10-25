@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.WheelWords
@@ -11,8 +10,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 /**
  * The hints, checked against the lists read again here. A pinned step must name the stored word of its slot (the stored
@@ -22,7 +19,7 @@ import java.time.LocalDate
 class WordWheelTeachingTest {
 
     private fun board(day: Int, d: Difficulty): WordWheelState =
-        WordWheel.generate(DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(day.toLong()), WordWheel.id, d), d) as WordWheelState
+        WordWheel.generate(daySeed(day, WordWheel.id, d), d) as WordWheelState
 
     /** Grid words that fit [slot] of [s] as the player sees it, counted with a pattern match over the list. */
     private fun fitting(s: WordWheelState, slot: Int): List<String> {
@@ -107,8 +104,7 @@ class WordWheelTeachingTest {
                     "most words fitting a clued slot (generator's walk): mean ${"%.1f".format(choices / 365.0)}, worst $worst\n",
             )
         }
-        File("build/reports").mkdirs()
-        File("build/reports/wordwheel-teaching-coverage.txt").writeText(report.toString())
+        writeReport("wordwheel-teaching-coverage.txt", report.toString())
         println(report)
     }
 

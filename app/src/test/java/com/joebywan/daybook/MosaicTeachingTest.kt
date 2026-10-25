@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.MosaicState
@@ -11,7 +10,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 import kotlin.random.Random
 
@@ -31,10 +29,6 @@ import kotlin.random.Random
  * flood a colour's last patch, a "biggest swallow" must really swallow the most, and so on.
  */
 class MosaicTeachingTest {
-
-    private fun seeds(count: Int, tier: Difficulty, salt: String) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 3, 1).plusDays(it.toLong()), salt, tier)
-    }
 
     private fun board(seed: Long, tier: Difficulty) = Mosaic.generate(seed, tier) as MosaicState
 
@@ -135,7 +129,7 @@ class MosaicTeachingTest {
     @Test
     fun `on generated boards the teacher's search finds the generator's optimum, which is the limit`() {
         for (tier in Difficulty.entries) {
-            for (seed in seeds(if (tier == Difficulty.EXPERT) 10 else 25, tier, "mosaic-teach-opt")) {
+            for (seed in seeds(if (tier == Difficulty.EXPERT) 10 else 25, tier, "mosaic-teach-opt", LocalDate.of(2026, 3, 1))) {
                 val b = board(seed, tier)
                 val a = MosaicTeacher.Areas.of(b.width, b.height, b.cells)!!
                 val search = MosaicTeacher.Search(b.colours)
@@ -208,7 +202,7 @@ class MosaicTeachingTest {
     @Test
     fun `every taught fill on a hint-walked board still finishes in the limit, for the reason given`() {
         for (tier in Difficulty.entries) {
-            for (seed in seeds(if (tier == Difficulty.EXPERT) 12 else 30, tier, "mosaic-teach-sound")) {
+            for (seed in seeds(if (tier == Difficulty.EXPERT) 12 else 30, tier, "mosaic-teach-sound", LocalDate.of(2026, 3, 1))) {
                 var s = board(seed, tier)
                 while (!s.solved) {
                     val label = "$tier/$seed@${s.moves}"
@@ -232,7 +226,7 @@ class MosaicTeachingTest {
     fun `from boards a player made, hints stay sound and a lost board is always caught`() {
         val rng = Random(31)
         for (tier in Difficulty.entries) {
-            for (seed in seeds(if (tier == Difficulty.EXPERT) 6 else 16, tier, "mosaic-teach-played")) {
+            for (seed in seeds(if (tier == Difficulty.EXPERT) 6 else 16, tier, "mosaic-teach-played", LocalDate.of(2026, 3, 1))) {
                 var s = board(seed, tier)
                 // Random fills, each checked independently for whether the board is still winnable.
                 while (!s.solved && left(s) > 0) {
@@ -315,7 +309,7 @@ class MosaicTeachingTest {
     fun `deduce reasons from the visible board alone`() {
         // The entry point that takes no record: the same board with and without one gets the same fill.
         for (tier in Difficulty.entries) {
-            for (seed in seeds(4, tier, "mosaic-teach-visible")) {
+            for (seed in seeds(4, tier, "mosaic-teach-visible", LocalDate.of(2026, 3, 1))) {
                 val b = board(seed, tier)
                 val a = MosaicTeacher.deduce(b.width, b.height, b.colours, b.cells, b.limit)!!
                 val t = MosaicTeacher.teach(b)!!
@@ -343,7 +337,7 @@ class MosaicTeachingTest {
             val boards = MosaicTeacher.TECHNIQUES.associateWith { 0 }.toMutableMap()
             var total = 0
             var slowest = 0L
-            for (seed in seeds(n, tier, "mosaic-coverage")) {
+            for (seed in seeds(n, tier, "mosaic-coverage", LocalDate.of(2026, 3, 1))) {
                 var s = board(seed, tier)
                 val used = mutableSetOf<String>()
                 while (!s.solved) {
@@ -370,8 +364,7 @@ class MosaicTeachingTest {
             }
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/mosaic-teaching-coverage.txt").writeText(report.toString())
+        writeReport("mosaic-teaching-coverage.txt", report.toString())
     }
 
     // ---- the walkthrough ------------------------------------------------------------------------

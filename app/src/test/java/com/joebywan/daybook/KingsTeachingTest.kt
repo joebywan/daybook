@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.KingsState
@@ -11,8 +10,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 /**
  * The hint solver, checked against rules and a brute-force enumerator written out again here.
@@ -26,36 +23,10 @@ import java.time.LocalDate
  */
 class KingsTeachingTest {
 
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String = "kings-teach") = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
-
     // ---- independent rules --------------------------------------------------------------------
 
     private fun touching(n: Int, a: Int, b: Int) =
         kotlin.math.abs(a / n - b / n) <= 1 && kotlin.math.abs(a % n - b % n) <= 1
-
-    /** Every legal placement, by plain enumeration of one column per row. */
-    private fun allSolutions(n: Int, region: List<Int>, cap: Int = 5000): List<Set<Int>> {
-        val out = mutableListOf<Set<Int>>()
-        val cols = IntArray(n)
-        fun walk(row: Int) {
-            if (out.size >= cap) return
-            if (row == n) {
-                val kings = (0 until n).map { it * n + cols[it] }
-                if (kings.map { region[it] }.toSet().size == n) out += kings.toSet()
-                return
-            }
-            for (c in 0 until n) {
-                if ((0 until row).any { cols[it] == c }) continue
-                if (row > 0 && kotlin.math.abs(cols[row - 1] - c) <= 1) continue
-                cols[row] = c
-                walk(row + 1)
-            }
-        }
-        walk(0)
-        return out
-    }
 
     /** Squares a king on [k] rules out, re-derived rather than borrowed from KingsState. */
     private fun ruledOutBy(n: Int, region: List<Int>, k: Int): Set<Int> =
@@ -75,7 +46,7 @@ class KingsTeachingTest {
     @Test
     fun `every step on a real board agrees with the answer and changes something open`() {
         for (difficulty in Difficulty.entries) {
-            for (seed in seeds(40, difficulty)) {
+            for (seed in seeds(40, difficulty, "kings-teach")) {
                 var s = Kings.generate(seed, difficulty) as KingsState
                 var guard = 0
                 while (!s.solved) {
@@ -156,7 +127,7 @@ class KingsTeachingTest {
         while (boards < 150) {
             val n = 5 + rng.nextInt(3)
             val region = looseBoard(rng, n)
-            val answers = allSolutions(n, region)
+            val answers = KingsOracle.allSolutions(n, region)
             if (answers.size < 2) continue
             boards++
             var marks = List(n * n) { Mark.EMPTY }
@@ -237,8 +208,7 @@ class KingsTeachingTest {
             assertEquals("$difficulty: the fallback is reached on $fallbackBoards/$perTier boards", 0, fallbackBoards)
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/kings-teaching-coverage.txt").writeText(report.toString())
+        writeReport("kings-teaching-coverage.txt", report.toString())
     }
 
     // ---- mistakes -------------------------------------------------------------------------------
@@ -379,7 +349,7 @@ class KingsTeachingTest {
 
     @Test
     fun `the walkthrough board has exactly one answer, and it is the stored one`() {
-        val answers = allSolutions(5, Kings.TUTORIAL_REGIONS)
+        val answers = KingsOracle.allSolutions(5, Kings.TUTORIAL_REGIONS)
         assertEquals(listOf(Kings.TUTORIAL_SOLUTION), answers)
     }
 

@@ -464,11 +464,6 @@ data class PuzzleTechniques(val puzzleId: String, val techniques: List<MetTechni
 /** Derived numbers for the stats screen. Pure, so it is trivially testable. */
 object Stats {
 
-    fun totalSolved(all: List<Completion>): Int = all.size
-
-    fun solvedToday(all: List<Completion>, today: LocalDate): Int =
-        all.count { it.day == today }
-
     /** Streak over the days a daily puzzle was solved (practice games have no day). See [streakOf]. */
     fun streak(all: List<Completion>, today: LocalDate): Streak =
         streakOf(all.mapNotNull { it.day }.toSet(), today)
