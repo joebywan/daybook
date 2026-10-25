@@ -36,7 +36,9 @@ sounded. Do not turn it off.
 All puzzles teach (Snap and Pointers through their walkthrough only; Pointers has no undo either). Shared code: `core/Teaching.kt`, `ui/teach/Hints.kt`,
 `ui/tutorial/TutorialRunner.kt`, `ui/play/PlayScreen.kt`. How to write a teacher: `docs/PUZZLE_STANDARDS.md`
 section 7. The settled play-screen UX (popover, finish frame, solve sound) and the measured fallback table:
-`docs/TEACHING.md`. Keep that table current when a teacher changes. What must not be broken:
+`docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
+praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
+never a drill): `docs/REWARDS.md` (Techniques). What must not be broken:
 
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the panel confirms
   when `isReached` sees it. Only an explicit "Show me" applies it. **One hint is counted per deduction opened.**
@@ -218,9 +220,13 @@ Tents and trees: a tent beside every tree (orthogonal, one each), no two tents t
 `puzzles/TentsRules.kt` (state, `TentsLogic` ladder, generator, exhaustive proof), `TentsTeacher.kt`, `TentsKeys.kt`, `Tents.kt` (object `Tents`,
 board, walkthrough, motif). `id = "tents"` is hashed into every seed: never rename it.
 
-- **Tiers are size alone: 6x6 / 8x8 / 10x10** (7 / 13 / 20 tents).
+- **Tiers: 6x6 / 8x8 / 10x10** (7 / 13 / 20 tents) **and the depth the hints need from blank** (`TentsLogic.fitsTier` on
+  `TentsTeacher.depth`, Tally's gate): Hard needs a tree's one spot or deeper, Expert a shared or served square; Standard is
+  not gated. Draws a board over a year: mean 1.3 / 5.6 / 23, most 5 / 27 / 143 of `ATTEMPTS` = 2000 (`TentsRulesTest`);
+  Expert JVM median 5 ms, worst 191 ms; Expert in the browser, p50 / p95 / max: 14 / 66 / 151 ms in Chromium, 17 / 75 / 125 in WebKit.
 - **A board ships only if the ladder finishes it** (`TentsLogic.deduce`) and `countSolutions` proves one answer; `TentsOracle` (walks the trees) is the
   independent check. No fallback in a year of seeds per tier, so hints never fall back on a generated board.
+  `lastResort` is the first seed from 1 whose first draw passes everything, so it is proved and gated too.
 - **`solved` checks the rules**; a mistake is a tent the stored answer lacks, sound because the board has one answer. Crosses are notes.
 - A tap lays grass (a note), a double tap a tent (one move); a tap on a tent removes it. **The grass a tent sprouts is derived, not stored** (`TentsState.seen`, as Kings' crosses), so removing a tent takes it away and the player's own grass in `marks` is never touched; a saved game from before keeps its stored grass as the player's. A drag lays grass on empty squares only, one move on lift. Highlight indices: squares `0 until n*n`, row clue `n*n+r`, column clue `n*n+n+c`.
 
@@ -533,6 +539,22 @@ hashed into every seed: never rename it.
   (Fredoka has no `≠`); green when the region is covered and keeps its rule, solid `scheme.error` once it cannot (1 s settle).
   Highlight indices: squares `row * width + col`, tray slot `DominoTeacher.TRAY + k`, badge `DominoTeacher.RULE + r`.
 
+## Pipes
+
+Rotate tiles until every opening meets another and the pipework is one network. `puzzles/Pipes.kt` (state, generator, board,
+walkthrough), `PipesTeacher.kt`, `PipesKeys.kt`. `id = "pipes"` is hashed into every seed: never rename it.
+
+- **The answer is a randomised Kruskal spanning tree** (every grid edge in `Rng.shuffled` order, kept when it joins two pieces):
+  per board 7.1 / 11.4 / 18.7 T-junctions and 0.9 / 1.7 / 3.0 crosses (Standard 5x7 / Hard 6x9 / Expert 8x11). The first generator
+  was a depth-first maze, long corridors with 3.2 / 5.2 / 8.5 T-junctions and almost no crosses.
+- **A board ships only if the teacher's reasoning settles every tile** (`PipesTeacher.settles`: the border, neighbours and no-loop,
+  shapes only); each step is sound for every answer, so that also proves one answer. Branchier trees have several answers far more
+  often (5-12% of raw Kruskal boards, against none of the maze's sampled), which is what the gate removes. `generateVerified` tries 40
+  trees with `Rng(seed + attempt)`: 95 / 91 / 84% pass first, a year never needs more than 3; `lastResort` is seed 1's board,
+  itself proved (`FallbackTest`). Under 0.5 ms a board on the JVM. Hints never fall back on a generated board (`PipesTeachingTest`).
+- **`solved` checks the rules** (fully joined and one network), never a stored answer; there is none.
+- Counter-clockwise rotation and a lock mark were proposed and **declined by the owner**: do not add them.
+
 ## Motion and haptics
 
 The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s
@@ -593,7 +615,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand, Sudoku (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Cages, Tally and Dominoes (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally and Dominoes count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Regions, Cipher, Word Wheel, Tally, Sand, Sudoku, Pipes (`internal`). `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally and Dominoes (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally and Dominoes count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

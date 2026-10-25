@@ -50,6 +50,7 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.KeptCard
+import com.joebywan.daybook.data.PuzzleTechniques
 import com.joebywan.daybook.data.Stats
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.BackupControls
@@ -70,6 +71,9 @@ fun StatsScreen(
     /** The home grid's order, so a puzzle is found where the player keeps it. */
     puzzles: List<PuzzleType>,
     onAchievements: () -> Unit,
+    /** Per puzzle with a teacher, what its hints have explained (`TechniquesMet`). */
+    techniques: List<PuzzleTechniques>,
+    onTechniques: () -> Unit,
     onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -151,6 +155,19 @@ fun StatsScreen(
                 ) {
                     Text("Achievements", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface, modifier = Modifier.weight(1f))
                     Text("$got of ${ACHIEVEMENTS.size}", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+                }
+            }
+
+            item {
+                // A count of what was met, never "of" a total: the page is a record of hints, not a list to finish.
+                val met = techniques.sumOf { p -> p.techniques.count { it.met } }
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(scheme.surface)
+                        .clickable(onClick = onTechniques).padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Techniques", style = MaterialTheme.typography.titleMedium, color = scheme.onSurface, modifier = Modifier.weight(1f))
+                    if (met > 0) Text("$met shown", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
                 }
             }
 

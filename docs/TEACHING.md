@@ -102,7 +102,7 @@ What each teaches, and how often a player walking a board by hints alone reaches
 | Sudoku | full house, hidden/naked singles, locked candidates, pairs, a bounded what-if chain; every step ends in a placement and never reads the player's pencil marks | none on a generated board: the generator digs only while the tier's ladder finishes it (a year of daily boards per tier, and 300 a tier in `SudokuTeachingTest`; before that gate 0.5 / 6 / 34% of boards). Per board: naked single 0 / 1.7 / 1.1 steps, locked candidates 0 / 0 / 0.7, pairs 0 / 0 / 0.3, what-if 0 / 0 / 0.5 |
 | Kings | last square, locked to a line, would empty, N confined, what-if | none: the generator keeps a board only if the ladder finishes it from blank and the tier's gate holds (a year per tier, hints alone finish all) |
 | Mambo | pair, sandwich, link, quota, almost, what-if | none: the generator's ladder is the teacher's, and each tier is gated on the rung it needs (a year per tier and 500 boards a tier, hints alone finish all; almost-met 0 / 2.9 / 5.7 and what-if 0 / 0 / 4.1 steps a board; the fallback exists for boards not made here) |
-| Pipes | border, set neighbour / whichever way it turns, no loop | 0 |
+| Pipes | border, set neighbour / whichever way it turns, no loop | 0: the generator ships only boards the reasoning settles (`PipesTeacher.settles`, which also proves one answer); 300 boards per tier, hints alone finish all, no-loop 0.6 / 0.8 / 0.8% of steps |
 | Shikaku | only fits, only reaches, common cells, what-if | 0.5 / 2.5 / 3.5% |
 | Mosaic | finish, count fills against colours, biggest swallow, centre; fallback offers a proven fill | 1.5 / 9 / 12.5% |
 | Sets | two cards fix the third, trait by trait; continue a pick, fresh, reuse a tinted card | none exists |
@@ -129,7 +129,7 @@ Adopting it, or changing a teacher — the lessons so far:
 
 - **Measure the fallback rate; don't assume it.** Test soundness against an independent solver.
 - **A mistake means "no legal answer keeps this", not "differs from the stored answer".** LITS and
-  Pipes have boards with several answers, and calling a correct move wrong is the PR #15 bug again.
+  Pipes had boards with several answers, and calling a correct move wrong is the PR #15 bug again.
 - **Check that a generator's stored answer obeys its own rules.** Atoms' did not on 4-35% of boards
   by tier, and every mistake judged against it was suspect.
 - **Fix a generator by rejecting and retrying after the existing attempts**, so the daily boards
@@ -171,8 +171,8 @@ board. No board changed (Mambo's rows are after its gate, below). Deepest techni
 |  | Hard | sign-bound 9, sign-place 91 | 0 / 0 | 24 |
 |  | Expert | sign-bound 4, sign-place 96 | 0 / 0 | 33 |
 | Tents | Standard | line-full 89, one-spot 10, shared 1, served 1 | 0 / 0 | 10 |
-|  | Hard | line-full 64, one-spot 28, shared 4, served 4 | 0 / 0 | 14 |
-|  | Expert | line-full 39, one-spot 43, shared 7, served 12 | 0 / 0 | 19 |
+|  | Hard | one-spot 78, shared 8, served 14 (gated: was line-full 64, one-spot 28, shared 4, served 4) | 0 / 0 | 15 |
+|  | Expert | shared 33, served 67 (gated: was line-full 39, one-spot 43, shared 7, served 12) | 0 / 0 | 21 |
 | Nonogram | Standard | line-logic 100; line passes 2: 95, 3: 5, 4+: <1 | 0 / 0 | 10 |
 |  | Hard | line-logic 100; passes 3: 79, 4+: 21 | 0 / 0 | 36 |
 |  | Expert | line-logic 100; passes 4: 79, 5+: 21 | 0 / 0 | 73 |
@@ -218,8 +218,10 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   Only-way-out stays shadowed (2 steps in 500 Expert boards).
 - **Inequality: the ladder is too short.** 91-96% of Hard and Expert boards top out at sign-place; size is the only
   difference. No gate is possible until there are deeper techniques (a pair in a line, a sign chain `a < b < c`).
-- **Tents: graded.** Hard: needs one-spot (36% today); Expert: needs shared or served (18%). The ladder is long enough;
-  `touch` is never needed.
+- **Tents: gated (built 2026-10).** `TentsLogic.fitsTier`, on `TentsTeacher.depth` (the hint walk from blank): Hard needs
+  one-spot or deeper, Expert needs shared or served; Standard is not gated. Draws a board over a year (a draw must also be
+  finished by the ladder and unique): mean 1.3 / 5.6 / 23, most 5 / 27 / 143 of 2000; JVM p50 / p95 / max 0.1 / 0.1 / 0.4,
+  2.6 / 9.3 / 41, 5.1 / 27 / 191 ms. Expert in the browser, p50 / p95 / max: 14 / 66 / 151 ms in Chromium, 17 / 75 / 125 in WebKit. `touch` is never needed.
 - **Nonogram: gated since the pictures became mirrored** (2026-10). Before, on noise, Hard and Expert overlapped in passes
   (3+: 54% / 75%) and 13% of Standard boards took one pass. Mirrored pictures are shallower (one pass on half of Standard,
   4+ on 7% of Expert), so a board must need 2 / 3 / 4 passes by tier (`Spec.minPasses`); the rows above are with the gate.
