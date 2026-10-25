@@ -187,7 +187,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   (Lexicon headline words such as `vomit`: declined by the owner.)
 - [ ] **Lexicon teaching and repeats.** Rotate the opener hint by seed; the fallback says how its guess splits the words left;
   a no-repeat cycle for Daily (supersedes the item above).
-- [ ] **Target: count the roads** (Expert needs few shortest answers, not only depth 5).
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
 - [ ] **Levels: a gentle first deck.** Levels 1-5 deal any of 25 (`Levels.STARTER`); deal deck 0 by `GENTLEST` band, with

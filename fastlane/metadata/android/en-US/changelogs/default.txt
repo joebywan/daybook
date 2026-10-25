@@ -1,4 +1,5 @@
 - Cipher repeats a total far less often.
+- Target's Expert targets have only a few ways to reach them.
 - Swipe left or right on the home screen to change the difficulty.
 - Tap your streak on the home screen to open Statistics.
 - Share it again later: Statistics keeps your best result and your last random board for every puzzle and tier.

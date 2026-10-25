@@ -229,6 +229,12 @@ after a game show.
   Expert 1 large, exactly 5 (all six numbers). Targets are 100-999 and never a starting tile. Measured over a year of daily seeds per tier
   (`TargetRulesTest`, `build/reports/target-par-distribution.txt`): shortest-answer lengths 3/4 = 164/201 (mean 3.55), 4/5 = 285/80 (4.22), 5 = 365 (5.00); no fallback on any day;
   12-16 ms a board on a desktop JVM. Hard/Expert never ship a target reachable in one or two steps.
+- **Expert also caps the roads: at most 5 shortest answers** (`TargetLogic.Roads`, `Spec.maxRoads`). A road is the tree of an answer's operations: the order of
+  independent steps, of a step's two tiles, and which of two equal tiles was used do not count; `(3+4)+5` and `3+(4+5)` are two. Counted by a memoised count of
+  trees per group of tiles (a shortest answer of p steps uses exactly p + 1 tiles, every step feeding the target). Uncapped, Expert targets had a median of 13 roads
+  (p90 41, max 157); now 1/3/3/4/5 (min/p25/median/p75/max). `generateVerified` tries the tier's candidates in a shuffled order for one with few enough, else draws
+  new numbers; no fallback in a year. Expert generation on the JVM: median 5 / p95 14 / max 53 ms; Chromium 19 / 54 / 102 ms, WebKit 27 / 68 / 110 (Hard, uncapped, 14 / 30 / 117 and 19 / 42 / 64). Hard is not capped (12 roads turned 78% of its
+  targets four steps away into 87%: shorter, not harder). `TargetOracle.roads` writes every answer out as text, both operand orders tried, and agrees on a sample.
 - **`TargetLogic.table` is the proof**: depth-first over every order of every operation, no budget (so nothing truncated can pass for a proof), minimum depth per value.
   Equal tiles are tried once and `x1`, `/1` are skipped (they change nothing). `generateVerified` draws the numbers, takes the table, picks a target whose
   depth fits the tier (candidates walked in ascending order; no hash order reaches the `Rng`), retries up to 24 times; `lastResort` is a fixed board per tier, itself checked.
