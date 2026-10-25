@@ -189,7 +189,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   shortest answers, not only depth 5).
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
-- [ ] **Stats: this week.** A seven-day strip and a per-puzzle time trend, against the player's own history only.
 - [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
 - [ ] **Teacher upgrades already listed:** Word Wheel's "two slots, two words", Cage Sudoku naming the cage chain, Regions'
   locked candidate.

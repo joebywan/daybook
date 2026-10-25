@@ -210,6 +210,17 @@ under the pinned rows says "Continue Kings · Hard" beside the puzzle's motif an
 touch on that visit (the board just left is saved as Play fades out, so it can land a moment after Home appears), then holds
 until Home is entered again or the tier or mode changes, so it never appears or goes under a finger.
 
+## This week (`ui/stats/ThisWeek.kt`)
+
+The top card of the stats screen: a circle for today and each of the six days before (filled and numbered with the boards solved
+that day, today outlined), then "N days played, M daily boards solved.", or "A fresh week: today's boards are ready." when the
+week is empty; never a count of what is missing. Under each puzzle's tiers, once its most solved tier (the easier on a tie) has a
+solve in 3 of the last 8 weeks, "Your recent median" with that tier and time (the latest
+week with a solve), then a line through each week's median (gaps bridged). No axis, no "faster" or "slower": the line is the player's own times and says nothing about them.
+Decision: **only dated completions count.** A `Completion` holds the day of the board it solved and no time of play, so practice
+and level solves (`day == null`) cannot be put in a week; an archive board counts on its own day. Weeks end today, so none splits
+at a month or year. Pure and tested: `ThisWeek.days`, `summary`, `weeklyMedians`, `trend` (`ThisWeekTest`). Static: nothing animates.
+
 ## Kept share cards (`KeptCard` in `data/ProgressStore.kt`, `ui/stats/StatsScreen.kt`)
 
 Every solve keeps its share card (`share_cards`, one JSON `KeptCard` per entry), so Statistics can share it again: each tier row
