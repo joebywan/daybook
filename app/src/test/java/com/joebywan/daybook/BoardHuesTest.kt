@@ -43,9 +43,12 @@ class BoardHuesTest {
         }
     }
 
+    /** [n] hues spread across the table, every other row first (docs/COLOUR.md): Coral, Green, Violet, Amber, Teal. */
+    private fun contentHues(n: Int): List<Float> = listOf(0, 3, 6, 1, 4, 7, 5, 2).map { BoardHues.all[it] }.take(n)
+
     @Test fun contentHuesAreDistinctAndSpread() {
         for (n in 2..5) {
-            val hs = BoardHues.contentHues(n)
+            val hs = contentHues(n)
             assertEquals(n, hs.size)
             assertEquals(n, hs.toSet().size)
             if (n <= 4) for (i in 0 until n - 1) {

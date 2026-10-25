@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -16,15 +15,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class CipherTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
     private fun board(day: Int, d: Difficulty) =
-        Cipher.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Cipher.id, d), d) as CipherState
+        Cipher.generate(daySeed(day, Cipher.id, d), d) as CipherState
 
     private val minShown = mapOf(Difficulty.STANDARD to 0.88, Difficulty.HARD to 0.77, Difficulty.EXPERT to 0.72)
 
@@ -54,11 +50,10 @@ class CipherTeachingTest {
             report.appendLine("${d.name}: fallback on $fallbackBoards of 200 boards; working shown on %.0f%% of steps; steps per board ".format(100.0 * shown / steps) +
                 counts.map { "${it.key} %.2f".format(it.value / 200.0) })
             assertEquals("${d.name} never falls back", 0, fallbackBoards)
-            // Measured 91 / 80 / 75%: the rest are the all-columns and what-if steps, still given as a summary.
+            // Measured 89 / 80 / 75%: the rest are the all-columns and what-if steps, still given as a summary.
             assertTrue("${d.name}: working shown on $shown of $steps steps", shown >= steps * minShown.getValue(d))
         }
-        File("build/reports").mkdirs()
-        File("build/reports/cipher-teaching-coverage.txt").writeText(report.toString())
+        writeReport("cipher-teaching-coverage.txt", report.toString())
         println(report)
     }
 

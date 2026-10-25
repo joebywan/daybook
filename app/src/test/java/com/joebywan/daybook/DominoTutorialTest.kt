@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.DominoPick
@@ -146,13 +145,9 @@ class DominoTutorialTest {
 
     // ---- the hint glue --------------------------------------------------------------------------
 
-    private fun seeds(count: Int, difficulty: Difficulty) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 3, 1).plusDays(it.toLong()), "dominoes-glue", difficulty)
-    }
-
     @Test
     fun `a hint's move reaches its own goal by the player's taps, and is one undo entry`() {
-        for (d in Difficulty.entries) for (seed in seeds(4, d)) {
+        for (d in Difficulty.entries) for (seed in seeds(4, d, "dominoes-glue", LocalDate.of(2026, 3, 1))) {
             var s = Dominoes.generate(seed, d) as DominoState
             while (!s.solved) {
                 val deduction = Dominoes.teach(s)!!
@@ -172,7 +167,7 @@ class DominoTutorialTest {
 
     @Test
     fun `a mistake's hint is reached by lifting the domino, and Show me lifts it`() {
-        val base = Dominoes.generate(seeds(1, Difficulty.STANDARD).single(), Difficulty.STANDARD) as DominoState
+        val base = Dominoes.generate(seeds(1, Difficulty.STANDARD, "dominoes-glue", LocalDate.of(2026, 3, 1)).single(), Difficulty.STANDARD) as DominoState
         val d = base.tray.indices.first { !base.tray[it].isDouble }
         val right = base.answer[d]
         val wrong = DominoLogic.place(base, d, Placement(right.second, right.first))

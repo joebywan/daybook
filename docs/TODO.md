@@ -124,7 +124,7 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
   enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
 - [ ] **Dependencies still behind after the toolchain majors.** The `androidx` libraries (Compose BOM
-  2025.09 -> 2026.09, lifecycle, activity, navigation, datastore, core-ktx) and kotlinx-serialization 1.11
+  2025.09 -> 2026.09, activity, datastore, core-ktx) and kotlinx-serialization 1.11
   are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
   17 too); Gradle 9 would run on newer, so moving the JDK is its own change (`renovate.json` holds it at 17).
 - [ ] **`compileSdk` 36 -> 37 before `core-ktx` 1.19.** `androidx.core:core-ktx` 1.19.1 requires `compileSdk` 37
@@ -164,24 +164,15 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 
 - [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
-  - Kings: Standard no confined or what-if; Hard needs confined; Expert needs what-if (5% of draws: cost it first).
   - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
     or what-if, no fallback.
-  - Tents: Hard needs one-spot; Expert needs shared or served (18% of draws).
   - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
-  - Nonogram: no gate needed (size separates the tiers); optional Expert needs 4+ line passes (21%). Mirror-symmetric
-    pictures: measure the pass rate.
   - Inequality (pairs, sign chains) and Regions (locked candidates): the ladder is too short; the techniques come first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
   same `countTilings` proof.
-- [ ] **Pipes: a branchier tree.** `spanningTree` is a depth-first maze (long corridors); a random-edge spanning tree gives
-  more junctions. (Counter-clockwise rotation and a lock mark: declined by the owner.)
-- [ ] **Cipher: cap repeated totals** (some totals recur many times a tier); **Target: count the roads** (Expert needs few
-  shortest answers, not only depth 5).
 - [ ] **Daily flow.** "Next puzzle today" on the daily finish frame; "Today's three" (one quick, one mid, one word/number,
   derived from the date) with its own share card; the day card's nudge never counts what is left; a level-complete share card.
-- [ ] **Techniques page.** Per puzzle, its ladder, each technique marked once met (needs a defaulted field: a save change).
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
 - [ ] **New puzzles, in order:** Mines (no guessing: a given opening, a solver-proved board, three
   lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
@@ -213,10 +204,6 @@ below have a famous branded version; use the descriptive name).
   toolbar do not move. Static renders of all three tiers matched pixel for pixel across both browsers and both schemes.
   Not done: headless WebKit ignores hand-built TouchEvents, so its touch slop on a 15x15 sweep is unchecked (only a real
   iPhone or the emulator can), and the 5x5 finish frame's cover of the last rows at 375x537 is by design.
-- [ ] **Nonogram: pictures are noise.** The boards are random squares, not drawings. One smoothing pass gave blobbier
-  pictures but failed the shape rules on 96% of 5x5 draws (about 25% of 10x10, 45% of 15x15), so it would need a
-  size-by-size retune; measure the pass rate before trying again.
-
 - [ ] **Web: a late home-grid value can reach a tile stale.** The "In progress" set, passed down as a plain `Set` and landing in
   the first frames, reached `PuzzleTile` stale in about half of Chromium loads (DaybookApp had the new set; the tile recomposed
   with the old one; WebKit and Android never showed it). It is now a state read in the tile (`inProgress: () -> Set<String>`),
@@ -228,7 +215,7 @@ below have a famous branded version; use the descriptive name).
 - [ ] **Cipher: other shapes need longer words.** Every tier is 4 + 4 = 5 because the leading carry is the foothold the no-trial ladder needs, and the
   answer lists stop at five letters. A screened six-letter answer list (SCOWL through `tools/words/build.py`, screened by hand as the others were) would
   allow 5 + 5 = 6, which would give Hard and Expert a different look. Measured without it: 5 + 5 = 5 gave one ladder board per 30 pairs, three addends none.
-- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 91 / 80 / 75% of steps (Standard / Hard /
+- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 89 / 80 / 75% of steps (Standard / Hard /
   Expert); most all-columns steps and nearly every two-column what-if still say "only X = d" in summary. Those need two columns combined as algebra
   ("U + O + carry is 11, and O is 1 + U + carry, so 2U ...") or a case split on a carry whose branches stall without a second split; tried, the second
   split ran every explanation past 260 characters. A hint in two parts (the carry first, then the letter) may be the shape that fits. *M–L.*

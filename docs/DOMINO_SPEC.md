@@ -229,4 +229,4 @@ From `DominoRulesTest` `a year of daily boards ...` (`app/build/reports/dominoes
   sound (its placement is the answer's — the answer is unique), steps counted per technique for `docs/TEACHING.md`.
   Mistake flagged for a wrong domino, a right domino flipped, a right domino on wrong squares.
 - `DominoKeysTest`, `StateSerializationTest.mutate` branch, `FallbackTest` entry, `ParityFingerprint` branch and a
-  `DominoWebParityTest`-style pin, `GeneratorTest` (automatic).
+  `BoardPinTest` entry, `GeneratorTest` (automatic).
