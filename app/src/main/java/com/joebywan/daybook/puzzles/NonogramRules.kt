@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PenMarks
 import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
 
@@ -23,52 +24,17 @@ data class NonogramState(
     val solution: String,
     val cells: String = NonogramLogic.UNMARKED.toString().repeat(width * height),
     override val moves: Int = 0,
-) : PuzzleState {
+) : PuzzleState, PenMarks<NonogramState> {
 
     /** Solved when the filled squares give every row and column the clue it was dealt. */
     override val solved: Boolean get() = NonogramLogic.isSolved(this)
 
-    fun markAt(index: Int): Char = cells[index]
+    override val penMarks get() = cells
+    override val penWidth get() = width
+    override val penHeight get() = height
+    override val pens get() = "${NonogramLogic.FILLED}${NonogramLogic.CROSSED}"
 
-    /** [mark] on every square of [indices] that is not already it; one state, one move per square. */
-    fun paint(indices: Collection<Int>, mark: Char): NonogramState {
-        val next = cells.toCharArray()
-        var changed = 0
-        for (i in indices) {
-            if (next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        return if (changed == 0) this else copy(cells = next.concatToString(), moves = moves + changed)
-    }
-
-    /**
-     * A tap with the fill or cross pen: that mark, or a clean square if it already has it. Tapping
-     * the other pen's mark replaces it, so a player never has to rub out to change their mind.
-     */
-    fun tap(index: Int, pen: Char): NonogramState = paint(listOf(index), sweepMark(index, pen))
-
-    /** What a sweep that starts on [index] with [pen] lays down: the pen's mark, or erasing if it is already there. */
-    fun sweepMark(index: Int, pen: Char): Char = if (cells[index] == pen) NonogramLogic.UNMARKED else pen
-
-    /**
-     * A sweep: [mark] along [indices], but a pen only writes over untouched squares and an eraser
-     * only takes out the mark it started on, so dragging a fill across a crossed square leaves the
-     * cross alone, and rubbing out a run of fills does not take the crosses with it.
-     */
-    fun sweep(indices: Collection<Int>, mark: Char, startedOn: Char): NonogramState {
-        val next = cells.toCharArray()
-        var changed = 0
-        for (i in indices) {
-            val ok = if (mark == NonogramLogic.UNMARKED) next[i] == startedOn else next[i] == NonogramLogic.UNMARKED
-            if (ok && next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        return if (changed == 0) this else copy(cells = next.concatToString(), moves = moves + changed)
-    }
+    override fun withPenMarks(marks: String, changed: Int) = copy(cells = marks, moves = moves + changed)
 }
 
 /**
