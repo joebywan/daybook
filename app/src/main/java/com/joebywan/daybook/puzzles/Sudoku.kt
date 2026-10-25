@@ -222,37 +222,122 @@ object Sudoku : PuzzleType {
     /** Bits 1..9 set. */
     private const val ALL_DIGITS = 0b11_1111_1110
 
-    private fun clueTarget(difficulty: Difficulty) = when (difficulty) {
-        Difficulty.STANDARD -> 38
-        Difficulty.HARD -> 30
-        Difficulty.EXPERT -> 24
+    /**
+     * A tier's gate: digging stops short of any board a walk by the teacher's ladder up to [ceiling] cannot finish, and a
+     * dug board ships only if that walk needed [needs] or deeper ([SudokuTeacher.TECHNIQUES] order). Standard: singles in
+     * a unit; Hard: a naked single, nothing past it; Expert: an elimination (locked candidates or a pair) or a what-if,
+     * never the fallback. So the tiers cannot overlap: each has a depth of its own.
+     */
+    private class Gate(val ceiling: String, val needs: String)
+
+    private fun gate(difficulty: Difficulty) = when (difficulty) {
+        Difficulty.STANDARD -> Gate(SudokuTeacher.HIDDEN_SINGLE_LINE, SudokuTeacher.FULL_HOUSE)
+        Difficulty.HARD -> Gate(SudokuTeacher.NAKED_SINGLE, SudokuTeacher.NAKED_SINGLE)
+        Difficulty.EXPERT -> Gate(SudokuTeacher.WHAT_IF, SudokuTeacher.LOCKED)
     }
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState {
-        val rng = Rng(seed)
-        val solution = fullGrid(rng)
-        val puzzle = solution.toMutableList()
-        var clues = 81
-        val target = clueTarget(difficulty)
+    /** Fresh grids [generateVerified] tries before giving up. */
+    internal const val ATTEMPTS = 100
 
-        // Dig holes in a random order, keeping only removals that leave the solution unique.
-        for (index in rng.shuffled((0 until 81).toList())) {
-            if (clues <= target) break
-            val saved = puzzle[index]
-            puzzle[index] = 0
-            if (countSolutions(puzzle.toMutableList(), 0) == 1) {
-                clues--
-            } else {
-                puzzle[index] = saved
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        generateVerified(seed, difficulty) ?: lastResort(difficulty)
+
+    /**
+     * The board when it was proved, null otherwise. What `FallbackTest` asserts on. Each attempt fills a grid from
+     * `Rng(seed + attempt)` and digs it in 180-degree pairs (the centre alone), in a random order, keeping each removal
+     * only while [countSolutions] (exhaustive) still finds one answer and the tier's ladder still finishes the board:
+     * the givens are minimal for that ladder, symmetric, and the clue count is whatever that leaves. The dug board then
+     * ships only if its walk needed the tier's technique ([Gate.needs]); otherwise the next grid is tried.
+     */
+    internal fun generateVerified(seed: Long, difficulty: Difficulty, attempts: Int = ATTEMPTS): SudokuState? {
+        val gate = gate(difficulty)
+        val needs = SudokuTeacher.TECHNIQUES.indexOf(gate.needs)
+        for (attempt in 0 until attempts) {
+            val rng = Rng(seed + attempt)
+            val solution = fullGrid(rng)
+            val puzzle = solution.toMutableList()
+            for (i in rng.shuffled((0..40).toList())) {
+                puzzle[i] = 0
+                puzzle[80 - i] = 0
+                if (countSolutions(puzzle) == 1 && finishes(puzzle, gate.ceiling)) continue
+                puzzle[i] = solution[i]
+                puzzle[80 - i] = solution[80 - i]
+            }
+            val depth = SudokuTeacher.depth(puzzle, gate.ceiling) ?: continue
+            if (depth < needs) continue
+            return SudokuState(givens = puzzle.map { it != 0 }, cells = puzzle.toList(), solution = solution)
+        }
+        return null
+    }
+
+    /**
+     * Whether the teacher's walk up to [ceiling] finishes [puzzle], the same verdict as `SudokuTeacher.depth(...) != null`
+     * but cheaper, since the dig asks it 41 times a grid. Singles are settled here first with bitmasks: they never
+     * stop being singles as digits go in, so every order of taking them reaches the same grid, the one the teacher's walk
+     * (singles always first) reaches before it needs anything deeper. Only there, and only when [ceiling] allows more
+     * than singles, is the teacher asked for its next step, and then the singles are settled again. `SudokuRulesTest`
+     * checks the two agree.
+     */
+    internal fun finishes(puzzle: List<Int>, ceiling: String): Boolean {
+        val grid = puzzle.toMutableList()
+        val cand = IntArray(81)
+        fun place(i: Int, d: Int) {
+            grid[i] = d
+            cand[i] = 0
+            for (p in peerTable[i]) cand[p] = cand[p] and (1 shl d).inv()
+        }
+        val naked = ceiling != SudokuTeacher.HIDDEN_SINGLE_LINE
+        while (true) {
+            for (i in 0 until 81) {
+                cand[i] = 0
+                if (grid[i] == 0) {
+                    var mask = ALL_DIGITS
+                    for (p in peerTable[i]) mask = mask and (1 shl grid[p]).inv()
+                    cand[i] = mask
+                }
+            }
+            var changed = true
+            while (changed) {
+                changed = false
+                for (unit in unitTable) for (d in 1..9) {
+                    var at = -1
+                    var count = 0
+                    for (i in unit) if (cand[i] and (1 shl d) != 0) { at = i; count++ }
+                    if (count == 1) { place(at, d); changed = true }
+                }
+                if (naked) for (i in 0 until 81) {
+                    if (cand[i].countOneBits() == 1) { place(i, cand[i].countTrailingZeroBits()); changed = true }
+                }
+            }
+            if (0 !in grid) return true
+            if (ceiling != SudokuTeacher.WHAT_IF) return false
+            // No single is left, so the teacher's next step is its first elimination or what-if, exactly as on its walk.
+            val step = SudokuTeacher.deduce(grid, ceiling) ?: return false
+            grid[step.cell] = step.digit
+        }
+    }
+
+    /** The 27 rows, columns and boxes, as cell indices. */
+    private val unitTable: List<IntArray> = List(27) { u ->
+        val k = u % 9
+        IntArray(9) { j ->
+            when (u / 9) {
+                0 -> k * 9 + j
+                1 -> j * 9 + k
+                else -> (k / 3 * 3 + j / 3) * 9 + k % 3 * 3 + j % 3
             }
         }
-
-        return SudokuState(
-            givens = puzzle.map { it != 0 },
-            cells = puzzle.toList(),
-            solution = solution,
-        )
     }
+
+    /** The seed [lastResort] draws from. */
+    private const val LAST_RESORT_SEED = 20261025L
+
+    /**
+     * What ships for a seed [generateVerified] did not prove: the board of one fixed seed, itself proved (a test asserts
+     * it on every tier, so this cannot throw once that test is green). A year of daily seeds never reaches it.
+     */
+    internal fun lastResort(difficulty: Difficulty): SudokuState =
+        generateVerified(LAST_RESORT_SEED, difficulty) ?: error("the fixed last-resort seed no longer proves a board")
 
     internal fun fullGrid(rng: Rng): List<Int> {
         val grid = MutableList(81) { 0 }
@@ -271,31 +356,58 @@ object Sudoku : PuzzleType {
         return grid
     }
 
-    /** Counts solutions, stopping at two. Always picks the most-constrained cell first. */
-    private fun countSolutions(grid: MutableList<Int>, found: Int): Int {
-        var best = -1
-        var bestOptions: List<Int>? = null
-        for (i in 0 until 81) {
-            if (grid[i] != 0) continue
-            val used = BooleanArray(10)
-            for (p in peerTable[i]) used[grid[p]] = true
-            val options = (1..9).filter { !used[it] }
-            if (options.isEmpty()) return found
-            if (bestOptions == null || options.size < bestOptions.size) {
-                best = i
-                bestOptions = options
-                if (options.size == 1) break
+    /**
+     * How many answers [puzzle] has, counted up to two. Exhaustive (no node budget, so 1 means one answer): a digit mask
+     * per row, column and box, and the most constrained empty cell split first.
+     */
+    internal fun countSolutions(puzzle: List<Int>): Int {
+        val grid = puzzle.toIntArray()
+        val rows = IntArray(9)
+        val cols = IntArray(9)
+        val boxes = IntArray(9)
+        fun box(i: Int) = i / 27 * 3 + i % 9 / 3
+        for (i in 0 until 81) if (grid[i] != 0) {
+            val bit = 1 shl grid[i]
+            if ((rows[i / 9] or cols[i % 9] or boxes[box(i)]) and bit != 0) return 0
+            rows[i / 9] = rows[i / 9] or bit
+            cols[i % 9] = cols[i % 9] or bit
+            boxes[box(i)] = boxes[box(i)] or bit
+        }
+        fun count(found: Int): Int {
+            var best = -1
+            var bestFree = 0
+            var bestSize = 10
+            for (i in 0 until 81) {
+                if (grid[i] != 0) continue
+                val free = ALL_DIGITS and (rows[i / 9] or cols[i % 9] or boxes[box(i)]).inv()
+                val size = free.countOneBits()
+                if (size == 0) return found
+                if (size < bestSize) {
+                    best = i
+                    bestFree = free
+                    bestSize = size
+                    if (size == 1) break
+                }
             }
+            if (best < 0) return found + 1
+            var total = found
+            for (d in 1..9) {
+                val bit = 1 shl d
+                if (bestFree and bit == 0) continue
+                grid[best] = d
+                rows[best / 9] = rows[best / 9] xor bit
+                cols[best % 9] = cols[best % 9] xor bit
+                boxes[box(best)] = boxes[box(best)] xor bit
+                total = count(total)
+                grid[best] = 0
+                rows[best / 9] = rows[best / 9] xor bit
+                cols[best % 9] = cols[best % 9] xor bit
+                boxes[box(best)] = boxes[box(best)] xor bit
+                if (total >= 2) return total
+            }
+            return total
         }
-        val options = bestOptions ?: return found + 1
-        var total = found
-        for (digit in options) {
-            grid[best] = digit
-            total = countSolutions(grid, total)
-            grid[best] = 0
-            if (total >= 2) return total
-        }
-        return total
+        return count(0)
     }
 
     override fun hint(state: PuzzleState): PuzzleState? {

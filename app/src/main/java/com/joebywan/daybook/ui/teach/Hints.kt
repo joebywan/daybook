@@ -285,12 +285,13 @@ fun HintSession.buttonLabel(): String = when {
  * wraps its text up to the height it is offered, and scrolls behind a fade beyond that (the play
  * screen's popover, see [HintPopover]). [raised] draws it as a card that floats over a board: a
  * solid ground, an outline and a shadow, where the slot's wash would let the board show through.
+ * Its one button is Close: the next step belongs to the Hint button, which reads "Why?" and then
+ * "Show me" (its [buttonLabel]), so the same button never shows twice.
  */
 @Composable
 fun HintPanel(
     session: HintSession,
     accent: Color,
-    onAction: () -> Unit,
     modifier: Modifier = Modifier,
     fill: Boolean = true,
     raised: Boolean = false,
@@ -342,9 +343,6 @@ fun HintPanel(
                 TextButton(onClick = { session.clear() }) {
                     Text("Close", color = scheme.onSurfaceVariant)
                 }
-                TextButton(onClick = onAction) {
-                    Text(if (session.stage == HintStage.NUDGE) "Why?" else "Show me", color = ink)
-                }
             }
         }
     }
@@ -379,7 +377,6 @@ fun HintPopover(
     boardTop: Float,
     toolbarTop: Float,
     windowHeight: Float,
-    onAction: () -> Unit,
 ) {
     val density = LocalDensity.current
     val gap = with(density) { 8.dp.toPx() }
@@ -424,7 +421,7 @@ fun HintPopover(
     }
 
     HintPanel(
-        session, accent, onAction,
+        session, accent,
         modifier = Modifier
             .offset { IntOffset(0, (y.value - origin.y).roundToInt()) }
             .padding(horizontal = 12.dp)
