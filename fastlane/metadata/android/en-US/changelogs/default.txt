@@ -1,6 +1,5 @@
-- Statistics shows your week: the days you played and boards solved, and a line of your recent times for each puzzle.
-- Swipe left or right on the home screen to change the difficulty.
-- Tap your streak on the home screen to open Statistics.
-- Statistics keeps your best result and last random board for every puzzle and tier, to share again.
-- Word Wheel's share says how many bonus words you found.
+- Statistics shows your week: the days you played, the boards solved, and a line of your recent times per puzzle.
+- Lexicon's first hint changes from board to board, and its later hints say how their word splits the words left.
+- From 1 November a daily Lexicon word never comes back until every other has had its day.
 - Clearer word clues, and no interjections or old words in Word Wheel's grids.
+- Swipe left or right on the home screen to change the difficulty.
