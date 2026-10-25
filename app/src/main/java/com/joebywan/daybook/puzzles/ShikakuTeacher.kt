@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.numberWord
+
 /**
  * Shikaku, reasoned the way a person reasons it, one named step at a time.
  *
@@ -63,7 +66,7 @@ internal object ShikakuTeacher {
     // ---- the board as the player sees it --------------------------------------------------------
 
     private class Sight(val w: Int, val h: Int, val clues: List<Int?>, blocks: List<Block>) {
-        val taken = BooleanArray(w * h).also { t -> blocks.forEach { b -> cellsOf(b).forEach { t[it] = true } } }
+        val taken = BooleanArray(w * h).also { t -> blocks.forEach { b -> b.cells(w).forEach { t[it] = true } } }
         val clueCells: List<Int> = clues.indices.filter { clues[it] != null }
 
         /** Numbers not yet inside a drawn rectangle, in reading order. */
@@ -71,11 +74,7 @@ internal object ShikakuTeacher {
 
         private val memo = arrayOfNulls<List<Block>>(w * h)
 
-        fun cellsOf(b: Block): List<Int> = buildList {
-            for (r in b.r0..b.r1) for (c in b.c0..b.c1) add(r * w + c)
-        }
-
-        fun cluesIn(b: Block): Int = cellsOf(b).count { clues[it] != null }
+        fun cluesIn(b: Block): Int = b.cells(w).count { clues[it] != null }
 
         /** Every rectangle the right size that holds clue [cell], at any position, on the grid or off. */
         fun shapes(cell: Int): List<Block> {
@@ -95,7 +94,7 @@ internal object ShikakuTeacher {
 
         fun onGrid(b: Block) = b.r0 >= 0 && b.c0 >= 0 && b.r1 < h && b.c1 < w
 
-        fun free(b: Block) = cellsOf(b).none { taken[it] }
+        fun free(b: Block) = b.cells(w).none { taken[it] }
 
         /** The rectangles clue [cell] could still take. */
         fun options(cell: Int): List<Block> = memo[cell] ?: shapes(cell)
@@ -113,12 +112,12 @@ internal object ShikakuTeacher {
      * rectangle left, or an empty square no number's rectangle could still cover.
      */
     private fun deadEnd(s: Sight, owner: Int, x: Block): Dead? {
-        val inX = BooleanArray(s.w * s.h).also { m -> s.cellsOf(x).forEach { m[it] = true } }
+        val inX = BooleanArray(s.w * s.h).also { m -> x.cells(s.w).forEach { m[it] = true } }
         val others = s.open.filter { it != owner }
-        val left = others.map { b -> s.options(b).filter { o -> s.cellsOf(o).none { inX[it] } } }
+        val left = others.map { b -> s.options(b).filter { o -> o.cells(s.w).none { inX[it] } } }
         others.forEachIndexed { i, b -> if (left[i].isEmpty()) return NoRoom(b) }
         val reach = BooleanArray(s.w * s.h)
-        left.forEach { opts -> opts.forEach { o -> s.cellsOf(o).forEach { reach[it] = true } } }
+        left.forEach { opts -> opts.forEach { o -> o.cells(s.w).forEach { reach[it] = true } } }
         for (cell in 0 until s.w * s.h) {
             if (!s.taken[cell] && !inX[cell] && !reach[cell]) return Uncovered(cell)
         }
@@ -129,7 +128,7 @@ internal object ShikakuTeacher {
     private fun stuck(s: Sight): Dead? {
         s.open.firstOrNull { s.options(it).isEmpty() }?.let { return NoRoom(it) }
         val reach = BooleanArray(s.w * s.h)
-        s.open.forEach { c -> s.options(c).forEach { o -> s.cellsOf(o).forEach { reach[it] = true } } }
+        s.open.forEach { c -> s.options(c).forEach { o -> o.cells(s.w).forEach { reach[it] = true } } }
         return (0 until s.w * s.h).firstOrNull { !s.taken[it] && !reach[it] }?.let { Uncovered(it) }
     }
 
@@ -147,7 +146,7 @@ internal object ShikakuTeacher {
         val wrong = s.blocks.filter { it !in s.solution }.minWithOrNull(compareBy({ it.r0 }, { it.c0 })) ?: return null
         val right = s.blocks.filter { it in s.solution }
         val sight = Sight(s.width, s.height, s.clues, right + wrong)
-        val cells = sight.cellsOf(wrong).toSet()
+        val cells = wrong.cells(sight.w).toSet()
         val clue = cells.first { s.clues[it] != null }
         val n = s.clues[clue]!!
         fun step(explanation: String, cited: Set<Int>) = Step(
@@ -183,17 +182,17 @@ internal object ShikakuTeacher {
         val sight = Sight(s.width, s.height, s.clues, s.blocks)
         val missing = s.solution.filter { it !in s.blocks }
         val block = missing.minByOrNull { b ->
-            val clue = sight.cellsOf(b).first { s.clues[it] != null }
+            val clue = b.cells(sight.w).first { s.clues[it] != null }
             sight.options(clue).size * 10_000 + clue
         } ?: return null
-        val clue = sight.cellsOf(block).first { s.clues[it] != null }
+        val clue = block.cells(sight.w).first { s.clues[it] != null }
         val n = s.clues[clue]!!
         return Step(
             technique = FALLBACK,
             place = block,
             focus = setOf(clue),
             cited = setOf(clue),
-            targets = sight.cellsOf(block).toSet(),
+            targets = block.cells(sight.w).toSet(),
             nudge = "This one takes a longer chain. Look at the glowing $n.",
             explanation = "This needs a longer chain than a hint can walk through, so here is the " +
                 "$n's rectangle from the answer.",
@@ -224,7 +223,7 @@ internal object ShikakuTeacher {
         for (b in s.shapes(clue)) {
             if (b == block) continue
             if (!s.onGrid(b)) { offGrid = true; continue }
-            val others = s.cellsOf(b).filter { it != clue && s.clues[it] != null }
+            val others = b.cells(s.w).filter { it != clue && s.clues[it] != null }
             if (others.isNotEmpty()) numbers += others.first() else if (!s.free(b)) drawn = true
         }
         val reasons = buildList {
@@ -235,7 +234,7 @@ internal object ShikakuTeacher {
         val explanation = if (reasons.isEmpty()) {
             "This $n needs ${numberWord(n)} squares, and there is only one way to lay them out here."
         } else {
-            "This $n needs ${numberWord(n)} squares. Any other rectangle would ${join(reasons, "or")}, " +
+            "This $n needs ${numberWord(n)} squares. Any other rectangle would ${listed(reasons, "or")}, " +
                 "so only this one fits."
         }
         return Step(
@@ -243,7 +242,7 @@ internal object ShikakuTeacher {
             place = block,
             focus = setOf(clue),
             cited = setOf(clue) + numbers,
-            targets = s.cellsOf(block).toSet(),
+            targets = block.cells(s.w).toSet(),
             nudge = "Look at the glowing $n.",
             explanation = explanation,
         )
@@ -252,10 +251,10 @@ internal object ShikakuTeacher {
     private fun onlyReaches(s: Sight): Step? {
         for (cell in 0 until s.w * s.h) {
             if (s.taken[cell] || s.clues[cell] != null) continue
-            val reaching = s.open.filter { c -> s.options(c).any { cell in s.cellsOf(it) } }
+            val reaching = s.open.filter { c -> s.options(c).any { cell in it.cells(s.w) } }
             if (reaching.size != 1) continue
             val clue = reaching[0]
-            val covering = s.options(clue).filter { cell in s.cellsOf(it) }
+            val covering = s.options(clue).filter { cell in it.cells(s.w) }
             if (covering.size != 1) continue
             val n = s.clues[clue]!!
             return Step(
@@ -263,7 +262,7 @@ internal object ShikakuTeacher {
                 place = covering[0],
                 focus = setOf(cell),
                 cited = setOf(clue, cell),
-                targets = s.cellsOf(covering[0]).toSet(),
+                targets = covering[0].cells(s.w).toSet(),
                 nudge = "Which number can reach the glowing square?",
                 explanation = "Only the $n can reach the marked square, and every square belongs to " +
                     "some rectangle. Just one of the $n's rectangles covers it, so that is the one.",
@@ -276,13 +275,13 @@ internal object ShikakuTeacher {
         for (a in s.open) {
             val opts = s.options(a)
             if (opts.size < 2) continue
-            val common = s.cellsOf(opts[0]).filter { cell -> cell != a && opts.all { cell in s.cellsOf(it) } }
+            val common = opts[0].cells(s.w).filter { cell -> cell != a && opts.all { cell in it.cells(s.w) } }
             if (common.isEmpty()) continue
             for (b in s.open) {
                 if (b == a) continue
                 val before = s.options(b)
                 if (before.size < 2) continue
-                val after = before.filter { o -> s.cellsOf(o).none { it in common } }
+                val after = before.filter { o -> o.cells(s.w).none { it in common } }
                 if (after.size != 1) continue
                 val na = s.clues[a]!!
                 val nb = s.clues[b]!!
@@ -294,7 +293,7 @@ internal object ShikakuTeacher {
                     place = after[0],
                     focus = setOf(a) + common,
                     cited = setOf(a, b) + common,
-                    targets = s.cellsOf(after[0]).toSet(),
+                    targets = after[0].cells(s.w).toSet(),
                     nudge = "Where must the glowing $na go?",
                     explanation = "Every rectangle this $na can make covers $these, so $other can't use " +
                         "${if (common.size == 1) "it" else "them"}. That leaves $other just one rectangle that fits.",
@@ -337,9 +336,9 @@ internal object ShikakuTeacher {
                 place = keep,
                 focus = setOf(a),
                 cited = cited + a,
-                targets = s.cellsOf(keep).toSet(),
+                targets = keep.cells(s.w).toSet(),
                 nudge = "What if the glowing $n went another way?",
-                explanation = "Suppose the $n took $which. That would ${join(phrases, "or")}. " +
+                explanation = "Suppose the $n took $which. That would ${listed(phrases, "or")}. " +
                     "So the $n takes this rectangle.",
             )
         }
@@ -347,14 +346,4 @@ internal object ShikakuTeacher {
     }
 
     // ---- words -----------------------------------------------------------------------------------
-
-    private fun join(words: List<String>, and: String = "and"): String = when (words.size) {
-        0 -> ""
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " $and " + words.last()
-    }
-
-    private fun numberWord(k: Int) =
-        listOf("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve")
-            .getOrElse(k) { k.toString() }
 }

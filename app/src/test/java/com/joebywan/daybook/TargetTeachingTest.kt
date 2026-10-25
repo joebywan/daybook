@@ -22,7 +22,7 @@ import org.junit.Test
 class TargetTeachingTest {
 
     private fun board(day: Int, d: Difficulty) =
-        Target.generateVerified(daySeed(day, Target.id, d), d)
+        TargetLogic.generateVerified(daySeed(day, Target.id, d), d)
             ?: error("no proved board for day $day ${d.name}")
 
     /** Every legal one-step successor of [s], as (a, op, b, board). */

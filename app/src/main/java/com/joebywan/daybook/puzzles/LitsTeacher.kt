@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.numberWord
+
 /**
  * LITS, reasoned the way a person reasons it, one named step at a time.
  *
@@ -188,6 +190,13 @@ internal object LitsTeacher {
             val e = empty.copyOf().also { a -> keepEmpty.forEach { a[it] = true } }
             return Sight(layout, s, e)
         }
+    }
+
+    /** [Lits.impossible]: the empty squares no candidate shape of their region ([Sight.cand]) covers. */
+    fun impossible(width: Int, height: Int, region: List<Int>, shaded: List<Boolean>): Set<Int> {
+        val layout = Layout(width, height, region)
+        val sight = Sight(layout, shaded.toBooleanArray(), BooleanArray(layout.n))
+        return (0 until layout.n).filter { c -> !shaded[c] && sight.cand(layout.of[c]).none { c in it.cells } }.toSet()
     }
 
     private const val BLOCK = 1
@@ -609,11 +618,11 @@ internal object LitsTeacher {
         val emptied = s.layout.cellsOf[chain.emptied]
         val home = s.layout.of[x]
         val steps = chain.forced.mapIndexed { i, (k, cells) ->
-            val count = if (cells.size == 1) "a marked square" else "${numberWord(cells.size)} marked squares"
+            val count = if (cells.size == 1) "a marked square" else "${numberWord(cells.size, zero = "no", upTo = 4)} marked squares"
             when {
                 i == 0 && k == home -> "its own region would need $count"
                 i == 0 -> "a nearby region would need $count"
-                else -> "then another ${if (cells.size == 1) "one" else numberWord(cells.size)}"
+                else -> "then another ${if (cells.size == 1) "one" else numberWord(cells.size, zero = "no", upTo = 4)}"
             }
         }
         val tail = "the marked region would have no legal shape left"
@@ -630,8 +639,6 @@ internal object LitsTeacher {
     }
 
     // ---- words ---------------------------------------------------------------------------------
-
-    private fun numberWord(k: Int) = listOf("no", "one", "two", "three", "four").getOrElse(k) { k.toString() }
 
     private fun article(p: Lits.Piece) = if (p == Lits.Piece.T) "a T" else "an ${p.name}"
 

@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
+
 /**
  * Nonograms, reasoned the way a person reasons them: one row or column at a time.
  *
@@ -136,7 +139,7 @@ internal object NonogramTeacher {
         val clueIndex = if (row) NonogramLogic.rowClueIndex(width, height, line)
         else NonogramLogic.colClueIndex(width, height, line - height)
         val name = if (row) "row ${line + 1}" else "column ${line - height + 1}"
-        val cap = name.replaceFirstChar { it.uppercaseChar() }
+        val cap = name.cap()
         val clueText = clue.joinToString(" ")
         val clues = if (clue.size == 1) "clue $clueText" else "clues $clueText"
 
@@ -211,7 +214,7 @@ internal object NonogramTeacher {
         }
         if (positions.size > 6 || groups.size > 3) return "${positions.size} squares"
         val parts = groups.map { if (it.first == it.last) "${it.first}" else "${it.first} to ${it.last}" }
-        val list = if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", ") + " and " + parts.last()
+        val list = listed(parts)
         return if (positions.size == 1) "square $list" else "squares $list"
     }
 }

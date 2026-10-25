@@ -51,6 +51,8 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.reportHighlight
+import com.joebywan.daybook.core.union
+import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.Job
@@ -94,11 +96,7 @@ object Tents : PuzzleType {
     )
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: TentsLogic.lastResort(difficulty)
-
-    /** The board when its answer was proved, null otherwise. */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): TentsState? =
-        TentsLogic.generateVerified(seed, difficulty)
+        TentsLogic.generateVerified(seed, difficulty) ?: TentsLogic.lastResort(difficulty)
 
     override fun teach(state: PuzzleState): Deduction? = TentsTeacher.deduction(state as TentsState)
 
@@ -431,7 +429,7 @@ object Tents : PuzzleType {
                     .size(unit * (n + 1))
                     .reportHighlight { _, h ->
                         (h.strong + h.soft).map { rectOf(it, n, unitPx) }
-                            .reduceOrNull { a, b -> Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom)) }
+                            .reduceOrNull(Rect::union)
                     },
             ) {
                 Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, hues, overlay, feel, Color(accent)) }
@@ -443,7 +441,7 @@ object Tents : PuzzleType {
                         .gridCursor(cursor.takeIf { interactive }, n, n, scheme.primary)
                         .pointerInput(interactive) {
                             if (!interactive) return@pointerInput
-                            fun cellAt(o: Offset) = (o.y / unitPx).toInt().coerceIn(0, n - 1) * n + (o.x / unitPx).toInt().coerceIn(0, n - 1)
+                            fun cellAt(o: Offset) = gridCellAt(o, unitPx, n, n)
                             detectDragGestures(
                                 onDragStart = { o ->
                                     // Any tap still held rides along as the sweep's base.
@@ -470,9 +468,7 @@ object Tents : PuzzleType {
                         .pointerInput(interactive, unitPx) {
                             if (!interactive) return@pointerInput
                             detectTapGestures { offset ->
-                                val r = (offset.y / unitPx).toInt().coerceIn(0, n - 1)
-                                val c = (offset.x / unitPx).toInt().coerceIn(0, n - 1)
-                                val i = r * n + c
+                                val i = gridCellAt(offset, unitPx, n, n)
                                 val held = pending?.takeIf { it.base === latest.v }
                                 commit.v?.cancel()
                                 if ((held?.after ?: latest.v).marks[i] == TentsLogic.TENT) { // taking a tent back is one tap

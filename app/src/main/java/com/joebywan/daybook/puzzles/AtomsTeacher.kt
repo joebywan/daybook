@@ -1,5 +1,9 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.numberWord
+
 /**
  * Atoms, reasoned the way a person reasons it, one named step at a time.
  *
@@ -148,6 +152,14 @@ internal object AtomsTeacher {
             return (0 until n).filter { seen[it] }
         }
 
+        /** The lines out of [group] that could still take a bond, each once, in order. */
+        fun exits(group: List<Int>): List<Int> {
+            val inside = BooleanArray(n).also { m -> group.forEach { m[it] = true } }
+            return group.flatMap { a -> incident[a] }
+                .filter { p -> inside[pairs[p].a] != inside[pairs[p].b] && cap(p, WITH_ISOLATION) > 0 }
+                .distinct().sorted()
+        }
+
         /** Every group of joined atoms, each listed once, in order of its lowest atom. */
         fun components(): List<List<Int>> {
             val done = BooleanArray(n)
@@ -169,22 +181,9 @@ internal object AtomsTeacher {
     }
 
     private fun sightOf(atoms: List<Atom>, pairs: List<Pair2>, counts: List<Int>): Sight {
-        val crossing = pairs.indices.map { p -> pairs.indices.filter { q -> q != p && crosses(atoms, pairs[p], pairs[q]) } }
+        val crossing = pairs.indices.map { p -> pairs.indices.filter { q -> q != p && Atoms.crosses(atoms, pairs[p], pairs[q]) } }
         val incident = atoms.indices.map { a -> pairs.indices.filter { pairs[it].a == a || pairs[it].b == a } }
         return Sight(atoms, pairs, counts.toIntArray(), IntArray(pairs.size) { 2 }, crossing, incident)
-    }
-
-    /** Whether two lines intersect. Re-derived here so the teacher needs no [AtomsState]. */
-    private fun crosses(atoms: List<Atom>, one: Pair2, two: Pair2): Boolean {
-        if (one.horizontal == two.horizontal) return false
-        val (h, v) = if (one.horizontal) one to two else two to one
-        val row = atoms[h.a].row
-        val col = atoms[v.a].col
-        val cLo = minOf(atoms[h.a].col, atoms[h.b].col)
-        val cHi = maxOf(atoms[h.a].col, atoms[h.b].col)
-        val rLo = minOf(atoms[v.a].row, atoms[v.b].row)
-        val rHi = maxOf(atoms[v.a].row, atoms[v.b].row)
-        return col in (cLo + 1) until cHi && row in (rLo + 1) until rHi
     }
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ----------------------
@@ -391,7 +390,7 @@ internal object AtomsTeacher {
         fun reasonsFor(short: Boolean): List<String> {
             fun who(b: Int) = "the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}"
             fun listed(bs: List<Int>, and: String = "and") =
-                if (short) join(bs.map { way(s.atoms[a], s.atoms[it]) }, and) else "to " + join(bs.map(::who), and)
+                if (short) listed(bs.map { way(s.atoms[a], s.atoms[it]) }, and) else "to " + listed(bs.map(::who), and)
             return buildList {
                 if (crossedTo.isNotEmpty()) {
                     add(if (short) "a bond crosses the line ${listed(crossedTo)}" else "a bond crosses the way ${listed(crossedTo)}")
@@ -425,7 +424,7 @@ internal object AtomsTeacher {
                 val goes = when {
                     f.need == 1 && s.degree(a) > 0 -> "its last bond goes there"
                     f.need == 1 -> "its bond goes there"
-                    s.degree(a) > 0 -> "its remaining ${numberWord(f.need)} go there"
+                    s.degree(a) > 0 -> "its remaining ${numberWord(f.need, upTo = 8)} go there"
                     else -> "${if (f.need == 2) "both" else "all"} its bonds go there"
                 }
                 if (reasons.isEmpty()) {
@@ -437,12 +436,12 @@ internal object AtomsTeacher {
             }
             ALL_FORCED -> {
                 val parts = f.raise.entries.sortedBy { it.key }.map { (p, to) ->
-                    "${numberWord(to - s.lo[p])} ${way(s.atoms[a], s.atoms[s.other(p, a)])}"
+                    "${numberWord(to - s.lo[p], upTo = 8)} ${way(s.atoms[a], s.atoms[s.other(p, a)])}"
                 }
                 val lead = "This $x $needWords and its neighbours can take just that"
-                val full = "$lead, so all are used: ${join(parts)}."
+                val full = "$lead, so all are used: ${listed(parts)}."
                 // The reason above can already have used most of the panel; "so all are used" goes first.
-                if (prefix.length + full.length <= MAX_EXPLANATION) full else "$lead: ${join(parts)}."
+                if (prefix.length + full.length <= MAX_EXPLANATION) full else "$lead: ${listed(parts)}."
             }
             else -> {
                 val spare = f.room - f.need
@@ -459,9 +458,9 @@ internal object AtomsTeacher {
                             "the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])}"
                         }
                         if (names.size == 1) {
-                            "${names[0].cap()} can take ${numberWord(room)}, so it gets at least ${numberWord(owed)}."
+                            "${names[0].cap()} can take ${numberWord(room, upTo = 8)}, so it gets at least ${numberWord(owed, upTo = 8)}."
                         } else {
-                            "${join(names).cap()} can each take ${numberWord(room)}, so each gets at least ${numberWord(owed)}."
+                            "${listed(names).cap()} can each take ${numberWord(room, upTo = 8)}, so each gets at least ${numberWord(owed, upTo = 8)}."
                         }
                     }
                 }
@@ -471,11 +470,11 @@ internal object AtomsTeacher {
                     val (p, to) = targets[0]
                     val b = s.other(p, a)
                     "This $x $needWords, so the ${s.atoms[b].bonds} ${where(s.atoms[a], s.atoms[b])} gets at least " +
-                        "${numberWord(to - s.lo[p])}."
+                        "${numberWord(to - s.lo[p], upTo = 8)}."
                 } else {
                     // Likewise "so one is spare": the arithmetic still stands without it.
-                    val lead = "This $x $needWords and its neighbours can take ${numberWord(f.room)}"
-                    val withSpare = "$lead, so ${if (spare == 1) "one is" else "${numberWord(spare)} are"} spare. $tail"
+                    val lead = "This $x $needWords and its neighbours can take ${numberWord(f.room, upTo = 8)}"
+                    val withSpare = "$lead, so ${if (spare == 1) "one is" else "${numberWord(spare, upTo = 8)} are"} spare. $tail"
                     if (prefix.length + withSpare.length <= MAX_EXPLANATION) withSpare else "$lead. $tail"
                 }
             }
@@ -502,14 +501,11 @@ internal object AtomsTeacher {
         if (s.components().size == 1) return null
         for (group in s.components()) {
             if (group.size < 2) continue // a lone atom is [ONE_NEIGHBOUR]'s case
-            val inside = BooleanArray(s.n).also { m -> group.forEach { m[it] = true } }
-            val exits = group.flatMap { a -> s.incident[a] }
-                .filter { p -> inside[s.pairs[p].a] != inside[s.pairs[p].b] && s.cap(p, WITH_ISOLATION) > 0 }
-                .distinct().sorted()
+            val exits = s.exits(group)
             if (exits.size != 1) continue
             val p = exits[0]
             val pr = s.pairs[p]
-            val from = if (inside[pr.a]) pr.a else pr.b
+            val from = if (pr.a in group) pr.a else pr.b
             val to = s.other(p, from)
             return Step(
                 technique = ONLY_WAY_OUT,
@@ -549,7 +545,7 @@ internal object AtomsTeacher {
             val steps = forced.map { f ->
                 val a = s.atoms[f.atom]
                 val where = f.raise.keys.sorted().map { way(a, s.atoms[s.other(it, f.atom)]) }
-                "the ${a.bonds} must bond ${join(where)}"
+                "the ${a.bonds} must bond ${listed(where)}"
             }
             val end = when (dead) {
                 is Short -> "the ${s.atoms[dead.atom].bonds} couldn't reach its number"
@@ -560,7 +556,7 @@ internal object AtomsTeacher {
                 }
             }
             val all = steps + end
-            val text = if (all.size == 1) all[0] else all.dropLast(1).joinToString(", ") + ", and then " + all.last()
+            val text = listed(all, "and then", oxford = true)
             return if (lead) text.cap() else text
         }
     }
@@ -573,13 +569,7 @@ internal object AtomsTeacher {
         }
         val groups = s.components()
         if (groups.size > 1) {
-            for (g in groups) {
-                val inside = BooleanArray(s.n).also { m -> g.forEach { m[it] = true } }
-                val exits = g.flatMap { s.incident[it] }.any { p ->
-                    inside[s.pairs[p].a] != inside[s.pairs[p].b] && s.cap(p, WITH_ISOLATION) > 0
-                }
-                if (!exits) return Closed(g)
-            }
+            for (g in groups) if (s.exits(g).isEmpty()) return Closed(g)
         }
         return null
     }
@@ -624,13 +614,8 @@ internal object AtomsTeacher {
 
     // ---- words -----------------------------------------------------------------------------------
 
-    /** Where [to] sits, seen from [from]: "to its right", "above". */
-    private fun where(from: Atom, to: Atom): String = when {
-        to.row == from.row && to.col > from.col -> "to the right"
-        to.row == from.row -> "to the left"
-        to.row < from.row -> "above"
-        else -> "below"
-    }
+    /** Where [to] sits, seen from [from]: "to the right", "above". */
+    private fun where(from: Atom, to: Atom): String = way(from, to).let { if (it == "right" || it == "left") "to the $it" else it }
 
     /** The same, as one word for lists: "left", "above". */
     private fun way(from: Atom, to: Atom): String = when {
@@ -640,17 +625,5 @@ internal object AtomsTeacher {
         else -> "below"
     }
 
-    private fun bondsWord(k: Int) = if (k == 1) "one bond" else "${numberWord(k)} bonds"
-
-    private fun join(words: List<String>, and: String = "and"): String = when (words.size) {
-        0 -> ""
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " $and " + words.last()
-    }
-
-    private fun numberWord(k: Int) =
-        listOf("zero", "one", "two", "three", "four", "five", "six", "seven", "eight")
-            .getOrElse(k) { k.toString() }
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
+    private fun bondsWord(k: Int) = if (k == 1) "one bond" else "${numberWord(k, upTo = 8)} bonds"
 }

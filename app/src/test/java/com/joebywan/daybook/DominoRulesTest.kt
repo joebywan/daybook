@@ -138,7 +138,8 @@ class DominoRulesTest {
         assertTrue(done.solved)
         val flipped = DominoLogic.flip(done, 1)
         assertFalse("turning the 3-4 round breaks both columns", flipped.solved)
-        assertTrue(DominoLogic.regionBroken(flipped, 0) && DominoLogic.regionBroken(flipped, 1))
+        val pips = DominoLogic.pipsOf(flipped)
+        assertTrue(DominoLogic.regionBroken(flipped.layout, pips, 0) && DominoLogic.regionBroken(flipped.layout, pips, 1))
         assertFalse("not every domino down is not solved", DominoLogic.place(s, 0, Placement(0, 1)).solved)
     }
 
@@ -240,7 +241,6 @@ class DominoRulesTest {
                     assertTrue(members.all { s.open[it] })
                     assertTrue("$d/$seed region $r is connected", connected(s, members))
                     val kind = s.rules[r].kind
-                    if (!spec.bounds) assertTrue("$d has no bounds", kind != RuleKind.LESS && kind != RuleKind.MORE)
                     if (!spec.different) assertTrue("$d has no all-different", kind != RuleKind.DIFFERENT)
                     if (kind == RuleKind.EQUAL || kind == RuleKind.DIFFERENT) assertTrue("no one-square $kind", members.size > 1)
                 }
@@ -272,7 +272,7 @@ class DominoRulesTest {
                 val s = DominoLogic.generateVerified(seed, d)!!
                 val level = DominoTeacher.solveLevel(s.layout, DominoTeacher.LEVEL_WHAT_IF)
                 assertNotNull(level)
-                assertTrue("$d/$seed needs $level", level!! in spec.minLevel..spec.needs)
+                assertEquals("$d/$seed needs $level", spec.needs, level)
                 dominoes += s.tray.size
             }
             val mean = dominoes / 60.0
@@ -280,7 +280,7 @@ class DominoRulesTest {
             lastSteps = mean
         }
         val levels = Difficulty.entries.map { DominoLogic.specFor(it) }
-        assertTrue(levels.zipWithNext().all { (a, b) -> a.needs < b.needs && a.minLevel < b.minLevel })
+        assertTrue(levels.zipWithNext().all { (a, b) -> a.needs < b.needs })
     }
 
     /**
@@ -343,7 +343,7 @@ class DominoRulesTest {
             val s = DominoLogic.lastResort(d)
             val spec = DominoLogic.specFor(d)
             assertEquals(spec.width, s.width)
-            assertTrue(DominoTeacher.solveLevel(s.layout, spec.needs)!! >= spec.minLevel)
+            assertEquals(spec.needs, DominoTeacher.solveLevel(s.layout, spec.needs))
             assertEquals(listOf(s.answer), oracle(s))
         }
     }

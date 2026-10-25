@@ -133,21 +133,8 @@ object LexiconRules {
      * "these" is yellow, grey, grey, grey, green, because the answer's other e is already matched.
      */
     fun mark(guess: String, answer: String): List<Int> {
-        val n = guess.length
-        val out = IntArray(n)
-        val left = IntArray(26)
-        for (i in 0 until n) {
-            if (guess[i] == answer[i]) out[i] = LexiconMark.CORRECT else left[answer[i] - 'a']++
-        }
-        for (i in 0 until n) {
-            if (out[i] == LexiconMark.CORRECT) continue
-            val k = guess[i] - 'a'
-            if (left[k] > 0) {
-                left[k]--
-                out[i] = LexiconMark.PRESENT
-            }
-        }
-        return out.toList()
+        var code = markCode(guess, answer)
+        return List(guess.length) { (code % 3).also { code /= 3 } }
     }
 
     /** [mark] packed base 3, first slot lowest: cheap to count and compare across a whole list. */

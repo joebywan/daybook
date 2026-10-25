@@ -789,10 +789,12 @@ object Dominoes : PuzzleType {
         val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // Green at once when a covered region keeps its rule; red only once it has stayed broken for a second.
-        val holds = BooleanArray(s.rules.size) { DominoLogic.regionHolds(s, it) }
-        val broken = rememberSettledFlags(BooleanArray(s.rules.size) { DominoLogic.regionBroken(s, it) }, s.open to s.tray, s.placed)
+        val layout = s.layout
+        val pips = DominoLogic.pipsOf(s)
+        val holds = BooleanArray(s.rules.size) { DominoLogic.regionHolds(layout, pips, it) }
+        val broken = rememberSettledFlags(BooleanArray(s.rules.size) { DominoLogic.regionBroken(layout, pips, it) }, s.open to s.tray, s.placed)
         // A laid domino settles; a region it completes by its rule glows once.
-        val feel = rememberMoveFeel(DominoLogic.pipsOf(s).toList(), s.layout.regionSquares) { holds[it] }
+        val feel = rememberMoveFeel(pips.toList(), layout.regionSquares) { holds[it] }
 
         BoxWithConstraints(
             Modifier

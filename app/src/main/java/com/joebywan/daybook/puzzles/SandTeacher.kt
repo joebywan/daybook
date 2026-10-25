@@ -86,16 +86,13 @@ internal object SandTeacher {
             if (t.isEmpty()) continue
             used++
             for (i in 1 until t.size) if (t[i] != t[i - 1]) meets++
-            if (t.size == height && t.all { it == t[0] }) finished++
+            if (SandLogic.finished(t, height)) finished++
         }
         return Triple(meets, used, -finished)
     }
 
     private fun closer(a: Triple<Int, Int, Int>, b: Triple<Int, Int, Int>) =
         compareValuesBy(a, b, { it.first }, { it.second }, { it.third }) < 0
-
-    private fun finishes(after: List<List<Int>>, to: Int, height: Int) =
-        after[to].size == height && after[to].all { it == after[to][0] }
 
     /**
      * A step on a road to sorted, reasoning from the tubes alone. [road] is a sorting sequence from here (the search's),
@@ -111,7 +108,7 @@ internal object SandTeacher {
         // 1. Finish a tube.
         for (m in pours) {
             val after = SandLogic.pour(tubes, height, m.first, m.second)
-            if (finishes(after, m.second, height) && good(m, after)) return finish(tubes, height, m, after)
+            if (SandLogic.finished(after[m.second], height) && good(m, after)) return finish(tubes, height, m, after)
         }
         // 2. Gather: onto a matching colour, uncovering a colour with somewhere to go first.
         val gathers = pours.filter { tubes[it.second].isNotEmpty() }

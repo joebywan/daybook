@@ -3,7 +3,7 @@ package com.joebywan.daybook.puzzles
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.bit
 import com.joebywan.daybook.core.has
-
+import com.joebywan.daybook.core.listed
 
 /**
  * Regions, reasoned a step at a time.
@@ -47,7 +47,6 @@ internal object RegionsTeacher {
     fun pad(d: Int): Int = 1000 + d
 
     // ---- what the player can see ------------------------------------------------------------------
-
 
     /** For each empty square the digits still possible there; 0 for a filled square. */
     private fun candidates(layout: RegionsLayout, cells: List<Int>): IntArray {
@@ -214,8 +213,6 @@ internal object RegionsTeacher {
 
     // ---- explaining ---------------------------------------------------------------------------------
 
-    private fun andList(ds: List<Int>) = if (ds.size < 2) ds.joinToString("") else ds.dropLast(1).joinToString(", ") + " and " + ds.last()
-
     fun deduce(layout: RegionsLayout, cells: List<Int>): PlacementStep? {
         val hit = findStep(layout, cells) ?: return null
         val x = hit.cell
@@ -232,16 +229,16 @@ internal object RegionsTeacher {
                 val inRegion = members.filter { it != x && cells[it] != 0 }
                 val regionDigits = inRegion.map { cells[it] }.sorted()
                 val touching = layout.around[x].filter { cells[it] != 0 && cells[it] <= members.size && cells[it] !in regionDigits }
-                val touchDigits = touching.map { cells[it] }.distinctSorted()
+                val touchDigits = touching.map { cells[it] }.sorted().distinct()
                 val why = when {
                     regionDigits.isNotEmpty() && touchDigits.isNotEmpty() ->
-                        "Its region already has ${andList(regionDigits)}, and the squares touching it have ${andList(touchDigits)}, so only $d is left."
-                    regionDigits.isNotEmpty() -> "Its region already has ${andList(regionDigits)}, so only $d is left."
+                        "Its region already has ${listed(regionDigits)}, and the squares touching it have ${listed(touchDigits)}, so only $d is left."
+                    regionDigits.isNotEmpty() -> "Its region already has ${listed(regionDigits)}, so only $d is left."
                     touchDigits.isEmpty() -> "Its region is one square, so it holds just a 1."
-                    else -> "The squares touching it have ${andList(touchDigits)}, so only $d is left."
+                    else -> "The squares touching it have ${listed(touchDigits)}, so only $d is left."
                 }
                 PlacementStep(
-                    ONLY_DIGIT, x, d, setOf(x), (inRegion + touching.firstPerDigit(cells)).toSet(),
+                    ONLY_DIGIT, x, d, setOf(x), (inRegion + touching.sorted().distinctBy { cells[it] }).toSet(),
                     "Which digits can this square still take?", why,
                 )
             }
@@ -268,19 +265,5 @@ internal object RegionsTeacher {
                 )
             }
         }
-    }
-
-    private fun List<Int>.distinctSorted(): List<Int> {
-        val out = mutableListOf<Int>()
-        for (v in sorted()) if (v !in out) out += v
-        return out
-    }
-
-    /** One square per digit among [this], the first in index order. */
-    private fun List<Int>.firstPerDigit(cells: List<Int>): List<Int> {
-        val seen = mutableListOf<Int>()
-        val out = mutableListOf<Int>()
-        for (i in sorted()) if (cells[i] !in seen) { seen += cells[i]; out += i }
-        return out
     }
 }

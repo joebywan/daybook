@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.listed
+
 /**
  * Lexicon, reasoned the way a person reasons it: from the marks already on the board.
  *
@@ -230,14 +232,14 @@ internal object LexiconTeacher {
                     .map { tile(c.length, g, it) }
             }.toSet()
             val shout = letter.uppercaseChar()
-            val where = if (need == 1) "slot ${slot + 1}" else "slots ${list(open.map { it + 1 })}"
+            val where = if (need == 1) "slot ${slot + 1}" else "slots ${listed(open.map { it + 1 })}"
             val long = buildString {
                 append("$shout is in the word, but ")
                 if (ruled.isNotEmpty()) append("not in ${slots(ruled)}")
                 if (ruled.isNotEmpty() && taken.isNotEmpty()) append(", and ")
                 if (taken.isNotEmpty()) {
                     append("${slots(taken)} already ${if (taken.size == 1) "holds" else "hold"} ")
-                    append(list(taken.map { c.green[it]!!.uppercaseChar() }))
+                    append(listed(taken.map { c.green[it]!!.uppercaseChar() }))
                 }
                 append(if (need == 1) ", so it goes in $where." else ", so it fills $where.")
             }
@@ -364,12 +366,5 @@ internal object LexiconTeacher {
     // ---- wording ----------------------------------------------------------------------------------
 
     private fun slots(slots: List<Int>): String =
-        (if (slots.size == 1) "slot " else "slots ") + list(slots.map { it + 1 })
-
-    /** "1", "1 and 2", "1, 2 and 4". */
-    private fun list(items: List<Any>): String = when (items.size) {
-        0 -> ""
-        1 -> "${items[0]}"
-        else -> items.dropLast(1).joinToString(", ") + " and " + items.last()
-    }
+        (if (slots.size == 1) "slot " else "slots ") + listed(slots.map { it + 1 })
 }

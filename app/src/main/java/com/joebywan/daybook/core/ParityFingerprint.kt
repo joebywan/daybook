@@ -32,7 +32,7 @@ import com.joebywan.daybook.puzzles.WordWheelState
 /**
  * One line per generated board, identical on the JVM and in the browser, so the two can be diffed:
  * `<id> <yyyy-mm-dd> <TIER> seed=<seed> <body>`. The body is whatever pins that puzzle's board and
- * answer; it is the format each puzzle's web parity test pins. The web build prints these under
+ * answer; it is the format `BoardPinTest` pins. The web build prints these under
  * `?dump`, and `WebParityDumpTest` writes the JVM's side.
  */
 object ParityFingerprint {

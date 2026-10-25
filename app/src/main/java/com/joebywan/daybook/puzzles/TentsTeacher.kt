@@ -1,6 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.lineName
+import com.joebywan.daybook.core.plural
 
 /**
  * Tents, reasoned a fact at a time.
@@ -114,10 +117,6 @@ internal object TentsTeacher {
 
     // ---- reasoning ------------------------------------------------------------------------------------
 
-    private fun lineName(n: Int, line: Int) = if (line < n) "row ${line + 1}" else "column ${line - n + 1}"
-    private fun cap(s: String) = s.replaceFirstChar { it.uppercase() }
-    private fun plural(k: Int, word: String) = if (k == 1) "1 $word" else "$k ${word}s"
-
     /** The first fact the ladder gives that the board does not already show, or null when it has no more. */
     fun deduce(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, marks: List<Int>): Step? {
         val st = IntArray(n * n)
@@ -174,12 +173,12 @@ internal object TentsTeacher {
             if (need == 0) return Step(
                 LINE_DONE, GRASS, open.toSet(), line.toSet() + clue, placed,
                 "Count the tents in $name.",
-                "${cap(name)} holds $want, and they are all placed, so the rest of it is grass.",
+                "${name.cap()} holds $want, and they are all placed, so the rest of it is grass.",
             )
             if (need == open.size) return Step(
                 LINE_FULL, TENT, open.toSet(), line.toSet() + clue, placed,
                 "Count the squares left in $name.",
-                "${cap(name)} still needs ${plural(need, "tent")} and has exactly ${if (need == 1) "1 square" else "$need squares"} left that can hold one, so ${if (need == 1) "it is a tent" else "all of them are tents"}.",
+                "${name.cap()} still needs ${plural(need, "tent")} and has exactly ${if (need == 1) "1 square" else "$need squares"} left that can hold one, so ${if (need == 1) "it is a tent" else "all of them are tents"}.",
             )
         }
 

@@ -2,6 +2,7 @@ package com.joebywan.daybook.ui.play
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.puzzles.ChessState
@@ -123,8 +124,6 @@ data class ShareCard(
             append(SHARE_URL)
         }
 }
-
-private fun plural(n: Int, one: String, many: String = one + "s") = "$n ${if (n == 1) one else many}"
 
 /** Worst first: a hint, then a taken-back move, then a claim that was not a set. */
 private fun PlayLog.Played.mark() = when {
