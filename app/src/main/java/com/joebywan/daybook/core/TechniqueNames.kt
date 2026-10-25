@@ -173,6 +173,15 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "spare" to "using an empty tube",
         "plan" to "planning a pour ahead",
     ),
+    "mines" to linkedMapOf(
+        "all-found" to "a number with all its mines found",
+        "all-mines" to "a number with as many squares as mines",
+        "subset" to "one number's squares inside another's",
+        "pair" to "two numbers that share squares",
+        "count" to "counting the mines left",
+        "count-edge" to "the numbers needing every mine left",
+        "what-if" to "a what-if",
+    ),
     "dominoes" to linkedMapOf(
         "only-partner" to "a square with one partner left",
         "only-place" to "a domino with one place left",

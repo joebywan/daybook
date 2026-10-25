@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -124,7 +125,7 @@ fun <S : PenMarks<S>> Modifier.penGrid(
         }
 }
 
-/** [pens] under the board. Kept clear of the hint popover: the player reaches for it to make a hinted move. */
+/** [pens] under the board, or stacked ([vertical]) beside it. Kept clear of the hint popover: the player reaches for it to make a hinted move. */
 @Composable
 fun PenRow(
     pens: String,
@@ -133,13 +134,18 @@ fun PenRow(
     accent: Color,
     label: (Char) -> String,
     onPen: (Char) -> Unit,
+    vertical: Boolean = false,
     icon: DrawScope.(Char) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    Row(
-        Modifier.fillMaxWidth().padding(bottom = 6.dp).keepClear(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-    ) {
+    @Composable
+    fun Pens(content: @Composable () -> Unit) =
+        if (vertical) Column(Modifier.keepClear(), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+        else Row(
+            Modifier.fillMaxWidth().padding(bottom = 6.dp).keepClear(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+        ) { content() }
+    Pens {
         for (option in pens) {
             val chosen = pen == option
             Row(

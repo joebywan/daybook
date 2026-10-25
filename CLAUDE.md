@@ -35,7 +35,7 @@ sounded. Do not turn it off.
 
 ## Teaching: hints that explain, and walkthroughs
 
-All puzzles teach (Snap and Pointers through their walkthrough only; Pointers has no undo either). Shared code: `core/Teaching.kt`, `ui/teach/Hints.kt`,
+All puzzles teach (Snap and Pointers through their walkthrough only; Pointers and Mines have no undo). Shared code: `core/Teaching.kt`, `ui/teach/Hints.kt`,
 `ui/tutorial/TutorialRunner.kt`, `ui/play/PlayScreen.kt`. How to write a teacher: `docs/PUZZLE_STANDARDS.md`
 section 7. The settled play-screen UX (popover, finish frame, solve sound) and the measured fallback table:
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
@@ -570,6 +570,39 @@ hashed into every seed: never rename it.
   (Fredoka has no `≠`); green when the region is covered and keeps its rule, solid `scheme.error` once it cannot (1 s settle).
   Highlight indices: squares `row * width + col`, tray slot `DominoTeacher.TRAY + k`, badge `DominoTeacher.RULE + r`.
 
+## Mines (a minefield with no guessing)
+
+Numbers say how many mines touch a square; reveal every square without one. Spec and decisions: `docs/MINES_SPEC.md`.
+Never "Minesweeper" anywhere the player sees. `puzzles/MinesRules.kt` (`MinesState`, `MinesLogic`: rules, the spread from a 0,
+the ladder `nextFact`, the walk, generator), `MinesTeacher.kt` (explanations of the same ladder), `MinesKeys.kt`, `Mines.kt` (board,
+pen row, walkthrough, motif). `id = "mines"` is hashed into every seed: never rename it.
+
+- **The owner's decisions; do not reopen:** no board ever needs a guess; the opening is given (the seed picks a square, its 3x3 is
+  kept clear and its spread is open when the board loads); three lives, as Pointers' (a mine revealed is shown, counts as found and
+  costs a life; Try again is `retry()`, one state, the opening again); **no undo** (`offersUndo = false`); hints on.
+- **Lives are `PuzzleState`, as Pointers':** `bumps` (the mines hit, in order; `lives` is three less those). `marks` is one string
+  ('.' hidden, 'o' open, 'f' flag). Flags are the player's notes: never checked, never a life, and a flagged square is never
+  revealed (the spread passes it by). "Mines left" is the total less flags and mines hit. **`solved` is every safe square open**
+  (a rule check; flags play no part); `failed` is no lives and not solved; losing is never a completion. No chording (with a wrong
+  flag it would spend a life on a note).
+- **Tiers: 8x8 with 10 mines / 8x10 with 16 / 8x12 with 22, all 8 wide** (a mis-tap costs a life, so a square stays about 42 dp at
+  375 wide), and the depth of the ladder a board must need (Tally's gate): Standard single numbers only, Hard a subset or pair at
+  least once, Expert the count against the numbers or a what-if (the count alone at the end, every mine found and a pocket no number
+  touches, is too slight and does not qualify). An opening that shows more than 45% of the safe squares is redrawn.
+- **The ladder is the teacher's and the generator's** (`MinesLogic.nextFact`, simplest first): all found, all mines, subset, pair,
+  the count, the count against the numbers (numbers on squares none share need every mine left: the rest is clear), a what-if
+  (suppose a square beside a number, follow single numbers at most `MAX_LINKS` = 3, one breaks). A board ships only if the walk from
+  the opening (revealing each square it proves, reading its number off the board) reveals every safe square at the tier's depth,
+  which also makes every mine forced. `MinesOracle` (test: every layout the numbers and the total allow, no inference) checks every
+  step. A year per tier never reaches `lastResort` (the first seed from 1 the tier accepts, itself checked).
+- **Teacher:** knowledge is the revealed numbers and the mines hit; flags are never knowledge, only a mines step whose squares are
+  all flagged counts as shown. A mistake is a flag on a safe square (sound: one answer). No fallback on a generated board, measured.
+  Highlight indices are squares. A subset/pair hint names the second number by where it lies ("the 2 to the right").
+- Input: a Reveal / Flag pen under the board (`rememberSaveable`, Nonogram's model, Reveal each visit); a tap uses the pen, a long
+  press the other tool. Keys: arrows, Space/Enter reveal, F flag. A mine hit shakes and rings in `scheme.error` (the ring alone
+  under reduced motion) with `PlayScreen`'s bump haptic. Colours: hue A tiles the hidden squares, hue B inks flags; numbers 1-6
+  each a hue (Blue, Teal, Violet, Amber, Rose, Gold) and always a digit. Share card: Pointers' hearts, a red square after hints.
+
 ## Pipes
 
 Rotate tiles until every opening meets another and the pipework is one network. `puzzles/Pipes.kt` (state, generator, board,
@@ -658,7 +691,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally and Dominoes (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally and Dominoes count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes and Mines (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally and Dominoes count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
@@ -687,7 +720,7 @@ double-tap must emit exactly one combined state.
 **The play log is part of the saved game.** `SavedGame.log` (`ui/play/ShareCard.kt`, `PlayLog`) is one character per move, undo,
 restart and counted hint, and the share graphic is drawn from it. Append to it exactly where the hint count goes up and where
 `push`/`undo`/`restart` change the board; keep it out of `PuzzleState`; it defaults to "" so older saves load (`ShareCardTest`).
-Restart is undoable (except in Pointers, which has no Undo): it pushes the cleared board, and `SavedGame.restarts` marks where, so
+Restart is undoable (except in Pointers and Mines, which have no Undo): it pushes the cleared board, and `SavedGame.restarts` marks where, so
 an Undo that crosses one logs `u` and `PlayLog.played` hands the restarted moves back.
 
 **Back goes where the screen was opened from** (`backFrom` in `ui/DaybookApp.kt`): an archive game returns to its archive at that

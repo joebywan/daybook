@@ -314,7 +314,7 @@ object Pointers : PuzzleType {
     }
 
     @Composable
-    private fun Hearts(lives: Int, modifier: Modifier) {
+    internal fun Hearts(lives: Int, modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
         Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             repeat(PointersLogic.LIVES) { k ->
