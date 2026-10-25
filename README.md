@@ -13,7 +13,7 @@ No ads. No subscription. No accounts. No network permission in the manifest at a
 
 | Every puzzle, every day | Sudoku | Cage Sudoku | Word Wheel |
 |---|---|---|---|
-| ![The home screen on day one: today's puzzles, the first nine in view, Snap marked as today's pick](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Hard Cage Sudoku board with a hint open](docs/screenshots/cage-sudoku.png) | ![A Word Wheel board](docs/screenshots/word-wheel.png) |
+| ![The home screen on day one: today's three over the grid of puzzles, the first nine in view](docs/screenshots/home.png) | ![A Sudoku board with a hint open](docs/screenshots/sudoku.png) | ![A Hard Cage Sudoku board with a hint open](docs/screenshots/cage-sudoku.png) | ![A Word Wheel board](docs/screenshots/word-wheel.png) |
 
 ![On a tablet the board sits beside the title, hints and tools: a Cage Sudoku with a hint open](docs/screenshots/tablet-cage-sudoku.png)
 

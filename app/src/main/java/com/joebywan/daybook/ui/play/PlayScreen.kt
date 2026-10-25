@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -164,6 +163,8 @@ fun PlayScreen(
     showTimer: Boolean = true,
     /** The level this board belongs to, if any: the subtitle says so where a daily shows its date. */
     level: Int? = null,
+    /** A hint explained this technique (`Deduction.technique`), for the techniques page. */
+    onTaught: (String) -> Unit = {},
 ) {
     // The harder boards take hundreds of milliseconds to generate, which would freeze the frame if
     // it happened during composition. Android runs it off the main thread; the web has only one
@@ -180,7 +181,7 @@ fun PlayScreen(
     } else {
         PlayBoard(
             puzzle, difficulty, day, ready, restore, persist, onSolved, praiseFor, options, onNext, onBack,
-            onNewGame, tutorialOffered, onTutorialOffered, showTimer, level,
+            onNewGame, tutorialOffered, onTutorialOffered, showTimer, level, onTaught,
         )
     }
 }
@@ -252,6 +253,7 @@ private fun PlayBoard(
     onTutorialOffered: () -> Unit,
     showTimer: Boolean,
     level: Int?,
+    onTaught: (String) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
 
@@ -409,6 +411,7 @@ private fun PlayBoard(
     // One logged hint per counted hint, exactly where the count goes up; a deduction's technique beside it, for the praise.
     fun countHint(opened: Deduction? = null) {
         val taught = if (opened == null || opened.mistake) game.taught else game.taught + opened.technique
+        if (opened != null && !opened.mistake) onTaught(opened.technique)
         game = game.copy(hints = game.hints + 1, log = game.log + PlayLog.HINT, taught = taught)
     }
 
@@ -876,6 +879,7 @@ private fun FinishedFrame(
                     color = scheme.onSurface,
                 )
                 praise.share?.let { ShareChip(it, accent) }
+                praise.setShare?.let { ShareChip(it, accent, praise.setShareLabel) }
             }
             praise.lines.forEach {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -911,9 +915,10 @@ private fun FinishedFrame(
 
 /** Opens the share preview ([SharePreview]) for the result's card ([Praise.share]). */
 @Composable
-private fun ShareChip(card: ShareCard, accent: Color) {
+private fun ShareChip(card: ShareCard, accent: Color, label: String = "Share") {
     // Saveable, so turning the device keeps the preview open.
-    var open by rememberSaveable { mutableStateOf(sharePreviewOpen) }
+    // The render hook opens the solve's own card, never the set's over it.
+    var open by rememberSaveable { mutableStateOf(sharePreviewOpen && label == "Share") }
     Row(
         Modifier.clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = 0.22f))
             .clickable { open = true }
@@ -922,7 +927,7 @@ private fun ShareChip(card: ShareCard, accent: Color) {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
-        Text("Share", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
     }
     if (open) SharePreview(card) { open = false }
 }

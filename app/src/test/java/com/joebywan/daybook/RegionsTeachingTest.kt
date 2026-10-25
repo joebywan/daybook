@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -13,14 +12,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class RegionsTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        Regions.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Regions.id, d), d) as RegionsState
+        Regions.generate(daySeed(day, Regions.id, d), d) as RegionsState
 
     /** Follows the teacher's steps from [s] to the end, applying each. Fails on a step that disagrees with the answer. */
     private fun walk(s: RegionsState, onStep: (String) -> Unit = {}): RegionsState {
@@ -57,8 +53,7 @@ class RegionsTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/regions-teaching-coverage.txt").writeText(report.toString())
+        writeReport("regions-teaching-coverage.txt", report.toString())
     }
 
     @Test

@@ -65,7 +65,4 @@ object PuzzleRegistry {
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }
-
-    /** Puzzle featured as "today's headline" — rotates daily but deterministically. */
-    fun featured(epochDay: Long): PuzzleType = all[(epochDay.mod(all.size.toLong())).toInt()]
 }
