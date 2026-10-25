@@ -7,6 +7,8 @@ import com.joebywan.daybook.puzzles.Atoms
 import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.Kings
+import com.joebywan.daybook.puzzles.Lamps
+import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.Shikaku
@@ -240,6 +242,33 @@ class FallbackTest {
             assertTrue("${difficulty.name} came close to the allowance: $most", most < TallyLogic.ATTEMPTS / 2)
         }
         assertTrue("tally shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
+    }
+
+    /**
+     * [LampsLogic.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the tier's
+     * rung, and the count proved one answer. Also measures the redraws (printed).
+     */
+    @Test
+    fun `lamps proves every daily board of a year on every tier`() {
+        val start = LocalDate.of(2026, 1, 1)
+        val gaveUp = mutableListOf<String>()
+        for (difficulty in Difficulty.entries) {
+            var total = 0
+            var most = 0
+            for (day in 0 until 365L) {
+                val date = start.plusDays(day)
+                val seed = DailySeed.seedFor(date, Lamps.id, difficulty)
+                val proved = Lamps.generateVerified(seed, difficulty)
+                if (proved == null) { gaveUp += "$date/${difficulty.name}"; continue }
+                assertEquals("lamps $date/${difficulty.name}", proved, Lamps.generate(seed, difficulty))
+                val used = 1 + (0 until LampsLogic.ATTEMPTS).first { LampsLogic.attempt(seed, difficulty, it) != null }
+                total += used
+                most = maxOf(most, used)
+            }
+            println("lamps ${difficulty.name}: draws per board mean ${"%.1f".format(total / 365.0)}, most $most of ${LampsLogic.ATTEMPTS}")
+            assertTrue("${difficulty.name} came close to the allowance: $most", most < LampsLogic.ATTEMPTS / 2)
+        }
+        assertTrue("lamps shipped its last resort on ${gaveUp.size} days: $gaveUp", gaveUp.isEmpty())
     }
 
     /**

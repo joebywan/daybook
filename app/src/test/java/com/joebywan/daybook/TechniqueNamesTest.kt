@@ -81,13 +81,17 @@ class TechniqueNamesTest {
             Tally to listOf(null, TallyTeacher.WAYS, TallyTeacher.WHAT_IF),
             Dominoes to listOf(DominoTeacher.REGION_VALUE, DominoTeacher.COUNTING, DominoTeacher.WHAT_IF),
             Cipher to listOf(null, CipherTeacher.CHAIN, CipherTeacher.WHAT_IF),
+            Lamps to listOf(null, LampsTeacher.STARVE, LampsTeacher.WHAT_IF),
         )
         for ((p, want) in expected) for (t in Difficulty.entries) for (seed in 1L..10L) {
             val board = p.generate(seed, t)
             var got: String? = null
             val took = measureTime { got = p.neededTechnique(board) }
             // Cipher's Standard is "columns and pairs only": whichever of those its walk ends on.
-            if (p == Cipher && t == Difficulty.STANDARD) {
+            if (p == Lamps && t == Difficulty.HARD) {
+                // Hard needs a look-ahead: whichever of the two its walk went deepest to.
+                assertTrue("lamps seed $seed: $got", got in setOf(LampsTeacher.STARVE, LampsTeacher.DARK))
+            } else if (p == Cipher && t == Difficulty.STANDARD) {
                 assertTrue("cipher seed $seed: $got", got in setOf(CipherTeacher.COLUMN, CipherTeacher.PAIR, CipherTeacher.ONLY_LETTER))
             } else {
                 assertEquals("${p.id} $t seed $seed", want[t.ordinal], got)
