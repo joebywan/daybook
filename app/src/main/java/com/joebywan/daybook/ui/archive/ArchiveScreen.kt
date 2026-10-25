@@ -99,7 +99,6 @@ fun ArchiveScreen(
     /** The day to select: the one just played, so coming back keeps the player's place. */
     openAt: LocalDate? = null,
 ) {
-    val scheme = MaterialTheme.colorScheme
     val puzzle = PuzzleRegistry.byId(puzzleId) ?: return
     val accent = Color(puzzle.accent)
     val done = completions.filter { it.puzzleId == puzzleId }
