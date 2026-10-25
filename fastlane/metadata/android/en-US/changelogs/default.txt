@@ -1,7 +1,6 @@
-- Swipe left or right on the home screen to change the difficulty.
-- Tap your streak on the home screen to open Statistics.
-- Statistics keeps your best result and last random board per puzzle and tier, to share again.
-- Share today's progress from Statistics: every daily you've solved today, per difficulty.
-- Word Wheel's share says how many bonus words you found.
+- Mate's tiers follow puzzle ratings too; a quarter of Expert boards start with a quiet move.
+- Lexicon's first hint changes from board to board, and its later hints say how their word splits the words left.
+- From 1 November a daily Lexicon word never comes back until every other has had its day.
+- Clearer word clues, and no interjections or old words in Word Wheel's grids.
+- Levels now start with the gentlest puzzles.
 - Shikaku: new layouts, and every board solvable by hints alone.
-- Tower's pips sit in a square beside each guess.

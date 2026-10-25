@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.SeedHash
 import kotlinx.serialization.Serializable
 
 /**
@@ -20,6 +21,10 @@ object LexiconMark {
  * [current] is the row so far, lowercase, left to right: a letter is typed at the end and taken back from the end, so it never has gaps.
  *
  * Saved games hold the words themselves, so a state written today loads whatever the lists do later.
+ *
+ * [opener] picks the first-guess hint from [LexiconTeacher.openers], drawn from the seed apart from the answer, so the
+ * opening clue changes from board to board and says nothing about the word. A save from before it was added loads as 0,
+ * the one opener there was.
  */
 @Serializable
 data class LexiconState(
@@ -29,6 +34,7 @@ data class LexiconState(
     val guesses: List<String> = emptyList(),
     val current: String = "",
     override val moves: Int = 0,
+    val opener: Int = 0,
 ) : PuzzleState {
 
     override val solved: Boolean get() = guesses.lastOrNull() == answer
@@ -80,12 +86,46 @@ object LexiconRules {
         Difficulty.EXPERT -> Shape(4, 7)
     }
 
-    /** The board for [seed]: the answer is one index into the sorted list for the tier's length. */
+    /**
+     * The board for [seed]: the answer is one index into the sorted list for the tier's length. A daily seed from
+     * [SeedHash.LEXICON_CYCLE_FROM] on carries its day, and the day walks [cycle]; any other seed draws the index.
+     */
     fun newBoard(seed: Long, difficulty: Difficulty): LexiconState {
         val shape = shape(difficulty)
         val answers = WordList.answers(shape.length)
-        return LexiconState(shape.length, shape.guesses, answers[Rng(seed).nextInt(answers.size)])
+        val day = SeedHash.lexiconCycleDay(seed)
+        val index = if (day == null) Rng(seed).nextInt(answers.size) else cycle(day, difficulty)
+        val opener = Rng(seed xor OPENER_SALT).nextInt(LexiconTeacher.openers(shape.length).size)
+        return LexiconState(shape.length, shape.guesses, answers[index], opener = opener)
     }
+
+    private const val OPENER_SALT = 0x4F70656E6572L // "Opener"
+
+    /**
+     * The answer index of cycle day [day] on [difficulty]: round `day / n` of the tier's answer list (n words) is one
+     * shuffle of every index, so no word comes back within a round. Round 0 puts the words the tier's length drew on
+     * hashed daily seeds (2026-01-01 to the cutover, every tier of that length) at the back of the shuffle, so the
+     * first cycle does not repeat the year before it either. Only the cycle's own boundary can bring a word back early.
+     */
+    fun cycle(day: Long, difficulty: Difficulty): Int {
+        val length = shape(difficulty).length
+        val n = WordList.answers(length).size
+        val round = day / n
+        val order = Rng(CYCLE_SALT + round * 3 + difficulty.ordinal).shuffled(List(n) { it })
+        val first = if (round == 0L) {
+            val used = BooleanArray(n)
+            for (tier in Difficulty.entries) {
+                if (shape(tier).length != length) continue
+                for (d in SeedHash.epochDay(2026, 1, 1) until SeedHash.LEXICON_CYCLE_FROM) {
+                    used[Rng(SeedHash.daily(d, "words", tier)).nextInt(n)] = true
+                }
+            }
+            order.filter { !used[it] } + order.filter { used[it] }
+        } else order
+        return first[(day % n).toInt()]
+    }
+
+    private const val CYCLE_SALT = 0x4379636C65L // "Cycle"
 
     /**
      * [guess] marked against [answer]. Greens first, then each remaining letter of the guess is
