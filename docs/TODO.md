@@ -174,7 +174,7 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
   - Nonogram: no gate needed (size separates the tiers); optional Expert needs 4+ line passes (21%). Mirror-symmetric
     pictures: measure the pass rate.
-  - Inequality (pairs, sign chains) and Regions (locked candidates): the ladder is too short; the techniques come first.
+  - Regions (locked candidates): the ladder is too short; the technique comes first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
   same `countTilings` proof.

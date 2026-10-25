@@ -41,8 +41,8 @@ class InequalityWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            1025107459, 1371178428, 1896126469, -52193566, 855727309, 1162442002,
-            -1744467274, 753301278, -1048334304,
+            1025107459, 8198164, 1970001082, -52193566, 1473856309, -2068621505,
+            -1744467274, -266714589, -66703088,
         )
     }
 }

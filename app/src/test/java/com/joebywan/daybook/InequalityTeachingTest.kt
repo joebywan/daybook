@@ -56,6 +56,12 @@ class InequalityTeachingTest {
             println(line)
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
+            // The tier gate, seen from the hints: Standard never needs a pair, Hard never a hidden one.
+            if (d != Difficulty.EXPERT) assertEquals(d.name, 0, counts.getValue(InequalityTeacher.HIDDEN_PAIR))
+            if (d == Difficulty.STANDARD) assertEquals(d.name, 0, counts.getValue(InequalityTeacher.NAKED_PAIR))
+            // Each counts once a board at least, since every board of the tier must need it.
+            if (d == Difficulty.HARD) assertTrue(d.name, counts.getValue(InequalityTeacher.NAKED_PAIR) >= 200)
+            if (d == Difficulty.EXPERT) assertTrue(d.name, counts.getValue(InequalityTeacher.HIDDEN_PAIR) >= 200)
         }
         File("build/reports").mkdirs()
         File("build/reports/inequality-teaching-coverage.txt").writeText(report.toString())
