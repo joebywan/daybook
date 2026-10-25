@@ -253,8 +253,13 @@ internal object NonogramLogic {
      * or [CROSS]) and returns every square it could settle. Complete when no [UNKNOWN] is left;
      * null on a contradiction.
      */
-    fun solveByLines(width: Int, height: Int, rows: List<List<Int>>, cols: List<List<Int>>, start: IntArray): IntArray? {
+    fun solveByLines(width: Int, height: Int, rows: List<List<Int>>, cols: List<List<Int>>, start: IntArray): IntArray? =
+        settle(width, height, rows, cols, start)?.first
+
+    /** [solveByLines], with the number of passes over every line that changed something. */
+    private fun settle(width: Int, height: Int, rows: List<List<Int>>, cols: List<List<Int>>, start: IntArray): Pair<IntArray, Int>? {
         val grid = start.copyOf()
+        var passes = 0
         var changed = true
         while (changed) {
             changed = false
@@ -270,35 +275,49 @@ internal object NonogramLogic {
                     }
                 }
             }
+            if (changed) passes++
         }
-        return grid
+        return grid to passes
     }
 
     /** Whether a picture ([solution], row by row) can be finished by lines alone from a blank board. */
-    fun lineSolvable(width: Int, height: Int, solution: String): Boolean {
+    fun lineSolvable(width: Int, height: Int, solution: String): Boolean = linePasses(width, height, solution) != null
+
+    /**
+     * How many passes over every row and column lines alone take to finish [solution] from a blank
+     * board (one pass is each line's overlap alone), or null when lines alone cannot finish it.
+     * The generator's depth gate ([Spec.minPasses]).
+     */
+    fun linePasses(width: Int, height: Int, solution: String): Int? {
         val p = picture(width, height, solution)
         val rows = List(height) { runs(p[it]) }
         val cols = List(width) { c -> runs(BooleanArray(height) { r -> p[r][c] }) }
-        val done = solveByLines(width, height, rows, cols, IntArray(width * height)) ?: return false
-        return done.none { it == UNKNOWN }
+        val (done, passes) = settle(width, height, rows, cols, IntArray(width * height)) ?: return null
+        return if (done.none { it == UNKNOWN }) passes else null
     }
 
     // ---- generation -----------------------------------------------------------------------
 
-    /** Side length and the share of squares drawn filled, per tier. */
-    class Spec(val side: Int, val density: Double)
+    /**
+     * Side length, the share of squares drawn filled, and the fewest line passes ([linePasses]) a
+     * board must need, per tier. Mirrored pictures finish in fewer passes than noise did (half of
+     * 5x5 boards in one), so the gate keeps each tier at least as deep as it was and puts Hard
+     * and Expert apart in passes as well as size.
+     */
+    class Spec(val side: Int, val density: Double, val minPasses: Int)
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
-        Difficulty.STANDARD -> Spec(5, 0.60)
-        Difficulty.HARD -> Spec(10, 0.62)
-        Difficulty.EXPERT -> Spec(15, 0.64)
+        Difficulty.STANDARD -> Spec(5, 0.60, 2)
+        Difficulty.HARD -> Spec(10, 0.62, 3)
+        Difficulty.EXPERT -> Spec(15, 0.64, 4)
     }
 
     /** Draws tried per seed before the generator gives up and falls back. */
     const val ATTEMPTS = 400
 
     /**
-     * A line-solvable board for [seed], or null when none of [ATTEMPTS] draws was. Draw `a` uses
+     * A line-solvable board for [seed] that needs the tier's [Spec.minPasses], or null when none of
+     * [ATTEMPTS] draws was. Draw `a` uses
      * `Rng(seed + a)`, so a board that needed three attempts still depends on its seed alone.
      */
     fun generateVerified(seed: Long, difficulty: Difficulty): NonogramState? {
@@ -307,7 +326,8 @@ internal object NonogramLogic {
         for (attempt in 0 until ATTEMPTS) {
             val rng = Rng(seed + attempt)
             val picture = drawPicture(rng, n, spec.density) ?: continue
-            if (lineSolvable(n, n, picture)) return NonogramState(n, n, picture)
+            val passes = linePasses(n, n, picture) ?: continue
+            if (passes >= spec.minPasses) return NonogramState(n, n, picture)
         }
         return null
     }
@@ -327,13 +347,26 @@ internal object NonogramLogic {
     }
 
     /**
-     * Random squares at [density], rejected when any line is blank or full (a clue of "0" or of the
-     * whole width needs no thought and makes a board look broken) or when the board is a long way
-     * from the tier's density.
+     * Random squares at [density], mirrored so the finished picture looks drawn rather than noise:
+     * left to right, top to bottom, or both, chosen by the draw. Rejected when any line is blank or
+     * full (a clue of "0" or of the whole width needs no thought and makes a board look broken) or
+     * when the board is a long way from the tier's density.
      */
     private fun drawPicture(rng: Rng, n: Int, density: Double): String? {
         val threshold = (density * 1000).toInt()
-        val cells = BooleanArray(n * n) { rng.nextInt(1000) < threshold }
+        val axes = rng.nextInt(3)
+        val acrossMirrored = axes != 1
+        val downMirrored = axes != 0
+        val cells = BooleanArray(n * n)
+        for (r in 0 until n) {
+            for (c in 0 until n) {
+                val fromR = if (downMirrored) minOf(r, n - 1 - r) else r
+                val fromC = if (acrossMirrored) minOf(c, n - 1 - c) else c
+                val from = fromR * n + fromC
+                // The mirror image comes earlier in reading order, so it is already drawn.
+                cells[r * n + c] = if (from < r * n + c) cells[from] else rng.nextInt(1000) < threshold
+            }
+        }
         val total = cells.count { it }
         if (total < n * n * 0.45 || total > n * n * 0.8) return null
         for (r in 0 until n) {

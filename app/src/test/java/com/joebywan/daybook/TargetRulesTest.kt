@@ -89,6 +89,25 @@ class TargetRulesTest {
     }
 
     @Test
+    fun `the road counts agree with an oracle that writes every answer out`() {
+        // Each tier's daily targets, two more values of that board, and boards of repeated tiles (where two equal tiles,
+        // or 5 / 5, are easy to count twice). The oracle takes up to a second on a six-tile board, so the sample is small.
+        val cases = Difficulty.entries.flatMap { d ->
+            (0 until 3).flatMap { day ->
+                val s = board(day, d)
+                val table = TargetLogic.table(s.start)
+                val others = (100..999).filter { table[it] == s.par && it != s.target }
+                listOf(s.start to s.target) + listOf(others.first(), others.last()).map { s.start to it }
+            }
+        } + listOf(listOf(5, 5, 5, 2, 2, 1) to 37, listOf(7, 7, 7, 7, 7, 7) to 105, listOf(25, 50, 75, 100, 10, 10) to 999, listOf(4, 4, 2, 2, 1, 1) to 18)
+        for ((tiles, target) in cases) {
+            val steps = TargetLogic.table(tiles)[target]
+            if (steps <= 0) continue
+            assertEquals("tiles $tiles target $target", TargetOracle.roads(tiles, target, steps), TargetLogic.Roads(tiles).to(target, steps))
+        }
+    }
+
+    @Test
     fun `every sampled board is as claimed, by the oracle`() {
         for (d in Difficulty.entries) {
             val spec = TargetLogic.specFor(d)
@@ -113,6 +132,7 @@ class TargetRulesTest {
         for (d in Difficulty.entries) {
             val spec = TargetLogic.specFor(d)
             val hist = IntArray(7)
+            val roads = mutableListOf<Int>()
             var gaveUp = 0
             val t0 = System.nanoTime()
             for (day in 0 until 365) {
@@ -122,12 +142,17 @@ class TargetRulesTest {
                 assertEquals(s, Target.generate(seed, d))
                 assertTrue("${d.name} day $day par ${s.par}", s.par in spec.parLo..spec.parHi)
                 hist[s.par]++
+                val n = TargetLogic.Roads(s.start).to(s.target, s.par)
+                assertTrue("${d.name} day $day has $n roads", n >= 1 && n <= (spec.maxRoads ?: Int.MAX_VALUE))
+                roads += n
             }
+            val sortedRoads = roads.sorted()
+            fun q(p: Double) = sortedRoads[((sortedRoads.size - 1) * p).toInt()]
             val ms = (System.nanoTime() - t0) / 1_000_000 / 365
             val total = hist.sum()
             val mean = hist.indices.sumOf { it * hist[it] }.toDouble() / total
             means += mean
-            val line = "${d.name}: fell back on $gaveUp/365, shortest answer length histogram (0..6) ${hist.toList()}, mean %.2f, %d ms a board".format(mean, ms)
+            val line = "${d.name}: fell back on $gaveUp/365, shortest answer length histogram (0..6) ${hist.toList()}, mean %.2f, %d ms a board; roads min/p25/median/p75/max %d/%d/%d/%d/%d".format(mean, ms, q(0.0), q(0.25), q(0.5), q(0.75), q(1.0))
             println(line)
             report.appendLine(line)
             assertEquals("${d.name} shipped its last resort", 0, gaveUp)

@@ -40,8 +40,8 @@ class TentsWebParityTest {
 
         /** Hashes of the 9 lines, in the order above; [String.hashCode] keeps long lines out of the source. */
         val FINGERPRINTS = listOf(
-            940931634, -194075166, 594257890, 1026611820, 193407596, -1548371628,
-            -341010275, 1640864579, 1396139213,
+            940931634, -194075166, 594257890, 1026611820, -699504840, 925276414,
+            -341010275, 1640864579, -931502707,
         )
     }
 }
