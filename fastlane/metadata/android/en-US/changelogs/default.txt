@@ -1,6 +1,6 @@
-- Mambo Hard and Expert give less away: Hard needs a line counted ahead, Expert a what-if.
+- Mate's difficulties follow puzzle ratings as well as the number of moves, and a quarter of Expert boards start with a quiet move.
+- Lexicon's first hint changes from board to board, and its later hints say how their word splits the words left.
+- From 1 November a daily Lexicon word never comes back until every other has had its day.
+- Clearer word clues, and no interjections or old words in Word Wheel's grids.
+- Levels now start with the gentlest puzzles.
 - Swipe left or right on the home screen to change the difficulty.
-- Tap your streak on the home screen to open Statistics.
-- Share it again later: Statistics keeps your best result and your last random board for every puzzle and tier.
-- Share today's progress from Statistics: every daily you've solved today, per difficulty.
-- Word Wheel's share says how many bonus words you found.
