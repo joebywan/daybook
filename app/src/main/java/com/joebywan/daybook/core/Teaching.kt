@@ -67,6 +67,30 @@ class PlacementStep(
 )
 
 /**
+ * Inequality's and Regions' honest fallback: [solution]'s digit in the first empty square of [cells], said
+ * to come from the stored answer.
+ */
+fun answerFallback(technique: String, cells: List<Int>, solution: List<Int>): PlacementStep? {
+    val i = cells.indices.firstOrNull { cells[it] == 0 } ?: return null
+    val d = solution[i]
+    return PlacementStep(
+        technique, i, d, setOf(i), emptySet(),
+        "This one takes a longer chain. Look at the glowing square.",
+        "This one needs a longer chain than a hint can walk through, so here's the answer for this square: a $d.",
+    )
+}
+
+/** The one empty square of [members] whose mask in [m] has [d]; -1 when there are none or several, or one holds [d]. */
+fun lonePlace(members: List<Int>, cells: List<Int>, m: IntArray, d: Int): Int {
+    var at = -1
+    for (i in members) {
+        if (cells[i] == d) return -1
+        if (cells[i] == 0 && has(m[i], d)) { if (at >= 0) return -1; at = i }
+    }
+    return at
+}
+
+/**
  * The [Deduction] for a placement on [state]: "Show me" places the digit and selects the square (one
  * state, so one undo entry, and the player sees where it went); a mistake is dealt with once that digit
  * is gone, whatever replaced it. [valueAt] reads a square; [place] writes one and selects it.

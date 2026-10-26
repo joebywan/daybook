@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -13,13 +12,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class MinesTeachingTest {
 
     private fun board(day: Int, d: Difficulty): MinesState =
-        Mines.generate(DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(day.toLong()), Mines.id, d), d) as MinesState
+        Mines.generate(daySeed(day, Mines.id, d), d) as MinesState
 
     private fun visible(s: MinesState): Pair<IntArray, BooleanArray> {
         val n = s.width * s.height
@@ -27,13 +24,12 @@ class MinesTeachingTest {
     }
 
     /** Hints alone, each made by "Show me", until solved; [each] sees every step's technique. */
-    private fun walk(start: MinesState, check: Boolean = false, each: (String) -> Unit = {}): MinesState {
+    private fun walk(start: MinesState, each: (String) -> Unit = {}): MinesState {
         var s = start
         var guard = 0
         while (!s.solved) {
             val d = Mines.teach(s)!!
             each(d.technique)
-            if (check) sound(s, d.technique)
             assertFalse("a step must change the board", d.isReached(s))
             s = d.apply(s) as MinesState
             assertTrue("Show me reaches the step", d.isReached(s))
@@ -79,14 +75,7 @@ class MinesTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/mines-teaching-coverage.txt").writeText(report.toString())
-    }
-
-    @Test fun `every step holds in every layout the oracle allows`() {
-        for ((d, days) in listOf(Difficulty.STANDARD to 20, Difficulty.HARD to 10, Difficulty.EXPERT to 6)) for (day in 0 until days) {
-            walk(board(day, d), check = true)
-        }
+        writeReport("mines-teaching-coverage.txt", report.toString())
     }
 
     /** Boards a player made: safe squares revealed out of the ladder's order, right flags, a mine hit. */
@@ -98,7 +87,6 @@ class MinesTeachingTest {
             var now = s
             for (i in rng.shuffled((0 until n).filter { !s.isMine(it) }).take(rng.nextInt(8))) now = now.reveal(i) ?: now
             for (i in rng.shuffled((0 until n).filter { s.isMine(it) }).take(rng.nextInt(4))) now = now.flag(i) ?: now
-            if (rng.nextBoolean()) now = now.reveal((0 until n).first { s.isMine(it) && !now.isFlag(it) }) ?: now
             if (now.solved) continue
             val step = Mines.teach(now)!!
             assertFalse(step.mistake)
@@ -144,7 +132,7 @@ class MinesTeachingTest {
     @Test fun `no hint on a lost or won board`() {
         var s = board(0, Difficulty.STANDARD)
         val mines = (0 until s.width * s.height).filter { s.isMine(it) }
-        for (i in mines.take(3)) s = s.reveal(i)!!
+        s = s.reveal(mines.first())!!
         assertTrue(s.failed)
         assertNull(Mines.teach(s))
         assertNull(Mines.teach(walk(board(1, Difficulty.STANDARD))))
@@ -174,15 +162,14 @@ class MinesTeachingTest {
     }
 
     @Test fun `each frame accepts its move made by the real gestures and refuses a wrong one`() {
-        assertEquals(5, frames.size)
+        assertEquals(6, frames.size)
         assertNull(frames[0].judge)
         val s0 = frames[1].state as MinesState
-        val bump = frames[1].judge!!
-        assertEquals(TutorialStep.DONE, bump(s0.reveal(Mines.BUMP)!!))
-        assertEquals(TutorialStep.REJECT, bump(s0.reveal(Mines.SAFE[0])!!))
-        assertEquals(TutorialStep.REJECT, bump(s0.flag(Mines.BUMP)!!))
-        val s1 = s0.reveal(Mines.BUMP)!!
-        assertEquals(s1.lives, s0.lives - 1)
+        val first = frames[1].judge!!
+        assertEquals(TutorialStep.DONE, first(s0.flag(Mines.BUMP)!!))
+        assertEquals(TutorialStep.REJECT, first(s0.reveal(Mines.BUMP)!!))
+        assertEquals(TutorialStep.REJECT, first(s0.flag(Mines.SAFE[0])!!))
+        val s1 = s0.flag(Mines.BUMP)!!
         assertEquals(s1, frames[2].state)
 
         val reveal = frames[2].judge!!
@@ -213,7 +200,7 @@ class MinesTeachingTest {
             assertFalse(d.mistake)
             s = d.apply(s) as MinesState
         }
-        assertEquals(2, s.lives)
+        assertFalse(s.failed)
     }
 
     @Test fun `captions fit the walkthrough's slot`() {

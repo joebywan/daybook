@@ -39,6 +39,7 @@ internal val BADGE_GLYPHS: Map<String, String> = mapOf(
     "puzzleStreak7" to "7", "puzzleStreak30" to "30",
     "firstTop" to "#star", "cleanTop" to "#crown",
     "oneOfEach" to "#star", "fullSet" to "3/3", "todaysThree" to "3", "allPuzzles" to "All",
+    "sudokuTrained" to "9", "sudokuGraduate" to "#crown",
 )
 
 private fun colourOf(c: AchievementCategory, dark: Boolean) = when (c) {

@@ -143,8 +143,8 @@ internal object NonogramTeacher {
         val clueText = clue.joinToString(" ")
         val clues = if (clue.size == 1) "clue $clueText" else "clues $clueText"
 
-        fun cellsOf(values: Int, from: IntArray = found) = at.filterIndexed { x, _ -> from[x] == values }
-        fun spots(values: Int, from: IntArray = found) = (0 until n).filter { from[it] == values }
+        fun cellsOf(values: Int) = at.filterIndexed { x, _ -> found[x] == values }
+        fun spots(values: Int) = (0 until n).filter { found[it] == values }
         val fills = cellsOf(NonogramLogic.FILL)
         val crosses = cellsOf(NonogramLogic.CROSS)
         val lineSet = at.toSet()

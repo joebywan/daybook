@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.MinesLogic
@@ -11,8 +10,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class MinesRulesTest {
 
@@ -60,31 +57,28 @@ class MinesRulesTest {
         assertTrue(flagged.isFlag(7))
         assertEquals(1, flagged.moves)
         assertNull("a flagged square is never revealed", flagged.reveal(7))
-        assertEquals(3, flagged.lives)
         val opened = flagged.reveal(3)!!
         assertTrue("the spread passes the flag by", opened.isFlag(7) && !opened.isOpen(7))
         assertFalse(opened.flag(7)!!.isFlag(7))
         assertNull("an open square takes no flag", opened.flag(3))
         // A wrong flag is allowed and costs nothing.
-        assertEquals(3, blank.flag(0)!!.lives)
+        assertFalse(blank.flag(0)!!.failed)
         assertEquals(blank.total - 1, blank.flag(0)!!.minesLeft)
     }
 
-    @Test fun `a mine costs a life and stays shown, three lose the board, and Try again restores it`() {
+    @Test fun `a mine stays shown and loses the board, and Try again restores it`() {
         var s = MinesState(4, 4, "1110" + "0000" + "0000" + "0000", 15, MinesLogic.openingMarks(4, 4, "1110" + "0000" + "0000" + "0000", 15))
         s = s.reveal(0)!!
         assertEquals(listOf(0), s.bumps)
-        assertEquals(2, s.lives)
+        assertTrue(s.failed)
         assertNull("a mine hit is not revealed twice", s.reveal(0))
         assertNull("nor flagged", s.flag(0))
         assertEquals(s.total - 1, s.minesLeft)
-        s = s.reveal(1)!!.reveal(2)!!
-        assertTrue(s.failed)
         assertFalse(s.solved)
         assertNull("nothing happens on a lost board", s.reveal(3))
         assertNull(s.flag(3))
         val again = s.retry()
-        assertEquals(3, again.lives)
+        assertTrue(again.bumps.isEmpty())
         assertEquals(MinesLogic.openingMarks(4, 4, s.mines, 15), again.marks)
         assertFalse(again.failed)
     }
@@ -98,10 +92,11 @@ class MinesRulesTest {
         s = s.flag(5)!!.reveal(0)!!
         assertTrue("solved with a flag on one mine and none on the other", s.solved)
         assertNull("nothing happens on a won board", s.flag(15))
-        // A board solved with a mine hit along the way still counts: the mine is not a safe square.
+        // A mine hit along the way loses the board: nothing more opens.
         var t = board().reveal(5)!!
         for (i in safe) t = t.reveal(i) ?: t
-        assertTrue(t.solved)
+        assertFalse(t.solved)
+        assertTrue(t.failed)
     }
 
     // ---- generated boards ----------------------------------------------------------------------------------------
@@ -109,7 +104,6 @@ class MinesRulesTest {
     /** Every board the year makes: its opening clear, within the cap, and the ladder clears it at the tier's depth. */
     @Test fun `a year of daily boards - the ladder clears each at its tier's depth, and the tiers get harder`() {
         val report = StringBuilder()
-        val start = LocalDate.of(2026, 1, 1)
         val meanMines = DoubleArray(3)
         for (t in Difficulty.entries) {
             val spec = MinesLogic.specFor(t)
@@ -117,12 +111,13 @@ class MinesRulesTest {
             val opening = ArrayList<Int>()
             val times = ArrayList<Double>()
             val used = HashMap<String, Int>()
-            for (day in 0 until 365L) {
-                val seed = DailySeed.seedFor(start.plusDays(day), Mines.id, t)
+            for (day in 0 until 365) {
+                val seed = daySeed(day, Mines.id, t)
                 val t0 = System.nanoTime()
                 var a = 0
                 var s: MinesState? = null
-                while (s == null) s = MinesLogic.attempt(seed, t, a++)
+                while (s == null && a < MinesLogic.ATTEMPTS) s = MinesLogic.attempt(seed, t, a++)
+                requireNotNull(s) { "day $day $t: no draw of ${MinesLogic.ATTEMPTS} accepted" }
                 times += (System.nanoTime() - t0) / 1e6
                 assertEquals(s, Mines.generate(seed, t))
                 draws += a
@@ -146,8 +141,7 @@ class MinesRulesTest {
                 ),
             )
         }
-        File("build/reports").mkdirs()
-        File("build/reports/mines-generation.txt").writeText(report.toString())
+        writeReport("mines-generation.txt", report.toString())
         print(report)
         assertTrue("density rises with the tier", meanMines[0] < meanMines[1] && meanMines[1] < meanMines[2])
     }

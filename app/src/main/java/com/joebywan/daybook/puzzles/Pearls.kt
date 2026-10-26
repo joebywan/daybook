@@ -37,6 +37,7 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.union
+import com.joebywan.daybook.ui.HintGlow
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberHintPulse
@@ -320,19 +321,12 @@ object Pearls : PuzzleType {
     private val PEARL_BLACK = Color(0xFF15191A)
     private val PEARL_WHITE = Color(0xFFFAF7EF)
 
-    /** What a board draws besides its own marks; all optional. */
-    private class Overlay(
-        val highlight: BoardHighlight = BoardHighlight.None,
-        val glow: Color = Color.Unspecified,
-        val pulse: Float = 1f,
-    )
-
     private fun DrawScope.drawBoard(
         s: PearlsState,
         u: Float,
         scheme: ColorScheme,
         broken: Breaks = Breaks(emptySet(), emptySet()),
-        overlay: Overlay = Overlay(),
+        overlay: HintGlow = HintGlow(),
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
         hues: Pair<Float, Float> = BoardHues.pair(s.pearls.hashCode()),
@@ -535,7 +529,7 @@ object Pearls : PuzzleType {
                     },
             ) {
                 Canvas(Modifier.fillMaxSize()) {
-                    drawBoard(shown, unitPx, scheme, red, Overlay(highlight, glow, pulse.value), feel, Color(accent))
+                    drawBoard(shown, unitPx, scheme, red, HintGlow(highlight, glow, pulse.value), feel, Color(accent))
                 }
             }
         }

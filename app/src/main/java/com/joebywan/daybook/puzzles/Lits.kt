@@ -411,9 +411,9 @@ object Lits : PuzzleType {
                             val board = LitsState(w, h, region, List(n) { false }, verdict.shading)
                             proved++
                             val score = score(difficulty, LitsTeacher.depth(w, h, region))
-                            if (score == FITS) return Built(board, floor, proved)
+                            if (score == FITS) return Built(board, floor)
                             if (score > bestScore) { best = board; bestScore = score }
-                            if (difficulty == Difficulty.EXPERT && proved >= MAX_DRAWS) return Built(best, floor, proved)
+                            if (difficulty == Difficulty.EXPERT && proved >= MAX_DRAWS) return Built(best, floor)
                         }
                     }
                 }
@@ -422,11 +422,11 @@ object Lits : PuzzleType {
             if (best != null) break
         }
 
-        return Built(best, floor, proved)
+        return Built(best, floor)
     }
 
-    /** [build]'s result: the proved board if any, the floor, and how many proved boards the gate looked at. */
-    internal class Built(val proved: LitsState?, val floor: LitsState?, val draws: Int)
+    /** [build]'s result: the proved board if any, and the floor. */
+    internal class Built(val proved: LitsState?, val floor: LitsState?)
 
     /**
      * Proved boards Expert's gate may look at. Its what-if is needed by about one board in twenty, and each draw
@@ -1073,9 +1073,9 @@ object Lits : PuzzleType {
      */
     val palette: Map<Piece, Color> = mapOf(
         Piece.I to BoardHues.fill(215f, false),
-        Piece.L to BoardHues.ink(175f, false),
+        Piece.L to BoardHues.deep(175f, false),
         Piece.T to BoardHues.mark(268f),
-        Piece.S to BoardHues.ink(330f, false),
+        Piece.S to BoardHues.deep(330f, false),
     )
 
 

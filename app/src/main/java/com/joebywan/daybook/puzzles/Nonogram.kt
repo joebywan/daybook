@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -26,7 +28,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -44,6 +45,8 @@ import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.marked
+import com.joebywan.daybook.core.only
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.rememberHintPulse
@@ -139,21 +142,6 @@ object Nonogram : PuzzleType {
     private fun tutorialBoard(cells: String = ".".repeat(TUTORIAL_N * TUTORIAL_N)) =
         NonogramState(TUTORIAL_N, TUTORIAL_N, TUTORIAL_PICTURE, cells)
 
-    /** [base] with [marks] (cell to mark) written over it. */
-    private fun marked(base: NonogramState, marks: Map<Int, Char>): NonogramState {
-        val next = base.cells.toCharArray()
-        marks.forEach { (i, c) -> next[i] = c }
-        return base.copy(cells = next.concatToString())
-    }
-
-    /**
-     * Accepts exactly [base] with [changes] made and nothing else. Strict on purpose, as Kings'
-     * is: each frame's board is written for the one before it.
-     */
-    private fun only(base: NonogramState, changes: Map<Int, Char>): (PuzzleState) -> Boolean = { next ->
-        next is NonogramState && next.cells == marked(base, changes).cells
-    }
-
     override val tutorial: List<TutorialFrame> by lazy {
         val rowIndex = { r: Int -> NonogramLogic.rowClueIndex(TUTORIAL_N, TUTORIAL_N, r) }
         val colIndex = { c: Int -> NonogramLogic.colClueIndex(TUTORIAL_N, TUTORIAL_N, c) }
@@ -162,9 +150,9 @@ object Nonogram : PuzzleType {
         val empty = tutorialBoard()
         val row2 = (5..9).toList()
         val row3 = (10..14).toList()
-        val afterRow3 = marked(empty, (row2 + row3).associateWith { NonogramLogic.FILLED })
-        val afterMiddle = marked(afterRow3, mapOf(17 to NonogramLogic.FILLED))
-        val afterCross = marked(afterMiddle, mapOf(20 to NonogramLogic.CROSSED))
+        val afterRow3 = empty.marked((row2 + row3).associateWith { NonogramLogic.FILLED })
+        val afterMiddle = afterRow3.marked(mapOf(17 to NonogramLogic.FILLED))
+        val afterCross = afterMiddle.marked(mapOf(20 to NonogramLogic.CROSSED))
         listOf(
             TutorialFrame(
                 state = solved,
@@ -184,9 +172,9 @@ object Nonogram : PuzzleType {
                 },
                 steps = { next ->
                     when {
-                        only(empty, (row2 + row3).associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.DONE
-                        only(empty, row2.associateWith { NonogramLogic.FILLED })(next) ||
-                            only(empty, row3.associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.PROGRESS
+                        empty.only((row2 + row3).associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.DONE
+                        empty.only(row2.associateWith { NonogramLogic.FILLED })(next) ||
+                            empty.only(row3.associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.PROGRESS
                         else -> TutorialStep.REJECT
                     }
                 },
@@ -198,7 +186,7 @@ object Nonogram : PuzzleType {
                 caption = "Row 4 reads 3 in five squares. Slide the 3 to the far left, then the far right: " +
                     "the middle square is covered both times, so it is filled. Tap it.",
                 highlight = BoardHighlight(strong = setOf(17, rowIndex(3)), soft = (15..19).toSet() - 17),
-                accepts = only(afterRow3, mapOf(17 to NonogramLogic.FILLED)),
+                accepts = afterRow3.only(mapOf(17 to NonogramLogic.FILLED)),
                 retry = "Tap the glowing square once.",
                 done = "Filled. Sliding a run both ways shows which squares it cannot avoid.",
             ),
@@ -207,7 +195,7 @@ object Nonogram : PuzzleType {
                 caption = "Column 1 reads 2, and rows 2 and 3 already give it that 2, so the rest of the column " +
                     "is empty. Choose Cross under the board, then tap the bottom square.",
                 highlight = BoardHighlight(strong = setOf(20, colIndex(0)), soft = setOf(0, 5, 10, 15)),
-                accepts = only(afterMiddle, mapOf(20 to NonogramLogic.CROSSED)),
+                accepts = afterMiddle.only(mapOf(20 to NonogramLogic.CROSSED)),
                 retry = "Switch to Cross under the board, then tap the glowing square.",
                 done = "Crossed. A cross is only a note that the square is empty.",
             ),
@@ -383,13 +371,27 @@ object Nonogram : PuzzleType {
         fun clues(line: Int, band: Offset, bandSize: Size, centre: (after: Int) -> Offset) {
             val lit1 = lit && (n + line in highlight.strong || n + line in highlight.soft)
             if (lit1) drawRoundRect(overlay.glow.copy(alpha = 0.16f * overlay.pulse), band, bandSize, CornerRadius(u * 0.2f))
-            val tint = if (bad[line]) scheme.error else if (done[line]) scheme.primary else Color.Unspecified
-            if (tint.isSpecified) drawRoundRect(tint.copy(alpha = 0.16f), band, bandSize, CornerRadius(u * 0.2f))
+            // Three states that differ by more than hue: a finished line's numbers fade on a green band; an impossible
+            // line's stay full strength in the error ink (no band under them, which would cut its contrast), boxed in a
+            // dashed outline.
+            if (done[line] && !bad[line]) drawRoundRect(scheme.primary.copy(alpha = 0.16f), band, bandSize, CornerRadius(u * 0.2f))
+            if (bad[line]) {
+                val w = maxOf(u * 0.06f, 1.5f)
+                drawRoundRect(
+                    scheme.error, band + Offset(w, w) / 2f, Size(bandSize.width - w, bandSize.height - w), CornerRadius(u * 0.2f),
+                    style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(w * 2f, w * 1.5f))),
+                )
+            }
+            val ink = when {
+                bad[line] -> scheme.error
+                done[line] -> scheme.onSurface.copy(alpha = 0.4f)
+                else -> scheme.onSurface
+            }
             val numbers = text[line]
             for ((k, layout) in numbers.withIndex()) {
                 val (cx, cy) = centre(numbers.size - 1 - k)
                 val alpha = if (lit && !lit1) 0.35f else 1f
-                drawText(layout, if (tint.isSpecified) tint.copy(alpha = alpha) else scheme.onSurface.copy(alpha = alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
+                drawText(layout, ink.copy(alpha = ink.alpha * alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
             }
         }
         clipRect(0f, g.gridY, g.gridX, g.gridY + g.gridSize.height) {

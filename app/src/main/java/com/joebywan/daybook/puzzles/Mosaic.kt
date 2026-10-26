@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -61,6 +62,8 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawWalls
 import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.hintRims
+import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.gridCellAt
 
 /** One fill: the cell tapped, and the colour poured into the area it belongs to. */
@@ -198,9 +201,9 @@ object Mosaic : PuzzleType {
      */
     val palette: List<Color> = listOf(
         BoardHues.fill(34f, false),
-        BoardHues.ink(175f, false),
+        BoardHues.deep(175f, false),
         BoardHues.mark(268f),
-        BoardHues.ink(330f, false),
+        BoardHues.deep(330f, false),
         BoardHues.fill(215f, false),
     )
 
@@ -1137,41 +1140,17 @@ object Mosaic : PuzzleType {
                         // a 160-cell board full of outlines.
                         drawHintDim(highlight, s.width, s.height, stepPx, scheme.background)
 
-                        // A rim just inside the outline of a set of cells: one stroke per cell side
-                        // that faces out of the set, inset by half its width so a neighbour's dimming
-                        // cannot cover it.
-                        fun rim(set: Set<Int>, width: Float, colour: Color) {
-                            val h = width / 2
-                            for (cell in set) {
-                                val r = cell / s.width
-                                val c = cell % s.width
-                                val x0 = c * stepPx
-                                val y0 = r * stepPx
-                                val x1 = x0 + stepPx
-                                val y1 = y0 + stepPx
-                                if (r == 0 || cell - s.width !in set) {
-                                    drawLine(colour, Offset(x0, y0 + h), Offset(x1, y0 + h), width)
-                                }
-                                if (r == s.height - 1 || cell + s.width !in set) {
-                                    drawLine(colour, Offset(x0, y1 - h), Offset(x1, y1 - h), width)
-                                }
-                                if (c == 0 || cell - 1 !in set) {
-                                    drawLine(colour, Offset(x0 + h, y0), Offset(x0 + h, y1), width)
-                                }
-                                if (c == s.width - 1 || cell + 1 !in set) {
-                                    drawLine(colour, Offset(x1 - h, y0), Offset(x1 - h, y1), width)
-                                }
-                            }
-                        }
-
-                        rim(highlight.soft - highlight.strong, stepPx * 0.07f, glow.copy(alpha = 0.5f))
                         // A band of page colour just inside the glow, so a strong rim reads as
                         // something other than one more of the black seams between areas. Widths
                         // checked in a rendered mock, light and dark: much wider and the band eats
                         // a one-cell arm's colour.
-                        val a = pulse.value
-                        rim(highlight.strong, stepPx * 0.2f, scheme.background.copy(alpha = 0.9f * a))
-                        rim(highlight.strong, stepPx * 0.11f, glow.copy(alpha = a))
+                        hintRims(highlight, stepPx, glow, pulse.value, scheme.background) { set, width, colour ->
+                            squareRim(set, width, colour, s.width, s.height, { i ->
+                                val x0 = i % s.width * stepPx
+                                val y0 = i / s.width * stepPx
+                                Rect(x0, y0, x0 + stepPx, y0 + stepPx)
+                            })
+                        }
                     }
                 }
             }

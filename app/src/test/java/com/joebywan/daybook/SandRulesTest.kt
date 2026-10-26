@@ -42,7 +42,7 @@ class SandRulesTest {
         // Into an empty tube the whole run goes.
         assertEquals(listOf(listOf(2), listOf(0, 1), listOf(1, 1, 1)), SandLogic.pour(t, 4, 0, 2))
         // Both agree with the test's own one-layer-at-a-time rule.
-        for ((a, b) in SandSupport.pours(t, 4)) assertEquals(SandSupport.pour(t, 4, a, b), SandLogic.pour(t, 4, a, b))
+        for ((a, b) in SandOracle.pours(t, 4)) assertEquals(SandOracle.pour(t, 4, a, b)!!, SandLogic.pour(t, 4, a, b))
     }
 
     @Test
@@ -74,7 +74,7 @@ class SandRulesTest {
             val s = SandLogic.generateVerified(daySeed(day, Sand.id, d), d)!!
             val v = SandLogic.solve(s.tubes, s.height, SandLogic.GEN_BUDGET)
             assertTrue(v is SandLogic.Verdict.Solvable)
-            assertTrue("${d.name} day $day", SandSupport.replays(s.tubes, s.height, (v as SandLogic.Verdict.Solvable).path))
+            assertTrue("${d.name} day $day", SandOracle.replays(s.tubes, s.height, (v as SandLogic.Verdict.Solvable).path))
         }
     }
 
@@ -98,12 +98,12 @@ class SandRulesTest {
             val spares = 1 + rng.nextInt(2)
             var t = rng.shuffled((0 until colours).flatMap { c -> List(h) { c } }).chunked(h) + List(spares) { emptyList() }
             repeat(rng.nextInt(12)) {
-                val ps = SandSupport.pours(t, h)
-                if (ps.isNotEmpty()) t = rng.pick(ps).let { (a, b) -> SandSupport.pour(t, h, a, b) }
+                val ps = SandOracle.pours(t, h)
+                if (ps.isNotEmpty()) t = rng.pick(ps).let { (a, b) -> SandOracle.pour(t, h, a, b)!! }
             }
-            val truth = SandSupport.sortable(t, h)!!
+            val truth = SandOracle.solve(t, h, 2_000_000).solvable
             when (val v = SandLogic.solve(t, h, 1_000_000)) {
-                is SandLogic.Verdict.Solvable -> { assertTrue("$t", truth); assertTrue(SandSupport.replays(t, h, v.path)); sortable++ }
+                is SandLogic.Verdict.Solvable -> { assertTrue("$t", truth); assertTrue(SandOracle.replays(t, h, v.path)); sortable++ }
                 SandLogic.Verdict.Unsolvable -> { assertFalse("$t", truth); unsortable++ }
                 SandLogic.Verdict.Truncated -> error("a small board ran out of budget: $t")
             }
@@ -119,12 +119,12 @@ class SandRulesTest {
             var t = (Sand.generate(daySeed(day, Sand.id, d), d) as SandState).tubes
             val h = 4
             repeat(30) {
-                val ps = SandSupport.pours(t, h)
+                val ps = SandOracle.pours(t, h)
                 if (ps.isEmpty()) return@repeat
                 val (a, b) = rng.pick(ps)
-                val next = SandSupport.pour(t, h, a, b)
+                val next = SandOracle.pour(t, h, a, b)!!
                 val back = SandLogic.unpours(next, h)
-                for ((before, from, to) in back) assertEquals(next, SandSupport.pour(before, h, from, to))
+                for ((before, from, to) in back) assertEquals(next, SandOracle.pour(before, h, from, to)!!)
                 assertTrue("the position before is one of them", back.any { it.first == t && it.second == a && it.third == b })
                 t = next
             }
@@ -159,7 +159,7 @@ class SandRulesTest {
             assertEquals(spec.colours + 2, s.tubes.size)
             for (c in 0 until spec.colours) assertEquals(spec.height, s.tubes.sumOf { t -> t.count { it == c } })
             val v = SandLogic.solve(s.tubes, s.height, SandLogic.GEN_BUDGET) as SandLogic.Verdict.Solvable
-            assertTrue(SandSupport.replays(s.tubes, s.height, v.path))
+            assertTrue(SandOracle.replays(s.tubes, s.height, v.path))
         }
     }
 

@@ -99,16 +99,7 @@ data class SandState(
     /** The board with the pour at [index] of the log taken back, and every pour after it: one move. */
     fun withoutFrom(index: Int): SandState {
         var t = tubes
-        for (p in log.subList(index, log.size).asReversed()) {
-            val moved = t[p.to].takeLast(p.count)
-            t = t.mapIndexed { i, v ->
-                when (i) {
-                    p.to -> v.dropLast(p.count)
-                    p.from -> v + moved
-                    else -> v
-                }
-            }
-        }
+        for (p in log.subList(index, log.size).asReversed()) t = SandLogic.shift(t, p.to, p.from, p.count)
         return copy(tubes = t, moves = moves + 1, log = log.take(index))
     }
 }
@@ -150,8 +141,8 @@ object Sand : PuzzleType {
      * layer also carries its colour's symbol, so colour is never the only signal.
      */
     val palette: List<Color> = listOf(
-        BoardHues.ink(34f, false), BoardHues.fill(46f, false), BoardHues.fill(268f, false), BoardHues.mark(268f),
-        BoardHues.ink(330f, false), BoardHues.fill(175f, false), BoardHues.ink(175f, false), BoardHues.mark(34f),
+        BoardHues.deep(34f, false), BoardHues.fill(46f, false), BoardHues.fill(268f, false), BoardHues.mark(268f),
+        BoardHues.deep(330f, false), BoardHues.fill(175f, false), BoardHues.deep(175f, false), BoardHues.mark(34f),
     )
 
     /** What the hints call each colour. */

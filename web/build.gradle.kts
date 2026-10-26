@@ -47,11 +47,7 @@ kotlin {
             kotlin.srcDir(appSources)
             kotlin.exclude(androidOnly)
             dependencies {
-                implementation(libs.jb.compose.runtime)
-                implementation(libs.jb.compose.foundation)
                 implementation(libs.jb.compose.material3)
-                implementation(libs.jb.compose.ui)
-                implementation(libs.kotlinx.serialization.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.datetime)
                 // The shell's icons are the same Material ones Android uses. Kotlin/Wasm drops

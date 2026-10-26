@@ -15,6 +15,14 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **Accent drawn as text outside the colour pass's files.** `BoardHues.textOn(accent, background)` (and `tileInk` on Home)
+  now make an accent readable as text; the colour pass applied it to Home tiles, the stats card header and share links, and the
+  walkthrough offer line. Still raw accent as text (under 4.5:1 for the lighter accents, Lexicon's olive, Sand's tan): the finish
+  frame's title and streak line (`PlayScreen.kt` `FinishCard`), `ResultsBlock`'s achievement title (`FinishExtras.kt`), the
+  hint panel's ink (`Hints.kt` `val ink = ... else accent`), the walkthrough status line (`TutorialRunner.kt`), the archive's
+  day number and tick (`ArchiveScreen.kt`), Today's three tile name (`TodaysThreeRow.kt`), and white text on accent-filled
+  buttons (`TutorialRunner.kt` `containerColor = accent`). Each is a one-expression swap; `ContrastTest` already covers every
+  accent. **S**. Source: the UX council's contrast review, 2026-10-26.
 - [ ] **Hints still say "cell".** Rules text says "square" everywhere now, but the Sudoku, Cage Sudoku and Mosaic teachers'
   hints (and Sudoku's and Cages' fallback nudge, "Look at the glowing cell") still say "cell". *S.*
 
@@ -27,6 +35,10 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Screenshots show the old names.** Snap, Mambo, Tower and Pointers became Trail, Sun & Moon, Codebreaker and Arrows
   (2026-10-25); `docs/screenshots/home.png` and the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
   with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
+- [ ] **The walkthrough offer: players from before the re-offer.** The offer now returns on every visit until the walkthrough is
+  opened or the puzzle solved, recorded in the same `tutorialsOffered` set the once-only offer wrote on a first visit, so a
+  player who saw the old offer once is never offered it again. A new key would re-offer them; the set's doc comment in
+  `ProgressStore` still describes the old rule. *S.*
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
@@ -250,8 +262,9 @@ but do not demand thought, against the owner's stated taste. (A crossword was he
 hand-written clues are one now, see the council list.) Curated themed puzzles (four groups of four, themed word hunts)
 were declined by the owner (2026-10-25): a shipped list runs out and would need revisiting every year.
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
-A practice mode per technique was declined by the owner: players can use the hints themselves, and it would
-only spend their time railroaded through a tutorial.
+A practice mode per technique, once declined, is now wanted (2026-10-26): Training, piloted on Sudoku
+(`docs/TRAINING_SPEC.md`). Open after the pilot: where it lives (Settings for now), other puzzles, and keeping a
+half-played final board when the player leaves it.
 
 ## Owner's call
 
@@ -268,11 +281,6 @@ only spend their time railroaded through a tutorial.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
-- **Mines: chording.** A tap on a number whose flags are met opening its other neighbours, as most versions have. Left out
-  (`docs/MINES_SPEC.md`): with a wrong flag it opens a mine, a life lost to a note. Add it only if the owner wants the speed.
-- **Mines Expert on a short screen.** Eight wide keeps the square at 42-45 dp on a phone, but twelve rows are height-bound in a
-  phone browser with both toolbars (375x537: about 21 px squares; a phone on its side puts the controls beside the board and gets
-  about 31). Shorter Expert boards (8x11) or fewer rows are the lever if a mis-tap there is reported.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),

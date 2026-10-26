@@ -68,12 +68,16 @@ internal object SandLogic {
     /** The tubes after pouring [from] onto [to]. Precondition: [canPour]. */
     fun pour(tubes: List<List<Int>>, height: Int, from: Int, to: Int): List<List<Int>> {
         require(canPour(tubes, height, from, to)) { "not a pour: $from -> $to" }
-        val k = pourSize(tubes, height, from, to)
-        val colour = tubes[from].last()
+        return shift(tubes, from, to, pourSize(tubes, height, from, to))
+    }
+
+    /** The tubes with the top [k] layers of [from] moved onto [to], in order. No rule is checked. */
+    fun shift(tubes: List<List<Int>>, from: Int, to: Int, k: Int): List<List<Int>> {
+        val moved = tubes[from].takeLast(k)
         return tubes.mapIndexed { i, t ->
             when (i) {
-                from -> t.subList(0, t.size - k).toList()
-                to -> t + List(k) { colour }
+                from -> t.dropLast(k)
+                to -> t + moved
                 else -> t
             }
         }
@@ -100,19 +104,12 @@ internal object SandLogic {
     fun unpours(tubes: List<List<Int>>, height: Int): List<Triple<List<List<Int>>, Int, Int>> {
         val out = mutableListOf<Triple<List<List<Int>>, Int, Int>>()
         for (to in tubes.indices) {
-            val b = tubes[to]
-            val run = topRun(b)
+            val run = topRun(tubes[to])
             for (from in tubes.indices) {
                 if (from == to) continue
                 for (k in 1..run) {
                     if (tubes[from].size + k > height) break
-                    val before = tubes.mapIndexed { i, t ->
-                        when (i) {
-                            to -> t.subList(0, t.size - k).toList()
-                            from -> t + List(k) { b.last() }
-                            else -> t
-                        }
-                    }
+                    val before = shift(tubes, to, from, k)
                     if (canPour(before, height, from, to) && pour(before, height, from, to) == tubes) out += Triple(before, from, to)
                 }
             }
