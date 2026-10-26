@@ -112,11 +112,11 @@ had a median share of 25%, below 5x5's 33%): Expert would be bigger and easier. 
 - **Hints** (`MiniTeachingTest`, 200 boards a tier, hints alone finish all, no mistake): the clue fallback is 44 / 54 / 62%
   of steps; per board one-word 3.6 / 3.8 / 4.9, crossing 2.0 / 2.2 / 2.1, every crossing together 1.5 / 2.0 / 2.3. A
   hint on the JVM: median 0.2-0.3 ms, p95 1.2 ms, max 2.9 ms.
-- **Second clue** (`MiniTeachingTest`, `build/reports/mini-second-clue.txt`, 200 boards a tier, 1,123 / 1,888 / 3,037
+- **Second clue** (`MiniTeachingTest`, `build/reports/mini-second-clue.txt`, 200 boards a tier, 1,105 / 1,872 / 3,041
   fallback steps): the walk reads letters, so on its own terms a second clue moves nothing. The proxy: suppose the player
-  solves it and types the word; the walk's next step is then a logic step (or the board is done) 28.3 / 32.1 / 29.4% of
+  solves it and types the word; the walk's next step is then a logic step (or the board is done) 27.2 / 32.9 / 28.5% of
   the time, else another fallback. The one letter of the next tap would have settled the same word through the crossings
-  53.4 / 53.9 / 56.1% of the time. Words fitting the slot the clue names: median 23 / 8 / 5, p90 439 / 439 / 33. The
+  52.5 / 54.1 / 56.6% of the time. Words fitting the slot the clue names: median 22 / 8 / 6, p90 434 / 434 / 35. The
   fallback share of steps is unchanged (44 / 54 / 62%): the second clue and the letter are one step's two taps.
 - **Layout:** at 375x537 Expert's squares are about 25 dp, with the clue bar (44 dp) and three rows of 40 dp keys under
   the grid; checked in Chromium and WebKit, light and dark, and on the emulator (1080x2400).
