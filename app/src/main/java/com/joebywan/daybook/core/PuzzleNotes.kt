@@ -13,9 +13,9 @@ const val NOTE_MAX = 64
 private val NOTES: Map<String, List<String>> = mapOf(
     "sudoku" to listOf(
         "A digit with one place left in its box goes there.",
-        "A cell with only one candidate left is settled.",
-        "A row with one empty cell has its missing digit decided.",
-        "Two cells sharing the same two candidates own those digits.",
+        "A square with only one candidate left is settled.",
+        "A row with one empty square has its missing digit decided.",
+        "Two squares sharing the same two candidates own those digits.",
         "A box digit confined to one row is out of that row elsewhere.",
     ),
     "kings" to listOf(
@@ -25,10 +25,10 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "If a king leaves a row or colour with no square, it is wrong.",
     ),
     "mambo" to listOf(
-        "Two matching cells side by side: both ends are the other symbol.",
+        "Two matching squares side by side: both ends are the other symbol.",
         "Same symbol at both ends of a gap: the middle one differs.",
         "A row with all its suns placed has only moons left.",
-        "An = or x links two cells: settle one and you settle both.",
+        "An = or x links two squares: settle one and you settle both.",
     ),
     "pipes" to listOf(
         "An opening that would leave the grid is never right.",
@@ -113,7 +113,7 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A cage of two totalling 17 can only be 8 and 9.",
         "A cage of three totalling 24 can only be 7, 8 and 9.",
         "A cage never repeats a digit, even across a box edge.",
-        "A row, column or box adds up to 45: use it to find a lone cell.",
+        "A row, column or box adds up to 45: use it to find a lone square.",
     ),
     "target" to listOf(
         "Work backwards: which two numbers could make the target?",

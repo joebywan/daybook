@@ -159,7 +159,7 @@ internal object CageTeacher {
             return PlacementStep(
                 FULL_HOUSE, empty[0], d, focus = all, cited = all,
                 nudge = "Look at ${unitName(u)}.",
-                explanation = "${unitName(u).cap()} has one empty cell left, and $d is the only digit it's " +
+                explanation = "${unitName(u).cap()} has one empty square left, and $d is the only digit it's " +
                     "missing, so $d goes there.",
             )
         }
@@ -202,8 +202,8 @@ internal object CageTeacher {
                     focus = CageLogic.units[u].toSet(),
                     cited = CageLogic.units[u].toSet() + blockers,
                     nudge = "Look at ${unitName(u)}.",
-                    explanation = "Every other empty cell in ${unitName(u)} already sees a $d in its row, " +
-                        "column, box or cage. So ${unitName(u)}'s $d goes in the glowing cell.",
+                    explanation = "Every other empty square in ${unitName(u)} already sees a $d in its row, " +
+                        "column, box or cage. So ${unitName(u)}'s $d goes in the glowing square.",
                 )
             }
         }
@@ -218,7 +218,7 @@ internal object CageTeacher {
                 NAKED_SINGLE, cell, d,
                 focus = setOf(cell),
                 cited = (Sudoku.peers(cell).toList() + s.board.mates[cell].toList()).filter { s.cells[it] != 0 }.toSet(),
-                nudge = "What can go in the glowing cell?",
+                nudge = "What can go in the glowing square?",
                 explanation = "Its row, column, box and cage already hold every digit except $d, so $d is " +
                     "the only one left for it.",
             )

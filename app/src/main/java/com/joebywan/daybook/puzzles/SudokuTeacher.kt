@@ -174,7 +174,7 @@ internal object SudokuTeacher {
             if (seen[p] == 0 && sight.cand[p] == 0) {
                 val shared = unitsOf(p).first { wrong in it.cells }
                 return step(
-                    "With a $d here, the marked cell in ${shared.name} would have no digit left: its " +
+                    "With a $d here, the marked square in ${shared.name} would have no digit left: its " +
                         "row, column and box would hold all nine between them. $clear.",
                     setOf(p),
                 )
@@ -208,9 +208,9 @@ internal object SudokuTeacher {
             FALLBACK, cell, d,
             focus = setOf(cell),
             cited = emptySet(),
-            nudge = "This one takes a longer chain. Look at the glowing cell.",
+            nudge = "This one takes a longer chain. Look at the glowing square.",
             explanation = "This one needs a longer chain than a hint can walk through, so here's a " +
-                "digit from the answer: the glowing cell is $d.",
+                "digit from the answer: the glowing square is $d.",
         )
     }
 
@@ -260,7 +260,7 @@ internal object SudokuTeacher {
                 focus = u.cells.toSet(),
                 cited = u.cells.toSet(),
                 nudge = "Look at ${u.name}.",
-                explanation = "${u.name.cap()} has one empty cell left, and $d is the only digit it's " +
+                explanation = "${u.name.cap()} has one empty square left, and $d is the only digit it's " +
                     "missing, so $d goes there.",
             )
         }
@@ -293,8 +293,8 @@ internal object SudokuTeacher {
             focus = u.cells.toSet(),
             cited = u.cells.toSet() + blockers(s, u, d, h.cell),
             nudge = "Look at ${u.name}.",
-            explanation = "Every other empty cell in ${u.name} already sees a $d in its row, " +
-                "column or box. So ${u.name}'s $d goes in the glowing cell.",
+            explanation = "Every other empty square in ${u.name} already sees a $d in its row, " +
+                "column or box. So ${u.name}'s $d goes in the glowing square.",
         )
     }
 
@@ -311,7 +311,7 @@ internal object SudokuTeacher {
             NAKED_SINGLE, cell, d,
             focus = setOf(cell),
             cited = Sudoku.peers(cell).filter { s.cells[it] != 0 }.toSet(),
-            nudge = "What can go in the glowing cell?",
+            nudge = "What can go in the glowing square?",
             explanation = "Its row, column and box already hold every digit except $d, so $d is " +
                 "the only one left for it.",
         )
@@ -395,8 +395,8 @@ internal object SudokuTeacher {
                     Elimination(
                         NAKED_PAIR, removed, setOf(a, b), u.cells.toSet(),
                         nudge = "Look at ${u.name}.",
-                        reason = "Two cells of ${u.name} can only be $x or $y, so they take both, and " +
-                            "no other cell there can be $x or $y.",
+                        reason = "Two squares of ${u.name} can only be $x or $y, so they take both, and " +
+                            "no other square there can be $x or $y.",
                     )
                 )
             }
@@ -417,7 +417,7 @@ internal object SudokuTeacher {
                     Elimination(
                         HIDDEN_PAIR, removed, px.toSet(), u.cells.toSet(),
                         nudge = "Look at ${u.name}.",
-                        reason = "In ${u.name}, $x and $y fit only in the same two cells, so those two " +
+                        reason = "In ${u.name}, $x and $y fit only in the same two squares, so those two " +
                             "can't hold anything else.",
                     )
                 )
@@ -431,8 +431,8 @@ internal object SudokuTeacher {
      */
     private class Single(val cell: Int, val digit: Int, val unit: Unit?) {
         fun sentence(): String =
-            if (unit == null) "That leaves the glowing cell only one digit: $digit."
-            else "That leaves the glowing cell as the only place for $digit in ${unit.name}."
+            if (unit == null) "That leaves the glowing square only one digit: $digit."
+            else "That leaves the glowing square as the only place for $digit in ${unit.name}."
     }
 
     private fun singleAfter(after: Sight, removed: List<Pair<Int, Int>>): Single? {
@@ -472,7 +472,7 @@ internal object SudokuTeacher {
     /** How a supposed digit breaks the board: a cell with no digit left, or a unit with no place for one. */
     private class Contradiction(val cell: Int?, val unit: Unit?, val digit: Int) {
         fun phrase(afterForced: Boolean): String =
-            if (cell != null) "${if (afterForced) "another" else "the"} marked cell would have no digit left"
+            if (cell != null) "${if (afterForced) "another" else "the"} marked square would have no digit left"
             else "${unit!!.name} would have nowhere left for a $digit"
 
         fun cells(): Set<Int> = if (cell != null) setOf(cell) else unit!!.cells.toSet()
@@ -551,8 +551,8 @@ internal object SudokuTeacher {
             }
             val middle = when (digits.size) {
                 0 -> ""
-                1 -> "that would force ${digits[0]} into a marked cell, and then "
-                else -> "that would force ${digits.joinToString(" and then ")} into marked cells, and then "
+                1 -> "that would force ${digits[0]} into a marked square, and then "
+                else -> "that would force ${digits.joinToString(" and then ")} into marked squares, and then "
             }
             val text = "$lead, $middle${chain.broken.phrase(digits.isNotEmpty())}. $close"
             if (text.length > MAX_EXPLANATION) return
@@ -561,7 +561,7 @@ internal object SudokuTeacher {
                 WHAT_IF, target, digit,
                 focus = setOf(target, supposed),
                 cited = chain.forced.map { it.first }.toSet() + chain.broken.cells() + supposed,
-                nudge = if (supposed == target) "What if the glowing cell were $supposedDigit?"
+                nudge = if (supposed == target) "What if the glowing square were $supposedDigit?"
                 else "What if this $digit went in the other place?",
                 explanation = text,
             )
@@ -570,8 +570,8 @@ internal object SudokuTeacher {
         for (c in 0 until 81) {
             if (s.cells[c] != 0 || s.cand[c].countOneBits() != 2) continue
             val (a, b) = digitsOf(s.cand[c])
-            consider(c, b, c, a, "If the glowing cell were $a", "So it can't be $a, and must be $b.")
-            consider(c, a, c, b, "If the glowing cell were $b", "So it can't be $b, and must be $a.")
+            consider(c, b, c, a, "If the glowing square were $a", "So it can't be $a, and must be $b.")
+            consider(c, a, c, b, "If the glowing square were $b", "So it can't be $b, and must be $a.")
         }
         // A digit with two places left in a unit: suppose one, and it breaks, so it's the other.
         for (u in units) for (d in 1..9) {
@@ -579,8 +579,8 @@ internal object SudokuTeacher {
             val places = s.places(u, d)
             if (places.size != 2) continue
             val (p, q) = places
-            consider(p, d, q, d, "${u.name.cap()} has two places for $d. If it went in the other one", "So $d goes in the glowing cell.")
-            consider(q, d, p, d, "${u.name.cap()} has two places for $d. If it went in the other one", "So $d goes in the glowing cell.")
+            consider(p, d, q, d, "${u.name.cap()} has two places for $d. If it went in the other one", "So $d goes in the glowing square.")
+            consider(q, d, p, d, "${u.name.cap()} has two places for $d. If it went in the other one", "So $d goes in the glowing square.")
         }
         return best
     }
