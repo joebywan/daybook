@@ -68,6 +68,17 @@ private enum class Status { WAITING, RETRY, DONE }
 internal const val TUTORIAL_HOLD_MS = 1000L
 
 /**
+ * Whether opening a board starts its walkthrough by itself: the first board of a puzzle the player has never solved
+ * (any tier, any mode: [solved]) and whose walkthrough was never opened or auto-started ([seen], the store's
+ * `tutorials_offered`, which a solve also sets). Never on a level board ([level]; Training has its own screen), and
+ * never over a game already under way ([savedMoves]: a restored save's moves and restarts). Shown once per puzzle;
+ * the offer line and the "?" sheet stay as the way back. A player from before this rule who has played a puzzle has
+ * a completion or a saved game for it, so neither starts.
+ */
+fun autoWalkthrough(solved: Boolean, seen: Boolean, level: Boolean, savedMoves: Int): Boolean =
+    !solved && !seen && !level && savedMoves == 0
+
+/**
  * Plays [puzzle]'s [PuzzleType.tutorial] on its own real board.
  *
  * Nothing here knows which puzzle it is: each frame brings its board, its caption, the squares to
