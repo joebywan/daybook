@@ -250,7 +250,7 @@ class TallyTeachingTest {
                     val g = grid.copyOf()
                     g[square] = if (square in step.stays) TallyLogic.GO else TallyLogic.STAY
                     assertEquals(null, TallyLogic.solveByLines(n, TallyLogic.digitArray(s), targets, g))
-                    assertTrue(step.explanation, step.explanation.startsWith("If the ${s.digitAt(square)} at row"))
+                    assertTrue(step.explanation, step.explanation.startsWith("If the glowing ${s.digitAt(square)} "))
                 }
                 s = applied(s, step)
             }

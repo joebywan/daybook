@@ -886,6 +886,8 @@ Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` vi
 **Glyphs inside a board are sized from their square with `boardSp()` (`ui/BoardText.kt`), never `(cell.value * k).sp`**, so the
 system font size cannot push them out of their square; text outside the grid scales. Rule and the line-height catch:
 `docs/PUZZLE_STANDARDS.md` section 6; `BoardTextSizeTest` fails on the old pattern.
+Digits take a role from the one scale, `BoardGlyph` in the same file (given, entered, clue, corner, note: a share of
+the square and a weight); heavy region walls and frames take `ColorScheme.wall` (`ui/BoardDraw.kt`), never black or `onBackground`.
 
 ## Colour
 
@@ -1099,6 +1101,12 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 - Signing key: `~/Documents/github/Claude/daybook-android-signing/` — the only readable copy.
   Certificate pinned in `android/release-key.sha256`; `tools/verify-apk.sh` fails a release whose
   certificate, name or debuggable flag is wrong. A green Gradle build is **not** proof of signing.
+- Actions are pinned to commit SHAs (`# vX.Y.Z` beside each); pin a new one the same way. Gradle
+  verifies every dependency against `gradle/verification-metadata.xml` (sha256). A dependency or
+  plugin change must regenerate it: `./gradlew --no-daemon --write-verification-metadata sha256 test
+  assembleRelease bundleRelease :app:assembleDebug :web:wasmJsBrowserDistribution`, and the diff
+  reviewed. Renovate does not do it here (it needs `allowedUnsafeExecutions`), so its Gradle PRs fail
+  CI until someone does.
 
 ## Settled — do not reopen
 

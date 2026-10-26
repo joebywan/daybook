@@ -14,6 +14,11 @@ local.properties
 *.keystore
 !debug.keystore
 keystore.properties
+# Signing keys and service-account credentials
+*.jks
+*.p12
+*.pem
+*service-account*.json
 
 # graphify output
 graphify-out/

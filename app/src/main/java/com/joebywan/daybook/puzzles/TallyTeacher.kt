@@ -5,7 +5,6 @@ import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.fit
 import com.joebywan.daybook.core.lineName
 import com.joebywan.daybook.core.listed
-import com.joebywan.daybook.core.squareName
 
 /**
  * Tally, reasoned the way a person reasons it: one row or column at a time, and on Expert one
@@ -90,7 +89,7 @@ internal object TallyTeacher {
             val removedWrongly = mark == TallyLogic.REMOVED && s.keep[i] == '1'
             val keptWrongly = mark == TallyLogic.KEPT && s.keep[i] == '0'
             if (!removedWrongly && !keptWrongly) continue
-            val what = "The ${s.digitAt(i)} at ${squareName(n, i)}"
+            val what = "The glowing ${s.digitAt(i)}"
             return Step(
                 technique = MISTAKE,
                 clears = listOf(i),
@@ -216,7 +215,7 @@ internal object TallyTeacher {
     private fun whatIfStep(n: Int, digits: IntArray, targets: List<Int>, w: TallyLogic.WhatIf): Step {
         val i = w.square
         val stayed = w.assume == TallyLogic.STAY
-        val square = "the ${digits[i]} at ${squareName(n, i)}"
+        val square = "the glowing ${digits[i]}"
         val suppose = "If $square ${if (stayed) "stayed" else "went"}"
         val fail = "${lineName(n, w.line)} could no longer make ${targets[w.line]}"
         val verdict = "So it ${if (stayed) "goes" else "stays"}."
@@ -248,7 +247,7 @@ internal object TallyTeacher {
             goes = if (stayed) listOf(i) else emptyList(),
             focus = setOf(i),
             cited = cited,
-            nudge = "Suppose the ${digits[i]} at ${squareName(n, i)} ${if (stayed) "stays" else "goes"}.",
+            nudge = "Suppose the glowing ${digits[i]} ${if (stayed) "stays" else "goes"}.",
             explanation = why,
         )
     }

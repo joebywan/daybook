@@ -22,9 +22,10 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-26.04
+    environment: release   # holds the Play service account
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/setup-build
 
@@ -40,7 +41,7 @@ jobs:
 
       # google_apis, not google_apis_playstore: only the former lets capture.sh `adb root` to set the date.
       - name: Capture
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 34
           arch: x86_64
@@ -49,7 +50,7 @@ jobs:
           disable-animations: true
           script: tools/screenshots/capture.sh app/build/outputs/apk/debug/app-debug.apk
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: screenshots
           path: |

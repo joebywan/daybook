@@ -23,7 +23,7 @@ runs:
     - name: Load the saves in the APK
       id: first
       continue-on-error: true
-      uses: reactivecircus/android-emulator-runner@v2
+      uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
       with:
         api-level: 34
         arch: x86_64
@@ -36,7 +36,7 @@ runs:
     # and this gates a release. A save that really breaks fails both.
     - name: Load the saves in the APK (retry)
       if: steps.first.outcome == 'failure'
-      uses: reactivecircus/android-emulator-runner@v2
+      uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
       with:
         api-level: 34
         arch: x86_64

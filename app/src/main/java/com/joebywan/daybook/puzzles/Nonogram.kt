@@ -34,9 +34,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -50,6 +48,8 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -269,8 +269,8 @@ object Nonogram : PuzzleType {
     }
 
     /** The clue numbers of every row, then column, as measured text, one layout per number. */
-    private fun measureClues(measurer: TextMeasurer, clues: List<List<Int>>, fontPx: Float, density: Density): List<List<TextLayoutResult>> {
-        val style = TextStyle(fontSize = with(density) { fontPx.toSp() }, fontWeight = FontWeight.SemiBold)
+    private fun measureClues(measurer: TextMeasurer, clues: List<List<Int>>, u: Float, density: Density): List<List<TextLayoutResult>> {
+        val style = density.boardStyle(BoardGlyph.CLUE, u)
         return clues.map { line -> (if (line.isEmpty()) listOf(0) else line).map { measurer.measure(it.toString(), style) } }
     }
 
@@ -442,7 +442,7 @@ object Nonogram : PuzzleType {
                 contentAlignment = Alignment.Center,
             ) {
                 val g = Geometry(s, clues, maxWidth, maxHeight, density)
-                val text = remember(s.solution, g.u) { measureClues(measurer, clues, g.u * 0.52f, density) }
+                val text = remember(s.solution, g.u) { measureClues(measurer, clues, g.u, density) }
 
                 val shown = s.swept(sweep.value)
                 val palette = remember(s.solution) { paletteFor(s) }
@@ -531,7 +531,7 @@ object Nonogram : PuzzleType {
         val done = remember { linesDone(motif, clues) }
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             val g = Geometry(motif, clues, maxWidth, maxHeight, density)
-            val text = remember(g.u) { measureClues(measurer, clues, g.u * 0.52f, density) }
+            val text = remember(g.u) { measureClues(measurer, clues, g.u, density) }
             Canvas(g.box) {
                 translate(g.gridX, g.gridY) { drawGrid(motif, g.u, scheme, paletteFor(motif)) }
                 drawClues(motif, g, text, done, scheme)
