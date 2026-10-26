@@ -196,6 +196,8 @@ internal fun SudokuGridBoard(
                             if (s.cells[i] != 0) {
                                 Text(
                                     text = s.cells[i].toString(),
+                                    // Under a label the digit sits a little low, so a two-figure cage total clears it.
+                                    modifier = Modifier.padding(top = cell * topBand(i) * 0.7f),
                                     style = (if (s.givens[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(cell),
                                     color = when {
                                         i in conflicts -> scheme.error

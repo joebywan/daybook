@@ -261,7 +261,8 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
 - **System font size: glyphs in a board are sized from their square, never by the font size.** A digit, letter,
   clue or label drawn in a square (or a fixed slot of the board: a peg, a table cell) takes its size from that
   square with `(cell * 0.5f).boardSp()` (`ui/BoardText.kt`), or `toSp()` in a draw scope, so it fits at any font
-  scale. Never `(cell.value * 0.5f).sp`: that grows with the system setting and clips (Sudoku's digits at 2x,
+  scale. A digit takes its share and weight from the one scale, `BoardGlyph` (given, entered, clue beside the grid, corner
+  label, pencil mark): `BoardGlyph.GIVEN.style(cell)` for a `Text`, `boardStyle(BoardGlyph.CLUE, px)` in a draw scope. Never `(cell.value * 0.5f).sp`: that grows with the system setting and clips (Sudoku's digits at 2x,
   cage totals over half a square). A label in a key of fixed dp height (Lexicon's, Crossword's and Codeword's
   keyboards) is a slot too. Give such a `Text` a `lineHeight` from the same size (`size * 1.2f`), or it inherits
   the theme's sp line height, which does scale (Target's number vanished at 2x). Text outside the grid (headers,

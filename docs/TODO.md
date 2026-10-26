@@ -15,6 +15,11 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **Boards not yet on the digit scale** (`BoardGlyph`, `ui/BoardText.kt`). Moved: Sudoku, Cage Sudoku, Inequality,
+  Regions, Nonogram, Tally, Mosaic. Still on their own shares: Tents' clues (0.55 SemiBold), Mines' numbers (0.6), Lamps'
+  wall numbers, Shikaku (0.46), Atoms (0.42 Bold), Cipher (0.56 Medium), Dominoes' badges (0.27), Target, Lits' piece
+  letters (0.42 Bold) and Codeword's fixed 14sp letters. Left out of the UX batch because other sessions held those files.
+  Pick each a role (most are `CLUE` or `GIVEN`) and render before and after. *S each.*
 - [ ] **Hints still say "cell".** Rules text says "square" everywhere now, but the Sudoku, Cage Sudoku and Mosaic teachers'
   hints (and Sudoku's and Cages' fallback nudge, "Look at the glowing cell") still say "cell". *S.*
 
