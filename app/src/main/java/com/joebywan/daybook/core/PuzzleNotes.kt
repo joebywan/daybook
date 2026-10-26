@@ -25,7 +25,7 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "If a king leaves a row or colour with no square, it is wrong.",
     ),
     "mambo" to listOf(
-        "Two matching squares side by side: both ends are the other symbol.",
+        "A matching pair side by side: both ends are the other symbol.",
         "Same symbol at both ends of a gap: the middle one differs.",
         "A row with all its suns placed has only moons left.",
         "An = or x links two squares: settle one and you settle both.",
@@ -113,7 +113,7 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A cage of two totalling 17 can only be 8 and 9.",
         "A cage of three totalling 24 can only be 7, 8 and 9.",
         "A cage never repeats a digit, even across a box edge.",
-        "A row, column or box adds up to 45: use it to find a lone square.",
+        "A row, column or box adds up to 45: use it to find a lone digit.",
     ),
     "target" to listOf(
         "Work backwards: which two numbers could make the target?",
