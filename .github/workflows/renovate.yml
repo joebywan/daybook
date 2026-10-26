@@ -24,7 +24,9 @@ jobs:
   renovate:
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false   # Renovate takes its token as an input; the dispatch script uses gh
 
       # Self-hosted so this works without installing the Renovate GitHub App. With the default
       # GITHUB_TOKEN, Renovate's pull requests do not trigger CI; the step below gives them a
@@ -32,7 +34,7 @@ jobs:
       # themselves and that step finds nothing to do.
       # This action publishes only full version tags; a bare major like `@v41` does not resolve,
       # and every run failed at "Set up job" until it was pinned exactly. Renovate bumps it.
-      - uses: renovatebot/github-action@v46.3.6
+      - uses: renovatebot/github-action@6d26fcf0275dc65624cbc3d51fe78bc773f98321 # v46.3.6
         with:
           token: ${{ secrets.RENOVATE_TOKEN || github.token }}
         env:
