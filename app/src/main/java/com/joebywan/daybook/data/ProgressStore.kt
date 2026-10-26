@@ -233,9 +233,10 @@ object SavedGames {
 
     /**
      * Random games mint a fresh seed every time they are started, so without a ceiling the store
-     * would grow a board for every game ever abandoned. One resumable game per puzzle and tier (15+ puzzles x 3) plus recent dailies must fit.
+     * would grow a board for every game ever abandoned. One resumable random game per puzzle and tier must fit, and as
+     * many again for unfinished dailies, archive days and level boards; derived, so a new puzzle raises it.
      */
-    const val KEEP = 64
+    val KEEP = PuzzleRegistry.all.size * Difficulty.entries.size * 2
 
     fun find(all: List<StoredGame>, key: String): SavedGame? =
         all.firstOrNull { it.key == key }?.game
