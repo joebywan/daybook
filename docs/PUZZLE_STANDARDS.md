@@ -258,6 +258,19 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   bounded rather than by arithmetic. The board's box is the whole space between header and toolbar and must be
   the same size before and after solving and while a hint opens (CLAUDE.md audits at 390x844, 390x664,
   360x640).
+- **System font size: glyphs in a board are sized from their square, never by the font size.** A digit, letter,
+  clue or label drawn in a square (or a fixed slot of the board: a peg, a table cell) takes its size from that
+  square with `(cell * 0.5f).boardSp()` (`ui/BoardText.kt`), or `toSp()` in a draw scope, so it fits at any font
+  scale. Never `(cell.value * 0.5f).sp`: that grows with the system setting and clips (Sudoku's digits at 2x,
+  cage totals over half a square). A label in a key of fixed dp height (Lexicon's, Crossword's and Codeword's
+  keyboards) is a slot too. Give such a `Text` a `lineHeight` from the same size (`size * 1.2f`), or it inherits
+  the theme's sp line height, which does scale (Target's number vanished at 2x). Text outside the grid (headers,
+  captions, clue lists, buttons that grow with their label) keeps plain `sp` and `MaterialTheme.typography`, and
+  scales. `test/BoardTextSizeTest` fails on the scaling pattern. To look at a board at a font scale, a local
+  `Density(d.density, fontScale)` around `DaybookApp` in `web/.../WebApp.kt` and the render harness will do.
+- **A double tap has a long press as its twin** (Tents' tent, Kings' crown, Dominoes' turn; Lamps' lamp not yet, `docs/TODO.md`), given as
+  `onLongPress` to `detectTapGestures`, which never delays a tap; `onDoubleTap` would, so double taps are counted
+  by hand. Rules text and the walkthrough name both.
 - **Feedback must not move the board.** Reserve the space (`minLines == maxLines`) or float over the content.
   Reference: `Mambo.CAPTION_LINES` with `test/MamboCaptionTest` (every message must fit the reserved lines;
   overflow ellipsises silently). Rule violations are debounced ~1 s so passing through an illegal

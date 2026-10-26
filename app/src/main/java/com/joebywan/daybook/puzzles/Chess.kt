@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
@@ -58,6 +57,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import com.joebywan.daybook.core.union
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * A Mate puzzle in play: a position and the player's moves so far. Only the player's moves are stored; the
@@ -385,14 +385,14 @@ object Chess : PuzzleType {
                                         Text(
                                             "${'a' + sq % 8}",
                                             Modifier.align(Alignment.BottomEnd).padding(end = cell * 0.06f),
-                                            fontSize = (cell.value * 0.2f).sp, color = labelColor, lineHeight = (cell.value * 0.2f).sp,
+                                            fontSize = (cell * 0.2f).boardSp(), color = labelColor, lineHeight = (cell * 0.2f).boardSp(),
                                         )
                                     }
                                     if (cc == 0) {
                                         Text(
                                             "${'1' + sq / 8}",
                                             Modifier.align(Alignment.TopStart).padding(start = cell * 0.06f),
-                                            fontSize = (cell.value * 0.2f).sp, color = labelColor, lineHeight = (cell.value * 0.2f).sp,
+                                            fontSize = (cell * 0.2f).boardSp(), color = labelColor, lineHeight = (cell * 0.2f).boardSp(),
                                         )
                                     }
                                 }

@@ -35,7 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -55,6 +54,7 @@ import com.joebywan.daybook.ui.ring
 import kotlinx.coroutines.delay
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * Lexicon: Mastermind for words.
@@ -479,7 +479,7 @@ object Lexicon : PuzzleType {
             if (letter != null) {
                 Text(
                     letter.uppercase(),
-                    fontSize = (cell.value * 0.46f).sp,
+                    fontSize = (cell * 0.46f).boardSp(), lineHeight = (cell * 0.46f).boardSp() * 1.2f,
                     fontWeight = FontWeight.Bold,
                     color = if (mark != null && mark > LexiconMark.ABSENT) onMark else scheme.onSurface,
                 )
@@ -516,7 +516,8 @@ object Lexicon : PuzzleType {
         ) {
             Text(
                 label,
-                fontSize = (if (small) 12f else 16f).times(scale).sp,
+                fontSize = (if (small) 12.dp else 16.dp).times(scale).boardSp(),
+                lineHeight = (if (small) 14.dp else 19.dp).times(scale).boardSp(),
                 fontWeight = FontWeight.SemiBold,
                 color = text,
                 maxLines = 1,

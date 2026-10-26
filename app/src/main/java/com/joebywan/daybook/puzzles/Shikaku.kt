@@ -32,7 +32,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -50,6 +49,7 @@ import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.joebywan.daybook.ui.boardSp
 
 /** An axis-aligned block of cells, inclusive on both corners. */
 @Serializable
@@ -682,7 +682,7 @@ object Shikaku : PuzzleType {
             clue?.let {
                 Text(
                     it.toString(),
-                    fontSize = (cell.value * 0.46f).sp,
+                    fontSize = (cell * 0.46f).boardSp(), lineHeight = (cell * 0.46f).boardSp() * 1.2f,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )

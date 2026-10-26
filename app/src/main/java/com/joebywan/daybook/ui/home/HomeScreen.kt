@@ -109,6 +109,7 @@ import com.joebywan.daybook.platform.formatDate
 import kotlinx.datetime.LocalDate
 import kotlinx.coroutines.flow.takeWhile
 import kotlin.math.roundToInt
+import com.joebywan.daybook.ui.boardSp
 
 /** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
 private const val HEADER_DATE = "EEEE d MMMM"
@@ -363,8 +364,9 @@ private fun Header(
             Spacer(Modifier.width(10.dp))
             Text(
                 "Daybook",
-                // 24sp, one line: with four buttons a 360dp-wide phone wrapped the 30sp name.
-                style = MaterialTheme.typography.displaySmall.copy(fontSize = 24.sp),
+                // 24, one line: with four buttons a 360dp-wide phone wrapped the 30sp name. A wordmark, so it does
+                // not grow with the system font size: at 2x it was cut to "Daybo".
+                style = MaterialTheme.typography.displaySmall.copy(fontSize = 24.dp.boardSp()),
                 maxLines = 1,
                 color = scheme.onBackground,
                 modifier = if (compact) Modifier else Modifier.weight(1f),

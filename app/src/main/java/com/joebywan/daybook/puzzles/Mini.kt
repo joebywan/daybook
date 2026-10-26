@@ -56,6 +56,7 @@ import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * A Mini crossword in play. [answer] (the filled grid in reading order, [BLACK] for a black square) and [clues] (one
@@ -252,15 +253,15 @@ object Mini : PuzzleType {
                     if (numbers[i] != 0 && square >= 14.dp) Text(
                         numbers[i].toString(),
                         Modifier.align(Alignment.TopStart).padding(start = square * 0.07f),
-                        fontSize = (square.value * 0.25f).sp,
-                        lineHeight = (square.value * 0.28f).sp,
+                        fontSize = (square * 0.25f).boardSp(),
+                        lineHeight = (square * 0.28f).boardSp(),
                         color = scheme.onSurfaceVariant,
                     )
                     if (letters[i] != OPEN) Text(
                         letters[i].uppercase(),
                         Modifier.align(Alignment.Center).padding(top = square * 0.1f),
-                        fontSize = (square.value * 0.52f).sp,
-                        lineHeight = (square.value * 0.56f).sp,
+                        fontSize = (square * 0.52f).boardSp(),
+                        lineHeight = (square * 0.56f).boardSp(),
                         fontWeight = FontWeight.Medium,
                         color = letterColour(i),
                     )
@@ -437,7 +438,7 @@ object Mini : PuzzleType {
                 .clickable(enabled = enabled, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text(label, fontSize = if (small) 12.sp else 16.sp, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant, maxLines = 1)
+            Text(label, fontSize = (if (small) 12.dp else 16.dp).boardSp(), lineHeight = (if (small) 14.dp else 19.dp).boardSp(), fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant, maxLines = 1)
         }
     }
 

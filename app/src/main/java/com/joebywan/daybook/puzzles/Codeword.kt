@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -49,6 +48,7 @@ import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * A Codeword in play. [numbers] (a number 1..k per square, 0 for black), [solution] (a letter 0..25 per number, index
@@ -189,15 +189,15 @@ object Codeword : PuzzleType {
                     if (square >= 14.dp) Text(
                         number.toString(),
                         Modifier.align(Alignment.TopStart).padding(start = square * 0.07f),
-                        fontSize = (square.value * 0.27f).sp,
-                        lineHeight = (square.value * 0.3f).sp,
+                        fontSize = (square * 0.27f).boardSp(),
+                        lineHeight = (square * 0.3f).boardSp(),
                         color = scheme.onSurfaceVariant,
                     )
                     if (letter != EMPTY) Text(
                         up(letter),
                         Modifier.align(Alignment.Center).padding(top = square * 0.12f),
-                        fontSize = (square.value * 0.5f).sp,
-                        lineHeight = (square.value * 0.55f).sp,
+                        fontSize = (square * 0.5f).boardSp(),
+                        lineHeight = (square * 0.55f).boardSp(),
                         fontWeight = if (number in s.given) FontWeight.Bold else FontWeight.Medium,
                         color = letterColour(number),
                     )
@@ -324,11 +324,11 @@ object Codeword : PuzzleType {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
                             ) {
-                                Text(n.toString(), fontSize = 9.sp, lineHeight = 10.sp, color = scheme.onSurfaceVariant)
+                                Text(n.toString(), fontSize = 9.dp.boardSp(), lineHeight = 10.dp.boardSp(), color = scheme.onSurfaceVariant)
                                 Text(
                                     if (l == EMPTY) "·" else up(l),
-                                    fontSize = 14.sp,
-                                    lineHeight = 16.sp,
+                                    fontSize = 14.dp.boardSp(),
+                                    lineHeight = 16.dp.boardSp(),
                                     fontWeight = if (given) FontWeight.Bold else FontWeight.Medium,
                                     color = when {
                                         n in shown.numbers -> scheme.error
@@ -371,12 +371,12 @@ object Codeword : PuzzleType {
                                     },
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(up(l), fontSize = 16.sp, color = if (owner != null) scheme.outline else scheme.onSurface)
+                                Text(up(l), fontSize = 16.dp.boardSp(), lineHeight = 16.dp.boardSp() * 1.2f, color = if (owner != null) scheme.outline else scheme.onSurface)
                                 if (owner != null) Text(
                                     owner.toString(),
                                     Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp),
-                                    fontSize = 9.sp,
-                                    lineHeight = 10.sp,
+                                    fontSize = 9.dp.boardSp(),
+                                    lineHeight = 10.dp.boardSp(),
                                     color = scheme.outline,
                                 )
                             }

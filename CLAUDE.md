@@ -258,7 +258,7 @@ board, walkthrough, motif). `id = "tents"` is hashed into every seed: never rena
   independent check. No fallback in a year of seeds per tier, so hints never fall back on a generated board.
   `lastResort` is the first seed from 1 whose first draw passes everything, so it is proved and gated too.
 - **`solved` checks the rules**; a mistake is a tent the stored answer lacks, sound because the board has one answer. Crosses are notes.
-- A tap lays grass (a note), a double tap a tent (one move); a tap on a tent removes it. **The grass a tent sprouts is derived, not stored** (`TentsState.seen`, as Kings' crosses), so removing a tent takes it away and the player's own grass in `marks` is never touched; a saved game from before keeps its stored grass as the player's. A drag lays grass on empty squares only, one move on lift. Highlight indices: squares `0 until n*n`, row clue `n*n+r`, column clue `n*n+n+c`.
+- A tap lays grass (a note), a double tap or a long press a tent (one move; Kings' crown is the same); a tap on a tent removes it. **The grass a tent sprouts is derived, not stored** (`TentsState.seen`, as Kings' crosses), so removing a tent takes it away and the player's own grass in `marks` is never touched; a saved game from before keeps its stored grass as the player's. A drag lays grass on empty squares only, one move on lift. Highlight indices: squares `0 until n*n`, row clue `n*n+r`, column clue `n*n+n+c`.
 
 ## Regions (region digits, no touching repeats)
 
@@ -831,6 +831,10 @@ Details: `docs/REWARDS.md` (Today's three; the finished frame).
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
 `Palette.kt` names no family. Static instances only; how they were made and cut: `docs/WEB_BUILD.md` (Fonts).
+
+**Glyphs inside a board are sized from their square with `boardSp()` (`ui/BoardText.kt`), never `(cell.value * k).sp`**, so the
+system font size cannot push them out of their square; text outside the grid scales. Rule and the line-height catch:
+`docs/PUZZLE_STANDARDS.md` section 6; `BoardTextSizeTest` fails on the old pattern.
 
 ## Colour
 

@@ -34,7 +34,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -59,6 +58,7 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * An Inequality square in play. [signs] and [solution] are fixed for the board; [cells] holds 0 for
@@ -284,7 +284,7 @@ object Inequality : PuzzleType {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             PREVIEW_DIGITS[i].toString(),
-                            fontSize = (cell.value * 0.6f).sp,
+                            fontSize = (cell * 0.6f).boardSp(), lineHeight = (cell * 0.6f).boardSp() * 1.2f,
                             fontWeight = if (PREVIEW_GIVEN[i]) FontWeight.Bold else FontWeight.Normal,
                             color = if (PREVIEW_GIVEN[i]) scheme.onSurface else BoardHues.ink(hueB, dark),
                         )
@@ -371,7 +371,7 @@ object Inequality : PuzzleType {
                             if (s.cells[i] != 0) {
                                 Text(
                                     s.cells[i].toString(),
-                                    fontSize = (cell.value * 0.6f).sp,
+                                    fontSize = (cell * 0.6f).boardSp(), lineHeight = (cell * 0.6f).boardSp() * 1.2f,
                                     fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
                                     color = when {
                                         i in conflicts -> scheme.error
