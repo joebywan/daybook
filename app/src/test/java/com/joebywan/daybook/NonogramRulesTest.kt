@@ -198,24 +198,20 @@ class NonogramRulesTest {
     }
 
     @Test
-    fun `generated pictures are mirrored and need their tier's line passes`() {
+    fun `generated pictures are not mirrored and need their tier's line passes`() {
         for ((d, count) in listOf(Difficulty.STANDARD to 365, Difficulty.HARD to 60, Difficulty.EXPERT to 15)) {
             val n = NonogramLogic.specFor(d).side
-            var bothWays = 0
             for (seed in seeds(count, d, "nonogram")) {
                 val s = NonogramLogic.generateVerified(seed, d)!!
                 val p = pictureOf(s)
                 val across = p.all { it == it.reversed() }
                 val down = p == p.reversed()
-                assertTrue("$d/$seed is not mirrored", across || down)
-                if (across && down) bothWays++
+                assertFalse("$d/$seed is mirrored", across || down)
                 val passes = brutePasses(s)
                 assertNotNull("$d/$seed is not finished by lines", passes)
                 assertTrue("$d/$seed needs only $passes passes", passes!! >= NonogramLogic.specFor(d).minPasses)
                 assertEquals(passes, NonogramLogic.linePasses(n, n, s.solution))
             }
-            // Some boards are mirrored both ways, but not all: the axes are chosen per draw.
-            assertTrue("$d: $bothWays of $count mirrored both ways", bothWays in 1 until count)
         }
     }
 

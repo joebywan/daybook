@@ -179,9 +179,9 @@ board. No board changed (Mambo's and LITS's rows are after their gates, below). 
 | Tents | Standard | line-full 89, one-spot 10, shared 1, served 1 | 0 / 0 | 10 |
 |  | Hard | one-spot 78, shared 8, served 14 (gated: was line-full 64, one-spot 28, shared 4, served 4) | 0 / 0 | 15 |
 |  | Expert | shared 33, served 67 (gated: was line-full 39, one-spot 43, shared 7, served 12) | 0 / 0 | 21 |
-| Nonogram | Standard | line-logic 100; line passes 2: 95, 3: 5, 4+: <1 | 0 / 0 | 10 |
-|  | Hard | line-logic 100; passes 3: 79, 4+: 21 | 0 / 0 | 36 |
-|  | Expert | line-logic 100; passes 4: 79, 5+: 21 | 0 / 0 | 73 |
+| Nonogram | Standard | line-logic 100; line passes 2: 72, 3: 27, 4+: 2 | 0 / 0 | 13 |
+|  | Hard | line-logic 100; passes 3: 82, 4+: 18 | 0 / 0 | 38 |
+|  | Expert | line-logic 100; passes 4: 80, 5+: 20 | 0 / 0 | 80 |
 | LITS (gated) | Standard | avoid-2x2 2, letter-clash 97, neighbour <1 | 0 / 0 | 15 |
 |  | Hard | avoid-2x2 1, letter-clash 63, neighbour 35, what-if 2 | 0 / 0 | 21 |
 |  | Expert | letter-clash <1, neighbour 64, what-if 35 | 0 / 0 | 30 |
@@ -236,9 +236,10 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   one-spot or deeper, Expert needs shared or served; Standard is not gated. Draws a board over a year (a draw must also be
   finished by the ladder and unique): mean 1.3 / 5.6 / 23, most 5 / 27 / 143 of 2000; JVM p50 / p95 / max 0.1 / 0.1 / 0.4,
   2.6 / 9.3 / 41, 5.1 / 27 / 191 ms. Expert in the browser, p50 / p95 / max: 14 / 66 / 151 ms in Chromium, 17 / 75 / 125 in WebKit. `touch` is never needed.
-- **Nonogram: gated since the pictures became mirrored** (2026-10). Before, on noise, Hard and Expert overlapped in passes
-  (3+: 54% / 75%) and 13% of Standard boards took one pass. Mirrored pictures are shallower (one pass on half of Standard,
-  4+ on 7% of Expert), so a board must need 2 / 3 / 4 passes by tier (`Spec.minPasses`); the rows above are with the gate.
+- **Nonogram: gated** (2026-10). Ungated, Hard and Expert overlapped in passes (3+: 54% / 75%) and 13% of Standard boards
+  took one pass, so a board must need 2 / 3 / 4 passes by tier (`Spec.minPasses`); the rows above are with the gate. The gate
+  came in with mirrored pictures (shallower still: one pass on half of Standard); those were dropped on 2026-10-26 because half
+  the picture gave the rest away, and the gate stayed.
   Deeper than that needs a technique line logic lacks (a what-if across two lines).
 - **LITS: gated (2026-10).** Before, the tiers were the same depth: Standard avoid-2x2 1, letter-clash 48, neighbour 47,
   what-if 4; Hard letter-clash 62, neighbour 35, what-if 2; Expert letter-clash 35, neighbour 60, what-if 5. Now each proved
