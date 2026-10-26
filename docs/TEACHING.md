@@ -261,8 +261,8 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   the year had run out of it under the cap and gone uncapped, and now stay under it), and a board never leaves the
   seven-square cap while a proved one exists under it. One Standard and one Expert day ran out of budget and ship the
   nearest proved board (neighbour, letter-clash). Generation, a year a tier, median / p95 / max (2026-10-27): Chromium
-  17 / 66 / 232, 12 / 41 / 88, 139 / 252 / 287 ms on a quiet machine (load about 2 on 32 cores); WebKit 22 / 84 / 276, 17 / 53 / 107,
-  202 / 333 / 436 and JVM 12 / 49 / 197, 7.7 / 29 / 65, 95 / 180 / 218 at load 8-12 on 32 cores (no quiet spell came). Expert's worst is the cap of eight
+  17 / 66 / 232, 12 / 41 / 88, 139 / 252 / 287 ms; WebKit 19 / 74 / 264, 14 / 45 / 95, 173 / 291 / 368;
+  JVM 11 / 44 / 155, 7.5 / 28 / 62, 86 / 168 / 178 (a quiet machine, load 1-3 on 32 cores). Expert's worst is the cap of eight
   proved draws. (Earlier figures, up to 562 ms in Chromium and 782 in WebKit, came from a loaded desktop.) 9x9 for Expert was not tried: the generator's squares are bits of a
   `Long` (64 squares), so it would be a rewrite, and it would cost more per draw, not less.
 - **Regions: gated (2026-10).** Before, 97% of Expert and 81% of Hard needed only-place (Hard only-digit 19, only-place 81;

@@ -126,7 +126,7 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   raised the JVM mean per board from 5 / 9 / 13 ms to 9 / 11 / 17 ms and the worst of 2026-2027 from
   41 / 62 / 85 ms to 57 / 69 / 118 ms; those browser figures predate it and were not re-measured. The tier gate
   (2026-10, up to eight proved draws on Expert) made a 2026 Expert board 139 / 252 / 287 ms median / p95 / max in Chromium
-  on a quiet machine and 202 / 333 / 436 ms in WebKit at load ~10 (2026-10-27; `docs/TEACHING.md`, Tier depth). Timings are
+  and 173 / 291 / 368 ms in WebKit on a quiet machine (2026-10-27; `docs/TEACHING.md`, Tier depth). Timings are
   `?dump&range=365&puzzle=<id>&times`, one page at a time, nothing else running.
 - Dark theme follows `prefers-color-scheme`; Playwright's `color_scheme="dark"` context option is
   enough to screenshot it.

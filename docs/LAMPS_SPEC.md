@@ -130,9 +130,9 @@ A year of daily seeds per tier from 2026-01-01 unless stated: `LampsRulesTest` `
 | Days reaching `lastResort` | 0 | 0 | 0 |
 | Hint steps a board | 11.0 | 25.4 | 43.2 |
 | of which starve / dark / what-if | 0 / 0 / 0 | 2.7 / 0.4 / 0 | 5.9 / 0.7 / 5.5 |
-| Generation ms, desktop JVM (median / p95 / max; load 8-12, 2026-10-27) | 0.3 / 0.5 / 0.9 | 1.9 / 4.7 / 16 | 22 / 80 / 179 |
-| Generation ms, Chromium (quiet machine, 2026-10-27) | 0.3 / 0.5 / 0.6 | 3.3 / 7.6 / 18 | 39 / 136 / 296 |
-| Generation ms, WebKit (load ~12, 2026-10-27) | 1 / 1 / 2 | 6 / 14 / 36 | 53 / 161 / 337 |
+| Generation ms, desktop JVM (median / p95 / max; a year a tier, quiet machine, 2026-10-27) | 0.3 / 0.4 / 2.0 | 1.7 / 4.0 / 8.6 | 20 / 71 / 154 |
+| Generation ms, Chromium (same) | 0.3 / 0.5 / 0.6 | 3.3 / 7.6 / 18 | 39 / 136 / 296 |
+| Generation ms, WebKit (same) | 0 / 1 / 1 | 5 / 12 / 26 | 47 / 149 / 308 |
 
 Walls were first a fifth of the squares: nine in ten Expert draws then failed at once (fully numbered, the ladder still
 could not finish), and Expert took 365 ms median on the JVM. At about a quarter, most draws pass and the numbers left are
