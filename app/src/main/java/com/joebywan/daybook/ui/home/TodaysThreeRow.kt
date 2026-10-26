@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.home
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -113,7 +114,7 @@ private fun ThreeChip(
         Box(contentAlignment = Alignment.TopEnd) {
             puzzle.Preview(Modifier.size(if (compact) 24.dp else 30.dp).clip(RoundedCornerShape(8.dp)))
             if (solved) Box(Modifier.size(14.dp).clip(CircleShape).background(scheme.surface), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Check, "Solved", tint = accent, modifier = Modifier.size(10.dp))
+                Icon(Icons.Default.Check, "Solved", tint = BoardHues.textOn(accent, scheme.surface, 3f), modifier = Modifier.size(10.dp))
             }
         }
     }
@@ -121,7 +122,7 @@ private fun ThreeChip(
         Text(
             puzzle.displayName,
             style = MaterialTheme.typography.labelLarge,
-            color = if (solved) accent else scheme.onSurface,
+            color = if (solved) BoardHues.onTint(accent, scheme.surface, alpha = 0.2f) else scheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

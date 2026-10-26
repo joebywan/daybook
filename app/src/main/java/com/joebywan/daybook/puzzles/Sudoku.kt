@@ -123,7 +123,7 @@ object Sudoku : PuzzleType {
     override val id = "sudoku"
     override val displayName = "Sudoku"
     override val tagline = "One to nine, once per row, column and box"
-    override val accent = 0xFF4C86D9
+    override val accent = 0xFF6F7DF7
     override val rules = listOf(
         "Fill every square with a digit from 1 to 9.",
         "No digit may repeat within a row, a column or a 3x3 box.",

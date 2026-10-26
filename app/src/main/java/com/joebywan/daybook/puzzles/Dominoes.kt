@@ -83,7 +83,7 @@ object Dominoes : PuzzleType {
     override val id = "dominoes"
     override val displayName = "Dominoes"
     override val tagline = "Lay every domino so each region keeps its rule"
-    override val accent = 0xFF76B43C
+    override val accent = 0xFF8F5DD6
 
     override val rules = listOf(
         "Lay every domino from the tray on two neighbouring squares, either way round.",

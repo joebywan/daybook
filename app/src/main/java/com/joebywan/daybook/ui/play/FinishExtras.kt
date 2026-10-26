@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.play
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
@@ -158,7 +159,7 @@ fun ResultsBlock(praise: Praise, accent: Color, badge: Dp, celebrate: Boolean) {
                 cameraDistance = 12f * density
             })
             Spacer(Modifier.height(8.dp))
-            Text(a.title, style = MaterialTheme.typography.titleMedium, color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(a.title, style = MaterialTheme.typography.titleMedium, color = BoardHues.textOn(accent, scheme.surface), fontWeight = FontWeight.Bold, maxLines = 1)
             Text(a.description, style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, maxLines = 2, textAlign = TextAlign.Center)
             if (items.size > 1) {
                 Spacer(Modifier.height(4.dp))

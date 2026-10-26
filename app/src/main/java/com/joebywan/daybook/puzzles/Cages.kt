@@ -100,7 +100,7 @@ object Cages : PuzzleType {
     override val id = "cages"
     override val displayName = "Cage Sudoku"
     override val tagline = "Sudoku where dashed cages must add up"
-    override val accent = 0xFF6E66CC
+    override val accent = 0xFF528DC9
     override val rules = listOf(
         "Fill every square with a digit from 1 to 9, as in Sudoku: no repeat in a row, a column or a 3x3 box.",
         "The dashed outlines are cages. The digits in a cage add up to the small number in its corner, " +

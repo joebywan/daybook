@@ -174,7 +174,7 @@ object Mosaic : PuzzleType {
     override val id = "mosaic"
     override val displayName = "Mosaic"
     override val tagline = "Flood the board down to one colour"
-    override val accent = 0xFFD97FB0
+    override val accent = 0xFFBC4C9C
     override val rules = listOf(
         "Squares of one colour joined edge to edge form a single area, drawn with a heavy outline.",
         "Pick a colour below, then tap an area to flood it with that colour.",

@@ -93,7 +93,7 @@ object Codeword : PuzzleType {
     override val id = "codeword"
     override val displayName = "Codeword"
     override val tagline = "Each number is a letter. Crack the grid."
-    override val accent = 0xFF65E7E7
+    override val accent = 0xFF0F9B89
     override val rules = listOf(
         "Every number stands for one letter, the same letter wherever it appears. Different numbers are different letters.",
         "Every word across and down is a real word.",

@@ -68,7 +68,7 @@ object Pointers : PuzzleType {
     override val id = "pointers"
     override val displayName = "Arrows"
     override val tagline = "Clear every arrow, without a bump"
-    override val accent = 0xFFC95E77
+    override val accent = 0xFFB96BCB
     override val rules = listOf(
         "Tap an arrow and it slides off the board the way its head points, if nothing is in its way to the edge.",
         "If another arrow is in the way, it bumps and you lose a life. Lose all three and the board is lost: try it again from the start.",

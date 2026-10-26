@@ -64,7 +64,7 @@ object Target : PuzzleType {
     override val id = "target"
     override val displayName = "Target"
     override val tagline = "Six numbers make the target"
-    override val accent = 0xFF6661D1
+    override val accent = 0xFFB47699
     override val rules = listOf(
         "Reach the target. Pick two numbers and an operator, and the answer replaces them as a new tile.",
         "Any tile equal to the target wins. Each number is used once, and you need not use them all.",

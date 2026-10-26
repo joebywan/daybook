@@ -9,19 +9,106 @@ bring several hues. This is the shared set to bring them from, derived from the 
 
 1. **Structure** is always `MaterialTheme.colorScheme`: board background, grid lines, given digits, text, `error`,
    hint glow. Never a hex literal, so light and dark both work.
-2. **Identity** is the puzzle's `accent` (card, selection, walkthrough buttons). One per puzzle, one colour for both
-   schemes; the thirty-one in use sit at saturation 0.37-0.73, lightness 0.45-0.67 (Lits' tan, s 0.21, is the one
-   deliberate low-saturation case). Spacing is perceptual, not by hue: every pair of accents is at least 1.5 CIEDE2000
-   apart under normal vision and 1.1 under simulated deuteranopia, protanopia and tritanopia (`AccentSpacingTest`, which
-   names the offending pair). The floors sit just under today's closest pairs (Regions/Target 1.59 normal, Shikaku/Lexicon
-   1.20 protan), so they only stop a new accent coming closer than any existing one; several pairs are already hard to
-   tell apart, which is why every card also carries the name and a motif. To pick a new puzzle's accent, run
-   `AccentSpacingTest`: it prints the colour in that box furthest from every accent in all four vision modes, leaving
-   out hues within 25 degrees of red, which would read as the error colour, and colours of relative luminance over 0.4,
-   which all but vanish as text on the light page (now `0xFFB35B93`, 6.4 from its nearest), and taking it keeps the
-   floors with room to spare.
+2. **Identity** is the puzzle's `accent` (home tile, selection, walkthrough buttons, the finish card). One per puzzle, one
+   colour for both schemes, chosen as a set (see **Accents** below): every raw accent reaches 3:1 on the surface and
+   background of both schemes, no accent reads as the error red or the success green, and the closest pair is as far
+   apart as the method could make it (`AccentSpacingTest`, `ContrastTest`). Text in an accent goes through `textOn`, or
+   `onTint` on the accent's own tint.
 3. **Content** is the hue family below. Anything the player *places, groups or compares* (regions, tokens, runs,
    paths, a solved flourish) takes its colour from here, not from the surface greys.
+
+## Accents
+
+The thirty-one accents were redesigned together in October 2026. Before that each new puzzle took whatever was furthest
+from the rest, and the set had drifted: the closest pair was 1.59 CIEDE2000 apart under normal vision (Regions/Target, with
+Cage Sudoku and the Crossword's violet beside them) and 1.20 under protanopia, about a just-noticeable difference, and
+Pearls' pale olive (`C7C785`) and Codeword's aqua (`65E7E7`) were 1.7:1 and 1.4:1 on the light page.
+
+**Method.** One set, solved at once, not one colour at a time:
+
+1. **One luminance band for both schemes.** A raw accent reaches WCAG 3:1 on the light background (`F6F1E7`) only below
+   relative luminance 0.26, and on the dark surface (`1B2F29`) only above 0.175, so every accent is in 0.18-0.255 (OKLCH
+   lightness 0.56-0.65). Any accent can then be drawn raw as a mark (icon, ring, board stroke, dot) on either scheme
+   without a lookup. The band is narrow, which is why lightness alone cannot separate the set; it also rules out pale
+   yellows and aquas, which vanish on the light page.
+2. **Reserved hues left empty.** Nothing within OKLCH hue 358-58 (the error Clay is 33) or 129-179 (the success green is
+   154), so no accent reads as wrong or right. In the test's CIELAB terms: hue 355-64 and 125-179, open at both ends.
+3. **Chroma 0.09-0.18 OKLCH** (CIELAB 28-72): no greys or muddy mid-tones, no neon.
+4. **Maximin spacing.** From every colour on an OKLCH grid (lightness 0.01, chroma 0.01, hue 5 degrees) that keeps rules
+   1-3, pick 31 so the closest pair is as far apart as possible, by CIEDE2000 under normal vision or twice the worst of
+   simulated deuteranopia, protanopia and tritanopia (Machado 2009, `ColourDistance`), whichever is smaller. Weighting
+   normal vision by two keeps colour-blind vision from flattening the whole set into the one axis it keeps; unweighted,
+   normal vision fell to 3.9. Farthest-point swaps from 300 random starts; the best start won.
+5. **Families, then neighbours.** The colours fall into hue sectors, and related puzzles share one: blue for the number
+   grids (Sudoku, Cage Sudoku, Regions, Inequality), teal for the word games and Pipes (Lexicon, Word Wheel, Crossword,
+   Codeword), ochre and olive for the earthy ones (Sand, Codebreaker, LITS, Tents, Mate, Shikaku, Pearls, Lamps), and
+   violet to rose for the rest. Within a sector, colours were placed to keep the closest pairs apart where they meet:
+   neighbours on the default home grid (`PuzzleOrder.GENTLEST` at three to seven columns) and puzzles from different
+   Today's three slots (puzzles in one slot never show together). No pair under 5.9 is a grid neighbour; the closest
+   pairs meet only in Today's three (Atoms and Target, Atoms and Lexicon, Kings and Who's Who: a quick or mid-weight
+   puzzle against another slot's, about one day in 77 to 143).
+
+**Result.** Closest pairs: normal 5.79 (Atoms/Target), deuteranopia 2.91 (Atoms/Lexicon), protanopia 2.90 (Kings/Who's
+Who), tritanopia 3.01 (Cage Sudoku/Word Wheel). `AccentSpacingTest` pins 5.7 and 2.85. Several pairs are still near
+alike to a colour-blind eye: no 31 colours in one luminance band can be told apart by colour alone, which is why every
+tile also carries the name and a motif.
+
+**Where each threshold applies** (`ContrastTest` covers every accent in both schemes):
+
+| Use | Ground | Needs | Through |
+|---|---|---|---|
+| Marks: icons, rings, board strokes, Levels' dots, the Continue arrow | surface, background | 3:1 | the raw accent |
+| Text in the accent: play-screen tagline, Statistics names and links, walkthrough feedback, achievement titles | surface, background | 4.5:1 | `textOn(accent, ground)` |
+| Text on the accent's own tint: tile names and footers, Today's three, archive days and tiers, finish title, hint button | accent at 0.2-0.22 over the ground | 4.5:1 | `onTint`, `tileInk` |
+| Ticks and borders on a tint or a plain chip: tier dots, archive ticks and selection, chosen pen, Who's Who's choice | tint or surface | 3:1 | `onTint(.., 3f)`, `textOn(.., 3f)` |
+| Labels on an accent-filled button (walkthrough, training) | the accent | 4.5:1 | `onFill(accent)` (black on every accent) |
+
+Board internals that tint or glow with the accent at partial alpha (move feel, Sets' card borders) are decoration, not
+marks; the board's own colours carry its meaning.
+
+| Puzzle | Accent | OKLCH (L C h) | Luminance | On light surface / background | On dark surface / background | Nearest (design distance) |
+|---|---|---|---|---|---|---|
+| **Blue: number grids** | | | | | | |
+| Cage Sudoku | `528DC9` | 0.63 0.110 250 | 0.251 | 3.4 / 3.1 | 4.0 / 4.8 | Word Wheel 6.0 |
+| Inequality | `1E76D8` | 0.57 0.170 255 | 0.182 | 4.4 / 4.0 | 3.1 / 3.7 | Dominoes 6.5 |
+| Regions | `5C72BE` | 0.57 0.120 270 | 0.180 | 4.4 / 4.1 | 3.1 / 3.7 | Nonogram 6.3 |
+| Sudoku | `6F7DF7` | 0.64 0.180 275 | 0.248 | 3.4 / 3.1 | 4.0 / 4.8 | Sun & Moon 6.1 |
+| **Ochre and olive: earth** | | | | | | |
+| Tents | `BE6B0B` | 0.61 0.140 60 | 0.215 | 3.8 / 3.5 | 3.6 / 4.2 | Mate 6.4 |
+| Codebreaker | `AF7D4C` | 0.63 0.090 64 | 0.243 | 3.5 / 3.2 | 3.9 / 4.7 | LITS 6.0 |
+| Mate | `BE7C1C` | 0.64 0.130 70 | 0.254 | 3.3 / 3.1 | 4.1 / 4.9 | Tents 6.4 |
+| Pearls | `967028` | 0.57 0.100 80 | 0.182 | 4.4 / 4.0 | 3.1 / 3.7 | Lamps 6.2 |
+| Shikaku | `8D813D` | 0.60 0.090 99 | 0.217 | 3.8 / 3.5 | 3.6 / 4.3 | Sand 5.9 |
+| Sand | `8A8C34` | 0.62 0.110 110 | 0.244 | 3.5 / 3.2 | 4.0 / 4.7 | Shikaku 5.9 |
+| Lamps | `737B39` | 0.56 0.090 115 | 0.181 | 4.4 / 4.0 | 3.1 / 3.7 | Pearls 6.2 |
+| LITS | `7A9052` | 0.62 0.090 125 | 0.247 | 3.4 / 3.1 | 4.0 / 4.8 | Codebreaker 6.0 |
+| **Teal: words and water** | | | | | | |
+| Crossword | `098777` | 0.56 0.100 180 | 0.187 | 4.3 / 3.9 | 3.2 / 3.8 | Tally 6.0 |
+| Codeword | `0F9B89` | 0.62 0.110 181 | 0.254 | 3.3 / 3.1 | 4.1 / 4.9 | Word Wheel 6.7 |
+| Lexicon | `278E8E` | 0.59 0.090 195 | 0.217 | 3.8 / 3.5 | 3.6 / 4.3 | Atoms 5.8 |
+| Word Wheel | `2891AC` | 0.61 0.099 219 | 0.237 | 3.5 / 3.3 | 3.9 / 4.6 | Cage Sudoku 6.0 |
+| Pipes | `1C7EAB` | 0.56 0.109 235 | 0.181 | 4.4 / 4.0 | 3.1 / 3.7 | Who's Who 6.0 |
+| **Violet to rose: the rest** | | | | | | |
+| Sun & Moon | `8C79E0` | 0.64 0.151 290 | 0.246 | 3.4 / 3.1 | 4.0 / 4.8 | Sudoku 6.1 |
+| Dominoes | `8F5DD6` | 0.59 0.180 300 | 0.185 | 4.3 / 4.0 | 3.2 / 3.8 | Nonogram 6.1 |
+| Who's Who | `846CAD` | 0.58 0.101 300 | 0.186 | 4.3 / 3.9 | 3.2 / 3.8 | Kings 5.8 |
+| Sets | `997EB8` | 0.64 0.090 305 | 0.252 | 3.4 / 3.1 | 4.1 / 4.8 | Cipher 6.2 |
+| Nonogram | `A258C1` | 0.59 0.169 315 | 0.185 | 4.3 / 4.0 | 3.2 / 3.8 | Dominoes 6.1 |
+| Kings | `94669F` | 0.58 0.100 320 | 0.183 | 4.4 / 4.0 | 3.1 / 3.7 | Who's Who 5.8 |
+| Arrows | `B96BCB` | 0.65 0.160 320 | 0.251 | 3.4 / 3.1 | 4.1 / 4.8 | Sun & Moon 6.7 |
+| Cipher | `A879AA` | 0.64 0.090 325 | 0.249 | 3.4 / 3.1 | 4.0 / 4.8 | Sets 6.2 |
+| Atoms | `B2659A` | 0.61 0.119 340 | 0.211 | 3.9 / 3.6 | 3.5 / 4.2 | Target 5.8 |
+| Mosaic | `BC4C9C` | 0.59 0.171 340 | 0.183 | 4.4 / 4.0 | 3.1 / 3.7 | Atoms 6.2 |
+| Target | `B47699` | 0.64 0.090 345 | 0.250 | 3.4 / 3.1 | 4.0 / 4.8 | Atoms 5.8 |
+| Tally | `A26482` | 0.58 0.089 350 | 0.184 | 4.3 / 4.0 | 3.2 / 3.8 | Crossword 6.0 |
+| Trail | `CA4383` | 0.59 0.180 355 | 0.182 | 4.4 / 4.0 | 3.1 / 3.7 | Mines 6.2 |
+| Mines | `D45C91` | 0.64 0.161 355 | 0.237 | 3.5 / 3.3 | 3.9 / 4.6 | Trail 6.2 |
+
+Design distance is CIEDE2000 under normal vision or twice the worst colour-blind one, whichever is smaller.
+
+**A new puzzle's accent:** run `AccentSpacingTest`. It prints, of the hsl colours that keep rules 1-3, the one furthest
+from every accent by the design distance (now `0xFF96754A`, a brown, 6.1 from its nearest), and taking it keeps the floors.
+A redesign of the whole set is the scripts' job, not the picker's; the method above is enough to repeat it.
 
 ## The hue family
 

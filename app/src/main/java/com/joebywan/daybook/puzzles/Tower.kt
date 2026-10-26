@@ -99,7 +99,7 @@ object Tower : PuzzleType {
     override val id = "tower"
     override val displayName = "Codebreaker"
     override val tagline = "Break the hidden colour code"
-    override val accent = 0xFFD08A33
+    override val accent = 0xFFAF7D4C
     override val rules = listOf(
         "A secret row of coloured pegs is hidden at the top.",
         "Tap a colour to put it in the next empty slot, or tap a slot to put the chosen colour there. Submit a full row to score it.",

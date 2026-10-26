@@ -64,7 +64,7 @@ object Pearls : PuzzleType {
     override val id = "pearls"
     override val displayName = "Pearls"
     override val tagline = "One loop through every pearl"
-    override val accent = 0xFFC7C785
+    override val accent = 0xFF967028
 
     override val rules = listOf(
         "Draw one closed loop through the middles of squares, moving up, down, left or right. It never crosses or branches.",

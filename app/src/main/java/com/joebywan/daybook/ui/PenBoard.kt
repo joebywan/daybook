@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -158,7 +159,7 @@ fun PenRow(
                     .background(if (chosen) accent.copy(alpha = 0.22f) else scheme.surface)
                     .border(
                         if (chosen) 2.dp else 1.dp,
-                        if (chosen) accent else scheme.outline,
+                        if (chosen) BoardHues.onTint(accent, scheme.surface, 3f) else scheme.outline,
                         RoundedCornerShape(14.dp),
                     )
                     .clickable(enabled = enabled) { onPen(option) },

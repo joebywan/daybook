@@ -108,7 +108,7 @@ object Nonogram : PuzzleType {
     override val id = "nonogram"
     override val displayName = "Nonogram"
     override val tagline = "Numbers reveal the picture"
-    override val accent = 0xFF3E7CB1
+    override val accent = 0xFFA258C1
 
     override val rules = listOf(
         "The numbers beside a row, or above a column, give the lengths of its runs of filled squares, in order.",

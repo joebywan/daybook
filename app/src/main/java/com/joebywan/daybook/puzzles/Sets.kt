@@ -106,7 +106,7 @@ object Sets : PuzzleType {
     override val id = "sets"
     override val displayName = "Sets"
     override val tagline = "All alike or all different, four ways"
-    override val accent = 0xFF54B07A
+    override val accent = 0xFF997EB8
     override val rules = listOf(
         "Find sets of three cards where each trait is all the same or all different.",
         "The four traits are count, shape, shading and colour. Two alike and one odd, on any trait, is not a set.",

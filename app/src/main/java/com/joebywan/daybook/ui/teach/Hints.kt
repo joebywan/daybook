@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.teach
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
@@ -333,7 +334,7 @@ fun HintPanel(
                 TextButton(onClick = { session.clear() }) {
                     Text("Close", color = scheme.onSurfaceVariant)
                 }
-                TextButton(onClick = onNext) { Text(session.buttonLabel(), color = ink) }
+                TextButton(onClick = onNext) { Text(session.buttonLabel(), color = BoardHues.textOn(ink, fade)) }
             }
         }
     }
