@@ -215,12 +215,7 @@ object Nonogram : PuzzleType {
         val step = NonogramTeacher.teach(s) ?: return null
         val before = s.cells
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == NonogramTeacher.MISTAKE,
             applyTo = { now -> applyStep(now as NonogramState, step) },
             reachedBy = { now ->

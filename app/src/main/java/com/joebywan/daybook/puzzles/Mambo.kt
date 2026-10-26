@@ -549,12 +549,7 @@ object Mambo : PuzzleType {
         val step = MamboTeacher.teach(s) ?: return null
         val base = s.cells
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == MamboTeacher.MISTAKE,
             fallback = step.technique == MamboTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as MamboState, step) },

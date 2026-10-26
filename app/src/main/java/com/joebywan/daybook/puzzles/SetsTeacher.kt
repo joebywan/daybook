@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 
 /**
  * Sets, taught the way a person finds a set: pick two cards, and work out trait by trait what the
@@ -40,17 +41,17 @@ internal object SetsTeacher {
      * cards a mistake asks the player to let go, empty when there is nothing to take back.
      */
     class Step(
-        val technique: String,
+        override val technique: String,
         val claim: List<Int> = emptyList(),
         val release: List<Int> = emptyList(),
         /** For a rejected pick: the three cards, so [isReached] can tell when the player moved on. */
         val rejected: List<Int> = emptyList(),
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    ) {
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
         val mistake: Boolean get() = technique == MISTAKE
     }
 

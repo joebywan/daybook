@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.core.numberWord
 
@@ -98,14 +99,14 @@ internal object TowerTeacher {
     }
 
     class Step(
-        val technique: String,
+        override val technique: String,
         val move: Move,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep
 
     /** Mastermind's score, with no stored code: [code] is whichever code is being tested. */
     fun score(guess: List<Int>, code: List<Int>, colours: Int): Feedback {

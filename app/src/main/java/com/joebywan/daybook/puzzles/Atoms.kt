@@ -521,12 +521,7 @@ object Atoms : PuzzleType {
         val s = state as AtomsState
         val step = AtomsTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == AtomsTeacher.MISTAKE,
             fallback = step.technique == AtomsTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as AtomsState, step) },

@@ -384,12 +384,7 @@ object Sets : PuzzleType {
         val s = state as SetsState
         val step = SetsTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.mistake,
             applyTo = { now -> SetsTeacher.apply(now as SetsState, step) },
             reachedBy = { now -> SetsTeacher.isReached(now as SetsState, step) },

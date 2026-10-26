@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.puzzles.WhosWhoLogic.Break
 import com.joebywan.daybook.puzzles.WhosWhoLogic.Step
@@ -46,16 +47,16 @@ internal object WhosWhoTeacher {
 
     /** One step: marks to tick, cross or clear (mark indices), where to look, and why. */
     class Lesson(
-        val technique: String,
+        override val technique: String,
         val ticks: List<Int> = emptyList(),
         val crosses: List<Int> = emptyList(),
         val clears: List<Int> = emptyList(),
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep
 
     fun teach(s: WhosWhoState): Lesson? {
         if (s.solved) return null

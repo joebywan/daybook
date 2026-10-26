@@ -385,12 +385,7 @@ object Tower : PuzzleType {
         fun fits(code: List<Int>) = TowerTeacher.consistent(code, s.guesses, feedback, s.colours)
         fun newGuesses(now: TowerState) = now.guesses.drop(s.guesses.size)
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == TowerTeacher.MISTAKE,
             fallback = step.technique == TowerTeacher.CONSISTENT || step.technique == TowerTeacher.ONLY_CODE,
             applyTo = { now -> applyMove(now as TowerState, step.move) },

@@ -683,12 +683,7 @@ object Kings : PuzzleType {
         val step = KingsTeacher.teach(s) ?: return null
         val base = s.marks
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == KingsTeacher.MISTAKE,
             fallback = step.technique == KingsTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as KingsState, step) },

@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.core.numberWord
 
@@ -71,15 +72,15 @@ internal object AtomsTeacher {
      * [raise] maps a line to the count it should reach; [clear] is only ever a mistake.
      */
     class Step(
-        val technique: String,
+        override val technique: String,
         val raise: Map<Int, Int> = emptyMap(),
         val clear: List<Int> = emptyList(),
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep
 
     // ---- the board as the player sees it --------------------------------------------------------
 

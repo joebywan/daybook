@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.orthogonalReading
 import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.puzzles.LampsLogic.Fact
@@ -41,15 +42,15 @@ internal object LampsTeacher {
     const val MAX_EXPLANATION = 260
 
     class Step(
-        val technique: String,
+        override val technique: String,
         /** What the targets become: [LAMP], [NO] (a cross), or 0 to take a lamp away (a mistake). */
         val value: Int,
-        val targets: Set<Int>,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val targets: Set<Int>,
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep
 
     fun teach(s: LampsState): Step? {
         if (s.solved) return null
@@ -64,12 +65,7 @@ internal object LampsTeacher {
         val step = teach(s) ?: return null
         val mistake = step.technique == MISTAKE
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = mistake,
             fallback = step.technique == FALLBACK,
             applyTo = { now ->
