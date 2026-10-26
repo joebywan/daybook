@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -989,13 +990,17 @@ internal fun RulesDialog(title: String, puzzle: PuzzleType, onWalkthrough: (() -
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Got it") } },
-        dismissButton = onWalkthrough?.let { { TextButton(onClick = it) { Text("Play the one-minute walkthrough") } } },
         title = { Text(title) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(puzzle.tagline, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(10.dp))
                 RulesList(puzzle)
+                // In the text, not the button row: beside "Got it" a label this long wraps the row onto two lines.
+                onWalkthrough?.let {
+                    Spacer(Modifier.height(12.dp))
+                    FilledTonalButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Play the one-minute walkthrough") }
+                }
             }
         },
     )
