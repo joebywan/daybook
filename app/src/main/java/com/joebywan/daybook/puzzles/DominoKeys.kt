@@ -14,7 +14,7 @@ data class DominoPick(val selected: Int? = null, val flipped: Boolean = false, v
     /** This pick, cleared of anything the board no longer allows (undo, a hint, a lift). */
     fun on(s: DominoState): DominoPick {
         val sel = selected?.takeIf { it in s.tray.indices && s.placed[it] == null }
-        val f = first?.takeIf { it in s.open.indices && s.open[it] && DominoLogic.dominoAt(s, it) < 0 }
+        val f = first?.takeIf { it in s.open.indices && s.isFree(it) }
         return if (sel == selected && f == first) this else DominoPick(sel, flipped && sel != null, f)
     }
 
@@ -74,7 +74,7 @@ fun DominoState.dragSquares(pick: DominoPick, from: Int, to: Int): DominoMove {
     val p = pick.on(this)
     val n = width * height
     if (from !in 0 until n || to !in 0 until n || !DominoLogic.adjacent(width, from, to)) return DominoMove(p)
-    if (!open[from] || !open[to] || DominoLogic.dominoAt(this, from) >= 0 || DominoLogic.dominoAt(this, to) >= 0) return DominoMove(p)
+    if (!isFree(from) || !isFree(to)) return DominoMove(p)
     val sel = p.selected ?: firstInTray(this) ?: return DominoMove(p)
     val flipped = p.flipped && p.selected == sel
     return DominoMove(DominoPick(), changed(DominoLogic.place(this, sel, placementFor(flipped, from, to))))

@@ -99,16 +99,7 @@ data class SandState(
     /** The board with the pour at [index] of the log taken back, and every pour after it: one move. */
     fun withoutFrom(index: Int): SandState {
         var t = tubes
-        for (p in log.subList(index, log.size).asReversed()) {
-            val moved = t[p.to].takeLast(p.count)
-            t = t.mapIndexed { i, v ->
-                when (i) {
-                    p.to -> v.dropLast(p.count)
-                    p.from -> v + moved
-                    else -> v
-                }
-            }
-        }
+        for (p in log.subList(index, log.size).asReversed()) t = SandLogic.shift(t, p.to, p.from, p.count)
         return copy(tubes = t, moves = moves + 1, log = log.take(index))
     }
 }
