@@ -1062,9 +1062,9 @@ object Lits : PuzzleType {
      */
     val palette: Map<Piece, Color> = mapOf(
         Piece.I to BoardHues.fill(215f, false),
-        Piece.L to BoardHues.ink(175f, false),
+        Piece.L to BoardHues.deep(175f, false),
         Piece.T to BoardHues.mark(268f),
-        Piece.S to BoardHues.ink(330f, false),
+        Piece.S to BoardHues.deep(330f, false),
     )
 
 

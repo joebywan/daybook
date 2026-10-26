@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -302,6 +303,15 @@ object Tally : PuzzleType {
                 else -> band
             }
             drawRoundRect(fill, topLeft, size, CornerRadius(u * 0.18f))
+            // Red and green differ by more than hue: a chip that can no longer add up also gets a dashed ring.
+            if (bad[line]) {
+                val w = maxOf(u * 0.05f, 1.5f)
+                val inset = u * 0.07f
+                drawRoundRect(
+                    BoardHues.onFill(scheme.error), topLeft + Offset(inset, inset), Size(size.width - 2 * inset, size.height - 2 * inset),
+                    CornerRadius(u * 0.12f), style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(w * 2f, w * 1.5f))),
+                )
+            }
             if (lit && named(index)) {
                 drawRoundRect(overlay.glow.copy(alpha = overlay.pulse), topLeft, size, CornerRadius(u * 0.18f), style = Stroke(u * 0.08f))
             }

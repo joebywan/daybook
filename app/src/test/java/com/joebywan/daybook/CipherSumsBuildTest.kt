@@ -25,7 +25,7 @@ import java.util.concurrent.Executors
  * hardest technique the ladder needs for it, [tierOf]) still has room and holds that total fewer than
  * [MAX_PER_TOTAL] times. Drawing stops once every tier is full.
  *
- * Why offline: about one pair in four has such a total, and finding it means proving each of the 1,801
+ * Why offline: about one pair in four has such a total, and finding it means proving each of the 1,768
  * five-letter totals (~7 ms a pair on 12 desktop threads; a phone has one, and the web one slower thread).
  * Why 4 + 4 = 5: the total's extra letter is the leading carry, the foothold every hand-solved sum starts
  * from. Measured over 3,000 draws, two five-letter addends (no foothold) gave one ladder board per 30

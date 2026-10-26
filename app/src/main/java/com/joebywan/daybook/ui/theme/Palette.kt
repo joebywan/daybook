@@ -17,14 +17,18 @@ private val Parchment = Color(0xFFF6F1E7)
 private val ParchmentDim = Color(0xFFE6DECD)
 private val Moss = Color(0xFF3F9E7F)
 private val Amber = Color(0xFFD08A33)
-private val Clay = Color(0xFFC0563F)
+// Clay (`C0563F`) stepped in lightness so error text reads at 4.5:1 on the surface and the background:
+// Clay itself was 3.13:1 on the dark surface and 4.02:1 on the light background (ContrastTest).
+private val ClayLight = Color(0xFFAD4D39)
+private val ClayDark = Color(0xFFD08271)
 
 internal val DarkScheme = darkColorScheme(
     primary = Moss,
     onPrimary = Ink,
     secondary = Amber,
     onSecondary = Ink,
-    error = Clay,
+    error = ClayDark,
+    onError = Ink,
     background = Ink,
     onBackground = Parchment,
     surface = InkSoft,
@@ -46,7 +50,8 @@ internal val LightScheme = lightColorScheme(
     onPrimary = Color.White,
     secondary = Color(0xFFB06C1E),
     onSecondary = Color.White,
-    error = Clay,
+    error = ClayLight,
+    onError = Color.White,
     background = Parchment,
     onBackground = Ink,
     surface = Color(0xFFFFFBF2),

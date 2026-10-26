@@ -5,7 +5,8 @@ import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -364,6 +365,9 @@ object Pointers : PuzzleType {
         val slides = remember(s.arrows) { mutableStateListOf<Slide>() }
         var bump by remember(s.arrows) { mutableStateOf<Bump?>(null) }
         var cursor by remember(s.arrows) { mutableStateOf<Int?>(null) }
+        // The arrow under a finger that is down: tinted at once, taken on release over the same arrow; sliding off it clears
+        // the tint and cancels. Transient, never state.
+        var pressed by remember(s.arrows) { mutableStateOf(-1) }
         // Reduced motion: a cleared arrow simply goes and a bump flashes without the shake.
         val still = LocalReducedMotion.current
         val live = interactive && !s.solved && !s.failed
@@ -435,10 +439,24 @@ object Pointers : PuzzleType {
                         .size(step * s.width, step * s.height)
                         .pointerInput(s, live) {
                             if (!live) return@pointerInput
-                            detectTapGestures { p ->
+                            fun arrowUnder(p: Offset): Int {
                                 val unit = size.width.toFloat() / s.width
-                                val cell = hit(s, p.x / unit, p.y / unit)
-                                if (cell >= 0) tapAt(cell)
+                                return hit(s, p.x / unit, p.y / unit).let { if (it >= 0) s.arrowAt(it) else -1 }
+                            }
+                            awaitEachGesture {
+                                val first = awaitFirstDown()
+                                val a = arrowUnder(first.position)
+                                pressed = a
+                                while (true) {
+                                    val c = awaitPointerEvent().changes.firstOrNull { it.id == first.id } ?: break
+                                    val over = arrowUnder(c.position)
+                                    if (!c.pressed) {
+                                        if (a >= 0 && over == a) tapAt(s.arrows[a].last())
+                                        break
+                                    }
+                                    pressed = if (over == a) a else -1
+                                }
+                                pressed = -1
                             }
                         },
                 ) {
@@ -447,6 +465,10 @@ object Pointers : PuzzleType {
                     drawDots(s.width, s.height, unit, scheme.onSurfaceVariant.copy(alpha = 0.35f))
                     val b = bump
                     val flash = if (b == null) 0f else minOf(1f, 2f * (1f - b.progress.value)) // full warning for the first half, then fading
+                    // A finger down on an arrow: the same band as the keyboard cursor's, under it.
+                    if (pressed >= 0 && pressed !in s.removed) {
+                        drawArrow(s.arrows[pressed], s.width, unit, Color(accent).copy(alpha = 0.45f), width = 0.75f, head = false)
+                    }
                     // The keyboard cursor: a soft band under the arrow it is on, or a ring on a bare square.
                     cursor?.let { at ->
                         val a = s.arrowAt(at)

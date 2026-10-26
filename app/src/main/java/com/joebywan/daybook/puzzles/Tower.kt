@@ -121,8 +121,8 @@ object Tower : PuzzleType {
      * CIEDE2000 with colour-blind vision (`TowerPaletteTest`), and every peg also carries its key's digit.
      */
     val palette: List<Color> = listOf(
-        BoardHues.ink(215f, false), BoardHues.mark(46f), BoardHues.ink(34f, false), BoardHues.ink(175f, false),
-        BoardHues.fill(175f, false), BoardHues.fill(268f, false), BoardHues.ink(330f, false), BoardHues.fill(46f, false),
+        BoardHues.deep(215f, false), BoardHues.mark(46f), BoardHues.deep(34f, false), BoardHues.deep(175f, false),
+        BoardHues.fill(175f, false), BoardHues.fill(268f, false), BoardHues.deep(330f, false), BoardHues.fill(46f, false),
     )
 
     /** The digit on a peg: the key that picks it, so colour is never the only signal. */

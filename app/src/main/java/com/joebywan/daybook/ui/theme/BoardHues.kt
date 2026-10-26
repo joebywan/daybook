@@ -13,8 +13,44 @@ object BoardHues {
     /** Cell or region background; carries `onSurface` text. */
     fun fill(hue: Float, dark: Boolean) = if (dark) Color.hsl(hue, .40f, .30f) else Color.hsl(hue, .62f, .76f)
 
-    /** Text or a thin stroke on the surface. */
-    fun ink(hue: Float, dark: Boolean) = Color.hsl(hue, .55f, if (dark) .64f else .38f)
+    /**
+     * Text or a thin stroke on the surface: lightness .38 (light) or .64 (dark), stepped darker or lighter, a hundredth
+     * at a time, until it reaches 4.5:1 against both the scheme's surface and its background. Amber, Gold, Green and Teal step
+     * in light, Violet in dark; the rest keep the table's value.
+     */
+    fun ink(hue: Float, dark: Boolean): Color {
+        val scheme = if (dark) DarkScheme else LightScheme
+        val steps = if (dark) 64..100 else 38 downTo 0
+        return steps.map { Color.hsl(hue, .55f, it / 100f) }
+            .firstOrNull { contrast(it, scheme.surface) >= 4.5f && contrast(it, scheme.background) >= 4.5f }
+            ?: if (dark) Color.White else Color.Black
+    }
+
+    /**
+     * The deep step of a token palette (Sand's grains, Tower's pegs, Mosaic's and LITS's pieces, Sets' shapes): the fixed
+     * recipe [ink] started from, lightness .38 (light) or .64 (dark). Those palettes are chosen and pinned by CIEDE2000
+     * spacing, so they keep it; a token carries its own digit or shape, not text on the surface.
+     */
+    fun deep(hue: Float, dark: Boolean = false) = Color.hsl(hue, .55f, if (dark) .64f else .38f)
+
+    /**
+     * [colour] made readable as text on [background]: the same hue, mixed towards black on a light background or white on
+     * a dark one, a fiftieth at a time, until it reaches [ratio] (4.5:1 for text, 3:1 for a dot or icon). A colour that
+     * already reaches it is returned as it is. For accents drawn as text; fills and rings keep the raw accent.
+     */
+    fun textOn(colour: Color, background: Color, ratio: Float = 4.5f): Color {
+        val toward = if (background.luminance() < 0.5f) Color.White else Color.Black
+        for (step in 0..50) {
+            val t = step / 50f
+            val c = Color(
+                colour.red + (toward.red - colour.red) * t,
+                colour.green + (toward.green - colour.green) * t,
+                colour.blue + (toward.blue - colour.blue) * t,
+            )
+            if (contrast(c, background) >= ratio) return c
+        }
+        return toward
+    }
 
     /** A solid shape (token, path, dot), either scheme. */
     fun mark(hue: Float) = Color.hsl(hue, .55f, .56f)
