@@ -355,7 +355,6 @@ credit: Recognition, or a loan
 cremate: Burn to ashes
 cringe: Wince with embarrassment
 crinkle: Wrinkle
-cripple: Disable
 crisply: Sharply
 crispy: Crunchy
 croquet: Lawn game with hoops
@@ -1389,7 +1388,6 @@ result: Outcome
 resume: Carry on
 retail: Shop selling
 retain: Keep
-retard: Slow down
 rethink: Reconsider
 retina: Eye's light-sensitive layer
 retire: Stop working for good
@@ -1640,7 +1638,6 @@ strode: Walked with long steps
 stubble: Short beard growth
 studio: Artist's workroom
 stumble: Trip
-stupid: Dim-witted
 stupor: Dazed state
 sublet: Rent out again
 subside: Die down

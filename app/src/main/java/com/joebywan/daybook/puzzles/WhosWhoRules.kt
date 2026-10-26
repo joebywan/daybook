@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.cap
 import kotlinx.serialization.Serializable
 
 /**
@@ -642,6 +643,8 @@ internal object WhosWhoLogic {
     /** Draws tried per seed before the generator gives up and falls back. */
     const val ATTEMPTS = 400
 
+    fun generate(seed: Long, difficulty: Difficulty): WhosWhoState = generateVerified(seed, difficulty) ?: lastResort(difficulty)
+
     fun generateVerified(seed: Long, difficulty: Difficulty): WhosWhoState? {
         for (a in 0 until ATTEMPTS) attempt(seed, difficulty, a)?.let { return it }
         return null
@@ -752,8 +755,6 @@ internal object WhosWhoLogic {
 
     private fun near(s: WhosWhoState, ref: Int) = WhosWhoWords.near(category(s, ref), word(s, ref))
 
-    fun capital(text: String) = text.replaceFirstChar { it.uppercaseChar() }
-
     /** Clue [k] as the player reads it, without its number. */
     fun clueText(s: WhosWhoState, k: Int): String {
         val clue = s.clues[k]
@@ -765,18 +766,18 @@ internal object WhosWhoLogic {
             SAME, NOT -> if (colour(x) && houseNo(y)) {
                 "The ${word(s, x)} house is${if (clue.kind == NOT) " not" else ""} house ${word(s, y)}."
             } else {
-                capital(who(s, x)) + " " + (if (clue.kind == SAME) has(s, y) else hasNot(s, y)) + "."
+                who(s, x).cap() + " " + (if (clue.kind == SAME) has(s, y) else hasNot(s, y)) + "."
             }
-            NEXT -> if (colour(x)) "The ${word(s, x)} house is next to ${near(s, y)}." else capital(who(s, x)) + " lives next to " + near(s, y) + "."
+            NEXT -> if (colour(x)) "The ${word(s, x)} house is next to ${near(s, y)}." else who(s, x).cap() + " lives next to " + near(s, y) + "."
             LEFT -> {
                 val flip = rank(clue.b) < rank(clue.a)
                 val first = if (flip) clue.b else clue.a
                 val second = if (flip) clue.a else clue.b
                 val side = if (flip) "right" else "left"
                 if (colour(first)) "The ${word(s, first)} house is somewhere $side of ${near(s, second)}."
-                else capital(who(s, first)) + " lives somewhere $side of " + near(s, second) + "."
+                else who(s, first).cap() + " lives somewhere $side of " + near(s, second) + "."
             }
-            else -> capital(who(s, clue.a)) + " " + WhosWhoWords.either(category(s, clue.b), word(s, clue.b), word(s, clue.c)) + "."
+            else -> who(s, clue.a).cap() + " " + WhosWhoWords.either(category(s, clue.b), word(s, clue.b), word(s, clue.c)) + "."
         }
     }
 }

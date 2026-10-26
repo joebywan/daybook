@@ -21,6 +21,9 @@ from a measurement or review, so you can check it is still true.
   and the calendar's day cells (sized from width, ~40dp at 360). The archive calendar's day cells size from both axes and
   are as large as the box allows: ~44dp at 375x537 and ~41dp on a phone on its side (844x390), where six weeks must fit
   under the title; dropping the "N days, all unlocked" line when the box is short would buy them about 5dp. *S each.*
+- [ ] **Screenshots show the old names.** Snap, Mambo, Tower and Pointers became Trail, Sun & Moon, Codebreaker and Arrows
+  (2026-10-25); `docs/screenshots/home.png` and the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
+  with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
@@ -38,15 +41,11 @@ from a measurement or review, so you can check it is still true.
   which can include the player's own (unhighlighted) king; that is the placement rule, not a missing report. The promotion button's
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
-- [ ] **Regions: sparser boards, and README screenshots.** The ladder is three single-digit techniques, so boards carry
-  about 27 / 21 / 19% of squares as givens. A locked-candidate technique (a digit whose every place in a region touches
-  one square rules that square out) would let the generator take more back, but it ends in an elimination, not a
-  placement, and Regions has no pencil marks; it would need a step that explains one elimination and then a placement
-  (Inequality's `SIGN_BOUND` is the model). *M.*
+- [ ] **Regions: README screenshots.** (Its sparser boards came with the locked candidate.) *S.*
+- [ ] **Regions: Expert's fill is slow in the browser.** `randomBoard` is about 85 ms of a 9x9 draw on the JVM, and Expert
+  generation is 187 ms median, 0.8 s p95, 1.7 s worst in Chromium (it was as slow before the depth gate). A cheaper fill
+  (fewer restarts, or growing regions where the fill is already forced) would fix it; it moves every board. *M.*
 
-- [ ] **Cage Sudoku: name what `cage-chain` does.** About 1 step in 13 on Expert (6.3 a board) is "every cage total worked through
-  together": true, but it points at a square without naming the groups. Locked candidates and pairs, run on the cage-aware candidates,
-  would explain some; each new rule must also go into `CageLogic.Sight` so the generator's ladder stays the teacher's. *M.*
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
   problem until the tiers change; a smarter independent solver would let it sample a year. *S.*
 - [ ] **Word Wheel: more wheels, fewer clue steps.** Grid words are limited to clued ones, so 6/7-letter words are a hand-picked 716 / 745
@@ -164,17 +163,11 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 
 - [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
-  - Shikaku: Standard no common-cells, what-if or fallback; Hard needs only-reaches, no fallback; Expert needs common-cells
-    or what-if, no fallback.
-  - LITS: Standard no neighbour or what-if; Expert needs what-if (5% of draws: cost it first).
-  - Regions (locked candidates): the ladder is too short; the technique comes first.
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
-- [ ] **Shikaku: not only guillotine cuts.** `slice` is recursive bisection, so pinwheels never appear; grow a tiling instead,
-  same `countTilings` proof.
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
-- [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
-  lives as Pointers', no undo), Pearl loop, Codeword, Mini crossword (5x5,
-  fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
+- [ ] **New puzzles, in order:** Mini crossword (5x5,
+  fills built offline from the hand-written clues; `test/CrosswordFill.kt`, Codeword's pattern maker and filler, is
+  written to be reused). Each gets a spec first (`docs/<NAME>_SPEC.md`).
 
 ## Future puzzle candidates
 
@@ -234,19 +227,13 @@ and Battleships is close to Tents.
   with a unique shortest ladder to keep it provable. *M after the lists exist.*
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
-  prototype the input before committing. *L.*
-- [ ] **Mines, no guessing.** Minesweeper rules: tap reveals, long-press flags. Ship only boards logic clears from the
-  first reveal (a solver proves it, as the Tents and Tally ladders do); a hint names the deduction ("this 2 already
-  touches two flags, so the rest are safe"). Tiers: size and density. A mine loses the board, as Pointers' lives do. *M.*
-- [ ] **Codeword.** A filled crossword grid with a number for each letter and a few letters given; work out the
-  substitution. No clues, so it avoids the clue-database problem below. Reuses Lexicon's and Word Wheel's lists and
-  Word Wheel's grid layout; uniqueness is pattern matching against the list. Not Cipher: word shapes, not columns. *M–L.*
+  prototype the input before committing. *L.* Pearls (built) has a loop's machinery to reuse: the loop rule, the
+  exhaustive count, edge hit testing (`Pearls.edgeNear`) and crosses as notes; its loop runs through squares, this one
+  along their edges.
 - [ ] **Skyscrapers.** A Latin square with edge clues (how many buildings are visible from that side). Inequality's
   Latin-square rules, generator and prover carry over; only the clue type is new. *S–M.*
 - [ ] **Hitori.** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.
   Tap-only; the connectivity proof is LITS's shape. *M.*
-- [ ] **Pearl loop (Masyu rules).** One closed loop through squares: it turns on black pearls, goes straight through
-  white ones. Drawn through squares, not along edges, so Snap's drag works and the edge-tapping problem goes away. *L.*
 - [ ] **Dominosa.** A pip grid holds each domino 0-0..N-N once; find where each lies. Tap between two squares to
   place one. Pairs well with the domino-placement idea above. *M.*
 - [ ] **Galaxies.** Cut the grid into regions, each symmetric under a half-turn about its dot. Shikaku's input,
@@ -280,6 +267,11 @@ only spend their time railroaded through a tutorial.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
+- **Mines: chording.** A tap on a number whose flags are met opening its other neighbours, as most versions have. Left out
+  (`docs/MINES_SPEC.md`): with a wrong flag it opens a mine, a life lost to a note. Add it only if the owner wants the speed.
+- **Mines Expert on a short screen.** Eight wide keeps the square at 42-45 dp on a phone, but twelve rows are height-bound in a
+  phone browser with both toolbars (375x537: about 21 px squares; a phone on its side puts the controls beside the board and gets
+  about 31). Shorter Expert boards (8x11) or fewer rows are the lever if a mis-tap there is reported.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),

@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PenMarks
 import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
 
@@ -22,50 +23,19 @@ data class TallyState(
     val keep: String,
     val marks: String = TallyLogic.UNMARKED.toString().repeat(size * size),
     override val moves: Int = 0,
-) : PuzzleState {
+) : PuzzleState, PenMarks<TallyState> {
 
     /** Solved when what is left in every row and column adds up to its target. The rules, not [keep]. */
     override val solved: Boolean get() = TallyLogic.isSolved(this)
 
     fun digitAt(index: Int): Int = digits[index] - '0'
 
-    /** [mark] on every square of [indices] that is not already it; one state, one move per square. */
-    fun paint(indices: Collection<Int>, mark: Char): TallyState {
-        val next = marks.toCharArray()
-        var changed = 0
-        for (i in indices) {
-            if (next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        return if (changed == 0) this else copy(marks = next.concatToString(), moves = moves + changed)
-    }
+    override val penMarks get() = marks
+    override val penWidth get() = size
+    override val penHeight get() = size
+    override val pens get() = "${TallyLogic.REMOVED}${TallyLogic.KEPT}"
 
-    /** A tap with the Remove or Keep pen: that mark, or an untouched square if it already has it. */
-    fun tap(index: Int, pen: Char): TallyState =
-        paint(listOf(index), if (marks[index] == pen) TallyLogic.UNMARKED else pen)
-
-    /** What a sweep that starts on [index] with [pen] lays down: the pen's mark, or erasing if it is already there. */
-    fun sweepMark(index: Int, pen: Char): Char = if (marks[index] == pen) TallyLogic.UNMARKED else pen
-
-    /**
-     * A sweep: [mark] along [indices], but a pen only writes over untouched squares and an eraser
-     * only takes out the mark it started on (Nonogram's rule), so dragging Remove across a circled
-     * square leaves the circle alone.
-     */
-    fun sweep(indices: Collection<Int>, mark: Char, startedOn: Char): TallyState {
-        val next = marks.toCharArray()
-        var changed = 0
-        for (i in indices) {
-            val ok = if (mark == TallyLogic.UNMARKED) next[i] == startedOn else next[i] == TallyLogic.UNMARKED
-            if (ok && next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        return if (changed == 0) this else copy(marks = next.concatToString(), moves = moves + changed)
-    }
+    override fun withPenMarks(marks: String, changed: Int) = copy(marks = marks, moves = moves + changed)
 }
 
 /** What an exhaustive count found. Only [ExactlyOne] carries an answer, so nothing else can be shipped as one. */
@@ -395,20 +365,23 @@ internal object TallyLogic {
     // ---- generation -------------------------------------------------------------------------
 
     /**
-     * Side, the share of squares kept (per mille), and the deepest step a board must need: [SHORTCUTS]
+     * Side and the deepest step a board must need: [SHORTCUTS]
      * (the shortcuts may finish it), [WAYS] (they must not; the ways of single lines must) or
      * [WHAT_IF] (single lines must not; a what-if must be needed at least once).
      */
-    class Spec(val side: Int, val keepPermille: Int, val needs: Int)
+    class Spec(val side: Int, val needs: Int)
+
+    /** The share of squares kept, per mille, on every tier. */
+    private const val KEEP_PERMILLE = 580
 
     const val SHORTCUTS = 0
     const val WAYS = 1
     const val WHAT_IF = 2
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
-        Difficulty.STANDARD -> Spec(5, 580, SHORTCUTS)
-        Difficulty.HARD -> Spec(6, 580, WAYS)
-        Difficulty.EXPERT -> Spec(7, 580, WHAT_IF)
+        Difficulty.STANDARD -> Spec(5, SHORTCUTS)
+        Difficulty.HARD -> Spec(6, WAYS)
+        Difficulty.EXPERT -> Spec(7, WHAT_IF)
     }
 
     /** The deepest step [s] needs from a blank board ([SHORTCUTS], [WAYS] or [WHAT_IF]), or null when the ladder does not finish it. */
@@ -441,7 +414,7 @@ internal object TallyLogic {
     /** Draw number [a] for [seed], if it is accepted. Public to tests so they can count the redraws. */
     fun attempt(seed: Long, difficulty: Difficulty, a: Int): TallyState? {
         val spec = specFor(difficulty)
-        val s = draw(Rng(seed + a), spec.side, spec.keepPermille) ?: return null
+        val s = draw(Rng(seed + a), spec.side) ?: return null
         return s.takeIf { accepts(it, spec) }
     }
 
@@ -456,9 +429,9 @@ internal object TallyLogic {
      * Random digits 1..9 and a random keep mask, rejected when some line keeps nothing or removes
      * nothing (a line where every number stays, or none does, gives itself away).
      */
-    private fun draw(rng: Rng, n: Int, keepPermille: Int): TallyState? {
+    private fun draw(rng: Rng, n: Int): TallyState? {
         val digits = CharArray(n * n) { '0' + rng.nextInt(1, 9) }
-        val keep = CharArray(n * n) { if (rng.nextInt(1000) < keepPermille) '1' else '0' }
+        val keep = CharArray(n * n) { if (rng.nextInt(1000) < KEEP_PERMILLE) '1' else '0' }
         for (line in 0 until 2 * n) {
             val kept = lineCells(n, line).count { keep[it] == '1' }
             if (kept == 0 || kept == n) return null

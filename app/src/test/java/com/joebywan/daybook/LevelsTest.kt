@@ -16,7 +16,10 @@ import java.time.LocalDate
  */
 class LevelsTest {
 
-    /** Today's pool, copied. Appending to [Levels.POOL] is fine; anything else changes opened levels. */
+    /**
+     * The pool levels shipped with, copied (Lamps came after). Appending to [Levels.POOL] is fine; anything else changes
+     * opened levels. The pins below are at this size: every level opened with it keeps planning exactly so.
+     */
     private val pinnedPool = listOf(
         "sudoku", "kings", "mambo", "pipes", "shikaku", "mosaic", "sets", "atoms", "snap", "lits",
         "tower", "words", "nonogram", "inequality", "chess", "tents", "regions", "cages", "target",
@@ -68,6 +71,7 @@ class LevelsTest {
     /** Pinned at [pinnedPool]'s size: a plan is a function of the pool size, and a puzzle appended later opens new levels at its own. */
     @Test
     fun `the plans of levels 1 to 50 are pinned for each deal`() {
+        // Pinned at the pool of 25: a level opened then keeps that plan however the pool grows (the test below).
         fun got(deal: Int) = (1..50).map { n -> Levels.plan(n, pinnedPool.size, deal).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
         assertEquals(GOLDEN, got(1))
         assertEquals(GOLDEN_2, got(2))

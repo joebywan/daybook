@@ -10,11 +10,19 @@ import com.joebywan.daybook.puzzles.AtomsTeacher
 import com.joebywan.daybook.puzzles.CageTeacher
 import com.joebywan.daybook.puzzles.ChessTeacher
 import com.joebywan.daybook.puzzles.Cipher
+import com.joebywan.daybook.puzzles.Codeword
 import com.joebywan.daybook.puzzles.CipherTeacher
+import com.joebywan.daybook.puzzles.CodewordTeacher
 import com.joebywan.daybook.puzzles.DominoTeacher
 import com.joebywan.daybook.puzzles.Dominoes
+import com.joebywan.daybook.puzzles.Mines
+import com.joebywan.daybook.puzzles.MinesTeacher
+import com.joebywan.daybook.puzzles.Pearls
+import com.joebywan.daybook.puzzles.PearlsTeacher
 import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.KingsTeacher
+import com.joebywan.daybook.puzzles.Lamps
+import com.joebywan.daybook.puzzles.LampsTeacher
 import com.joebywan.daybook.puzzles.LexiconTeacher
 import com.joebywan.daybook.puzzles.LitsTeacher
 import com.joebywan.daybook.puzzles.MamboTeacher
@@ -49,7 +57,11 @@ class TechniqueNamesTest {
         "inequality" to InequalityTeacher.TECHNIQUES, "chess" to ChessTeacher.TECHNIQUES, "tents" to TentsTeacher.TECHNIQUES,
         "regions" to RegionsTeacher.TECHNIQUES, "cages" to CageTeacher.TECHNIQUES, "target" to TargetTeacher.TECHNIQUES,
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
-        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES, "whoswho" to WhosWhoTeacher.TECHNIQUES,
+        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
+        "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
+        "codeword" to CodewordTeacher.TECHNIQUES,
+        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
+        "whoswho" to WhosWhoTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 
@@ -81,6 +93,9 @@ class TechniqueNamesTest {
             Tally to listOf(null, TallyTeacher.WAYS, TallyTeacher.WHAT_IF),
             Dominoes to listOf(DominoTeacher.REGION_VALUE, DominoTeacher.COUNTING, DominoTeacher.WHAT_IF),
             Cipher to listOf(null, CipherTeacher.CHAIN, CipherTeacher.WHAT_IF),
+            Lamps to listOf(null, LampsTeacher.STARVE, LampsTeacher.WHAT_IF),
+            Codeword to listOf(null, CodewordTeacher.CROSSING, CodewordTeacher.ALL_WORDS),
+            Pearls to listOf(null, PearlsTeacher.SMALL_LOOP, PearlsTeacher.WHAT_IF),
             WhosWho to listOf(null, null, WhosWhoTeacher.WHAT_IF),
         )
         for ((p, want) in expected) for (t in Difficulty.entries) for (seed in 1L..10L) {
@@ -90,12 +105,24 @@ class TechniqueNamesTest {
             // Cipher's Standard is "columns and pairs only": whichever of those its walk ends on.
             if (p == WhosWho && t == Difficulty.HARD) {
                 assertTrue("whoswho seed $seed: $got", got in setOf(WhosWhoTeacher.LINK, WhosWhoTeacher.HOUSE))
+            } else if (p == Lamps && t == Difficulty.HARD) {
+                // Hard needs a look-ahead: whichever of the two its walk went deepest to.
+                assertTrue("lamps seed $seed: $got", got in setOf(LampsTeacher.STARVE, LampsTeacher.DARK))
+            } else if (p == Codeword && t == Difficulty.STANDARD) {
+                // Codeword's Standard is "one run at a time": a word only one word fits, or a letter every fitting word shares.
+                assertTrue("codeword seed $seed: $got", got in setOf(CodewordTeacher.ONE_WORD, CodewordTeacher.RUN_AGREES))
             } else if (p == Cipher && t == Difficulty.STANDARD) {
                 assertTrue("cipher seed $seed: $got", got in setOf(CipherTeacher.COLUMN, CipherTeacher.PAIR, CipherTeacher.ONLY_LETTER))
             } else {
                 assertEquals("${p.id} $t seed $seed", want[t.ordinal], got)
             }
             assertTrue("${p.id} $t took $took", took.inWholeMilliseconds < 500)
+        }
+        // Mines' Hard and Expert each gate on a level of two techniques: whichever the walk used.
+        val mines = listOf(setOf(null), setOf(MinesTeacher.SUBSET, MinesTeacher.PAIR), setOf(MinesTeacher.EDGE, MinesTeacher.WHAT_IF))
+        for (t in Difficulty.entries) for (seed in 1L..10L) {
+            val got = Mines.neededTechnique(Mines.generate(seed, t))
+            assertTrue("mines $t seed $seed: $got", got in mines[t.ordinal])
         }
     }
 }

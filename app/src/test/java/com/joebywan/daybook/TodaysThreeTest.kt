@@ -17,9 +17,10 @@ class TodaysThreeTest {
 
     @Test fun `the three are pinned to the date`() {
         // Worked out by hand from the lists and the epoch day (20751): a change here moves everyone's three.
-        assertEquals(listOf("mosaic", "lits", "wordwheel"), TodaysThree.of(day))
-        assertEquals(listOf("pointers", "tower", "target"), TodaysThree.of(LocalDate(2026, 10, 26)))
-        assertEquals(listOf("pipes", "nonogram", "cipher"), TodaysThree.of(LocalDate(2026, 10, 27)))
+        // Mid-weight steps (d mod 45 + d / 45): 20751 is 6 + 461 = 467, index 3 of 16 (467 mod 16).
+        assertEquals(listOf("sets", "lits", "wordwheel"), TodaysThree.of(day))
+        assertEquals(listOf("mosaic", "tower", "target"), TodaysThree.of(LocalDate(2026, 10, 26)))
+        assertEquals(listOf("tents", "nonogram", "cipher"), TodaysThree.of(LocalDate(2026, 10, 27)))
     }
 
     @Test fun `every puzzle has a slot, each slot keeps to its kind, and a year never repeats a day's three`() {

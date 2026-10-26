@@ -1,5 +1,9 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.lineName
+import com.joebywan.daybook.core.listed
+
 /**
  * Tally, reasoned the way a person reasons it: one row or column at a time, and on Expert one
  * supposition followed a few lines further.
@@ -133,7 +137,7 @@ internal object TallyTeacher {
         if (found.all { it == TallyLogic.OPEN }) return null
 
         val name = lineName(n, line)
-        val cap = name.replaceFirstChar { it.uppercaseChar() }
+        val cap = name.cap()
         val open = (0 until n).filter { state[it] == TallyLogic.OPEN }
         val kept = (0 until n).filter { state[it] == TallyLogic.STAY }.sumOf { values[it] }
         val left = (0 until n).filter { state[it] != TallyLogic.GO }.sumOf { values[it] }
@@ -224,7 +228,7 @@ internal object TallyTeacher {
 
         fun sentence(full: Boolean): String {
             val parts = w.links.map { linkText(it, full) } + fail
-            val chain = if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", ") + ", and " + parts.last()
+            val chain = listed(parts, oxford = true)
             return "$suppose, $chain. $verdict"
         }
         var why = sentence(true)
@@ -245,8 +249,6 @@ internal object TallyTeacher {
 
     // ---- words ----------------------------------------------------------------------------
 
-    private fun lineName(n: Int, line: Int) = if (line < n) "row ${line + 1}" else "column ${line - n + 1}"
-
     private fun targetIndex(n: Int, line: Int) =
         if (line < n) TallyLogic.rowTargetIndex(n, line) else TallyLogic.colTargetIndex(n, line - n)
 
@@ -264,7 +266,7 @@ internal object TallyTeacher {
         } else {
             positions.map { "${values[it]}" }
         }
-        val list = if (parts.size == 1) parts[0] else parts.dropLast(1).joinToString(", ") + " $joiner " + parts.last()
+        val list = listed(parts, joiner)
         return "the $list"
     }
 }

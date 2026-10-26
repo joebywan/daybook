@@ -62,14 +62,14 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.dimmed
+import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberSettledFlags
+import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
-import kotlinx.coroutines.delay
-
-/** How long a break must last before it turns red, so a player passing through one is not shouted at. */
-private const val SETTLE_MILLIS = 1000L
 
 /**
  * Who's Who: a few people, a row of houses and one or two more categories (a pet, a job...), and a numbered list of
@@ -102,11 +102,7 @@ object WhosWho : PuzzleType {
         "Arrows move between squares, 1-5 tick that item (Shift+1-5 crosses it), Backspace clears the square.",
     )
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
-        generateVerified(seed, difficulty) ?: WhosWhoLogic.lastResort(difficulty)
-
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): WhosWhoState? =
-        WhosWhoLogic.generateVerified(seed, difficulty)
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = WhosWhoLogic.generate(seed, difficulty)
 
     /** The deepest step of the hint walk from a blank board; null for the direct steps alone. */
     override fun neededTechnique(state: PuzzleState): String? =
@@ -319,13 +315,8 @@ object WhosWho : PuzzleType {
         val grid = WhosWhoLogic.gridOf(s.n, s.columns, s.marks)
         val cellsNow = badCells(s, grid)
         val cluesNow = badClues(s, grid)
-        var settled by remember(s.names, s.clues) { mutableStateOf(cellsNow to cluesNow) }
-        LaunchedEffect(s.marks) {
-            delay(SETTLE_MILLIS)
-            settled = cellsNow to cluesNow
-        }
-        val badCell = BooleanArray(cellsNow.size) { cellsNow[it] && settled.first.getOrElse(it) { false } }
-        val badClue = BooleanArray(cluesNow.size) { cluesNow[it] && settled.second.getOrElse(it) { false } }
+        val badCell = rememberSettledFlags(cellsNow, s.clues, s.marks)
+        val badClue = rememberSettledFlags(cluesNow, s.clues, s.marks)
         val feel = rememberMoveFeel(s.marks.chunked(s.n))
 
         Column(
@@ -444,7 +435,7 @@ object WhosWho : PuzzleType {
         val column = c % s.columns
         val placed = grid.placed[c]
         val open = (0 until s.n).filter { grid.cand[c] shr it and 1 == 1 }
-        val dim = look.lit && !look.named(c)
+        val hint = look.highlight.look(c)
         val accent = Color(accent)
         Box(
             modifier
@@ -458,10 +449,10 @@ object WhosWho : PuzzleType {
                 )
                 .border(0.5.dp, scheme.outline)
                 .then(if (isSelected) Modifier.border(2.dp, accent) else Modifier)
-                .glow(look, c, 0.dp)
+                .ring(hint, look.glow, look.pulse, 0.dp)
                 .moveFeel(feel, c, accent)
                 .clickable(enabled = interactive) { onCell(c) }
-                .alpha(if (dim) 0.45f else 1f),
+                .dimmed(hint),
             contentAlignment = Alignment.Center,
         ) {
             if (placed >= 0) {
@@ -498,19 +489,18 @@ object WhosWho : PuzzleType {
             itemsIndexed(s.clues) { k, _ ->
                 val index = WhosWhoTeacher.CLUE_BASE + k
                 val struck = s.isStruck(k)
-                val strong = look.lit && index in look.highlight.strong
-                val soft = look.lit && index in look.highlight.soft
+                val hint = look.highlight.look(index)
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .highlightAnchor(index)
                         .padding(vertical = 1.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .glow(look, index, 8.dp)
+                        .ring(hint, look.glow, look.pulse, 8.dp)
                         .background(if (bad[k]) scheme.error.copy(alpha = 0.14f) else Color.Transparent)
                         .clickable(enabled = interactive) { onClue(k) }
                         .padding(horizontal = 6.dp, vertical = 3.dp)
-                        .alpha(if (look.lit && !strong && !soft) 0.45f else 1f),
+                        .dimmed(hint),
                 ) {
                     Text(
                         "${k + 1}",
@@ -608,6 +598,7 @@ object WhosWho : PuzzleType {
         }
     }
 
+    /** A tick in the square of side [w] at [at]. */
     /** A tick in the square of side [w] at [at]. */
     /** The hint's ring on a highlighted cell or clue, read in the draw phase so the pulse does not recompose the board. */
     private fun Modifier.glow(look: Look, index: Int, corner: Dp): Modifier {

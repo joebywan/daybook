@@ -1,35 +1,7 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.ui.input.key.Key
-import com.joebywan.daybook.core.arrowStep
-import com.joebywan.daybook.core.stepCursor
-
-/** What a physical key asks of a Sudoku board. No state, no focus: that is [sudokuKeyAction]'s whole job. */
-sealed interface SudokuKeyAction {
-    /** 1-9: the digit pad's key of that number. */
-    data class Digit(val digit: Int) : SudokuKeyAction
-
-    /** Backspace, Delete or 0: empty the selected cell. */
-    data object Clear : SudokuKeyAction
-
-    /** An arrow: move the selection one square, never wrapping. */
-    data class Move(val dRow: Int, val dCol: Int) : SudokuKeyAction
-}
-
-/** The action for [key], or null for a key the board does not use. The caller has already ruled out chords. */
-fun sudokuKeyAction(key: Key): SudokuKeyAction? = when (key) {
-    Key.One, Key.NumPad1 -> SudokuKeyAction.Digit(1)
-    Key.Two, Key.NumPad2 -> SudokuKeyAction.Digit(2)
-    Key.Three, Key.NumPad3 -> SudokuKeyAction.Digit(3)
-    Key.Four, Key.NumPad4 -> SudokuKeyAction.Digit(4)
-    Key.Five, Key.NumPad5 -> SudokuKeyAction.Digit(5)
-    Key.Six, Key.NumPad6 -> SudokuKeyAction.Digit(6)
-    Key.Seven, Key.NumPad7 -> SudokuKeyAction.Digit(7)
-    Key.Eight, Key.NumPad8 -> SudokuKeyAction.Digit(8)
-    Key.Nine, Key.NumPad9 -> SudokuKeyAction.Digit(9)
-    Key.Zero, Key.NumPad0, Key.Backspace, Key.Delete -> SudokuKeyAction.Clear
-    else -> arrowStep(key)?.let { (r, c) -> SudokuKeyAction.Move(r, c) }
-}
+import com.joebywan.daybook.core.DigitKeyAction
+import com.joebywan.daybook.core.applyDigitKey
 
 /**
  * What pressing [digit] does to [cell]: the one rule the pad and the keyboard share. In notes mode it
@@ -47,19 +19,9 @@ fun SudokuState.clearCell(cell: Int): SudokuState =
     if (givens[cell] || (cells[cell] == 0 && notes[cell] == 0)) this else withCell(cell, 0)
 
 /**
- * The board after [action], or null when it changes nothing (no cell selected, a given, an edge).
- * One state per key, the same ones a tap emits, so undo, notes, conflicts and peer-striking behave alike.
- * With nothing selected an arrow selects the first square.
+ * The board after [action] (from `digitKeyAction(key, 9)`), or null when it changes nothing (no cell
+ * selected, a given, an edge). One state per key, the same ones a tap emits, so undo, notes, conflicts
+ * and peer-striking behave alike. With nothing selected an arrow selects the first square.
  */
-fun SudokuState.applyKey(action: SudokuKeyAction, notesMode: Boolean): SudokuState? {
-    val at = selected
-    val next = when (action) {
-        is SudokuKeyAction.Move -> {
-            if (at == null) return select(0)
-            select(stepCursor(at, action.dRow, action.dCol, 9, 9))
-        }
-        is SudokuKeyAction.Digit -> if (at == null) this else enter(at, action.digit, notesMode)
-        SudokuKeyAction.Clear -> if (at == null) this else clearCell(at)
-    }
-    return if (next == this) null else next
-}
+fun SudokuState.applyKey(action: DigitKeyAction, notesMode: Boolean): SudokuState? =
+    applyDigitKey(action, selected, 9, { select(it) }, { cell, d -> enter(cell, d, notesMode) }, { clearCell(it) })

@@ -8,6 +8,8 @@ import com.joebywan.daybook.puzzles.ChessState
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.Pointers
+import com.joebywan.daybook.puzzles.Mines
+import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsState
@@ -33,6 +35,7 @@ import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The share text, written out in full for each format, so a change to any of them is seen here first. */
@@ -133,7 +136,7 @@ class ShareCardTest {
     @Test fun `tower is pips per guess in the board's order`() {
         val s = TowerState(4, 6, 8, listOf(0, 1, 2, 3), listOf(listOf(1, 0, 4, 4), listOf(0, 1, 3, 2), listOf(0, 1, 2, 3)), List(4) { -1 })
         assertEquals(
-            "Daybook · Tower · Expert · 22 Oct · 3/8\n○ ○ · ·\n● ● ○ ○ 🟥\n● ● ● ●\n12:04 · 1 hint · 6 day streak\n" +
+            "Daybook · Codebreaker · Expert · 22 Oct · 3/8\n○ ○ · ·\n● ● ○ ○ 🟥\n● ● ● ●\n12:04 · 1 hint · 6 day streak\n" +
                 "● right colour and slot  ○ right colour  🟥 hint\n$SHARE_URL",
             card(Tower, s, "mhmm").text,
         )
@@ -170,7 +173,7 @@ class ShareCardTest {
         for (i in listOf(Pointers.SIDE, Pointers.ROW, Pointers.HOOK, Pointers.TOP, Pointers.SHORT)) s = s.tap(Pointers.TUTORIAL_ARROWS[i][0])!!
         val c = card(Pointers, s, "m".repeat(6))
         assertEquals(
-            "Daybook · Pointers · Expert · 22 Oct\n❤️❤️🖤\n12:04 · 6 day streak\n" +
+            "Daybook · Arrows · Expert · 22 Oct\n❤️❤️🖤\n12:04 · 6 day streak\n" +
                 "❤️ life left  🖤 life lost\n$SHARE_URL",
             c.text,
         )
@@ -178,6 +181,27 @@ class ShareCardTest {
         val clean = board.copy(removed = board.arrows.indices.toList())
         assertEquals("Not a single bump.", card(Pointers, clean, "mmmmm").nudge)
         assertEquals("❤️❤️❤️", card(Pointers, clean, "mmmmm").lines.single().text(false))
+    }
+
+    @Test fun `mines is the lives left as hearts, and a red square for hints`() {
+        val board = Mines.tutorialBoard()
+        var s: MinesState = board.reveal(Mines.BUMP)!!
+        for (i in 0 until 25) if (!s.isMine(i)) s = s.reveal(i) ?: s
+        assertTrue(s.solved)
+        val c = card(Mines, s, "m".repeat(9))
+        assertEquals(
+            "Daybook · Mines · Expert · 22 Oct\n❤️❤️🖤\n12:04 · 6 day streak\n" +
+                "❤️ life left  🖤 life lost\n$SHARE_URL",
+            c.text,
+        )
+        assertEquals("1 mine found the hard way. None tomorrow?", c.nudge)
+        val hinted = card(Mines, s, "mhmm")
+        assertEquals("❤️❤️🖤 🟥", hinted.lines.single().text(false))
+        assertEquals("The hints got you there. Try tomorrow's with fewer.", hinted.nudge)
+        var clean = board
+        for (i in 0 until 25) if (!clean.isMine(i)) clean = clean.reveal(i) ?: clean
+        assertEquals("Not a single mine.", card(Mines, clean, "mmmmm").nudge)
+        assertEquals("❤️❤️❤️", card(Mines, clean, "mmmmm").lines.single().text(false))
     }
 
     @Test fun `sets is a square a claim`() {

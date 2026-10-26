@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -43,10 +42,16 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.forEachBit
 import com.joebywan.daybook.core.jvmHashSetOrder
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.drawWalls
+import com.joebywan.daybook.ui.drawHintRings
+import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.fitStep
+import com.joebywan.daybook.ui.gridCellAt
 
 @Serializable
 data class LitsState(
@@ -189,18 +194,11 @@ object Lits : PuzzleType {
         val n = width * height
         if (region.size != n || shaded.size != n || n == 0) return false
 
-        // Every region needs its own four squares: a region left blank is not "not yet wrong".
-        val quads = HashMap<Int, MutableList<Int>>()
-        for (cell in 0 until n) if (shaded[cell]) quads.getOrPut(region[cell]) { mutableListOf() } += cell
-        if (quads.size != region.toHashSet().size) return false
-
-        val letters = arrayOfNulls<Piece>(n)
-        for (quad in quads.values) {
-            if (quad.size != 4) return false
-            if (!isConnected(quad, width, height)) return false
-            val piece = classify(quad, width) ?: return false   // null is the banned 2x2 block
-            quad.forEach { letters[it] = piece }
-        }
+        // Every region needs its own four squares (a region left blank is not "not yet wrong"), in one
+        // legal tetromino: exactly the squares [letters] names.
+        if ((0 until n).filter { shaded[it] }.map { region[it] }.toSet().size != region.toSet().size) return false
+        val letters = letters(width, height, region, shaded)
+        if ((0 until n).any { shaded[it] && letters[it] == null }) return false
 
         for (r in 0 until height - 1) for (c in 0 until width - 1) {
             val i = r * width + c
@@ -289,52 +287,7 @@ object Lits : PuzzleType {
         val n = width * height
         if (region.size != n || shaded.size != n) return emptySet()
 
-        val letters = letters(width, height, region, shaded)
-        val members = HashMap<Int, MutableList<Int>>()
-        for (cell in 0 until n) members.getOrPut(region[cell]) { mutableListOf() } += cell
-
-        /** Would this cover, standing on the shading already down, fill a 2x2 anywhere? */
-        fun fillsBlock(quad: List<Int>): Boolean = quad.any { cell ->
-            val r = cell / width
-            val c = cell % width
-            (-1..0).any { dr ->
-                (-1..0).any { dc ->
-                    val rr = r + dr
-                    val cc = c + dc
-                    rr >= 0 && cc >= 0 && rr + 1 < height && cc + 1 < width &&
-                        listOf(
-                            rr * width + cc, rr * width + cc + 1,
-                            (rr + 1) * width + cc, (rr + 1) * width + cc + 1,
-                        ).all { it in quad || shaded[it] }
-                }
-            }
-        }
-
-        /** Would this cover sit its letter against a region that has already settled on it? */
-        fun clashes(quad: List<Int>, piece: Piece): Boolean = quad.any { cell ->
-            neighbours(cell, width, height).any { next ->
-                next !in quad && shaded[next] && letters[next] == piece
-            }
-        }
-
-        val covers = HashMap<Int, List<kotlin.Pair<List<Int>, Piece>>>()
-        val out = mutableSetOf<Int>()
-        for (cell in 0 until n) {
-            if (shaded[cell]) continue
-            val id = region[cell]
-            val cells = members.getValue(id)
-            val forced = cells.filter { shaded[it] } + cell
-            if (forced.size > 4) {
-                out += cell
-                continue
-            }
-            val fits = covers.getOrPut(id) { tetrominoes(cells, width, height) }
-                .filter { it.first.containsAll(forced) }
-            if (fits.isEmpty() || fits.all { (quad, piece) -> fillsBlock(quad) || clashes(quad, piece) }) {
-                out += cell
-            }
-        }
-        return out
+        return LitsTeacher.impossible(width, height, region, shaded)
     }
 
     // ---- generation ---------------------------------------------------------------------------
@@ -349,11 +302,14 @@ object Lits : PuzzleType {
      */
     private const val NODE_BUDGET = 400_000
 
-    /** Ceiling on uniqueness checks per board, which is what actually bounds generation time. */
-    private const val SEARCH_BUDGET = 4000
+    /**
+     * Ceiling on uniqueness checks per board, which is what actually bounds generation time. Tripled (with
+     * [ATTEMPTS]) for the tier gate: a board that fits inside the old budget is the board it always was.
+     */
+    private const val SEARCH_BUDGET = 12_000
 
     /** Piece layouts tried per board, and partitions carved per layout. */
-    private const val ATTEMPTS = 150
+    private const val ATTEMPTS = 450
     private const val WALL_TRIES = 2
 
     /**
@@ -375,7 +331,9 @@ object Lits : PuzzleType {
      */
     private const val LAYOUTS = 24
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = build(seed, difficulty).let { (proved, floor) ->
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = build(seed, difficulty).let { b ->
+        val proved = b.proved
+        val floor = b.floor
         // Nothing was *proved* unique inside the budget. The floor still obeys every rule and can
         // be finished, and a second legal answer is a blemish rather than a wrong-answer bug (the
         // win check is the rules, not a stored answer), so it beats shipping nothing. FallbackTest
@@ -387,10 +345,13 @@ object Lits : PuzzleType {
      * The board [generate] makes, or null when nothing was proved to have exactly one answer under
      * the win check's rules: what a test asserts, because [generate] would then ship a floor.
      */
-    internal fun generateVerified(seed: Long, difficulty: Difficulty): LitsState? = build(seed, difficulty).first
+    internal fun generateVerified(seed: Long, difficulty: Difficulty): LitsState? = build(seed, difficulty).proved
 
-    /** The proved board if any, and the first legal-but-unproved candidate built along the way. */
-    private fun build(seed: Long, difficulty: Difficulty): kotlin.Pair<LitsState?, LitsState?> {
+    /**
+     * The proved board if any (the first that [score] says fits the tier, else the nearest), and the first
+     * legal-but-unproved candidate built along the way.
+     */
+    internal fun build(seed: Long, difficulty: Difficulty): Built {
         val (w, h) = shape(difficulty)
         val n = w * h
         val g = geometry(w, h)
@@ -404,6 +365,10 @@ object Lits : PuzzleType {
         // first and the regions drawn around it — so the first one built is kept as a floor. Only
         // its *uniqueness* is ever in doubt.
         var floor: LitsState? = null
+        // The proved board that came nearest the tier's gate, shipped when none meets it in MAX_DRAWS.
+        var best: LitsState? = null
+        var bestScore = -1
+        var proved = 0
 
         // Capped first. Should no board be provable under the cap, a proved board with one larger
         // region still beats the unproved floor, so the cap is dropped rather than the proof.
@@ -443,14 +408,52 @@ object Lits : PuzzleType {
                         // the next candidate.
                         searches++
                         if (search(g, options, connected = false) is Verdict.ExactlyOne) {
-                            return LitsState(w, h, region, List(n) { false }, verdict.shading) to floor
+                            val board = LitsState(w, h, region, List(n) { false }, verdict.shading)
+                            proved++
+                            val score = score(difficulty, LitsTeacher.depth(w, h, region))
+                            if (score == FITS) return Built(board, floor, proved)
+                            if (score > bestScore) { best = board; bestScore = score }
+                            if (difficulty == Difficulty.EXPERT && proved >= MAX_DRAWS) return Built(best, floor, proved)
                         }
                     }
                 }
             }
+            // A proved board under the cap beats a gated one with a larger region.
+            if (best != null) break
         }
 
-        return null to floor
+        return Built(best, floor, proved)
+    }
+
+    /** [build]'s result: the proved board if any, the floor, and how many proved boards the gate looked at. */
+    internal class Built(val proved: LitsState?, val floor: LitsState?, val draws: Int)
+
+    /**
+     * Proved boards Expert's gate may look at. Its what-if is needed by about one board in twenty, and each draw
+     * costs a carve (~15 ms on the JVM), so it keeps the deepest of these rather than drawing on: a year of Expert
+     * days is then what-if 35%, neighbour 64%, at a median of ~140 ms a board (16 draws: 37%, 177 ms).
+     */
+    private const val MAX_DRAWS = 8
+
+    private const val FITS = 2
+
+    /**
+     * How well a proved board meets its tier's gate, by the deepest [LitsTeacher.TECHNIQUES] rung a walk from blank
+     * needs ([LitsTeacher.depth]); [FITS] ships at once. Standard: no [LitsTeacher.NEIGHBOUR] or [LitsTeacher.WHAT_IF].
+     * Hard: any walk that finishes. Expert: [LitsTeacher.WHAT_IF], else (after [MAX_DRAWS]) [LitsTeacher.NEIGHBOUR].
+     */
+    internal fun score(difficulty: Difficulty, depth: Int?): Int {
+        if (depth == null) return 0
+        val t = LitsTeacher.TECHNIQUES
+        return when (difficulty) {
+            Difficulty.STANDARD -> if (depth < t.indexOf(LitsTeacher.NEIGHBOUR)) FITS else 0
+            Difficulty.HARD -> FITS
+            Difficulty.EXPERT -> when {
+                depth == t.indexOf(LitsTeacher.WHAT_IF) -> FITS
+                depth == t.indexOf(LitsTeacher.NEIGHBOUR) -> 1
+                else -> 0
+            }
+        }
     }
 
     /**
@@ -510,7 +513,7 @@ object Lits : PuzzleType {
         var claimed = 0L
         masks.forEachIndexed { index, m ->
             claimed = claimed or m
-            forEachBit(m) { region[it] = index }
+            m.forEachBit { region[it] = index }
         }
         val sizes = IntArray(placed.size) { 4 }
         val opts = Array(placed.size) { g.tetrominoesIn(masks[it]) }
@@ -528,7 +531,7 @@ object Lits : PuzzleType {
             val frontier = g.spread(claimed) and claimed.inv()
             if (frontier == 0L) break
             var open = frontier
-            if (intact) forEachBit(frontier) { cell ->
+            if (intact) frontier.forEachBit { cell ->
                 if (hostBits(g, cell, region) and refused[cell].inv() == 0L) {
                     open = open and (1L shl cell).inv()
                 }
@@ -705,14 +708,6 @@ object Lits : PuzzleType {
         return rest.countTrailingZeroBits()
     }
 
-    private inline fun forEachBit(bits: Long, action: (Int) -> Unit) {
-        var rest = bits
-        while (rest != 0L) {
-            action(rest.countTrailingZeroBits())
-            rest = rest and (rest - 1)
-        }
-    }
-
     /**
      * A w x h grid (at most 64 squares) worked out once for the generator: squares as bits of a
      * `Long`, and every four-square connected placement, the 2x2 block included, as an id with its
@@ -829,7 +824,7 @@ object Lits : PuzzleType {
         fun tetrominoesIn(cells: Long): IntArray {
             var size = 0
             var buffer = IntArray(40)
-            forEachBit(cells) { cell ->
+            cells.forEachBit { cell ->
                 for (q in byLowest[cell]) {
                     if (mask[q] and cells.inv() != 0L) continue
                     if (size == buffer.size) buffer = buffer.copyOf(size * 2)
@@ -1083,7 +1078,6 @@ object Lits : PuzzleType {
         Piece.S to BoardHues.ink(330f, false),
     )
 
-    private fun colourOf(piece: Piece): Color = palette.getValue(piece)
 
     /**
      * Shaded, but not yet anything: the puzzle's own accent, which is what every shaded square
@@ -1270,7 +1264,7 @@ object Lits : PuzzleType {
                     // otherwise the home grid would advertise a board that no longer exists. The
                     // letter itself is left off: at a 20dp cell the glyph is a smudge, and the tile
                     // has to read as LITS from across a grid, not be read word by word.
-                    color = if (previewShaded[i]) colourOf(Piece.L) else scheme.surfaceVariant,
+                    color = if (previewShaded[i]) palette.getValue(Piece.L) else scheme.surfaceVariant,
                     topLeft = at,
                     size = Size(step, step),
                 )
@@ -1282,32 +1276,7 @@ object Lits : PuzzleType {
                 )
             }
 
-            for (i in 0 until PREVIEW_SIDE * PREVIEW_SIDE) {
-                val r = i / PREVIEW_SIDE
-                val c = i % PREVIEW_SIDE
-                if (c + 1 < PREVIEW_SIDE && previewRegions[i] != previewRegions[i + 1]) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset(origin.x + (c + 1) * step, origin.y + r * step),
-                        Offset(origin.x + (c + 1) * step, origin.y + (r + 1) * step),
-                        strokeWidth = wall,
-                    )
-                }
-                if (r + 1 < PREVIEW_SIDE && previewRegions[i] != previewRegions[i + PREVIEW_SIDE]) {
-                    drawLine(
-                        scheme.onBackground,
-                        Offset(origin.x + c * step, origin.y + (r + 1) * step),
-                        Offset(origin.x + (c + 1) * step, origin.y + (r + 1) * step),
-                        strokeWidth = wall,
-                    )
-                }
-            }
-            drawRect(
-                color = scheme.onBackground,
-                topLeft = Offset(origin.x + wall / 2f, origin.y + wall / 2f),
-                size = Size(side - wall, side - wall),
-                style = Stroke(width = wall),
-            )
+            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, step, wall, scheme.onBackground, origin, frameInset = wall / 2f) { previewRegions[it] }
         }
     }
 
@@ -1365,14 +1334,10 @@ object Lits : PuzzleType {
             }.padding(18.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val step = if (constraints.hasBoundedHeight) minOf(maxWidth / s.width, maxHeight / s.height) else maxWidth / s.width
+            val step = fitStep(s.width, s.height)
             val stepPx = with(LocalDensity.current) { step.toPx() }
 
-            fun cellAt(offset: Offset): Int {
-                val c = (offset.x / stepPx).toInt().coerceIn(0, s.width - 1)
-                val r = (offset.y / stepPx).toInt().coerceIn(0, s.height - 1)
-                return r * s.width + c
-            }
+            fun cellAt(offset: Offset) = gridCellAt(offset, stepPx, s.width, s.height)
 
             Canvas(
                 Modifier
@@ -1421,7 +1386,7 @@ object Lits : PuzzleType {
                             color = when {
                                 !shown.shaded[i] -> scheme.surfaceVariant
                                 piece == null -> inProgress
-                                else -> colourOf(piece)
+                                else -> palette.getValue(piece)
                             },
                             topLeft = at,
                             size = Size(stepPx, stepPx),
@@ -1438,7 +1403,7 @@ object Lits : PuzzleType {
                     if (piece != null) {
                         // The glyph is the channel a colour-blind player is left with, so its colour is computed
                         // per fill for 4.5:1 (BoardHues.onFill), at full alpha.
-                        val glyph = BoardHues.onFill(colourOf(piece))
+                        val glyph = BoardHues.onFill(palette.getValue(piece))
                         val layout = measurer.measure(
                             piece.name,
                             TextStyle(
@@ -1482,64 +1447,15 @@ object Lits : PuzzleType {
 
                 // Dimming goes over the marks but under the walls, so the regions stay readable
                 // however much of the board has stepped back.
-                if (!highlight.isEmpty) {
-                    for (i in 0 until s.width * s.height) {
-                        if (i in highlight.strong || i in highlight.soft) continue
-                        drawRect(
-                            color = dim.copy(alpha = 0.62f),
-                            topLeft = Offset((i % s.width) * stepPx, (i / s.width) * stepPx),
-                            size = Size(stepPx, stepPx),
-                        )
-                    }
-                }
+                drawHintDim(highlight, s.width, s.height, stepPx, dim)
 
                 // Thick strokes wherever two different regions meet.
                 val edge = stepPx * 0.06f
-                for (i in 0 until s.width * s.height) {
-                    val r = i / s.width
-                    val c = i % s.width
-                    if (c + 1 < s.width && s.region[i] != s.region[i + 1]) {
-                        drawLine(
-                            scheme.onBackground,
-                            Offset((c + 1) * stepPx, r * stepPx),
-                            Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                            strokeWidth = edge,
-                        )
-                    }
-                    if (r + 1 < s.height && s.region[i] != s.region[i + s.width]) {
-                        drawLine(
-                            scheme.onBackground,
-                            Offset(c * stepPx, (r + 1) * stepPx),
-                            Offset((c + 1) * stepPx, (r + 1) * stepPx),
-                            strokeWidth = edge,
-                        )
-                    }
-                }
-                drawRect(
-                    color = scheme.onBackground,
-                    topLeft = Offset.Zero,
-                    size = Size(stepPx * s.width, stepPx * s.height),
-                    style = Stroke(width = edge),
-                )
+                drawWalls(s.width, s.height, stepPx, edge, scheme.onBackground) { s.region[it] }
 
                 // Outlines last, on top of the walls: a glow that a wall half-covers is a glow the
                 // player has to hunt for.
-                val strongWidth = 4.dp.toPx()
-                val softWidth = 1.5.dp.toPx()
-                val radius = CornerRadius(4.dp.toPx())
-                for (i in 0 until s.width * s.height) {
-                    val strong = i in highlight.strong
-                    if (!strong && i !in highlight.soft) continue
-                    val stroke = if (strong) strongWidth else softWidth
-                    val inset = edge / 2f + stroke / 2f
-                    drawRoundRect(
-                        color = if (strong) glow.copy(alpha = pulse.value) else glow.copy(alpha = 0.5f),
-                        topLeft = Offset((i % s.width) * stepPx + inset, (i / s.width) * stepPx + inset),
-                        size = Size(stepPx - inset * 2f, stepPx - inset * 2f),
-                        cornerRadius = radius,
-                        style = Stroke(stroke),
-                    )
-                }
+                drawHintRings(highlight, s.width, s.height, stepPx, glow, pulse.value, inset = edge / 2f)
             }
         }
     }

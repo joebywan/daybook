@@ -117,6 +117,79 @@ private class KeyPacer {
     val queue = ArrayDeque<KeyPress>()
 }
 
+private val DIGIT_KEYS = listOf(
+    Key.Zero, Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven, Key.Eight, Key.Nine,
+)
+private val NUMPAD_KEYS = listOf(
+    Key.NumPad0, Key.NumPad1, Key.NumPad2, Key.NumPad3, Key.NumPad4,
+    Key.NumPad5, Key.NumPad6, Key.NumPad7, Key.NumPad8, Key.NumPad9,
+)
+private val LETTER_KEYS = listOf(
+    Key.A, Key.B, Key.C, Key.D, Key.E, Key.F, Key.G, Key.H, Key.I, Key.J, Key.K, Key.L, Key.M,
+    Key.N, Key.O, Key.P, Key.Q, Key.R, Key.S, Key.T, Key.U, Key.V, Key.W, Key.X, Key.Y, Key.Z,
+)
+
+/** 0-9 for a digit key, top row or number pad, else null. */
+fun digitKey(key: Key): Int? =
+    DIGIT_KEYS.indexOf(key).takeIf { it >= 0 } ?: NUMPAD_KEYS.indexOf(key).takeIf { it >= 0 }
+
+/** 'a'..'z' for a letter key, else null. */
+fun letterKey(key: Key): Char? = LETTER_KEYS.indexOf(key).takeIf { it >= 0 }?.let { 'a' + it }
+
+/** Enter, on the main block or the number pad. */
+fun isEnterKey(key: Key): Boolean = key == Key.Enter || key == Key.NumPadEnter
+
+/** Backspace or Delete. */
+fun isEraseKey(key: Key): Boolean = key == Key.Backspace || key == Key.Delete
+
+/** Space or Enter: "tap what the cursor is on". */
+fun isConfirmKey(key: Key): Boolean = key == Key.Spacebar || isEnterKey(key)
+
+/** What a physical key asks of a board with a digit pad and a selected square (Sudoku, Inequality, Regions). */
+sealed interface DigitKeyAction {
+    /** 1..max: the digit pad's key of that number. */
+    data class Digit(val digit: Int) : DigitKeyAction
+
+    /** Backspace, Delete or 0: empty the selected square. */
+    data object Clear : DigitKeyAction
+
+    /** An arrow: move the selection one square, never wrapping. */
+    data class Move(val dRow: Int, val dCol: Int) : DigitKeyAction
+}
+
+/** The action for [key] on a board whose pad goes up to [max], or null for a key it does not use. The caller has ruled out chords. */
+fun digitKeyAction(key: Key, max: Int): DigitKeyAction? {
+    arrowStep(key)?.let { (r, c) -> return DigitKeyAction.Move(r, c) }
+    if (isEraseKey(key)) return DigitKeyAction.Clear
+    val d = digitKey(key) ?: return null
+    return when {
+        d == 0 -> DigitKeyAction.Clear
+        d <= max -> DigitKeyAction.Digit(d)
+        else -> null
+    }
+}
+
+/**
+ * The board after [action] on a [side] x [side] grid whose selection is [at], or null when it changes nothing.
+ * One state per key, the same ones a tap emits: [select], [enter] (a digit on a square) and [clear] are the
+ * board's own. With nothing selected an arrow selects the first square.
+ */
+inline fun <S> S.applyDigitKey(
+    action: DigitKeyAction,
+    at: Int?,
+    side: Int,
+    select: S.(Int) -> S,
+    enter: S.(Int, Int) -> S,
+    clear: S.(Int) -> S,
+): S? {
+    val next = when (action) {
+        is DigitKeyAction.Move -> if (at == null) return select(0) else select(stepCursor(at, action.dRow, action.dCol, side, side))
+        is DigitKeyAction.Digit -> if (at == null) this else enter(at, action.digit)
+        DigitKeyAction.Clear -> if (at == null) this else clear(at)
+    }
+    return if (next == this) null else next
+}
+
 /** (dRow, dCol) for an arrow key, or null. */
 fun arrowStep(key: Key): Pair<Int, Int>? = when (key) {
     Key.DirectionUp -> -1 to 0

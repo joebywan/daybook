@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.puzzles.WhosWhoLogic.Break
 import com.joebywan.daybook.puzzles.WhosWhoLogic.Step
 
@@ -143,19 +145,6 @@ internal object WhosWhoTeacher {
 
     // ---- words ----------------------------------------------------------------------------------
 
-    /** "Ann", "Ann and Ben", "Ann, Ben and Cara". */
-    fun list(words: List<String>): String = when (words.size) {
-        0 -> ""
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " and " + words.last()
-    }
-
-    /** "the fish or the bird", "house 1 or house 3". */
-    private fun orList(words: List<String>): String = when (words.size) {
-        1 -> words[0]
-        else -> words.dropLast(1).joinToString(", ") + " or " + words.last()
-    }
-
     private fun person(s: WhosWhoState, mark: Int) = s.names[mark / s.n / s.columns]
 
     private fun itemOf(s: WhosWhoState, mark: Int) = (mark / s.n % s.columns + 1) * s.n + mark % s.n
@@ -166,7 +155,7 @@ internal object WhosWhoTeacher {
     private fun crossOff(s: WhosWhoState, crosses: List<Int>): String {
         val people = crosses.map { person(s, it) }.distinct()
         val things = crosses.map { WhosWhoLogic.thing(s, itemOf(s, it)) }.distinct()
-        return "cross ${list(things)} off for ${list(people)}"
+        return "cross ${listed(things)} off for ${listed(people)}"
     }
 
     /** What a NEXT / LEFT clue asks of the partner of the side that holds [item]: "next to", "somewhere right of". */
@@ -183,7 +172,7 @@ internal object WhosWhoTeacher {
                 val action = if (step.ticks.isNotEmpty()) {
                     "Tick ${WhosWhoLogic.thing(s, itemOf(s, step.ticks[0]))} for ${person(s, step.ticks[0])}."
                 } else {
-                    capital(crossOff(s, step.crosses)) + "."
+                    crossOff(s, step.crosses).cap() + "."
                 }
                 "${clueLine(s, step.clue)} $action"
             }
@@ -215,12 +204,12 @@ internal object WhosWhoTeacher {
                         "$line $who ${WhosWhoLogic.has(s, clue.a)}, so ${crossOff(s, step.crosses)}."
                     }
                     clue.kind == WhosWhoLogic.SAME -> {
-                        val people = list(step.crosses.map { person(s, it) })
-                        "$line ${capital(WhosWhoLogic.thing(s, step.partner))} is ruled out for $people, so ${crossOff(s, step.crosses)}."
+                        val people = listed(step.crosses.map { person(s, it) })
+                        "$line ${WhosWhoLogic.thing(s, step.partner).cap()} is ruled out for $people, so ${crossOff(s, step.crosses)}."
                     }
                     else -> {
-                        val people = list(step.crosses.map { person(s, it) })
-                        "$line ${capital(WhosWhoLogic.thing(s, clue.b))} and ${WhosWhoLogic.thing(s, clue.c)} are both ruled out for $people, so ${crossOff(s, step.crosses)}."
+                        val people = listed(step.crosses.map { person(s, it) })
+                        "$line ${WhosWhoLogic.thing(s, clue.b).cap()} and ${WhosWhoLogic.thing(s, clue.c)} are both ruled out for $people, so ${crossOff(s, step.crosses)}."
                     }
                 }
             }
@@ -231,13 +220,13 @@ internal object WhosWhoTeacher {
                 val partner = WhosWhoLogic.base(s, step.partner)
                 if (step.person >= 0) {
                     val who = s.names[step.person]
-                    val houses = orList(step.crosses.map { "house ${it % n + 1}" })
+                    val houses = listed(step.crosses.map { "house ${it % n + 1}" }, "or")
                     val known = if (step.item / n == 0) "" else "$who ${WhosWhoLogic.has(s, step.item)}, and "
-                    "$line ${capital(known)}nobody who could $partner can live $rel $houses, so ${crossOff(s, step.crosses)}."
+                    "$line ${known.cap()}nobody who could $partner can live $rel $houses, so ${crossOff(s, step.crosses)}."
                 } else {
                     val people = step.crosses.map { person(s, it) }
                     val them = if (people.size == 1) people[0] else "any of them"
-                    "$line Wherever ${list(people)} can live, nobody who could $partner can live $rel $them, " +
+                    "$line Wherever ${listed(people)} can live, nobody who could $partner can live $rel $them, " +
                         "so ${crossOff(s, step.crosses)}."
                 }
             }
@@ -246,7 +235,7 @@ internal object WhosWhoTeacher {
                 val who = person(s, supposed)
                 val chain = if (step.chain.size <= WhosWhoLogic.MAX_LINKS) step.chain.map { link(s, it) } else {
                     val clues = step.chain.mapNotNull { if (it.clue >= 0) it.clue + 1 else null }.distinct().sorted()
-                    listOf("following clues " + list(clues.map { "$it" }) + " and what they leave")
+                    listOf("following clues " + listed(clues.map { "$it" }) + " and what they leave")
                 }
                 val end = when (val b = step.broke) {
                     is Break.EmptyCell -> "${s.names[b.person]} has no ${WhosWhoWords.NOUNS[s.groups[b.column]]} left"
@@ -269,9 +258,8 @@ internal object WhosWhoTeacher {
         }
         val people = step.crosses.map { person(s, it) }.distinct()
         val items = step.crosses.map { itemOf(s, it) }.distinct()
-        val what = WhosWhoLogic.base(s, items[0]) + if (items.size > 1) " or " + orList(items.drop(1).map { WhosWhoLogic.thing(s, it) }) else ""
-        return "${list(people)} can't $what$why"
+        val what = WhosWhoLogic.base(s, items[0]) + if (items.size > 1) " or " + listed(items.drop(1).map { WhosWhoLogic.thing(s, it) }, "or") else ""
+        return "${listed(people)} can't $what$why"
     }
 
-    private fun capital(text: String) = WhosWhoLogic.capital(text)
 }

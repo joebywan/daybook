@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.numberWord
+
 /**
  * Mambo, reasoned the way a person reasons it, one named step at a time.
  *
@@ -363,7 +366,7 @@ internal object MamboTeacher {
                     focus = line.cells.toSet(),
                     cited = line.cells.filter { cells[it] == sym }.toSet(),
                     nudge = "Count the ${plural(sym)} in ${line.name}.",
-                    explanation = "${line.name.cap()} already has its ${numberWord(half)} ${plural(sym)}, " +
+                    explanation = "${line.name.cap()} already has its ${numberWord(half, upTo = 6)} ${plural(sym)}, " +
                         "so the rest of it must be ${plural(other)}.",
                 )
             }
@@ -511,9 +514,4 @@ internal object MamboTeacher {
     private fun Sym.word() = if (this == Sym.SUN) "sun" else "moon"
 
     private fun plural(sym: Sym) = sym.word() + "s"
-
-    private fun numberWord(k: Int) =
-        listOf("zero", "one", "two", "three", "four", "five", "six").getOrElse(k) { k.toString() }
-
-    private fun String.cap() = replaceFirstChar { it.uppercaseChar() }
 }

@@ -77,8 +77,8 @@ internal object PointersLogic {
     private const val ATTEMPTS = 12
 
     /** Row and column step of each direction: up, right, down, left. */
-    private val DR = intArrayOf(-1, 0, 1, 0)
-    private val DC = intArrayOf(0, 1, 0, -1)
+    val DR = intArrayOf(-1, 0, 1, 0)
+    val DC = intArrayOf(0, 1, 0, -1)
 
     /**
      * [width] x [height] squares; arrows of [minLength] to [maxLength] squares that keep straight with
@@ -103,13 +103,11 @@ internal object PointersLogic {
         }
     }
 
-    fun rowStep(dir: Int) = DR[dir]
-    fun colStep(dir: Int) = DC[dir]
-
     /** The squares from just past the head to the edge, nearest first. */
-    fun ray(arrow: List<Int>, width: Int, height: Int): List<Int> {
-        val d = dirOf(arrow, width)
-        val head = arrow.last()
+    fun ray(arrow: List<Int>, width: Int, height: Int): List<Int> = ray(arrow.last(), dirOf(arrow, width), width, height)
+
+    /** The squares from just past [head] to the edge going [d], nearest first. */
+    fun ray(head: Int, d: Int, width: Int, height: Int): List<Int> {
         var r = head / width + DR[d]
         var c = head % width + DC[d]
         val out = ArrayList<Int>()
@@ -153,9 +151,6 @@ internal object PointersLogic {
         for (i in 0 until n) of(i)
         return depth
     }
-
-    fun generate(seed: Long, difficulty: Difficulty): PointersState =
-        generateVerified(seed, difficulty) ?: lastResort(difficulty)
 
     /** A board that covers the grid to the tier's density and clears, or null if no attempt made one. */
     fun generateVerified(seed: Long, difficulty: Difficulty): PointersState? {
@@ -224,16 +219,7 @@ internal object PointersLogic {
             val bc = hc - DC[dir]
             if (br !in 0 until h || bc !in 0 until w || owner[br * w + bc] >= 0) return false
             // The ray: squares it crosses, and the arrows sitting on it (they are in this arrow's way).
-            val ray = ArrayList<Int>()
-            run {
-                var r = hr + DR[dir]
-                var c = hc + DC[dir]
-                while (r in 0 until h && c in 0 until w) {
-                    ray += r * w + c
-                    r += DR[dir]
-                    c += DC[dir]
-                }
-            }
+            val ray = ray(head, dir, w, h)
             ray.forEach { onRay[it] = true }
             // Walk the body back from the head, never onto its own ray.
             walk.clear()
