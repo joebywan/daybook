@@ -133,8 +133,7 @@ class MiniTeachingTest {
             )
             assertTrue(d.name, wordMovesOn > 0)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/mini-second-clue.txt").writeText(report.toString())
+        writeReport("mini-second-clue.txt", report.toString())
         println(report)
     }
 
