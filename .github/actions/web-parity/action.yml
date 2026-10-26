@@ -21,7 +21,10 @@ runs:
 
     # Keyed on the pinned Playwright version: the browsers, and the ~150 .debs their system packages
     # need, so a warm run downloads neither (the runners' apt mirror has served at 65 kB/s).
-    - uses: actions/cache@v6
+    # Restored here and saved straight after the install, not in a post step: a post step saves only
+    # when the whole job succeeds, so a cold run that timed out later would never warm the cache.
+    - id: pw-cache
+      uses: actions/cache/restore@v6
       with:
         path: |
           ~/.cache/ms-playwright
@@ -36,6 +39,9 @@ runs:
       run: |
         python3 -m venv "$RUNNER_TEMP/pwenv"
         "$RUNNER_TEMP/pwenv/bin/pip" install --quiet -r tools/web-parity/requirements.txt
+        # The runners' own mirror (azure.archive.ubuntu.com) has crawled at minutes a package for 26.04.
+        sudo sed -i 's|http://azure.archive.ubuntu.com|http://archive.ubuntu.com|g' \
+          /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
         mkdir -p ~/apt-archives/partial
         printf 'Dir::Cache::Archives "%s";\nDPkg::Lock::Timeout "300";\nAPT::Keep-Downloaded-Packages "true";\n' \
           ~/apt-archives | sudo tee /etc/apt/apt.conf.d/99daybook-cache >/dev/null
@@ -43,6 +49,14 @@ runs:
         $pw install-deps chromium webkit || { echo "::warning::install-deps failed; retrying once"; sudo dpkg --configure -a; $pw install-deps chromium webkit; }
         timeout 600 $pw install chromium webkit || { echo "::warning::browser download failed or hung; retrying once"; timeout 600 $pw install chromium webkit; }
         sudo chown -R "$USER" ~/apt-archives
+
+    - if: steps.pw-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          ~/.cache/ms-playwright
+          ~/apt-archives
+        key: ${{ steps.pw-cache.outputs.cache-primary-key }}
 
     - name: Compare the browser's boards with the JVM's
       shell: bash
