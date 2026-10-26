@@ -45,6 +45,9 @@ data class DominoState(
 
     /** What the player can see: everything but [answer]. */
     internal val layout: DominoLogic.Layout get() = DominoLogic.Layout(width, height, open, regionOf, rules, tray)
+
+    /** Square [q] is on the board and no domino covers it. */
+    internal fun isFree(q: Int): Boolean = open[q] && DominoLogic.dominoAt(this, q) < 0
 }
 
 /**
@@ -196,7 +199,7 @@ internal object DominoLogic {
         }
     }
 
-    /** Region [r]'s covered pips and its uncovered square count on [pips]. */
+    /** The covered pips of a region's [squares] and its uncovered square count, on [pips]. */
     private fun regionView(squares: IntArray, pips: IntArray): Pair<List<Int>, Int> {
         val covered = squares.filter { pips[it] >= 0 }.map { pips[it] }
         return covered to squares.size - covered.size
@@ -405,8 +408,6 @@ internal object DominoLogic {
         for (a in 0 until ATTEMPTS) attempt(seed, difficulty, a)?.let { return it }
         return null
     }
-
-    fun generate(seed: Long, difficulty: Difficulty): DominoState = generateVerified(seed, difficulty) ?: lastResort(difficulty)
 
     /** The seed [lastResort] draws from. */
     private const val LAST_RESORT_SEED = 20261022L

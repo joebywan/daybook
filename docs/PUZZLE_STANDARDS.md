@@ -57,7 +57,7 @@ A puzzle is done when all of these are true:
 state: `PlayScreen` never reads it. Pointers and Mines, having no undo, draw their own Try again, one state that restores the
 board and its lives).
 
-Registry line: `core/PuzzleRegistry.kt` `all` is the archive picker's order; the home grid starts from `PuzzleOrder.GENTLEST`. Today's three (`core/TodaysThree.kt`) puts a new puzzle in its mid-weight slot unless it is listed as quick or word/number.
+Registry line: `core/PuzzleRegistry.kt` `all` is the archive picker's order; the home grid starts from `PuzzleOrder.GENTLEST`. Today's three (`core/TodaysThree.kt`) puts a new puzzle in its mid-weight slot unless it is listed as quick or word/number; choose its slot by what it asks, keep the three lengths pairwise coprime, and re-pin `TodaysThreeTest`.
 The home grid is three columns (`ui/home/HomeScreen.kt` `COLUMNS`, with a comment that four rows of tiles is what one
 phone screenful holds); adding a puzzle that starts a new row, or changing the tile size, means checking that screen again.
 

@@ -21,6 +21,8 @@ class Achievement(
     val category: AchievementCategory,
     val title: String,
     val description: String,
+    /** For a Training achievement: whether the training record (`TrainingRecord`, `puzzleId|technique`) earns it. */
+    val trained: ((training: Set<String>) -> Boolean)? = null,
     val earned: (history: List<Completion>, today: LocalDate, puzzleIds: List<String>) -> Boolean,
 )
 
@@ -75,6 +77,17 @@ val ACHIEVEMENTS: List<Achievement> = listOf(
     Achievement("allPuzzles", AchievementCategory.COVERAGE, "Clean sweep", "Finish every puzzle's daily within one week.") { h, _, ids ->
         ids.isNotEmpty() && h.mapNotNullTo(HashSet()) { it.day }.any { start -> weekFrom(h, start).containsAll(ids) }
     },
+    // Training (docs/TRAINING_SPEC.md): read off the training record, never the completions.
+    Achievement(
+        "sudokuTrained", AchievementCategory.MILESTONE, "Sudoku trained", "Pass every Sudoku technique in Training.",
+        earned = { _, _, _ -> false },
+        trained = { t -> SudokuTraining.TECHNIQUES.all { TrainingRecord.entry(SudokuTraining.PUZZLE, it) in t } },
+    ),
+    Achievement(
+        "sudokuGraduate", AchievementCategory.MILESTONE, "Sudoku graduate", "Then solve Training's final board.",
+        earned = { _, _, _ -> false },
+        trained = { t -> TrainingRecord.entry(SudokuTraining.PUZZLE, SudokuTraining.EXAM) in t },
+    ),
 )
 
 /** The puzzles with a daily solved in [h] for one of the seven days from [start]. */
@@ -83,10 +96,10 @@ private fun weekFrom(h: List<Completion>, start: LocalDate): Set<String> =
 
 private fun registryIds() = PuzzleRegistry.all.map { it.id }
 
-/** Every achievement [history] has earned. */
+/** Every achievement [history] (and [training], the training record) has earned. */
 fun earnedAchievements(
-    history: List<Completion>, today: LocalDate, puzzleIds: List<String> = registryIds(),
-): List<Achievement> = ACHIEVEMENTS.filter { it.earned(history, today, puzzleIds) }
+    history: List<Completion>, today: LocalDate, puzzleIds: List<String> = registryIds(), training: Set<String> = emptySet(),
+): List<Achievement> = ACHIEVEMENTS.filter { it.earned(history, today, puzzleIds) || it.trained?.invoke(training) == true }
 
 /** What [solve] earns: true after it, false before. History that already satisfied one never re-fires it. */
 fun newlyEarned(

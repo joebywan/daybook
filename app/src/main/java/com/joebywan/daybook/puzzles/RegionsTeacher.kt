@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.answerFallback
+import com.joebywan.daybook.core.lonePlace
 import com.joebywan.daybook.core.bit
 import com.joebywan.daybook.core.has
 import com.joebywan.daybook.core.listed
@@ -77,16 +79,6 @@ internal object RegionsTeacher {
 
     /** The deepest rung any board may use. */
     val DEEPEST = rung(LOCKED)
-
-    /** The one empty square of [members] whose mask in [m] has [d]; -1 when there are none or several, or one holds [d]. */
-    private fun lonePlace(members: List<Int>, cells: List<Int>, m: IntArray, d: Int): Int {
-        var at = -1
-        for (i in members) {
-            if (cells[i] == d) return -1
-            if (cells[i] == 0 && has(m[i], d)) { if (at >= 0) return -1; at = i }
-        }
-        return at
-    }
 
     private fun findStep(layout: RegionsLayout, cells: List<Int>, deepest: Int = DEEPEST): Hit? {
         val base = candidates(layout, cells)
@@ -180,17 +172,7 @@ internal object RegionsTeacher {
     fun teach(s: RegionsState): PlacementStep? {
         if (s.solved) return null
         mistake(s)?.let { return it }
-        return deduce(RegionsLayout(s.size, s.region), s.cells) ?: fallback(s)
-    }
-
-    private fun fallback(s: RegionsState): PlacementStep? {
-        val i = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
-        val d = s.solution[i]
-        return PlacementStep(
-            FALLBACK, i, d, setOf(i), emptySet(),
-            "This one takes a longer chain. Look at the glowing square.",
-            "This one needs a longer chain than a hint can walk through, so here's the answer for this square: a $d.",
-        )
+        return deduce(RegionsLayout(s.size, s.region), s.cells) ?: answerFallback(FALLBACK, s.cells, s.solution)
     }
 
     private fun mistake(s: RegionsState): PlacementStep? {

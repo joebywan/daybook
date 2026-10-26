@@ -160,7 +160,7 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
 
 - A record, not practice: per puzzle that teaches, its praised techniques (`praisedTechniquesOf`, in `TechniqueNames.kt`'s
   order), with a tick on each a hint has explained. The rest are plain, never greyed, locked or counted "of" a total; the
-  owner declined a per-technique practice mode, so nothing here starts a drill. Pointers and Snap (no teacher) and Target
+  page itself starts no drill; practice is Training (`docs/TRAINING_SPEC.md`). Pointers and Snap (no teacher) and Target
   (its steps are not skills) have no list.
 - Opened from a row on Statistics under Achievements ("N shown" once any is), back returns to Statistics; route `techniques`.
 - Stored as its own key set, `techniques_met` (`"puzzleId|technique"`), written when a hint opens a deduction (mistakes
@@ -184,9 +184,14 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   solve that earned no achievement, record, percentile or board-needed line; a solve with hints keeps its hint line. At most 64 characters.
   Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
 - **Today's three** (`core/TodaysThree.kt`, `ui/home/TodaysThreeRow.kt`). One quick puzzle, one mid-weight, one word or
-  number puzzle, from the date alone (each slot steps one place a day through its own list: quick 9, words 5, mid-weight
-  everything else, 17; the mid-weight slot steps once more each 45 days, so no set repeats within a year whatever that
-  list's length), so it is the same for everyone and a shared card means the same three. It replaced today's pick
+  number puzzle, from the date alone (each slot steps one place a day through its own list: quick 11, words 7, mid-weight
+  everything else, 13; pairwise coprime, so a set comes round again after 1,001 days and no puzzle waits more than 13. If a
+  new puzzle gives the mid-weight list a factor of 7 or 11, that slot steps once more each 77 days, so still no set repeats
+  within a year), so it is the same for everyone and a shared card means the same three. The slots were re-sorted
+  2026-10-26 by what each puzzle asks, from `docs/TEACHING.md`'s hint-walk steps on Standard: quick is one gesture (Arrows,
+  Pipes, Trail, Sand, Sets, Mosaic) or few rules and about a dozen steps (Kings, Tents, Shikaku, Atoms, Lamps); words and
+  numbers takes Crossword and Codeword beside Lexicon, Word Wheel, Target, Cipher and Tally; mid-weight is the rest (Sun &
+  Moon moved there: 30 steps on Standard against the quick ones' 7 to 13). It replaced today's pick
   (`PuzzleRegistry.featured`, stepped past the player's five most played): a per-player pick could not be the shared set,
   and two daily highlights would compete, so the pick's gold ring and sparkles moved onto the three. Home shows it as one
   row over the grid: "Today's three" and, once one is solved today at the grid's tier, a Share button; then a chip per
@@ -196,7 +201,7 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   laid out unseen in Levels, so it never moves the grid. "Try me!" and the grid's pick square are gone; nothing is stored.
   Its share card (`threeShareCard`): "Daybook · 25 Oct · Today's three · Standard", a mark per puzzle and "2/3", the solved
   boards' time and hints, the streak. A new player (fewer than five solves) gets `TodaysThree.starter` instead: the same
-  quick slot, a mid-weight from Sudoku / Crossword / Nonogram / Mines and a word one from Lexicon / Word Wheel / Target
+  quick slot, a mid-weight from Sudoku / Nonogram / Mines and a word one from Lexicon / Word Wheel / Crossword / Target
   (the gentlest of each kind), the same for every newcomer that day. An achievement, "Today's three" (all three on one
   tier, on the day, either the shared three or the day's starter three), reads the registry's lists, so changing a list (or adding a puzzle) can make an old day's read unearned, as with the other
   registry-wide ones.
