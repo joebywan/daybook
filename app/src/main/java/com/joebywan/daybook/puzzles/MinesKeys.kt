@@ -5,7 +5,7 @@ import com.joebywan.daybook.core.isConfirmKey
 
 /** What a physical key asks of the Mines square under the cursor (arrows are the board's, through `movedCursor`). */
 enum class MinesKeyAction {
-    /** Space or Enter: reveal it. */
+    /** Space or Enter: reveal it, or chord on a revealed number ([MinesState.chord]). */
     Reveal,
 
     /** F: flag it, or take its flag off. */

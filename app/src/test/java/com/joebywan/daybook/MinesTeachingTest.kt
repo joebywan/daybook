@@ -87,7 +87,6 @@ class MinesTeachingTest {
             var now = s
             for (i in rng.shuffled((0 until n).filter { !s.isMine(it) }).take(rng.nextInt(8))) now = now.reveal(i) ?: now
             for (i in rng.shuffled((0 until n).filter { s.isMine(it) }).take(rng.nextInt(4))) now = now.flag(i) ?: now
-            if (rng.nextBoolean()) now = now.reveal((0 until n).first { s.isMine(it) && !now.isFlag(it) }) ?: now
             if (now.solved) continue
             val step = Mines.teach(now)!!
             assertFalse(step.mistake)
@@ -133,7 +132,7 @@ class MinesTeachingTest {
     @Test fun `no hint on a lost or won board`() {
         var s = board(0, Difficulty.STANDARD)
         val mines = (0 until s.width * s.height).filter { s.isMine(it) }
-        for (i in mines.take(3)) s = s.reveal(i)!!
+        s = s.reveal(mines.first())!!
         assertTrue(s.failed)
         assertNull(Mines.teach(s))
         assertNull(Mines.teach(walk(board(1, Difficulty.STANDARD))))
@@ -163,15 +162,14 @@ class MinesTeachingTest {
     }
 
     @Test fun `each frame accepts its move made by the real gestures and refuses a wrong one`() {
-        assertEquals(5, frames.size)
+        assertEquals(6, frames.size)
         assertNull(frames[0].judge)
         val s0 = frames[1].state as MinesState
-        val bump = frames[1].judge!!
-        assertEquals(TutorialStep.DONE, bump(s0.reveal(Mines.BUMP)!!))
-        assertEquals(TutorialStep.REJECT, bump(s0.reveal(Mines.SAFE[0])!!))
-        assertEquals(TutorialStep.REJECT, bump(s0.flag(Mines.BUMP)!!))
-        val s1 = s0.reveal(Mines.BUMP)!!
-        assertEquals(s1.lives, s0.lives - 1)
+        val first = frames[1].judge!!
+        assertEquals(TutorialStep.DONE, first(s0.flag(Mines.BUMP)!!))
+        assertEquals(TutorialStep.REJECT, first(s0.reveal(Mines.BUMP)!!))
+        assertEquals(TutorialStep.REJECT, first(s0.flag(Mines.SAFE[0])!!))
+        val s1 = s0.flag(Mines.BUMP)!!
         assertEquals(s1, frames[2].state)
 
         val reveal = frames[2].judge!!
@@ -202,7 +200,7 @@ class MinesTeachingTest {
             assertFalse(d.mistake)
             s = d.apply(s) as MinesState
         }
-        assertEquals(2, s.lives)
+        assertFalse(s.failed)
     }
 
     @Test fun `captions fit the walkthrough's slot`() {
