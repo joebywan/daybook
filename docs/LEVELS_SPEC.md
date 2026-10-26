@@ -261,7 +261,7 @@ each generator already measures and gates its own tiers (size, and the ladder ru
 alone misreads a puzzle whose one step is a whole search: on the walk Mate is the easiest puzzle at every tier, since a
 key move is one step. So the measure moves a puzzle within its tier's band and the tiers overlap only at the edges.
 
-What it says: the word games (Crossword, Lexicon, Codebreaker, Word Wheel), Cage Sudoku and Nonogram are the hardest
+What it says (of solving, not learning; see the learning cost below): the word games (Crossword, Lexicon, Codebreaker, Word Wheel), Cage Sudoku and Nonogram are the hardest
 at Standard; Word Wheel's Standard (276) is harder than every ladder puzzle's but Cage Sudoku's. Sets sits
 above the middle (215, 21st of 31 Standards); what makes it hard is finding a set among the cards, which a walk of
 three or four steps cannot see, so it is probably still underrated. Mate, Atoms, Codeword, Tents and Who's Who are the
@@ -269,19 +269,40 @@ gentlest Standards: short walks on low rungs. Known ceilings: steps favour big b
 ladder is cut; open is zero for most puzzles. Player data (solve times by tier) would replace all of it.
 
 **The deal.** `Levels.spread`, built once from `core/LevelSpread.kt` (written by the test above; never edited by hand)
-and nothing else, so a plan is still `(level, poolSize, deal)` alone. Level `n` of 1-100 aims at a target rising evenly
-from the lowest score to the highest. Every puzzle not in the level before offers its tier nearest the target; they
-queue by staleness (never met first, gentlest Standard first; then the longest away, blurred by up to two levels so
-puzzles met together do not keep returning together), and the level is the five of the first 16 whose mean is nearest
-the target, each board's own distance counting 0.3 as much. A puzzle away 15 levels must come back, and the `r`-th
-gentlest Standard must be met by level `1 + 12r / 31`. Integer arithmetic only, no hash order (web parity). Tiles show
-gentlest first. Measured (`LevelsTest` holds each): every level's mean within 87 of its target (11 on average), ten-level means 159, 220, 294, 383, 469, 539, 629, 722, 796, 829; every
-puzzle met by level 13 and in 13 to 20 of levels 1-100, never away more than 15 levels nor in two levels running; 43 levels mix tiers.
-The first 31 pool ids are ranked (`LevelSpread.RANKED`); a puzzle appended later joins deal 3 from level 101, where
-deal 3 deals decks 1, 2, ... of the whole pool on the old curve (3 Hard, 2 Expert), deck 1 repaired against levels 99-100.
-That is a step down from level 100's five Experts, a breather rather than a cliff. Re-measuring, or ranking a new
-puzzle into 1-100, is a new deal: rewriting `LevelSpread.kt` would move every deal-3 plan, opened ones included.
-Building the spread costs about 150 ms on a desktop JVM, once, cold; a plan after that costs what it did.
+and `Levels.LEARN` (a frozen copy of `PuzzleOrder.GENTLEST` on 2026-10-26, quickest to learn first; never changed, as
+`GENTLE` is not), and nothing else, so a plan is still `(level, poolSize, deal)` alone.
+
+- **Target.** Level `n` of 1-100 aims at a target rising evenly from the mean Standard of the five quickest to learn
+  (221) to the mean of the five hardest Experts (882), both reachable by a real level.
+- **Learning cost.** The measure says how hard a board is to solve, not how long a puzzle takes to learn: on it alone,
+  level 1 was Mate, Atoms, Codeword, Tents and Who's Who, the "takes a bit" group, which `GENTLEST` exists to keep from a
+  newcomer. So a puzzle not yet met may join only once its place in `LEARN` is inside a window that opens on the first 10
+  and takes in all 31 by level 15, must join by level `1 + 13r / 31` (`r` its place), and is met on Standard. The term
+  is strongest at level 1 and gone by level 15; after that only the measured score counts.
+- **Choice.** Every puzzle not in the level before offers its tier nearest the target (Standard if not yet met). They
+  queue by staleness (never met first, quickest to learn first; then the longest away, blurred by up to two levels so
+  puzzles met together do not keep returning together), and the level is the five of the first 16 whose mean is nearest
+  the target, each board's own distance counting 0.3 as much. A puzzle away 15 levels must come back. Integer arithmetic
+  only, no hash order (web parity). Tiles show gentlest first.
+
+Levels 1-5:
+
+| level | boards (all Standard) |
+|---|---|
+| 1 | Arrows, Target, Pipes, Sudoku, Word Wheel |
+| 2 | Kings, Sand, Trail, Nonogram, Lexicon |
+| 3 | Target, Pipes, Sudoku, Sun & Moon, Word Wheel |
+| 4 | Kings, Sand, Trail, Nonogram, Crossword |
+| 5 | Sets, Target, Sudoku, Word Wheel, Lexicon |
+
+Measured (`LevelsTest` holds each): levels 1-5 all Standard and from the 15 quickest to learn; every level's mean
+within 92 of its target (10 on average); ten-level means 231, 302, 388, 454, 518, 569, 652, 730, 787, 830; every puzzle
+met by level 15 and in 13 to 22 of levels 1-100, never away more than 15 levels nor in two levels running; 48 levels
+mix tiers. The first 31 pool ids are ranked (`LevelSpread.RANKED`); a puzzle appended later joins deal 3 from level 101,
+where deal 3 deals decks 1, 2, ... of the whole pool on the old curve (3 Hard, 2 Expert), deck 1 repaired against levels
+99-100. That is a step down from level 100's five Experts, a breather rather than a cliff. Re-measuring, or ranking a new
+puzzle into 1-100, is a new deal: rewriting `LevelSpread.kt` or `LEARN` would move every deal-3 plan, opened ones
+included. Building the spread costs about 150 ms on a desktop JVM, once, cold; a plan after that costs what it did.
 
 <!-- level-difficulty:start -->
 Generated by `LevelDifficultyBuildTest` (60 boards a tier, the level seeds of levels 1-60); do not edit by hand.

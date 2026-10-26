@@ -189,6 +189,13 @@ class LevelsTest {
         assertEquals("Mostly Hard, one Standard, one Expert", Levels.summary(Levels.plan(60, pinnedPool.size, 1)))
     }
 
+    /** Deal 3's learning order, copied: `PuzzleOrder.GENTLEST` on 2026-10-26. It must never change. */
+    private val pinnedLearn = listOf(
+        "pointers", "pipes", "snap", "sudoku", "words", "sand", "wordwheel", "mini", "target", "nonogram", "mines",
+        "kings", "mambo", "mosaic", "sets", "inequality", "tents", "lamps", "regions", "tally",
+        "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", "codeword", "pearls", "whoswho", "tower",
+    )
+
     /** Deal 3's pool, and that pool with puzzles that do not exist yet appended. */
     private val future3 = ranked + (1..35).map { "future$it" }
 
@@ -223,9 +230,8 @@ class LevelsTest {
         val levels = (1..100).map { Levels.plan(it, ranked, 3) }
         val score = { b: LevelBoard -> LevelSpread.SCORE.getValue(b.puzzleId)[b.difficulty.ordinal] }
         val mean = levels.map { l -> l.sumOf(score) / 5.0 }
-        val all = LevelSpread.SCORE.values.flatten()
-        val lo = all.min()
-        val hi = all.max()
+        val lo = pinnedLearn.take(5).sumOf { LevelSpread.SCORE.getValue(it)[0] } / 5.0
+        val hi = LevelSpread.SCORE.values.map { it[2] }.sortedDescending().take(5).sum() / 5.0
         for ((i, m) in mean.withIndex()) {
             val target = lo + (hi - lo) * i / 99.0
             assertTrue("level ${i + 1}: mean $m, target $target", kotlin.math.abs(m - target) < 100)
@@ -234,6 +240,12 @@ class LevelsTest {
         assertTrue("ten-level means rise: $tens", tens.zipWithNext().all { (a, b) -> b > a + 25 })
         val mixed = levels.count { l -> l.map { it.difficulty }.toSet().size > 1 }
         assertTrue("levels mixing tiers: $mixed", mixed >= 20)
+        assertEquals(pinnedLearn, Levels.LEARN)
+        assertEquals(ranked.sorted(), pinnedLearn.sorted())
+        for (n in 1..5) for (b in levels[n - 1]) {
+            assertTrue("level $n: ${b.puzzleId} is not among the 15 quickest to learn", b.puzzleId in pinnedLearn.take(15))
+            assertEquals("level $n: ${b.puzzleId}", Difficulty.STANDARD, b.difficulty)
+        }
         val first = ranked.associateWith { id -> levels.indexOfFirst { l -> l.any { it.puzzleId == id } } + 1 }
         assertTrue("every puzzle by level 15: $first", first.values.all { it in 1..15 })
         for (id in ranked) {
@@ -249,65 +261,65 @@ class LevelsTest {
 
     private companion object {
         val GOLDEN_3 = listOf(
-            "chess/S atoms/S codeword/S tents/S whoswho/S",
-            "shikaku/S pointers/S cipher/S dominoes/S lamps/S",
-            "kings/S mosaic/S tally/S mines/S inequality/S",
-            "lits/S regions/S pearls/S sand/S snap/S",
-            "chess/S atoms/S codeword/S tents/S pointers/S",
-            "whoswho/S shikaku/S dominoes/S lamps/S inequality/S",
-            "cipher/S kings/S mosaic/S tally/S mines/S",
-            "atoms/S lits/S regions/S pearls/S snap/S",
-            "chess/S tents/S shikaku/S sets/S mambo/S",
-            "codeword/S pointers/S target/S pipes/S sudoku/S",
-            "whoswho/S kings/S tally/S mines/S nonogram/S",
-            "atoms/S tents/S wordwheel/S cages/S words/S",
-            "chess/S shikaku/S dominoes/S tower/S mini/S",
-            "regions/S pearls/S sand/S snap/S sets/S",
-            "inequality/S lits/S target/S pipes/S mambo/S",
-            "kings/S tally/S sudoku/S nonogram/S wordwheel/S",
-            "lamps/S snap/S sets/S cages/S words/S",
-            "cipher/S mines/S lits/S tower/S chess/H",
-            "pearls/S sand/S pipes/S mambo/S mini/S",
-            "regions/S target/S sudoku/S nonogram/S wordwheel/S",
-            "tally/S inequality/S snap/S cages/S words/S",
-            "mosaic/S sand/S sets/S tower/S atoms/H",
-            "mines/S mambo/S nonogram/S chess/H mini/S",
-            "snap/S target/S pipes/S wordwheel/S shikaku/H",
-            "whoswho/S lamps/S words/S pointers/H codeword/H",
-            "sets/S sudoku/S cages/S tower/S tents/H",
-            "inequality/S mambo/S chess/H mini/S atoms/H",
-            "tally/S nonogram/S wordwheel/S shikaku/H dominoes/H",
-            "target/S pipes/S words/S cipher/H mines/H",
-            "sets/S sudoku/S tower/S pointers/H codeword/H",
-            "mambo/S cages/S chess/H mini/S kings/H",
-            "inequality/S nonogram/S atoms/H cipher/H dominoes/H",
-            "pearls/S pipes/S shikaku/H mines/H lits/H",
-            "wordwheel/S words/S tower/S pointers/H lamps/H",
-            "regions/S chess/H mini/S sand/H mosaic/H",
-            "nonogram/S cages/S cipher/H tents/H sudoku/H",
-            "mambo/S atoms/H shikaku/H dominoes/H codeword/H",
-            "wordwheel/S chess/H pointers/H target/H sets/H",
-            "words/S tower/S mines/H sand/H snap/H",
-            "cages/S mini/S tents/H whoswho/H lamps/H",
-            "atoms/H cipher/H shikaku/H dominoes/H codeword/H",
-            "chess/H pointers/H mines/H target/H kings/H",
-            "tower/S sets/H lits/H snap/H tally/H",
-            "mini/S cipher/H sand/H sudoku/H whoswho/H",
-            "dominoes/H codeword/H tents/H mines/H lamps/H",
-            "atoms/H target/H sets/H kings/H mosaic/H",
-            "shikaku/H pointers/H sand/H tally/H inequality/H",
-            "mini/S sudoku/H whoswho/H pipes/H pearls/H",
-            "dominoes/H snap/H lits/H mosaic/H wordwheel/H",
-            "mines/H sets/H kings/H lamps/H regions/H",
+            "pointers/S target/S pipes/S sudoku/S wordwheel/S",
+            "kings/S sand/S snap/S nonogram/S words/S",
+            "target/S pipes/S sudoku/S mambo/S wordwheel/S",
+            "kings/S sand/S snap/S nonogram/S mini/S",
+            "sets/S target/S sudoku/S wordwheel/S words/S",
+            "mines/S pipes/S mambo/S nonogram/S mini/S",
+            "mosaic/S target/S sudoku/S wordwheel/S words/S",
+            "tents/S inequality/S mambo/S nonogram/S mini/S",
+            "lamps/S tally/S regions/S wordwheel/S words/S",
+            "atoms/S shikaku/S pipes/S sudoku/S mambo/S",
+            "chess/S lits/S nonogram/S cages/S words/S",
+            "cipher/S dominoes/S wordwheel/S mini/S pointers/H",
+            "codeword/S pipes/S sudoku/S shikaku/H tents/H",
+            "whoswho/S pearls/S nonogram/S words/S atoms/H",
+            "target/S mambo/S cages/S tower/S chess/H",
+            "sets/S pipes/S wordwheel/S cipher/H pointers/H",
+            "sand/S snap/S mini/S atoms/H shikaku/H",
+            "pearls/S mambo/S tower/S dominoes/H codeword/H",
+            "sets/S nonogram/S words/S pointers/H kings/H",
+            "wordwheel/S cages/S chess/H mini/S target/H",
+            "pipes/S sudoku/S atoms/H cipher/H mines/H",
+            "regions/S mambo/S shikaku/H dominoes/H mosaic/H",
+            "nonogram/S wordwheel/S tower/S pointers/H inequality/H",
+            "pearls/S words/S chess/H lamps/H tally/H",
+            "cages/S mini/S atoms/H cipher/H shikaku/H",
+            "regions/S dominoes/H codeword/H tents/H lits/H",
+            "mambo/S tower/S mines/H sets/H target/H",
+            "words/S chess/H shikaku/H pointers/H kings/H",
+            "nonogram/S mini/S atoms/H sand/H whoswho/H",
+            "cages/S cipher/H dominoes/H codeword/H tents/H",
+            "tower/S chess/H mines/H sets/H sudoku/H",
+            "words/S shikaku/H target/H kings/H snap/H",
+            "mini/S pointers/H sand/H lits/H whoswho/H",
+            "tower/S cipher/H dominoes/H sudoku/H tally/H",
+            "chess/H codeword/H mines/H sets/H lamps/H",
+            "atoms/H shikaku/H pointers/H tents/H pipes/H",
+            "mini/S target/H kings/H lits/H mosaic/H",
+            "chess/H cipher/H sand/H inequality/H wordwheel/H",
+            "shikaku/H dominoes/H mines/H sets/H pearls/H",
+            "codeword/H tents/H snap/H whoswho/H mosaic/H",
+            "cipher/H pointers/H target/H sudoku/H regions/H",
+            "atoms/H lits/H lamps/H tally/H mambo/H",
+            "sets/H kings/H sand/H pipes/H pearls/H",
+            "codeword/H mines/H whoswho/H inequality/H nonogram/H",
+            "tents/H snap/H mosaic/H wordwheel/H cages/H",
+            "target/H lits/H lamps/H pipes/H mini/H",
+            "sand/H sudoku/H tally/H words/H tower/H",
+            "snap/H whoswho/H inequality/H pearls/H regions/H",
+            "kings/H mosaic/H mambo/H cages/H nonogram/H",
+            "dominoes/H sets/H wordwheel/H mini/H chess/E",
         )
 
         /** Levels 98-103: the spread's end, then deck 1 on the curve. */
         val GOLDEN_3_TURN = listOf(
-            "lits/E pipes/E wordwheel/E words/E mambo/E",
-            "pointers/E mosaic/E whoswho/E regions/E mini/E",
-            "sets/E inequality/E cages/E tower/E pearls/E",
-            "sand/E words/H regions/H mosaic/E pointers/H",
-            "pearls/E tally/H tents/H nonogram/H sets/E",
+            "target/E cipher/E inequality/E cages/E mini/E",
+            "sand/E wordwheel/E tally/E whoswho/E regions/E",
+            "sets/E words/E tower/E lamps/E pearls/E",
+            "sand/E regions/H mosaic/H pointers/E tally/H",
+            "pearls/E words/H tents/H nonogram/H sets/E",
             "codeword/E tower/E snap/H whoswho/H cages/H",
         )
 

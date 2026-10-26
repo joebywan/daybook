@@ -39,7 +39,8 @@ data class LevelBoard(val puzzleId: String, val difficulty: Difficulty, val seed
  * **Deal 3, the spread** ([spread]): levels 1-[SPREAD_LEVELS] are not dealt from decks at all. Every puzzle-tier has a
  * measured difficulty ([LevelSpread], generated; `docs/LEVELS_SPEC.md`, "Level difficulty"), and each level takes the five
  * boards, from five puzzles, that best match a target rising evenly from the gentlest score to the hardest, so tiers mix
- * across puzzles (one puzzle's Expert beside another's Standard) and the curve above does not apply. Levels after that
+ * across puzzles (one puzzle's Expert beside another's Standard) and the curve above does not apply. Puzzles are met on
+ * Standard in [LEARN] order, quickest to learn first, all by level 15. Levels after that
  * are dealt from decks 1, 2, ... as before, on the curve, deck 1 repaired against the spread's last two levels.
  */
 object Levels {
@@ -165,33 +166,39 @@ object Levels {
 
     /**
      * Deal 3's levels 1-[SPREAD_LEVELS], each five (puzzle, tier) pairs, gentlest first. Built once, in order, from
-     * [LevelSpread] alone. Level `n` aims at a target `T` rising evenly from the lowest score to the highest. Each puzzle
-     * not in the level before offers its tier nearest `T`; they queue by staleness (never seen first, gentlest Standard
-     * first; then the longest unseen, blurred by up to [SPREAD_BLUR] levels by the level's own `Rng`), and the level is the five of the first [SPREAD_QUEUE]
-     * whose mean is nearest `T`, each board's own distance counting a little ([SPREAD_LEAN]). A puzzle away for
-     * [SPREAD_GAP] levels must come back, and a new one must be in by its turn: the `r`-th gentlest Standard by level
-     * `1 + r * SPREAD_INTRO / puzzles`, so every puzzle is met by about level [SPREAD_INTRO]. Integer arithmetic only.
+     * [LevelSpread] and [LEARN] alone. Level `n` aims at a target `T` rising evenly from the mean Standard of the five
+     * quickest to learn to the mean of the five hardest Experts. Each puzzle not in the level before offers its tier nearest `T`; they queue
+     * by staleness (never met first, quickest to learn first; then the longest away, blurred by up to [SPREAD_BLUR]
+     * levels by the level's own `Rng`), and the level is the five of the first [SPREAD_QUEUE] whose mean is nearest `T`,
+     * each board's own distance counting a little ([SPREAD_LEAN]). A puzzle away [SPREAD_GAP] levels must come back.
+     *
+     * Learning cost: a puzzle not yet met may join only once its place in [LEARN] is inside a window that opens on the
+     * first [LEARN_FROM] and takes in all of them by level [LEARN_BY], and must join by level `1 + r * SPREAD_INTRO /
+     * puzzles` (`r` its place). So the first levels are the quickest to learn, on Standard, and the term is gone by
+     * about level 15, after which only the measured score counts. Integer arithmetic only.
      */
     private val spread: List<List<Pair<String, Difficulty>>> by lazy {
         val score = LevelSpread.SCORE
         val ids = Rng(SeedHash.levelPick(0, SALT_SPREAD)).shuffled(POOL.take(LevelSpread.RANKED))
-        val introRank = ids.sortedBy { score.getValue(it)[0] }.withIndex().associate { (r, id) -> id to r }
-        val lo = score.values.minOf { it.min() }.toLong()
-        val hi = score.values.maxOf { it.max() }.toLong()
+        val learn = ids.associateWith { LEARN.indexOf(it).toLong() }
+        val lo5 = LEARN.take(SIZE).sumOf { score.getValue(it)[0] }.toLong() // five times the first target
+        val hi5 = score.values.map { it[2] }.sortedDescending().take(SIZE).sum().toLong() // five times the last target
         val last = HashMap<String, Int>() // looked up by key only
         var before = emptySet<String>()
         (1..SPREAD_LEVELS).map { n ->
-            val target = 99 * lo + (hi - lo) * (n - 1) // 99 times the target, so nothing is rounded
-            fun tierFor(id: String): Int = (0..2).minBy { kotlin.math.abs(99L * score.getValue(id)[it] - target) }
-            // Staleness, never seen first (gentlest Standard first); the last level seen is blurred by up to SPREAD_BLUR
-            // levels, so puzzles met together do not keep coming back together.
+            val target = 99 * lo5 + (hi5 - lo5) * (n - 1) // 495 times the target, so nothing is rounded
+            fun scaled(id: String, t: Int) = 99L * SIZE * score.getValue(id)[t]
+            // A puzzle is met on Standard; after that, its tier nearest the target.
+            fun tierFor(id: String): Int = if (id !in last) 0 else (0..2).minBy { kotlin.math.abs(scaled(id, it) - target) }
+            val window = LEARN_FROM * (LEARN_BY - 1L) + (ids.size - LEARN_FROM) * (n - 1L)
             val rng = Rng(SeedHash.levelPick(n, SALT_SPREAD))
-            val key = ids.associateWith { id -> last[id]?.let { 10_000 + SIZE * it + rng.nextInt(SIZE * SPREAD_BLUR) } ?: score.getValue(id)[0] }
-            val queue = ids.filter { it !in before }.sortedBy { key.getValue(it) }.take(SPREAD_QUEUE)
+            val key = ids.associateWith { id -> last[id]?.let { 10_000L + SIZE * it + rng.nextInt(SIZE * SPREAD_BLUR) } ?: learn.getValue(id) }
+            val queue = ids.filter { it !in before && (it in last || learn.getValue(it) * (LEARN_BY - 1) < window) }
+                .sortedBy { key.getValue(it) }.take(SPREAD_QUEUE)
             val must = queue.filter { id ->
-                last[id]?.let { n - it >= SPREAD_GAP } ?: (n.toLong() * ids.size >= ids.size + introRank.getValue(id).toLong() * SPREAD_INTRO)
+                last[id]?.let { n - it >= SPREAD_GAP } ?: ((n - 1L) * ids.size >= learn.getValue(id) * SPREAD_INTRO)
             }.take(SIZE)
-            val s = queue.map { 99L * score.getValue(it)[tierFor(it)] }
+            val s = queue.map { scaled(it, tierFor(it)) }
             var best = -1L
             var pick = IntArray(0)
             val c = IntArray(SIZE)
@@ -213,11 +220,23 @@ object Levels {
         }
     }
 
+    /**
+     * Deal 3's learning order, quickest to learn first: `PuzzleOrder.GENTLEST` as it was on 2026-10-26, frozen here (as
+     * [GENTLE] is) so a later edit to the home grid's order cannot move a plan. Never change it.
+     */
+    val LEARN: List<String> = listOf(
+        "pointers", "pipes", "snap", "sudoku", "words", "sand", "wordwheel", "mini", "target", "nonogram", "mines",
+        "kings", "mambo", "mosaic", "sets", "inequality", "tents", "lamps", "regions", "tally",
+        "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", "codeword", "pearls", "whoswho", "tower",
+    )
+
     private const val SPREAD_QUEUE = 16
     private const val SPREAD_LEAN = 3 // tenths: a board's own distance from the target counts 0.3 of the level's
     private const val SPREAD_GAP = 15
-    private const val SPREAD_INTRO = 12
+    private const val SPREAD_INTRO = 13
     private const val SPREAD_BLUR = 2
+    private const val LEARN_FROM = 10
+    private const val LEARN_BY = 15
 
     private fun deck(k: Int, pool: List<String>, deal: Int): List<String> {
         val cards = rawDeck(k, pool, deal).toMutableList()
