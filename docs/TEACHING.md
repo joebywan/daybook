@@ -35,6 +35,9 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
   board's box is the whole of the space between header and toolbar and never changes size: not when
   a hint opens, not for the first-visit offer, not on solve. (A reserved slot did the opposite: a
   blank ~156dp band all game on every teaching puzzle, and a visible jump larger on completion.)
+  What it keeps off is everything the hint names at any stage, not only what glows: the nudge lights the focus alone,
+  but `HighlightBounds.named` adds the squares the explanation will cite and change, so the popover does not sit on them
+  and does not jump when the second tap lights them.
   It sits on the opposite half from the highlight: highlight low, popover above (under the clock);
   highlight high, popover below (hugging the toolbar, which it never covers). Both clear, then
   the half rule decides, ties below. A control the player needs (`keepClear`: Sudoku's digit pad,

@@ -127,7 +127,6 @@ basket: Wicker carrier
 bat: Flying mammal, or a club for hitting
 battery: Torch's power cell
 bay: Coastal inlet
-bayonet: Blade on a rifle
 beaten: Defeated
 beaver: Dam-building rodent
 became: Turned into
@@ -139,7 +138,6 @@ belated: Late in coming
 belfry: Bell tower
 bemoan: Lament
 beneath: Under
-bereave: Leave grieving
 bestial: Brutish
 betray: Double-cross
 bettor: Gambler at the races
@@ -228,7 +226,6 @@ capture: Take prisoner
 caramel: Burnt-sugar toffee
 car: Automobile
 caress: Gentle stroke
-carnage: Slaughter
 carouse: Drink and make merry
 carpet: Floor covering
 carrot: Orange root vegetable
@@ -236,7 +233,6 @@ cartel: Price-fixing group
 carton: Milk box
 cartoon: Animated film
 cashier: Till operator
-casket: Coffin
 castle: Fortress with a moat
 cat: Feline pet
 catnap: Short doze
@@ -329,7 +325,6 @@ cop: Police officer
 cordon: Line of police
 cornea: Clear front of the eye
 cornet: Brass instrument, or an ice cream cone
-corpse: Dead body
 corrode: Rust away
 corsage: Flowers worn at the wrist
 costume: Fancy dress
@@ -352,7 +347,6 @@ crayon: Coloured wax stick
 create: Make
 creator: Maker
 credit: Recognition, or a loan
-cremate: Burn to ashes
 cringe: Wince with embarrassment
 crinkle: Wrinkle
 crisply: Sharply
@@ -569,12 +563,10 @@ fairly: Justly, or quite
 falsely: Untruthfully
 falter: Waver
 family: Parents and children
-famine: Severe food shortage
 fan: Supporter
 far: Distant
 farther: More distant
 father: Male parent
-fat: Plump
 fatten: Feed up
 faulty: Defective
 fearful: Afraid
@@ -641,14 +633,12 @@ fright: Scare
 fringe: Edge, or hair over the forehead
 fry: Cook in oil
 fun: Enjoyment
-funeral: Burial service
 fur: Animal's coat
 furtive: Sneaky
 gab: Chatter
 gag: Comedian's line
 gallery: Art museum
 galley: Ship's kitchen
-gallows: Hanging frame
 gander: Male goose, or a look
 gap: Opening
 garage: Car shelter
@@ -701,7 +691,6 @@ gravel: Small stones
 gravely: Seriously
 greatly: To a great degree
 gremlin: Mischievous goblin
-grenade: Hand bomb
 griddle: Flat cooking plate
 grieve: Mourn
 grimace: Pull a face
@@ -713,9 +702,6 @@ growth: Increase
 grumble: Moan
 guilty: To blame
 gum: Chewing treat
-gun: Firearm
-gunfire: Shooting
-gunshot: Bang of a rifle
 gut: Belly
 guy: Fellow
 gym: Workout spot
@@ -737,11 +723,9 @@ hassle: Bother
 hasten: Speed up
 hatchet: Small axe
 hat: Headwear
-hatred: Loathing
 hay: Dried grass
 health: Wellbeing
 healthy: Well
-hearse: Funeral car
 hearten: Encourage
 hearty: Warm and generous
 hem: Skirt's edge
@@ -893,7 +877,6 @@ lengthy: Long and drawn out
 leopard: Spotted big cat
 leotard: Dancer's one-piece
 leprosy: Ancient skin disease
-lesion: Wound or sore
 lessen: Reduce
 lesson: Class at school
 let: Allow
@@ -1001,14 +984,12 @@ monster: Ogre
 moo: Cow's call
 mop: Floor cleaner
 morale: Team spirit
-morgue: Mortuary
 motion: Movement
 motive: Reason behind a crime
 mow: Cut the grass
 mud: Wet dirt
 mug: Coffee cup
 mum: Mother, or silent
-murder: Killing
 mutant: Product of a genetic change
 myriad: Countless
 nab: Catch
@@ -1090,7 +1071,6 @@ ordeal: Painful experience
 ore: Mined rock
 orient: Get one's bearings
 ornate: Elaborately decorated
-orphan: Child without parents
 our: Belonging to us
 outcry: Public protest
 outlaw: Bandit
@@ -1182,7 +1162,6 @@ piracy: Robbery at sea
 pirate: Buccaneer
 pit: Fruit stone
 placate: Pacify
-plague: Epidemic
 plaice: Flat fish
 planet: Mars, for one
 plaster: Wall coating, or a sticking dressing
@@ -1263,9 +1242,7 @@ pummel: Pound with fists
 pun: Wordplay
 pup: Baby seal or dog
 purpose: Aim
-pus: Wound discharge
 put: Place
-putrid: Rotten and stinking
 pyramid: Egyptian tomb
 python: Big snake
 quaint: Charmingly old-fashioned
@@ -1295,7 +1272,6 @@ rat: Rodent
 rattle: Baby's noisy toy
 ravage: Lay waste
 ravine: Gorge
-ravish: Enrapture
 raw: Uncooked
 ray: Beam of light
 reactor: Nuclear plant's core
@@ -1419,8 +1395,6 @@ riposte: Quick reply
 ripple: Small wave
 rip: Tear
 ritual: Solemn ceremony
-robber: Bank thief
-robbery: Heist
 rob: Steal from
 rodent: Mouse or rat
 rod: Fishing pole
@@ -1428,8 +1402,6 @@ roe: Fish eggs
 romance: Love affair
 roster: Duty list
 rotary: Turning
-rot: Decay
-rotten: Decayed
 rotunda: Domed building
 rotund: Round and plump
 roughen: Make coarse
@@ -1469,7 +1441,6 @@ satchel: School bag
 satire: Mockery in print
 sat: Was seated
 saunter: Leisurely walk
-savage: Fierce
 saw: Carpenter's cutter
 say: Speak
 scandal: Shocking affair
@@ -1497,7 +1468,6 @@ see: Look at
 seminar: Discussion class
 senate: Upper house
 senator: Member of the upper house
-senile: Doddery with age
 senior: Elder
 sensor: Detector
 sensory: Of the senses
@@ -1527,7 +1497,6 @@ she: That woman, as subject
 shimmer: Gleam softly
 shingle: Pebbly beach
 shorten: Cut down
-shotgun: Front passenger seat, when called
 shrivel: Wither
 shutter: Window cover, or a camera part
 shuttle: Spacecraft, or a loom part
@@ -1612,7 +1581,6 @@ stature: Height
 statute: Written law
 staunch: Loyal
 steamy: Misty with heat
-stench: Stink
 stencil: Cut-out template
 stereo: Sound system
 sternly: Strictly
@@ -1736,7 +1704,6 @@ torment: Agony
 torpedo: Submarine's missile
 torque: Twisting force
 torrent: Downpour
-torture: Inflict pain
 tot: Toddler
 toucan: Bird with a big bill
 toughen: Strengthen
@@ -1746,8 +1713,6 @@ tow: Pull a car
 toy: Plaything
 tractor: Farm vehicle
 traffic: Cars on the road
-tragedy: Disaster
-tragic: Very sad
 trainee: Apprentice
 trance: Hypnotic state
 transit: Passage
@@ -1848,7 +1813,6 @@ wag: Shake a tail
 walkout: Union action
 wallow: Roll in mud
 wan: Pale
-war: Armed conflict
 was: Existed
 wax: Candle material
 way: Path
