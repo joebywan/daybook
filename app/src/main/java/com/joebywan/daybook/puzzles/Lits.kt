@@ -21,7 +21,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
@@ -44,6 +43,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.forEachBit
 import com.joebywan.daybook.core.jvmHashSetOrder
+import com.joebywan.daybook.core.orthogonal
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -209,7 +209,7 @@ object Lits : PuzzleType {
         // shaded square belongs to the one tetromino.
         for (cell in 0 until n) {
             if (!shaded[cell]) continue
-            for (next in neighbours(cell, width, height)) {
+            for (next in orthogonal(cell, width, height)) {
                 if (!shaded[next] || region[next] == region[cell]) continue
                 if (letters[cell] == letters[next]) return false
             }
@@ -724,7 +724,7 @@ object Lits : PuzzleType {
         private val notFirstColumn: Long
         private val notLastColumn: Long
 
-        val adjacent: Array<IntArray> = Array(n) { neighbours(it, w, h).toIntArray() }
+        val adjacent: Array<IntArray> = Array(n) { orthogonal(it, w, h).toIntArray() }
 
         val mask: LongArray
         /** [Piece] ordinal, or -1 for the 2x2 block. */
@@ -762,7 +762,7 @@ object Lits : PuzzleType {
                         return
                     }
                     for (c in current) {
-                        for (next in neighbours(c, w, h)) {
+                        for (next in orthogonal(c, w, h)) {
                             if (next in current) continue
                             grow((current + next).sorted())
                         }
@@ -847,17 +847,6 @@ object Lits : PuzzleType {
         geometries.firstOrNull { it.w == w && it.h == h }
             ?: Geometry(w, h).also { geometries = geometries + it }
 
-    internal fun neighbours(cell: Int, w: Int, h: Int): List<Int> {
-        val r = cell / w
-        val c = cell % w
-        return buildList {
-            if (r > 0) add(cell - w)
-            if (r < h - 1) add(cell + w)
-            if (c > 0) add(cell - 1)
-            if (c < w - 1) add(cell + 1)
-        }
-    }
-
     /** Every four-square legal tetromino that fits inside [cells]. Internal for [LitsTeacher]. */
     internal fun tetrominoes(cells: List<Int>, w: Int, h: Int): List<kotlin.Pair<List<Int>, Piece>> {
         val out = mutableListOf<kotlin.Pair<List<Int>, Piece>>()
@@ -881,7 +870,7 @@ object Lits : PuzzleType {
         seen += cells.first()
         while (stack.isNotEmpty()) {
             val cell = stack.removeLast()
-            for (next in neighbours(cell, w, h)) {
+            for (next in orthogonal(cell, w, h)) {
                 if (next in set && seen.add(next)) stack.addLast(next)
             }
         }
@@ -1102,12 +1091,7 @@ object Lits : PuzzleType {
         val s = state as LitsState
         val step = LitsTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == LitsTeacher.MISTAKE,
             fallback = step.technique == LitsTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as LitsState, step) },
@@ -1307,11 +1291,8 @@ object Lits : PuzzleType {
         // What a hint or the walkthrough is pointing at. Everything it does not name is dimmed, so
         // the named squares can be found at a glance; [BoardHighlight.strong] squares get a
         // breathing outline and [BoardHighlight.soft] ones a quiet one — the same language as Kings.
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        val (highlight, glow, pulse) = rememberHintPaint()
         val dim = scheme.background
-        // Read only inside the draw lambda, so the pulse repaints the outlines without recomposing.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.

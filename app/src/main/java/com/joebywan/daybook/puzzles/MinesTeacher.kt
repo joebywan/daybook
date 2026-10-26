@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TeachStep
+import com.joebywan.daybook.core.neighbours8
 import com.joebywan.daybook.core.plural
 
 /**
@@ -35,16 +37,18 @@ internal object MinesTeacher {
     const val MAX_EXPLANATION = 230
 
     class Step(
-        val technique: String,
+        override val technique: String,
         /** Squares to reveal. */
         val safe: Set<Int>,
         /** Squares to flag; for a mistake, the flag to take off. */
         val mines: Set<Int>,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
+        override val targets: Set<Int> get() = safe + mines
+    }
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback -----------------------------------------
 
@@ -55,7 +59,7 @@ internal object MinesTeacher {
             ?.let { return it }
         val n = s.width * s.height
         val open = (0 until n).filter { !s.isMine(it) && !s.isOpen(it) && !s.isFlag(it) }
-        val i = open.firstOrNull { j -> MinesLogic.neighbours(s.width, s.height, j).any { s.isOpen(it) } } ?: open.firstOrNull() ?: return null
+        val i = open.firstOrNull { j -> neighbours8(s.width, s.height, j).any { s.isOpen(it) } } ?: open.firstOrNull() ?: return null
         return Step(FALLBACK, setOf(i), emptySet(), setOf(i), emptySet(), "This one takes a longer chain. Look at the glowing square.", "This one needs a longer chain than a hint can walk through, so here's the answer for this square: it's safe.")
     }
 
@@ -67,12 +71,7 @@ internal object MinesTeacher {
         val step = teach(s) ?: return null
         val mistake = step.technique == MISTAKE
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.safe + step.mines,
+            step,
             mistake = mistake,
             fallback = step.technique == FALLBACK,
             applyTo = { now -> apply(now as MinesState, step) },
@@ -105,8 +104,8 @@ internal object MinesTeacher {
     private fun mistake(s: MinesState): Step? {
         val n = s.width * s.height
         val wrong = (0 until n).firstOrNull { s.isFlag(it) && !s.isMine(it) } ?: return null
-        val over = MinesLogic.neighbours(s.width, s.height, wrong).firstOrNull { j ->
-            s.isOpen(j) && MinesLogic.neighbours(s.width, s.height, j).count { s.isFlag(it) || it in s.bumps } > s.number(j)
+        val over = neighbours8(s.width, s.height, wrong).firstOrNull { j ->
+            s.isOpen(j) && neighbours8(s.width, s.height, j).count { s.isFlag(it) || it in s.bumps } > s.number(j)
         }
         val why = when {
             over == null -> "No way to finish the board has a mine here."
@@ -151,8 +150,8 @@ internal object MinesTeacher {
     }
 
     private fun explain(w: Int, h: Int, num: IntArray, st: IntArray, total: Int, f: MinesLogic.Fact): Step {
-        fun need(i: Int) = num[i] - MinesLogic.neighbours(w, h, i).count { st[it] == MinesLogic.MINE }
-        fun found(i: Int) = MinesLogic.neighbours(w, h, i).count { st[it] == MinesLogic.MINE }
+        fun need(i: Int) = num[i] - neighbours8(w, h, i).count { st[it] == MinesLogic.MINE }
+        fun found(i: Int) = neighbours8(w, h, i).count { st[it] == MinesLogic.MINE }
         val safe = f.safe.toSet()
         val mines = f.mines.toSet()
         val cited = f.cited.toSet()

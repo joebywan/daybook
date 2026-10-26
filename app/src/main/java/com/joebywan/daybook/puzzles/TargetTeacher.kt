@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TeachStep
 import kotlin.math.abs
 
 /**
@@ -33,19 +34,19 @@ internal object TargetTeacher {
     const val MAX_EXPLANATION = 200
 
     class Step(
-        val technique: String,
+        override val technique: String,
         /** The two slots (the answer goes in [a]) and the operator. -1 for a mistake. */
         val a: Int,
         val b: Int,
         val op: TargetOp?,
-        val nudge: String,
-        val explanation: String,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
         /** The tiles the board should show after the step, sorted; empty for a mistake. */
         val after: List<Int>,
-    )
+    ) : TeachStep
 
     /** Mistakes first, then a step on a shortest road. Null once solved (or if the position is lost with nothing to take back, which a board made here never is). */
     fun teach(s: TargetState): Step? {
@@ -143,8 +144,7 @@ internal object TargetTeacher {
         val va = s.slots[step.a]
         val vb = s.slots[step.b]
         return Deduction(
-            technique = step.technique, nudge = step.nudge, explanation = step.explanation,
-            focus = step.focus, cited = step.cited, targets = step.targets,
+            step,
             applyTo = { now ->
                 val n = now as TargetState
                 // The board may have moved on while the hint was open; if the same two tiles are still there use them, else reason afresh.

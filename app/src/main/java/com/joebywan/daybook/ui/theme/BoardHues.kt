@@ -82,5 +82,38 @@ object BoardHues {
     /** The pair for a board: [seed] is a hash of its solution or picture, never stored. */
     fun pair(seed: Int): Pair<Float, Float> = HUE_PAIRS[(seed and Int.MAX_VALUE) % HUE_PAIRS.size]
 
+    /**
+     * Region hues: Violet, Amber, Teal, Blue and, only if a board needs five, Gold. docs/COLOUR.md's content hues less Coral
+     * and Green (the boards show right and wrong) and Rose (too near the red of a broken rule).
+     */
+    val REGION_HUES = listOf(268f, 34f, 175f, 215f, 46f)
+
+    /**
+     * An index into [REGION_HUES] per region, no two neighbours alike ([adj] is the region graph): the fewest colours from
+     * [minColours] up that a depth-first search finds, region r trying colour r first so a board spreads them rather than
+     * leaning on the first. Derived, never stored.
+     */
+    fun regionColours(adj: List<BooleanArray>, minColours: Int): IntArray {
+        val count = adj.size
+        for (k in minColours..REGION_HUES.size) {
+            val colour = IntArray(count) { -1 }
+            var budget = 50_000
+            fun go(r: Int): Boolean {
+                if (r == count) return true
+                if (--budget < 0) return false
+                for (j in 0 until k) {
+                    val c = (r + j) % k
+                    if ((0 until count).any { adj[r][it] && colour[it] == c }) continue
+                    colour[r] = c
+                    if (go(r + 1)) return true
+                }
+                colour[r] = -1
+                return false
+            }
+            if (go(0)) return colour
+        }
+        return IntArray(count) { it % REGION_HUES.size } // not reached on a planar layout; the region outlines still show
+    }
+
     private val TEXT = listOf(Color(0xFF1B2F29), Color.White, Color.Black)
 }

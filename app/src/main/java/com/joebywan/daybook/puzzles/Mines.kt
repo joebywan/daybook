@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
@@ -66,10 +65,12 @@ import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.neighbours8
+import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.PenRow
@@ -167,7 +168,7 @@ object Mines : PuzzleType {
         val s2 = SAFE.fold(s1) { acc, i -> acc.reveal(i)!! }
         val s3 = s2.flag(FLAG_SQUARE)!!
         val s4 = s3.chord(CHORD_ONE)!!
-        fun around(i: Int) = MinesLogic.neighbours(5, 5, i).toSet()
+        fun around(i: Int) = neighbours8(5, 5, i).toSet()
         listOf(
             TutorialFrame(
                 state = s0,
@@ -386,9 +387,7 @@ object Mines : PuzzleType {
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
         val hues = remember(s.mines) { BoardHues.pair(s.mines.hashCode()) }
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         // The pen is the screen's, not the board's (Nonogram's): in the state it would be a move.
         var flagPen by rememberSaveable(s.mines) { mutableStateOf(false) }
         var cursor by remember(s.mines) { mutableStateOf<Int?>(null) }
@@ -488,7 +487,7 @@ object Mines : PuzzleType {
         } else {
             val left = s.minesLeft
             Text(
-                if (s.solved) "All clear" else "$left mine${if (left == 1) "" else "s"} left",
+                if (s.solved) "All clear" else "${plural(left, "mine")} left",
                 style = MaterialTheme.typography.labelLarge,
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,

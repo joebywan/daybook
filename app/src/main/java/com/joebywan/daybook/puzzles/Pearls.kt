@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
@@ -40,11 +39,12 @@ import com.joebywan.daybook.core.union
 import com.joebywan.daybook.ui.HintGlow
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.geometry.Rect
+import com.joebywan.daybook.ui.gridCellAt
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -88,10 +88,6 @@ object Pearls : PuzzleType {
     }
 
     // ---- input geometry (pure, tested) ----------------------------------------------------------
-
-    /** The square under ([x], [y]), in square units, clamped onto the board. */
-    fun cellAt(n: Int, x: Float, y: Float): Int =
-        floor(y).toInt().coerceIn(0, n - 1) * n + floor(x).toInt().coerceIn(0, n - 1)
 
     /** How near the middle of an edge a tap must land to name it, in squares. */
     const val TAP_REACH = 0.42f
@@ -450,9 +446,7 @@ object Pearls : PuzzleType {
         var cursor by remember(s.pearls) { mutableStateOf<Int?>(null) }
         var armed by remember(s.pearls) { mutableStateOf(false) }
 
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         val shown = if (path.size >= 2) s.drag(path) else s
         val broken = breaks(shown)
@@ -505,7 +499,7 @@ object Pearls : PuzzleType {
                             onDragStart = { down, _, _ ->
                                 lastX = down.position.x / unitPx
                                 lastY = down.position.y / unitPx
-                                path = listOf(cellAt(n, lastX, lastY))
+                                path = listOf(gridCellAt(Offset(lastX, lastY), 1f, n, n))
                             },
                             onDrag = { change, _ ->
                                 change.consume()

@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.core.numberWord
 
@@ -55,18 +56,18 @@ internal object KingsTeacher {
      * [clears] is only ever a mistake being taken back.
      */
     class Step(
-        val technique: String,
+        override val technique: String,
         val kings: List<Int> = emptyList(),
         val crosses: List<Int> = emptyList(),
         val clears: List<Int> = emptyList(),
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
         /** For [CONFINED]: how many colours and lines it ties together (two or more). */
         val width: Int = 0,
-    ) {
-        val targets: Set<Int> get() = (kings + crosses + clears).toSet()
+    ) : TeachStep {
+        override val targets: Set<Int> get() = (kings + crosses + clears).toSet()
     }
 
     private enum class Kind { REGION, ROW, COLUMN }

@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 
 /**
  * A sum of words laid out in right-aligned columns: [words] is the addends, then the total, lowercase.
@@ -144,19 +145,13 @@ internal object CipherLogic {
 
     // ---- proof -------------------------------------------------------------------------------------
 
-    /** What an exhaustive search says. Only [ExactlyOne] carries an answer, so "gave up" cannot pass for one. */
-    sealed interface Verdict {
-        data object None : Verdict
-        class ExactlyOne(val digits: List<Int>) : Verdict
-        data object Several : Verdict
-    }
 
     /**
      * Every answer of [sum], counted to two. Column by column from the units, a digit for each new letter in
      * the column, the total's letter then forced by the column's sum. No node budget, so it always ends with
      * the true count.
      */
-    fun prove(sum: CipherSum): Verdict {
+    fun prove(sum: CipherSum): Verdict<List<Int>> {
         if (!sum.wellFormed) return Verdict.None
         val d = IntArray(sum.letters.size) { EMPTY }
         var used = 0
@@ -208,11 +203,7 @@ internal object CipherLogic {
             assign(0)
         }
         column(0, 0)
-        return when (found) {
-            0 -> Verdict.None
-            1 -> Verdict.ExactlyOne(first!!)
-            else -> Verdict.Several
-        }
+        return Verdict.of(found) { first!! }
     }
 
     // ---- generator ---------------------------------------------------------------------------------
@@ -237,7 +228,7 @@ internal object CipherLogic {
         val sum = parse(entry)
         if (!sum.wellFormed || !CipherTeacher.solvesByLogic(sum)) return null
         val verdict = prove(sum) as? Verdict.ExactlyOne ?: return null
-        return CipherState(words = sum.words, solution = verdict.digits, digits = List(sum.letters.size) { EMPTY })
+        return CipherState(words = sum.words, solution = verdict.value, digits = List(sum.letters.size) { EMPTY })
     }
 
     /** Null when nothing was proved. Pure in (seed, difficulty): only the list's own order reaches the `Rng`. */

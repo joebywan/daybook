@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.neighbours8
 import kotlinx.serialization.Serializable
 
 /**
@@ -84,14 +85,7 @@ internal object TentsLogic {
     }
 
     /** In-bounds neighbours of [i] including diagonals, excluding [i]. */
-    fun around(n: Int, i: Int): List<Int> = buildList {
-        for (dr in -1..1) for (dc in -1..1) {
-            if (dr == 0 && dc == 0) continue
-            val r = i / n + dr
-            val c = i % n + dc
-            if (r in 0 until n && c in 0 until n) add(r * n + c)
-        }
-    }
+    fun around(n: Int, i: Int): List<Int> = neighbours8(n, n, i).asList()
 
     fun touching(n: Int, tent: List<Boolean>): Set<Int> =
         tent.indices.filterTo(mutableSetOf()) { tent[it] && around(n, it).any { j -> tent[j] } }

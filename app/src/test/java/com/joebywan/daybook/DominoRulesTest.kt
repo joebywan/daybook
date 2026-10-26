@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.Domino
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.DominoState
@@ -154,7 +155,7 @@ class DominoRulesTest {
         )
         val all = oracle(s, cap = 10)
         assertTrue("the board has several answers: $all", all.size > 1)
-        assertTrue(DominoLogic.solutions(s) is DominoLogic.Verdict.Several)
+        assertTrue(DominoLogic.solutions(s) is Verdict.Several)
         val other = all.first { it != s.answer }
         var b: DominoState = s
         for (k in other.indices) b = DominoLogic.place(b, k, other[k])
@@ -194,9 +195,9 @@ class DominoRulesTest {
             val s = planted(rng, rng.nextInt(2, 5), rng.nextInt(2, 4)) ?: return@repeat
             val want = oracle(s)
             when (val v = DominoLogic.solutions(s)) {
-                DominoLogic.Verdict.None -> { assertTrue(want.isEmpty()); none++ }
-                is DominoLogic.Verdict.ExactlyOne -> { assertEquals(want, listOf(v.placements)); one++ }
-                DominoLogic.Verdict.Several -> { assertEquals(2, want.size); several++ }
+                Verdict.None -> { assertTrue(want.isEmpty()); none++ }
+                is Verdict.ExactlyOne -> { assertEquals(want, listOf(v.value)); one++ }
+                Verdict.Several -> { assertEquals(2, want.size); several++ }
             }
         }
         println("oracle sample: $none none, $one one, $several several")

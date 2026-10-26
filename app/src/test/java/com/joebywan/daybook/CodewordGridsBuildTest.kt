@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.CodewordLogic
 import com.joebywan.daybook.puzzles.CodewordTeacher
 import com.joebywan.daybook.puzzles.CodewordWords
@@ -144,8 +145,8 @@ class CodewordGridsBuildTest {
             val letters = lettersFor(alphabet, givens)
             val walk = CodewordTeacher.walk(size, numbers, letters, upTo) ?: return null
             if (upTo > CodewordTeacher.TECHNIQUES.indexOf(CodewordTeacher.RUN_AGREES) && walk.none { it.technique == spec.needs }) return null.also { FAILS.incrementAndGet(3) }
-            if (CodewordLogic.solve(size, numbers, letters) !is CodewordLogic.Verdict.ExactlyOne) return null.also { FAILS.incrementAndGet(4) }
-            if (CodewordLogic.solve(size, numbers, letters) { WIDE.getValue(it) } !is CodewordLogic.Verdict.ExactlyOne) return null.also { FAILS.incrementAndGet(5) }
+            if (CodewordLogic.solve(size, numbers, letters) !is Verdict.ExactlyOne) return null.also { FAILS.incrementAndGet(4) }
+            if (CodewordLogic.solve(size, numbers, letters) { WIDE.getValue(it) } !is Verdict.ExactlyOne) return null.also { FAILS.incrementAndGet(5) }
             return "$squares:" + givens.sorted().map { 'a' + it }.joinToString("")
         }
     }

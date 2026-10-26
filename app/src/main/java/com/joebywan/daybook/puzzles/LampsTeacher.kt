@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TeachStep
+import com.joebywan.daybook.core.orthogonalReading
 import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.puzzles.LampsLogic.Fact
 import com.joebywan.daybook.puzzles.LampsLogic.LAMP
@@ -40,15 +42,15 @@ internal object LampsTeacher {
     const val MAX_EXPLANATION = 260
 
     class Step(
-        val technique: String,
+        override val technique: String,
         /** What the targets become: [LAMP], [NO] (a cross), or 0 to take a lamp away (a mistake). */
         val value: Int,
-        val targets: Set<Int>,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val targets: Set<Int>,
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep
 
     fun teach(s: LampsState): Step? {
         if (s.solved) return null
@@ -63,12 +65,7 @@ internal object LampsTeacher {
         val step = teach(s) ?: return null
         val mistake = step.technique == MISTAKE
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = mistake,
             fallback = step.technique == FALLBACK,
             applyTo = { now ->
@@ -103,7 +100,7 @@ internal object LampsTeacher {
             Step(MISTAKE, 0, setOf(wrong), setOf(wrong), cited, "Check this lamp.", "$why Tap it to take it away.")
         val sees = LampsLogic.sight(n, s.walls, wrong).filter { s.marks[it] == LampsLogic.LAMP_MARK }
         if (sees.isNotEmpty()) return step("This lamp lights another lamp in its row or column.", sees.toSet())
-        val over = LampsLogic.orth(n, wrong).firstOrNull { s.numberAt(it) >= 0 && s.lampsBeside(it) > s.numberAt(it) }
+        val over = orthogonalReading(wrong, n).firstOrNull { s.numberAt(it) >= 0 && s.lampsBeside(it) > s.numberAt(it) }
         if (over != null) return step("The ${s.numberAt(over)} beside it would have too many lamps.", setOf(over))
         return step("No way to finish the board keeps a lamp here.", emptySet())
     }
@@ -145,7 +142,7 @@ internal object LampsTeacher {
             ROOM -> Step(
                 ROOM, LAMP, t, t + f.wall, setOf(f.wall),
                 "How many squares beside this $num can still take a lamp?",
-                "The $num needs ${plural(t.size, if (num > t.size) "more lamp" else "lamp")}, and only ${if (t.size == 1) "1 square" else "${t.size} squares"} " +
+                "The $num needs ${plural(t.size, if (num > t.size) "more lamp" else "lamp")}, and only ${plural(t.size, "square")} " +
                     "beside it can still take one (the others are walls, lamps, lit or ruled out), so ${if (t.size == 1) "it is a lamp" else "they are all lamps"}.",
             )
             ONLY_LIGHT -> if (f.targets[0] == f.seen) Step(

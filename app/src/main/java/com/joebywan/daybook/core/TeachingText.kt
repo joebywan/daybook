@@ -27,3 +27,9 @@ fun plural(n: Int, one: String, many: String = one + "s") = "$n ${if (n == 1) on
 
 /** Line [line] of an [n] by [n] board: rows first, then columns. */
 fun lineName(n: Int, line: Int) = if (line < n) "row ${line + 1}" else "column ${line - n + 1}"
+
+/** Square [i] of a board [width] squares wide, as "row 2, column 3". */
+fun squareName(width: Int, i: Int) = "row ${i / width + 1}, column ${i % width + 1}"
+
+/** The first of [options] no longer than [max] characters, else the last (the shortest a teacher could write). */
+fun fit(options: List<String>, max: Int): String = options.firstOrNull { it.length <= max } ?: options.last()

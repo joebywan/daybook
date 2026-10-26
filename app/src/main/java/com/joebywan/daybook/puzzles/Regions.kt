@@ -35,7 +35,6 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.DigitKeyAction
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
@@ -46,8 +45,9 @@ import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.PAD_GAP
 import com.joebywan.daybook.ui.DigitPadRow
 import com.joebywan.daybook.ui.padBoardSide
+import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
@@ -111,39 +111,11 @@ object Regions : PuzzleType {
 
     // ---- colour ------------------------------------------------------------------------------
 
-    /**
-     * Hues for regions, in docs/COLOUR.md terms: Violet, Amber, Teal, Blue and (only if a board needs
-     * five) Gold. Coral, Green and Rose are left out because the board also shows right and wrong, and
-     * neither the thick borders nor the colours are the only way to see a region.
-     */
-    private val REGION_HUES = listOf(268f, 34f, 175f, 215f, 46f)
-
-    /**
-     * A colour index for each region so that no two regions sharing an edge match: the fewest of 3 to 5
-     * that a depth-first search finds, starting each region's try at a different colour so the board
-     * does not lean on the first. Pure in the layout.
-     */
+    /** A hue index per region, neighbours different: the fewest of 3 to 5 colours. Pure in the layout. */
     internal fun regionColours(layout: RegionsLayout): IntArray {
-        val adj = List(layout.count) { mutableListOf<Int>() }
-        for ((a, b) in layout.adjacentRegions()) { adj[a] += b; adj[b] += a }
-        for (k in 3..5) {
-            val colour = IntArray(layout.count) { -1 }
-            var budget = 50_000
-            fun go(r: Int): Boolean {
-                if (r == layout.count) return true
-                if (--budget < 0) return false
-                for (j in 0 until k) {
-                    val c = (r + j) % k
-                    if (adj[r].any { colour[it] == c }) continue
-                    colour[r] = c
-                    if (go(r + 1)) return true
-                }
-                colour[r] = -1
-                return false
-            }
-            if (go(0)) return colour
-        }
-        return IntArray(layout.count) { it % 5 } // not reached on a planar layout; the borders still show the regions
+        val adj = List(layout.count) { BooleanArray(layout.count) }
+        for ((a, b) in layout.adjacentRegions()) { adj[a][b] = true; adj[b][a] = true }
+        return BoardHues.regionColours(adj, minColours = 3)
     }
 
     // ---- teaching --------------------------------------------------------------------------
@@ -329,9 +301,7 @@ object Regions : PuzzleType {
         val (_, hueB) = BoardHues.pair(s.solution.hashCode())
         val ink = BoardHues.ink(hueB, dark)
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         val digits = layout.digits
         // A region is finished when it holds 1..its size, none of them touching an equal digit.
         val units = remember(s.region) { s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() } }
@@ -358,7 +328,7 @@ object Regions : PuzzleType {
                 Box(Modifier.size(side).highlightGrid(n, n)) {
                     for (i in 0 until n * n) {
                         val look = highlight.look(i)
-                        val regionFill = BoardHues.fill(REGION_HUES[colours[s.region[i]]], dark)
+                        val regionFill = BoardHues.fill(BoardHues.REGION_HUES[colours[s.region[i]]], dark)
                         // A selected square, and every square holding its digit, go plain so they stand out from the colours.
                         val plain = s.selected == i || (selectedValue != 0 && s.cells[i] == selectedValue)
                         // A square in conflict is filled red (and edged red), so a wrong digit is never only a colour on a colour.
@@ -372,7 +342,7 @@ object Regions : PuzzleType {
                                 .padding(start = slot * (i % n), top = slot * (i / n))
                                 .size(slot)
                                 .moveFeel(feel, i, Color(accent))
-                                .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
+                                .dimmed(look)
                                 .ring(look, glow, pulse, corner = 2.dp)
                                 .background(fill)
                                 .then(if (i in conflicts) Modifier.border(2.dp, scheme.error) else Modifier)

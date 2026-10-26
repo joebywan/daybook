@@ -3,6 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.core.neighbours8
 import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.MinesLogic
 import com.joebywan.daybook.puzzles.MinesState
@@ -149,7 +150,7 @@ class MinesTeachingTest {
         val o = MinesOracle.solve(5, 5, num, hit, s.total)
         assertTrue(o.layouts > 1) // the opening alone does not decide it; the reveals do
         // Each claim the captions make.
-        fun hiddenAround(b: MinesState, i: Int) = MinesLogic.neighbours(5, 5, i).filter { !b.isOpen(it) }
+        fun hiddenAround(b: MinesState, i: Int) = neighbours8(5, 5, i).filter { !b.isOpen(it) }
         assertEquals(1, s.number(Mines.FIRST_ONE))
         assertEquals(listOf(Mines.BUMP), hiddenAround(s, Mines.FIRST_ONE))
         assertTrue(s.isMine(Mines.BUMP))

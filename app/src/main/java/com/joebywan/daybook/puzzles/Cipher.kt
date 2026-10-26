@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
@@ -53,8 +52,9 @@ import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
 import com.joebywan.daybook.ui.PAD_HEIGHT
 import com.joebywan.daybook.ui.PadKey
+import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
@@ -336,9 +336,7 @@ object Cipher : PuzzleType {
         val (hueA, hueB) = BoardHues.pair(s.solution.hashCode())
         val mark = BoardHues.mark(hueA)
         val ink = BoardHues.ink(hueB, dark)
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // A broken rule shows after a pause and goes at once when mended; held here, not in the state (undo).
         val live = remember(s.digits) { CipherLogic.conflicts(sum, s.digits) }
@@ -398,7 +396,7 @@ object Cipher : PuzzleType {
                         val look = highlight.look(sum.tile(r, c))
                         Modifier
                             .moveFeel(feel, l, Color(accent))
-                            .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
+                            .dimmed(look)
                             .ring(look, glow, pulse, corner = 8.dp)
                             .then(if (sum.tile(r, c) in redColumn) Modifier.border(2.dp, scheme.error, RoundedCornerShape(8.dp)) else Modifier)
                             .clickable(enabled = interactive) { onState(s.select(l)) }

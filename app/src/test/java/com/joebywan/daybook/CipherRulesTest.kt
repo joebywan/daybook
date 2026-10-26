@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.CipherLogic
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
@@ -48,7 +49,7 @@ class CipherRulesTest {
         for (d in Difficulty.entries) {
             for (entry in CipherLogic.sums(d)) {
                 val sum = CipherLogic.parse(entry)
-                assertTrue(entry, CipherLogic.prove(sum) is CipherLogic.Verdict.ExactlyOne)
+                assertTrue(entry, CipherLogic.prove(sum) is Verdict.ExactlyOne)
                 assertEquals(entry, d, CipherSumsBuildTest.tierOf(sum))
             }
         }
@@ -66,7 +67,7 @@ class CipherRulesTest {
                 val sum = CipherLogic.parse(entry)
                 val answers = CipherOracle.answers(sum.words)
                 assertEquals(entry, 1, answers.size)
-                assertEquals(entry, answers[0], (CipherLogic.prove(sum) as CipherLogic.Verdict.ExactlyOne).digits)
+                assertEquals(entry, answers[0], (CipherLogic.prove(sum) as Verdict.ExactlyOne).value)
             }
         }
         // ...and random ones, which mostly have none or several.
@@ -76,9 +77,9 @@ class CipherRulesTest {
             if (!sum.wellFormed) return@repeat
             val answers = CipherOracle.answers(words)
             when (val v = CipherLogic.prove(sum)) {
-                CipherLogic.Verdict.None -> { none++; assertEquals(words.toString(), 0, answers.size) }
-                CipherLogic.Verdict.Several -> { several++; assertTrue(words.toString(), answers.size >= 2) }
-                is CipherLogic.Verdict.ExactlyOne -> assertEquals(words.toString(), listOf(v.digits), answers)
+                Verdict.None -> { none++; assertEquals(words.toString(), 0, answers.size) }
+                Verdict.Several -> { several++; assertTrue(words.toString(), answers.size >= 2) }
+                is Verdict.ExactlyOne -> assertEquals(words.toString(), listOf(v.value), answers)
             }
         }
         assertTrue("the sample reached sums with several answers ($several) and none ($none)", several > 5 && none > 5)

@@ -39,7 +39,6 @@ import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
@@ -47,10 +46,10 @@ import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.HintLook
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.ring
 import kotlinx.coroutines.delay
 import com.joebywan.daybook.ui.moveFeel
@@ -246,12 +245,7 @@ object Lexicon : PuzzleType {
         fun fits(word: String) = LexiconRules.consistent(word, base.guesses, marks)
         fun newGuesses(now: LexiconState) = now.guesses.drop(base.guesses.size)
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == LexiconTeacher.MISTAKE,
             fallback = step.technique in LexiconTeacher.FALLBACKS,
             applyTo = { now -> applyMove(now as LexiconState, step.move) },
@@ -305,8 +299,7 @@ object Lexicon : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as LexiconState
         val scheme = MaterialTheme.colorScheme
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        val (highlight, glow, pulse) = rememberHintPaint()
         val tilesNamed = highlight.strong.any { it < LexiconTeacher.KEY } || highlight.soft.any { it < LexiconTeacher.KEY }
         val absent = scheme.outline.copy(alpha = 0.45f)
         val playable = interactive && s.open
@@ -322,9 +315,6 @@ object Lexicon : PuzzleType {
             }
         }
         LaunchedEffect(s.current, s.guesses.size) { notice = null }
-
-        // Breathes only while something glows, as on Kings.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         fun press(action: LexiconKeyAction) {
             if (!playable) return

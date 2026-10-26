@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.orthogonalReading
 import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.LampsState
 import com.joebywan.daybook.puzzles.LampsTeacher
@@ -140,7 +141,7 @@ class LampsTeachingTest {
             val walls0 = w.concatToString()
             val lamp = BooleanArray(n * n)
             for (i in rng.shuffled((0 until n * n).filter { w[it] == '.' })) if (!LampsLogic.lit(n, walls0, lamp)[i]) lamp[i] = true
-            for (i in 0 until n * n) if (w[i] == '#' && rng.nextBoolean()) w[i] = '0' + LampsLogic.orth(n, i).count { lamp[it] }
+            for (i in 0 until n * n) if (w[i] == '#' && rng.nextBoolean()) w[i] = '0' + orthogonalReading(i, n).count { lamp[it] }
             val walls = w.concatToString()
             val all = LampsOracle.solutions(n, walls, limit = 40)
             if (all.size < 2 || all.size == 40) return@repeat

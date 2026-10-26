@@ -4,8 +4,10 @@ import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.answerFallback
 import com.joebywan.daybook.core.lonePlace
 import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.fullMask
 import com.joebywan.daybook.core.has
 import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.squareName
 
 /**
  * Regions, reasoned a step at a time.
@@ -55,7 +57,7 @@ internal object RegionsTeacher {
         val base = IntArray(layout.n * layout.n)
         for (i in base.indices) {
             if (cells[i] != 0) continue
-            var m = RegionsLogic.fullMask(layout.sizeOf[i])
+            var m = fullMask(layout.sizeOf[i])
             for (j in layout.peers[i]) if (cells[j] != 0) m = m and bit(cells[j]).inv()
             base[i] = m
         }
@@ -87,7 +89,7 @@ internal object RegionsTeacher {
         for ((r, members) in layout.members.withIndex()) {
             val empty = members.filter { cells[it] == 0 }
             if (empty.size != 1) continue
-            val missing = RegionsLogic.fullMask(members.size) and members.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
+            val missing = fullMask(members.size) and members.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
             if (missing.countOneBits() == 1) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), r)
         }
         // 2. A square whose region and neighbours leave one digit.
@@ -226,10 +228,9 @@ internal object RegionsTeacher {
             }
             LOCKED -> {
                 val n = layout.n
-                fun at(i: Int) = "row ${i / n + 1}, column ${i % n + 1}"
                 val why = "This region's ${hit.lockDigit} must go in one of the marked squares. They all touch the square at " +
-                    "${at(hit.struck)}, so it is not a ${hit.lockDigit}."
-                val then = if (hit.byPlace) "That leaves ${at(x)} as its region's only place for a $d."
+                    "${squareName(n, hit.struck)}, so it is not a ${hit.lockDigit}."
+                val then = if (hit.byPlace) "That leaves ${squareName(n, x)} as its region's only place for a $d."
                 else "That leaves it only $d."
                 PlacementStep(
                     LOCKED, x, d, members.toSet() + hit.struck, hit.places.toSet() + hit.struck + x,

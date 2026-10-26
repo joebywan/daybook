@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.squareName
+
 /**
  * Pearls, reasoned the way a person reasons it: a pearl at a time, a square at a time, then the rule
  * that the loop is one, and on Expert one supposition followed a few rounds.
@@ -154,7 +156,7 @@ internal object PearlsTeacher {
     private fun localStep(g: PearlsGrid, pearls: String, st: IntArray, f: PearlsLogic.Found): Step {
         val n = g.n
         val s = f.square
-        val place = at(n, s)
+        val place = "at ${squareName(n, s)}"
         val edgesOf = (0 until 4).mapNotNull { d -> g.edge(s, d).takeIf { it >= 0 } }
         fun step(technique: String, nudge: String, why: String, focus: Set<Int>, cited: Set<Int> = focus) = Step(
             technique, f.lines.toList(), f.crosses.toList(), focus = focus, cited = cited, nudge = nudge, explanation = why,
@@ -227,7 +229,7 @@ internal object PearlsTeacher {
             crosses = listOf(e),
             focus = setOf(a, b, edgeIndex(n, e)),
             cited = stretch.map { edgeIndex(n, it) }.toSet() + setOf(a, b),
-            nudge = "Two ends of one line meet ${at(n, a)}.",
+            nudge = "Two ends of one line meet at ${squareName(n, a)}.",
             explanation = "A line between ${squareName(n, a)} and ${squareName(n, b)} would close a loop that leaves out " +
                 "a pearl or another line. There is only one loop, so cross it.",
         )
@@ -329,8 +331,6 @@ internal object PearlsTeacher {
     // ---- words ------------------------------------------------------------------------------
 
     /** "at row 2, column 3". */
-    private fun at(n: Int, s: Int) = "at row ${s / n + 1}, column ${s % n + 1}"
 
     /** "row 2, column 3". */
-    private fun squareName(n: Int, s: Int) = "row ${s / n + 1}, column ${s % n + 1}"
 }

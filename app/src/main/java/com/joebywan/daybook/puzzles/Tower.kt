@@ -37,7 +37,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.text.style.TextAlign
@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightAnchor
@@ -385,12 +384,7 @@ object Tower : PuzzleType {
         fun fits(code: List<Int>) = TowerTeacher.consistent(code, s.guesses, feedback, s.colours)
         fun newGuesses(now: TowerState) = now.guesses.drop(s.guesses.size)
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == TowerTeacher.MISTAKE,
             fallback = step.technique == TowerTeacher.CONSISTENT || step.technique == TowerTeacher.ONLY_CODE,
             applyTo = { now -> applyMove(now as TowerState, step.move) },
@@ -430,10 +424,7 @@ object Tower : PuzzleType {
         val s = state as TowerState
         val scheme = MaterialTheme.colorScheme
         var selectedColour by remember(s.secret) { mutableIntStateOf(0) }
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // Breathes only while something glows, as on Kings.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // A phone's width at most: on a tablet or a wide window the rows would otherwise stretch across the whole box.
         Column(

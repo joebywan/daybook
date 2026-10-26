@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.isConfirmKey
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.MamboKeyAction
@@ -10,7 +11,6 @@ import com.joebywan.daybook.puzzles.Sym
 import com.joebywan.daybook.puzzles.applyKey
 import com.joebywan.daybook.puzzles.mamboKeyAction
 import com.joebywan.daybook.puzzles.pipesRotateKey
-import com.joebywan.daybook.puzzles.setsPickKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -48,7 +48,7 @@ class GridKeysTest {
         assertTrue(pipesRotateKey(Key.R))
         assertTrue(pipesRotateKey(Key.Spacebar))
         assertFalse(pipesRotateKey(Key.M))
-        assertTrue(setsPickKey(Key.Enter))
-        assertFalse(setsPickKey(Key.R))
+        assertTrue(isConfirmKey(Key.Enter))
+        assertFalse(isConfirmKey(Key.R))
     }
 }

@@ -2,10 +2,11 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
+import com.joebywan.daybook.core.orthogonalReading
 import com.joebywan.daybook.puzzles.Lamps
 import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.LampsState
-import com.joebywan.daybook.puzzles.LampsVerdict
 import com.joebywan.daybook.puzzles.withLamp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,7 +45,7 @@ class LampsRulesTest {
         assertTrue(withLamps(s, "0110").solved)
         assertTrue(withLamps(s, "1001").solved)
         assertFalse(withLamps(s, "1000").solved)
-        assertEquals(LampsVerdict.Several, LampsLogic.countSolutions(2, "...."))
+        assertEquals(Verdict.Several, LampsLogic.countSolutions(2, "...."))
     }
 
     @Test
@@ -72,7 +73,7 @@ class LampsRulesTest {
             if (LampsLogic.lit(n, walls, lamp)[i]) continue
             lamp[i] = true
         }
-        for (i in 0 until n * n) if (w[i] == '#' && (numberAll || rng.nextBoolean())) w[i] = '0' + LampsLogic.orth(n, i).count { lamp[it] }
+        for (i in 0 until n * n) if (w[i] == '#' && (numberAll || rng.nextBoolean())) w[i] = '0' + orthogonalReading(i, n).count { lamp[it] }
         return w.concatToString()
     }
 
@@ -86,9 +87,9 @@ class LampsRulesTest {
             val oracle = LampsOracle.solutions(n, walls, limit = 2)
             val verdict = LampsLogic.countSolutions(n, walls)
             when (oracle.size) {
-                0 -> assertEquals(walls, LampsVerdict.None, verdict)
-                1 -> assertEquals(walls, LampsVerdict.ExactlyOne(oracle[0]), verdict)
-                else -> { several++; assertEquals(walls, LampsVerdict.Several, verdict) }
+                0 -> assertEquals(walls, Verdict.None, verdict)
+                1 -> assertEquals(walls, Verdict.ExactlyOne(oracle[0]), verdict)
+                else -> { several++; assertEquals(walls, Verdict.Several, verdict) }
             }
         }
         assertTrue("too few boards with several answers to mean anything: $several", several > 50)

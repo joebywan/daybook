@@ -6,6 +6,7 @@ import com.joebywan.daybook.core.lonePlace
 import com.joebywan.daybook.core.bit
 import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.digitsOf
+import com.joebywan.daybook.core.fullMask
 import com.joebywan.daybook.core.has
 import com.joebywan.daybook.core.lineName
 import com.joebywan.daybook.core.listed
@@ -76,7 +77,7 @@ internal object InequalityTeacher {
         var consistent = true
 
         init {
-            val full = InequalityLogic.fullMask(n)
+            val full = fullMask(n)
             val row = IntArray(n)
             val col = IntArray(n)
             for (i in 0 until n * n) if (cells[i] != 0) { row[i / n] = row[i / n] or bit(cells[i]); col[i % n] = col[i % n] or bit(cells[i]) }
@@ -175,7 +176,7 @@ internal object InequalityTeacher {
         for ((li, line) in all.withIndex()) {
             val empty = line.filter { cells[it] == 0 }
             if (empty.size == 1) {
-                val missing = InequalityLogic.fullMask(n) and line.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
+                val missing = fullMask(n) and line.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
                 if (missing.countOneBits() == 1) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), li)
             }
         }
@@ -381,7 +382,7 @@ internal object InequalityTeacher {
         val cut = if (hit.technique == NAKED_PAIR) {
             "Two squares of $name can only be $a or $b, so they take both, and no other square there can."
         } else {
-            "${name.replaceFirstChar { it.uppercase() }} needs a $a and a $b, which fit only the same two squares, so those hold nothing else."
+            "${name.cap()} needs a $a and a $b, which fit only the same two squares, so those hold nothing else."
         }
         val again = if (hit.needsSigns) "Counting the signs again, that" else "That"
         val r = hit.cell / n + 1

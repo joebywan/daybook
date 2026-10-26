@@ -44,13 +44,12 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -61,6 +60,7 @@ import com.joebywan.daybook.ui.GLOW_ALPHA
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.graphics.drawscope.scale
+import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.rememberSettledFlags
@@ -118,11 +118,7 @@ object Dominoes : PuzzleType {
         val s = state as DominoState
         val step = DominoTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
+            step,
             // A mistake's targets name only its tray slot; the squares it lies on glow too, so the domino to lift is seen.
             targets = if (step.mistake) step.targets + step.focus else step.targets,
             mistake = step.mistake,
@@ -337,13 +333,7 @@ object Dominoes : PuzzleType {
 
     // ---- colours --------------------------------------------------------------------------------
 
-    /**
-     * Violet, Amber, Teal, Blue: docs/COLOUR.md's content hues less Coral and Green (the badges show right and wrong) and
-     * Rose (too near the red of a broken rule); a region graph is planar, so four always do. Gold stands by.
-     */
-    private val REGION_HUES = listOf(268f, 34f, 175f, 215f, 46f)
-
-    /** A hue index per region, neighbouring regions different: a 4 (else 5) colouring of the region graph, derived, never stored. */
+    /** A hue index per region, neighbouring regions different: a 4 (else 5) colouring of the region graph (planar, so four do). */
     internal fun regionColours(s: DominoState): IntArray {
         val count = s.rules.size
         val adj = List(count) { BooleanArray(count) }
@@ -354,25 +344,7 @@ object Dominoes : PuzzleType {
             val down = if (i + s.width < s.regionOf.size) s.regionOf[i + s.width] else -1
             for (b in intArrayOf(right, down)) if (b >= 0 && b != a) { adj[a][b] = true; adj[b][a] = true }
         }
-        // Four hues, region r trying hue r first, so a board spreads them rather than leaning on the first three.
-        for (k in 4..REGION_HUES.size) {
-            val colour = IntArray(count) { -1 }
-            var budget = 50_000
-            fun go(r: Int): Boolean {
-                if (r == count) return true
-                if (--budget < 0) return false
-                for (j in 0 until k) {
-                    val c = (r + j) % k
-                    if ((0 until count).any { adj[r][it] && colour[it] == c }) continue
-                    colour[r] = c
-                    if (go(r + 1)) return true
-                }
-                colour[r] = -1
-                return false
-            }
-            if (go(0)) return colour
-        }
-        return IntArray(count) { it % REGION_HUES.size } // not reached on a planar layout; the outlines still show the regions
+        return BoardHues.regionColours(adj, minColours = 4)
     }
 
     private val Ink = Color(0xFF11201C)
@@ -381,8 +353,8 @@ object Dominoes : PuzzleType {
         val surface = scheme.surface
         val line = scheme.outline
         val rim = scheme.onSurfaceVariant.copy(alpha = 0.55f)
-        val tint = hues.map { BoardHues.fill(REGION_HUES[it], dark).copy(alpha = if (dark) 0.75f else 0.55f) }
-        val edge = hues.map { BoardHues.ink(REGION_HUES[it], dark) }
+        val tint = hues.map { BoardHues.fill(BoardHues.REGION_HUES[it], dark).copy(alpha = if (dark) 0.75f else 0.55f) }
+        val edge = hues.map { BoardHues.ink(BoardHues.REGION_HUES[it], dark) }
         val good = BoardHues.mark(145f)
         val error = scheme.error
         val body = if (dark) Color(0xFFDCD4C3) else Color.White
@@ -745,8 +717,6 @@ object Dominoes : PuzzleType {
 
     private const val DOUBLE_TAP_MS = 300L
 
-    private class Cell<T>(var v: T)
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as DominoState
@@ -789,9 +759,7 @@ object Dominoes : PuzzleType {
             }
         }
 
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // Green at once when a covered region keeps its rule; red only once it has stayed broken for a second.
         val layout = s.layout
