@@ -52,6 +52,29 @@ data class MinesState(
         return copy(marks = MinesLogic.open(width, height, mines, marks, i), moves = moves + 1)
     }
 
+    /**
+     * Chording: on a revealed number whose neighbouring flags and mines hit already make its count, reveals every other
+     * hidden neighbour, in reading order, as one move. A wrong flag means a mine among them: each mine revealed costs a
+     * life, as a tap on it would, and the chord stops when the last life goes. Null when the count is not met by flags
+     * and hits, when nothing is left to reveal, or on a board already won or lost.
+     */
+    fun chord(i: Int): MinesState? {
+        if (solved || failed || !isOpen(i)) return null
+        val nb = MinesLogic.neighbours(width, height, i)
+        if (nb.count { isFlag(it) || it in bumps } != number(i)) return null
+        val todo = nb.filter { marks[it] == MinesLogic.HIDDEN && it !in bumps }
+        if (todo.isEmpty()) return null
+        val m = marks.toCharArray()
+        val hit = bumps.toMutableList()
+        for (j in todo) {
+            if (isMine(j)) {
+                hit += j
+                if (hit.size >= MinesLogic.LIVES) break
+            } else MinesLogic.openInPlace(width, height, mines, m, j)
+        }
+        return copy(marks = m.concatToString(), bumps = hit, moves = moves + 1)
+    }
+
     /** Flags [i], or takes its flag off. Null on a square open or hit, or a board already won or lost. */
     fun flag(i: Int): MinesState? {
         if (solved || failed || marks[i] == MinesLogic.OPEN || i in bumps) return null
@@ -103,7 +126,7 @@ internal object MinesLogic {
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
         Difficulty.STANDARD -> Spec(8, 8, 10, 1)
         Difficulty.HARD -> Spec(8, 10, 16, 2)
-        Difficulty.EXPERT -> Spec(8, 12, 22, 3)
+        Difficulty.EXPERT -> Spec(9, 10, 21, 3)
     }
 
     /** The up to eight neighbours of [i], in reading order. */

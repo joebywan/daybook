@@ -97,9 +97,10 @@ object Mines : PuzzleType {
         "Reveal every square without a mine. Revealing a mine costs a life; lose all three and the board is lost: try it again from the start.",
         "Flag a square you are sure holds a mine. A flag is your note, never checked, and keeps its square from being revealed by mistake.",
         "A tap uses the tool under the board, Reveal or Flag; a long press uses the other. Every board can be cleared without a guess.",
+        "Tap a number whose flags already match it to reveal all its other squares at once. A wrong flag there opens a mine, and each mine costs a life.",
     )
 
-    override val keyboardHelp = listOf("Arrows move, Space or Enter reveals, F flags or unflags.")
+    override val keyboardHelp = listOf("Arrows move, Space or Enter reveals (on a number, reveals around it), F flags or unflags.")
 
     /**
      * No undo, on purpose (the owner's call). A reveal is never wrong unless it finds a mine, so undo could only hand
@@ -153,6 +154,10 @@ object Mines : PuzzleType {
     internal const val THIRD_ONE = 2
     internal const val FLAG_SQUARE = 3
 
+    /** The 1 beside the flag, tapped to reveal its other hidden squares ([CHORDED]) in one go. */
+    internal const val CHORD_ONE = 8
+    internal val CHORDED = listOf(4, 9, 14)
+
     internal fun tutorialBoard() =
         MinesState(5, 5, TUTORIAL_MINES, TUTORIAL_OPENING, MinesLogic.openingMarks(5, 5, TUTORIAL_MINES, TUTORIAL_OPENING))
 
@@ -161,6 +166,7 @@ object Mines : PuzzleType {
         val s1 = s0.reveal(BUMP)!!
         val s2 = SAFE.fold(s1) { acc, i -> acc.reveal(i)!! }
         val s3 = s2.flag(FLAG_SQUARE)!!
+        val s4 = s3.chord(CHORD_ONE)!!
         fun around(i: Int) = MinesLogic.neighbours(5, 5, i).toSet()
         listOf(
             TutorialFrame(
@@ -204,6 +210,14 @@ object Mines : PuzzleType {
             ),
             TutorialFrame(
                 state = s3,
+                caption = "This 1's mine is flagged, so its other squares are safe. Tap the 1 itself to reveal them all at once.",
+                highlight = BoardHighlight(strong = setOf(CHORD_ONE), soft = CHORDED.toSet() + FLAG_SQUARE),
+                accepts = { it is MinesState && it.marks == s4.marks && it.bumps == s4.bumps },
+                retry = "Tap the glowing 1.",
+                done = "All three at once. A wrong flag would open a mine here, so flag with care.",
+            ),
+            TutorialFrame(
+                state = s4,
                 caption = "Your turn: reveal every safe square. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Cleared. That's all there is to it.",
@@ -385,10 +399,11 @@ object Mines : PuzzleType {
         val live = interactive && !s.solved && !s.failed
         val feel = rememberMoveFeel(List(n) { if (it in s.bumps) 'x' else s.marks[it] })
 
+        // Any tap or long press on a revealed number chords (nothing else could happen there); else the tool decides.
         fun act(cell: Int, flag: Boolean) {
-            val next = (if (flag) s.flag(cell) else s.reveal(cell)) ?: return
+            val next = (if (s.isOpen(cell)) s.chord(cell) else if (flag) s.flag(cell) else s.reveal(cell)) ?: return
             if (next.lives < s.lives) {
-                val b = Bump(cell, Animatable(0f))
+                val b = Bump(next.bumps.last(), Animatable(0f))
                 bump = b
                 scope.launch {
                     b.progress.animateTo(1f, tween(BUMP_MS, easing = LinearEasing))
@@ -402,7 +417,8 @@ object Mines : PuzzleType {
             movedCursor(cursor, key, s.height, s.width)?.let { cursor = it; return@boardKeys true }
             val at = cursor ?: return@boardKeys false
             val action = minesKeyAction(key) ?: return@boardKeys false
-            if (!repeat) act(at, action == MinesKeyAction.Flag)
+            // F on a revealed number does nothing; Space or Enter there chords.
+            if (!repeat && !(action == MinesKeyAction.Flag && s.isOpen(at))) act(at, action == MinesKeyAction.Flag)
             true
         }
 

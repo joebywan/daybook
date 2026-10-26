@@ -174,7 +174,7 @@ class MinesTeachingTest {
     }
 
     @Test fun `each frame accepts its move made by the real gestures and refuses a wrong one`() {
-        assertEquals(5, frames.size)
+        assertEquals(6, frames.size)
         assertNull(frames[0].judge)
         val s0 = frames[1].state as MinesState
         val bump = frames[1].judge!!
