@@ -15,6 +15,14 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **Accent drawn as text outside the colour pass's files.** `BoardHues.textOn(accent, background)` (and `tileInk` on Home)
+  now make an accent readable as text; the colour pass applied it to Home tiles, the stats card header and share links, and the
+  walkthrough offer line. Still raw accent as text (under 4.5:1 for the lighter accents, Lexicon's olive, Sand's tan): the finish
+  frame's title and streak line (`PlayScreen.kt` `FinishCard`), `ResultsBlock`'s achievement title (`FinishExtras.kt`), the
+  hint panel's ink (`Hints.kt` `val ink = ... else accent`), the walkthrough status line (`TutorialRunner.kt`), the archive's
+  day number and tick (`ArchiveScreen.kt`), Today's three tile name (`TodaysThreeRow.kt`), and white text on accent-filled
+  buttons (`TutorialRunner.kt` `containerColor = accent`). Each is a one-expression swap; `ContrastTest` already covers every
+  accent. **S**. Source: the UX council's contrast review, 2026-10-26.
 - [ ] **Touch targets left under 48dp.** Fixed in the UX pass: Home header buttons (48dp targets round 36dp circles), the
   play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
   Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)
