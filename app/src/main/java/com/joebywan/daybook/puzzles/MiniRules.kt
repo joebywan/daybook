@@ -73,6 +73,14 @@ internal object MiniLogic {
     /** The clue [word] has in the lists, or null for a word they do not hold. */
     fun clueOf(word: String): String? = if (WheelWords.isGridWord(word)) WheelWords.clue(word) else null
 
+    // Probed by word, never iterated, so its order cannot reach a seed.
+    private val secondClues: Map<String, String> by lazy {
+        MiniSecondClueText.ALL.split("\n").associate { it.substringBefore(": ") to it.substringAfter(": ") }
+    }
+
+    /** [word]'s second clue (`tools/words/second-clues.txt`), a different angle from its first, or "" for none. */
+    fun secondClueOf(word: String): String = secondClues[word] ?: ""
+
     /** The rules and nothing else: every slot spells the word its clue is the clue of. [clues] is one per slot, in slot order. */
     fun isSolved(size: Int, letters: String, clues: List<String>): Boolean {
         val slots = slots(size, letters)
@@ -187,7 +195,7 @@ internal object MiniLogic {
         for (hit in walk) if (hit.technique == MiniTeacher.CLUE) read[hit.square] = hit.letter
         val proof = solve(size, read.concatToString()) as? Verdict.ExactlyOne ?: return null
         if (proof.value != entry) return null
-        return MiniState(size = size, answer = entry, clues = clues, letters = read.map { if (it == BLACK) BLACK else OPEN }.joinToString(""))
+        return MiniState(size = size, answer = entry, clues = clues, secondClues = words.map(::secondClueOf), letters = read.map { if (it == BLACK) BLACK else OPEN }.joinToString(""))
     }
 
     fun generate(seed: Long, difficulty: Difficulty): MiniState = generateVerified(seed, difficulty) ?: lastResort(difficulty)

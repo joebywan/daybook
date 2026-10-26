@@ -1,7 +1,7 @@
 # Levels — spec
 
 A third way to play beside Daily and Random: numbered levels, each a fixed set of five boards from different puzzles.
-Finish all five and the next level opens. Built: see the two "As built" sections below for where the build differs from
+Finish all five and the next level opens. Built: see the two "As built" sections and "Level difficulty (deal 3)" below for where the build differs from
 the plan that makes up the rest of this file.
 
 **Why.** A player's feedback (2026-10-22): they finish the dailies, but lose interest in Random because nothing on the
@@ -200,7 +200,7 @@ differs from the plan above:
   none being deal 1) and `Levels.LATEST` only when nothing is opened yet. Anyone who opened a level before this build keeps
   deal 1 everywhere; a new player gets deal 2 everywhere. Entries are still written once, so an opened level never moves.
   `openLevel` now returns the plan itself. `LevelsTest` pins 50 levels of each deal and runs every rule over both;
-  `LevelProgressTest` covers the old entry, the new one and the mixed history. The parity dump uses the latest deal.
+  `LevelProgressTest` covers the old entry, the new one and the mixed history. The parity dump uses the latest deal (deal 3 since "Level difficulty" below).
 - **Backup needed no change:** the web export copies every `daybook.*` localStorage entry verbatim, so the two new keys
   travel with it.
 - **Proof:** `LevelBoardsProvedTest` walks levels 1-365 (1,387 boards with a `generateVerified`) and none falls back; about
@@ -233,6 +233,117 @@ differs from the plan above:
 - Back from a level board goes home, where the mode is still Levels; back from one level's boards goes to the list.
 - Web render hooks: `?mode=levels`, `?screen=levels[&level=N]`, `?puzzle=<id>&level=N`, and `&leveldone` with `?finish=`;
   `tools/render/render.py --query` passes them.
+
+## Level difficulty (deal 3)
+
+**Why (2026-10-26, approved by the owner).** Deal 2 dealt deck 0 in bands of the gentlest-first order, so the five
+hardest starters all landed in level 5, and it treated every puzzle's Standard as the same step, though some puzzles
+are simply harder than others at the same tier (the owner named Sets and Word Wheel). The owner's direction: if levels
+are tuned across a spread, do it over 100 levels, not 5. Deal 3 is `Levels.LATEST` from this build; a player who opened
+a level under deal 1 or 2 keeps it (the deal is per player, as before).
+
+**The measure (no player data).** `LevelDifficultyBuildTest` (env-gated, `DAYBOOK_LEVEL_DIFFICULTY=1`, about a minute)
+walks 60 boards of every puzzle and tier (the level seeds of levels 1-60) with the puzzle's own teacher, from the blank
+board to the end, taking every hint, and records three things a board:
+
+- **steps**: hints the walk took, the deductions or moves a player has to make;
+- **depth**: the deepest technique it needed, as its place on the puzzle's own ladder (`techniqueNamesOf`, simplest
+  first) from 0 to 1; a fallback step, or a walk the teacher loses (Lexicon, 2 and 4 of 60), counts as the top;
+- **open**: the share of steps that were the fallback: nothing short explained the move, so the player chooses or
+  recalls (the word games and Codebreaker; zero on every board a ladder gates).
+
+Snap and Pointers have no teacher. Snap's steps are its squares and its depth is 1 when the whole-board rules of
+`SnapDeducer` (test code) cannot finish it from blank (a what-if is needed); Pointers' steps are its arrows, depth and
+open 0 (nothing is hidden; its challenge is care). A Sudoku step is not a chess move, so the numbers are not compared
+as numbers: each measure becomes a percentile rank among all 93 puzzle-tiers, and their mean is the **measured** score
+(0-1000). The score deal 3 uses is the mean of that and the tier itself (Standard 0, Hard 500, Expert 1000), because
+each generator already measures and gates its own tiers (size, and the ladder rung a board must need), and the walk
+alone misreads a puzzle whose one step is a whole search: on the walk Mate is the easiest puzzle at every tier, since a
+key move is one step. So the measure moves a puzzle within its tier's band and the tiers overlap only at the edges.
+
+What it says (of solving, not learning; see the learning cost below): the word games (Crossword, Lexicon, Codebreaker, Word Wheel), Cage Sudoku and Nonogram are the hardest
+at Standard; Word Wheel's Standard (276) is harder than every ladder puzzle's but Cage Sudoku's. Sets sits
+above the middle (215, 21st of 31 Standards); what makes it hard is finding a set among the cards, which a walk of
+three or four steps cannot see, so it is probably still underrated. Mate, Atoms, Codeword, Tents and Who's Who are the
+gentlest Standards: short walks on low rungs. Known ceilings: steps favour big boards; depth depends on how finely each
+ladder is cut; open is zero for most puzzles. Player data (solve times by tier) would replace all of it.
+
+**The deal.** `Levels.spread`, built once from `core/LevelSpread.kt` (written by the test above; never edited by hand)
+and `Levels.LEARN` (a frozen copy of `PuzzleOrder.GENTLEST` on 2026-10-26, quickest to learn first; never changed, as
+`GENTLE` is not), and nothing else, so a plan is still `(level, poolSize, deal)` alone.
+
+- **Target.** Level `n` of 1-100 aims at a target rising evenly from the mean Standard of the five quickest to learn
+  (221) to the mean of the five hardest Experts (882), both reachable by a real level.
+- **Learning cost.** The measure says how hard a board is to solve, not how long a puzzle takes to learn: on it alone,
+  level 1 was Mate, Atoms, Codeword, Tents and Who's Who, the "takes a bit" group, which `GENTLEST` exists to keep from a
+  newcomer. So a puzzle not yet met may join only once its place in `LEARN` is inside a window that opens on the first 10
+  and takes in all 31 by level 15, must join by level `1 + 13r / 31` (`r` its place), and is met on Standard. The term
+  is strongest at level 1 and gone by level 15; after that only the measured score counts.
+- **Choice.** Every puzzle not in the level before offers its tier nearest the target (Standard if not yet met). They
+  queue by staleness (never met first, quickest to learn first; then the longest away, blurred by up to two levels so
+  puzzles met together do not keep returning together), and the level is the five of the first 16 whose mean is nearest
+  the target, each board's own distance counting 0.3 as much. A puzzle away 15 levels must come back. Integer arithmetic
+  only, no hash order (web parity). Tiles show gentlest first.
+
+Levels 1-5:
+
+| level | boards (all Standard) |
+|---|---|
+| 1 | Arrows, Target, Pipes, Sudoku, Word Wheel |
+| 2 | Kings, Sand, Trail, Nonogram, Lexicon |
+| 3 | Target, Pipes, Sudoku, Sun & Moon, Word Wheel |
+| 4 | Kings, Sand, Trail, Nonogram, Crossword |
+| 5 | Sets, Target, Sudoku, Word Wheel, Lexicon |
+
+Measured (`LevelsTest` holds each): levels 1-5 all Standard and from the 15 quickest to learn; every level's mean
+within 92 of its target (10 on average); ten-level means 231, 302, 388, 454, 518, 569, 652, 730, 787, 830; every puzzle
+met by level 15 and in 13 to 22 of levels 1-100, never away more than 15 levels nor in two levels running; 48 levels
+mix tiers. The first 31 pool ids are ranked (`LevelSpread.RANKED`); a puzzle appended later joins deal 3 from level 101,
+where deal 3 deals decks 1, 2, ... of the whole pool on the old curve (3 Hard, 2 Expert), deck 1 repaired against levels
+99-100. That is a step down from level 100's five Experts, a breather rather than a cliff. Re-measuring, or ranking a new
+puzzle into 1-100, is a new deal: rewriting `LevelSpread.kt` or `LEARN` would move every deal-3 plan, opened ones
+included. Building the spread costs about 150 ms on a desktop JVM, once, cold; a plan after that costs what it did.
+
+<!-- level-difficulty:start -->
+Generated by `LevelDifficultyBuildTest` (60 boards a tier, the level seeds of levels 1-60); do not edit by hand.
+Steps: median hints a board. Depth: mean deepest technique, 0-1 on the puzzle's ladder. Open: fallback share of steps.
+Score: measured, the mean of the three percentile ranks among all 93 puzzle-tiers (0-1000), then **the score deal 3 uses**,
+the mean of that and the tier (Standard 0, Hard 500, Expert 1000). Sorted by Standard's score.
+
+| puzzle | Standard: steps / depth / open | measured, score | Hard | measured, score | Expert | measured, score |
+|---|---|---|---|---|---|---|
+| Mate (`chess`) | 2 / 0.50 / 0% | 194, **97** | 3 / 0.50 / 0% | 199, **350** | 4 / 0.67 / 0% | 283, **642** |
+| Atoms (`atoms`) | 7 / 0.19 / 0% | 219, **110** | 15 / 0.56 / 0% | 359, **430** | 24 / 0.75 / 0% | 498, **749** |
+| Codeword (`codeword`) | 12 / 0.08 / 0% | 261, **131** | 17 / 0.67 / 0% | 411, **456** | 19 / 1.00 / 0% | 598, **799** |
+| Tents (`tents`) | 10 / 0.39 / 0% | 263, **132** | 15 / 0.74 / 0% | 420, **460** | 21 / 0.95 / 0% | 547, **774** |
+| Who's Who (`whoswho`) | 10.5 / 0.25 / 0% | 264, **132** | 23 / 0.75 / 0% | 498, **499** | 36 / 1.00 / 0% | 681, **841** |
+| Shikaku (`shikaku`) | 12 / 0.20 / 0% | 272, **136** | 18 / 0.53 / 0% | 371, **436** | 21 / 0.82 / 0% | 522, **761** |
+| Arrows (`pointers`) | 14 / 0.00 / 0% | 275, **138** | 34 / 0.00 / 0% | 393, **447** | 48 / 0.00 / 0% | 435, **718** |
+| Cipher (`cipher`) | 7 / 0.60 / 0% | 293, **147** | 7 / 0.80 / 0% | 370, **435** | 7 / 1.00 / 0% | 484, **742** |
+| Dominoes (`dominoes`) | 7 / 0.60 / 0% | 293, **147** | 10 / 0.80 / 0% | 399, **450** | 13 / 1.00 / 0% | 543, **772** |
+| Lamps (`lamps`) | 11 / 0.50 / 0% | 295, **148** | 25 / 0.73 / 0% | 500, **500** | 44 / 1.00 / 0% | 710, **855** |
+| Kings (`kings`) | 14 / 0.49 / 0% | 315, **158** | 18 / 0.75 / 0% | 458, **479** | 20 / 0.81 / 0% | 504, **752** |
+| Mosaic (`mosaic`) | 4 / 0.77 / 0% | 319, **160** | 5 / 0.84 / 1% | 514, **507** | 6 / 0.88 / 1% | 543, **772** |
+| Tally (`tally`) | 14 / 0.51 / 0% | 333, **167** | 21 / 0.80 / 0% | 502, **501** | 32.5 / 1.00 / 0% | 667, **834** |
+| Mines (`mines`) | 20.5 / 0.17 / 0% | 341, **171** | 34 / 0.42 / 0% | 426, **463** | 43.5 / 0.85 / 0% | 623, **812** |
+| Inequality (`inequality`) | 16 / 0.59 / 0% | 373, **187** | 25 / 0.83 / 0% | 558, **529** | 36 / 1.00 / 0% | 681, **841** |
+| LITS (`lits`) | 15 / 0.60 / 0% | 375, **188** | 22 / 0.70 / 0% | 471, **486** | 29 / 0.87 / 0% | 583, **792** |
+| Regions (`regions`) | 19 / 0.53 / 0% | 384, **192** | 40 / 1.00 / 0% | 697, **599** | 68 / 1.00 / 0% | 739, **870** |
+| Pearls (`pearls`) | 19 / 0.58 / 0% | 395, **198** | 40 / 0.86 / 0% | 618, **559** | 71.5 / 1.00 / 0% | 743, **872** |
+| Sand (`sand`) | 17 / 0.67 / 0% | 411, **206** | 23 / 0.67 / 0% | 460, **480** | 26 / 0.67 / 0% | 487, **744** |
+| Trail (`snap`) | 25 / 0.50 / 0% | 418, **209** | 36 / 0.55 / 0% | 471, **486** | 42 / 0.75 / 0% | 572, **786** |
+| Sets (`sets`) | 3 / 1.00 / 0% | 429, **215** | 4 / 1.00 / 0% | 442, **471** | 6 / 1.00 / 0% | 467, **734** |
+| Target (`target`) | 4 / 1.00 / 0% | 442, **221** | 4 / 1.00 / 0% | 442, **471** | 5 / 1.00 / 0% | 457, **729** |
+| Pipes (`pipes`) | 24 / 0.62 / 0% | 455, **228** | 36.5 / 0.69 / 0% | 533, **517** | 60 / 0.74 / 0% | 591, **796** |
+| Sudoku (`sudoku`) | 53 / 0.27 / 0% | 467, **234** | 53 / 0.43 / 0% | 478, **489** | 53 / 0.81 / 0% | 616, **808** |
+| Sun & Moon (`mambo`) | 30.5 / 0.60 / 0% | 473, **237** | 56 / 0.80 / 0% | 614, **557** | 87 / 1.00 / 0% | 757, **879** |
+| Nonogram (`nonogram`) | 13 / 1.00 / 0% | 543, **272** | 37 / 1.00 / 0% | 692, **596** | 80.5 / 1.00 / 0% | 750, **875** |
+| Word Wheel (`wordwheel`) | 5 / 0.97 / 31% | 551, **276** | 6 / 0.98 / 37% | 589, **545** | 8.5 / 1.00 / 30% | 659, **830** |
+| Cage Sudoku (`cages`) | 67 / 0.63 / 0% | 558, **279** | 73 / 0.82 / 0% | 649, **575** | 81 / 0.99 / 0% | 699, **850** |
+| Lexicon (`words`) | 7 / 0.98 / 34% | 591, **296** | 8 / 1.00 / 34% (lost 2) | 668, **584** | 8 / 1.00 / 36% (lost 4) | 672, **836** |
+| Codebreaker (`tower`) | 10 / 1.00 / 29% | 665, **333** | 10 / 1.00 / 33% | 676, **588** | 12 / 1.00 / 36% | 710, **855** |
+| Crossword (`mini`) | 13 / 1.00 / 45% | 728, **364** | 17 / 1.00 / 54% | 768, **634** | 24.5 / 1.00 / 61% | 833, **917** |
+<!-- level-difficulty:end -->
 
 ## Open questions for the owner
 
