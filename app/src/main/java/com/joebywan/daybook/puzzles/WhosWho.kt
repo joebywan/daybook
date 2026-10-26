@@ -68,6 +68,7 @@ import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * Who's Who: a few people, a row of houses and one or two more categories (a pet, a job...), and a numbered list of
@@ -386,7 +387,7 @@ object WhosWho : PuzzleType {
                     Box(Modifier.weight(weights[column]).fillMaxHeight(), contentAlignment = Alignment.Center) {
                         Text(
                             WhosWhoWords.HEADERS[s.groups[column]],
-                            fontSize = 12.sp,
+                            fontSize = 12.dp.boardSp(), lineHeight = 12.dp.boardSp() * 1.2f,
                             fontWeight = FontWeight.SemiBold,
                             color = scheme.onSurface,
                             maxLines = 1,
@@ -400,7 +401,7 @@ object WhosWho : PuzzleType {
                         Text(
                             s.names[p],
                             Modifier.padding(start = 6.dp),
-                            fontSize = 14.sp,
+                            fontSize = 14.dp.boardSp(), lineHeight = 14.dp.boardSp() * 1.2f,
                             fontWeight = FontWeight.SemiBold,
                             color = scheme.onSurface,
                             maxLines = 1,
@@ -455,7 +456,7 @@ object WhosWho : PuzzleType {
             if (placed >= 0) {
                 Text(
                     s.word(column, placed),
-                    fontSize = 15.sp,
+                    fontSize = 15.dp.boardSp(), lineHeight = 15.dp.boardSp() * 1.2f,
                     fontWeight = FontWeight.Bold,
                     color = if (isBad) scheme.error else BoardHues.ink(look.hueB, look.dark),
                     maxLines = 1,
@@ -465,8 +466,8 @@ object WhosWho : PuzzleType {
                 Text(
                     open.joinToString(" ") { s.word(column, it) },
                     Modifier.padding(horizontal = 3.dp),
-                    fontSize = if (column == 0) 12.sp else 10.5.sp,
-                    lineHeight = 12.sp,
+                    fontSize = if (column == 0) 12.dp.boardSp() else 10.5.dp.boardSp(),
+                    lineHeight = 12.dp.boardSp(),
                     color = scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     maxLines = 2,

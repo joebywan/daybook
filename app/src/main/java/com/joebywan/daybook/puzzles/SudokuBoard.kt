@@ -44,7 +44,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.DigitKeyAction
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.boardKeys
@@ -61,6 +60,7 @@ import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.boardSp
 
 
 /**
@@ -178,7 +178,7 @@ internal fun SudokuGridBoard(
                                 // A square that carries a label (a cage's total) gives its top band to it.
                                 val band = topBand(i)
                                 val style = TextStyle(
-                                    fontSize = (cell.value * SUDOKU_NOTE_SIZE * (1f - band * 0.5f)).sp,
+                                    fontSize = (cell * SUDOKU_NOTE_SIZE * (1f - band * 0.5f)).boardSp(), lineHeight = (cell * SUDOKU_NOTE_SIZE * (1f - band * 0.5f)).boardSp() * 1.2f,
                                     fontWeight = FontWeight.Medium,
                                     color = ink,
                                     textAlign = TextAlign.Center,
@@ -206,7 +206,7 @@ internal fun SudokuGridBoard(
                             if (s.cells[i] != 0) {
                                 Text(
                                     text = s.cells[i].toString(),
-                                    fontSize = (cell.value * 0.52f).sp,
+                                    fontSize = (cell * 0.52f).boardSp(), lineHeight = (cell * 0.52f).boardSp() * 1.2f,
                                     fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
                                     color = when {
                                         i in conflicts -> scheme.error
