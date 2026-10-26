@@ -89,7 +89,7 @@ object Tally : PuzzleType {
     override val id = "tally"
     override val displayName = "Tally"
     override val tagline = "Keep the numbers that make every sum"
-    override val accent = 0xFF43B14E
+    override val accent = 0xFFA26482
 
     override val rules = listOf(
         "The number beside each row, and under each column, is its target.",

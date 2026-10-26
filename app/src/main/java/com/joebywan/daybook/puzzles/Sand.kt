@@ -114,7 +114,7 @@ object Sand : PuzzleType {
     override val id = "sand"
     override val displayName = "Sand"
     override val tagline = "Pour every colour into a tube of its own"
-    override val accent = 0xFFD1617B
+    override val accent = 0xFF8A8C34
     override val rules = listOf(
         "Sort the sand: finish with every tube holding one colour, or nothing.",
         "Tap a tube to lift it, then tap another to pour into it. Tap the lifted tube again to put it down.",

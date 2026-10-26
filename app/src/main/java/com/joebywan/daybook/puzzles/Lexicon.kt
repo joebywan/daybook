@@ -73,7 +73,7 @@ object Lexicon : PuzzleType {
     override val id = "words"
     override val displayName = "Lexicon"
     override val tagline = "Find the hidden word"
-    override val accent = 0xFF9CB83E
+    override val accent = 0xFF278E8E
     override val rules = listOf(
         "A word is hidden. Type a real word and press Enter to guess it.",
         "Green: the right letter in the right place.",

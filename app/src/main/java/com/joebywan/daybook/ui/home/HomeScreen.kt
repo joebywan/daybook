@@ -810,7 +810,7 @@ internal fun HomeTile(
  * [accent] as text on a tile, solved (tinted with it) or not: the tinted tile is the harder background in both schemes,
  * so one ink reads on either.
  */
-internal fun tileInk(accent: Color, surface: Color) = BoardHues.textOn(accent, accent.copy(alpha = 0.20f).compositeOver(surface))
+internal fun tileInk(accent: Color, surface: Color) = BoardHues.onTint(accent, surface, alpha = 0.20f)
 
 /**
  * Three dots for the three tiers, so a tile can say "you did the Standard one" while the grid is

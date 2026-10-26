@@ -74,7 +74,7 @@ object Snap : PuzzleType {
     override val id = "snap"
     override val displayName = "Trail"
     override val tagline = "One line, every square, numbers in order"
-    override val accent = 0xFFD9584C
+    override val accent = 0xFFCA4383
     override val rules = listOf(
         "Draw one continuous line from 1 to the highest number.",
         "The line must pass through every square exactly once.",

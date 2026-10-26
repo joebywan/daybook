@@ -109,7 +109,7 @@ object Cipher : PuzzleType {
     override val id = "cipher"
     override val displayName = "Cipher"
     override val tagline = "Each letter is a digit. Make the sum true."
-    override val accent = 0xFFC84161
+    override val accent = 0xFFA879AA
     override val rules = listOf(
         "Each letter stands for one digit, 0 to 9, the same digit everywhere it appears.",
         "Different letters are different digits, and no word starts with 0.",

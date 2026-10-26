@@ -132,7 +132,7 @@ object Atoms : PuzzleType {
     override val id = "atoms"
     override val displayName = "Atoms"
     override val tagline = "Bond every atom into one molecule"
-    override val accent = 0xFF6FA8C4
+    override val accent = 0xFFB2659A
     override val rules = listOf(
         "Each atom's number is exactly how many bond-ends it must carry.",
         "Bonds run straight, horizontally or vertically, between two atoms.",

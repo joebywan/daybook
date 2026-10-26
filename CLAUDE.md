@@ -649,7 +649,6 @@ to a wall), no lamp lights another, and a numbered wall touches exactly that man
   last two turn red after a 1 s settle. Lit squares are a static Amber wash, so reduced motion has nothing to still.
 - Input is Kings' and Tents': tap a cross, double-tap a lamp, tap a lamp to take it away, drag crosses (one state on lift).
   Keyboard: L or Enter lamp, X or Space cross, Backspace clears. Highlight indices are squares (`highlightGrid`).
-- The accent, `0xFF9D4881`, is `AccentSpacingTest`'s pick once Mines held its first choice (`0xFF3C28BD`).
 
 ## Codeword (a crossword with numbers for letters)
 
@@ -885,8 +884,11 @@ An accent drawn as text goes through `BoardHues.textOn` (fills and rings keep th
 lightness to 4.5:1 on the surface and background, so token palettes pinned by CIEDE2000 use the fixed `BoardHues.deep`; a
 state shown by colour also changes shape or weight (Nonogram's faded/dashed clues, Tally's dashed red chip). `ContrastTest`
 holds all of it, and `scheme.error` is a text-safe Clay in each scheme.
-A new puzzle's accent comes from `AccentSpacingTest`, which prints the candidate furthest from every accent (CIEDE2000,
-colour-blind vision included) and pins a floor between every pair; the palette tests share its maths (`ColourDistance`).
+The accents were designed as one set (`docs/COLOUR.md`, layer 2): one luminance band where every raw accent reaches 3:1
+on both schemes, clear of the error red and the success green, spread for the largest closest pair (CIEDE2000 5.79 normal,
+2.90 colour-blind). Text in an accent goes through `BoardHues.textOn`, or `onTint` on the accent's own tint. A new puzzle's
+accent comes from `AccentSpacingTest`, which prints the candidate that keeps those rules furthest from every accent and pins
+the floors; the palette tests share its maths (`ColourDistance`).
 
 ## Rules that keep being relearned
 

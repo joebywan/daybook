@@ -85,7 +85,7 @@ object WhosWho : PuzzleType {
     override val id = "whoswho"
     override val displayName = "Who's Who"
     override val tagline = "Match everyone to everything from the clues"
-    override val accent = 0xFF4457A2
+    override val accent = 0xFF846CAD
 
     override val rules = listOf(
         "Each row is a person and each column a category: their house, and one or two more. No two people share anything.",
@@ -445,7 +445,7 @@ object WhosWho : PuzzleType {
                     },
                 )
                 .border(0.5.dp, scheme.outline)
-                .then(if (isSelected) Modifier.border(2.dp, accent) else Modifier)
+                .then(if (isSelected) Modifier.border(2.dp, BoardHues.onTint(accent, scheme.surface, 3f)) else Modifier)
                 .ring(hint, look.glow, look.pulse, 0.dp)
                 .moveFeel(feel, c, accent)
                 .clickable(enabled = interactive) { onCell(c) }
@@ -548,7 +548,7 @@ object WhosWho : PuzzleType {
                         .size(42.dp, 46.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(if (chosen) accent.copy(alpha = 0.22f) else scheme.surface)
-                        .border(if (chosen) 2.dp else 1.dp, if (chosen) accent else scheme.outline, RoundedCornerShape(12.dp))
+                        .border(if (chosen) 2.dp else 1.dp, if (chosen) BoardHues.onTint(accent, scheme.surface, 3f) else scheme.outline, RoundedCornerShape(12.dp))
                         .clickable(enabled = interactive) { onPen(pen) },
                     contentAlignment = Alignment.Center,
                 ) {

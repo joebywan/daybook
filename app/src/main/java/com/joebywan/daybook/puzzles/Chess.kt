@@ -158,7 +158,7 @@ object Chess : PuzzleType {
     override val id = "chess"
     override val displayName = "Mate"
     override val tagline = "Find the forced checkmate"
-    override val accent = 0xFF58A744
+    override val accent = 0xFFBE7C1C
     override val rules = listOf(
         "You play the side shown at the bottom. Checkmate the opposing king in the number of moves shown.",
         "Tap a piece, then tap where it goes. Tap another of your pieces to change your mind.",

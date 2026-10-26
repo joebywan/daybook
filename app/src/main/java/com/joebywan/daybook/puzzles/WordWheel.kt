@@ -88,7 +88,7 @@ object WordWheel : PuzzleType {
     override val id = "wordwheel"
     override val displayName = "Word Wheel"
     override val tagline = "Spell every word in the grid from the wheel"
-    override val accent = 0xFFCF6E84
+    override val accent = 0xFF2891AC
     override val rules = listOf(
         "Spell words from the wheel by swiping across its letters, or tap them in turn and tap the word to try it.",
         "Each letter on the wheel is used at most once in a word, and a word has three letters or more.",

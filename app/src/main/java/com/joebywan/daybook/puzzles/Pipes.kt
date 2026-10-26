@@ -133,7 +133,7 @@ object Pipes : PuzzleType {
     override val id = "pipes"
     override val displayName = "Pipes"
     override val tagline = "Rotate until every pipe joins up"
-    override val accent = 0xFF48B9C4
+    override val accent = 0xFF1C7EAB
     override val rules = listOf(
         "Tap a tile to rotate it a quarter turn.",
         "Water enters at the ringed tile; pipes joined back to it run full.",

@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.archive
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.TitledScreen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -214,7 +215,7 @@ private fun DayCell(
     var m = modifier.aspectRatio(1f).padding(2.dp).clip(shape)
     if (open) m = m.background(if (all) accent.copy(alpha = 0.22f) else scheme.surface).clickable(onClick = onClick)
     when {
-        isSelected -> m = m.border(BorderStroke(2.5.dp, accent), shape)
+        isSelected -> m = m.border(BorderStroke(2.5.dp, BoardHues.onTint(accent, scheme.background, 3f)), shape)
         day == today -> m = m.border(BorderStroke(1.5.dp, scheme.onSurface), shape)
     }
     Column(
@@ -225,7 +226,7 @@ private fun DayCell(
         Text(
             day.day.toString(),
             style = MaterialTheme.typography.labelLarge,
-            color = if (all) accent else scheme.onSurface,
+            color = if (all) BoardHues.onTint(accent, scheme.background) else scheme.onSurface,
         )
         if (open) {
             Spacer(Modifier.height(2.dp))
@@ -257,7 +258,7 @@ private fun TierPanel(
         Row(Modifier.fillMaxWidth().height(TIER_ROW), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (day != null) Difficulty.entries.forEach { difficulty ->
                 val isSolved = solved(difficulty)
-                val ink = if (isSolved) accent else scheme.onSurfaceVariant
+                val ink = if (isSolved) BoardHues.onTint(accent, scheme.background) else scheme.onSurfaceVariant
                 Box(
                     Modifier
                         .weight(1f)
@@ -269,7 +270,7 @@ private fun TierPanel(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isSolved) {
-                            Icon(Icons.Default.Check, "Solved", tint = accent, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Check, "Solved", tint = ink, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
                         }
                         Text(difficulty.label, style = MaterialTheme.typography.labelLarge, color = ink)
@@ -478,7 +479,7 @@ private fun DayPuzzles(
                             contentAlignment = Alignment.Center,
                         ) {
                             when {
-                                isSolved -> Icon(Icons.Default.Check, "${tier.label} solved", tint = accent, modifier = Modifier.size(18.dp))
+                                isSolved -> Icon(Icons.Default.Check, "${tier.label} solved", tint = BoardHues.onTint(accent, scheme.background, 3f), modifier = Modifier.size(18.dp))
                                 (puzzle.id to tier) in started -> Text(
                                     "started", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant,
                                 )

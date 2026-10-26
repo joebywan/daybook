@@ -83,7 +83,7 @@ object Tents : PuzzleType {
     override val id = "tents"
     override val displayName = "Tents"
     override val tagline = "A tent beside every tree, none touching"
-    override val accent = 0xFFC45EC9
+    override val accent = 0xFFBE6B0B
     override val rules = listOf(
         "Put one tent beside every tree, up, down, left or right of it. Each tent belongs to one tree.",
         "Tents never touch each other, not even at a corner.",

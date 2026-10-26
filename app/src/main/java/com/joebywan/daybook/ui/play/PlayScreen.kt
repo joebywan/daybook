@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.play
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
@@ -860,10 +861,11 @@ private fun FinishedFrame(
                 PartyPopper(Modifier.size(36.dp))
                 val style = if (praise.big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall
                 val weight = if (praise.big) FontWeight.Bold else null
+                val titleInk = BoardHues.onTint(accent, scheme.surface)
                 Box(Modifier.weight(1f, fill = false).graphicsLayer { scaleX = stamp.value; scaleY = stamp.value }, contentAlignment = Alignment.Center) {
-                    Text(title, style = style, color = accent, fontWeight = weight, maxLines = 1,
+                    Text(title, style = style, color = titleInk, fontWeight = weight, maxLines = 1,
                         modifier = if (counting) Modifier.alpha(0f) else Modifier)
-                    if (counting) Text(title.replaceFirst("${praise.streak}", "$shown"), style = style, color = accent, fontWeight = weight, maxLines = 1)
+                    if (counting) Text(title.replaceFirst("${praise.streak}", "$shown"), style = style, color = titleInk, fontWeight = weight, maxLines = 1)
                 }
                 PartyPopper(Modifier.size(36.dp).graphicsLayer(scaleX = -1f))
             }

@@ -2,6 +2,7 @@ package com.joebywan.daybook.ui.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 
 // The board content hues of docs/COLOUR.md: one HSL recipe, so any two hues sit at the same weight.
@@ -51,6 +52,14 @@ object BoardHues {
         }
         return toward
     }
+
+    /**
+     * [accent] made readable on its own tint: the ground a solved tile, chip, archive cell or finish card paints, [accent]
+     * at [alpha] over [ground]. 4.5:1 for text; pass 3f for a tick or a border. A raw accent reaches 3:1 on the plain
+     * surface and background (`docs/COLOUR.md`), not on its tint, where it measures as little as 2:1.
+     */
+    fun onTint(accent: Color, ground: Color, ratio: Float = 4.5f, alpha: Float = 0.22f) =
+        textOn(accent, accent.copy(alpha = alpha).compositeOver(ground), ratio)
 
     /** A solid shape (token, path, dot), either scheme. */
     fun mark(hue: Float) = Color.hsl(hue, .55f, .56f)

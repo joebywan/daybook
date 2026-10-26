@@ -97,7 +97,7 @@ object Inequality : PuzzleType {
     override val id = "inequality"
     override val displayName = "Inequality"
     override val tagline = "Each digit once per line, signs point to the smaller"
-    override val accent = 0xFF3FA89A
+    override val accent = 0xFF1E76D8
     override val rules = listOf(
         "Fill every square with a digit from 1 to the size of the grid.",
         "No digit may repeat in a row or a column.",

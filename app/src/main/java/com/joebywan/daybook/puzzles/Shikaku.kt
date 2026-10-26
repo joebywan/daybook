@@ -99,7 +99,7 @@ object Shikaku : PuzzleType {
     override val id = "shikaku"
     override val displayName = "Shikaku"
     override val tagline = "Cut the grid into numbered rectangles"
-    override val accent = 0xFFE0B23C
+    override val accent = 0xFF8D813D
     override val rules = listOf(
         "Divide the whole grid into rectangles.",
         "Every rectangle must contain exactly one number.",

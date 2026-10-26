@@ -91,7 +91,7 @@ object Mines : PuzzleType {
     override val id = "mines"
     override val displayName = "Mines"
     override val tagline = "Every safe square, found without a guess"
-    override val accent = 0xFF3C28BD
+    override val accent = 0xFFD45C91
     override val rules = listOf(
         "Each number counts the mines in the squares touching it, corners included.",
         "Reveal every square without a mine. Reveal a mine and the board is lost: try it again from the start.",

@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.training
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -260,7 +261,7 @@ fun TechniquePractice(technique: String, record: Set<String>, onPass: (String) -
                     index++
                 },
                 enabled = p != null,
-                colors = ButtonDefaults.buttonColors(containerColor = accent),
+                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = BoardHues.onFill(accent)),
                 modifier = Modifier.weight(1f),
             ) { Text(if (verdict == null) "Another board" else "Next board") }
         }
@@ -337,7 +338,7 @@ fun FinalBoard(record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit
                     board = start
                     shown = false
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = accent),
+                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = BoardHues.onFill(accent)),
                 modifier = Modifier.weight(1f),
             ) { Text("Start again") }
         }

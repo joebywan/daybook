@@ -169,7 +169,7 @@ object Kings : PuzzleType {
     override val id = "kings"
     override val displayName = "Kings"
     override val tagline = "One crown per row, column and colour"
-    override val accent = 0xFF9B6FD0
+    override val accent = 0xFF94669F
     override val rules = listOf(
         "Place exactly one king in every row, every column and every coloured region.",
         "No two kings may touch, not even diagonally.",

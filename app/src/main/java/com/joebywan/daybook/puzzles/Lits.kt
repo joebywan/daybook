@@ -120,7 +120,7 @@ object Lits : PuzzleType {
     override val id = "lits"
     override val displayName = "LITS"
     override val tagline = "One tetromino in every region"
-    override val accent = 0xFF9A8264
+    override val accent = 0xFF7A9052
     override val rules = listOf(
         "Shade exactly four squares in every region, forming an L, I, T or S tetromino.",
         "A 2x2 square of shading is never allowed.",

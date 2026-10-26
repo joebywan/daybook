@@ -121,7 +121,7 @@ object Mambo : PuzzleType {
     override val id = "mambo"
     override val displayName = "Sun & Moon"
     override val tagline = "Balance two symbols, never three alike in a line"
-    override val accent = 0xFF6E8FD8
+    override val accent = 0xFF8C79E0
 
     /**
      * The third line used to read "No three identical symbols may sit next to each other in a

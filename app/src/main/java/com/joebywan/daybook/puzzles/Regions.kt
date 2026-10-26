@@ -96,7 +96,7 @@ object Regions : PuzzleType {
     override val id = "regions"
     override val displayName = "Regions"
     override val tagline = "Fill each region, equal digits never touch"
-    override val accent = 0xFF675EC9
+    override val accent = 0xFF5C72BE
     override val rules = listOf(
         "A region of N squares holds the digits 1 to N, each once.",
         "Equal digits may not touch, not even at a corner.",
