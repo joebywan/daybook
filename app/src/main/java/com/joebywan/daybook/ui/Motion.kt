@@ -24,6 +24,21 @@ import com.joebywan.daybook.core.LocalBoardHighlight
  */
 val LocalReducedMotion = compositionLocalOf { false }
 
+/** The player's Reduced motion setting: the device's (the default) or their own, either way. Stored by name. */
+enum class MotionChoice(val label: String) {
+    DEVICE("Same as device"),
+    ON("On"),
+    OFF("Off"),
+    ;
+
+    /** Whether motion is reduced, given what the [device] asks for. */
+    fun reduced(device: Boolean): Boolean = when (this) {
+        DEVICE -> device
+        ON -> true
+        OFF -> false
+    }
+}
+
 /** The three buzzes a game gives, from `rememberHaptics` in the platform seam. Each does nothing when vibration is off. */
 class Haptics(val tick: () -> Unit, val bump: () -> Unit, val success: () -> Unit) {
     companion object {

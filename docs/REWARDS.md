@@ -280,9 +280,12 @@ kept is the best until beaten, and Best can be slower than the best time beside 
 
 ## Reduced motion and haptics (`ui/Motion.kt`, the platform seam)
 
-- **Reduced motion** follows the system: Android's "Remove animations" (animator duration scale 0), the web's
-  `prefers-reduced-motion: reduce`. Both are watched, so a change applies at once. `rememberReducedMotion` is read once
-  in `DaybookApp` and handed down as `LocalReducedMotion`. Under it: no confetti; Today's three's sparkles drawn still (no
+- **Reduced motion** follows the system by default: Android's "Remove animations" (animator duration scale 0), the web's
+  `prefers-reduced-motion: reduce`. Both are watched, so a change applies at once. Settings' Accessibility section lets the
+  player override it (`MotionChoice`: Same as device, the default / On / Off; stored as the `reduced_motion` launch
+  preference, absent for everyone until they pick). `DaybookApp` reads `rememberReducedMotion` once, passes it through the
+  choice and hands the result down as `LocalReducedMotion`, on both builds. The same section holds Vibration and a line on
+  what is always on (long press for a double tap, `boardSp`, right and wrong never by colour alone). Under it: no confetti; Today's three's sparkles drawn still (no
   infinite transition runs); the hint glow steady at full strength (`rememberHintPulse`, which every board uses); Pointers'
   arrow simply goes and a bump flashes red without the shake; Sand has no pour stream and no refusal shake (the refused tube's red tint, shown always, is held 400 ms
   instead of fading), and a lifted tube rises at once; a Pipes tile shows its new turn; the hint popover jumps rather than slides. Fades (the finished frame's

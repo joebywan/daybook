@@ -799,7 +799,7 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
 
 ## Motion and haptics
 
-The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s
+The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
 A move's feel (the changed squares settle, a unit finished by the rules glows once) is `ui/MoveFeel.kt`'s

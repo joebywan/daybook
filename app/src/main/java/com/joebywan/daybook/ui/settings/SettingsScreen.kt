@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Spacer
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.CardText
 import com.joebywan.daybook.ui.TitledScreen
+import com.joebywan.daybook.ui.MotionChoice
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +60,8 @@ fun SettingsScreen(
     onPlaySound: (Boolean) -> Unit,
     vibrate: Boolean,
     onVibrate: (Boolean) -> Unit,
+    motionChoice: MotionChoice,
+    onMotionChoice: (MotionChoice) -> Unit,
     customOrder: Boolean,
     onResetOrder: () -> Unit,
     appearance: Appearance,
@@ -91,6 +94,10 @@ fun SettingsScreen(
                     onChecked = onPlaySound,
                 )
             }
+            if (OFFERS_REMINDER) item { ReminderSetting() }
+            item { AppearanceChoice(appearance, onAppearance) }
+            item { AccessibilityHeading() }
+            item { MotionSetting(motionChoice, onMotionChoice) }
             item {
                 SettingSwitch(
                     title = "Vibration",
@@ -100,8 +107,6 @@ fun SettingsScreen(
                     onChecked = onVibrate,
                 )
             }
-            if (OFFERS_REMINDER) item { ReminderSetting() }
-            item { AppearanceChoice(appearance, onAppearance) }
             item { PuzzleOrderRow(customOrder, onResetOrder) }
             item { TrainingRow(onTraining) }
             item { RateRow(rateLink) }
@@ -156,6 +161,56 @@ private fun ReminderSetting() {
                 track = scheme.background,
             )
         }
+    }
+}
+
+/**
+ * The Accessibility section's heading, and what is always on with no switch (each is in the code: Kings', Tents',
+ * Lamps' and Dominoes' long press; `boardSp`; the non-colour signals of `docs/COLOUR.md`). Reduced motion and Vibration
+ * follow it. Screen readers are not a goal (CLAUDE.md, settled), so nothing here claims them.
+ */
+@Composable
+private fun AccessibilityHeading() {
+    val scheme = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 12.dp)) {
+        Text("Accessibility", style = MaterialTheme.typography.titleLarge, color = scheme.onBackground)
+        Text(
+            "Always on: press and hold does whatever a double tap does, the numbers and letters on a board stay " +
+                "inside their squares at large font sizes, and what is right or wrong is never shown by colour alone.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = scheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Reduced motion: the device's setting (the default), or on or off whatever the device says. */
+@Composable
+private fun MotionSetting(choice: MotionChoice, onChoice: (MotionChoice) -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .card(scheme.surface)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column {
+            CardText(
+                "Reduced motion",
+                "Stills the confetti, sparkles, shakes and slides, and holds the hint glow steady.",
+            )
+        }
+        SegmentedControl(
+            modifier = Modifier,
+            options = MotionChoice.entries,
+            selected = choice,
+            label = { it.label },
+            tone = scheme.primary,
+            onTone = scheme.onPrimary,
+            verticalPadding = 7.dp,
+            onSelect = onChoice,
+            track = scheme.background,
+        )
     }
 }
 
