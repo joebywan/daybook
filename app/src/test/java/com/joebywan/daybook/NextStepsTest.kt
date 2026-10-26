@@ -61,17 +61,17 @@ class NextStepsTest {
     // ---- daily boards, nothing else done ----
 
     @Test fun dailyStandard() = assertEquals(
-        listOf("Random>random:STANDARD", "Harder Daily>daily:HARD", "Done>home"),
+        listOf("Random>random:STANDARD", "Harder daily>daily:HARD", "Done>home"),
         shown(true, STANDARD),
     )
 
     @Test fun dailyHard() = assertEquals(
-        listOf("Easier Daily>daily:STANDARD", "Random>random:HARD", "Harder Daily>daily:EXPERT", "Done>home"),
+        listOf("Easier daily>daily:STANDARD", "Random>random:HARD", "Harder daily>daily:EXPERT", "Done>home"),
         shown(true, HARD),
     )
 
     @Test fun dailyExpert() = assertEquals(
-        listOf("Easier Daily>daily:HARD", "Random>random:EXPERT", "Done>home"),
+        listOf("Easier daily>daily:HARD", "Random>random:EXPERT", "Done>home"),
         shown(true, EXPERT),
     )
 
@@ -94,22 +94,22 @@ class NextStepsTest {
     // ---- daily: skipping tiers that are done ----
 
     @Test fun hardDailyWithStandardDoneOffersOnlyHarder() = assertEquals(
-        listOf("Random>random:HARD", "Harder Daily>daily:EXPERT", "Done>home"),
+        listOf("Random>random:HARD", "Harder daily>daily:EXPERT", "Done>home"),
         shown(true, HARD, STANDARD),
     )
 
     @Test fun hardDailyWithExpertDoneOffersOnlyEasier() = assertEquals(
-        listOf("Easier Daily>daily:STANDARD", "Random>random:HARD", "Done>home"),
+        listOf("Easier daily>daily:STANDARD", "Random>random:HARD", "Done>home"),
         shown(true, HARD, EXPERT),
     )
 
     @Test fun expertDailyWithHardDoneJumpsToStandard() = assertEquals(
-        listOf("Easier Daily>daily:STANDARD", "Random>random:EXPERT", "Done>home"),
+        listOf("Easier daily>daily:STANDARD", "Random>random:EXPERT", "Done>home"),
         shown(true, EXPERT, HARD),
     )
 
     @Test fun standardDailyWithHardDoneJumpsToExpert() = assertEquals(
-        listOf("Random>random:STANDARD", "Harder Daily>daily:EXPERT", "Done>home"),
+        listOf("Random>random:STANDARD", "Harder daily>daily:EXPERT", "Done>home"),
         shown(true, STANDARD, HARD),
     )
 
@@ -166,7 +166,7 @@ class NextStepsTest {
         val all = listOf(c("mosaic", STANDARD, past), c("mosaic", EXPERT, d1))
         // Playing Hard on the past day: Standard is done there, Expert (done today) is not.
         assertEquals(
-            listOf("Random>random:HARD", "Harder Daily>daily:EXPERT", "Done>home"),
+            listOf("Random>random:HARD", "Harder daily>daily:EXPERT", "Done>home"),
             render(nextOptions(true, HARD, tiersDoneOn(all, "mosaic", past))),
         )
     }
@@ -185,14 +185,14 @@ class NextStepsTest {
         pillOption(nextOptions(daily, tier, done.toSet()))?.let { render(listOf(it)).single() }
 
     @Test fun `a reopened Standard daily offers the next undone tier, not Random`() {
-        assertEquals("Harder Daily>daily:HARD", pill(true, STANDARD, STANDARD))
-        assertEquals("Harder Daily>daily:EXPERT", pill(true, STANDARD, STANDARD, HARD))
+        assertEquals("Harder daily>daily:HARD", pill(true, STANDARD, STANDARD))
+        assertEquals("Harder daily>daily:EXPERT", pill(true, STANDARD, STANDARD, HARD))
     }
 
     @Test fun `the pill prefers harder, then easier, then Random`() {
-        assertEquals("Harder Daily>daily:EXPERT", pill(true, HARD, HARD))
-        assertEquals("Easier Daily>daily:STANDARD", pill(true, HARD, HARD, EXPERT))
-        assertEquals("Easier Daily>daily:HARD", pill(true, EXPERT, EXPERT))
+        assertEquals("Harder daily>daily:EXPERT", pill(true, HARD, HARD))
+        assertEquals("Easier daily>daily:STANDARD", pill(true, HARD, HARD, EXPERT))
+        assertEquals("Easier daily>daily:HARD", pill(true, EXPERT, EXPERT))
         assertEquals("Random>random:EXPERT", pill(true, EXPERT, STANDARD, HARD, EXPERT))
     }
 
@@ -203,7 +203,7 @@ class NextStepsTest {
     @Test fun `next puzzle today leads the daily's buttons, is the filled one and the pill's`() {
         val options = nextOptions(daily = true, tier = HARD, doneTiers = emptySet(), today = "kings")
         assertEquals(
-            listOf("Next puzzle>today:kings:HARD", "Easier Daily>daily:STANDARD", "Random>random:HARD", "Harder Daily>daily:EXPERT", "Done>home"),
+            listOf("Next puzzle>today:kings:HARD", "Easier daily>daily:STANDARD", "Random>random:HARD", "Harder daily>daily:EXPERT", "Done>home"),
             render(options),
         )
         assertEquals("Kings", options.first().note)

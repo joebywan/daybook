@@ -32,7 +32,7 @@ seven days, never reaching back before the run's first day: alive while at most 
 (which is 5 of 7 for an established run, and "at most 2 missed since the first play" for a new one). The third
 miss ends the run and the next play starts a fresh one. `current` counts days played. Home shows "Welcome back"
 in place of the badge when lapsed, and "Day one awaits" before the first daily solve, so never a bare 0 (the stats
-screen's Streak tile shows "-" for both); best streak is on the stats screen (the home header has no room for it).
+screen's Streak tile shows "–" for both, under the plain label "Streak"); best streak is on the stats screen (a "Best streak" tile; the home header has no room for it), where a puzzle never played is one line, "Not played yet".
 The rule is told once, under the stats calendar: "Play on 5 of any 7 days to keep your streak going."
 
 ## Finished-frame praise (`ui/play/FinishPraise.kt`)
@@ -84,7 +84,7 @@ history already satisfies one sees it earned in the list and is never told, so t
 - Streak (best run ever, so it never goes away): 3, 7, 14, 30, 60, 100, 365 days. Per puzzle (that puzzle's own played
   days through `streakOf`): 7 and 30 days.
 - Top tier (Expert): first solve; a solve with no hints.
-- One of each puzzle; all three difficulties of one puzzle's daily on the same day; every puzzle's daily on one day;
+- One of each puzzle; all three difficulties of one puzzle's daily on the same day; every puzzle's daily within one week (any seven days in a row: the puzzles are a menu, not a day's quota);
   today's three on one tier on the day (see "Today's three").
   The last two and "one of each" read the ids from `PuzzleRegistry`, so they scale; adding a puzzle makes them unearned
   until it is played (nothing is stored to keep them). Tests pass a fake id list.
@@ -126,7 +126,9 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
   nearest achievement 1 or 2 steps away after this solve (fewest steps, then list order). It sits under the badge description
   when something was earned, else in the banner under the praise line. Wording keeps lifetime and today apart: lifetime goals
   say what the player "hasn't tried yet" ("Lexicon is the only puzzle you haven't tried yet.", "2 puzzles you haven't tried
-  yet: A and B."), today's say "today" ("Only Hard on Kings left for all done today!", "...left for a clean sweep today!").
+  yet: A and B."), today's say "today" ("Kings on Hard is all that's left for a Full set today."), the week's "this week" ("Kings and Sudoku
+  are all that's left for a Clean sweep this week.", counting the seven days ending today). Each names the puzzle, so it reads
+  clearly on a solve of another one.
   Covers streaks (current run, only while it is alive, so never a lapsed one), per-puzzle streaks, 100 solves, 30 days, one
   of each, full set and clean sweep. Null for earned ones, first solve and top tier. Positive wording only; never a loss.
 - **Next puzzle today.** On today's own daily opened from Home (not an archive day), the frame's first button, filled as
@@ -139,8 +141,10 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
   (`levelShareCard`: "Daybook · Level 14 · 5/5", a mark per board, green unaided, red with hints, then the total time and
   hints, from the stored `level_solves` plus this solve; nothing new is stored), or "Share three" on the third of today's
   three at a tier. Not on a reopened board (the home row shares the three at any time).
-- **The day's card never counts what is left.** `dayShareCard`'s nudge is "Every Standard board done. A clean sweep." on a
-  full tier, else "Well played. Same time tomorrow?".
+- **The day's card shows only what was solved.** `dayShareCard`: per tier with a solve, the puzzles solved (named up to
+  three, else "Standard · 6 puzzles") and a green mark each; never "6/26" and never a blank square for a puzzle not played.
+  Its preview nudge mentions the rest of the day only when a tier is done ("Every Standard daily done today.") or one or two
+  are left at it ("Kings is all that's left for every Standard daily today."), else "Well played. Same time tomorrow?".
 - **Tap to hide.** Tapping anywhere that is not a button (a full-screen scrim under the frame, so the open centre and the board, and the
   banner) hides the frame; a floating row at the same spot takes its place: "Show results", the first non-Done
   next step, and Done. The hidden state (`resultsHidden`) is `rememberSaveable`, never `PuzzleState`; the board is not
