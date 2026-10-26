@@ -452,6 +452,9 @@ hashed into every seed: never rename it.
 - **Tiers: size, length and bends.** 6x7 / 12x12 / 14x17 squares, arrows of 2-4 / 3-7 / 3-9 squares: about 14 / 33 / 49 arrows, 2% of squares bare, mean depth 2.0 / 4.4 / 6.3 (depth: rounds of "take every free arrow" before an arrow can go; `PointersLogic.depths`), worst 10 / 23 / 27. Generation on the JVM: 0.02 / 0.2 / 0.8 ms median, 1.2 ms p95 on Expert. Expert was
   meant to be 18x20; at 360dp wide that is a square of about 18dp, too small for a thumb when a mis-tap costs a life, so it is capped at 14
   wide (about 23dp at 360, 26 at 390; Nonogram's 15x15 is the precedent).
+- **Press, preview, commit.** A finger down tints the arrow it would take (the keyboard cursor's band, no delay, nothing animated);
+  release over the same arrow takes it, sliding off clears the tint and cancels. The arrow under the finger is `remember` state.
+  Restart (no Undo to take it back) asks "Start over?" once a move has been made.
 - Hit testing (`Pointers.hit`): the square under the finger if an arrow is on it, else the nearest line within 0.75 of a square. Arrow
   colours are derived (four hues, Blue/Amber/Violet/Teal ink, touching arrows differ where four allow), never stored; a bump flashes the
   arrow and the one in its way in `scheme.error`. Keyboard: arrows move a cursor (a square) to the nearest other arrow that way, Enter or
