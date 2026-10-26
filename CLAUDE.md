@@ -454,7 +454,7 @@ hashed into every seed: never rename it.
   wide (about 23dp at 360, 26 at 390; Nonogram's 15x15 is the precedent).
 - **Press, preview, commit.** A finger down tints the arrow it would take (the keyboard cursor's band, no delay, nothing animated);
   release over the same arrow takes it, sliding off clears the tint and cancels. The arrow under the finger is `remember` state.
-  Restart (no Undo to take it back) asks "Start over?" once a move has been made.
+  Restart (no Undo to take it back) asks "Start over?" once a move has been made ("your lives come back"; Mines, also without Undo, gets the same prompt with no word of lives).
 - Hit testing (`Pointers.hit`): the square under the finger if an arrow is on it, else the nearest line within 0.75 of a square. Arrow
   colours are derived (four hues, Blue/Amber/Violet/Teal ink, touching arrows differ where four allow), never stored; a bump flashes the
   arrow and the one in its way in `scheme.error`. Keyboard: arrows move a cursor (a square) to the nearest other arrow that way, Enter or

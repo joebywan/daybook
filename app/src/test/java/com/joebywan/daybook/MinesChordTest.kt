@@ -61,4 +61,19 @@ class MinesChordTest {
         assertEquals(TutorialStep.REJECT, f.judge!!(s.reveal(Mines.CHORDED[0])!!))
         assertEquals(chorded, Mines.tutorial[5].state)
     }
+
+    /** The released three-lives build saved games with a mine hit and lives left; under one mine loses, they load as lost. */
+    @Test fun `a released save with a life spent loads as lost, and Try again restores the opening`() {
+        val file = java.io.File(javaClass.getResource("/saves/2026-10-25-mines.json")!!.toURI())
+        val saves = kotlinx.serialization.json.Json.parseToJsonElement(file.readText()).let { (it as kotlinx.serialization.json.JsonArray) }
+        assertEquals(3, saves.size)
+        for (raw in saves) {
+            val s = com.joebywan.daybook.data.StoredGame.decode(raw.toString())!!.game.state as MinesState
+            assertTrue(s.bumps.isNotEmpty())
+            assertTrue("${s.width}x${s.height} loads lost", s.failed && !s.solved)
+            val again = s.retry()
+            assertFalse(again.failed)
+            assertEquals(MinesLogic.openingMarks(s.width, s.height, s.mines, s.opening), again.marks)
+        }
+    }
 }
