@@ -29,8 +29,8 @@ from a measurement or review, so you can check it is still true.
   with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
 - [ ] **The walkthrough offer: players from before the re-offer.** The offer now returns on every visit until the walkthrough is
   opened or the puzzle solved, recorded in the same `tutorialsOffered` set the once-only offer wrote on a first visit, so a
-  player who saw the old offer once is never offered it again. A new key would re-offer them; the set's doc comment in
-  `ProgressStore` still describes the old rule. *S.*
+  player who saw the old offer once is never offered it again (nor shown the first-board walkthrough). A new key would
+  re-offer them. *S.*
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*

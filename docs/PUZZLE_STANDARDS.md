@@ -403,7 +403,10 @@ Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.
 - Offered as one passive line over the clock (tagline, then "One-minute walkthrough") on every visit, until the first
   move of that visit, until the player has opened the walkthrough or solved the puzzle once at any tier; either is
   recorded in `ProgressStore.tutorialsOffered` (a player whose set already held a puzzle under the old once-only rule
-  is not offered it again). No popups, no focus stealing. "How to play" (`?`) opens a rules sheet (tagline, the `rules`
+  is not offered it again). No popups, no focus stealing, with one exception: **a first board opens on its
+  walkthrough** (`autoWalkthrough` in `TutorialRunner.kt`): a puzzle never solved (`Completion`s, any tier and mode) and
+  never opened (`tutorialsOffered`), not a level board, not a restored game with moves. Recorded as it opens, so once per
+  puzzle; Skip leaves at once. Players from before it who played a puzzle have a solve or a save for it. "How to play" (`?`) opens a rules sheet (tagline, the `rules`
   list, "Play the one-minute walkthrough"); the `rules` list is also the runner's "Rules" button. Skip is always on screen.
 - Frame, board and hint state are transient (never in a saved game). The walkthrough draws over the game, so
   the board, undo stack and clock are where the player left them, and the clock pauses.
