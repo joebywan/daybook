@@ -46,6 +46,13 @@ class HighlightBounds {
 
     internal fun setKeepClear(key: Any, rect: Rect?) = keep.update(key, rect)
 
+    /**
+     * Everything the open hint names at any stage (its focus, what it cites, what it changes), counted with the
+     * highlight while one shows: the nudge lights only the focus, but the popover must not sit where the explanation
+     * will point next, nor jump when it does.
+     */
+    var named by mutableStateOf(BoardHighlight.None)
+
     internal fun set(key: Any, rect: Rect?) = parts.update(key, rect)
 
     // A write only when something changed, so an unchanged report recomposes nothing.
@@ -74,12 +81,14 @@ fun Modifier.reportHighlight(bounds: (IntSize, BoardHighlight) -> Rect?): Modifi
 
     fun publish() {
         val c = coords
-        val local = if (c != null && c.isAttached && !highlight.isEmpty) measure(c.size, highlight) else null
+        val h = highlight
+        val n = sink.named
+        val local = if (c != null && c.isAttached && !h.isEmpty) measure(c.size, BoardHighlight(h.strong + n.strong, h.soft + n.soft, h.warning)) else null
         sink.set(key, local?.let { Rect(c!!.localToWindow(it.topLeft), c.localToWindow(it.bottomRight)) })
     }
 
     val current = LocalBoardHighlight.current
-    LaunchedEffect(current, coords) { publish() }
+    LaunchedEffect(current, coords, sink.named) { publish() }
     DisposableEffect(sink) { onDispose { sink.set(key, null) } }
     this.onGloballyPositioned {
         coords = it
