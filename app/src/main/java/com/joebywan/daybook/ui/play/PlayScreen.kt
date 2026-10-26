@@ -704,7 +704,8 @@ fun PlayScreen(
         AlertDialog(
             onDismissRequest = { askStartOver = false },
             title = { Text("Start over?") },
-            text = { Text("The board resets and your lives come back.") },
+            // Only Arrows has lives; Mines (no Undo either) ends at its first mine, so it says nothing of them.
+            text = { Text(if (state is PointersState) "The board resets and your lives come back." else "The board goes back to how it began.") },
             confirmButton = { TextButton(onClick = { askStartOver = false; restart() }) { Text("Start over") } },
             dismissButton = { TextButton(onClick = { askStartOver = false }) { Text("Keep playing") } },
         )

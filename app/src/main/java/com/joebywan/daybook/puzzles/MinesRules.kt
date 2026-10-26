@@ -8,10 +8,10 @@ import kotlinx.serialization.Serializable
 /**
  * A Mines board (`docs/MINES_SPEC.md`). Squares are numbered in reading order. [mines] is the board: '1' a mine, '0'
  * none. [marks] is what the player has done: [MinesLogic.HIDDEN], [MinesLogic.OPEN] or [MinesLogic.FLAG]; the opening
- * (the spread from [opening]) is open when the board loads. [bumps] are the mines revealed, in order, one life each
- * ([lives] is [MinesLogic.LIVES] less those, so the two cannot disagree); a mine hit stays shown and counts as found.
+ * (the spread from [opening]) is open when the board loads. [bumps] is the mine revealed, which loses the board: at most
+ * one, but a list because builds with three lives saved up to three (such a save loads as lost, with Try again).
  *
- * [bumps] has a default, so a save that lacks it loads as a board with every life left.
+ * [bumps] has a default, so a save that lacks it loads as a board still in play.
  */
 @Serializable
 data class MinesState(
@@ -23,8 +23,6 @@ data class MinesState(
     val bumps: List<Int> = emptyList(),
     override val moves: Int = 0,
 ) : PuzzleState {
-
-    val lives: Int get() = MinesLogic.LIVES - bumps.size
 
     val total: Int get() = mines.count { it == '1' }
 
@@ -41,16 +39,39 @@ data class MinesState(
     /** Every square without a mine revealed: the rule, flags play no part. */
     override val solved: Boolean get() = marks.indices.all { mines[it] == '1' || marks[it] == MinesLogic.OPEN }
 
-    override val failed: Boolean get() = !solved && lives <= 0
+    override val failed: Boolean get() = !solved && bumps.isNotEmpty()
 
     /**
-     * Reveals [i]: a mine costs a life and stays shown; a safe square opens, spreading from a 0. Null (nothing happens,
+     * Reveals [i]: a mine stays shown and loses the board; a safe square opens, spreading from a 0. Null (nothing happens,
      * nothing is spent) on a square already open, flagged or hit, or a board already won or lost.
      */
     fun reveal(i: Int): MinesState? {
         if (solved || failed || marks[i] != MinesLogic.HIDDEN || i in bumps) return null
         if (isMine(i)) return copy(bumps = bumps + i, moves = moves + 1)
         return copy(marks = MinesLogic.open(width, height, mines, marks, i), moves = moves + 1)
+    }
+
+    /**
+     * Chording: on a revealed number whose neighbouring flags and mines hit already make its count, reveals every other
+     * hidden neighbour, in reading order, as one move. A wrong flag means a mine among them: the first one revealed loses
+     * the board, as a tap on it would, and the chord stops there. Null when the count is not met by flags
+     * and hits, when nothing is left to reveal, or on a board already won or lost.
+     */
+    fun chord(i: Int): MinesState? {
+        if (solved || failed || !isOpen(i)) return null
+        val nb = neighbours8(width, height, i)
+        if (nb.count { isFlag(it) || it in bumps } != number(i)) return null
+        val todo = nb.filter { marks[it] == MinesLogic.HIDDEN && it !in bumps }
+        if (todo.isEmpty()) return null
+        val m = marks.toCharArray()
+        val hit = bumps.toMutableList()
+        for (j in todo) {
+            if (isMine(j)) {
+                hit += j
+                break
+            } else MinesLogic.openInPlace(width, height, mines, m, j)
+        }
+        return copy(marks = m.concatToString(), bumps = hit, moves = moves + 1)
     }
 
     /** Flags [i], or takes its flag off. Null on a square open or hit, or a board already won or lost. */
@@ -61,7 +82,7 @@ data class MinesState(
         return copy(marks = m.concatToString(), moves = moves + 1)
     }
 
-    /** The board from the opening again, no flags, lives restored: one state, so one move. */
+    /** The board from the opening again, no flags, no mine shown: one state, so one move. */
     fun retry(): MinesState = copy(marks = MinesLogic.openingMarks(width, height, mines, opening), bumps = emptyList(), moves = moves + 1)
 }
 
@@ -73,8 +94,6 @@ data class MinesState(
  * is over a list.
  */
 internal object MinesLogic {
-
-    const val LIVES = 3
 
     const val HIDDEN = '.'
     const val OPEN = 'o'
@@ -104,7 +123,7 @@ internal object MinesLogic {
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
         Difficulty.STANDARD -> Spec(8, 8, 10, 1)
         Difficulty.HARD -> Spec(8, 10, 16, 2)
-        Difficulty.EXPERT -> Spec(8, 12, 22, 3)
+        Difficulty.EXPERT -> Spec(9, 10, 21, 3)
     }
 
     /** [marks] with [start] opened and the spread from every 0 it reaches; flagged squares are passed by. */

@@ -84,7 +84,7 @@ import kotlin.math.sin
 
 /**
  * Mines (`docs/MINES_SPEC.md`): numbers say how many mines touch a square; reveal every square without one. Every board
- * is cleared by reasoning from a given opening. Three lives, as Pointers'; no undo. Rules, ladder and generator:
+ * is cleared by reasoning from a given opening. A mine revealed loses the board; no undo. Rules, ladder and generator:
  * [MinesLogic]; hints: [MinesTeacher]. Highlight indices are squares.
  */
 object Mines : PuzzleType {
@@ -95,16 +95,17 @@ object Mines : PuzzleType {
     override val accent = 0xFF3C28BD
     override val rules = listOf(
         "Each number counts the mines in the squares touching it, corners included.",
-        "Reveal every square without a mine. Revealing a mine costs a life; lose all three and the board is lost: try it again from the start.",
+        "Reveal every square without a mine. Reveal a mine and the board is lost: try it again from the start.",
         "Flag a square you are sure holds a mine. A flag is your note, never checked, and keeps its square from being revealed by mistake.",
         "A tap uses the tool under the board, Reveal or Flag; a long press uses the other. Every board can be cleared without a guess.",
+        "Tap a number whose flags already match it to reveal all its other squares at once. A wrong flag there opens a mine and loses the board.",
     )
 
-    override val keyboardHelp = listOf("Arrows move, Space or Enter reveals, F flags or unflags.")
+    override val keyboardHelp = listOf("Arrows move, Space or Enter reveals (on a number, reveals around it), F flags or unflags.")
 
     /**
-     * No undo, on purpose (the owner's call). A reveal is never wrong unless it finds a mine, so undo could only hand
-     * back a life; flags come off by the same gesture that put them on. A lost board offers Try again.
+     * No undo, on purpose (the owner's call). A reveal is never wrong unless it finds a mine, so undo could only take
+     * back a lost board; flags come off by the same gesture that put them on. A lost board offers Try again.
      */
     override val offersUndo = false
 
@@ -142,7 +143,7 @@ object Mines : PuzzleType {
     internal const val TUTORIAL_MINES = "00010" + "00000" + "00000" + "00101" + "00010"
     internal const val TUTORIAL_OPENING = 5
 
-    /** The 1 whose one hidden square is [BUMP], the mine the player reveals to see what it costs. */
+    /** The 1 whose one hidden square is [BUMP], the mine the player flags first. */
     internal const val FIRST_ONE = 11
     internal const val BUMP = 17
 
@@ -154,14 +155,19 @@ object Mines : PuzzleType {
     internal const val THIRD_ONE = 2
     internal const val FLAG_SQUARE = 3
 
+    /** The 1 beside the flag, tapped to reveal its other hidden squares ([CHORDED]) in one go. */
+    internal const val CHORD_ONE = 8
+    internal val CHORDED = listOf(4, 9, 14)
+
     internal fun tutorialBoard() =
         MinesState(5, 5, TUTORIAL_MINES, TUTORIAL_OPENING, MinesLogic.openingMarks(5, 5, TUTORIAL_MINES, TUTORIAL_OPENING))
 
     override val tutorial: List<TutorialFrame> by lazy {
         val s0 = tutorialBoard()
-        val s1 = s0.reveal(BUMP)!!
+        val s1 = s0.flag(BUMP)!!
         val s2 = SAFE.fold(s1) { acc, i -> acc.reveal(i)!! }
         val s3 = s2.flag(FLAG_SQUARE)!!
+        val s4 = s3.chord(CHORD_ONE)!!
         fun around(i: Int) = neighbours8(5, 5, i).toSet()
         listOf(
             TutorialFrame(
@@ -171,11 +177,11 @@ object Mines : PuzzleType {
             ),
             TutorialFrame(
                 state = s0,
-                caption = "This 1 has only one hidden square beside it, so that square is a mine. Tap it anyway, to see.",
+                caption = "This 1 has only one hidden square beside it, so that square is a mine: reveal it and the board is lost. Flag it: long-press it, or choose Flag below and tap it.",
                 highlight = BoardHighlight(strong = setOf(BUMP), soft = setOf(FIRST_ONE)),
-                accepts = { it is MinesState && it.bumps == listOf(BUMP) && it.marks == s0.marks },
-                retry = "Tap the glowing square.",
-                done = "A mine. That cost a life: lose all three and the board is lost.",
+                accepts = { it is MinesState && it.marks == s1.marks && it.bumps.isEmpty() },
+                retry = "Long-press the glowing square.",
+                done = "Flagged. A flag is your note: that square can't be revealed by mistake.",
             ),
             TutorialFrame(
                 state = s1,
@@ -197,14 +203,22 @@ object Mines : PuzzleType {
             ),
             TutorialFrame(
                 state = s2,
-                caption = "This 1 has one hidden square left, so it is a mine. Flag it: long-press it, or choose Flag below and tap it.",
+                caption = "This 1 has one hidden square left, so it is a mine too. Flag it.",
                 highlight = BoardHighlight(strong = setOf(FLAG_SQUARE), soft = setOf(THIRD_ONE)),
                 accepts = { it is MinesState && it.marks == s3.marks && it.bumps == s3.bumps },
                 retry = "Long-press the glowing square.",
-                done = "Flagged. A flag is your note: that square can't be revealed by mistake.",
+                done = "Flagged.",
             ),
             TutorialFrame(
                 state = s3,
+                caption = "This 1's mine is flagged, so its other squares are safe. Tap the 1 itself to reveal them all at once.",
+                highlight = BoardHighlight(strong = setOf(CHORD_ONE), soft = CHORDED.toSet() + FLAG_SQUARE),
+                accepts = { it is MinesState && it.marks == s4.marks && it.bumps == s4.bumps },
+                retry = "Tap the glowing 1.",
+                done = "All three at once. A wrong flag would open a mine here, so flag with care.",
+            ),
+            TutorialFrame(
+                state = s4,
                 caption = "Your turn: reveal every safe square. Stuck? Hint shows you why.",
                 freePlay = true,
                 done = "Cleared. That's all there is to it.",
@@ -384,10 +398,11 @@ object Mines : PuzzleType {
         val live = interactive && !s.solved && !s.failed
         val feel = rememberMoveFeel(List(n) { if (it in s.bumps) 'x' else s.marks[it] })
 
+        // Any tap or long press on a revealed number chords (nothing else could happen there); else the tool decides.
         fun act(cell: Int, flag: Boolean) {
-            val next = (if (flag) s.flag(cell) else s.reveal(cell)) ?: return
-            if (next.lives < s.lives) {
-                val b = Bump(cell, Animatable(0f))
+            val next = (if (s.isOpen(cell)) s.chord(cell) else if (flag) s.flag(cell) else s.reveal(cell)) ?: return
+            if (next.bumps.size > s.bumps.size) {
+                val b = Bump(next.bumps.last(), Animatable(0f))
                 bump = b
                 scope.launch {
                     b.progress.animateTo(1f, tween(BUMP_MS, easing = LinearEasing))
@@ -401,7 +416,8 @@ object Mines : PuzzleType {
             movedCursor(cursor, key, s.height, s.width)?.let { cursor = it; return@boardKeys true }
             val at = cursor ?: return@boardKeys false
             val action = minesKeyAction(key) ?: return@boardKeys false
-            if (!repeat) act(at, action == MinesKeyAction.Flag)
+            // F on a revealed number does nothing; Space or Enter there chords.
+            if (!repeat && !(action == MinesKeyAction.Flag && s.isOpen(at))) act(at, action == MinesKeyAction.Flag)
             true
         }
 
@@ -435,8 +451,8 @@ object Mines : PuzzleType {
 
         BoxWithConstraints(Modifier.fillMaxSize().then(keys).padding(horizontal = 16.dp)) {
             if (maxWidth > maxHeight * 1.1f) {
-                // A wide box (a phone on its side, a tablet) puts the lives and the pen beside the board, which then has
-                // the whole height: twelve rows on a phone on its side are short of it.
+                // A wide box (a phone on its side, a tablet) puts the count and the pen beside the board, which then has
+                // the whole height: ten rows on a phone on its side are short of it.
                 Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                     Grid(Modifier.weight(1f).fillMaxHeight().padding(vertical = 8.dp))
                     Column(
@@ -444,18 +460,14 @@ object Mines : PuzzleType {
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Pointers.Hearts(s.lives, Modifier)
                         Box(Modifier.height(48.dp), contentAlignment = Alignment.Center) { Status(s, interactive, onState) }
                         Pens(flagPen, enabled = live, vertical = true, onPen = { flagPen = it })
                     }
                 }
             } else {
                 Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    // Lives and the count, always this height, so a mine found or a loss never moves the board.
-                    Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Pointers.Hearts(s.lives, Modifier)
-                        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { Status(s, interactive, onState) }
-                    }
+                    // The count, always this height, so a loss never moves the board.
+                    Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.CenterEnd) { Status(s, interactive, onState) }
                     Grid(Modifier.weight(1f).fillMaxWidth().padding(bottom = 8.dp))
                     Pens(flagPen, enabled = live, vertical = false, onPen = { flagPen = it })
                 }
@@ -463,13 +475,13 @@ object Mines : PuzzleType {
         }
     }
 
-    /** "N mines left" or "All clear", or, with no lives left, the loss and Try again. */
+    /** "N mines left" or "All clear", or, after a mine, the loss and Try again. */
     @Composable
     private fun Status(s: MinesState, interactive: Boolean, onState: (PuzzleState) -> Unit) {
         val scheme = MaterialTheme.colorScheme
         if (s.failed) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Out of lives", style = MaterialTheme.typography.bodyMedium, color = scheme.error, maxLines = 1)
+                Text("Mine hit", style = MaterialTheme.typography.bodyMedium, color = scheme.error, maxLines = 1)
                 FilledTonalButton(onClick = { if (interactive) onState(s.retry()) }) { Text("Try again", maxLines = 1) }
             }
         } else {
