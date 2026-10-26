@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
@@ -44,6 +43,7 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.PAD_GAP
 import com.joebywan.daybook.ui.DigitPadRow
+import com.joebywan.daybook.ui.wall
 import com.joebywan.daybook.ui.padBoardSide
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
@@ -53,7 +53,8 @@ import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
-import com.joebywan.daybook.ui.boardSp
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.style
 
 /**
  * A Regions board in play. [region] (the region id of each square) and [solution] are fixed for the
@@ -274,15 +275,14 @@ object Regions : PuzzleType {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             PREVIEW_DIGITS[i].toString(),
-                            fontSize = (slot * 0.6f).boardSp(), lineHeight = (slot * 0.6f).boardSp() * 1.2f,
-                            fontWeight = if (i in PREVIEW_GIVEN) FontWeight.Bold else FontWeight.Normal,
+                            style = (if (i in PREVIEW_GIVEN) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(slot),
                             color = BoardHues.onFill(fill),
                         )
                     }
                 }
             }
             Canvas(Modifier.size(slot * 4)) {
-                walls(4, TUTORIAL_REGION, slot.toPx(), scheme.onSurface.copy(alpha = 0.2f), scheme.onSurface.copy(alpha = 0.8f), 1.dp.toPx(), 2.5.dp.toPx())
+                walls(4, TUTORIAL_REGION, slot.toPx(), scheme.onSurface.copy(alpha = 0.2f), scheme.wall, 1.dp.toPx(), 2.5.dp.toPx())
             }
         }
     }
@@ -354,8 +354,7 @@ object Regions : PuzzleType {
                                 val own = if (BoardHues.contrast(ink, fill) >= 4.5f) ink else BoardHues.onFill(fill)
                                 Text(
                                     s.cells[i].toString(),
-                                    fontSize = (slot * 0.6f).boardSp(), lineHeight = (slot * 0.6f).boardSp() * 1.2f,
-                                    fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
+                                    style = (if (s.givens[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(slot),
                                     color = when {
                                         i in conflicts || s.givens[i] -> BoardHues.onFill(fill)
                                         else -> own
@@ -366,7 +365,7 @@ object Regions : PuzzleType {
                         }
                     }
                     Canvas(Modifier.fillMaxSize()) {
-                        walls(n, s.region, slot.toPx(), scheme.onSurface.copy(alpha = 0.2f), scheme.onSurface.copy(alpha = 0.8f), 1.dp.toPx(), 3.dp.toPx())
+                        walls(n, s.region, slot.toPx(), scheme.onSurface.copy(alpha = 0.2f), scheme.wall, 1.dp.toPx(), 3.dp.toPx())
                     }
                 }
 

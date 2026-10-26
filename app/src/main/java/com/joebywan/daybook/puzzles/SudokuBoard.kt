@@ -39,7 +39,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -59,7 +58,8 @@ import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
-import com.joebywan.daybook.ui.boardSp
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.style
 
 
 /**
@@ -69,8 +69,7 @@ import com.joebywan.daybook.ui.boardSp
  * square's height that a label of the overlay takes from the top, which the pencil marks leave clear.
  */
 
-/** A note's size as a share of its cell's side, and how strongly it is inked. Tuned by rendering. */
-private const val SUDOKU_NOTE_SIZE = 0.34f
+/** How strongly a note is inked (its size is `BoardGlyph.NOTE`). Tuned by rendering. */
 private const val SUDOKU_NOTE_ALPHA = 0.85f
 
 /** Sudoku's units for the move feel: the rows, the columns and the boxes, each in reading order. */
@@ -173,12 +172,7 @@ internal fun SudokuGridBoard(
                                 val ink = scheme.onSurface.copy(alpha = SUDOKU_NOTE_ALPHA)
                                 // A square that carries a label (a cage's total) gives its top band to it.
                                 val band = topBand(i)
-                                val style = TextStyle(
-                                    fontSize = (cell * SUDOKU_NOTE_SIZE * (1f - band * 0.5f)).boardSp(), lineHeight = (cell * SUDOKU_NOTE_SIZE * (1f - band * 0.5f)).boardSp() * 1.2f,
-                                    fontWeight = FontWeight.Medium,
-                                    color = ink,
-                                    textAlign = TextAlign.Center,
-                                )
+                                val style = BoardGlyph.NOTE.style(cell * (1f - band * 0.5f)).copy(color = ink, textAlign = TextAlign.Center)
                                 // Drawn, not composed: nine Text nodes in each of up to eighty-one
                                 // cells would be a lot of layout for a board that redraws on every tap.
                                 Canvas(Modifier.fillMaxSize()) {
@@ -202,8 +196,7 @@ internal fun SudokuGridBoard(
                             if (s.cells[i] != 0) {
                                 Text(
                                     text = s.cells[i].toString(),
-                                    fontSize = (cell * 0.52f).boardSp(), lineHeight = (cell * 0.52f).boardSp() * 1.2f,
-                                    fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
+                                    style = (if (s.givens[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(cell),
                                     color = when {
                                         i in conflicts -> scheme.error
                                         s.givens[i] -> scheme.onSurface

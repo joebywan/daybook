@@ -48,6 +48,7 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawWalls
+import com.joebywan.daybook.ui.wall
 import com.joebywan.daybook.ui.drawHintRings
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.fitStep
@@ -1260,7 +1261,7 @@ object Lits : PuzzleType {
                 )
             }
 
-            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, step, wall, scheme.onBackground, origin, frameInset = wall / 2f) { previewRegions[it] }
+            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, step, wall, scheme.wall, origin, frameInset = wall / 2f) { previewRegions[it] }
         }
     }
 
@@ -1432,7 +1433,7 @@ object Lits : PuzzleType {
 
                 // Thick strokes wherever two different regions meet.
                 val edge = stepPx * 0.06f
-                drawWalls(s.width, s.height, stepPx, edge, scheme.onBackground) { s.region[it] }
+                drawWalls(s.width, s.height, stepPx, edge, scheme.wall) { s.region[it] }
 
                 // Outlines last, on top of the walls: a glow that a wall half-covers is a glow the
                 // player has to hunt for.
