@@ -3,6 +3,7 @@ package com.joebywan.daybook.ui
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
@@ -14,6 +15,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
+
+/**
+ * The ink of a board's heavy walls and frame (Lits, Mosaic, Regions, Tally): the scheme's softer ink, eased, so a wall
+ * reads as structure rather than a black (or, dark, a white) bar over the colours. One colour, so the boards agree.
+ */
+val ColorScheme.wall: Color get() = onSurfaceVariant.copy(alpha = 0.7f)
 
 /** A box a gesture reads the latest board through: plain, not state, so writing it recomposes nothing. */
 internal class Cell<T>(var v: T)

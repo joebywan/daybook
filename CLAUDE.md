@@ -883,6 +883,8 @@ Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` vi
 **Glyphs inside a board are sized from their square with `boardSp()` (`ui/BoardText.kt`), never `(cell.value * k).sp`**, so the
 system font size cannot push them out of their square; text outside the grid scales. Rule and the line-height catch:
 `docs/PUZZLE_STANDARDS.md` section 6; `BoardTextSizeTest` fails on the old pattern.
+Digits take a role from the one scale, `BoardGlyph` in the same file (given, entered, clue, corner, note: a share of
+the square and a weight); heavy region walls and frames take `ColorScheme.wall` (`ui/BoardDraw.kt`), never black or `onBackground`.
 
 ## Colour
 
