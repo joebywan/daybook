@@ -138,11 +138,11 @@ Run-length clues beside a grid; fill the squares that give every row and column 
 into every seed: never rename it.
 
 - **Tiers: 5x5 / 10x10 / 15x15, and the fewest line passes a board needs: 2 / 3 / 4** (`Spec.minPasses`, `NonogramLogic.linePasses`:
-  passes over every row and column from a blank board until lines alone finish it). About 53 / 56 / 58% filled.
+  passes over every row and column from a blank board until lines alone finish it). About 57 / 60 / 61% filled.
 - **A board ships only if lines alone finish it** (`NonogramLogic.lineSolvable`: per line, the squares every legal layout of
   the clue agrees on, to a fixpoint). That also makes the answer unique, and `NonogramRulesTest` checks it with an
-  independent oracle that tries every arrangement of every row. Of the draws with no blank or full line, 95 / 90 / 92% are
-  line-solvable; with the pass gate a year's worst seed needs 101 / 56 / 160 of the 400 draws and none falls back (a year per
+  independent oracle that tries every arrangement of every row. Of the draws with no blank or full line, 89 / 85 / 87% are
+  line-solvable; with the pass gate a year's worst seed needs 17 / 12 / 34 of the 400 draws and none falls back (a year per
   tier is tested); `lastResort` is a fixed diagonal, itself proved line-solvable. Expert takes 1.6 ms median, 18 ms worst on
   the JVM; 2 / 8 / 18 ms median / p95 / max in Chromium, 3 / 10 / 23 in WebKit.
 - **`solved` checks the clues, not the stored picture.** Crosses are notes and never count.
@@ -162,10 +162,10 @@ into every seed: never rename it.
   board's picture, so each daily and each random board has its own and nothing is saved. A line whose runs match its clue turns
   green; a line no legal layout of its clue can hold (`lineImpossible`: too many, a run too long, no gap; crosses ignored, the
   stored picture never read) turns red once it has stayed so for a second. `NonogramRulesTest` brute-forces that rule.
-- **Pictures are mirrored**: random squares reflected left to right, top to bottom or both (chosen per draw), so a finished
-  board looks drawn rather than noise. Mirrored pictures are easier (half of 5x5 boards took one pass, Expert's 4+ fell
-  from 21% to 7%), which is what the pass gate is for. Smoothing into blobs was tried earlier and failed the shape rules
-  on 96% of 5x5 draws.
+- **Pictures are random squares, never mirrored** (the owner, 2026-10-26: no symmetry). Mirroring was tried for a day so a
+  finished board would look drawn, but half the board (a quarter when mirrored both ways) gave the rest away, and the clues
+  showed it (palindrome rows, paired columns). A draw that happens to read the same mirrored either way is redrawn. Smoothing
+  into blobs was tried earlier and failed the shape rules on 96% of 5x5 draws.
 
 ## Mambo (Takuzu with = and x links; shown to players as Sun & Moon)
 
