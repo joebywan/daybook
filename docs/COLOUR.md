@@ -10,15 +10,16 @@ bring several hues. This is the shared set to bring them from, derived from the 
 1. **Structure** is always `MaterialTheme.colorScheme`: board background, grid lines, given digits, text, `error`,
    hint glow. Never a hex literal, so light and dark both work.
 2. **Identity** is the puzzle's `accent` (card, selection, walkthrough buttons). One per puzzle, one colour for both
-   schemes; the twenty-nine in use sit at saturation 0.37-0.73, lightness 0.45-0.67 (Lits' tan, s 0.21, is the one
+   schemes; the thirty-one in use sit at saturation 0.37-0.73, lightness 0.45-0.67 (Lits' tan, s 0.21, is the one
    deliberate low-saturation case). Spacing is perceptual, not by hue: every pair of accents is at least 1.5 CIEDE2000
    apart under normal vision and 1.1 under simulated deuteranopia, protanopia and tritanopia (`AccentSpacingTest`, which
    names the offending pair). The floors sit just under today's closest pairs (Regions/Target 1.59 normal, Shikaku/Lexicon
    1.20 protan), so they only stop a new accent coming closer than any existing one; several pairs are already hard to
    tell apart, which is why every card also carries the name and a motif. To pick a new puzzle's accent, run
    `AccentSpacingTest`: it prints the colour in that box furthest from every accent in all four vision modes, leaving
-   out hues within 25 degrees of red, which would read as the error colour (now `0xFFD6E765`, 8.1 from its nearest), and
-   taking it keeps the floors with room to spare.
+   out hues within 25 degrees of red, which would read as the error colour, and colours of relative luminance over 0.4,
+   which all but vanish as text on the light page (now `0xFFB35B93`, 6.4 from its nearest), and taking it keeps the
+   floors with room to spare.
 3. **Content** is the hue family below. Anything the player *places, groups or compares* (regions, tokens, runs,
    paths, a solved flourish) takes its colour from here, not from the surface greys.
 

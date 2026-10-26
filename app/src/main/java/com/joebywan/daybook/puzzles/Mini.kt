@@ -158,7 +158,7 @@ object Mini : PuzzleType {
     override val id = "mini"
     override val displayName = "Crossword"
     override val tagline = "A mini crossword. Solve the clues."
-    override val accent = 0xFFC7C785
+    override val accent = 0xFF6A30DF
     override val rules = listOf(
         "Every row and column of white squares is a word, and each word has a clue: 1 Across, 2 Down and so on.",
         "Tap a square, then type. Tap it again to turn between Across and Down, or tap the clue.",

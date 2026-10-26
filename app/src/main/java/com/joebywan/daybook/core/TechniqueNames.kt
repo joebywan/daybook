@@ -211,6 +211,23 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "crossing" to "a number cut by every word it is in",
         "all-words" to "every word worked through together",
     ),
+    "pearls" to linkedMapOf(
+        "black-pearl" to "a black pearl's straight arms",
+        "white-pearl" to "a white pearl's straight line",
+        "white-turn" to "a white pearl's turn beside it",
+        "one-way" to "a line with one way on",
+        "pearl-ways" to "a pearl with two ways in",
+        "dead-end" to "a dead end",
+        "small-loop" to "the loop that must be one",
+        "what-if" to "a what-if",
+    ),
+    "whoswho" to linkedMapOf(
+        "clue" to "a clue that names someone",
+        "only" to "the one item left",
+        "link" to "two things a clue ties together",
+        "house" to "where the houses allow",
+        "what-if" to "a what-if",
+    ),
 )
 
 /**

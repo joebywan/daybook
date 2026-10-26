@@ -21,6 +21,7 @@ import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.RegionsState
 import com.joebywan.daybook.puzzles.TallyState
+import com.joebywan.daybook.puzzles.PearlsState
 import com.joebywan.daybook.puzzles.SandState
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.TentsState
@@ -32,6 +33,7 @@ import com.joebywan.daybook.puzzles.SudokuState
 import com.joebywan.daybook.puzzles.Sym
 import com.joebywan.daybook.puzzles.TowerState
 import com.joebywan.daybook.puzzles.WordWheelState
+import com.joebywan.daybook.puzzles.WhosWhoState
 
 /**
  * One line per generated board, identical on the JVM and in the browser, so the two can be diffed:
@@ -84,6 +86,7 @@ object ParityFingerprint {
         is TargetState -> "start=${s.start.joinToString(",")} target=${s.target} par=${s.par}"
         is TallyState -> "n=${s.size} digits=${s.digits} keep=${s.keep}"
         is LampsState -> "n=${s.size} walls=${s.walls} solution=${s.solution}"
+        is PearlsState -> "n=${s.size} pearls=${s.pearls} loop=${s.loop}"
         is DominoState -> "${s.width}x${s.height} open=${s.open.joinToString("") { if (it) "1" else "0" }} " +
             "regions=${s.regionOf.joinToString(",")} rules=${s.rules.joinToString(",") { "${it.kind.name[0]}${it.n}" }} " +
             "tray=${s.tray.joinToString(",") { "${it.a}${it.b}" }} answer=${s.answer.joinToString(",") { "${it.first}-${it.second}" }}"
@@ -96,5 +99,9 @@ object ParityFingerprint {
         is CipherState -> "words=${s.words.joinToString(",")} solution=${s.solution.joinToString("")}"
         is WordWheelState -> "wheel=${s.wheel} ${s.width}x${s.height} slots=" +
             s.slots.joinToString(";") { "${it.word}@${it.row},${it.col}${if (it.across) "a" else "d"}" }
+        is WhosWhoState -> "names=${s.names.joinToString(",")} groups=${s.groups.joinToString(",")} " +
+            "items=${s.items.joinToString("/") { it.joinToString("") }} " +
+            "clues=${s.clues.joinToString(",") { "${it.kind}:${it.a}.${it.b}.${it.c}" }} " +
+            "answer=${s.answer.joinToString("/") { it.joinToString("") }}"
     }
 }

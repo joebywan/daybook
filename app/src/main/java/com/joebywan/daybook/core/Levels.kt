@@ -50,6 +50,8 @@ object Levels {
         "cipher", "wordwheel", "tally", "sand", "pointers", "dominoes",
         "mines", "lamps",
         "codeword",
+        "pearls",
+        "whoswho",
         "mini",
     )
 

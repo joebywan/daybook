@@ -152,6 +152,12 @@ into every seed: never rename it.
 - **The pen (Fill/Cross) is `rememberSaveable` in the board, not state.** A sweep is one state: it locks to the row or column
   of the larger move, a pen only writes over untouched squares, and an eraser only takes out the mark it started on.
   `onDragStart` uses the overload that receives the *down*, since the web's touch slop is wider than a 15x15 square.
+- **Hard and Expert zoom** (`NonogramZoom.kt`, the owner's design): pinch zooms (to 2.5x); zoomed in, one finger pans and a
+  tap still marks, so sweeping is for the whole board; a corner button (in the empty corner above the row clues) fits the
+  board again. Clues stay pinned to the edges and keep their size. The view (`GridView`) is `remember`, never state: a
+  hint glides to what it names, a solve to the whole board. Read on the Initial pass, so a second finger cancels a sweep
+  already begun (nothing is emitted before lift). Ctrl+wheel zooms on the web. Expert squares unzoomed were 16-19dp; a
+  12x18 board was rendered and dropped (bigger on tall phones, smaller on short ones and on its side).
 - **Colour is derived, never stored.** Filled squares blend diagonally between a pair from `PALETTES`, picked by hashing the
   board's picture, so each daily and each random board has its own and nothing is saved. A line whose runs match its clue turns
   green; a line no legal layout of its clue can hold (`lineImpossible`: too many, a run too long, no gap; crosses ignored, the
@@ -667,6 +673,36 @@ and every across and down run must be a word. Spec and decisions: `docs/CODEWORD
   its numbers can take. `ONE_WORD`, `RUN_AGREES`, `CROSSING`, `ALL_WORDS` (named as Cipher's chain is). No "only number
   for a letter": a grid uses part of the alphabet. Highlight indices: squares `0 until size*size`, number key
   `CodewordLogic.key(n)` = 1000 + n, letter key `CodewordLogic.letterKey(l)` = 2000 + l.
+## Pearls (a pearl loop)
+
+One closed loop through square middles passing every pearl: on a black pearl it turns and runs straight on through the
+next square each way; on a white pearl it goes straight and turns on a square beside it. Spec: `docs/PEARLS_SPEC.md`. The
+genre is published as Masyu; that name never appears where the player sees it. `puzzles/PearlsRules.kt` (`PearlsState`,
+`PearlsGrid`, `PearlsLogic`: rules, ladder, count, generator), `PearlsTeacher.kt`, `PearlsKeys.kt`, `Pearls.kt` (board,
+hit testing, walkthrough, motif). `id = "pearls"` is hashed into every seed: never rename it.
+
+- **State is the edges**, strings: `pearls` per square, `loop` (`1` per answer edge), the player's `edges` (`.`, `-` line,
+  `x` cross: a note). Horizontal edges first (`r * (n-1) + c`), then vertical (`n(n-1) + r * n + c`).
+- **Tiers: 6x6 / 8x8 / 10x10 and the rung a board must need** (`PearlsLogic.depth`): Standard the pearls' and squares'
+  local rules alone; Hard needs the small-loop rule; Expert needs a what-if (at most `MAX_ROUNDS` = 6 rounds). A draw
+  needing more or less is redrawn.
+- **The loop is grown to be pinned by its pearls.** A random loop with every pearl it allows almost always has two answers
+  (37 of 39 six-by-six), so `randomLoop` grows a face region greedily by the pearls its boundary allows. Then pearls are taken
+  back in random order while the tier's ladder finishes (on Expert, a cheap pass with the loop rule first, then the full
+  ladder), and `solutions` (local + loop rules, branching, no budget, sealed `PearlsVerdict`) must say `ExactlyOne(loop)`.
+  `PearlsOracle` (test: edges decided in reading order with a frontier memo, no propagation) is the independent check. A
+  year per tier never reaches `lastResort` (`FallbackTest`).
+- **`solved` checks the rules** (`PearlsLogic.isSolved`, lines only); a mistake is a line off the loop or a cross on it,
+  sound because the loop is unique. Red after a 1 s settle, derived from the lines alone: three lines at a square, a pearl its
+  lines already break, a closed loop that leaves something out.
+- **Input:** a drag through squares draws (its first edge decides: over a line it rubs out), one state on lift; backing up
+  along the drag undoes it (`Pearls.trail`). A tap near an edge's middle (`Pearls.edgeNear`, within 0.42 of a square)
+  crosses it, or rubs out the line or cross there. Detectors are keyed on the size and read the board through
+  `rememberUpdatedState` (Snap's lesson). Keys: arrows, Shift+arrow draws or rubs, X then an arrow crosses.
+- **Teacher:** the local rules (black pearl, white pearl, white turn, one way on, a pearl's two ways, dead end), then the
+  small loop, then a what-if (the shortest within the cap; if a player's own order has left none short, the shortest of any
+  length, so hints never run out). A square with two lines has its other edges read as crossed (`PearlsTeacher.view`), so the
+  hints never ask for tidying. Highlight indices: squares `0 until n*n`, edge `e` is `n*n + e`.
 
 ## Mini crossword
 
@@ -717,6 +753,27 @@ walkthrough), `PipesTeacher.kt`, `PipesKeys.kt`. `id = "pipes"` is hashed into e
   itself proved (`FallbackTest`). Under 0.5 ms a board on the JVM. Hints never fall back on a generated board (`PipesTeachingTest`).
 - **`solved` checks the rules** (fully joined and one network), never a stored answer; there is none.
 - Counter-clockwise rotation and a lock mark were proposed and **declined by the owner**: do not add them.
+
+## Who's Who (a logic grid)
+
+People in a row of houses, each with one item of every category (a pet, a job...), and numbered clues that fix one
+assignment. Spec and measurements: `docs/WHOSWHO_SPEC.md`. Never "Einstein puzzle" or "Zebra puzzle" where the player sees.
+`puzzles/WhosWhoRules.kt` (state, `WhosWhoLogic`: candidates, the ladder, the count, generator, clue text), `WhosWhoTeacher.kt`,
+`WhosWhoKeys.kt`, `WhosWhoWords.kt` (names, five categories of five words, how a clue says each), `WhosWho.kt` (board, walkthrough,
+motif). `id = "whoswho"` is hashed into every seed: never rename it.
+
+- **The word lists are a contract** (indices are stored and drawn by index): append-only, with a re-pin.
+- **Tiers: 4 people, house + 1 category, every clue naming a person / 4 people, house + 2, plus links and next to / left of /
+  5 people, house + 2, plus either-or**, gated by the deepest ladder level the walk needs (direct / link or house / what-if).
+- **A board ships only if the ladder finishes it, every clue is needed, and `count` proves one answer** (column by column over
+  permutations, no budget, sealed `Verdict`). Clues are drawn until the ladder finishes, shown in a fixed shuffled order (the
+  ladder reads them in order, so the checks run on that order), then taken back while it still finishes, repeated until none
+  goes (the what-if is not monotone). `WhosWhoOracle` (every combination, its own clue reading) is the independent check.
+- **The table holds the player's ticks and crosses per (person, item)**; what a tick rules out is derived. One pad tap or one
+  clue strike is one state; the selection and pen are `remember`. `solved` checks the clues. A cell or clue no answer the marks
+  allow can keep turns red after a 1 s settle. The board is a Compose layout (table, scrolling clue strip, pad), not a canvas.
+- **Teacher:** clue, only, link, house, what-if (at most 3 steps). From boards marked the player's own way the short what-if
+  can be led astray (its steps are taken first come), so the teacher alone tries a 12-step one before giving up; measured.
 
 ## Motion and haptics
 

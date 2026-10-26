@@ -69,6 +69,7 @@ fun <S : PenMarks<S>> Modifier.penKeys(
 /**
  * Taps and sweeps over the grid alone, in its own coordinates ([unitPx] a square). A sweep is one
  * state, emitted on lift, and locks to the row or column of the larger move ([sweptCells]).
+ * Without [sweeps] (a zoomed Nonogram, where a drag pans) only taps are read.
  */
 fun <S : PenMarks<S>> Modifier.penGrid(
     s: S,
@@ -79,6 +80,7 @@ fun <S : PenMarks<S>> Modifier.penGrid(
     cursor: MutableState<Int?>,
     cursorColour: Color,
     onState: (S) -> Unit,
+    sweeps: Boolean = true,
 ): Modifier {
     val w = s.penWidth
     val h = s.penHeight
@@ -97,8 +99,8 @@ fun <S : PenMarks<S>> Modifier.penGrid(
                 onState(s.tap(cellAt(offset), pen))
             }
         }
-        .pointerInput(s, interactive, pen) {
-            if (!interactive) return@pointerInput
+        .pointerInput(s, interactive, pen, sweeps) {
+            if (!interactive || !sweeps) return@pointerInput
             // The overload that hands over the *down*: Compose's touch slop on the web is wider than
             // a 15x15 square, so the plain one would start every sweep a square or two along from
             // where the finger landed.

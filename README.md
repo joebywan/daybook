@@ -86,6 +86,8 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
 | Lamps | Lamp placement | Light every white square with lamps that shine along their row and column to a wall; no lamp may light another, and a numbered wall touches that many lamps |
 | Codeword | Codeword (number crossword) | A filled crossword in which every letter is a number: work out which letter each number stands for |
+| Pearls | Masyu (pearl loop) | One closed loop through square middles and every pearl: it turns on black pearls (running straight on either side) and goes straight through white ones (turning beside them) |
+| Who's Who | Logic grid | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house" |
 | Crossword | Mini crossword | A small crossword, every square in a word across and a word down: solve the clues and fill the grid |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
@@ -121,6 +123,9 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
 - **Tally** — random digits and a random answer, kept only if a person's ladder finishes it (shortcuts, the ways one line can
   make its target, and on Expert a short what-if) needing exactly the tier's deepest step, and an exhaustive count finds one answer.
   An independent solver that lists every way each column can make its target confirms it in the tests.
+- **Pearls** — a random loop grown so that the pearls it allows can pin it down, then pearls taken back while a person's ladder
+  (the pearls' own rules, the loop that must be one, and on Expert a short what-if) still finishes it, needing exactly the tier's
+  deepest step; an exhaustive count proves one loop, and an independent solver that decides every edge in reading order agrees.
 - **Sand** — many answers by design, so what is proved is that one exists: a deal is kept only once a search has found a
   sequence of pours that sorts it (the found road is the proof; a search that runs out of budget proves nothing and the deal
   is redrawn). Deals that give the board away (a tube already one colour, a long run) are redrawn, and so is a board a player
@@ -178,6 +183,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   fitting word shares, a number cut by every word it is in, every word worked through together) still finishes the
   grid; the device numbers the letters from the seed and proves the one answer again with an exhaustive search, and an
   independent solver that walks the alphabet letter by letter confirms it in the tests.
+- **Who's Who** — a random answer, then clues true of it drawn at random and added until an exhaustive count finds one
+  answer and the hint ladder (a clue naming someone, the one item left, two things a clue ties together, the houses each
+  side allows, and on Expert a short what-if) finishes it; then every clue the rest already implies is taken back. A board
+  ships only if it needs its tier's deepest step; an independent solver that tries every combination confirms it in the tests.
 - **Crossword** (the mini) — grids are dense fills from the same screened lists, built offline with Codeword's filler, every
   word clued by hand. A clue names one word, so the answer is the clues'; what is proved is how much the crossings
   give: the hints' walk (a slot only one word fits, one word its crossings leave, every crossing worked through) must

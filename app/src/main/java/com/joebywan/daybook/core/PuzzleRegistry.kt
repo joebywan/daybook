@@ -17,6 +17,7 @@ import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Nonogram
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.Mines
+import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Sets
@@ -28,6 +29,7 @@ import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
+import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WordWheel
 
 /**
@@ -67,6 +69,8 @@ object PuzzleRegistry {
         Mines,
         Lamps,
         Codeword,
+        Pearls,
+        WhosWho,
         Mini,
     )
 

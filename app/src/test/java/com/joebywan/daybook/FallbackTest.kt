@@ -26,7 +26,11 @@ import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.RegionsLogic
 import com.joebywan.daybook.puzzles.Tally
+import com.joebywan.daybook.puzzles.Pearls
+import com.joebywan.daybook.puzzles.PearlsLogic
 import com.joebywan.daybook.puzzles.TallyLogic
+import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.SandLogic
 import com.joebywan.daybook.puzzles.Pipes
@@ -270,6 +274,40 @@ class FallbackTest {
         for ((d, u) in used) {
             println("lamps ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${LampsLogic.ATTEMPTS}")
             assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < LampsLogic.ATTEMPTS / 2)
+        }
+    }
+
+    /**
+     * [PearlsLogic.generateVerified] returns a board only when the tier's rungs finished it, needing exactly the tier's
+     * deepest, and the exhaustive count proved one loop. Also measures the redraws (printed): a draw is redrawn when
+     * its loop stalls short of the share of squares, when every pearl it allows still leaves two loops, when the
+     * ladder needs the wrong rung, or when the count disagrees.
+     */
+    @Test
+    fun `pearls proves every daily board of a year on every tier`() {
+        val used = Difficulty.entries.associateWith { mutableListOf<Int>() }
+        assertYearProved(Pearls, onProved = { seed, d ->
+            used.getValue(d) += 1 + (0 until PearlsLogic.ATTEMPTS).first { PearlsLogic.attempt(seed, d, it) != null }
+        }) { seed, d -> PearlsLogic.generateVerified(seed, d) }
+        for ((d, u) in used) {
+            println("pearls ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${PearlsLogic.ATTEMPTS}")
+            assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < PearlsLogic.ATTEMPTS / 2)
+        }
+    }
+
+    /**
+     * [WhosWhoLogic.generateVerified] returns a board only when the count proved one answer, every clue is needed and
+     * the tier's ladder finishes it at exactly the tier's depth. Also measures the redraws (printed).
+     */
+    @Test
+    fun `whoswho proves every daily board of a year on every tier`() {
+        val used = Difficulty.entries.associateWith { mutableListOf<Int>() }
+        assertYearProved(WhosWho, onProved = { seed, d ->
+            used.getValue(d) += 1 + (0 until WhosWhoLogic.ATTEMPTS).first { WhosWhoLogic.attempt(seed, d, it) != null }
+        }) { seed, d -> WhosWhoLogic.generateVerified(seed, d) }
+        for ((d, u) in used) {
+            println("whoswho ${d.name}: draws per board mean ${"%.2f".format(u.sum() / 365.0)}, most ${u.max()} of ${WhosWhoLogic.ATTEMPTS}")
+            assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < WhosWhoLogic.ATTEMPTS / 4)
         }
     }
 
