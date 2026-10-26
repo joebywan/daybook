@@ -48,7 +48,9 @@ object Levels {
         "sudoku", "kings", "mambo", "pipes", "shikaku", "mosaic", "sets", "atoms", "snap", "lits",
         "tower", "words", "nonogram", "inequality", "chess", "tents", "regions", "cages", "target",
         "cipher", "wordwheel", "tally", "sand", "pointers", "dominoes",
-        "mines",
+        "mines", "lamps",
+        "codeword",
+        "pearls",
     )
 
     /** Deck 0, levels 1-5: the first this many pool ids, every one with a walkthrough. Never change it. */

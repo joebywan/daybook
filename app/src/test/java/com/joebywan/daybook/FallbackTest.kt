@@ -8,11 +8,15 @@ import com.joebywan.daybook.puzzles.CageLogic
 import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.Kings
+import com.joebywan.daybook.puzzles.Lamps
+import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.Cipher
+import com.joebywan.daybook.puzzles.Codeword
+import com.joebywan.daybook.puzzles.CodewordLogic
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Inequality
@@ -20,6 +24,8 @@ import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.RegionsLogic
 import com.joebywan.daybook.puzzles.Tally
+import com.joebywan.daybook.puzzles.Pearls
+import com.joebywan.daybook.puzzles.PearlsLogic
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.SandLogic
@@ -153,6 +159,10 @@ class FallbackTest {
     @Test
     fun `cipher proves every daily board of a year on every tier`() = assertYearProved(Cipher) { seed, d -> Cipher.generateVerified(seed, d) }
 
+    /** [CodewordLogic.generateVerified] returns a board only when the ladder finished its grid from the givens and the search proved one answer. */
+    @Test
+    fun `codeword proves every daily board of a year on every tier`() = assertYearProved(Codeword) { seed, d -> CodewordLogic.generateVerified(seed, d) }
+
     /** [WordWheelLogic.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
     @Test
     fun `wordwheel proves every daily board of a year on every tier`() = assertYearProved(WordWheel) { seed, d -> WordWheelLogic.generateVerified(seed, d) }
@@ -240,6 +250,40 @@ class FallbackTest {
         for ((d, u) in used) {
             println("tally ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${TallyLogic.ATTEMPTS}")
             assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < TallyLogic.ATTEMPTS / 2)
+        }
+    }
+
+    /**
+     * [LampsLogic.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the tier's
+     * rung, and the count proved one answer. Also measures the redraws (printed).
+     */
+    @Test
+    fun `lamps proves every daily board of a year on every tier`() {
+        val used = Difficulty.entries.associateWith { mutableListOf<Int>() }
+        assertYearProved(Lamps, onProved = { seed, d ->
+            used.getValue(d) += 1 + (0 until LampsLogic.ATTEMPTS).first { LampsLogic.attempt(seed, d, it) != null }
+        }) { seed, d -> LampsLogic.generateVerified(seed, d) }
+        for ((d, u) in used) {
+            println("lamps ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${LampsLogic.ATTEMPTS}")
+            assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < LampsLogic.ATTEMPTS / 2)
+        }
+    }
+
+    /**
+     * [PearlsLogic.generateVerified] returns a board only when the tier's rungs finished it, needing exactly the tier's
+     * deepest, and the exhaustive count proved one loop. Also measures the redraws (printed): a draw is redrawn when
+     * its loop stalls short of the share of squares, when every pearl it allows still leaves two loops, when the
+     * ladder needs the wrong rung, or when the count disagrees.
+     */
+    @Test
+    fun `pearls proves every daily board of a year on every tier`() {
+        val used = Difficulty.entries.associateWith { mutableListOf<Int>() }
+        assertYearProved(Pearls, onProved = { seed, d ->
+            used.getValue(d) += 1 + (0 until PearlsLogic.ATTEMPTS).first { PearlsLogic.attempt(seed, d, it) != null }
+        }) { seed, d -> PearlsLogic.generateVerified(seed, d) }
+        for ((d, u) in used) {
+            println("pearls ${d.name}: draws per board mean ${"%.1f".format(u.sum() / 365.0)}, most ${u.max()} of ${PearlsLogic.ATTEMPTS}")
+            assertTrue("${d.name} came close to the allowance: ${u.max()}", u.max() < PearlsLogic.ATTEMPTS / 2)
         }
     }
 

@@ -165,8 +165,9 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
-- [ ] **New puzzles, in order:** Lamps (Light Up rules), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
-  fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
+- [ ] **New puzzles, in order:** Who's Who (a logic grid from templated clues), Mini crossword (5x5,
+  fills built offline from the hand-written clues; `test/CrosswordFill.kt`, Codeword's pattern maker and filler, is
+  written to be reused). Each gets a spec first (`docs/<NAME>_SPEC.md`).
 
 ## Future puzzle candidates
 
@@ -183,22 +184,6 @@ below have a famous branded version; use the descriptive name).
 
 ### Asked for by the owner
 
-- [ ] **Nonogram: pinch to zoom.** Expert's squares are small: 19.3dp at 390x844, 15.8 at 375x537, 17.3 at 844x390 (web
-  renders, 2026-10-25). A board reshaped to fit was rendered and dropped: 12x18 grew squares to 24dp on a tall phone but
-  shrank them to 13 / 14dp on a short phone and a phone on its side, and it moves every Expert board. Narrower clue slots
-  and a cap of 5 runs a line gained under 1dp. Zoom helps every screen and changes no board. Design agreed with the owner:
-  - Pinch zooms about the fingers (up to about 2.5x); there is no two-finger pan to learn.
-  - Zoomed: one finger taps to mark and drags to pan (past touch slop it is a pan, never a mark). Whole board: as now
-    (tap marks, drag sweeps). The owner mostly taps single squares on Expert, so losing the sweep while zoomed is fine.
-  - A second finger drops a sweep already started (the sweep is `remember` until lift, so nothing reaches undo).
-  - Clues stay pinned: row clues on the left scroll only up and down with the grid, column clues on the top only sideways.
-  - A "fit" button shows in a corner only while zoomed; pinching out also returns to the whole board. No double-tap zoom
-    (every fill tap would wait ~300 ms).
-  - A hint pans to its line, and solving zooms out for the solve wave. The zoom is `remember` state, never saved.
-  - Web: Ctrl+wheel (and trackpad pinch) zooms, a mouse drag pans. Check that the page itself does not zoom, in Chromium
-    and WebKit, and on the emulator.
-  - How-to-play text and walkthrough get a line about zoom. It is a feature a player notices: bump `version.txt`'s middle
-    number and write "What's new". *M.*
 - [ ] **Nonogram and Lexicon: short phone screens on the emulator.** Both were driven on the Android emulator
   (1080x2160 and 1080x2400, 2026-10-03): the Lexicon hint popover over a highlighted row and keys, its nine-frame
   walkthrough, hardware keys, and a Nonogram 5x5 swept by touch drag to the finish frame all work, and a save made on
@@ -242,16 +227,13 @@ and Battleships is close to Tents.
   with a unique shortest ladder to keep it provable. *M after the lists exist.*
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
-  prototype the input before committing. *L.*
-- [ ] **Codeword.** A filled crossword grid with a number for each letter and a few letters given; work out the
-  substitution. No clues, so it avoids the clue-database problem below. Reuses Lexicon's and Word Wheel's lists and
-  Word Wheel's grid layout; uniqueness is pattern matching against the list. Not Cipher: word shapes, not columns. *M–L.*
+  prototype the input before committing. *L.* Pearls (built) has a loop's machinery to reuse: the loop rule, the
+  exhaustive count, edge hit testing (`Pearls.edgeNear`) and crosses as notes; its loop runs through squares, this one
+  along their edges.
 - [ ] **Skyscrapers.** A Latin square with edge clues (how many buildings are visible from that side). Inequality's
   Latin-square rules, generator and prover carry over; only the clue type is new. *S–M.*
 - [ ] **Hitori.** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.
   Tap-only; the connectivity proof is LITS's shape. *M.*
-- [ ] **Pearl loop (Masyu rules).** One closed loop through squares: it turns on black pearls, goes straight through
-  white ones. Drawn through squares, not along edges, so Snap's drag works and the edge-tapping problem goes away. *L.*
 - [ ] **Dominosa.** A pip grid holds each domino 0-0..N-N once; find where each lies. Tap between two squares to
   place one. Pairs well with the domino-placement idea above. *M.*
 - [ ] **Galaxies.** Cut the grid into regions, each symmetric under a half-turn about its dot. Shikaku's input,

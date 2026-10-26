@@ -16,7 +16,10 @@ import java.time.LocalDate
  */
 class LevelsTest {
 
-    /** Today's pool, copied. Appending to [Levels.POOL] is fine; anything else changes opened levels. */
+    /**
+     * The pool levels shipped with, copied (Lamps came after). Appending to [Levels.POOL] is fine; anything else changes
+     * opened levels. The pins below are at this size: every level opened with it keeps planning exactly so.
+     */
     private val pinnedPool = listOf(
         "sudoku", "kings", "mambo", "pipes", "shikaku", "mosaic", "sets", "atoms", "snap", "lits",
         "tower", "words", "nonogram", "inequality", "chess", "tents", "regions", "cages", "target",

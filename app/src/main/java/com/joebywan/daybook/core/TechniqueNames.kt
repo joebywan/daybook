@@ -190,6 +190,31 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "counting" to "counting the halves left in the tray",
         "what-if" to "a what-if",
     ),
+    "lamps" to linkedMapOf(
+        "zero" to "the squares beside a 0",
+        "done" to "a number with all its lamps",
+        "room" to "a number with just enough room",
+        "only-light" to "the one square that can light another",
+        "starve" to "a lamp that would starve a number",
+        "dark" to "a lamp that would leave a square dark",
+        "what-if" to "a what-if",
+    ),
+    "codeword" to linkedMapOf(
+        "one-word" to "a word only one word fits",
+        "run-agrees" to "a letter every fitting word shares",
+        "crossing" to "a number cut by every word it is in",
+        "all-words" to "every word worked through together",
+    ),
+    "pearls" to linkedMapOf(
+        "black-pearl" to "a black pearl's straight arms",
+        "white-pearl" to "a white pearl's straight line",
+        "white-turn" to "a white pearl's turn beside it",
+        "one-way" to "a line with one way on",
+        "pearl-ways" to "a pearl with two ways in",
+        "dead-end" to "a dead end",
+        "small-loop" to "the loop that must be one",
+        "what-if" to "a what-if",
+    ),
 )
 
 /**

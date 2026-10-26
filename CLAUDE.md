@@ -152,6 +152,12 @@ into every seed: never rename it.
 - **The pen (Fill/Cross) is `rememberSaveable` in the board, not state.** A sweep is one state: it locks to the row or column
   of the larger move, a pen only writes over untouched squares, and an eraser only takes out the mark it started on.
   `onDragStart` uses the overload that receives the *down*, since the web's touch slop is wider than a 15x15 square.
+- **Hard and Expert zoom** (`NonogramZoom.kt`, the owner's design): pinch zooms (to 2.5x); zoomed in, one finger pans and a
+  tap still marks, so sweeping is for the whole board; a corner button (in the empty corner above the row clues) fits the
+  board again. Clues stay pinned to the edges and keep their size. The view (`GridView`) is `remember`, never state: a
+  hint glides to what it names, a solve to the whole board. Read on the Initial pass, so a second finger cancels a sweep
+  already begun (nothing is emitted before lift). Ctrl+wheel zooms on the web. Expert squares unzoomed were 16-19dp; a
+  12x18 board was rendered and dropped (bigger on tall phones, smaller on short ones and on its side).
 - **Colour is derived, never stored.** Filled squares blend diagonally between a pair from `PALETTES`, picked by hashing the
   board's picture, so each daily and each random board has its own and nothing is saved. A line whose runs match its clue turns
   green; a line no legal layout of its clue can hold (`lineImpossible`: too many, a run too long, no gap; crosses ignored, the
@@ -603,6 +609,101 @@ pen row, walkthrough, motif). `id = "mines"` is hashed into every seed: never re
   under reduced motion) with `PlayScreen`'s bump haptic. Colours: hue A tiles the hidden squares, hue B inks flags; numbers 1-6
   each a hue (Blue, Teal, Violet, Amber, Rose, Gold) and always a digit. Share card: Pointers' hearts, a red square after hints.
 
+## Lamps (light every square)
+
+White squares and walls, some walls numbered 0-4: put lamps so every white square is lit (a lamp lights its row and column
+to a wall), no lamp lights another, and a numbered wall touches exactly that many lamps. Spec and measured numbers:
+`docs/LAMPS_SPEC.md`. The genre is published by Nikoli as *Akari* ("Light Up"); neither name appears anywhere the player sees.
+`puzzles/LampsRules.kt` (state, `LampsLogic`: rules, the ladder, exhaustive count with a sealed `LampsVerdict`, generator),
+`LampsTeacher.kt`, `LampsKeys.kt` (keys and the pure tap/lamp/sweep functions), `Lamps.kt` (board, walkthrough, motif).
+`id = "lamps"` is hashed into every seed: never rename it.
+
+- **Tiers: 7x7 / 10x10 / 12x12, about a quarter walls (half-turn symmetric), and the rung a board must need, exactly:**
+  direct facts (a 0, a number with all its lamps, a number with just enough room, a square only one lamp can light) /
+  look-ahead (a lamp that would starve a number or leave a square dark) / a what-if (at most `MAX_LINKS` = 3 direct facts to
+  a contradiction). Tally's `Spec.needs`: a draw needing more or less is redrawn.
+- **The generator's ladder is the teacher's** (`LampsLogic.nextFact`, one fact at a time). A lamp on every square still dark
+  in a random order is the answer; every wall is numbered from it, then numbers are taken back (rung by rung, the tier's own
+  last, which must take one more) while the ladder finishes the board. `countSolutions` (direct facts propagated, then the
+  first lamp among an unlit square's sources: a partition, no budget) proves it again; `LampsOracle` (test: one row run at
+  a time, no propagation) is the independent check. No day of a year reaches `lastResort` (a fixed board per tier, accepted
+  by a test), so hints never fall back on a daily board.
+- **`solved` checks the rules**; a mistake is a lamp the one answer lacks. Crosses are notes, never read by the rules or
+  the teacher. What is lit, clashing lamps and broken numbers (over, or out of reach with crosses ignored) are derived; the
+  last two turn red after a 1 s settle. Lit squares are a static Amber wash, so reduced motion has nothing to still.
+- Input is Kings' and Tents': tap a cross, double-tap a lamp, tap a lamp to take it away, drag crosses (one state on lift).
+  Keyboard: L or Enter lamp, X or Space cross, Backspace clears. Highlight indices are squares (`highlightGrid`).
+- The accent, `0xFF9D4881`, is `AccentSpacingTest`'s pick once Mines held its first choice (`0xFF3C28BD`).
+
+## Codeword (a crossword with numbers for letters)
+
+A filled crossword grid in which every letter is a number 1..k; the same number is the same letter, a few letters are given,
+and every across and down run must be a word. Spec and decisions: `docs/CODEWORD_SPEC.md`. `puzzles/CodewordRules.kt`
+(`CodewordWords`: the lists with each word's shape; `CodewordLogic`: rules, conflicts, the exhaustive proof, the pick),
+`CodewordTeacher.kt`, `CodewordKeys.kt`, `Codeword.kt` (state, board, walkthrough, motif), `CodewordGrids.kt` (generated).
+`id = "codeword"` is hashed into every seed: never rename it.
+
+- **Grids are built offline** (`CodewordGridsBuildTest`, env-gated, reproducible: draw `i` of a tier uses its own `Rng`): a
+  dense fill is a backtracking search per pattern whose cost varies wildly (most 11x11 patterns give up within the budget).
+  The pattern maker and the filler are `test/CrosswordFill.kt`, free of anything Codeword-specific, for the mini crossword
+  that may follow. Grids are **fully checked** (every white square in an across and a down word, words 3-7 letters, no
+  two-letter words), symmetric under a half-turn, connected, no word twice; words are Word Wheel's grid lists
+  (`WheelWords.grid`, Lexicon's answer screening). Scattering the black squares (no
+  2x2 block) interlocked the grid so tightly that almost no fill existed; blocks are allowed. The lists' order is a contract
+  (`BoardPinTest` goes red on purpose when it moves).
+- **Numbers are not stored in the list:** the device numbers a grid's letters 1..k by a shuffle from the board's `Rng`.
+- **Tiers: size and ladder depth.** Standard 7x7, finished one run at a time (a run only one word fits, a letter every
+  fitting word shares); Hard 9x9, must need a number cut by every run it is in; Expert 11x11, must need every word worked
+  through together. Givens are minimal for the tier's ladder (taken back in a random order while it still finishes, at
+  least one kept): about 1.8 / 1.1 / 1.0 a board. From one given letter the lists are so tight that the shallow steps
+  finish most boards, so Hard and Expert are cut by what they need, not by their givens (Tally's `Spec.needs` precedent).
+  A what-if technique was built and dropped: no board kept needed it.
+- **A board ships only if the ladder finishes it from its givens and `CodewordLogic.solve` (branch on the run with fewest
+  fitting words, no budget, sealed `Verdict`) finds one answer**; the builder also proves it with Word Wheel's `BONUS`
+  words added, so a less common real word cannot open a second answer. `CodewordOracle` (test: letter by letter over the
+  alphabet, no word index) is the independent check. `lastResort` is each list's first entry, proved by a test.
+- **`solved` checks the rules** (every number a letter, none twice, every run a grid word); a mistake is a number whose letter
+  differs from the stored answer, sound because the board has one. Red, after a 1 s settle held in `remember`: numbers
+  sharing a letter, and runs no word can be any more (shape, placed letters, letters other numbers hold). Never refused.
+- **Selection is a number, in the state** (Cipher's precedent; `withoutSelection`). A given number cannot be selected or
+  changed. The key under the grid shows each number's letter and picks it; the A-Z keys under that grey a letter another
+  number holds, with its number. Keyboard: with a number picked, a letter types it (again clears), Backspace clears, arrows
+  walk the open numbers; with none picked letters are left to the play screen, so H still asks for a hint.
+- **Teacher:** candidates per number derived on every call; a run's fitting words are those of its shape whose letters
+  its numbers can take. `ONE_WORD`, `RUN_AGREES`, `CROSSING`, `ALL_WORDS` (named as Cipher's chain is). No "only number
+  for a letter": a grid uses part of the alphabet. Highlight indices: squares `0 until size*size`, number key
+  `CodewordLogic.key(n)` = 1000 + n, letter key `CodewordLogic.letterKey(l)` = 2000 + l.
+## Pearls (a pearl loop)
+
+One closed loop through square middles passing every pearl: on a black pearl it turns and runs straight on through the
+next square each way; on a white pearl it goes straight and turns on a square beside it. Spec: `docs/PEARLS_SPEC.md`. The
+genre is published as Masyu; that name never appears where the player sees it. `puzzles/PearlsRules.kt` (`PearlsState`,
+`PearlsGrid`, `PearlsLogic`: rules, ladder, count, generator), `PearlsTeacher.kt`, `PearlsKeys.kt`, `Pearls.kt` (board,
+hit testing, walkthrough, motif). `id = "pearls"` is hashed into every seed: never rename it.
+
+- **State is the edges**, strings: `pearls` per square, `loop` (`1` per answer edge), the player's `edges` (`.`, `-` line,
+  `x` cross: a note). Horizontal edges first (`r * (n-1) + c`), then vertical (`n(n-1) + r * n + c`).
+- **Tiers: 6x6 / 8x8 / 10x10 and the rung a board must need** (`PearlsLogic.depth`): Standard the pearls' and squares'
+  local rules alone; Hard needs the small-loop rule; Expert needs a what-if (at most `MAX_ROUNDS` = 6 rounds). A draw
+  needing more or less is redrawn.
+- **The loop is grown to be pinned by its pearls.** A random loop with every pearl it allows almost always has two answers
+  (37 of 39 six-by-six), so `randomLoop` grows a face region greedily by the pearls its boundary allows. Then pearls are taken
+  back in random order while the tier's ladder finishes (on Expert, a cheap pass with the loop rule first, then the full
+  ladder), and `solutions` (local + loop rules, branching, no budget, sealed `PearlsVerdict`) must say `ExactlyOne(loop)`.
+  `PearlsOracle` (test: edges decided in reading order with a frontier memo, no propagation) is the independent check. A
+  year per tier never reaches `lastResort` (`FallbackTest`).
+- **`solved` checks the rules** (`PearlsLogic.isSolved`, lines only); a mistake is a line off the loop or a cross on it,
+  sound because the loop is unique. Red after a 1 s settle, derived from the lines alone: three lines at a square, a pearl its
+  lines already break, a closed loop that leaves something out.
+- **Input:** a drag through squares draws (its first edge decides: over a line it rubs out), one state on lift; backing up
+  along the drag undoes it (`Pearls.trail`). A tap near an edge's middle (`Pearls.edgeNear`, within 0.42 of a square)
+  crosses it, or rubs out the line or cross there. Detectors are keyed on the size and read the board through
+  `rememberUpdatedState` (Snap's lesson). Keys: arrows, Shift+arrow draws or rubs, X then an arrow crosses.
+- **Teacher:** the local rules (black pearl, white pearl, white turn, one way on, a pearl's two ways, dead end), then the
+  small loop, then a what-if (the shortest within the cap; if a player's own order has left none short, the shortest of any
+  length, so hints never run out). A square with two lines has its other edges read as crossed (`PearlsTeacher.view`), so the
+  hints never ask for tidying. Highlight indices: squares `0 until n*n`, edge `e` is `n*n + e`.
+
 ## Pipes
 
 Rotate tiles until every opening meets another and the pipework is one network. `puzzles/Pipes.kt` (state, generator, board,
@@ -691,7 +792,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes and Mines (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally and Dominoes count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps and Codeword (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
