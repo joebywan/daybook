@@ -141,7 +141,7 @@ internal object TallyTeacher {
         val open = (0 until n).filter { state[it] == TallyLogic.OPEN }
         val kept = (0 until n).filter { state[it] == TallyLogic.STAY }.sumOf { values[it] }
         val left = (0 until n).filter { state[it] != TallyLogic.GO }.sumOf { values[it] }
-        val focus = at.toSet() + targetIndex(n, line)
+        val focus = at.toSet() + (n * n + line) // line's target: rows' then columns' follow the squares
 
         fun step(technique: String, stays: List<Int>, goes: List<Int>, nudge: String, why: String) = Step(
             technique = technique,
@@ -235,7 +235,7 @@ internal object TallyTeacher {
         if (why.length > MAX_EXPLANATION) why = sentence(false)
         if (why.length > MAX_EXPLANATION) why = "$suppose, following ${w.links.size} lines on, $fail. $verdict"
 
-        val cited = w.links.flatMap { it.stays + it.goes }.toSet() + targetIndex(n, w.line)
+        val cited = w.links.flatMap { it.stays + it.goes }.toSet() + (n * n + w.line)
         return Step(
             technique = WHAT_IF,
             stays = if (stayed) emptyList() else listOf(i),
@@ -248,9 +248,6 @@ internal object TallyTeacher {
     }
 
     // ---- words ----------------------------------------------------------------------------
-
-    private fun targetIndex(n: Int, line: Int) =
-        if (line < n) TallyLogic.rowTargetIndex(n, line) else TallyLogic.colTargetIndex(n, line - n)
 
     private fun at(n: Int, i: Int) = "row ${i / n + 1}, column ${i % n + 1}"
 
