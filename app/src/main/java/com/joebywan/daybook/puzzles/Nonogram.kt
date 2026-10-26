@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -26,7 +28,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -383,13 +384,27 @@ object Nonogram : PuzzleType {
         fun clues(line: Int, band: Offset, bandSize: Size, centre: (after: Int) -> Offset) {
             val lit1 = lit && (n + line in highlight.strong || n + line in highlight.soft)
             if (lit1) drawRoundRect(overlay.glow.copy(alpha = 0.16f * overlay.pulse), band, bandSize, CornerRadius(u * 0.2f))
-            val tint = if (bad[line]) scheme.error else if (done[line]) scheme.primary else Color.Unspecified
-            if (tint.isSpecified) drawRoundRect(tint.copy(alpha = 0.16f), band, bandSize, CornerRadius(u * 0.2f))
+            // Three states that differ by more than hue: a finished line's numbers fade on a green band; an impossible
+            // line's stay full strength in the error ink (no band under them, which would cut its contrast), boxed in a
+            // dashed outline.
+            if (done[line] && !bad[line]) drawRoundRect(scheme.primary.copy(alpha = 0.16f), band, bandSize, CornerRadius(u * 0.2f))
+            if (bad[line]) {
+                val w = maxOf(u * 0.06f, 1.5f)
+                drawRoundRect(
+                    scheme.error, band + Offset(w, w) / 2f, Size(bandSize.width - w, bandSize.height - w), CornerRadius(u * 0.2f),
+                    style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(w * 2f, w * 1.5f))),
+                )
+            }
+            val ink = when {
+                bad[line] -> scheme.error
+                done[line] -> scheme.onSurface.copy(alpha = 0.4f)
+                else -> scheme.onSurface
+            }
             val numbers = text[line]
             for ((k, layout) in numbers.withIndex()) {
                 val (cx, cy) = centre(numbers.size - 1 - k)
                 val alpha = if (lit && !lit1) 0.35f else 1f
-                drawText(layout, if (tint.isSpecified) tint.copy(alpha = alpha) else scheme.onSurface.copy(alpha = alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
+                drawText(layout, ink.copy(alpha = ink.alpha * alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
             }
         }
         clipRect(0f, g.gridY, g.gridX, g.gridY + g.gridSize.height) {

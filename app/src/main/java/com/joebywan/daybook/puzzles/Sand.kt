@@ -150,8 +150,8 @@ object Sand : PuzzleType {
      * layer also carries its colour's symbol, so colour is never the only signal.
      */
     val palette: List<Color> = listOf(
-        BoardHues.ink(34f, false), BoardHues.fill(46f, false), BoardHues.fill(268f, false), BoardHues.mark(268f),
-        BoardHues.ink(330f, false), BoardHues.fill(175f, false), BoardHues.ink(175f, false), BoardHues.mark(34f),
+        BoardHues.deep(34f, false), BoardHues.fill(46f, false), BoardHues.fill(268f, false), BoardHues.mark(268f),
+        BoardHues.deep(330f, false), BoardHues.fill(175f, false), BoardHues.deep(175f, false), BoardHues.mark(34f),
     )
 
     /** What the hints call each colour. */

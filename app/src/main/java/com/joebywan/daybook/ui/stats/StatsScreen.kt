@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.stats
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.TitledScreen
 import androidx.compose.foundation.clickable
@@ -171,7 +172,7 @@ private fun PuzzleStats(
     val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
     Column(modifier.card(scheme.surface).padding(14.dp)) {
-        Text(puzzle.displayName, style = MaterialTheme.typography.titleMedium, color = accent, maxLines = 1)
+        Text(puzzle.displayName, style = MaterialTheme.typography.titleMedium, color = BoardHues.textOn(accent, scheme.surface), maxLines = 1)
         Difficulty.entries.forEach { difficulty ->
             val best = Stats.bestTime(completions, puzzle.id, difficulty)
             val count = completions.count { it.puzzleId == puzzle.id && it.difficulty == difficulty }
@@ -211,7 +212,7 @@ private fun ShareLink(label: String, kept: KeptCard?, accent: Color, onOpen: (Ke
     Text(
         label,
         style = MaterialTheme.typography.labelLarge,
-        color = if (kept != null) accent else scheme.outlineVariant,
+        color = if (kept != null) BoardHues.textOn(accent, scheme.surface) else scheme.outlineVariant,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .clickable(enabled = kept != null) { kept?.let(onOpen) }

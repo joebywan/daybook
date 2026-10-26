@@ -1,5 +1,7 @@
 package com.joebywan.daybook.ui.home
 
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.foundation.border
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.keyframes
@@ -92,6 +94,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.core.Streak
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
@@ -694,7 +697,8 @@ internal fun TileGrid(count: Int, height: Dp, tile: @Composable (index: Int, pre
 }
 
 /**
- * A puzzle's motif and name, ticked when [solved]; [footer] is the line under the name (in the puzzle's accent).
+ * A puzzle's motif and name, ticked when [solved]; [footer] is the line under the name, handed the puzzle's accent as
+ * text ink ([tileInk]).
  * [inProgress] is read here, in the tile, so a save that lands during the first frames is never shown stale.
  */
 @Composable
@@ -722,7 +726,7 @@ internal fun PuzzleTile(
             puzzle.Preview(Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)))
             if (started) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
         },
-        footer = { footer(accent) },
+        footer = { footer(tileInk(accent, MaterialTheme.colorScheme.surface)) },
     )
 }
 
@@ -774,6 +778,7 @@ internal fun HomeTile(
 ) {
     val scheme = MaterialTheme.colorScheme
     val pop = rememberPop(justSolved, solved, 1.15f)
+    val ink = tileInk(accent, scheme.surface)
     Column(
         modifier
             .clip(RoundedCornerShape(18.dp))
@@ -794,7 +799,7 @@ internal fun HomeTile(
                     Modifier.size(16.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value }.clip(CircleShape).background(scheme.surface),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.Check, "Solved", tint = accent, modifier = Modifier.size(11.dp))
+                    Icon(Icons.Default.Check, "Solved", tint = ink, modifier = Modifier.size(11.dp))
                 }
             }
         }
@@ -805,7 +810,7 @@ internal fun HomeTile(
         Text(
             name,
             style = style,
-            color = if (solved) accent else scheme.onSurface,
+            color = if (solved) ink else scheme.onSurface,
             textAlign = TextAlign.Center,
             maxLines = if (oneWord) 1 else 2,
             softWrap = !oneWord,
@@ -819,6 +824,12 @@ internal fun HomeTile(
 }
 
 /**
+ * [accent] as text on a tile, solved (tinted with it) or not: the tinted tile is the harder background in both schemes,
+ * so one ink reads on either.
+ */
+internal fun tileInk(accent: Color, surface: Color) = BoardHues.textOn(accent, accent.copy(alpha = 0.20f).compositeOver(surface))
+
+/**
  * Three dots for the three tiers, so a tile can say "you did the Standard one" while the grid is
  * set to Expert. Kept to a few pixels: the tile's job is to be recognised and tapped, and a row of
  * labelled pills is exactly the weight that made the old cards unscannable.
@@ -826,6 +837,7 @@ internal fun HomeTile(
 @Composable
 internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty) -> Boolean, popped: Difficulty? = null) {
     val scheme = MaterialTheme.colorScheme
+    val fill = BoardHues.textOn(accent, scheme.surface, 3f)
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -834,18 +846,16 @@ internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty
             val isSelected = tier == selected
             // The tier just solved pops in big, to say where the solve went ([LocalJustSolved]).
             val pop = rememberPop(tier == popped && cleared(tier), cleared(tier), 2.2f)
+            // Solved: filled in the accent, darkened or lightened to 3:1 on the surface if it needs it (on Home the
+            // caller already hands over the tile's text ink). Not solved: a ring, so the two differ by shape as well as colour,
+            // darker for the tier the grid is set to.
+            val dot = Modifier
+                .size(if (isSelected) 7.dp else 5.dp)
+                .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+                .clip(CircleShape)
             Box(
-                Modifier
-                    .size(if (isSelected) 7.dp else 5.dp)
-                    .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
-                    .clip(CircleShape)
-                    .background(
-                        when {
-                            cleared(tier) -> accent
-                            isSelected -> scheme.onSurfaceVariant.copy(alpha = 0.55f)
-                            else -> scheme.outline.copy(alpha = 0.35f)
-                        }
-                    )
+                if (cleared(tier)) dot.background(fill)
+                else dot.border(1.dp, scheme.onSurfaceVariant.copy(alpha = if (isSelected) 1f else 0.6f), CircleShape)
             )
         }
     }

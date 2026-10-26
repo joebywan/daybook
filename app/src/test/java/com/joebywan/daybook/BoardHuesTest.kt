@@ -77,9 +77,9 @@ class BoardHuesTest {
     @Test fun onFillPicksReadableText() {
         assertEquals(Color(0xFF1B2F29), BoardHues.onFill(Color.White)) // light fill: the theme ink
         assertEquals(Color.White, BoardHues.onFill(Color.Black))
-        // Teal's deep step fails ink (3.95) and white (3.58): only black reaches 4.5.
-        val teal = BoardHues.ink(175f, false)
-        assertEquals(Color.Black, BoardHues.onFill(teal))
-        assertTrue(BoardHues.contrast(BoardHues.onFill(teal), teal) >= 4.5f)
+        // Lexicon's green fails ink (4.3) and white (3.2): only black reaches 4.5.
+        val green = Color(0xFF4E9F6C)
+        assertEquals(Color.Black, BoardHues.onFill(green))
+        assertTrue(BoardHues.contrast(BoardHues.onFill(green), green) >= 4.5f)
     }
 }

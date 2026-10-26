@@ -31,16 +31,17 @@ uses), so any two hues sit at the same weight and can share a board. Light/dark 
 | Hue | h | Fill, light | Fill, dark | Ink, light | Ink, dark | Mark (either) |
 |---|---|---|---|---|---|---|
 | Coral | 8 | `E8A69C` | `6B362E` | `963A2C` | `D67E71` | `CD6251` |
-| Amber | 34 | `E8C79C` | `6B512E` | `96682C` | `D6AA71` | `CD9751` |
-| Gold | 46 | `E8D69C` | `6B5D2E` | `967D2C` | `D6BE71` | `CDB051` |
-| Green | 145 | `9CE8BB` | `2E6B47` | `2C9658` | `71D69B` | `51CD85` |
-| Teal | 175 | `9CE8E1` | `2E6B66` | `2C968D` | `71D6CD` | `51CDC2` |
+| Amber | 34 | `E8C79C` | `6B512E` | `92652A` | `D6AA71` | `CD9751` |
+| Gold | 46 | `E8D69C` | `6B5D2E` | `7E6A25` | `D6BE71` | `CDB051` |
+| Green | 145 | `9CE8BB` | `2E6B47` | `247B48` | `71D69B` | `51CD85` |
+| Teal | 175 | `9CE8E1` | `2E6B66` | `227770` | `71D6CD` | `51CDC2` |
 | Blue | 215 | `9CBBE8` | `2E476B` | `2C5896` | `719BD6` | `5185CD` |
-| Violet | 268 | `BF9CE8` | `4A2E6B` | `5D2C96` | `A071D6` | `8B51CD` |
+| Violet | 268 | `BF9CE8` | `4A2E6B` | `5D2C96` | `AA81DA` | `8B51CD` |
 | Rose | 330 | `E89CC2` | `6B2E4D` | `962C61` | `D671A3` | `CD518F` |
 
-Recipe: fill = hsl(h, .62, .76) light / hsl(h, .40, .30) dark; ink = hsl(h, .55, .38) light / hsl(h, .55, .64) dark;
-mark = hsl(h, .55, .56). **Fill** is a cell or region background and carries `onSurface` text. **Ink** is text or a thin
+Recipe: fill = hsl(h, .62, .76) light / hsl(h, .40, .30) dark; ink = hsl(h, .55, .38) light / hsl(h, .55, .64) dark,
+stepped a hundredth darker (light) or lighter (dark) until it reaches 4.5:1 on both the surface and the background
+(Amber .37, Gold .32, Green .31, Teal .30 in light; Violet .68 in dark; `ContrastTest`); mark = hsl(h, .55, .56). **Fill** is a cell or region background and carries `onSurface` text. **Ink** is text or a thin
 stroke drawn on the surface. **Mark** is a solid shape (token, path, dot). Generate in code with `Color.hsl(h, s, l)`
 from the table's `h`; do not paste the hexes in (they are for reading and for the harness).
 
@@ -51,7 +52,7 @@ from the table's `h`; do not paste the hexes in (they are for reading and for th
   Violet, Amber, Teal, Rose), not neighbours.
 - **More than five groups: steps, not new hues.** Excluding Coral and Green leaves six hues, and Amber and Gold sit 12
   degrees apart. A board that needs up to eight equal tokens (Tower's pegs) takes them from the six hues at three steps,
-  the same in both schemes: pale = `fill(h, false)`, mid = `mark(h)`, deep = `ink(h, false)`. Choose and order them by
+  the same in both schemes: pale = `fill(h, false)`, mid = `mark(h)`, deep = `deep(h)` (the fixed recipe `ink` starts from, so these palettes keep their pinned spacing). Choose and order them by
   CIEDE2000 including deuteranopia and protanopia so every prefix is as far apart as it can be (Tower: 21 / 17 / 11 for the
   first 5 / 6 / 8, pinned by `TowerPaletteTest`), and put a digit or shape on every token: the colour-blind distance of an
   eight-token set is too small to carry it alone.
@@ -59,10 +60,13 @@ from the table's `h`; do not paste the hexes in (they are for reading and for th
   grey. Giving each hue its own step (Mosaic: pale `fill`, deep `ink`, mid `mark`) gives four luminance levels and raised the
   5-colour CIEDE2000 floor (colour-blind included) from 6.6 to 15.8. Search the 3 steps x hue order, scoring all four vision modes.
 - **Semantic colours are fixed and are not content hues.** Correct = Green mark, present/partial = Gold (Lexicon's
-  `4E9F6C` / `D1A32F` are these two), error = `scheme.error` (Clay `C0563F`), warning is the error colour too. Do not
+  `4E9F6C` / `D1A32F` are these two), error = `scheme.error` (Clay, stepped per scheme to read as text at 4.5:1: `AD4D39` light, `D08271` dark), warning is the error colour too. Do not
   spend Coral or Green on an unrelated group *in a board that also shows right/wrong*; use the other six.
 - **Thin graphics on the surface take `ink`, not `mark`.** `mark` is one lightness for both schemes and falls under 3:1 against
   the light card for the lighter hues; check WCAG 3:1 for strokes and shapes, 4.5:1 for text, in both schemes (Sets did).
+- **An accent drawn as text goes through `BoardHues.textOn(accent, background)`** (the same hue, mixed towards black or
+  white until it reaches 4.5:1; pass 3f for a dot or icon). Fills, rings and tints keep the raw accent. Home tiles use
+  `tileInk`, which reads on the tile whether or not it is tinted. `ContrastTest` covers every accent in both schemes.
 - **Colour is never the only signal** (see PUZZLE_STANDARDS section on legibility): pair every hue with a shape,
   digit or position. Where groups must be told apart by colour alone (Kings' regions) pick by CIEDE2000 as
   `KingsPaletteTest` does, not by eye.
