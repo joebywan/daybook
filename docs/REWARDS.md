@@ -177,7 +177,7 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   Only say what the rules make true: no history, no attribution. `PuzzleNotesTest` fails for a registered puzzle without notes.
 - **Today's three** (`core/TodaysThree.kt`, `ui/home/TodaysThreeRow.kt`). One quick puzzle, one mid-weight, one word or
   number puzzle, from the date alone (each slot steps one place a day through its own list: quick 9, words 5, mid-weight
-  everything else, 16; the mid-weight slot steps once more each 45 days, so no set repeats within a year whatever that
+  everything else, 17; the mid-weight slot steps once more each 45 days, so no set repeats within a year whatever that
   list's length), so it is the same for everyone and a shared card means the same three. It replaced today's pick
   (`PuzzleRegistry.featured`, stepped past the player's five most played): a per-player pick could not be the shared set,
   and two daily highlights would compete, so the pick's gold ring and sparkles moved onto the three. Home shows it as one
@@ -205,7 +205,7 @@ would rather let people rearrange than hide.
 - **Gentlest first, then most played** (the default): solves per puzzle, dailies of the last 60 days plus every practice game
   (they carry no day); ties and never-played puzzles keep `PuzzleOrder.GENTLEST`, the owner's one table of how quickly a
   newcomer gets going on Standard (see it, do it: Pointers, Pipes, Snap; then Sudoku, Lexicon, Sand; familiar: Word Wheel,
-  Target, Nonogram; quick to learn: Kings, Mambo, Mosaic, Sets, Inequality, Tents, Regions, Tally; takes a bit: Shikaku,
+  Crossword, Target, Nonogram; quick to learn: Kings, Mambo, Mosaic, Sets, Inequality, Tents, Regions, Tally; takes a bit: Shikaku,
   Atoms, LITS, Mate, Cage Sudoku, Cipher, Dominoes, Codeword; and Tower last, as much the same game as Lexicon). So a new player's grid is that table, and Sudoku and Lexicon open the
   second row of a three-column phone (`HomeOrderTest` pins it); a puzzle missing from it goes last. The solves are read once
   per app start and day, not live, so coming home from a solve never moves a tile under the player's finger.
@@ -276,7 +276,7 @@ kept is the best until beaten, and Best can be slower than the best time beside 
 - **Move feel** (`ui/MoveFeel.kt`, `rememberMoveFeel`): the squares a move changed are drawn 8% large and ease back over
   120 ms; a unit the move finished by the rules (a Sudoku row, column, box or cage; an Inequality line; a Regions region; a
   Kings row, column or region; a Tents or Mambo line; a Nonogram or Tally line, beside their green clue; a LITS region with its
-  piece; a Dominoes region keeping its rule; a full Sand tube; a found Word Wheel word; a Codeword word spelled; an Atoms atom with all its bonds)
+  piece; a Dominoes region keeping its rule; a full Sand tube; a found Word Wheel word; a Codeword word spelled; a Crossword slot spelling a word of the list; an Atoms atom with all its bonds)
   has a soft band of the puzzle's accent run along it once (400 ms, at most 35%). Only a move fires it (`LocalMoveCount`,
   raised by `PlayScreen.push`): a board loaded, restarted, undone into a finished unit or shown in the walkthrough stays
   quiet. An Undo (`LocalUndoCount`, raised by `PlayScreen.undo` when it takes something back) dips the squares it changed to

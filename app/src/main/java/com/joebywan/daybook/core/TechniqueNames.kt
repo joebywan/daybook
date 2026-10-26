@@ -199,6 +199,12 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "dark" to "a lamp that would leave a square dark",
         "what-if" to "a what-if",
     ),
+    "mini" to linkedMapOf(
+        "clue" to "a letter from its clue",
+        "one-word" to "a word only one word fits",
+        "crossing" to "the word its crossings leave",
+        "all-words" to "every crossing worked through together",
+    ),
     "codeword" to linkedMapOf(
         "one-word" to "a word only one word fits",
         "run-agrees" to "a letter every fitting word shares",
@@ -236,6 +242,7 @@ private val NOT_PRAISED: Map<String, Set<String>> = mapOf(
     "words" to setOf("opener", "submit", "best-guess", "only-word-left"),
     "target" to setOf("step", "finish"),
     "wordwheel" to setOf("clue"),
+    "mini" to setOf("clue"),
     "sand" to setOf("finish"),
 )
 

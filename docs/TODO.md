@@ -165,9 +165,6 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
   "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
   - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
 - [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
-- [ ] **New puzzles, in order:** Mini crossword (5x5,
-  fills built offline from the hand-written clues; `test/CrosswordFill.kt`, Codeword's pattern maker and filler, is
-  written to be reused). Each gets a spec first (`docs/<NAME>_SPEC.md`).
 
 ## Future puzzle candidates
 

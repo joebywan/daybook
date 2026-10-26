@@ -88,6 +88,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Codeword | Codeword (number crossword) | A filled crossword in which every letter is a number: work out which letter each number stands for |
 | Pearls | Masyu (pearl loop) | One closed loop through square middles and every pearl: it turns on black pearls (running straight on either side) and goes straight through white ones (turning beside them) |
 | Who's Who | Logic grid | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house" |
+| Crossword | Mini crossword | A small crossword, every square in a word across and a word down: solve the clues and fill the grid |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -186,6 +187,11 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   answer and the hint ladder (a clue naming someone, the one item left, two things a clue ties together, the houses each
   side allows, and on Expert a short what-if) finishes it; then every clue the rest already implies is taken back. A board
   ships only if it needs its tier's deepest step; an independent solver that tries every combination confirms it in the tests.
+- **Crossword** (the mini) — grids are dense fills from the same screened lists, built offline with Codeword's filler, every
+  word clued by hand. A clue names one word, so the answer is the clues'; what is proved is how much the crossings
+  give: the hints' walk (a slot only one word fits, one word its crossings leave, every crossing worked through) must
+  finish the grid reading a tier's share of its letters from the clues, and an exhaustive search proves those letters
+  and the crossings leave one grid. An independent solver that fills square by square over the alphabet confirms it.
 - **Codebreaker and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by

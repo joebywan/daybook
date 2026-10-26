@@ -704,6 +704,40 @@ hit testing, walkthrough, motif). `id = "pearls"` is hashed into every seed: nev
   length, so hints never run out). A square with two lines has its other edges read as crossed (`PearlsTeacher.view`), so the
   hints never ask for tidying. Highlight indices: squares `0 until n*n`, edge `e` is `n*n + e`.
 
+## Mini crossword
+
+A small, fully checked crossword: a clue for every word across and down; fill the grid. Spec and decisions: `docs/MINI_SPEC.md`.
+`puzzles/MiniRules.kt` (`MiniLogic`: slots and numbering, rules, the exhaustive proof, the pick), `MiniTeacher.kt`, `MiniKeys.kt`,
+`Mini.kt` (state, board, walkthrough, motif), `MiniGrids.kt` (generated). `id = "mini"` is hashed into every seed: never rename it.
+Display name "Crossword" (one line on a home tile), never a newspaper's.
+
+- **Grids are built offline** (`MiniGridsBuildTest`, env-gated, reproducible) with Codeword's `test/CrosswordFill.kt`, from Word
+  Wheel's grid lists less a breakfast-table list (`MiniGridsBuildTest.SKIP`: death, murder, vomit and the like, which those lists
+  keep because a guess or a wheel word is never shown under a clue; `MiniRulesTest` fails a grid holding one). The lists' order is
+  a contract (`BoardPinTest` goes red on purpose). Clues are `WheelWords.clue` (`clues.txt`, `wheel-clues.txt`), distinct across
+  answers, so a clue names one word; the board stores its clue texts, so a reworded clue never changes a saved game.
+- **Tiers: size and clue share, not ladder depth.** The clue share is the letters the hints' walk must read from the clues, over
+  the white squares: Standard 5x5 (4 black) at most 30%, Hard 6x6 (about 9 black) over 30% to 40%, Expert 7x7 (about 15 black)
+  over 40% (`MiniLogic.Spec`). Depth does not separate grids here (93% of 5x5 fills need every rung), and left alone a bigger grid
+  interlocks more and has a *lower* share: Expert would be bigger and easier. Clue letters a board 5.6 / 9.4 / 15.2.
+- **A board ships only if** every slot is a different grid word with a clue, the hints' walk finishes it with its share in the
+  band, and `MiniLogic.solve` (no budget, sealed `Verdict`) finds exactly one fill of the grid from the letters the walk read off
+  the clues: the crossings settle everything else. `MiniOracle` (test: square by square over the alphabet, prefix sets) is the
+  independent check. `lastResort` is each list's first entry, proved by a test; a year per tier never reaches it (`FallbackTest`).
+- **`solved` checks the rules** (every slot spells the word its clue is the clue of); a mistake is a letter off the stored answer,
+  sound because the clues name one fill. Red, after a 1 s settle: a full slot that is no word of the list, never a real word under
+  another clue (that would be reading the answer). A word the list holds glows once, for the same reason not only the right one.
+- **Teacher:** `ONE_WORD` (the letters in a slot leave one word), `CROSSING` (one word leaves every crossing slot a fit, the slots
+  named), `ALL_WORDS` (arc consistency to a fixpoint, said as such), then `CLUE`, the fallback: it reads the answer, says so, and
+  gives one letter of the open slot the fewest words fit. It cannot be designed out: from an empty grid nothing else starts, and a
+  clue is knowledge, not logic. 44 / 54 / 62% of steps on a hints-only walk; that share is the tier measure. Word steps are typed
+  by the player; only "Show me" types the word. Highlight indices: squares, letter key `MiniLogic.letterKey(l)` = 2000 + l, the
+  clue bar `MiniLogic.CLUE_BAR` = 3000.
+- **Cursor and direction are in the state** (Codeword's precedent; `withoutSelection` drops both). A tap selects a square, the same
+  square again turns between Across and Down; typing moves on to the next empty square of the word; Del clears, or steps back and
+  clears. The clue bar (fixed height, room for two lines) shows the cursor's clue, turns on a tap, and ‹ › walk the words. Keys:
+  letters, Backspace, arrows (one across the word's way turns first), Space turns.
+
 ## Pipes
 
 Rotate tiles until every opening meets another and the pipework is one network. `puzzles/Pipes.kt` (state, generator, board,
@@ -813,7 +847,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps and Codeword (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword and Mini (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

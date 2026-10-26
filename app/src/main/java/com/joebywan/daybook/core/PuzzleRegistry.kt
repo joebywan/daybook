@@ -5,6 +5,7 @@ import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.Chess
 import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.Codeword
+import com.joebywan.daybook.puzzles.Mini
 import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Kings
@@ -70,6 +71,7 @@ object PuzzleRegistry {
         Codeword,
         Pearls,
         WhosWho,
+        Mini,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }

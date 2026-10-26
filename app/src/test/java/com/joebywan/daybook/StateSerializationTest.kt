@@ -9,6 +9,7 @@ import com.joebywan.daybook.puzzles.DominoState
 import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.CipherState
 import com.joebywan.daybook.puzzles.CodewordState
+import com.joebywan.daybook.puzzles.MiniState
 import com.joebywan.daybook.puzzles.CageState
 import com.joebywan.daybook.puzzles.ChessPosition
 import com.joebywan.daybook.puzzles.ChessRules
@@ -126,6 +127,7 @@ class StateSerializationTest {
         }
         is CipherState -> state.select(1).withDigit(1, 7).withDigit(0, 3)
         is CodewordState -> (1..state.letters.size).first { it !in state.given }.let { state.select(it).withLetter(it, 25) }
+        is MiniState -> state.select(state.letters.indexOf(' ')).type('z').type('q')
         is ChessState -> state.play(ChessRules.legalMoves(ChessPosition.fromFen(state.start)).first())
         is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is RegionsState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }

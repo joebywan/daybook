@@ -136,6 +136,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A letter already used is greyed: no other number can have it.",
         "Every square is in two words: a crossing checks both.",
     ),
+    "mini" to listOf(
+        "Start with the shortest words: the fewest words fit them.",
+        "A crossing letter cuts a word down to a handful.",
+        "Every square is in two words: check a doubtful letter both ways.",
+        "Tap a square twice to read the clue going the other way.",
+        "Stuck on a clue? Fill its crossings first.",
+    ),
     "wordwheel" to listOf(
         "The longest slot always uses every letter on the wheel.",
         "A crossing letter cuts a slot down to a handful of words.",
