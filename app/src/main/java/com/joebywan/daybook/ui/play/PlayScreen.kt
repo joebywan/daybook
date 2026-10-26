@@ -115,6 +115,7 @@ import com.joebywan.daybook.platform.readyBoard
 import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.LocalHaptics
 import com.joebywan.daybook.ui.LocalBoardArrives
 import com.joebywan.daybook.ui.LocalMoveCount
@@ -468,33 +469,36 @@ fun PlayScreen(
         // Title at the start, the one remaining action at the end. Centring what is left over
         // after removing the arrow would have hung the title 44dp off true, and padding the gap
         // back out would keep reserving room for a control that no longer exists.
-        Row(
-            Modifier.fillMaxWidth().padding(start = 18.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Nothing on Android, where the system back button is the way out.
-            BackButton(onBack)
-            Column(Modifier.weight(1f)) {
-                Text(
-                    puzzle.displayName,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = scheme.onBackground,
-                )
-                Text(
-                    buildString {
-                        append(difficulty.label)
-                        append(" · ")
-                        append(level?.let { "Level $it" } ?: day?.let { formatDate(it, PLAY_DATE) } ?: "Random")
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
-            Box(
-                Modifier.size(48.dp).clip(CircleShape).clickable { showRules = true },
-                contentAlignment = Alignment.Center,
+        // Held to the chrome cap: at 2x the date wrapped and the header took the board's room.
+        CappedFontScale {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 18.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.AutoMirrored.Filled.HelpOutline, "How to play", tint = scheme.onSurfaceVariant)
+                // Nothing on Android, where the system back button is the way out.
+                BackButton(onBack)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        puzzle.displayName,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = scheme.onBackground,
+                    )
+                    Text(
+                        buildString {
+                            append(difficulty.label)
+                            append(" · ")
+                            append(level?.let { "Level $it" } ?: day?.let { formatDate(it, PLAY_DATE) } ?: "Random")
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
+                Box(
+                    Modifier.size(48.dp).clip(CircleShape).clickable { showRules = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.HelpOutline, "How to play", tint = scheme.onSurfaceVariant)
+                }
             }
         }
 
@@ -507,13 +511,15 @@ fun PlayScreen(
         ) {
             // Hidden by the player's setting: still laid out, so the row, the board and the hint
             // popover (placed from this row's bottom) are exactly where they would be with it.
-            // The time keeps counting and is shown on the solved card.
-            Text(
-                text = formatClock(seconds),
-                style = MaterialTheme.typography.titleMedium,
-                color = scheme.onSurfaceVariant,
-                modifier = if (showTimer) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
-            )
+            // The time keeps counting and is shown on the solved card. It sets the row's height, so it is capped too.
+            CappedFontScale {
+                Text(
+                    text = formatClock(seconds),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = scheme.onSurfaceVariant,
+                    modifier = if (showTimer) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
+                )
+            }
             if (offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
                 Box(Modifier.matchParentSize().background(scheme.background), contentAlignment = Alignment.Center) {
                     // What the puzzle is about, then the offer: two small lines (the longest tagline fits one at 360dp),

@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
+import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
@@ -490,17 +491,20 @@ object Tower : PuzzleType {
                         ) { if (colour >= 0) PegDigit(colour, 15) }
                     }
                     Spacer(Modifier.weight(1f))
-                    Text(
-                        "Submit",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (s.ready) scheme.primary else scheme.outline,
-                        modifier = Modifier
-                            .highlightAnchor(TowerTeacher.SUBMIT_BUTTON)
-                            .ring(highlight.look(TowerTeacher.SUBMIT_BUTTON, dims = false), glow, pulse, 8.dp, outside = true)
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable(enabled = interactive && s.ready) { onState(s.submit()) }
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                    )
+                    // Capped: at 2x "Submit" wrapped to two lines.
+                    CappedFontScale {
+                        Text(
+                            "Submit",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (s.ready) scheme.primary else scheme.outline,
+                            modifier = Modifier
+                                .highlightAnchor(TowerTeacher.SUBMIT_BUTTON)
+                                .ring(highlight.look(TowerTeacher.SUBMIT_BUTTON, dims = false), glow, pulse, 8.dp, outside = true)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable(enabled = interactive && s.ready) { onState(s.submit()) }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))

@@ -84,7 +84,7 @@ object Lamps : PuzzleType {
         "A lamp lights its own square and its whole row and column, up to a wall or the edge.",
         "Light every white square. No lamp may light another lamp.",
         "A number on a wall is how many lamps sit right beside it: above, below, left or right.",
-        "Tap a square for a cross (a note that no lamp goes there), tap again to clear it. Drag to lay crosses across squares. Double-tap for a lamp; tap a lamp to remove it.",
+        "Tap a square for a cross (a note that no lamp goes there), tap again to clear it. Drag to lay crosses across squares. Double-tap or long-press for a lamp; tap a lamp to remove it.",
     )
 
     override val keyboardHelp = listOf(
@@ -152,7 +152,7 @@ object Lamps : PuzzleType {
             ),
             TutorialFrame(
                 state = swept,
-                caption = "The 2 in the corner has only two squares beside it, so both hold lamps. Double-tap each " +
+                caption = "The 2 in the corner has only two squares beside it, so both hold lamps. Double-tap or long-press each " +
                     "glowing square to place one.",
                 glow = { s ->
                     BoardHighlight(strong = pair.filter { (s as LampsState).marks[it] != LampsLogic.LAMP_MARK }.toSet(), soft = setOf(0))
@@ -166,7 +166,7 @@ object Lamps : PuzzleType {
                         else -> TutorialStep.REJECT
                     }
                 },
-                retry = "Double-tap the glowing square: two quick taps.",
+                retry = "Double-tap the glowing square (two quick taps), or press and hold it.",
                 done = "Two lamps, and their light fills their rows and columns.",
             ),
             TutorialFrame(
@@ -428,7 +428,20 @@ object Lamps : PuzzleType {
                     }
                     .pointerInput(interactive, unitPx) {
                         if (!interactive) return@pointerInput
-                        detectTapGestures { offset ->
+                        // A long press is the double tap's twin, as in Tents and Kings: a lamp, or one taken back.
+                        // `onLongPress` never delays a tap (only `onDoubleTap` would).
+                        detectTapGestures(
+                            onLongPress = { offset ->
+                                val i = gridCellAt(offset, unitPx, n, n)
+                                val held = pending?.takeIf { it.base === latest.v }
+                                commit.v?.cancel()
+                                lastCell = -1
+                                pending = null
+                                val from = if (held != null && held.cell != i) held.after else latest.v
+                                val next = from.withLamp(i)
+                                if (next !== latest.v) emit(next)
+                            },
+                        ) { offset ->
                             val i = gridCellAt(offset, unitPx, n, n)
                             val held = pending?.takeIf { it.base === latest.v }
                             commit.v?.cancel()

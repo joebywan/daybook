@@ -96,6 +96,7 @@ import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.LevelProgress
 import com.joebywan.daybook.data.PuzzleOrder
 import com.joebywan.daybook.data.Stats
+import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.LocalHaptics
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.play.ShareCard
@@ -384,14 +385,17 @@ private fun Header(
 
 @Composable
 private fun HeaderDate(today: LocalDate, oneLine: Boolean, modifier: Modifier) {
-    Text(
-        formatDate(today, HEADER_DATE),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = if (oneLine) 1 else Int.MAX_VALUE,
-        overflow = if (oneLine) TextOverflow.Ellipsis else TextOverflow.Clip,
-        modifier = modifier,
-    )
+    // Capped: at 2x it broke "Monda/y" beside the streak badge.
+    CappedFontScale {
+        Text(
+            formatDate(today, HEADER_DATE),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = if (oneLine) 1 else Int.MAX_VALUE,
+            overflow = if (oneLine) TextOverflow.Ellipsis else TextOverflow.Clip,
+            modifier = modifier,
+        )
+    }
 }
 
 /** They share the header with the title, so each is a little under the 40dp they once were. */
@@ -791,18 +795,21 @@ internal fun HomeTile(
         Spacer(Modifier.height(4.dp))
         // A one-word name shrinks to fit rather than breaking mid-word ("Codebreak / er" at 360dp); two words wrap.
         val oneWord = ' ' !in name
-        val style = MaterialTheme.typography.titleMedium
-        Text(
-            name,
-            style = style,
-            color = if (solved) ink else scheme.onSurface,
-            textAlign = TextAlign.Center,
-            maxLines = if (oneWord) 1 else 2,
-            softWrap = !oneWord,
-            // Clip, not Ellipsis: an ellipsis counts as fitting, so the size would never step down.
-            overflow = if (oneWord) TextOverflow.Clip else TextOverflow.Ellipsis,
-            autoSize = if (oneWord) TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = style.fontSize) else null,
-        )
+        // Capped: at 2x two-word names ellipsised ("Regio...").
+        CappedFontScale {
+            val style = MaterialTheme.typography.titleMedium
+            Text(
+                name,
+                style = style,
+                color = if (solved) ink else scheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = if (oneWord) 1 else 2,
+                softWrap = !oneWord,
+                // Clip, not Ellipsis: an ellipsis counts as fitting, so the size would never step down.
+                overflow = if (oneWord) TextOverflow.Clip else TextOverflow.Ellipsis,
+                autoSize = if (oneWord) TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = style.fontSize) else null,
+            )
+        }
         Spacer(Modifier.height(3.dp))
         footer()
     }
