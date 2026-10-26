@@ -197,7 +197,7 @@ private fun MotionSetting(choice: MotionChoice, onChoice: (MotionChoice) -> Unit
         Column {
             CardText(
                 "Reduced motion",
-                "Stills the confetti, sparkles, shakes and slides, and holds the hint glow steady.",
+                "Stills the confetti, sparkles, shakes and slides, and holds the hint glow steady. System follows your device's setting.",
             )
         }
         SegmentedControl(

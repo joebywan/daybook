@@ -26,7 +26,7 @@ val LocalReducedMotion = compositionLocalOf { false }
 
 /** The player's Reduced motion setting: the device's (the default) or their own, either way. Stored by name. */
 enum class MotionChoice(val label: String) {
-    DEVICE("Same as device"),
+    DEVICE("System"),
     ON("On"),
     OFF("Off"),
     ;
