@@ -14,12 +14,12 @@ const val TECHNIQUE_NAME_MAX = 40
  */
 private val NAMES: Map<String, Map<String, String>> = mapOf(
     "sudoku" to linkedMapOf(
-        "full-house" to "the last cell in a row, column or box",
+        "full-house" to "the last square in a row, column or box",
         "hidden-single-box" to "a digit's only place in a box",
         "hidden-single-line" to "a digit's only place in a row or column",
-        "naked-single" to "a cell with one digit left",
+        "naked-single" to "a square with one digit left",
         "locked-candidates" to "a digit locked to one line or box",
-        "naked-pair" to "two cells sharing two digits",
+        "naked-pair" to "two squares sharing two digits",
         "hidden-pair" to "two digits with only two places",
         "what-if" to "a what-if",
     ),
@@ -132,11 +132,11 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "locked-candidate" to "a digit locked beside one square",
     ),
     "cages" to linkedMapOf(
-        "full-house" to "the last cell in a row, column or box",
+        "full-house" to "the last square in a row, column or box",
         "cage-last" to "the last square of a cage",
         "hidden-single-box" to "a digit's only place in a box",
         "hidden-single-line" to "a digit's only place in a row or column",
-        "naked-single" to "a cell with one digit left",
+        "naked-single" to "a square with one digit left",
         "cage-combination" to "a cage's digit combinations",
         "forty-five" to "the 45 rule",
         "linked-totals" to "totals that share squares",

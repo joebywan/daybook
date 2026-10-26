@@ -884,6 +884,8 @@ Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` vi
 system font size cannot push them out of their square; text outside the grid scales, but chrome in a fixed slot (play
 header, tier pills, pen buttons, tile names) stops at 1.3x (`CappedFontScale`; web `?fontscale=2` to check). Rule and the line-height catch:
 `docs/PUZZLE_STANDARDS.md` section 6; `BoardTextSizeTest` fails on the old pattern.
+Digits take a role from the one scale, `BoardGlyph` in the same file (given, entered, clue, corner, note: a share of
+the square and a weight); heavy region walls and frames take `ColorScheme.wall` (`ui/BoardDraw.kt`), never black or `onBackground`.
 
 ## Colour
 
