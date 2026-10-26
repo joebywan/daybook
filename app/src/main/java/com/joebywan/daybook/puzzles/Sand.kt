@@ -47,14 +47,14 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.ui.LocalReducedMotion
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -332,10 +332,8 @@ object Sand : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as SandState
         val scheme = MaterialTheme.colorScheme
-        val highlight = LocalBoardHighlight.current
+        val (highlight, glowColour, pulse) = rememberHintPaint()
         val accentColour = Color(accent)
-        val glowColour = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // Transient: the lifted tube starts over whenever the board changes (a pour, undo, a hint).
         var lifted by remember(s.tubes) { mutableStateOf<Int?>(null) }
@@ -419,9 +417,7 @@ object Sand : PuzzleType {
             Box(Modifier.size(boardW, boardH + captionH)) {
                 for (i in 0 until n) {
                     val (x, y) = tubeOffset(i)
-                    val strong = i in highlight.strong
-                    val soft = !strong && i in highlight.soft
-                    val dim = !highlight.isEmpty && !strong && !soft
+                    val hint = highlight.look(i)
                     val up by animateFloatAsState(if (lifted == i) 1f else 0f, if (still) snap() else tween(120), label = "lift")
                     val t = s.tubes[i]
                     Box(
@@ -432,7 +428,7 @@ object Sand : PuzzleType {
                             .graphicsLayer {
                                 translationY = -up * LIFT * 0.85f * u.toPx()
                                 translationX = if (shaking == i) shake.value * u.toPx() * 0.12f else 0f
-                                alpha = if (dim) 0.3f else 1f
+                                alpha = if (hint.dim) 0.3f else 1f
                             }
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -447,12 +443,12 @@ object Sand : PuzzleType {
                                     outlineWidth = if (lifted == i) 2.5.dp.toPx() else 1.5.dp.toPx(),
                                     inside = lerp(scheme.surface, scheme.error, 0.22f * refused),
                                     glow = when {
-                                        strong -> glowColour.copy(alpha = pulse.value)
-                                        soft -> glowColour.copy(alpha = 0.5f)
+                                        hint.strong -> glowColour.copy(alpha = pulse.value)
+                                        hint.soft -> glowColour.copy(alpha = 0.5f)
                                         feel.glow(i) > 0f -> accentColour.copy(alpha = feel.glow(i))
                                         else -> null
                                     },
-                                    glowWidth = if (strong) 3.dp.toPx() else 2.dp.toPx(),
+                                    glowWidth = if (hint.strong) 3.dp.toPx() else 2.dp.toPx(),
                                 )
                                 drawTube(t, s.height, i, (size.width - w) / 2, w * (LIFT + CAP), w, look, symbols = true)
                             },

@@ -53,7 +53,6 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
@@ -65,7 +64,7 @@ import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberSettledFlags
 import com.joebywan.daybook.ui.ring
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 
@@ -304,10 +303,9 @@ object WhosWho : PuzzleType {
         // state it is handed.
         var selected by remember(s.names, s.clues) { mutableStateOf<Int?>(null) }
         var tick by rememberSaveable { mutableStateOf(true) }
-        val highlight = LocalBoardHighlight.current
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         val (hueA, hueB) = BoardHues.pair(s.answer.hashCode())
-        val look = Look(scheme, hueA, hueB, BoardHues.isDark(scheme), highlight, if (highlight.warning) scheme.error else scheme.onBackground, pulse)
+        val look = Look(scheme, hueA, hueB, BoardHues.isDark(scheme), highlight, glow, pulse)
 
         val grid = WhosWhoLogic.gridOf(s.n, s.columns, s.marks)
         val cellsNow = badCells(s, grid)

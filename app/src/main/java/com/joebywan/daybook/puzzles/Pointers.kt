@@ -43,13 +43,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.ui.LocalReducedMotion
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -358,8 +358,7 @@ object Pointers : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         val hues = remember(s.arrows) { colouring(s) }
-        val highlight = LocalBoardHighlight.current
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty(), 0.35f, 0.8f)
+        val (highlight, _, pulse) = rememberHintPaint(low = 0.35f, high = 0.8f)
         // Animations are transient: they live here, in a scope that outlives the state that started them.
         val scope = rememberCoroutineScope()
         val slides = remember(s.arrows) { mutableStateListOf<Slide>() }
@@ -458,8 +457,9 @@ object Pointers : PuzzleType {
                     for (i in s.arrows.indices) {
                         if (i in s.removed) continue
                         var colour = BoardHues.ink(HUES[hues[i]], dark)
-                        if (!highlight.isEmpty && i !in highlight.strong && i !in highlight.soft) colour = colour.copy(alpha = 0.3f)
-                        if (i in highlight.strong) drawArrow(s.arrows[i], s.width, unit, scheme.onBackground.copy(alpha = pulse.value * 0.5f), width = 0.6f, head = false)
+                        val look = highlight.look(i)
+                        if (look.dim) colour = colour.copy(alpha = 0.3f)
+                        if (look.strong) drawArrow(s.arrows[i], s.width, unit, scheme.onBackground.copy(alpha = pulse.value * 0.5f), width = 0.6f, head = false)
                         var shift = 0f
                         if (b != null && (i == b.arrow || i == b.blocker)) colour = lerp(colour, scheme.error, flash)
                         if (b != null && i == b.arrow && !still) {

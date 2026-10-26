@@ -36,13 +36,12 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -534,11 +533,7 @@ object Shikaku : PuzzleType {
         val s = state as ShikakuState
         val scheme = MaterialTheme.colorScheme
         val dark = scheme.background.luminance() < 0.5f
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // Breathes, as the other teaching boards' do, so a glowing square is findable at a glance on
-        // a 9x11 board. Only runs while something glows, and is read in the draw phase.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         // The squares a rectangle takes (or gives back) settle. No units: a rectangle is a move, not a line filled in.
         val feel = rememberMoveFeel(List(s.width * s.height) { s.blockAt(it / s.width, it % s.width) })
         var dragFrom by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }

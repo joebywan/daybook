@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
@@ -48,8 +47,9 @@ import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.puzzles.MiniLogic.BLACK
 import com.joebywan.daybook.puzzles.MiniLogic.OPEN
 import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.ring
@@ -275,9 +275,7 @@ object Mini : PuzzleType {
         val word = BoardHues.mark(hueA).copy(alpha = if (dark) 0.3f else 0.22f).compositeOver(scheme.surface)
         val here = BoardHues.mark(hueA).copy(alpha = if (dark) 0.7f else 0.55f).compositeOver(scheme.surface)
         val ink = BoardHues.ink(hueB, dark)
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         val slots = remember(s.size, s.answer) { MiniLogic.slots(s.size, s.answer) }
         val units = remember(slots) { slots.map { it.squares } }
@@ -329,7 +327,7 @@ object Mini : PuzzleType {
                     squareModifier = { i ->
                         val look = highlight.look(i)
                         Modifier
-                            .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
+                            .dimmed(look)
                             .ring(look, glow, pulse, corner = 4.dp)
                             .then(if (i in red) Modifier.border(2.dp, scheme.error, RoundedCornerShape(4.dp)) else Modifier)
                             .clickable(enabled = interactive) { onState(s.select(i)) }

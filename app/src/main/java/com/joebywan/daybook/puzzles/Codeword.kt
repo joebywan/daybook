@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
@@ -42,10 +41,11 @@ import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.puzzles.CodewordLogic.EMPTY
 import com.joebywan.daybook.puzzles.CodewordLogic.up
 import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.ring
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
@@ -202,9 +202,7 @@ object Codeword : PuzzleType {
         val (hueA, hueB) = BoardHues.pair(s.solution.hashCode())
         val pick = BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.4f)
         val ink = BoardHues.ink(hueB, dark)
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         val k = s.letters.size
 
         // A broken rule shows after a pause and goes at once when mended; held here, not in the state (undo).
@@ -255,7 +253,7 @@ object Codeword : PuzzleType {
                     squareModifier = { i, n ->
                         val look = highlight.look(i)
                         Modifier
-                            .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
+                            .dimmed(look)
                             .ring(look, glow, pulse, corner = 4.dp)
                             .then(if (i in red) Modifier.border(2.dp, scheme.error, RoundedCornerShape(4.dp)) else Modifier)
                             .clickable(enabled = interactive && n !in s.given) { onState(s.select(n)) }

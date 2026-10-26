@@ -36,7 +36,6 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.DigitKeyAction
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
@@ -47,8 +46,9 @@ import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.PAD_GAP
 import com.joebywan.daybook.ui.DigitPadRow
 import com.joebywan.daybook.ui.padBoardSide
+import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
@@ -329,9 +329,7 @@ object Regions : PuzzleType {
         val (_, hueB) = BoardHues.pair(s.solution.hashCode())
         val ink = BoardHues.ink(hueB, dark)
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         val digits = layout.digits
         // A region is finished when it holds 1..its size, none of them touching an equal digit.
         val units = remember(s.region) { s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() } }
@@ -372,7 +370,7 @@ object Regions : PuzzleType {
                                 .padding(start = slot * (i % n), top = slot * (i / n))
                                 .size(slot)
                                 .moveFeel(feel, i, Color(accent))
-                                .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
+                                .dimmed(look)
                                 .ring(look, glow, pulse, corner = 2.dp)
                                 .background(fill)
                                 .then(if (i in conflicts) Modifier.border(2.dp, scheme.error) else Modifier)
