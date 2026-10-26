@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.SandLogic
@@ -11,7 +10,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * `SandLogic` against [SandOracle], which shares nothing with it but the spec's prose (breadth-first over raw positions,
@@ -142,9 +140,8 @@ class SandDifferentialTest {
 
     @Test
     fun `generated daily boards follow the dealing rules and can be sorted`() {
-        val start = LocalDate.of(2026, 1, 1)
-        for (difficulty in Difficulty.entries) for (day in 0L until 365L step 7) {
-            val seed = DailySeed.seedFor(start.plusDays(day), "sand", difficulty)
+        for (difficulty in Difficulty.entries) for (day in 0 until 365 step 7) {
+            val seed = daySeed(day, "sand", difficulty)
             val s = checkNotNull(SandLogic.generateVerified(seed, difficulty)) { "generateVerified gave up: $difficulty day $day" }
             val what = "$difficulty day $day ${s.tubes}"
             val h = s.height

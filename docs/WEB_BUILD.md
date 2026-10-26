@@ -103,9 +103,8 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
 - **Parity:** `DAYBOOK_PARITY_DUMP=<file> ./gradlew :app:testDebugUnitTest --tests
   '*WebParityDumpTest*'` writes the JVM's year in the same order; strip `RANGE ` from the page's
   lines and the files must be identical. The same file, taken before and after a change, is how
-  Android boards are proved unchanged. `BoardPinTest` pins nine boards of every puzzle outright. For LITS alone,
-  `DAYBOOK_LITS_DUMP=<file>` (`DAYBOOK_LITS_DAYS`, default 730) runs `LitsYearDumpTest`: the same
-  lines over two years plus per-board JVM times in `<file>.times`.
+  Android boards are proved unchanged. `BoardPinTest` pins nine boards of every puzzle outright. Two years
+  (as LITS's generator changes were checked) is `DAYBOOK_PARITY_DAYS=730`.
 
   **CI runs the year.** `tools/web-parity/check.py --jvm <file>` does the comparison by hand above for
   you: it serves the built dist, loads `?dump&range=N&puzzle=<id>` for all puzzles at once in
@@ -187,7 +186,7 @@ and Atoms: each `Rng` draw and every list it picks from keep their order (`quads
 is run once per square and *filtered*, which keeps the HashSet insertion order `JvmHashOrder`
 replays; the replay only runs when there are two or more candidates, but `nextInt(1)` is still
 drawn), and the search visits the same nodes, so `NODE_BUDGET` truncates exactly where it did.
-The proof is `LitsYearDumpTest` before and after, plus the wasm `?dump&range=730` in both browsers.
+The proof is `WebParityDumpTest` over 730 days before and after, plus the wasm `?dump&range=730` in both browsers.
 
 **Compose web reads `TouchEvent`s for fingers, not `PointerEvent`s.** Synthetic `pointerdown` with
 `pointerType: 'touch'` does nothing. Playwright's `touchscreen.tap` works in WebKit; for a touch

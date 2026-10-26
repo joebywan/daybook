@@ -19,21 +19,15 @@ class RegionsTeachingTest {
         Regions.generate(daySeed(day, Regions.id, d), d) as RegionsState
 
     /** Follows the teacher's steps from [s] to the end, applying each. Fails on a step that disagrees with the answer. */
-    private fun walk(s: RegionsState, onStep: (String) -> Unit = {}): RegionsState {
-        var now = s
-        var guard = 0
-        while (!now.solved) {
-            val d = Regions.teach(now) ?: error("no step on an unsolved board")
-            onStep(d.technique)
-            val t = d.targets.single()
-            val next = d.apply(now) as RegionsState
-            assertEquals("${d.technique} put the wrong digit in square $t", s.solution[t], next.cells[t])
-            assertNotEquals("a step must change something", now.cells, next.cells)
-            assertTrue(d.isReached(next))
-            now = next
-            assertTrue("walk does not end", ++guard <= 81)
-        }
-        return now
+    private fun walk(s: RegionsState, onStep: (String) -> Unit = {}): RegionsState = hintWalk(s, 81) { now ->
+        val d = Regions.teach(now) ?: error("no step on an unsolved board")
+        onStep(d.technique)
+        val t = d.targets.single()
+        val next = d.apply(now) as RegionsState
+        assertEquals("${d.technique} put the wrong digit in square $t", s.solution[t], next.cells[t])
+        assertNotEquals("a step must change something", now.cells, next.cells)
+        assertTrue(d.isReached(next))
+        next
     }
 
     @Test
@@ -134,14 +128,12 @@ class RegionsTeachingTest {
             val s = board(day, d)
             val at = s.cells.indices.first { s.cells[it] == 0 }
             for (state in listOf(s, s.withCell(at, s.solution[at] % s.digits + 1))) {
-                var cur = state
-                var guard = 0
-                while (!cur.solved && guard++ < 90) {
+                hintWalk(state, 90) { cur ->
                     val step = Regions.teach(cur)!!
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= 70)
                     assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= RegionsTeacher.MAX_EXPLANATION)
                     longest = maxOf(longest, step.explanation.length)
-                    cur = step.apply(cur) as RegionsState
+                    step.apply(cur) as RegionsState
                 }
             }
         }
@@ -194,14 +186,14 @@ class RegionsTeachingTest {
         assertEquals(TutorialStep.DONE, clash(wrong.enter(Regions.TUTORIAL_WRONG, 1)))
         // Frame 5 is free play, and hints alone finish it with no fallback and no mistake.
         assertTrue(frames[4].freePlay)
-        var now = frames[4].state as RegionsState
+        val now = frames[4].state as RegionsState
         assertEquals(Regions.tutorialBoard(mapOf(first to 1)).cells, now.cells)
-        while (!now.solved) {
-            val d = Regions.teach(now)!!
+        val end = hintWalk(now, 81) { cur ->
+            val d = Regions.teach(cur)!!
             assertFalse(d.fallback); assertFalse(d.mistake)
-            now = d.apply(now) as RegionsState
+            d.apply(cur) as RegionsState
         }
-        assertEquals(Regions.TUTORIAL_SOLUTION, now.cells)
+        assertEquals(Regions.TUTORIAL_SOLUTION, end.cells)
         for (f in frames) assertTrue("caption ${f.caption.length}", f.caption.length <= 200)
         // Every claim a caption makes: square 9 touches a 2, a 3 and a 4 and the others around it are empty or 1-free.
         val around = b0.layout.around[first].map { b0.cells[it] }.filter { it != 0 }.toSet()

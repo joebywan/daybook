@@ -149,9 +149,4 @@ class TentsRulesTest {
             assertTrue(withTents(s, s.solution).solved)
         }
     }
-
-    @Test
-    fun `boards are deterministic`() {
-        for (d in Difficulty.entries) assertEquals(board(5, d), board(5, d))
-    }
 }

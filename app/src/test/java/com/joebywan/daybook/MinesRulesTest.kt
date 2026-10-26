@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.MinesLogic
@@ -11,8 +10,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class MinesRulesTest {
 
@@ -109,7 +106,6 @@ class MinesRulesTest {
     /** Every board the year makes: its opening clear, within the cap, and the ladder clears it at the tier's depth. */
     @Test fun `a year of daily boards - the ladder clears each at its tier's depth, and the tiers get harder`() {
         val report = StringBuilder()
-        val start = LocalDate.of(2026, 1, 1)
         val meanMines = DoubleArray(3)
         for (t in Difficulty.entries) {
             val spec = MinesLogic.specFor(t)
@@ -117,12 +113,13 @@ class MinesRulesTest {
             val opening = ArrayList<Int>()
             val times = ArrayList<Double>()
             val used = HashMap<String, Int>()
-            for (day in 0 until 365L) {
-                val seed = DailySeed.seedFor(start.plusDays(day), Mines.id, t)
+            for (day in 0 until 365) {
+                val seed = daySeed(day, Mines.id, t)
                 val t0 = System.nanoTime()
                 var a = 0
                 var s: MinesState? = null
-                while (s == null) s = MinesLogic.attempt(seed, t, a++)
+                while (s == null && a < MinesLogic.ATTEMPTS) s = MinesLogic.attempt(seed, t, a++)
+                requireNotNull(s) { "day $day $t: no draw of ${MinesLogic.ATTEMPTS} accepted" }
                 times += (System.nanoTime() - t0) / 1e6
                 assertEquals(s, Mines.generate(seed, t))
                 draws += a
@@ -146,8 +143,7 @@ class MinesRulesTest {
                 ),
             )
         }
-        File("build/reports").mkdirs()
-        File("build/reports/mines-generation.txt").writeText(report.toString())
+        writeReport("mines-generation.txt", report.toString())
         print(report)
         assertTrue("density rises with the tier", meanMines[0] < meanMines[1] && meanMines[1] < meanMines[2])
     }

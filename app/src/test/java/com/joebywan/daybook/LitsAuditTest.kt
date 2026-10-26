@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
@@ -74,7 +73,7 @@ class LitsAuditTest {
             var square = 0
             val n = 40
             for (i in 0 until n) {
-                val seed = DailySeed.seedFor(LocalDate.of(2026, 2, 1).plusDays(i.toLong()), "lits", d)
+                val seed = daySeed(i, "lits", d, LocalDate.of(2026, 2, 1))
                 val s = Lits.generate(seed, d) as LitsState
                 val w = s.width; val h = s.height
                 val byRegion = s.region.indices.filter { s.solution[it] }.groupBy { s.region[it] }
@@ -157,7 +156,7 @@ class LitsAuditTest {
         val examples = mutableListOf<String>()
         for (d in Difficulty.entries) {
             for (i in 0 until 6) {
-                val seed = DailySeed.seedFor(LocalDate.of(2026, 3, 1).plusDays(i.toLong()), "lits", d)
+                val seed = daySeed(i, "lits", d, LocalDate.of(2026, 3, 1))
                 val s = Lits.generate(seed, d) as LitsState
                 val w = s.width
                 val regions = s.region.distinct().sorted()

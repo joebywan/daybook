@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.MosaicMove
@@ -40,9 +39,7 @@ class MosaicOptimumTest {
     // ---- the generator's claims ---------------------------------------------------------------
 
     private fun seedsFrom(month: Int, count: Int, tier: Difficulty) =
-        (0 until count).map {
-            DailySeed.seedFor(LocalDate.of(2026, month, 1).plusDays(it.toLong()), "mosaic", tier)
-        }
+        seeds(count, tier, "mosaic", LocalDate.of(2026, month, 1))
 
     /**
      * Expert gets fewer seeds than the other two on purpose. Refuting the fill below its optimum
