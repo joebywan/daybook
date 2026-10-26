@@ -4,11 +4,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,11 +43,10 @@ import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.digitKeyAction
 import com.joebywan.daybook.core.highlightGrid
-import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.PAD_GAP
-import com.joebywan.daybook.ui.PAD_HEIGHT
-import com.joebywan.daybook.ui.PadKey
+import com.joebywan.daybook.ui.DigitPadRow
+import com.joebywan.daybook.ui.padBoardSide
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.ring
@@ -337,11 +334,7 @@ object Inequality : PuzzleType {
                 },
             contentAlignment = Alignment.Center,
         ) {
-            val side = if (constraints.hasBoundedHeight) {
-                minOf(maxWidth, (maxHeight - PAD_GAP - PAD_HEIGHT).coerceAtLeast(0.dp))
-            } else {
-                maxWidth
-            }
+            val side = padBoardSide()
             val slot = side / n
             val cell = slot * CELL
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -402,29 +395,13 @@ object Inequality : PuzzleType {
 
                 Spacer(Modifier.height(PAD_GAP))
 
-                Row(
-                    Modifier.width(side).keepClear(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    (1..n).forEach { digit ->
-                        val remaining = n - s.cells.count { it == digit }
-                        val at = s.selected
-                        PadKey(
-                            InequalityTeacher.pad(digit), highlight, glow, pulse,
-                            fill = if (remaining == 0) scheme.surfaceVariant else scheme.surface,
-                            enabled = interactive && at != null,
-                            onClick = {
-                                val next = s.enter(at ?: return@PadKey, digit)
-                                if (next !== s) onState(next)
-                            },
-                        ) {
-                            Text(
-                                digit.toString(),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (remaining == 0) scheme.outline else scheme.onSurface,
-                            )
-                        }
-                    }
+                DigitPadRow(
+                    side, n, InequalityTeacher::pad, highlight, glow, pulse,
+                    enabled = interactive && s.selected != null,
+                    done = { d -> s.cells.count { it == d } == n },
+                ) { digit ->
+                    val next = s.enter(s.selected ?: return@DigitPadRow, digit)
+                    if (next !== s) onState(next)
                 }
             }
         }

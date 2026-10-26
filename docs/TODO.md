@@ -15,6 +15,9 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **Hints still say "cell".** Rules text says "square" everywhere now, but the Sudoku, Cage Sudoku and Mosaic teachers'
+  hints (and Sudoku's and Cages' fallback nudge, "Look at the glowing cell") still say "cell". *S.*
+
 - [ ] **Touch targets left under 48dp.** Fixed in the UX pass: Home header buttons (48dp targets round 36dp circles), the
   play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
   Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)
@@ -170,6 +173,9 @@ Five independent design reviews (puzzle construction, player experience, daily m
 accepted by the owner except where noted. Each item is one workstream and one PR; delete it here when it lands.
 Generator changes move every daily board of that puzzle (parity pins go red on purpose): batch them, one PR per puzzle.
 
+- [ ] **Daily reminder follow-ups** (`ui/home/Reminder.kt`). The hour is one of five presets (8 am to 9 pm), not a
+  clock picker: add one if players ask. Home's one offer counts the days of the boards solved, so an archive board can
+  stand in for a second day; read the day a solve was made instead once completions record it (WS6). *S.*
 - [ ] **Snap depth gate:** not possible yet. Snap has no teacher (a whole-board deducer leaves the real choices to a
   13-joint what-if; `docs/TEACHING.md`).
 
@@ -253,8 +259,9 @@ but do not demand thought, against the owner's stated taste. (A crossword was he
 hand-written clues are one now, see the council list.) Curated themed puzzles (four groups of four, themed word hunts)
 were declined by the owner (2026-10-25): a shipped list runs out and would need revisiting every year.
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
-A practice mode per technique was declined by the owner: players can use the hints themselves, and it would
-only spend their time railroaded through a tutorial.
+A practice mode per technique, once declined, is now wanted (2026-10-26): Training, piloted on Sudoku
+(`docs/TRAINING_SPEC.md`). Open after the pilot: where it lives (Settings for now), other puzzles, and keeping a
+half-played final board when the player leaves it.
 
 ## Owner's call
 

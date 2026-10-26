@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -39,16 +40,15 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.puzzles.CodewordLogic.EMPTY
+import com.joebywan.daybook.puzzles.CodewordLogic.up
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.ring
-import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
-import com.joebywan.daybook.ui.boardSp
 
 /**
  * A Codeword in play. [numbers] (a number 1..k per square, 0 for black), [solution] (a letter 0..25 per number, index
@@ -148,12 +148,9 @@ object Codeword : PuzzleType {
 
     // ---- drawing ---------------------------------------------------------------------------
 
-    private fun up(l: Int) = ('A' + l).toString()
+    private val TEXT = CrosswordText(corner = 0.27f, cornerLine = 0.3f, letter = 0.5f, letterLine = 0.55f, letterTop = 0.12f)
 
-    /**
-     * The grid: black squares, and white ones with their number in the corner and their letter, once placed, in the
-     * middle. [tint] colours a white square; [modifier] adds to each (index, number).
-     */
+    /** [CrosswordGrid] read by number: [letterColour] and [squareModifier] take a square's number. */
     @Composable
     private fun Grid(
         s: CodewordState,
@@ -163,48 +160,18 @@ object Codeword : PuzzleType {
         modifier: Modifier = Modifier,
         feel: MoveFeel = MoveFeel.Still,
         squareModifier: @Composable (index: Int, number: Int) -> Modifier = { _, _ -> Modifier },
-    ) {
-        val scheme = MaterialTheme.colorScheme
-        val dark = BoardHues.isDark(scheme)
-        // Blocks: near-black on the light card, nearly the background in the dark (the white squares carry the grid).
-        val block = if (dark) scheme.background else scheme.onSurface.copy(alpha = 0.85f)
-        val n = s.size
-        Box(modifier.size(square * n)) {
-            for (i in s.numbers.indices) {
-                val number = s.numbers[i]
-                val at = Modifier.padding(start = square * (i % n), top = square * (i / n)).size(square)
-                if (number == 0) {
-                    Box(at.padding(0.5.dp).background(block))
-                    continue
-                }
-                val letter = s.letters[number - 1]
-                Box(
-                    at
-                        .moveFeel(feel, i, Color(accent))
-                        .then(squareModifier(i, number))
-                        .padding(0.5.dp)
-                        .clip(RoundedCornerShape(minOf(4.dp, square * 0.1f)))
-                        .background(tint(i)),
-                ) {
-                    if (square >= 14.dp) Text(
-                        number.toString(),
-                        Modifier.align(Alignment.TopStart).padding(start = square * 0.07f),
-                        fontSize = (square * 0.27f).boardSp(),
-                        lineHeight = (square * 0.3f).boardSp(),
-                        color = scheme.onSurfaceVariant,
-                    )
-                    if (letter != EMPTY) Text(
-                        up(letter),
-                        Modifier.align(Alignment.Center).padding(top = square * 0.12f),
-                        fontSize = (square * 0.5f).boardSp(),
-                        lineHeight = (square * 0.55f).boardSp(),
-                        fontWeight = if (number in s.given) FontWeight.Bold else FontWeight.Medium,
-                        color = letterColour(number),
-                    )
-                }
-            }
-        }
-    }
+    ) = CrosswordGrid(
+        s.size, square, TEXT, Color(accent),
+        black = { s.numbers[it] == 0 },
+        number = { s.numbers[it] },
+        letter = { i -> s.letters[s.numbers[i] - 1].takeIf { it != EMPTY }?.let(::up) },
+        tint = tint,
+        letterColour = { letterColour(s.numbers[it]) },
+        modifier = modifier,
+        bold = { s.numbers[it] in s.given },
+        feel = feel,
+        squareModifier = { squareModifier(it, s.numbers[it]) },
+    )
 
     // ---- home-grid motif -------------------------------------------------------------------
 
@@ -324,11 +291,11 @@ object Codeword : PuzzleType {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
                             ) {
-                                Text(n.toString(), fontSize = 9.dp.boardSp(), lineHeight = 10.dp.boardSp(), color = scheme.onSurfaceVariant)
+                                Text(n.toString(), fontSize = 9.sp, lineHeight = 10.sp, color = scheme.onSurfaceVariant)
                                 Text(
                                     if (l == EMPTY) "·" else up(l),
-                                    fontSize = 14.dp.boardSp(),
-                                    lineHeight = 16.dp.boardSp(),
+                                    fontSize = 14.sp,
+                                    lineHeight = 16.sp,
                                     fontWeight = if (given) FontWeight.Bold else FontWeight.Medium,
                                     color = when {
                                         n in shown.numbers -> scheme.error
@@ -371,12 +338,12 @@ object Codeword : PuzzleType {
                                     },
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(up(l), fontSize = 16.dp.boardSp(), lineHeight = 16.dp.boardSp() * 1.2f, color = if (owner != null) scheme.outline else scheme.onSurface)
+                                Text(up(l), fontSize = 16.sp, color = if (owner != null) scheme.outline else scheme.onSurface)
                                 if (owner != null) Text(
                                     owner.toString(),
                                     Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp),
-                                    fontSize = 9.dp.boardSp(),
-                                    lineHeight = 10.dp.boardSp(),
+                                    fontSize = 9.sp,
+                                    lineHeight = 10.sp,
                                     color = scheme.outline,
                                 )
                             }

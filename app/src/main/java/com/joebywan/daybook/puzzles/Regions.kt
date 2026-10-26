@@ -4,18 +4,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,11 +42,10 @@ import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.digitKeyAction
 import com.joebywan.daybook.core.highlightGrid
-import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.PAD_GAP
-import com.joebywan.daybook.ui.PAD_HEIGHT
-import com.joebywan.daybook.ui.PadKey
+import com.joebywan.daybook.ui.DigitPadRow
+import com.joebywan.daybook.ui.padBoardSide
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.ring
@@ -356,11 +352,7 @@ object Regions : PuzzleType {
                 },
             contentAlignment = Alignment.Center,
         ) {
-            val side = if (constraints.hasBoundedHeight) {
-                minOf(maxWidth, (maxHeight - PAD_GAP - PAD_HEIGHT).coerceAtLeast(0.dp))
-            } else {
-                maxWidth
-            }
+            val side = padBoardSide()
             val slot = side / n
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.size(side).highlightGrid(n, n)) {
@@ -410,24 +402,9 @@ object Regions : PuzzleType {
 
                 Spacer(Modifier.height(PAD_GAP))
 
-                Row(
-                    Modifier.width(side).keepClear(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    (1..digits).forEach { digit ->
-                        val at = s.selected
-                        PadKey(
-                            RegionsTeacher.pad(digit), highlight, glow, pulse,
-                            fill = scheme.surface,
-                            enabled = interactive && at != null,
-                            onClick = {
-                                val next = s.enter(at ?: return@PadKey, digit)
-                                if (next !== s) onState(next)
-                            },
-                        ) {
-                            Text(digit.toString(), style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-                        }
-                    }
+                DigitPadRow(side, digits, RegionsTeacher::pad, highlight, glow, pulse, enabled = interactive && s.selected != null) { digit ->
+                    val next = s.enter(s.selected ?: return@DigitPadRow, digit)
+                    if (next !== s) onState(next)
                 }
             }
         }

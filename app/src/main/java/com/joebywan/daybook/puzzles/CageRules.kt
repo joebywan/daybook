@@ -108,15 +108,9 @@ internal object CageLogic {
         return bad
     }
 
-    fun cageCells(cageOf: List<Int>): Array<IntArray> {
-        val n = cageOf.max() + 1
-        val count = IntArray(n)
-        for (k in cageOf) count[k]++
-        val out = Array(n) { IntArray(count[it]) }
-        val at = IntArray(n)
-        for (i in cageOf.indices) out[cageOf[i]][at[cageOf[i]]++] = i
-        return out
-    }
+    /** Each cage's squares in reading order. */
+    fun cageCells(cageOf: List<Int>): Array<IntArray> =
+        Array(cageOf.max() + 1) { k -> cageOf.indices.filter { cageOf[it] == k }.toIntArray() }
 
     // ---- the board the logic works on --------------------------------------------------------------------
 

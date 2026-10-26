@@ -37,14 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -296,7 +294,6 @@ object WhosWho : PuzzleType {
         val glow: Color,
         val pulse: State<Float>,
     ) {
-        val lit get() = !highlight.isEmpty
         fun named(i: Int) = i in highlight.strong || i in highlight.soft
     }
 
@@ -600,25 +597,6 @@ object WhosWho : PuzzleType {
     }
 
     /** A tick in the square of side [w] at [at]. */
-    /** A tick in the square of side [w] at [at]. */
-    /** The hint's ring on a highlighted cell or clue, read in the draw phase so the pulse does not recompose the board. */
-    private fun Modifier.glow(look: Look, index: Int, corner: Dp): Modifier {
-        if (!look.lit) return this
-        val strong = index in look.highlight.strong
-        if (!strong && index !in look.highlight.soft) return this
-        return drawWithContent {
-            drawContent()
-            val w = (if (strong) 3.dp else 2.dp).toPx()
-            drawRoundRect(
-                look.glow.copy(alpha = if (strong) look.pulse.value else 0.5f),
-                Offset(w / 2, w / 2),
-                Size(size.width - w, size.height - w),
-                CornerRadius(corner.toPx()),
-                style = Stroke(w),
-            )
-        }
-    }
-
     private fun DrawScope.drawTick(colour: Color, alpha: Float, at: Offset = Offset.Zero, w: Float = size.width) {
         val stroke = maxOf(w * 0.16f, 1.5f)
         val p = { x: Float, y: Float -> Offset(at.x + w * x, at.y + w * y) }

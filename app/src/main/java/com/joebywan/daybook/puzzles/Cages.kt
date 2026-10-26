@@ -102,11 +102,11 @@ object Cages : PuzzleType {
     override val tagline = "Sudoku where dashed cages must add up"
     override val accent = 0xFF6E66CC
     override val rules = listOf(
-        "Fill every cell with a digit from 1 to 9, as in Sudoku: no repeat in a row, a column or a 3x3 box.",
+        "Fill every square with a digit from 1 to 9, as in Sudoku: no repeat in a row, a column or a 3x3 box.",
         "The dashed outlines are cages. The digits in a cage add up to the small number in its corner, " +
             "and a cage never repeats a digit.",
-        "Tap a cell, then tap a digit. Tap the digit again to clear it.",
-        "Tap the pencil to take notes: while it is lit, a digit is pencilled small in the cell " +
+        "Tap a square, then tap a digit. Tap the digit again to clear it.",
+        "Tap the pencil to take notes: while it is lit, a digit is pencilled small in the square " +
             "instead of placed.",
         "Clashing digits, and cages that are over their total or finished wrong, are shown in red.",
         "Every row, column and box adds up to 45. That can tell you what the cages leave out, or spill into.",

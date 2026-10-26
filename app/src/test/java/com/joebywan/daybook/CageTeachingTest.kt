@@ -23,21 +23,15 @@ class CageTeachingTest {
             ?: error("no proved board for day $day ${d.name}")
 
     /** Applies each hint until solved; every step must agree with the (unique) answer and change something. */
-    private fun walk(s: CageState, onStep: (String) -> Unit = {}): CageState {
-        var now = s
-        var guard = 0
-        while (!now.solved) {
-            val d = Cages.teach(now) ?: error("no step on an unsolved board")
-            assertFalse("unexpected mistake: ${d.explanation}", d.mistake)
-            onStep(d.technique)
-            val next = d.apply(now) as CageState
-            for (t in d.targets) assertEquals("${d.technique} is wrong at $t", s.grid.solution[t], next.cells[t])
-            assertNotEquals("a step must change something", now.cells, next.cells)
-            assertTrue(d.isReached(next))
-            now = next
-            assertTrue("walk does not end", ++guard <= 90)
-        }
-        return now
+    private fun walk(s: CageState, onStep: (String) -> Unit = {}): CageState = hintWalk(s, 90) { now ->
+        val d = Cages.teach(now) ?: error("no step on an unsolved board")
+        assertFalse("unexpected mistake: ${d.explanation}", d.mistake)
+        onStep(d.technique)
+        val next = d.apply(now) as CageState
+        for (t in d.targets) assertEquals("${d.technique} is wrong at $t", s.grid.solution[t], next.cells[t])
+        assertNotEquals("a step must change something", now.cells, next.cells)
+        assertTrue(d.isReached(next))
+        next
     }
 
     @Test
@@ -121,16 +115,14 @@ class CageTeachingTest {
             val at = s.grid.givens.indices.first { !s.grid.givens[it] }
             val wrong = (1..9).first { it != s.grid.solution[at] }
             for (state in listOf(s, s.withCell(at, wrong))) {
-                var cur = state
-                var guard = 0
-                while (!cur.solved && guard++ < 90) {
+                hintWalk(state, 90) { cur ->
                     val step = CageTeacher.teach(cur)!!
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= 70)
                     val limit = if (step.technique == CageTeacher.LINKED_TOTALS) CageTeacher.MAX_LINKED_EXPLANATION else CageTeacher.MAX_EXPLANATION
                     assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= limit)
                     longest = maxOf(longest, step.explanation.length)
                     nudge = maxOf(nudge, step.nudge.length)
-                    cur = Cages.teach(cur)!!.apply(cur) as CageState
+                    Cages.teach(cur)!!.apply(cur) as CageState
                 }
             }
         }
@@ -159,10 +151,9 @@ class CageTeachingTest {
     fun `linked totals hold in every answer the oracle finds`() {
         var checked = 0
         for (d in listOf(Difficulty.HARD, Difficulty.EXPERT)) for (day in 0 until 30) {
-            var now = board(day, d)
-            var guard = 0
             var here = 0
-            while (!now.solved && guard++ < 90 && here < 2) {
+            hintWalk(board(day, d), 90) { now ->
+                if (here == 2) return@hintWalk null
                 val step = CageTeacher.teach(now)!!
                 if (step.technique == CageTeacher.LINKED_TOTALS) {
                     val answers = CageOracle.all(now.cageOf, now.sums, now.cells, limit = 5)
@@ -171,7 +162,7 @@ class CageTeachingTest {
                     checked++
                     here++
                 }
-                now = Cages.teach(now)!!.apply(now) as CageState
+                Cages.teach(now)!!.apply(now) as CageState
             }
         }
         println("linked totals checked against the oracle: $checked")
@@ -195,20 +186,19 @@ class CageTeachingTest {
             val answers = CageOracle.all(cageOf, sums, cells, limit = 30)
             if (answers.size < 2 || answers.size >= 30) continue
             boards++
-            var now = CageState(
+            val start = CageState(
                 SudokuState(givens = List(81) { it in givens }, cells = cells, solution = solution),
                 cageOf, sums,
             )
-            var guard = 0
-            while (!now.solved && guard++ < 90) {
-                val step = Cages.teach(now) ?: break
-                if (step.fallback) break
+            hintWalk(start, 90) { now ->
+                val step = Cages.teach(now) ?: return@hintWalk null
+                if (step.fallback) return@hintWalk null
                 for (t in step.targets) {
                     val digit = (step.apply(now) as CageState).cells[t]
                     for (a in answers) assertEquals("${step.technique} at $t", a[t], digit)
                 }
                 steps++
-                now = step.apply(now) as CageState
+                step.apply(now) as CageState
             }
         }
         println("multi-answer check: $boards boards, $steps steps")

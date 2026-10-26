@@ -37,11 +37,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
@@ -60,7 +58,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -84,17 +81,13 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.joebywan.daybook.core.Streak
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.LevelProgress
@@ -174,7 +167,7 @@ fun HomeScreen(
     onLaunch: (String) -> Unit,
     levels: LevelProgress,
     onLevels: () -> Unit,
-    onArchive: (String) -> Unit,
+    onArchive: () -> Unit,
     onStats: () -> Unit,
     onAchievements: () -> Unit,
     onSettings: () -> Unit,
@@ -194,7 +187,6 @@ fun HomeScreen(
             .toSet()
     }
     val streak = remember(completions, today) { Stats.streak(completions, today) }
-    var pickingArchive by rememberSaveable { mutableStateOf(false) }
 
     // What the header and the pinned rows take, so the grid knows the height left for its tiles (homeColumns).
     var headerHeight by remember { mutableStateOf(0) }
@@ -247,7 +239,7 @@ fun HomeScreen(
                     compact = short,
                     today = today,
                     streak = streak,
-                    onArchive = { pickingArchive = true },
+                    onArchive = onArchive,
                     onStats = onStats,
                     onAchievements = onAchievements,
                     onSettings = onSettings,
@@ -300,19 +292,10 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
                 )
             }
+            item { ReminderOffer(completions, today) }
             item { GetTheAppCard() }
         }
         TierFlash(flash, Modifier.align(Alignment.Center))
-    }
-
-    if (pickingArchive) {
-        ArchivePicker(
-            onPick = { puzzleId ->
-                pickingArchive = false
-                onArchive(puzzleId)
-            },
-            onDismiss = { pickingArchive = false },
-        )
     }
 }
 
@@ -848,92 +831,6 @@ internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty
                             else -> scheme.outline.copy(alpha = 0.35f)
                         }
                     )
-            )
-        }
-    }
-}
-
-/**
- * One archive door for all eleven puzzles, instead of the icon that used to sit on every card.
- * The archive is a place you go occasionally and deliberately; it does not need to be one tap from
- * a screen whose job is starting today's game.
- */
-@Composable
-private fun ArchivePicker(onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    // The platform default dialog width leaves a puzzle name and its tagline fighting over about
-    // 280dp; this is a list to read, so it gets the width of the screen less a margin.
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(
-            Modifier
-                .padding(horizontal = 20.dp, vertical = 28.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(scheme.surface)
-                .padding(vertical = 18.dp),
-        ) {
-            Text(
-                "Open an archive",
-                style = MaterialTheme.typography.titleLarge,
-                color = scheme.onSurface,
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
-            Text(
-                "Every past day of any puzzle, free.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
-            Spacer(Modifier.height(10.dp))
-            Column(
-                Modifier
-                    // fill = false so the dialog stays as short as the list on a tall screen and
-                    // only the list gives way on a short one.
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                PuzzleRegistry.all.forEach { puzzle ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onPick(puzzle.id) }
-                            .padding(horizontal = 20.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        puzzle.Preview(
-                            Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                        )
-                        Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                puzzle.displayName,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = scheme.onSurface,
-                            )
-                            // The taglines lost their home when the cards went; this is the one
-                            // place left that explains what a motif in the grid actually is.
-                            Text(
-                                puzzle.tagline,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = scheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "Cancel",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = scheme.primary,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .clip(RoundedCornerShape(50))
-                    .clickable(onClick = onDismiss)
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
             )
         }
     }

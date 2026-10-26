@@ -19,22 +19,16 @@ class TentsTeachingTest {
             ?: error("no proved board for day $day ${d.name}")
 
     /** Every step's conclusion must hold in the (unique) answer; applies each until solved. */
-    private fun walk(s: TentsState, onStep: (String) -> Unit = {}): TentsState {
-        var now = s
-        var guard = 0
-        while (!now.solved) {
-            val d = TentsTeacher.deduction(now) ?: error("no step on an unsolved board")
-            assertFalse("unexpected mistake", d.mistake)
-            onStep(d.technique)
-            val tent = TentsTeacher.teach(now)!!.value == TentsLogic.TENT
-            for (t in d.targets) assertEquals("${d.technique} is wrong at $t", tent, s.solution[t])
-            val next = d.apply(now) as TentsState
-            assertNotEquals("a step must change something", now.marks, next.marks)
-            assertTrue(d.isReached(next))
-            now = next
-            assertTrue("walk does not end", ++guard <= 400)
-        }
-        return now
+    private fun walk(s: TentsState, onStep: (String) -> Unit = {}): TentsState = hintWalk(s, 400) { now ->
+        val d = TentsTeacher.deduction(now) ?: error("no step on an unsolved board")
+        assertFalse("unexpected mistake", d.mistake)
+        onStep(d.technique)
+        val tent = TentsTeacher.teach(now)!!.value == TentsLogic.TENT
+        for (t in d.targets) assertEquals("${d.technique} is wrong at $t", tent, s.solution[t])
+        val next = d.apply(now) as TentsState
+        assertNotEquals("a step must change something", now.marks, next.marks)
+        assertTrue(d.isReached(next))
+        next
     }
 
     @Test
@@ -117,14 +111,12 @@ class TentsTeachingTest {
             val s = board(day, d)
             val at = s.trees.indices.first { !s.trees[it] && !s.solution[it] }
             for (state in listOf(s, s.withMark(at, TentsLogic.TENT))) {
-                var cur = state
-                var guard = 0
-                while (!cur.solved && guard++ < 400) {
+                hintWalk(state, 400) { cur ->
                     val step = TentsTeacher.teach(cur)!!
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= TentsTeacher.MAX_NUDGE)
                     assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= TentsTeacher.MAX_EXPLANATION)
                     longest = maxOf(longest, step.explanation.length)
-                    cur = TentsTeacher.deduction(cur)!!.apply(cur) as TentsState
+                    TentsTeacher.deduction(cur)!!.apply(cur) as TentsState
                 }
             }
         }
@@ -168,15 +160,13 @@ class TentsTeachingTest {
             val all = answers.filter { a -> List(n) { r -> a.count { it / n == r } } == rows && List(n) { c -> a.count { it % n == c } } == cols }
             val s = TentsState(n, trees.toList(), rows, cols, List(n * n) { it in pick })
             boards++
-            var now = s
-            var guard = 0
-            while (!now.solved && guard++ < 100) {
+            hintWalk(s, 100) { now ->
                 val step = TentsTeacher.teach(now)!!
-                if (step.technique == TentsTeacher.FALLBACK) break
+                if (step.technique == TentsTeacher.FALLBACK) return@hintWalk null
                 assertNotNull(step)
                 for (a in all) for (t in step.targets) assertEquals("${step.technique} at $t", step.value == TentsLogic.TENT, t in a)
                 steps++
-                now = TentsTeacher.deduction(now)!!.apply(now) as TentsState
+                TentsTeacher.deduction(now)!!.apply(now) as TentsState
             }
         }
         println("multi-answer check: $boards boards, $steps steps")

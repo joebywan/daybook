@@ -1,12 +1,10 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * Every shipped LITS board has exactly one answer under the rules the win check enforces.
@@ -19,8 +17,7 @@ import java.time.LocalDate
 class LitsUniquenessTest {
 
     private fun daily(difficulty: Difficulty, days: Int): List<Long> {
-        val start = LocalDate.of(2026, 1, 1)
-        return (0 until days).map { DailySeed.seedFor(start.plusDays(it.toLong()), Lits.id, difficulty) }
+        return (0 until days).map { daySeed(it, Lits.id, difficulty) }
     }
 
     @Test

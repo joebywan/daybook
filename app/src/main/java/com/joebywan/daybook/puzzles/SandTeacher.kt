@@ -238,7 +238,7 @@ internal object SandTeacher {
     private fun back(s: SandState, technique: String): Step? {
         val (nudge, why) = when (technique) {
             STUCK -> "No pours left." to "No pour is possible, and the board is not sorted."
-            UNSURE -> "I can't see a way through from here quickly." to "I can't find a way through from here quickly; try undoing."
+            UNSURE -> "There's no quick way through from here." to "There's no quick way through from here. Try undoing a few pours."
             else -> "This board can no longer be sorted." to "No order of pours sorts this board now."
         }
         badPour(s)?.let { j ->

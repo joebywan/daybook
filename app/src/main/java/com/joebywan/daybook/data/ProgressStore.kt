@@ -30,6 +30,11 @@ private val SavedJson = Json { ignoreUnknownKeys = true }
  * One finished puzzle.
  *
  * [day] is null for practice games, which count toward totals but never toward streaks.
+ *
+ * [playedOn] is the date the solve was made, stored from the build that stopped archive solves counting toward the
+ * streak. It is null on every record from before then, and such a record counts as it always did: there is no telling
+ * an old archive solve from an old on-the-day one. It is written as a sixth field only when known, so an old record
+ * encodes exactly as it was written.
  */
 data class Completion(
     val puzzleId: String,
@@ -37,21 +42,30 @@ data class Completion(
     val day: LocalDate?,
     val seconds: Int,
     val hints: Int,
+    val playedOn: LocalDate? = null,
 ) {
+    /**
+     * The day this solve keeps a streak alive: a daily solved on its own day (or an old record, see [playedOn]), else
+     * null. An archive solve still counts for totals, best times and the archive's own marks, never for the streak.
+     */
+    val streakDay: LocalDate? get() = day?.takeIf { playedOn == null || playedOn == it }
+
     fun encode(): String =
-        listOf(puzzleId, difficulty.name, day?.toEpochDays()?.toString() ?: "-", seconds, hints)
+        (listOf(puzzleId, difficulty.name, day?.toEpochDays()?.toString() ?: "-", seconds, hints) + listOfNotNull(playedOn?.toEpochDays()))
             .joinToString("|")
 
     companion object {
+        /** Reads the old five-field record and the newer one ending in [playedOn]; anything else is null. */
         fun decode(raw: String): Completion? {
             val parts = raw.split("|")
-            if (parts.size != 5) return null
+            if (parts.size !in 5..6) return null
             return Completion(
                 puzzleId = parts[0],
                 difficulty = Difficulty.fromKey(parts[1]),
                 day = parts[2].toLongOrNull()?.let { LocalDate.fromEpochDays(it) },
                 seconds = parts[3].toIntOrNull() ?: return null,
                 hints = parts[4].toIntOrNull() ?: return null,
+                playedOn = parts.getOrNull(5)?.let { LocalDate.fromEpochDays(it.toLongOrNull() ?: return null) },
             )
         }
     }
@@ -219,9 +233,10 @@ object SavedGames {
 
     /**
      * Random games mint a fresh seed every time they are started, so without a ceiling the store
-     * would grow a board for every game ever abandoned. One resumable game per puzzle and tier (15+ puzzles x 3) plus recent dailies must fit.
+     * would grow a board for every game ever abandoned. One resumable random game per puzzle and tier must fit, and as
+     * many again for unfinished dailies, archive days and level boards; derived, so a new puzzle raises it.
      */
-    const val KEEP = 64
+    val KEEP = PuzzleRegistry.all.size * Difficulty.entries.size * 2
 
     fun find(all: List<StoredGame>, key: String): SavedGame? =
         all.firstOrNull { it.key == key }?.game
@@ -466,9 +481,9 @@ data class PuzzleTechniques(val puzzleId: String, val techniques: List<MetTechni
 /** Derived numbers for the stats screen. Pure, so it is trivially testable. */
 object Stats {
 
-    /** Streak over the days a daily puzzle was solved (practice games have no day). See [streakOf]. */
+    /** Streak over the days a daily was solved on its own day ([Completion.streakDay]). See [streakOf]. */
     fun streak(all: List<Completion>, today: LocalDate): Streak =
-        streakOf(all.mapNotNull { it.day }.toSet(), today)
+        streakOf(all.mapNotNull { it.streakDay }.toSet(), today)
 
     /** The time of the best solve in [KeptCard.beats]' order (fewest hints, then fastest), so it matches the Best card. */
     fun bestTime(all: List<Completion>, puzzleId: String, difficulty: Difficulty): Int? =

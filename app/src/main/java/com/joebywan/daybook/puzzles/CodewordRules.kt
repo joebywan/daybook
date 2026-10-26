@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.bit
 
 /**
  * The words a Codeword grid is made of and judged by: Word Wheel's grid lists ([WheelWords.grid], Lexicon's answer
@@ -67,6 +68,9 @@ internal object CodewordLogic {
 
     fun letterKey(letter: Int): Int = LETTER + letter
 
+    /** Letter [l] (0 = A) as the player sees it. */
+    fun up(l: Int) = ('A' + l).toString()
+
     /** Every across run, then every down run, each as its squares in reading order. Runs of one square are not words. */
     fun runs(size: Int, numbers: List<Int>): List<IntArray> {
         val out = mutableListOf<IntArray>()
@@ -99,7 +103,7 @@ internal object CodewordLogic {
     fun conflicts(size: Int, numbers: List<Int>, letters: List<Int>): Conflicts {
         val twins = (1..letters.size).filter { n -> letters[n - 1] != EMPTY && letters.indices.any { it != n - 1 && letters[it] == letters[n - 1] } }.toSet()
         var held = 0
-        for (l in letters) if (l != EMPTY) held = held or (1 shl l)
+        for (l in letters) if (l != EMPTY) held = held or bit(l)
         val dead = mutableSetOf<Int>()
         runs(size, numbers).forEachIndexed { r, run ->
             val nums = IntArray(run.size) { numbers[run[it]] }
@@ -110,7 +114,7 @@ internal object CodewordLogic {
                 list.shapes[w] == shape && nums.indices.all { i ->
                     val have = letters[nums[i] - 1]
                     val c = list.letters[w][i]
-                    if (have != EMPTY) have == c else held and (1 shl c) == 0
+                    if (have != EMPTY) have == c else held and bit(c) == 0
                 }
             }
             if (!fits) dead += r
@@ -139,8 +143,8 @@ internal object CodewordLogic {
         val assign = known.toIntArray()
         var used = 0
         for (l in assign) if (l != EMPTY) {
-            if (used and (1 shl l) != 0) return Verdict.None
-            used = used or (1 shl l)
+            if (used and bit(l) != 0) return Verdict.None
+            used = used or bit(l)
         }
         var found = 0
         var first: List<Int>? = null
@@ -155,9 +159,9 @@ internal object CodewordLogic {
                 if (assign[n] != EMPTY) {
                     if (assign[n] != c) { ok = false; break }
                 } else if (local[n] == EMPTY) {
-                    if ((used or taken) and (1 shl c) != 0) { ok = false; break }
+                    if ((used or taken) and bit(c) != 0) { ok = false; break }
                     local[n] = c
-                    taken = taken or (1 shl c)
+                    taken = taken or bit(c)
                 }
                 // A repeat of an open number agrees by shape.
             }
@@ -197,11 +201,11 @@ internal object CodewordLogic {
                 val opened = ArrayList<Int>()
                 for (i in run.indices) if (assign[run[i]] == EMPTY) {
                     assign[run[i]] = list.letters[w][i]
-                    used = used or (1 shl list.letters[w][i])
+                    used = used or bit(list.letters[w][i])
                     opened += run[i]
                 }
                 search()
-                for (n in opened) { used = used and (1 shl assign[n]).inv(); assign[n] = EMPTY }
+                for (n in opened) { used = used and bit(assign[n]).inv(); assign[n] = EMPTY }
                 if (found >= 2) return
             }
         }
@@ -243,10 +247,7 @@ internal object CodewordLogic {
 
     fun parse(entry: String): Entry {
         val squares = entry.substringBefore(':')
-        var size = 0
-        while (size * size < squares.length) size++
-        require(size * size == squares.length) { "not a square grid: $entry" }
-        return Entry(size, squares, entry.substringAfter(':'))
+        return Entry(MiniLogic.sizeOf(squares), squares, entry.substringAfter(':'))
     }
 
     /**

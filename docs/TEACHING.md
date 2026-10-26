@@ -65,7 +65,7 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
   and 375x537, light and dark: the board's box is identical before and after, and the tiles take taps
   over the board's raw-pointer canvas, which is switched off once solved.) The tiles come from the pure `nextOptions(daily, tier,
   doneTiers)` in `ui/play/NextSteps.kt` (`NextStepsTest`): a random board offers Another/Easier/Harder/
-  Done; a daily offers Easier Daily/Random/Harder Daily/Done, skipping tiers already done *that date*
+  Done; a daily offers Easier daily/Random/Harder daily/Done, skipping tiers already done *that date*
   (`tiersDoneOn(completions, puzzle, day)`; random games never count) and counting the tier just played
   as done, because `onSolved` records it asynchronously. A Daily tile keeps the route's `day`, so on an
   archive day it is that past date's board.
@@ -261,8 +261,8 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   58% of 9x9 draws. Now Standard is untouched, Hard must take at least two locked steps and Expert at least six; givens fell
   from 21.6 / 19.1% to 19.1 / 16.6% of squares on Hard / Expert.
 
-**Snap feasibility.** `SnapDeducerReportTest` (same switch; `build/reports/snap-deducer.txt`) prototypes a whole-board
-deducer in test code: every joint between neighbours in, out or unknown; *degree* (two joints a square, one at the 1 and
+**Snap feasibility.** A test-code prototype (`SnapDeducerReportTest`, since deleted; in git history) tried a whole-board
+deducer: every joint between neighbours in, out or unknown; *degree* (two joints a square, one at the 1 and
 at the highest number: a square with two usable joints uses both), *pieces* (no joint closing a loop, joining the two
 ends' pieces early, or putting the numbers along a piece out of order: a piece holds consecutive numbers in order) and
 *pockets* (the usable joints stay connected, a bridge must be used, a square that cuts the board in two uses one joint into

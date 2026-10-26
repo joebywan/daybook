@@ -34,26 +34,20 @@ class TargetTeachingTest {
     }
 
     /** Takes each hint in turn until solved; every step must keep the target reachable and shorten the road by exactly one. */
-    private fun walk(s: TargetState, onStep: (String) -> Unit = {}): TargetState {
-        var now = s
-        var guard = 0
-        while (!now.solved) {
-            val d = TargetTeacher.deduction(now) ?: error("no step on an unsolved, reachable board")
-            assertFalse("unexpected mistake", d.mistake)
-            assertFalse(d.fallback)
-            onStep(d.technique)
-            val before = TargetOracle.minOps(now.tiles)[now.target]
-            assertTrue(before > 0)
-            val next = d.apply(now) as TargetState
-            assertEquals("a step is one operation", now.moves + 1, next.moves)
-            assertTrue(d.isReached(next))
-            assertFalse(d.isReached(now))
-            val after = if (next.solved) 0 else TargetOracle.minOps(next.tiles)[next.target]
-            assertEquals("the step must stay on a shortest road", before - 1, after)
-            now = next
-            assertTrue("walk does not end", ++guard <= 6)
-        }
-        return now
+    private fun walk(s: TargetState, onStep: (String) -> Unit = {}): TargetState = hintWalk(s, 6) { now ->
+        val d = TargetTeacher.deduction(now) ?: error("no step on an unsolved, reachable board")
+        assertFalse("unexpected mistake", d.mistake)
+        assertFalse(d.fallback)
+        onStep(d.technique)
+        val before = TargetOracle.minOps(now.tiles)[now.target]
+        assertTrue(before > 0)
+        val next = d.apply(now) as TargetState
+        assertEquals("a step is one operation", now.moves + 1, next.moves)
+        assertTrue(d.isReached(next))
+        assertFalse(d.isReached(now))
+        val after = if (next.solved) 0 else TargetOracle.minOps(next.tiles)[next.target]
+        assertEquals("the step must stay on a shortest road", before - 1, after)
+        next
     }
 
     @Test
@@ -175,14 +169,12 @@ class TargetTeachingTest {
             val s = board(day, d)
             val lost = successors(s).firstOrNull { (_, _, n) -> !n.solved && TargetOracle.minOps(n.tiles)[n.target] < 0 }?.third
             for (state in listOfNotNull(s, lost)) {
-                var cur = state
-                var guard = 0
-                while (!cur.solved && guard++ < 8) {
-                    val step = TargetTeacher.teach(cur) ?: break
+                hintWalk(state, 8) { cur ->
+                    val step = TargetTeacher.teach(cur) ?: return@hintWalk null
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= TargetTeacher.MAX_NUDGE)
                     assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= TargetTeacher.MAX_EXPLANATION)
                     longest = maxOf(longest, step.explanation.length)
-                    cur = TargetTeacher.deduction(cur)!!.apply(cur) as TargetState
+                    TargetTeacher.deduction(cur)!!.apply(cur) as TargetState
                 }
             }
         }

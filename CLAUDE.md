@@ -40,7 +40,10 @@ All puzzles teach (Snap and Pointers through their walkthrough only; Pointers an
 section 7. The settled play-screen UX (popover, finish frame, solve sound) and the measured fallback table:
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
-never a drill): `docs/REWARDS.md` (Techniques). What must not be broken:
+never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: Sudoku's techniques
+practised on real positions found by walking generated boards by hints (`core/Training.kt`, `ui/training/`, its own
+`training_passed` key set, two appended achievements), opened from Settings and a Sudoku hint's "Practise this":
+`docs/TRAINING_SPEC.md`. What must not be broken:
 
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the panel confirms
   when `isReached` sees it. Only an explicit "Show me" applies it. **One hint is counted per deduction opened.**
@@ -819,13 +822,32 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths, 11 / 13 / 7, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
+  **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
+  once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,
+  Nonogram, Mines) and `STARTER_WORDS` (Lexicon, Word Wheel, Crossword, Target), the gentlest of each kind in
+  `PuzzleOrder.GENTLEST` (a test ties them). The achievement accepts either three for a day.
   The home row is always laid out at one height (unseen in Levels), so it never moves the grid.
 - **"Next puzzle today"** (`nextToday`, `NextKind.TODAY`) is offered only on today's daily opened from Home, and opens the next
   board as from Home, so back from it is Home, as from the board solved. Not on an archive board (its back is its own archive).
 - Set share cards (`threeShareCard`, `levelShareCard`) are derived from completions and `level_solves`; nothing new is stored.
   Share cards say what was done, never what is left (`REWARDS.md`).
+
+## Daily reminder (Android)
+
+One notification a day at the player's hour, off by default. Shared: `ui/home/Reminder.kt` (the text, the offer rule,
+Home's offer card), the three `reminder*` keys in `LaunchPreferences` (launch preferences, never progress), the row in
+Settings. Android: `platform/AndroidReminder.kt` (in `web/build.gradle.kts`'s `androidOnly`); the web has
+`OFFERS_REMINDER = false` and stubs, since a closed page cannot notify.
+
+- **Asked once.** Home shows one card under the grid after the first solve on a second day (`reminderOfferDue`) until the
+  player answers either way, then never again; a choice in Settings answers it too. Notification permission (Android 13+)
+  is requested only when the player turns the reminder on; refused, it stays off and Settings says why.
+- **No nagging.** One inexact `AlarmManager` alarm (`setAndAllowWhileIdle`, no exact-alarm permission, no dependency), set
+  again when it fires, on boot or update (`ReminderRestoreReceiver`) and on app open. When it fires it posts nothing if a
+  daily is solved today, the reminder is off, or it is before 5 am. The text (`reminderText`) greets for the time of day,
+  says how much of the day is left and invites; no streaks, no loss framing, no follow-ups (`ReminderTest` guards the words).
 
 ## Typography
 
@@ -883,9 +905,16 @@ restart and counted hint, and the share graphic is drawn from it. Append to it e
 Restart is undoable (except in Pointers and Mines, which have no Undo): it pushes the cleared board, and `SavedGame.restarts` marks where, so
 an Undo that crosses one logs `u` and `PlayLog.played` hands the restarted moves back.
 
+**The streak counts only dailies solved on their own day** (the owner). `Completion.playedOn` (a sixth field, absent from
+records written before it, which count as before) is when a solve was made; read `Completion.streakDay`, never `day`, for
+anything about the streak or days played. `day` is the board's date (archive marks, best times, "solved today"). `docs/REWARDS.md`.
+
 **Back goes where the screen was opened from** (`backFrom` in `ui/DaybookApp.kt`): an archive game returns to its archive at that
-day, for system back, the web's back, the BackButton and the finish frame's Done alike (`Route.Archive.day` is the selected day;
-the archive is a month calendar, `ui/archive/ArchiveScreen.kt`, opening on that day's month). Route strings only gain fields at the end,
+day, for system back, the web's back, the BackButton and the finish frame's Done alike. The archive opens by day (`Route.Days`,
+`ArchiveDaysScreen` in `ui/archive/ArchiveScreen.kt`: a month calendar over that day's puzzles, in the home grid's order, each tier
+one tap; it opens on yesterday), from Home's Archive button and from a tapped day on the streak calendar (`fromStats`, so the chain
+ends at Statistics). A puzzle's name there drills down to its own calendar (`Route.Archive`, `fromDays`). `fromDays`/`fromStats` ride
+on `Route.Play` so back walks the same chain. Route strings only gain fields at the end,
 read with `getOrNull`, so a route saved by an older build still decodes (`RouteTest`).
 
 **Feedback must not move the board.** Mambo's caption shifted it ~45dp when an error appeared,

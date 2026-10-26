@@ -49,14 +49,12 @@ import com.joebywan.daybook.puzzles.MiniLogic.BLACK
 import com.joebywan.daybook.puzzles.MiniLogic.OPEN
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
-import com.joebywan.daybook.ui.boardSp
 
 /**
  * A Mini crossword in play. [answer] (the filled grid in reading order, [BLACK] for a black square) and [clues] (one
@@ -216,10 +214,9 @@ object Mini : PuzzleType {
 
     // ---- drawing ---------------------------------------------------------------------------
 
-    /**
-     * The grid: black squares, and white ones with their clue number in the corner and their letter in the middle.
-     * [tint] colours a white square; [squareModifier] adds to each.
-     */
+    private val TEXT = CrosswordText(corner = 0.25f, cornerLine = 0.28f, letter = 0.52f, letterLine = 0.56f, letterTop = 0.1f)
+
+    /** [CrosswordGrid] read from the board's string, numbered by [MiniLogic.numbers]. */
     @Composable
     private fun Grid(
         size: Int,
@@ -231,43 +228,18 @@ object Mini : PuzzleType {
         feel: MoveFeel = MoveFeel.Still,
         squareModifier: @Composable (index: Int) -> Modifier = { Modifier },
     ) {
-        val scheme = MaterialTheme.colorScheme
-        val dark = BoardHues.isDark(scheme)
-        val block = if (dark) scheme.background else scheme.onSurface.copy(alpha = 0.85f)
         val numbers = remember(size, letters.map { it == BLACK }) { MiniLogic.numbers(size, letters) }
-        Box(modifier.size(square * size)) {
-            for (i in letters.indices) {
-                val at = Modifier.padding(start = square * (i % size), top = square * (i / size)).size(square)
-                if (letters[i] == BLACK) {
-                    Box(at.padding(0.5.dp).background(block))
-                    continue
-                }
-                Box(
-                    at
-                        .moveFeel(feel, i, Color(accent))
-                        .then(squareModifier(i))
-                        .padding(0.5.dp)
-                        .clip(RoundedCornerShape(minOf(4.dp, square * 0.1f)))
-                        .background(tint(i)),
-                ) {
-                    if (numbers[i] != 0 && square >= 14.dp) Text(
-                        numbers[i].toString(),
-                        Modifier.align(Alignment.TopStart).padding(start = square * 0.07f),
-                        fontSize = (square * 0.25f).boardSp(),
-                        lineHeight = (square * 0.28f).boardSp(),
-                        color = scheme.onSurfaceVariant,
-                    )
-                    if (letters[i] != OPEN) Text(
-                        letters[i].uppercase(),
-                        Modifier.align(Alignment.Center).padding(top = square * 0.1f),
-                        fontSize = (square * 0.52f).boardSp(),
-                        lineHeight = (square * 0.56f).boardSp(),
-                        fontWeight = FontWeight.Medium,
-                        color = letterColour(i),
-                    )
-                }
-            }
-        }
+        CrosswordGrid(
+            size, square, TEXT, Color(accent),
+            black = { letters[it] == BLACK },
+            number = { numbers[it] },
+            letter = { i -> letters[i].takeIf { it != OPEN }?.uppercase() },
+            tint = tint,
+            letterColour = letterColour,
+            modifier = modifier,
+            feel = feel,
+            squareModifier = squareModifier,
+        )
     }
 
     // ---- home-grid motif -------------------------------------------------------------------
@@ -438,7 +410,7 @@ object Mini : PuzzleType {
                 .clickable(enabled = enabled, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text(label, fontSize = (if (small) 12.dp else 16.dp).boardSp(), lineHeight = (if (small) 14.dp else 19.dp).boardSp(), fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant, maxLines = 1)
+            Text(label, fontSize = if (small) 12.sp else 16.sp, fontWeight = FontWeight.SemiBold, color = scheme.onSurfaceVariant, maxLines = 1)
         }
     }
 
