@@ -5,7 +5,8 @@ package com.joebywan.daybook
  * `SandLogic.solve` on every point the spec names: breadth-first, not depth-first; positions are the tubes in their own
  * order (no canonical sort, so two positions that differ only by swapping tubes are two positions); every legal pour is
  * tried (no pruning: a single-colour tube into an empty one, a pour into the second of two empty tubes and a pour straight
- * back are all expanded); no budget. So it is for small boards only.
+ * back are all expanded); no budget, only a [solve] limit past which it fails outright rather than answer. So it is for
+ * small boards only.
  *
  * The pour is written a layer at a time: lift the top grain while it is the colour that started the pour and the target
  * has room, which is "the whole run, or as much of it as fits" without ever computing a run or a room.
@@ -35,8 +36,11 @@ object SandOracle {
     fun isSolved(tubes: List<List<Int>>, height: Int): Boolean =
         tubes.all { t -> t.isEmpty() || (t.size == height && t.toSet().size == 1) }
 
-    fun hasPour(tubes: List<List<Int>>, height: Int): Boolean =
-        tubes.indices.any { f -> tubes.indices.any { t -> canPour(tubes, height, f, t) } }
+    fun hasPour(tubes: List<List<Int>>, height: Int): Boolean = pours(tubes, height).isNotEmpty()
+
+    /** Every legal pour, as (from, to). */
+    fun pours(tubes: List<List<Int>>, height: Int): List<Pair<Int, Int>> =
+        tubes.indices.flatMap { f -> tubes.indices.filter { t -> canPour(tubes, height, f, t) }.map { f to it } }
 
     /** "Not solved and no legal pour exists." */
     fun isStuck(tubes: List<List<Int>>, height: Int): Boolean = !isSolved(tubes, height) && !hasPour(tubes, height)
@@ -46,20 +50,22 @@ object SandOracle {
         val solvable get() = shortest != null
     }
 
-    fun solve(start: List<List<Int>>, height: Int): Result {
+    /** Throws, never answers, once it has seen more than [limit] positions: an unfinished search proves nothing. */
+    fun solve(start: List<List<Int>>, height: Int, limit: Int = Int.MAX_VALUE): Result {
         // Each position remembers the position and pour it was first reached by, so the road is read back from the end.
         val cameFrom = HashMap<List<List<Int>>, Pair<List<List<Int>>, Pair<Int, Int>>?>()
         cameFrom[start] = null
+        if (isSolved(start, height)) return Result(emptyList(), 1)
         var layer = listOf(start)
         while (layer.isNotEmpty()) {
-            for (p in layer) if (isSolved(p, height)) return Result(roadTo(p, cameFrom), cameFrom.size)
             val next = ArrayList<List<List<Int>>>()
             for (p in layer) for (f in p.indices) for (t in p.indices) {
                 val q = pour(p, height, f, t) ?: continue
-                if (q !in cameFrom) {
-                    cameFrom[q] = p to (f to t)
-                    next += q
-                }
+                if (q in cameFrom) continue
+                cameFrom[q] = p to (f to t)
+                if (isSolved(q, height)) return Result(roadTo(q, cameFrom), cameFrom.size)
+                check(cameFrom.size <= limit) { "past $limit positions from $start" }
+                next += q
             }
             layer = next
         }
@@ -83,4 +89,8 @@ object SandOracle {
         for ((f, t) in road) p = pour(p, height, f, t) ?: return null
         return p
     }
+
+    /** Whether [road] is legal pour by pour from [start] and ends solved. */
+    fun replays(start: List<List<Int>>, height: Int, road: List<Pair<Int, Int>>): Boolean =
+        replay(start, height, road)?.let { isSolved(it, height) } == true
 }

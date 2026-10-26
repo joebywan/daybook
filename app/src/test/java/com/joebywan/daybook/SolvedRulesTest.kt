@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Block
 import com.joebywan.daybook.puzzles.Shikaku
@@ -12,7 +11,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * Sudoku's and Shikaku's `solved` is the rules, not a comparison with the stored answer (Kings and
@@ -22,7 +20,6 @@ import java.time.LocalDate
  */
 class SolvedRulesTest {
 
-    private fun day(i: Int) = LocalDate.of(2026, 1, 1).plusDays(i.toLong())
 
     // ---- Sudoku: an independent checker ---------------------------------------------------------
 
@@ -41,7 +38,7 @@ class SolvedRulesTest {
         SudokuState(givens = givens, cells = cells, solution = solution)
 
     private fun sudokuBoards(): List<SudokuState> = Difficulty.entries.flatMap { d ->
-        (0 until 20).map { Sudoku.generate(DailySeed.seedFor(day(it), "sudoku", d), d) as SudokuState }
+        (0 until 20).map { Sudoku.generate(daySeed(it, "sudoku", d), d) as SudokuState }
     }
 
     /** The same grid with digits [a] and [b] exchanged: legal, and a different answer. */
@@ -154,7 +151,7 @@ class SolvedRulesTest {
     }
 
     private fun shikakuBoards(): List<ShikakuState> = Difficulty.entries.flatMap { d ->
-        (0 until 20).map { Shikaku.generate(DailySeed.seedFor(day(it), "shikaku", d), d) as ShikakuState }
+        (0 until 20).map { Shikaku.generate(daySeed(it, "shikaku", d), d) as ShikakuState }
     }
 
     /** 4 wide, 2 tall, a 4 at (0,0) and a 4 at (1,3): two 2x2 squares, or two 1x4 rows. */

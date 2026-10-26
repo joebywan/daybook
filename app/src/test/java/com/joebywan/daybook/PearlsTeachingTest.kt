@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Pearls
@@ -13,8 +12,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 /**
  * The Pearls hint solver. As for Tally and Nonogram: on real boards every step must agree with the stored
@@ -23,10 +20,6 @@ import java.time.LocalDate
  * ([PearlsOracle.answers]).
  */
 class PearlsTeachingTest {
-
-    private fun seeds(count: Int, difficulty: Difficulty, salt: String) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), salt, difficulty)
-    }
 
     private fun board(seed: Long, d: Difficulty) = PearlsLogic.generateVerified(seed, d)!!
 
@@ -114,7 +107,7 @@ class PearlsTeachingTest {
                     on
                 }
                 if (answers.size > 1) ambiguous++
-                val base = PearlsState(n, pearls, loop.toString())
+                val base = PearlsState(n, pearls, loop)
                 repeat(3) {
                     val marked = partial(base, rng, rng.nextInt(0, 5))
                     val possible = answers.filter { a ->
@@ -346,7 +339,6 @@ class PearlsTeachingTest {
             }
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/pearls-teaching-coverage.txt").writeText(report.toString())
+        writeReport("pearls-teaching-coverage.txt", report.toString())
     }
 }
