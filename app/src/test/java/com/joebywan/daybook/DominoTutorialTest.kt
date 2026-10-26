@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.DominoPick
 import com.joebywan.daybook.puzzles.DominoState
@@ -48,7 +49,7 @@ class DominoTutorialTest {
         assertEquals(1, answers.size)
         assertEquals(norm(s, s.answer), norm(s, answers.single()))
         val verdict = DominoLogic.solutions(s)
-        assertTrue(verdict is DominoLogic.Verdict.ExactlyOne)
+        assertTrue(verdict is Verdict.ExactlyOne)
         assertNotNull("the ladder finishes it", DominoTeacher.solveLevel(s.layout, DominoTeacher.LEVEL_WHAT_IF))
     }
 

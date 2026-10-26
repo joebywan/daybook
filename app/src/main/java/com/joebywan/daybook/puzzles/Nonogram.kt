@@ -43,13 +43,12 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.marked
 import com.joebywan.daybook.core.only
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
@@ -216,12 +215,7 @@ object Nonogram : PuzzleType {
         val step = NonogramTeacher.teach(s) ?: return null
         val before = s.cells
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == NonogramTeacher.MISTAKE,
             applyTo = { now -> applyStep(now as NonogramState, step) },
             reachedBy = { now ->
@@ -434,11 +428,7 @@ object Nonogram : PuzzleType {
         val cursor = remember(s.solution) { mutableStateOf<Int?>(null) }
         val clues = remember(s.solution) { NonogramLogic.clues(s) }
 
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // A rim that breathes is findable at a glance on a 15x15 board. Only runs while something
-        // glows, and is read in the draw phase.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         Column(
             Modifier

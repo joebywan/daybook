@@ -27,22 +27,19 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -50,6 +47,8 @@ import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.boardSp
 
 /** An axis-aligned block of cells, inclusive on both corners. */
 @Serializable
@@ -458,12 +457,7 @@ object Shikaku : PuzzleType {
         val s = state as ShikakuState
         val step = ShikakuTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == ShikakuTeacher.MISTAKE,
             fallback = step.technique == ShikakuTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as ShikakuState, step) },
@@ -513,7 +507,7 @@ object Shikaku : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
-        val dark = scheme.background.luminance() < 0.5f
+        val dark = BoardHues.isDark(scheme)
         BoxWithConstraints(modifier) {
             // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
             // shorter box than it is wide should shrink rather than draw its bottom row outside.
@@ -533,12 +527,8 @@ object Shikaku : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as ShikakuState
         val scheme = MaterialTheme.colorScheme
-        val dark = scheme.background.luminance() < 0.5f
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // Breathes, as the other teaching boards' do, so a glowing square is findable at a glance on
-        // a 9x11 board. Only runs while something glows, and is read in the draw phase.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val dark = BoardHues.isDark(scheme)
+        val (highlight, glow, pulse) = rememberHintPaint()
         // The squares a rectangle takes (or gives back) settle. No units: a rectangle is a move, not a line filled in.
         val feel = rememberMoveFeel(List(s.width * s.height) { s.blockAt(it / s.width, it % s.width) })
         var dragFrom by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -682,7 +672,7 @@ object Shikaku : PuzzleType {
             clue?.let {
                 Text(
                     it.toString(),
-                    fontSize = (cell.value * 0.46f).sp,
+                    fontSize = (cell * 0.46f).boardSp(), lineHeight = (cell * 0.46f).boardSp() * 1.2f,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )

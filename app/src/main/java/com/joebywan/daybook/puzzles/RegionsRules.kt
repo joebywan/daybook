@@ -2,6 +2,9 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.countMaskSolutions
+import com.joebywan.daybook.core.fullMask
+import com.joebywan.daybook.core.orthogonalReading
 
 /**
  * A grid cut into regions, as the rules see it: which squares share a region, how big each region
@@ -69,8 +72,6 @@ internal object RegionsLogic {
 
     const val MAX_REGION = 5
 
-    fun fullMask(size: Int): Int = (1 shl (size + 1)) - 2
-
     /** Filled squares breaking a rule: a digit above its region's size, a repeat in a region, or a touching repeat. */
     fun conflicts(layout: RegionsLayout, cells: List<Int>): Set<Int> {
         val bad = mutableSetOf<Int>()
@@ -93,13 +94,6 @@ internal object RegionsLogic {
     /** Retries with `Rng(seed + attempt)`; `FallbackTest` walks a year to see whether one is ever needed. */
     const val ATTEMPTS = 40
 
-    private fun orth(n: Int, i: Int): List<Int> = buildList {
-        if (i / n > 0) add(i - n)
-        if (i % n > 0) add(i - 1)
-        if (i % n < n - 1) add(i + 1)
-        if (i / n < n - 1) add(i + n)
-    }
-
     /**
      * Region sizes the layout draws from, as a weighted list (a size repeated is a size likelier).
      * A digit k appears once in every region of size k or more and never twice in a 2x2 window, so
@@ -112,7 +106,7 @@ internal object RegionsLogic {
         val grown = mutableListOf(start)
         while (grown.size < k) {
             val frontier = mutableListOf<Int>()
-            for (c in grown) for (o in orth(n, c)) if (region[o] == -1 && o !in grown && o !in frontier) frontier += o
+            for (c in grown) for (o in orthogonalReading(c, n)) if (region[o] == -1 && o !in grown && o !in frontier) frontier += o
             if (frontier.isEmpty()) break
             grown += rng.pick(frontier)
         }
@@ -200,13 +194,6 @@ internal object RegionsLogic {
         return true
     }
 
-    /** The unsettled square with fewest digits left, or -1 if every square is settled. */
-    private fun squarest(c: IntArray): Int {
-        var best = -1
-        for (i in c.indices) if (c[i].countOneBits() > 1 && (best < 0 || c[i].countOneBits() < c[best].countOneBits())) best = i
-        return best
-    }
-
     /**
      * The ladder a tier may use ([deepest], a rung of [RegionsTeacher.TECHNIQUES]) and how many locked-candidate steps its
      * walk must take ([needs]), as Tally's `Spec.needs`: a board whose walk takes fewer is redrawn.
@@ -288,21 +275,6 @@ internal object RegionsLogic {
     fun countSolutions(layout: RegionsLayout, given: List<Int>, limit: Int = 2): Int {
         val total = layout.n * layout.n
         val cand = IntArray(total) { if (given[it] == 0) fullMask(layout.sizeOf[it]) else (1 shl given[it]) and fullMask(layout.sizeOf[it]) }
-        var found = 0
-
-        fun search(c: IntArray) {
-            if (!settle(layout, c)) return
-            val best = squarest(c)
-            if (best < 0) { found++; return }
-            for (d in 1..layout.sizeOf[best]) {
-                if (c[best] and (1 shl d) == 0) continue
-                val next = c.copyOf()
-                next[best] = 1 shl d
-                search(next)
-                if (found >= limit) return
-            }
-        }
-        search(cand)
-        return found
+        return countMaskSolutions(cand, limit) { settle(layout, it) }
     }
 }

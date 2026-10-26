@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import kotlinx.serialization.Serializable
 
 /** One domino of the double-six set: [a] <= [b], each 0..6. */
@@ -235,12 +236,6 @@ internal object DominoLogic {
 
     // ---- the exhaustive count ---------------------------------------------------------------------
 
-    /** What an exhaustive count found. Only [ExactlyOne] carries an answer, so nothing else can be shipped as one. */
-    sealed interface Verdict {
-        data object None : Verdict
-        data class ExactlyOne(val placements: List<Placement>) : Verdict
-        data object Several : Verdict
-    }
 
     /**
      * Every way to lay the whole tray on [layout] keeping every rule, counted up to [limit], with no
@@ -249,7 +244,7 @@ internal object DominoLogic {
      * smallest and largest values the unused dominoes hold, EQUAL and DIFFERENT on what is covered.
      * A double counts once, not once each way round.
      */
-    fun solutions(layout: Layout, limit: Int = 2): Verdict {
+    fun solutions(layout: Layout, limit: Int = 2): Verdict<List<Placement>> {
         val n = layout.size
         val tray = layout.tray
         val d = tray.size
@@ -357,15 +352,10 @@ internal object DominoLogic {
             }
         }
         walk(d)
-        val a = answer
-        return when {
-            found == 0 -> Verdict.None
-            found == 1 && a != null -> Verdict.ExactlyOne(a)
-            else -> Verdict.Several
-        }
+        return Verdict.of(found) { answer!! }
     }
 
-    fun solutions(s: DominoState, limit: Int = 2): Verdict = solutions(s.layout, limit)
+    fun solutions(s: DominoState, limit: Int = 2): Verdict<List<Placement>> = solutions(s.layout, limit)
 
     // ---- generation -------------------------------------------------------------------------------
 
@@ -461,7 +451,7 @@ internal object DominoLogic {
         val level = DominoTeacher.solveLevel(layout, spec.needs) ?: return null
         if (level < spec.needs) return null
         val verdict = solutions(layout)
-        if (verdict !is Verdict.ExactlyOne || verdict.placements != answer) return null
+        if (verdict !is Verdict.ExactlyOne || verdict.value != answer) return null
         return DominoState(w, h, openList, layout.regionOf, layout.rules, tray, List(tray.size) { null }, answer)
     }
 

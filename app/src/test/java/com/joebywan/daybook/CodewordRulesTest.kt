@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.Codeword
 import com.joebywan.daybook.puzzles.CodewordLogic
 import com.joebywan.daybook.puzzles.CodewordLogic.EMPTY
@@ -96,15 +97,15 @@ class CodewordRulesTest {
             val known = s.letters
             assertEquals(1, CodewordOracle.count(s.size, s.numbers, known))
             val v = CodewordLogic.solve(s.size, s.numbers, known)
-            assertTrue(v is CodewordLogic.Verdict.ExactlyOne)
-            assertEquals(s.solution, (v as CodewordLogic.Verdict.ExactlyOne).letters)
+            assertTrue(v is Verdict.ExactlyOne)
+            assertEquals(s.solution, (v as Verdict.ExactlyOne).value)
         }
         // Small boards with several answers or none: the two must agree there too.
         val cat = grid("cat", "###", "###")
-        assertTrue(CodewordLogic.solve(3, cat.numbers, cat.letters) is CodewordLogic.Verdict.Several)
+        assertTrue(CodewordLogic.solve(3, cat.numbers, cat.letters) is Verdict.Several)
         assertEquals(2, CodewordOracle.count(3, cat.numbers, cat.letters))
         val noWord = CodewordState(3, listOf(1, 1, 1, 0, 0, 0, 0, 0, 0), listOf(0), emptyList(), listOf(EMPTY))
-        assertTrue(CodewordLogic.solve(3, noWord.numbers, noWord.letters) is CodewordLogic.Verdict.None)
+        assertTrue(CodewordLogic.solve(3, noWord.numbers, noWord.letters) is Verdict.None)
         assertEquals(0, CodewordOracle.count(3, noWord.numbers, noWord.letters))
     }
 
@@ -154,7 +155,7 @@ class CodewordRulesTest {
         for (d in Difficulty.entries) {
             val s = CodewordLogic.lastResort(d)
             assertEquals(CodewordLogic.specFor(d).size, s.size)
-            assertTrue(CodewordLogic.solve(s.size, s.numbers, s.letters) is CodewordLogic.Verdict.ExactlyOne)
+            assertTrue(CodewordLogic.solve(s.size, s.numbers, s.letters) is Verdict.ExactlyOne)
             assertTrue(CodewordTeacher.solvesByLogic(s.size, s.numbers, s.letters))
         }
     }

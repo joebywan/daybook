@@ -115,7 +115,7 @@ fun newlyEarned(
  */
 class ToGo(val id: String, val left: Int, val text: String)
 
-private fun steps(n: Int, one: String, many: String) = if (n == 1) "1 more $one" else "$n more $many"
+private fun steps(n: Int, one: String, many: String) = plural(n, "more $one", "more $many")
 
 private fun names(ids: List<String>, nameOf: (String) -> String): String =
     ids.map(nameOf).sorted().joinToString(" and ")

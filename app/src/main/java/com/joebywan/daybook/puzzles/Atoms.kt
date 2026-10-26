@@ -25,17 +25,15 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.GLOW_ALPHA
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -521,12 +519,7 @@ object Atoms : PuzzleType {
         val s = state as AtomsState
         val step = AtomsTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == AtomsTeacher.MISTAKE,
             fallback = step.technique == AtomsTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as AtomsState, step) },
@@ -605,12 +598,7 @@ object Atoms : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
         val overloaded = s.overloaded()
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // A glow that breathes is findable at a glance on an Expert board; a static ring is not much
-        // louder than the atoms themselves. Only runs while something glows, and is read in the
-        // draw phase, so it repaints without recomposing the board every frame.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         // Highlight cells: atom a is cell a, line p is cell atoms.size + p (AtomsTeacher.pairCell).
         fun named(cell: Int) = highlight.isEmpty || cell in highlight.strong || cell in highlight.soft
 
@@ -793,7 +781,7 @@ object Atoms : PuzzleType {
                             atom.bonds.toString(),
                             TextStyle(
                                 color = (if (complete) Color(accent) else scheme.onBackground).copy(alpha = fade),
-                                fontSize = (step.value * 0.34f).sp,
+                                fontSize = (step * 0.34f).toSp(),
                                 fontWeight = FontWeight.Bold,
                             ),
                         )

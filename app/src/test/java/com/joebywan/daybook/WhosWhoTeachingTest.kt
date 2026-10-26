@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.WhosWhoState
@@ -111,7 +112,7 @@ class WhosWhoTeachingTest {
             for (drop in full.clues.indices) {
                 val s = full.copy(clues = full.clues.filterIndexed { i, _ -> i != drop })
                 val p = WhosWhoLogic.puzzleOf(s)
-                if (WhosWhoLogic.count(p) !is WhosWhoLogic.Verdict.Several) continue
+                if (WhosWhoLogic.count(p) !is Verdict.Several) continue
                 var grid = WhosWhoLogic.gridOf(s.n, s.columns, s.marks)
                 var marks = s.marks
                 while (true) {

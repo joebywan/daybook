@@ -5,12 +5,16 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
+import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.core.LocalBoardHighlight
 
 /**
  * The system's "reduce motion" (Android: Remove animations; the web: `prefers-reduced-motion`), read once at
@@ -46,3 +50,21 @@ fun rememberHintPulse(glowing: Boolean, low: Float = 0.45f, high: Float = 1f): S
             label = "hint-pulse",
         )
     }
+
+/**
+ * What a board needs to draw the hint: the [highlight], the [glow] colour ([ink], or the error colour when the
+ * hint flags a mistake) and the [pulse]. The pulse breathes only while something glows strongly, so a still
+ * board runs no animation; read it in the draw phase, so the glow repaints without recomposing the board.
+ */
+data class HintPaint(val highlight: BoardHighlight, val glow: Color, val pulse: State<Float>)
+
+@Composable
+fun rememberHintPaint(
+    ink: Color = MaterialTheme.colorScheme.onBackground,
+    low: Float = 0.45f,
+    high: Float = 1f,
+): HintPaint {
+    val highlight = LocalBoardHighlight.current
+    val glow = if (highlight.warning) MaterialTheme.colorScheme.error else ink
+    return HintPaint(highlight, glow, rememberHintPulse(highlight.strong.isNotEmpty(), low, high))
+}

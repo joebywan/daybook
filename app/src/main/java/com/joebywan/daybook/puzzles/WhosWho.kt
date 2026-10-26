@@ -53,7 +53,6 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
@@ -65,9 +64,10 @@ import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberSettledFlags
 import com.joebywan.daybook.ui.ring
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * Who's Who: a few people, a row of houses and one or two more categories (a pet, a job...), and a numbered list of
@@ -222,12 +222,7 @@ object WhosWho : PuzzleType {
         val s = state as WhosWhoState
         val step = WhosWhoTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == WhosWhoTeacher.MISTAKE,
             applyTo = { now -> applyStep(now as WhosWhoState, step) },
             reachedBy = { now -> reached(now as WhosWhoState, step) },
@@ -304,10 +299,9 @@ object WhosWho : PuzzleType {
         // state it is handed.
         var selected by remember(s.names, s.clues) { mutableStateOf<Int?>(null) }
         var tick by rememberSaveable { mutableStateOf(true) }
-        val highlight = LocalBoardHighlight.current
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         val (hueA, hueB) = BoardHues.pair(s.answer.hashCode())
-        val look = Look(scheme, hueA, hueB, BoardHues.isDark(scheme), highlight, if (highlight.warning) scheme.error else scheme.onBackground, pulse)
+        val look = Look(scheme, hueA, hueB, BoardHues.isDark(scheme), highlight, glow, pulse)
 
         val grid = WhosWhoLogic.gridOf(s.n, s.columns, s.marks)
         val cellsNow = badCells(s, grid)
@@ -386,7 +380,7 @@ object WhosWho : PuzzleType {
                     Box(Modifier.weight(weights[column]).fillMaxHeight(), contentAlignment = Alignment.Center) {
                         Text(
                             WhosWhoWords.HEADERS[s.groups[column]],
-                            fontSize = 12.sp,
+                            fontSize = 12.dp.boardSp(), lineHeight = 12.dp.boardSp() * 1.2f,
                             fontWeight = FontWeight.SemiBold,
                             color = scheme.onSurface,
                             maxLines = 1,
@@ -400,7 +394,7 @@ object WhosWho : PuzzleType {
                         Text(
                             s.names[p],
                             Modifier.padding(start = 6.dp),
-                            fontSize = 14.sp,
+                            fontSize = 14.dp.boardSp(), lineHeight = 14.dp.boardSp() * 1.2f,
                             fontWeight = FontWeight.SemiBold,
                             color = scheme.onSurface,
                             maxLines = 1,
@@ -455,7 +449,7 @@ object WhosWho : PuzzleType {
             if (placed >= 0) {
                 Text(
                     s.word(column, placed),
-                    fontSize = 15.sp,
+                    fontSize = 15.dp.boardSp(), lineHeight = 15.dp.boardSp() * 1.2f,
                     fontWeight = FontWeight.Bold,
                     color = if (isBad) scheme.error else BoardHues.ink(look.hueB, look.dark),
                     maxLines = 1,
@@ -465,8 +459,8 @@ object WhosWho : PuzzleType {
                 Text(
                     open.joinToString(" ") { s.word(column, it) },
                     Modifier.padding(horizontal = 3.dp),
-                    fontSize = if (column == 0) 12.sp else 10.5.sp,
-                    lineHeight = 12.sp,
+                    fontSize = if (column == 0) 12.dp.boardSp() else 10.5.dp.boardSp(),
+                    lineHeight = 12.dp.boardSp(),
                     color = scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     maxLines = 2,

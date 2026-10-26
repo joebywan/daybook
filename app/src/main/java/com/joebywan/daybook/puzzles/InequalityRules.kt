@@ -2,6 +2,8 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.countMaskSolutions
+import com.joebywan.daybook.core.fullMask
 import kotlinx.serialization.Serializable
 
 /** A `<` between two neighbouring squares: the square [lo] holds a smaller digit than [hi]. */
@@ -30,8 +32,6 @@ internal object InequalityLogic {
         Difficulty.HARD -> 5
         Difficulty.EXPERT -> 6
     }
-
-    fun fullMask(n: Int): Int = (1 shl (n + 1)) - 2
 
     /** Every pair of neighbours: row pairs first, then column pairs, each in index order. */
     fun neighbours(n: Int): List<Pair<Int, Int>> = buildList {
@@ -170,7 +170,6 @@ internal object InequalityLogic {
     fun countSolutions(n: Int, given: List<Int>, signs: List<Sign>, limit: Int = 2): Int {
         val full = fullMask(n)
         val cand = IntArray(n * n) { if (given[it] == 0) full else 1 shl given[it] }
-        var found = 0
 
         fun settle(c: IntArray): Boolean {
             do {
@@ -196,21 +195,6 @@ internal object InequalityLogic {
             } while (changed)
             return true
         }
-
-        fun search(c: IntArray) {
-            if (!settle(c)) return
-            var best = -1
-            for (i in c.indices) if (c[i].countOneBits() > 1 && (best < 0 || c[i].countOneBits() < c[best].countOneBits())) best = i
-            if (best < 0) { found++; return }
-            for (d in 1..n) {
-                if (c[best] and (1 shl d) == 0) continue
-                val next = c.copyOf()
-                next[best] = 1 shl d
-                search(next)
-                if (found >= limit) return
-            }
-        }
-        search(cand)
-        return found
+        return countMaskSolutions(cand, limit, ::settle)
     }
 }

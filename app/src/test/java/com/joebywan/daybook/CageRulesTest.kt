@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.CageLogic
 import com.joebywan.daybook.puzzles.CageState
 import com.joebywan.daybook.puzzles.Cages
@@ -101,9 +102,9 @@ class CageRulesTest {
     fun `the prover agrees with the oracle on ambiguous and impossible boards`() {
         val cageOf = CageLogic.dominoes()
         val sums = CageLogic.sumsOf(cageOf, grid)
-        assertTrue(CageLogic.solutions(CageLogic.Board(cageOf, sums), List(81) { 0 }) is CageLogic.Verdict.Ambiguous)
+        assertTrue(CageLogic.solutions(CageLogic.Board(cageOf, sums), List(81) { 0 }) is Verdict.Several)
         val broken = sums.toMutableList().also { it[0] = 40 }
-        assertTrue(CageLogic.solutions(CageLogic.Board(cageOf, broken), List(81) { 0 }) is CageLogic.Verdict.None)
+        assertTrue(CageLogic.solutions(CageLogic.Board(cageOf, broken), List(81) { 0 }) is Verdict.None)
     }
 
     @Test
@@ -113,7 +114,7 @@ class CageRulesTest {
         assertTrue(legal(s.grid.solution, s.cageOf, s.sums))
         assertEquals(1, CageOracle.count(s.cageOf, s.sums, s.grid.cells))
         val verdict = CageLogic.solutions(CageLogic.Board(s.cageOf, s.sums), s.grid.cells)
-        assertTrue(verdict is CageLogic.Verdict.ExactlyOne && verdict.cells == s.grid.solution)
+        assertTrue(verdict is Verdict.ExactlyOne && verdict.value == s.grid.solution)
     }
 
     @Test

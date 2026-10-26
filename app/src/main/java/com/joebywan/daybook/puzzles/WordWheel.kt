@@ -53,7 +53,6 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
@@ -61,7 +60,8 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
 import kotlin.math.PI
@@ -244,12 +244,10 @@ object WordWheel : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = remember(s.wheel) { BoardHues.pair(s.slots.sumOf { it.word.length * 31 + it.row * 7 + it.col }) }
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        val (highlight, glow, pulse) = rememberHintPaint()
         val playable = interactive && !s.solved
         val measurer = rememberTextMeasurer()
 
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
         // A found word's squares settle, and the glow runs along it.
         val units = remember(s.wheel) { s.slots.map { it.cells(s.width).toIntArray() } }
         val feel = rememberMoveFeel(s.shown().toList(), units) { s.slots[it].word in s.found }
@@ -486,30 +484,28 @@ object WordWheel : PuzzleType {
         val shown = s.shown()
         val fill = BoardHues.fill(hueB, dark)
         val ink = BoardHues.onFill(fill)
-        val anyLit = !highlight.isEmpty
         val inset = cell * 0.06f
         val corner = CornerRadius(cell * 0.14f)
         for (i in used.indices) {
             if (!used[i]) continue
             val topLeft = Offset((i % s.width) * cell + inset, (i / s.width) * cell + inset)
             val box = Size(cell - 2 * inset, cell - 2 * inset)
-            val strong = i in highlight.strong
-            val soft = !strong && i in highlight.soft
-            val alpha = if (anyLit && !strong && !soft) 0.3f else 1f
+            val look = highlight.look(i)
+            val alpha = if (look.dim) 0.3f else 1f
             val letter = shown[i]
             feelSquare(feel, i, topLeft, box, accent) {
                 if (letter != null) {
                     drawRoundRect(fill.copy(alpha = alpha), topLeft, box, corner)
-                    val layout = measurer.measure(letter.uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (cell * 0.5f / density).sp, fontWeight = FontWeight.Bold))
+                    val layout = measurer.measure(letter.uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (cell * 0.5f).toSp(), fontWeight = FontWeight.Bold))
                     drawText(layout, topLeft = Offset(topLeft.x + (box.width - layout.size.width) / 2f, topLeft.y + (box.height - layout.size.height) / 2f))
                 } else {
                     drawRoundRect(BoardHues.ink(hueB, dark).copy(alpha = 0.55f * alpha), topLeft, box, corner, style = Stroke(cell * 0.05f))
                 }
             }
-            if (strong || soft) {
-                val w = if (strong) cell * 0.08f else cell * 0.05f
+            if (look.strong || look.soft) {
+                val w = if (look.strong) cell * 0.08f else cell * 0.05f
                 drawRoundRect(
-                    if (strong) glow.copy(alpha = pulse) else glow.copy(alpha = 0.5f),
+                    if (look.strong) glow.copy(alpha = pulse) else glow.copy(alpha = 0.5f),
                     Offset(topLeft.x - w, topLeft.y - w),
                     Size(box.width + 2 * w, box.height + 2 * w),
                     CornerRadius(corner.x + w),
@@ -549,15 +545,13 @@ object WordWheel : PuzzleType {
             val chosen = i in picked
             val disc = if (chosen) mark else surface
             drawCircle(disc, radius = g.disc, center = c)
-            val index = WordWheelTeacher.WHEEL + i
-            val strong = index in highlight.strong
-            val soft = !strong && index in highlight.soft
-            if (strong || soft) {
-                val w = g.disc * if (strong) 0.16f else 0.1f
-                drawCircle(if (strong) glow.copy(alpha = pulse) else glow.copy(alpha = 0.5f), radius = g.disc + w, center = c, style = Stroke(w))
+            val look = highlight.look(WordWheelTeacher.WHEEL + i)
+            if (look.strong || look.soft) {
+                val w = g.disc * if (look.strong) 0.16f else 0.1f
+                drawCircle(if (look.strong) glow.copy(alpha = pulse) else glow.copy(alpha = 0.5f), radius = g.disc + w, center = c, style = Stroke(w))
             }
             val text = if (chosen) BoardHues.onFill(mark) else BoardHues.ink(hueA, dark)
-            val layout = measurer.measure(s.wheel[i].uppercase(), TextStyle(color = text, fontSize = (g.disc * 1.05f / density).sp, fontWeight = FontWeight.Bold))
+            val layout = measurer.measure(s.wheel[i].uppercase(), TextStyle(color = text, fontSize = (g.disc * 1.05f).toSp(), fontWeight = FontWeight.Bold))
             drawText(layout, topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
         }
     }

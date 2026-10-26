@@ -38,7 +38,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
@@ -826,12 +825,7 @@ object Mosaic : PuzzleType {
         val base = s.cells
         val after = if (mistake) null else s.flood(step.cell, step.colour).cells
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = mistake,
             fallback = step.technique == MosaicTeacher.KEEPS,
             applyTo = { now ->
@@ -1039,11 +1033,7 @@ object Mosaic : PuzzleType {
         var selected by rememberSaveable(s.colours) { mutableIntStateOf(0) }
         val measurer = rememberTextMeasurer()
         val live = interactive && !s.failed
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // A rim that breathes is findable at a glance; a still one is not much louder than the
-        // seams. Only runs while something glows, and is read in the draw phase.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // The keyboard cursor (see MosaicKeys): transient, so not in the state.
         var cursor by remember(s.colours, s.width, s.height) { mutableStateOf<Int?>(null) }

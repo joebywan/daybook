@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.Mini
 import com.joebywan.daybook.puzzles.MiniLogic
 import com.joebywan.daybook.puzzles.MiniLogic.BLACK
@@ -103,18 +104,18 @@ class MiniRulesTest {
             val s = board(rng.nextInt(365), d)
             val read = clueLetters(s.size, s.answer)
             val v = MiniLogic.solve(s.size, read)
-            assertTrue(v is MiniLogic.Verdict.ExactlyOne)
-            assertEquals(s.answer, (v as MiniLogic.Verdict.ExactlyOne).grid)
+            assertTrue(v is Verdict.ExactlyOne)
+            assertEquals(s.answer, (v as Verdict.ExactlyOne).value)
             assertEquals(1, MiniOracle.count(s.size, read))
             // One clue letter fewer: both see several grids, or both still one.
             val drop = read.indexOfFirst { it in 'a'..'z' }
             val fewer = read.substring(0, drop) + OPEN + read.substring(drop + 1)
-            val many = MiniLogic.solve(s.size, fewer) is MiniLogic.Verdict.Several
+            val many = MiniLogic.solve(s.size, fewer) is Verdict.Several
             assertEquals(if (many) 2 else 1, MiniOracle.count(s.size, fewer))
         }
         // No word fits: both say none.
         val none = "###" + "qqq" + "###"
-        assertTrue(MiniLogic.solve(3, none) is MiniLogic.Verdict.None)
+        assertTrue(MiniLogic.solve(3, none) is Verdict.None)
         assertEquals(0, MiniOracle.count(3, none))
     }
 

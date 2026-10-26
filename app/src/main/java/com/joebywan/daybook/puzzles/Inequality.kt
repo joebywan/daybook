@@ -32,12 +32,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.DigitKeyAction
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
@@ -48,14 +46,16 @@ import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.PAD_GAP
 import com.joebywan.daybook.ui.DigitPadRow
 import com.joebywan.daybook.ui.padBoardSide
+import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * An Inequality square in play. [signs] and [solution] are fixed for the board; [cells] holds 0 for
@@ -281,7 +281,7 @@ object Inequality : PuzzleType {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             PREVIEW_DIGITS[i].toString(),
-                            fontSize = (cell.value * 0.6f).sp,
+                            fontSize = (cell * 0.6f).boardSp(), lineHeight = (cell * 0.6f).boardSp() * 1.2f,
                             fontWeight = if (PREVIEW_GIVEN[i]) FontWeight.Bold else FontWeight.Normal,
                             color = if (PREVIEW_GIVEN[i]) scheme.onSurface else BoardHues.ink(hueB, dark),
                         )
@@ -311,9 +311,7 @@ object Inequality : PuzzleType {
         val twin = BoardHues.fill(hueB, dark)
         val band = BoardHues.fill(hueA, dark).copy(alpha = 0.45f)
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         // A row or column is finished when it holds 1..n and every sign inside it is true.
         val units = remember(n) { lineUnits(n, n) }
         val feel = rememberMoveFeel(s.cells, units) { u ->
@@ -346,7 +344,7 @@ object Inequality : PuzzleType {
                                 .padding(start = slot * (i % n) + (slot - cell) / 2, top = slot * (i / n) + (slot - cell) / 2)
                                 .size(cell)
                                 .moveFeel(feel, i, Color(accent))
-                                .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
+                                .dimmed(look)
                                 .ring(look, glow, pulse, corner = 8.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
@@ -364,7 +362,7 @@ object Inequality : PuzzleType {
                             if (s.cells[i] != 0) {
                                 Text(
                                     s.cells[i].toString(),
-                                    fontSize = (cell.value * 0.6f).sp,
+                                    fontSize = (cell * 0.6f).boardSp(), lineHeight = (cell * 0.6f).boardSp() * 1.2f,
                                     fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
                                     color = when {
                                         i in conflicts -> scheme.error

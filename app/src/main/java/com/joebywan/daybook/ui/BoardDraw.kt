@@ -15,6 +15,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 
+/** A box a gesture reads the latest board through: plain, not state, so writing it recomposes nothing. */
+internal class Cell<T>(var v: T)
+
 /** The square of an even grid of [cols] x [rows] squares of side [step] under [offset], clamped to the grid. */
 fun gridCellAt(offset: Offset, step: Float, cols: Int, rows: Int): Int =
     (offset.y / step).toInt().coerceIn(0, rows - 1) * cols + (offset.x / step).toInt().coerceIn(0, cols - 1)

@@ -15,8 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.boardSp
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 
@@ -67,16 +67,16 @@ internal fun CrosswordGrid(
                 if (n != 0 && square >= 14.dp) Text(
                     n.toString(),
                     Modifier.align(Alignment.TopStart).padding(start = square * 0.07f),
-                    fontSize = (square.value * text.corner).sp,
-                    lineHeight = (square.value * text.cornerLine).sp,
+                    fontSize = (square * text.corner).boardSp(),
+                    lineHeight = (square * text.cornerLine).boardSp(),
                     color = scheme.onSurfaceVariant,
                 )
                 val l = letter(i)
                 if (l != null) Text(
                     l,
                     Modifier.align(Alignment.Center).padding(top = square * text.letterTop),
-                    fontSize = (square.value * text.letter).sp,
-                    lineHeight = (square.value * text.letterLine).sp,
+                    fontSize = (square * text.letter).boardSp(),
+                    lineHeight = (square * text.letterLine).boardSp(),
                     fontWeight = if (bold(i)) FontWeight.Bold else FontWeight.Medium,
                     color = letterColour(i),
                 )

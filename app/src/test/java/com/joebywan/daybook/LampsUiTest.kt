@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.core.orthogonalReading
 import com.joebywan.daybook.puzzles.Lamps
 import com.joebywan.daybook.puzzles.LampsKeyAction
 import com.joebywan.daybook.puzzles.LampsLogic
@@ -59,7 +60,7 @@ class LampsUiTest {
         val pair = frames[4].steps!!
         val glow = frames[4].glow!!
         assertEquals(setOf(1, 5), glow(at(4)).strong)
-        assertEquals(listOf(1, 5), LampsLogic.orth(5, 0)) // the 2 has only these two squares beside it
+        assertEquals(listOf(1, 5), orthogonalReading(0, 5)) // the 2 has only these two squares beside it
         for ((a, b) in listOf(1 to 5, 5 to 1)) {
             val one = at(4).withLamp(a)
             assertEquals(TutorialStep.PROGRESS, pair(one))

@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
@@ -49,13 +48,15 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.orthogonalReading
+import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.feelSquare
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.Job
@@ -72,8 +73,6 @@ object Lamps : PuzzleType {
 
     private const val DOUBLE_TAP_MS = 300L
     private val tapClock = TimeSource.Monotonic.markNow()
-
-    private class Cell<T>(var v: T)
 
     private data class Pending(val cell: Int, val base: LampsState, val after: LampsState)
 
@@ -198,7 +197,7 @@ object Lamps : PuzzleType {
     internal fun badNumbers(s: LampsState, lit: BooleanArray = s.lit()): Set<Int> = (0 until s.size * s.size).filterTo(mutableSetOf()) { w ->
         val want = s.numberAt(w)
         if (want < 0) return@filterTo false
-        val beside = LampsLogic.orth(s.size, w).filter { !s.isWall(it) }
+        val beside = orthogonalReading(w, s.size).filter { !s.isWall(it) }
         val on = beside.count { s.marks[it] == LampsLogic.LAMP_MARK }
         val room = beside.count { s.marks[it] != LampsLogic.LAMP_MARK && !lit[it] }
         on > want || on + room < want
@@ -362,9 +361,7 @@ object Lamps : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // Wrong now, and still wrong a second on: lamps lighting each other, numbers over or out of reach. Derived.
         val bad = s.clashes() to badNumbers(s)
@@ -373,7 +370,7 @@ object Lamps : PuzzleType {
         // A numbered wall's squares glow once when its count is met.
         val units = remember(base.walls) {
             (0 until n * n).filter { base.numberAt(it) > 0 }.map { w ->
-                (listOf(w) + LampsLogic.orth(n, w).filter { !base.isWall(it) }).toIntArray()
+                (listOf(w) + orthogonalReading(w, n).filter { !base.isWall(it) }).toIntArray()
             }
         }
         val feel = rememberMoveFeel(base.marks.toList(), units) { u ->

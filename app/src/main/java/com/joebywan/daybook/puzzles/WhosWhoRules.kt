@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.core.cap
 import kotlinx.serialization.Serializable
 
@@ -556,12 +557,6 @@ internal object WhosWhoLogic {
 
     // ---- the exhaustive count -------------------------------------------------------------------
 
-    /** What the count found. Only [ExactlyOne] carries an answer, so nothing else can be shipped as one. */
-    sealed interface Verdict {
-        data object None : Verdict
-        data class ExactlyOne(val answer: List<List<Int>>) : Verdict
-        data object Several : Verdict
-    }
 
     /** Every permutation of 0 until n (person -> slot), in lexicographic order. */
     fun permutations(n: Int): List<IntArray> {
@@ -587,7 +582,7 @@ internal object WhosWhoLogic {
      * How many assignments satisfy every clue, with no budget: column by column over every permutation, each clue
      * checked as soon as every column it reads is placed. Only [Verdict.ExactlyOne] carries the answer.
      */
-    fun count(p: Puzzle): Verdict {
+    fun count(p: Puzzle): Verdict<List<List<Int>>> {
         val n = p.n
         val perms = PERMS[n]
         val of = Array(p.columns) { IntArray(n) }
@@ -619,11 +614,7 @@ internal object WhosWhoLogic {
             }
         }
         walk(0)
-        return when (found) {
-            0 -> Verdict.None
-            1 -> Verdict.ExactlyOne(answer)
-            else -> Verdict.Several
-        }
+        return Verdict.of(found) { answer }
     }
 
     // ---- generation -----------------------------------------------------------------------------
@@ -689,7 +680,7 @@ internal object WhosWhoLogic {
         val puzzle = Puzzle(n, groups.size, shown.toList())
         if (depth(puzzle) != spec.needs) return null
         val proof = count(puzzle) as? Verdict.ExactlyOne ?: return null
-        if (proof.answer != answer) return null
+        if (proof.value != answer) return null
         return WhosWhoState(names, groups, items, shown.toList(), answer)
     }
 

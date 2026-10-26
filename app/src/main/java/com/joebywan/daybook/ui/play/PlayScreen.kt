@@ -101,6 +101,7 @@ import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.core.undone
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.platform.BackButton
@@ -873,7 +874,7 @@ private fun FinishedFrame(
                 Text(
                     buildString {
                         append(formatClock(seconds))
-                        if (hints > 0) append("  ·  $hints hint${if (hints == 1) "" else "s"}")
+                        if (hints > 0) append("  ·  ${plural(hints, "hint")}")
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = scheme.onSurface,

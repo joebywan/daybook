@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.TeachStep
 
 /**
  * Lexicon, reasoned the way a person reasons it: from the marks already on the board.
@@ -103,14 +104,14 @@ internal object LexiconTeacher {
     }
 
     class Step(
-        val technique: String,
+        override val technique: String,
         val move: Move,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep
 
     /** Answer-list words that would have drawn every mark on the board. */
     fun candidates(length: Int, guesses: List<String>, marks: List<List<Int>>): List<String> =

@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.neighbours8
 import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.MinesLogic
 import com.joebywan.daybook.puzzles.MinesState
@@ -124,7 +125,7 @@ class MinesRulesTest {
                 assertEquals(spec.width, s.width)
                 assertEquals(spec.height, s.height)
                 assertEquals(spec.mines, s.total)
-                for (j in MinesLogic.neighbours(s.width, s.height, s.opening).toList() + s.opening) assertFalse("$t $day: mine in the opening", s.isMine(j))
+                for (j in neighbours8(s.width, s.height, s.opening).toList() + s.opening) assertFalse("$t $day: mine in the opening", s.isMine(j))
                 val share = s.marks.count { it == 'o' } * 1000 / s.mines.count { it == '0' }
                 assertTrue("$t $day opening $share", share <= MinesLogic.MAX_OPENING)
                 opening += share

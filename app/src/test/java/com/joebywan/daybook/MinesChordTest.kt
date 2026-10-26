@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.core.neighbours8
 import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.MinesLogic
 import com.joebywan.daybook.puzzles.MinesState
@@ -55,7 +56,7 @@ class MinesChordTest {
         val s = f.state as MinesState
         assertEquals(1, s.number(Mines.CHORD_ONE))
         assertTrue(s.isFlag(Mines.FLAG_SQUARE) && s.isMine(Mines.FLAG_SQUARE))
-        assertEquals(Mines.CHORDED, MinesLogic.neighbours(5, 5, Mines.CHORD_ONE).filter { s.marks[it] == MinesLogic.HIDDEN })
+        assertEquals(Mines.CHORDED, neighbours8(5, 5, Mines.CHORD_ONE).filter { s.marks[it] == MinesLogic.HIDDEN })
         val chorded = s.chord(Mines.CHORD_ONE)!!
         assertEquals(TutorialStep.DONE, f.judge!!(chorded))
         assertEquals(TutorialStep.REJECT, f.judge!!(s.reveal(Mines.CHORDED[0])!!))

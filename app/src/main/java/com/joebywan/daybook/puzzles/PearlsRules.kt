@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import kotlinx.serialization.Serializable
 
 /**
@@ -64,12 +65,6 @@ data class PearlsState(
     }
 }
 
-/** What the exhaustive count found. Only [ExactlyOne] carries a loop, so nothing else can be shipped as an answer. */
-sealed interface PearlsVerdict {
-    data object None : PearlsVerdict
-    data class ExactlyOne(val loop: String) : PearlsVerdict
-    data object Several : PearlsVerdict
-}
 
 /**
  * Where everything is on an `n x n` board: each square's edge and neighbour in each direction
@@ -621,9 +616,9 @@ internal object PearlsLogic {
      * How many loops keep every rule, with no budget: the local and loop rules to a fixpoint (sound, so
      * they lose no answer), then a branch on an open edge (one beside the end of a stretch first), line
      * and then cross, until two answers are found or every branch is closed. A finished branch is checked
-     * by [isSolved], not by the rules that led to it. Only [PearlsVerdict.ExactlyOne] carries the loop.
+     * by [isSolved], not by the rules that led to it. Only [Verdict.ExactlyOne] carries the loop.
      */
-    fun solutions(n: Int, pearls: String): PearlsVerdict {
+    fun solutions(n: Int, pearls: String): Verdict<String> {
         val g = PearlsGrid.of(n)
         var found = 0
         var answer = ""
@@ -658,12 +653,8 @@ internal object PearlsLogic {
         // The root is first taken as far as the whole ladder goes, what-ifs included: every step of it is sound, so no
         // answer is lost, and it spares the branches a short what-if would have closed (one board's count fell from half a
         // second to a few milliseconds).
-        walk(settle(n, pearls, IntArray(g.edgeCount), WHAT_IF) ?: return PearlsVerdict.None)
-        return when (found) {
-            0 -> PearlsVerdict.None
-            1 -> PearlsVerdict.ExactlyOne(answer)
-            else -> PearlsVerdict.Several
-        }
+        walk(settle(n, pearls, IntArray(g.edgeCount), WHAT_IF) ?: return Verdict.None)
+        return Verdict.of(found) { answer }
     }
 
     /**
@@ -738,7 +729,7 @@ internal object PearlsLogic {
     fun accepts(s: PearlsState, spec: Spec): Boolean {
         if (s.size != spec.side || depth(s) != spec.needs) return false
         val verdict = solutions(s.size, s.pearls)
-        return verdict is PearlsVerdict.ExactlyOne && verdict.loop == s.loop
+        return verdict is Verdict.ExactlyOne && verdict.value == s.loop
     }
 
     /**

@@ -2,6 +2,7 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.WhoClue
 import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoLogic
@@ -89,9 +90,9 @@ class WhosWhoRulesTest {
             for (p in randomBoards(60, n, columns, 7L * n + columns)) {
                 val all = WhosWhoOracle.answers(n, columns, p.clues, limit = 2)
                 when (val v = WhosWhoLogic.count(p)) {
-                    WhosWhoLogic.Verdict.None -> { assertEquals(0, all.size); seen[0]++ }
-                    is WhosWhoLogic.Verdict.ExactlyOne -> { assertEquals(listOf(v.answer), all); seen[1]++ }
-                    WhosWhoLogic.Verdict.Several -> { assertEquals(2, all.size); seen[2]++ }
+                    Verdict.None -> { assertEquals(0, all.size); seen[0]++ }
+                    is Verdict.ExactlyOne -> { assertEquals(listOf(v.value), all); seen[1]++ }
+                    Verdict.Several -> { assertEquals(2, all.size); seen[2]++ }
                 }
             }
         }
@@ -118,7 +119,7 @@ class WhosWhoRulesTest {
             val spec = WhosWhoLogic.specFor(tier)
             for (k in s.clues.indices) {
                 val p = WhosWhoLogic.Puzzle(s.n, s.columns, s.clues.filterIndexed { i, _ -> i != k })
-                val unique = WhosWhoLogic.count(p) is WhosWhoLogic.Verdict.ExactlyOne
+                val unique = WhosWhoLogic.count(p) is Verdict.ExactlyOne
                 if (!unique) several++ else ladder++
                 assertFalse("$tier day $day clue $k is implied", unique && WhosWhoLogic.finishes(p, spec.needs))
             }
@@ -166,7 +167,7 @@ class WhosWhoRulesTest {
         for (tier in Difficulty.entries) {
             val s = WhosWhoLogic.lastResort(tier)
             val p = WhosWhoLogic.puzzleOf(s)
-            assertEquals(WhosWhoLogic.Verdict.ExactlyOne(s.answer), WhosWhoLogic.count(p))
+            assertEquals(Verdict.ExactlyOne(s.answer), WhosWhoLogic.count(p))
             assertEquals(WhosWhoLogic.specFor(tier).needs, WhosWhoLogic.depth(p))
         }
     }
