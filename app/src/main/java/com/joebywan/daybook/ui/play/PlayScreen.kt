@@ -1035,9 +1035,9 @@ internal fun RulesDialog(
 private fun TierList(puzzle: PuzzleType, current: Difficulty?) {
     val notes = tierNotes(puzzle.id)
     if (notes.size != Difficulty.entries.size) return
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(14.dp))
     Text(Difficulty.entries.joinToString(" · ") { it.label }, style = MaterialTheme.typography.titleSmall)
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(8.dp))
     Difficulty.entries.forEachIndexed { i, d ->
         val here = d == current
         Text(
@@ -1046,7 +1046,7 @@ private fun TierList(puzzle: PuzzleType, current: Difficulty?) {
             fontWeight = if (here) FontWeight.Bold else null,
             color = if (here) MaterialTheme.colorScheme.primary else Color.Unspecified,
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(6.dp))
     }
 }
 
