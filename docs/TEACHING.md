@@ -162,7 +162,7 @@ board. No board changed (Mambo's and LITS's rows are after their gates, below). 
 
 | puzzle | tier | deepest technique (% of boards) | fallback boards / steps % | median steps |
 |---|---|---|---|---|
-| Sudoku (gated) | Standard | hidden-single-box 26, hidden-single-line 74 | 0 / 0 | 53 |
+| Sudoku (gated) | Standard | hidden-single-box 78, hidden-single-line 22 (clue floor; was 26 / 74) | 0 / 0 | 47 |
 |  | Hard | naked-single 100 | 0 / 0 | 53 |
 |  | Expert | locked-candidates 38, naked-pair 13, hidden-pair 5, what-if 44 | 0 / 0 | 53 |
 | Kings | Standard | last-square <1, locked-to-a-line 4, would-empty 95 (gated: was 58, with confined 33, what-if 6) | 0 / 0 | 13 |
@@ -205,6 +205,11 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   `Sudoku.generateVerified` digs symmetric pairs only while the tier's ladder finishes the board (singles in a unit / up to
   naked single / everything but the fallback) and redraws a board whose walk did not need the tier's technique (Hard a naked
   single, Expert locked candidates or deeper); the table above is the result, no tier overlaps another and nothing falls back.
+  **Standard clue floor (2026-10-26):** Standard's dig now stops at 34 givens (`Sudoku.STANDARD_FLOOR`; it had 24-33, mean
+  28.1, now 34-35, mean 34.1; Hard and Expert unchanged at 22-32, mean 27.6, and 24-32, mean 27.9). A year: 47 steps a board
+  (full house 20.1, box singles 26.4, line singles 0.4), squares placeable at the start 11.6 (4-21; was 7.4, 2-16). The cost:
+  line singles went from 74% of boards to 22%, so most Standard boards are now box singles alone. Generation on the JVM:
+  0.7 / 2.4 / 3.9 ms median, 1.1 / 10 / 15 p95, 23 / 27 / 33 max.
 - **Kings: gated (built 2026-10).** Before, would-empty / confined / what-if were 58/33/6, 52/41/6, 39/55/5% across the
   tiers and only size differed. Now (`Kings.fitsTier`, on `KingsTeacher.depth`, the hint walk from blank): Standard needs
   nothing past would-empty; Hard needs a confinement of two colours and nothing wider or a what-if; Expert needs a
