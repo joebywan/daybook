@@ -11,6 +11,7 @@ this puzzle. Where the two disagree on a point not listed here, the standards wi
 | `id` | `"mini"` (hashed into every seed: never rename). Display name **Crossword** ("Mini Crossword" took two lines on a three-column home tile); the tagline says mini. Not named after any newspaper's mini. |
 | Words | Word Wheel's grid lists `WordWheelWords.GRID_3..7` (Lexicon's answer screening at every length; 4 and 5 letters are exactly Lexicon's answers), which the app-wide breakfast-table screen `tools/words/grim.txt` has already cleared of death, murder, vomit and the like (it replaced the Crossword's own list, 2026-10-26). |
 | Clues | `WheelWords.clue`: `tools/words/clues.txt` for four and five letters (Lexicon's), `tools/words/wheel-clues.txt` for three, six and seven. Hand-written, neutral English, linted by `build.py`. **No two answers share a clue** (`LexiconCluesTest`, `WordWheelRulesTest`), so a clue names exactly one word. The board stores its clue texts, so a saved game keeps its clues if a clue is reworded later. |
+| Second clues | `tools/words/second-clues.txt`, compiled into `MiniSecondClues.kt` by `build.py` (`--second-clues` alone needs no inputs): one per word the grids use, hand-written from a different angle than the first (another sense, a fill-in-the-blank, a category), never containing the word, never any grid word's first clue, no two alike (`MiniSecondCluesTest`). Stored on the board as `secondClues`, as the clues are. The owner: "I'd rather a 2nd clue before giving the answer." |
 | Grids | **Fully checked**: every white square is in an across word *and* a down word, every word 3 letters or more. Black squares symmetric under a half-turn, white squares connected, no word twice in a grid. |
 | Built offline | `MiniGridsBuildTest` (env-gated, fixed seed, reproducible) writes `puzzles/MiniGrids.kt` with Codeword's pattern maker and filler (`test/CrosswordFill.kt`): per tier, a sorted list of filled grids. The list's order is a contract: adding or removing an entry moves every daily board after it, and `BoardPinTest` goes red on purpose. Offline because a dense fill is a backtracking search per pattern whose cost varies (two 7x7 patterns in five give up within the budget), and because the tier test walks the hints over every candidate. |
 | Answer | Unique by the clues (each clue names one word). `solved` checks the rules: every slot spells the word whose clue the slot shows (`MiniLogic.isSolved`), never the stored answer. |
@@ -37,6 +38,7 @@ this puzzle. Where the two disagree on a point not listed here, the standards wi
     val cursor: Int? = null,       // the selected square
     val across: Boolean = true,    // the way the cursor reads
     override val moves: Int = 0,
+    val secondClues: List<String> = emptyList(), // one per slot, as clues: the fallback's first tap (absent in old saves)
 ) : PuzzleState
 ```
 
@@ -66,9 +68,11 @@ to its word is reading the answer. Every word step ends in the player typing the
    names those crossing slots.
 3. `all-words`: every square keeps only the letters both its words allow, to a fixpoint, and a slot is left one word.
    Says so, as Codeword's does.
-4. `clue`, the fallback: no crossing settles a word, so the hint reads the answer and says so, giving one letter of the
-   open slot the fewest words fit: "No crossing letters settle a word yet, so this hint reads the answer: 1 Across,
-   "Top card in a deck", starts with A." From an empty grid nothing else can start, so every board needs some: these
+4. `clue`, the fallback: no crossing settles a word. The first tap names the open slot the fewest words fit (chosen
+   from the board) with its word's second clue: "Another way in: 1 Across, "Expert pilot, or a serve no one returns"."
+   Only the next tap reads the answer and says so, giving one letter: "No crossing letters settle a word yet, so this
+   hint reads the answer: 1 Across, "Top card in a deck", starts with A." Show me places that letter. One hint is
+   counted, as for any step. A save without second clues gets the old nudge, "Try 1 Across." From an empty grid nothing else can start, so every board needs some: these
    are the letters a player must find from the clues alone, and the tiers are cut by them. Measured, never assumed: the
    share is `docs/TEACHING.md`'s row.
 
@@ -108,5 +112,11 @@ had a median share of 25%, below 5x5's 33%): Expert would be bigger and easier. 
 - **Hints** (`MiniTeachingTest`, 200 boards a tier, hints alone finish all, no mistake): the clue fallback is 44 / 54 / 62%
   of steps; per board one-word 3.6 / 3.8 / 4.9, crossing 2.0 / 2.2 / 2.1, every crossing together 1.5 / 2.0 / 2.3. A
   hint on the JVM: median 0.2-0.3 ms, p95 1.2 ms, max 2.9 ms.
+- **Second clue** (`MiniTeachingTest`, `build/reports/mini-second-clue.txt`, 200 boards a tier, 1,105 / 1,872 / 3,041
+  fallback steps): the walk reads letters, so on its own terms a second clue moves nothing. The proxy: suppose the player
+  solves it and types the word; the walk's next step is then a logic step (or the board is done) 27.2 / 32.9 / 28.5% of
+  the time, else another fallback. The one letter of the next tap would have settled the same word through the crossings
+  52.5 / 54.1 / 56.6% of the time. Words fitting the slot the clue names: median 22 / 8 / 6, p90 434 / 434 / 35. The
+  fallback share of steps is unchanged (44 / 54 / 62%): the second clue and the letter are one step's two taps.
 - **Layout:** at 375x537 Expert's squares are about 25 dp, with the clue bar (44 dp) and three rows of 40 dp keys under
   the grid; checked in Chromium and WebKit, light and dark, and on the emulator (1080x2400).
