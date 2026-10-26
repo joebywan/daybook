@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
@@ -45,7 +44,8 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberHintPaint
 import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -840,12 +840,7 @@ object Kings : PuzzleType {
         val shown = held?.after ?: s
         val conflicts = shown.conflicts()
         val eliminated = shown.eliminated()
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else MarkInk // on opaque tiles, in both themes
-        // A glow that breathes is findable at a glance on a 9x9 board; a static outline is not much
-        // louder than the gaps between squares. Only runs while something glows, and is read in
-        // the draw phase, so it repaints the outlines without recomposing the board every frame.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint(ink = MarkInk) // on opaque tiles, in both themes
         val palette = remember(s.region) { regionPalette(s.size, s.region) }
         // Rows, columns and regions: one finished holds exactly one king, clashing with nothing.
         val units = remember(s.region) {
@@ -993,19 +988,17 @@ object Kings : PuzzleType {
                             sweepMark != null && i in swept && shown.marks[i] != Mark.KING -> sweepMark
                             else -> shown.marks[i]
                         }
-                        val strong = i in highlight.strong
-                        val soft = !strong && i in highlight.soft
                         // Everything the highlight does not name steps back, so the named squares
                         // read without having to hunt for their outlines. The tiles are opaque, so
                         // stepping back means fading toward the page rather than going see-through.
-                        val dim = !(highlight.isEmpty || strong || soft)
+                        val look = highlight.look(i)
                         Tile(
                             cell, r, c,
                             Color(regionColours[palette[s.region[i]]]).let {
-                                if (dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
+                                if (look.dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
                             },
                             feel = Modifier.moveFeel(feel, i, Color(accent)),
-                            outline = Modifier.hintOutline(strong, soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
+                            outline = Modifier.hintOutline(look.strong, look.soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
                         ) {
                             when (mark) {
                                 // A clashing crown is filled in the error colour, which on a red

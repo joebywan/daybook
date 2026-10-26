@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
@@ -40,7 +39,7 @@ import com.joebywan.daybook.core.union
 import com.joebywan.daybook.ui.HintGlow
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.theme.BoardHues
@@ -447,9 +446,7 @@ object Pearls : PuzzleType {
         var cursor by remember(s.pearls) { mutableStateOf<Int?>(null) }
         var armed by remember(s.pearls) { mutableStateOf(false) }
 
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         val shown = if (path.size >= 2) s.drag(path) else s
         val broken = breaks(shown)

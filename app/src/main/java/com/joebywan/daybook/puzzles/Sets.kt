@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
@@ -57,7 +56,9 @@ import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.isConfirmKey
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.HintLook
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 
@@ -541,12 +542,8 @@ object Sets : PuzzleType {
         val s = state as SetsState
         val scheme = MaterialTheme.colorScheme
         val used = s.found.flatten().toSet()
-        val highlight = LocalBoardHighlight.current
         // Ink on a light card, in both themes; the error colour for a pick that went wrong.
-        val glow = if (highlight.warning) scheme.error else scheme.onSurface
-        // A glow that breathes is findable at a glance among twelve cards; read in the draw phase,
-        // so it repaints the outline without recomposing the board every frame (as Kings does).
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint(ink = scheme.onSurface)
 
         // Which thumbnail is being peeked at. Deliberately not in SetsState: PlayScreen pushes an
         // undo entry for every state handed to it, so a look at a set you already banked would
@@ -611,12 +608,7 @@ object Sets : PuzzleType {
                                     peeked = index in peekedCards,
                                     used = index in used,
                                     interactive = interactive,
-                                    look = when {
-                                        index in highlight.strong -> Look.STRONG
-                                        index in highlight.soft -> Look.SOFT
-                                        highlight.isEmpty -> Look.PLAIN
-                                        else -> Look.DIM
-                                    },
+                                    look = highlight.look(index),
                                     glow = glow,
                                     pulse = pulse,
                                 ) {
@@ -642,9 +634,6 @@ object Sets : PuzzleType {
      * one of the three behind a thumbnail the player is pointing at — is washed harder, because
      * it answers a direct question and has to be told apart from that faint tint at a glance.
      */
-    /** How a card answers the hint's highlight. */
-    private enum class Look { PLAIN, STRONG, SOFT, DIM }
-
     @Composable
     private fun BoardCard(
         card: Card,
@@ -653,7 +642,7 @@ object Sets : PuzzleType {
         peeked: Boolean,
         used: Boolean,
         interactive: Boolean,
-        look: Look,
+        look: HintLook,
         glow: Color,
         pulse: State<Float>,
         onTap: () -> Unit,
@@ -671,7 +660,7 @@ object Sets : PuzzleType {
                 .height(width / CARD_ASPECT)
                 // Everything the highlight does not name steps back, so the named cards read at
                 // a glance without hunting for their outlines.
-                .alpha(if (look == Look.DIM) 0.4f else 1f)
+                .alpha(if (look.dim) 0.4f else 1f)
                 .clip(corner)
                 .background(fill)
                 .border(
@@ -685,12 +674,12 @@ object Sets : PuzzleType {
                     corner,
                 )
                 .then(
-                    when (look) {
+                    when {
                         // Inside the selection border rather than over it, so a glowing card that
                         // is also picked still shows both.
-                        Look.STRONG, Look.SOFT -> Modifier.drawWithContent {
+                        look.strong || look.soft -> Modifier.drawWithContent {
                             drawContent()
-                            val strong = look == Look.STRONG
+                            val strong = look.strong
                             val w = (if (strong) 4.dp else 1.5.dp).toPx()
                             val inset = 3.dp.toPx() + w / 2
                             drawRoundRect(

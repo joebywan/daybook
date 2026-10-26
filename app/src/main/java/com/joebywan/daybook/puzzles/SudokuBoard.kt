@@ -46,18 +46,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.DigitKeyAction
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.digitKeyAction
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightGrid
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.PAD_GAP
 import com.joebywan.daybook.ui.padBoardSide
 import com.joebywan.daybook.ui.PadKey
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.moveFeel
-import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
@@ -111,16 +110,13 @@ internal fun SudokuGridBoard(
     val (hueA, hueB) = BoardHues.pair(hueSeed)
     val boxTint = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.55f else 0.30f).compositeOver(scheme.surface)
     val selectedValue = s.selected?.let { s.cells[it] } ?: 0
-    val highlight = LocalBoardHighlight.current
-    val glow = if (highlight.warning) scheme.error else scheme.onBackground
+    val (highlight, glow, pulse) = rememberHintPaint()
     // Which way the digit keys act. Transient UI state, so it lives here and not in the state:
     // PlayScreen would otherwise make every flip of it an undo step.
     var notesMode by rememberSaveable { mutableStateOf(false) }
     val measurer = rememberTextMeasurer()
     // The keyboard (web, or a hardware keyboard on Android): digits, clear and arrows, mapped by
     // digitKeyAction and applied through the same state functions the pad and a tap use. See boardKeys.
-    // Breathes only while something glows, as on Kings.
-    val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
     // Sized from both axes (CLAUDE.md): from width alone, a 693dp-tall screen ran the grid up
     // over the header and down under the hint slot. The pad keeps the full width.

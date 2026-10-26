@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Deduction
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
@@ -54,7 +53,7 @@ import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.union
 import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.gridCellAt
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -378,9 +377,7 @@ object Tents : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         val hues = remember(s.solution) { BoardHues.pair(s.solution.hashCode()) }
 
         // Wrong now, and still wrong a second on: touching tents, a row or column with too many.

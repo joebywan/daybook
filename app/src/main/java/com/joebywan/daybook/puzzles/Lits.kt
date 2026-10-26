@@ -21,7 +21,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
@@ -1292,11 +1291,8 @@ object Lits : PuzzleType {
         // What a hint or the walkthrough is pointing at. Everything it does not name is dimmed, so
         // the named squares can be found at a glance; [BoardHighlight.strong] squares get a
         // breathing outline and [BoardHighlight.soft] ones a quiet one — the same language as Kings.
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        val (highlight, glow, pulse) = rememberHintPaint()
         val dim = scheme.background
-        // Read only inside the draw lambda, so the pulse repaints the outlines without recomposing.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.

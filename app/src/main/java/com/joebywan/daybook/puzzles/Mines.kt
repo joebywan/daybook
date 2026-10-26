@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
@@ -71,7 +70,7 @@ import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.PenRow
@@ -374,9 +373,7 @@ object Mines : PuzzleType {
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
         val hues = remember(s.mines) { BoardHues.pair(s.mines.hashCode()) }
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         // The pen is the screen's, not the board's (Nonogram's): in the state it would be a move.
         var flagPen by rememberSaveable(s.mines) { mutableStateOf(false) }
         var cursor by remember(s.mines) { mutableStateOf<Int?>(null) }

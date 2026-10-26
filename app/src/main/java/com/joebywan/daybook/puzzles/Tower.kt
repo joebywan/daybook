@@ -38,7 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.text.style.TextAlign
@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightAnchor
@@ -425,10 +424,7 @@ object Tower : PuzzleType {
         val s = state as TowerState
         val scheme = MaterialTheme.colorScheme
         var selectedColour by remember(s.secret) { mutableIntStateOf(0) }
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // Breathes only while something glows, as on Kings.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // A phone's width at most: on a tablet or a wide window the rows would otherwise stretch across the whole box.
         Column(

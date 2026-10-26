@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
@@ -57,7 +56,7 @@ import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.feelSquare
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.Job
@@ -362,9 +361,7 @@ object Lamps : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // Wrong now, and still wrong a second on: lamps lighting each other, numbers over or out of reach. Derived.
         val bad = s.clashes() to badNumbers(s)

@@ -42,12 +42,11 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.marked
 import com.joebywan.daybook.core.only
 import com.joebywan.daybook.core.TutorialFrame
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.MoveFeel
@@ -354,9 +353,7 @@ object Tally : PuzzleType {
         val cursor = remember(s.digits) { mutableStateOf<Int?>(null) }
         val targets = remember(s.digits, s.keep) { TallyLogic.targets(s) }
 
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         Column(
             Modifier

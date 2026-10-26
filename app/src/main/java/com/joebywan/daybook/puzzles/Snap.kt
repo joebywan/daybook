@@ -30,13 +30,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.drawHintRings
@@ -711,11 +710,7 @@ object Snap : PuzzleType {
         // with no line on it — so every drag after the first reset to an empty path and wiped the
         // line. Read the live board through this instead.
         val latest by rememberUpdatedState(s)
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // Breathes, as Kings' and Pipes' do, so a glowing square is findable at a glance. Only runs
-        // while something glows, and is read in the draw phase.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
