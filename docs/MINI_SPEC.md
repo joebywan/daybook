@@ -106,9 +106,10 @@ had a median share of 25%, below 5x5's 33%): Expert would be bigger and easier. 
   6x6 with 8, 29%; 7x7 with 13, 25%; 7x7 with 15, 29%. Of 5x5 fills 92% needed a crossing step and 94% every crossing
   together; under 1% needed only one-word steps.
 - **On the device, a year of daily boards** (`MiniRulesTest`, `build/reports/mini-tiers.txt`): clue letters 5.6 / 9.4 /
-  15.2 a board, share 26.4 / 34.8 / 44.9%. Generation (the walk and the proof), median / p95 / max: JVM 9.5 / 16 / 33 ms,
-  15 / 18 / 25, 17 / 24 / 34; Chromium 20 / 31 / 61, 31 / 37 / 49, 36 / 52 / 67; WebKit 38 / 60 / 121, 59 / 72 / 96,
-  69 / 100 / 131. No day of a year reaches `lastResort` on any tier (`FallbackTest`).
+  15.2 a board, share 26.4 / 34.8 / 44.9%. Generation (the walk and the proof), median / p95 / max, re-measured at load 8-12
+  on 32 cores (2026-10-27): JVM 8.5 / 15 / 79 ms, 13 / 18 / 26, 16 / 27 / 38; Chromium 23 / 43 / 194, 36 / 51 / 71, 43 / 66 / 89;
+  WebKit 44 / 75 / 433, 68 / 90 / 132, 80 / 126 / 159. Standard's worst two days (2026-10-03, 2026-07-06) are slow in every run:
+  one board's walk and proof, first attempt, 236 / 83 ms on the JVM. No day of a year reaches `lastResort` on any tier (`FallbackTest`).
 - **Hints** (`MiniTeachingTest`, 200 boards a tier, hints alone finish all, no mistake): the clue fallback is 44 / 54 / 62%
   of steps; per board one-word 3.6 / 3.9 / 4.7, crossing 1.9 / 2.3 / 2.2, every crossing together 1.5 / 1.9 / 2.3. A
   hint on the JVM: median 0.2-0.3 ms, p95 1.2 ms, max 2.9 ms.

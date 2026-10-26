@@ -287,8 +287,9 @@ motif). `id = "regions"` is hashed into every seed: never rename it.
   budget) proves one answer. `RegionsOracle` (naive reading-order search) is the independent check. `lastResort` is the board of one fixed seed, itself
   proved by a test. A dig that misses the gate is dug again in a new order (up to `DIGS` = 4) before the fill is redrawn, because the fill is ~85 ms of
   a 9x9 draw; about 14% of Expert days need a second fill (`RegionsRulesTest`), and a year per tier never reaches `lastResort` (`FallbackTest`).
-  Generation costs what it did before the gate (JVM 1.4 / 8 / 73 ms median, 7 / 32 / 319 p95; Chromium 3 / 18 / 187 median, 14 / 80 / 822 p95,
-  36 / 172 / 1700 max, was 3 / 19 / 173, 15 / 87 / 738, 58 / 175 / 1828; WebKit about the same). Changing the ladder or the draw changes every board
+  Generation, a year a tier, median / p95 / max (2026-10-27): Chromium 1.5 / 7 / 17, 11 / 39 / 92, 99 / 433 / 799 ms on a quiet machine (load about 2 on 32 cores);
+  WebKit 3 / 14 / 25, 19 / 74 / 160, 188 / 787 / 1521 and JVM 0.9 / 3.8 / 7.9, 5.9 / 21 / 45, 51 / 215 / 424 at load 8-12 on 32 cores (no quiet spell came).
+  The fill is 93% of Expert's time; the slowest days throw away 1-2 fills that dead-ended and draw 3-4 (`docs/TODO.md`). Changing the ladder or the draw changes every board
   (parity pins go red on purpose).
 - **The generator's walk is `lockedSteps`, not `depth`**: it places every single of a pass at once (the single rungs are order-free while every digit
   is right), so it meets the same stuck boards and locked steps as the hints. `RegionsRulesTest` checks the two agree.

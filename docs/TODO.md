@@ -49,8 +49,9 @@ from a measurement or review, so you can check it is still true.
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
 - [ ] **Regions: README screenshots.** (Its sparser boards came with the locked candidate.) *S.*
-- [ ] **Regions: Expert's fill is slow in the browser.** `randomBoard` is about 85 ms of a 9x9 draw on the JVM, and Expert
-  generation is 187 ms median, 0.8 s p95, 1.7 s worst in Chromium (it was as slow before the depth gate). A cheaper fill
+- [ ] **Regions: Expert's fill is slow in the browser.** `randomBoard` is about 85 ms of a 9x9 draw on the JVM, and 93% of Expert
+  generation; Expert is 99 ms median, 0.43 s p95, 0.8 s worst in Chromium on a quiet machine, 0.19 / 0.79 / 1.5 s in WebKit at
+  load ~12 (2026-10-27); the worst days are those whose first fills dead-end and are redrawn (3-4 draws). A cheaper fill
   (fewer restarts, or growing regions where the fill is already forced) would fix it; it moves every board. *M.*
 
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
