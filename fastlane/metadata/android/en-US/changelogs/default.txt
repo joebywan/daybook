@@ -1,5 +1,6 @@
-- Today's three: a small daily set, with its own share card, and "Next puzzle" after each solve.
-- Statistics: this week at a glance, and a Techniques page of what hints have taught you.
-- Sudoku, Mambo, Kings, Tents, Atoms, Shikaku and Nonogram tiers now ask for harder reasoning, not just bigger boards.
-- Mate follows puzzle ratings; Lexicon's daily word won't repeat from 1 November.
-- Levels start with the gentlest puzzles.
+- Six new puzzles: Mines (no guessing, three lives), Lamps, Codeword, Pearls, Who's Who and a mini Crossword.
+- Nonogram: pinch to zoom on Hard and Expert boards.
+- New names: Trail, Sun & Moon, Codebreaker and Arrows (were Snap, Mambo, Tower, Pointers).
+- Today's three: a small daily set with its own share card, and "Next puzzle" after each solve.
+- Statistics: this week at a glance, and a Techniques page.
+- Most harder tiers now ask for deeper reasoning, not just bigger boards.
