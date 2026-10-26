@@ -19,9 +19,10 @@ import com.joebywan.daybook.puzzles.MiniLogic.OPEN
  * 2. [CROSSING] — of the words that fit a slot, only one leaves every slot crossing it a word that fits.
  * 3. [ALL_WORDS] — every square keeps only the letters both its words allow, over and over until nothing changes,
  *    and a slot is left one word. It cannot name one crossing, so it says so.
- * 4. [CLUE] — the fallback: no crossing settles a word, so the hint reads the answer and says so, giving one letter of
- *    the open slot the fewest words fit. From an empty grid nothing else can start, so every board needs some: they are
- *    the letters a player must find from the clues, and the tiers are cut by them (`docs/MINI_SPEC.md`).
+ * 4. [CLUE] — the fallback: no crossing settles a word. Its first tap names the open slot the fewest words fit with
+ *    that word's second clue ("Another way in: ..."), chosen from the board alone; only the next tap reads the answer,
+ *    says so, and gives one letter of the slot. From an empty grid nothing else can start, so every board needs some:
+ *    they are the letters a player must find from the clues, and the tiers are cut by them (`docs/MINI_SPEC.md`).
  *
  * A mistake is a letter that differs from the stored answer, sound because each clue names one word. Every loop walks
  * slots, squares and words in index order, so a board gets the same hint on every platform.
@@ -198,6 +199,9 @@ internal object MiniTeacher {
     const val MAX_EXPLANATION = 200
     const val MAX_NUDGE = 70
 
+    /** The fallback's nudge carries a whole second clue, so it may run longer; the popover wraps it. */
+    const val MAX_CLUE_NUDGE = 100
+
     /**
      * One step: [slot] to type [word] into, or [square] to take [letter] ([OPEN] to clear a mistake); where to look and
      * why. [square] is -1 for a word.
@@ -235,8 +239,11 @@ internal object MiniTeacher {
         val l = s.answer[sq]
         val where = if (i == 0) "starts with ${l.uppercase()}" else "has ${l.uppercase()} as its ${ORDINALS[i]} letter"
         val squares = slot.squares.toSet()
+        // The second clue first (tap 1), the letter of the answer only on the next tap. A save from before second
+        // clues has none: the nudge is then the old pointer to the slot.
+        val second = s.secondClues.getOrNull(r)?.takeIf { it.isNotBlank() }
         return Step(
-            CLUE, r, null, sq, l, squares, squares, "Try ${slot.name}.",
+            CLUE, r, null, sq, l, squares, squares, if (second != null) "Another way in: ${slot.name}, \"$second\"." else "Try ${slot.name}.",
             "No crossing letters settle a word yet, so this hint reads the answer: ${slot.name}, \"${s.clues[r]}\", $where.",
         )
     }
