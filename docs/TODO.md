@@ -161,10 +161,8 @@ Five independent design reviews (puzzle construction, player experience, daily m
 accepted by the owner except where noted. Each item is one workstream and one PR; delete it here when it lands.
 Generator changes move every daily board of that puzzle (parity pins go red on purpose): batch them, one PR per puzzle.
 
-- [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
-  "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
-  - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
-- [ ] **Teacher upgrades already listed:** Cage Sudoku naming the cage chain, Regions' locked candidate.
+- [ ] **Snap depth gate:** not possible yet. Snap has no teacher (a whole-board deducer leaves the real choices to a
+  13-joint what-if; `docs/TEACHING.md`).
 
 ## Future puzzle candidates
 
