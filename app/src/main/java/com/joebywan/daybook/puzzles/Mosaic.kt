@@ -177,7 +177,7 @@ object Mosaic : PuzzleType {
     override val tagline = "Flood the board down to one colour"
     override val accent = 0xFFD97FB0
     override val rules = listOf(
-        "Cells of one colour joined edge to edge form a single area, drawn with a heavy outline.",
+        "Squares of one colour joined edge to edge form a single area, drawn with a heavy outline.",
         "Pick a colour below, then tap an area to flood it with that colour.",
         "A flooded area merges with every neighbouring area already in that colour — " +
             "growing one big blob is how you cover ground quickly.",
@@ -925,7 +925,7 @@ object Mosaic : PuzzleType {
         listOf(
             TutorialFrame(
                 state = start,
-                caption = "Touching cells of one colour make an area, outlined in black. Turn the whole board " +
+                caption = "Touching squares of one colour make an area, outlined in black. Turn the whole board " +
                     "one colour. The line above counts your fills against the fewest this board needs: here 3.",
                 highlight = BoardHighlight(strong = tealArea),
             ),

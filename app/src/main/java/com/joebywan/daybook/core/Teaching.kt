@@ -75,8 +75,8 @@ fun answerFallback(technique: String, cells: List<Int>, solution: List<Int>): Pl
     val d = solution[i]
     return PlacementStep(
         technique, i, d, setOf(i), emptySet(),
-        "Try this square.",
-        "No short reason found: the stored answer has a $d here.",
+        "This one takes a longer chain. Look at the glowing square.",
+        "This one needs a longer chain than a hint can walk through, so here's the answer for this square: a $d.",
     )
 }
 

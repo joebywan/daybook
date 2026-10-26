@@ -237,7 +237,7 @@ internal object CodewordTeacher {
         val n = s.letters.indices.firstOrNull { s.letters[it] == EMPTY } ?: return null
         val l = s.solution[n]
         val shape = Shape(s.size, s.numbers, s.letters.size)
-        return Step(FALLBACK, n, l, shape.squaresOf(n), emptySet(), "Try ${n + 1}.", "No short reason found: the stored answer has ${n + 1} = ${up(l)}.")
+        return Step(FALLBACK, n, l, shape.squaresOf(n), emptySet(), "This one takes a longer chain. Look at ${n + 1}.", "This one needs a longer chain than a hint can walk through, so here's the answer for ${n + 1}: it's ${up(l)}.")
     }
 
     private fun mistake(s: CodewordState): Step? {
