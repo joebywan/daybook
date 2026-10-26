@@ -406,8 +406,8 @@ internal object LitsTeacher {
             Search.Unknown -> Step(
                 technique = FALLBACK, shades = listOf(pick), focus = home, cited = emptySet(),
                 nudge = "This one takes a longer chain. Look at the glowing region.",
-                explanation = "This needs more than a hint can walk through, so here's a square " +
-                    "from the answer.",
+                explanation = "This one needs a longer chain than a hint can walk through, so here's " +
+                    "a square from the answer.",
             )
         }
     }

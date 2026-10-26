@@ -277,8 +277,8 @@ internal object CipherTeacher {
         val d = s.solution[l]
         return Step(
             FALLBACK, l, d, sum.tilesOf(l), emptySet(),
-            "Try ${sum.name(l)}.",
-            "No short reason found: the stored answer has ${sum.name(l)} = $d.",
+            "This one takes a longer chain. Look at ${sum.name(l)}.",
+            "This one needs a longer chain than a hint can walk through, so here's the answer for ${sum.name(l)}: it's $d.",
         )
     }
 
