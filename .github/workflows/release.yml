@@ -20,11 +20,13 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-26.04
+    environment: release   # holds the signing key
     outputs:
       tag: v${{ steps.version.outputs.name }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false   # nothing here pushes with git; `gh` takes GH_TOKEN per step
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-build

@@ -35,8 +35,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-26.04
+    environment: release   # holds the signing key
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Restore the repo so far
         run: |
@@ -76,12 +77,13 @@ jobs:
       - name: Push the repo and redeploy the site
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || 'latest' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch --orphan fdroid-out
           git --work-tree=fdroid add -f repo
-          git commit -q -m "F-Droid repo: ${{ inputs.tag || 'latest' }}"
+          git commit -q -m "F-Droid repo: $TAG"
           git push --force origin fdroid-out:fdroid
           gh workflow run pages.yml --ref main
 

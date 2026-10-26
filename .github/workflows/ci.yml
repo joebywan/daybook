@@ -14,8 +14,6 @@ jobs:
     permissions:
       contents: read
       statuses: write   # only used by the workflow_dispatch steps below
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
       # Renovate's pull requests are made with GITHUB_TOKEN, which triggers no workflows, so
       # tools/dispatch-ci-for-renovate.sh runs this workflow by hand on their branches. The
@@ -25,13 +23,16 @@ jobs:
       # need none of this: their check run counts.
       - name: Report pending (dispatched run)
         if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}   # on the status steps only: a job-level token would be readable by Gradle and every dependency
         run: >
           gh api "repos/${{ github.repository }}/statuses/${{ github.sha }}"
           -f state=pending -f context=build -f description="Dispatched CI is running"
           -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false   # the job's token can post statuses; keep it out of .git/config, where Gradle could read it
           fetch-depth: 0   # the commit-message check below needs the pull request's whole range
 
       # CLAUDE.md forbids a `Co-Authored-By: Claude` trailer, and a rule written there lost to the
@@ -65,7 +66,7 @@ jobs:
       # two pull requests merged side by side, is tested again before it ships.
       - name: Record the tree that passed
         run: git rev-parse 'HEAD^{tree}' > tested-tree.txt && echo "TREE=$(cat tested-tree.txt)" >> "$GITHUB_ENV"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: tested-tree-${{ env.TREE }}
           path: tested-tree.txt
@@ -74,6 +75,7 @@ jobs:
       - name: Report result (dispatched run)
         if: always() && github.event_name == 'workflow_dispatch'
         env:
+          GH_TOKEN: ${{ github.token }}
           RESULT: ${{ job.status }}
         run: |
           case "$RESULT" in
@@ -94,18 +96,19 @@ jobs:
     permissions:
       contents: read
       statuses: write   # only used by the workflow_dispatch steps below
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Report pending (dispatched run)
         if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}   # on the status steps only: a job-level token would be readable by Gradle and every dependency
         run: >
           gh api "repos/${{ github.repository }}/statuses/${{ github.sha }}"
           -f state=pending -f context=web-parity -f description="Dispatched CI is running"
           -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Could this change a board or the web build?
@@ -133,6 +136,7 @@ jobs:
       - name: Report result (dispatched run)
         if: always() && github.event_name == 'workflow_dispatch'
         env:
+          GH_TOKEN: ${{ github.token }}
           RESULT: ${{ job.status }}
         run: |
           case "$RESULT" in
