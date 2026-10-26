@@ -28,21 +28,21 @@ object SudokuTraining {
 
     /** What each technique is, before the first board. The hints' voice: plain, short, "cell", "box". */
     val EXPLANATIONS: Map<String, String> = mapOf(
-        SudokuTeacher.FULL_HOUSE to "When a row, column or box has one empty cell left, the digit it's missing goes there.",
-        SudokuTeacher.HIDDEN_SINGLE_BOX to "Pick a box and a digit it still needs. When every other empty cell in the box " +
-            "already sees that digit in its row or column, the one cell left must hold it.",
-        SudokuTeacher.HIDDEN_SINGLE_LINE to "The same idea along a row or column: when every other empty cell in the line " +
-            "already sees a digit in its column, row or box, the one cell left takes it.",
-        SudokuTeacher.NAKED_SINGLE to "Look at one cell instead of one digit. When its row, column and box between them " +
+        SudokuTeacher.FULL_HOUSE to "When a row, column or box has one empty square left, the digit it's missing goes there.",
+        SudokuTeacher.HIDDEN_SINGLE_BOX to "Pick a box and a digit it still needs. When every other empty square in the box " +
+            "already sees that digit in its row or column, the one square left must hold it.",
+        SudokuTeacher.HIDDEN_SINGLE_LINE to "The same idea along a row or column: when every other empty square in the line " +
+            "already sees a digit in its column, row or box, the one square left takes it.",
+        SudokuTeacher.NAKED_SINGLE to "Look at one square instead of one digit. When its row, column and box between them " +
             "hold eight different digits, the ninth is the only one left for it.",
         SudokuTeacher.LOCKED to "When a digit's places in a box all lie in one row or column, it must go there, so the " +
             "rest of that line can't have it. (The same works the other way round, a line's places all in one box.) " +
             "That often leaves a single.",
-        SudokuTeacher.NAKED_PAIR to "Two cells in a row, column or box that can each be only the same two digits take both " +
-            "of them, so no other cell there can hold either. Strike them off and look for the single it leaves.",
-        SudokuTeacher.HIDDEN_PAIR to "Two digits that fit in only the same two cells of a row, column or box take those " +
-            "cells, so those two cells can't hold anything else. Look for the single that follows.",
-        SudokuTeacher.WHAT_IF to "A cell with two digits left, or a digit with two places left: suppose one and follow it " +
+        SudokuTeacher.NAKED_PAIR to "Two squares in a row, column or box that can each be only the same two digits take both " +
+            "of them, so no other square there can hold either. Strike them off and look for the single it leaves.",
+        SudokuTeacher.HIDDEN_PAIR to "Two digits that fit in only the same two squares of a row, column or box take those " +
+            "squares, so those two squares can't hold anything else. Look for the single that follows.",
+        SudokuTeacher.WHAT_IF to "A square with two digits left, or a digit with two places left: suppose one and follow it " +
             "a step or two. If something runs out of digits or places, the other choice is the answer.",
     )
 
