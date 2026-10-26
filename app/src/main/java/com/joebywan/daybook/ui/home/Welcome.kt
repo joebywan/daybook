@@ -68,9 +68,9 @@ internal fun Welcome(onStart: () -> Unit) {
                 )
                 Pointer(
                     { Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFE8A317), modifier = icon) },
-                    "Today's three, over the grid, are a quick one, a longer one and a word or number one, the same for " +
-                        "everyone. Every puzzle has a one-minute walkthrough, " +
-                        "under “How to play”.",
+                    "Today's three, over the grid, are a quick one, a longer one and a word or number one: gentle ones " +
+                        "while you find your feet, then the same three as everyone else. Tap the ? on any puzzle for its " +
+                        "rules and a one-minute walkthrough.",
                 )
                 Pointer(
                     { Icon(Icons.Default.CalendarToday, null, tint = scheme.secondary, modifier = icon) },
@@ -85,11 +85,13 @@ internal fun Welcome(onStart: () -> Unit) {
                             Icon(Icons.Default.InsertChart, null, tint = scheme.onSurfaceVariant, modifier = small)
                         }
                     },
-                    "The buttons by the title open the archive of every past day and your achievements. Tap your streak for your stats.",
+                    "The buttons by the title open the archive of every past day and your achievements. The chart badge " +
+                        "with your streak opens your stats.",
                 )
                 Pointer(
                     { Icon(Icons.Default.OpenWith, null, tint = scheme.secondary, modifier = icon) },
-                    "Press and hold a puzzle to move it. Until you do, the easiest to pick up come first, then the ones you play most.",
+                    "Press and hold a puzzle to move it. Until you do, the ones you play most come first, and the easiest " +
+                        "to pick up lead among the rest.",
                 )
             }
             Button(onClick = onStart, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp).height(52.dp)) {

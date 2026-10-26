@@ -554,3 +554,14 @@ fun rememberRateLink(): RateLink {
     val uri = LocalUriHandler.current
     return remember(uri) { githubRateLink(uri::openUri) }
 }
+
+/** A page cannot notify reliably once it is closed, so the daily reminder is not offered on the web. */
+const val OFFERS_REMINDER: Boolean = false
+
+/** Never asked on the web (see [OFFERS_REMINDER]); answers no. */
+@Composable
+fun rememberAskToNotify(): ((Boolean) -> Unit) -> Unit = remember { { done -> done(false) } }
+
+/** Never called on the web (see [OFFERS_REMINDER]). */
+@Composable
+fun rememberReminderSchedule(): (Boolean, Int) -> Unit = remember { { _, _ -> } }

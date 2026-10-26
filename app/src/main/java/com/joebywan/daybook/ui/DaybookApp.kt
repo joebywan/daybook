@@ -248,8 +248,11 @@ private fun DaybookScreens(
     val ids = remember { PuzzleOrder.gentlest(PuzzleRegistry.all.map { it.id }) }
     val playedBasis by produceState<List<Completion>?>(null, today) { value = store.completions.first() }
     val mostPlayed = remember(playedBasis, today) { PuzzleOrder.mostPlayed(playedBasis.orEmpty(), today, ids) }
-    // Today's three (TodaysThree): the date alone, the same for everyone.
-    val three = remember(today) { TodaysThree.of(today) }
+    // Today's three (TodaysThree): the date alone, the same for everyone, except a new player's gentler starter three.
+    // Read from the once-a-day basis, so a fifth solve never swaps the three mid-day.
+    val three = remember(today, playedBasis) {
+        if (playedBasis.let { it != null && it.size < TodaysThree.NEWCOMER_SOLVES }) TodaysThree.starter(today) else TodaysThree.of(today)
+    }
     val doneToday = remember(completions, today) { completions.filter { it.day == today }.mapTo(HashSet()) { it.puzzleId to it.difficulty } }
     val (customOrder, setOrder) = rememberPref(launchPrefs.puzzleOrder, emptyList(), launchPrefs::setPuzzleOrder)
     val puzzles = remember(customOrder, mostPlayed) {
@@ -500,12 +503,14 @@ private fun DaybookScreens(
                                     day = current.day,
                                     seconds = seconds,
                                     hints = hints,
+                                    // Only a daily solved on its own day counts toward the streak (Completion.streakDay).
+                                    playedOn = today,
                                 )
                             )
                         }
                     },
                     praiseFor = { seconds, hints, state, log, taught ->
-                        val solve = Completion(puzzle.id, difficulty, current.day, seconds, hints)
+                        val solve = Completion(puzzle.id, difficulty, current.day, seconds, hints, playedOn = today)
                         // The streak is told only for today's own daily: an archive day, a level or a random board does not extend it.
                         val streak = if (current.day == today) Stats.streak(completions + solve, today).current else 0
                         // Asked of the board only when no hint was opened: a hint solve names what the hints showed.

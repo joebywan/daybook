@@ -3,6 +3,11 @@
 
     <!-- Deliberately no INTERNET permission. Everything is generated on device. -->
 
+    <!-- The daily reminder, off unless the player turns it on (ui/home/Reminder.kt, platform/AndroidReminder.kt).
+         Notifications are asked for only then; the boot permission only sets its alarm again. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -21,6 +26,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name=".platform.ReminderReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".platform.ReminderRestoreReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
