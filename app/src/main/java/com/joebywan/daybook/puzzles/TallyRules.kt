@@ -316,7 +316,7 @@ internal object TallyLogic {
      * cutting a branch as soon as a column passes its target or can no longer reach it. Only
      * [Verdict.ExactlyOne] carries the answer.
      */
-    fun countSolutions(n: Int, digits: IntArray, targets: List<Int>): Verdict {
+    fun countSolutions(n: Int, digits: IntArray, targets: List<Int>): Verdict<String> {
         val rowWays = List(n) { r -> ways(IntArray(n) { digits[r * n + it] }, IntArray(n), targets[r]) }
         // What each column can still gain from rows r.. : the sum of its digits there.
         val rest = Array(n + 1) { IntArray(n) }

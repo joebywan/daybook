@@ -618,7 +618,7 @@ internal object PearlsLogic {
      * and then cross, until two answers are found or every branch is closed. A finished branch is checked
      * by [isSolved], not by the rules that led to it. Only [Verdict.ExactlyOne] carries the loop.
      */
-    fun solutions(n: Int, pearls: String): Verdict {
+    fun solutions(n: Int, pearls: String): Verdict<String> {
         val g = PearlsGrid.of(n)
         var found = 0
         var answer = ""

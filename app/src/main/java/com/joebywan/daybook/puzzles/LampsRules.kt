@@ -446,7 +446,7 @@ internal object LampsLogic {
      * (sources before it hold none), a partition of the answers, so none is counted twice. Only
      * [Verdict.ExactlyOne] carries the answer.
      */
-    fun countSolutions(n: Int, walls: String): Verdict {
+    fun countSolutions(n: Int, walls: String): Verdict<String> {
         val g = Geo(n, walls)
         var found = 0
         var answer = ""

@@ -151,7 +151,7 @@ internal object CipherLogic {
      * the column, the total's letter then forced by the column's sum. No node budget, so it always ends with
      * the true count.
      */
-    fun prove(sum: CipherSum): Verdict {
+    fun prove(sum: CipherSum): Verdict<List<Int>> {
         if (!sum.wellFormed) return Verdict.None
         val d = IntArray(sum.letters.size) { EMPTY }
         var used = 0

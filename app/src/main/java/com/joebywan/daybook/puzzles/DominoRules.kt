@@ -244,7 +244,7 @@ internal object DominoLogic {
      * smallest and largest values the unused dominoes hold, EQUAL and DIFFERENT on what is covered.
      * A double counts once, not once each way round.
      */
-    fun solutions(layout: Layout, limit: Int = 2): Verdict {
+    fun solutions(layout: Layout, limit: Int = 2): Verdict<List<Placement>> {
         val n = layout.size
         val tray = layout.tray
         val d = tray.size
@@ -355,7 +355,7 @@ internal object DominoLogic {
         return Verdict.of(found) { answer!! }
     }
 
-    fun solutions(s: DominoState, limit: Int = 2): Verdict = solutions(s.layout, limit)
+    fun solutions(s: DominoState, limit: Int = 2): Verdict<List<Placement>> = solutions(s.layout, limit)
 
     // ---- generation -------------------------------------------------------------------------------
 

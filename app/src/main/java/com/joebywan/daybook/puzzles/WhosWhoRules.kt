@@ -582,7 +582,7 @@ internal object WhosWhoLogic {
      * How many assignments satisfy every clue, with no budget: column by column over every permutation, each clue
      * checked as soon as every column it reads is placed. Only [Verdict.ExactlyOne] carries the answer.
      */
-    fun count(p: Puzzle): Verdict {
+    fun count(p: Puzzle): Verdict<List<List<Int>>> {
         val n = p.n
         val perms = PERMS[n]
         val of = Array(p.columns) { IntArray(n) }

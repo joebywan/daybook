@@ -132,7 +132,7 @@ internal object CodewordLogic {
      * A spelled run must be a word. No node budget, so it always ends with the true count. [words] is the list a length
      * is judged by; the builder passes a wider one to check that no less common word opens a second answer.
      */
-    fun solve(size: Int, numbers: List<Int>, known: List<Int>, words: (Int) -> CodewordWords.Length = CodewordWords::of): Verdict {
+    fun solve(size: Int, numbers: List<Int>, known: List<Int>, words: (Int) -> CodewordWords.Length = CodewordWords::of): Verdict<List<Int>> {
         val runs = runs(size, numbers).map { run -> IntArray(run.size) { numbers[run[it]] - 1 } }
         val shapes = runs.map { CodewordWords.shape(it) }
         val assign = known.toIntArray()

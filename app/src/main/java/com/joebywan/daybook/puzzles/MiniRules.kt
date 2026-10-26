@@ -99,7 +99,7 @@ internal object MiniLogic {
      * slot the fewest words fit is branched on. No node budget, so it always ends with the true count. Clues play no part:
      * this proves that the letters given and the crossings alone leave one grid.
      */
-    fun solve(size: Int, letters: String): Verdict {
+    fun solve(size: Int, letters: String): Verdict<String> {
         val slots = slots(size, letters)
         val grid = letters.toCharArray()
         var found = 0

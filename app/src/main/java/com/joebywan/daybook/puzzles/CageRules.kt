@@ -357,7 +357,7 @@ internal object CageLogic {
 
 
     /** Exhaustive: settle, then branch on the emptiest square, until a second answer turns up or the tree is gone. */
-    fun solutions(board: Board, start: List<Int>): Verdict {
+    fun solutions(board: Board, start: List<Int>): Verdict<List<Int>> {
         var first: List<Int>? = null
         var count = 0
         fun walk(cells: IntArray) {
