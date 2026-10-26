@@ -137,7 +137,7 @@ fun StatsScreen(
             }
 
             item {
-                StreakCalendar(completions.mapNotNullTo(HashSet()) { it.day }, today, Modifier.fillMaxWidth())
+                StreakCalendar(completions.mapNotNullTo(HashSet()) { it.streakDay }, today, Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
             }
 
