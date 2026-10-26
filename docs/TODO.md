@@ -140,9 +140,14 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   build; not yet on a real Renovate PR. Check: the PR gets `build`, a patch/Actions PR merges by
   itself, a rebase builds again. *Recommended: turn on "Allow auto-merge" in the repo settings so
   such PRs merge the moment the build is green rather than on the next daily run.*
-- [ ] **Pages HTTPS.** The Pages API reports `https_enforced=false` with no CNAME on the project site
-  (it is served under the owner's existing custom domain). It works over HTTPS today; confirm
-  enforcement is on at the domain level, since the service worker requires HTTPS. *S.*
+- [ ] **Release secrets into an environment** (security review, 2026-10-27). Move `ANDROID_KEYSTORE_BASE64`,
+  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `PLAY_SERVICE_ACCOUNT_JSON` into a `release`
+  environment restricted to `main`, so no other branch's workflow can read them. Repo settings, owner only. *S.*
+- [ ] **Bind the required checks to GitHub Actions.** The ruleset's `build` and `web-parity` accept a status from anyone;
+  bind both to the GitHub Actions app (integration_id 15368) so a stray token cannot post them. Owner only. *S.*
+- [ ] **Require SHA-pinned actions.** Once the SHA-pinning PR merges, turn on "Require actions to be pinned to a
+  full-length commit SHA" in the repo's Actions settings. Owner only. *S.*
+- [ ] **Consider one approval for `.github/` changes** (a ruleset path rule), so a workflow change cannot merge unseen.
 - [ ] **Dependencies still behind after the toolchain majors.** The `androidx` libraries (Compose BOM
   2025.09 -> 2026.09, activity, datastore, core-ktx) and kotlinx-serialization 1.11
   are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
@@ -276,6 +281,12 @@ half-played final board when the player leaves it.
   strands existing installs (the export/import backup on the stats screen is the way across). Decide
   the final address before many people install it, if it is going to change at all. Other sites on
   that domain share its browser storage, so keep key names distinct.
+- **Declined: own origin for the web game** (security review, 2026-10-27). Daybook shares `knowhowit.com.au` with the
+  owner's blog (which loads Google Analytics) and six other Pages sites, so script on any of them could read or alter its
+  `localStorage` or plant an entry in its service-worker cache. The fix would be its own subdomain. The owner declined: a
+  free app, not happening. Do not reopen.
+- **Declined: HTTPS enforcement** (same review). `http://knowhowit.com.au/daybook/` is served over plain HTTP ("Enforce
+  HTTPS" is off for this repo's Pages). Declined for the same reason. Do not reopen.
 - **F-Droid.** Our own repo is automatic (`publish-fdroid.yml`; `docs/fdroid/README.md`). f-droid.org: merge request [fdroiddata!51019](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51019) is open (entry: `docs/fdroid/com.joebywan.daybook.yml`); answer the reviewers on GitLab, and when it merges check the app appears and that a later release is picked up
   (lints; never built by F-Droid). It is set up as a reproducible build, so its installs update over Play and GitHub ones if F-Droid's build matches our APK. Once the first run has
   pushed the `fdroid` branch, check the repo address in the F-Droid app and that a new release shows up in it.
