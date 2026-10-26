@@ -220,7 +220,7 @@ below have a famous branded version; use the descriptive name).
 - [ ] **Cipher: other shapes need longer words.** Every tier is 4 + 4 = 5 because the leading carry is the foothold the no-trial ladder needs, and the
   answer lists stop at five letters. A screened six-letter answer list (SCOWL through `tools/words/build.py`, screened by hand as the others were) would
   allow 5 + 5 = 6, which would give Hard and Expert a different look. Measured without it: 5 + 5 = 5 gave one ladder board per 30 pairs, three addends none.
-- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 89 / 80 / 75% of steps (Standard / Hard /
+- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 90 / 80 / 75% of steps (Standard / Hard /
   Expert); most all-columns steps and nearly every two-column what-if still say "only X = d" in summary. Those need two columns combined as algebra
   ("U + O + carry is 11, and O is 1 + U + carry, so 2U ...") or a case split on a carry whose branches stall without a second split; tried, the second
   split ran every explanation past 260 characters. A hint in two parts (the carry first, then the letter) may be the shape that fits. *M–L.*

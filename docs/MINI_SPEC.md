@@ -106,11 +106,11 @@ had a median share of 25%, below 5x5's 33%): Expert would be bigger and easier. 
   6x6 with 8, 29%; 7x7 with 13, 25%; 7x7 with 15, 29%. Of 5x5 fills 92% needed a crossing step and 94% every crossing
   together; under 1% needed only one-word steps.
 - **On the device, a year of daily boards** (`MiniRulesTest`, `build/reports/mini-tiers.txt`): clue letters 5.6 / 9.4 /
-  15.2 a board, share 26.7 / 34.9 / 44.8%. Generation (the walk and the proof), median / p95 / max: JVM 9.5 / 16 / 33 ms,
+  15.2 a board, share 26.4 / 34.8 / 44.9%. Generation (the walk and the proof), median / p95 / max: JVM 9.5 / 16 / 33 ms,
   15 / 18 / 25, 17 / 24 / 34; Chromium 20 / 31 / 61, 31 / 37 / 49, 36 / 52 / 67; WebKit 38 / 60 / 121, 59 / 72 / 96,
   69 / 100 / 131. No day of a year reaches `lastResort` on any tier (`FallbackTest`).
 - **Hints** (`MiniTeachingTest`, 200 boards a tier, hints alone finish all, no mistake): the clue fallback is 44 / 54 / 62%
-  of steps; per board one-word 3.6 / 3.8 / 4.9, crossing 2.0 / 2.2 / 2.1, every crossing together 1.5 / 2.0 / 2.3. A
+  of steps; per board one-word 3.6 / 3.9 / 4.7, crossing 1.9 / 2.3 / 2.2, every crossing together 1.5 / 1.9 / 2.3. A
   hint on the JVM: median 0.2-0.3 ms, p95 1.2 ms, max 2.9 ms.
 - **Second clue** (`MiniTeachingTest`, `build/reports/mini-second-clue.txt`, 200 boards a tier, 1,105 / 1,872 / 3,041
   fallback steps): the walk reads letters, so on its own terms a second clue moves nothing. The proxy: suppose the player
