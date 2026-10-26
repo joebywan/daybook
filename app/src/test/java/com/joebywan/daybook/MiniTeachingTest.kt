@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -15,14 +14,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class MiniTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
-    private fun board(day: Int, d: Difficulty) = Mini.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Mini.id, d), d) as MiniState
+    private fun board(day: Int, d: Difficulty) = Mini.generate(daySeed(day, Mini.id, d), d) as MiniState
 
     @Test
     fun `coverage - which techniques boards need, per difficulty`() {
@@ -58,8 +54,7 @@ class MiniTeachingTest {
             assertTrue("${d.name}: the crossings settle words", counts.keys.any { it != MiniTeacher.CLUE })
             assertTrue("${d.name}: the clue share is the measured one, under two thirds of steps", clue * 3 < steps * 2)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/mini-teaching-coverage.txt").writeText(report.toString())
+        writeReport("mini-teaching-coverage.txt", report.toString())
         println(report)
     }
 
