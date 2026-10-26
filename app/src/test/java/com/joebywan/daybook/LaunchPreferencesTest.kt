@@ -128,4 +128,21 @@ class LaunchPreferencesTest {
         store.putString("show_timer", "garbage")
         assertEquals(true, LaunchPreferences(store).showTimer.first())
     }
+
+    @Test
+    fun theReminderIsOffAt7pmUntilChosenAndAnyChoiceAnswersTheOffer() = runBlocking {
+        val store = MemoryStore()
+        val prefs = LaunchPreferences(store)
+        assertEquals("off by default", false, prefs.reminder.first())
+        assertEquals(19, prefs.reminderHour.first())
+        assertEquals(false, prefs.reminderOffered.first())
+        prefs.setReminder(false)
+        assertEquals("a choice in Settings answers the offer too", true, prefs.reminderOffered.first())
+        prefs.setReminder(true)
+        prefs.setReminderHour(8)
+        assertEquals(true, prefs.reminder.first())
+        assertEquals(8, prefs.reminderHour.first())
+        store.putString("reminder_hour", "99")
+        assertEquals("a bad hour falls back to the default", 19, prefs.reminderHour.first())
+    }
 }
