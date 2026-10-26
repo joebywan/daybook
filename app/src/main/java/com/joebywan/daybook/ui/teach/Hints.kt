@@ -269,13 +269,14 @@ fun HintSession.buttonLabel(): String = when {
  * wraps its text up to the height it is offered, and scrolls behind a fade beyond that (the play
  * screen's popover, see [HintPopover]). [raised] draws it as a card that floats over a board: a
  * solid ground, an outline and a shadow, where the slot's wash would let the board show through.
- * Its one button is Close: the next step belongs to the Hint button, which reads "Why?" and then
- * "Show me" (its [buttonLabel]), so the same button never shows twice.
+ * Its buttons are Close and the next step, "Why?" then "Show me", where the eye already is. [onNext] is
+ * whatever the caller's Hint button does, so the two are one path ([HintSession.tap]) and count alike.
  */
 @Composable
 fun HintPanel(
     session: HintSession,
     accent: Color,
+    onNext: () -> Unit,
     modifier: Modifier = Modifier,
     fill: Boolean = true,
     raised: Boolean = false,
@@ -327,6 +328,7 @@ fun HintPanel(
                 TextButton(onClick = { session.clear() }) {
                     Text("Close", color = scheme.onSurfaceVariant)
                 }
+                TextButton(onClick = onNext) { Text(session.buttonLabel(), color = ink) }
             }
         }
     }
@@ -354,6 +356,7 @@ fun HintPanel(
 fun HintPopover(
     session: HintSession,
     accent: Color,
+    onNext: () -> Unit,
     highlight: Rect?,
     keepClear: Collection<Rect>,
     origin: Offset,
@@ -405,7 +408,7 @@ fun HintPopover(
     }
 
     HintPanel(
-        session, accent,
+        session, accent, onNext,
         modifier = Modifier
             .offset { IntOffset(0, (y.value - origin.y).roundToInt()) }
             .padding(horizontal = 12.dp)
