@@ -1,7 +1,9 @@
 package com.joebywan.daybook
 
+import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import java.util.BitSet
+import java.util.concurrent.ExecutorService
 
 /**
  * Dense crossword fills, offline. Nothing here knows about Codeword: a mini crossword can call the same two functions
@@ -159,5 +161,61 @@ object CrosswordFill {
             return false
         }
         return if (search()) grid else null
+    }
+
+    /** The pattern a tier draws: runs of 3 to [maxRun] squares, about [blacks] black squares. */
+    class Shape(val maxRun: Int, val blacks: Int)
+
+    /**
+     * A grids build's tier: draws `make(i)` in batches of [batch] on [pool], read back in draw order, keeping the first
+     * [want] entries distinct by [key], until [limit] draws or [stall] batches in a row that keep nothing; [stats] sees
+     * them in draw order with the number drawn, and they come back sorted.
+     */
+    fun buildTier(
+        tier: Difficulty,
+        pool: ExecutorService,
+        want: Int,
+        limit: Int,
+        batch: Int,
+        fails: Any,
+        stall: Int = Int.MAX_VALUE,
+        key: (String) -> String = { it },
+        stats: (found: List<String>, drawn: Int) -> Unit,
+        make: (Int) -> String?,
+    ): List<String> {
+        val found = mutableListOf<String>()
+        val seen = HashSet<String>() // probed only, never iterated
+        var drawn = 0
+        val started = System.nanoTime()
+        var stalled = 0
+        while (found.size < want && drawn < limit && stalled < stall) {
+            val before = found.size
+            val futures = (drawn until drawn + batch).map { i -> pool.submit<String?> { make(i) } }
+            for (f in futures) {
+                val e = f.get() ?: continue
+                if (found.size < want && seen.add(key(e))) found += e
+            }
+            drawn += batch
+            stalled = if (found.size == before) stalled + 1 else 0
+            println("$tier drawn $drawn kept ${found.size} fails $fails (${(System.nanoTime() - started) / 1_000_000_000} s)")
+        }
+        stats(found, drawn)
+        return found.sorted()
+    }
+
+    /** A generated grids file: object [name], [header] as `//` lines, each tier's list in chunks of [chunk] entries. */
+    fun source(name: String, header: List<String>, tiers: Map<Difficulty, List<String>>, chunk: Int): String = buildString {
+        appendLine("package com.joebywan.daybook.puzzles")
+        appendLine()
+        for (line in header) appendLine("// $line")
+        appendLine()
+        appendLine("internal object $name {")
+        for ((tier, list) in tiers) {
+            appendLine("    val ${tier.name}: List<String> = listOf(")
+            for (c in list.chunked(chunk)) appendLine("        \"${c.joinToString(" ")}\",")
+            appendLine("    ).joinToString(\" \").split(\" \")")
+            if (tier != tiers.keys.last()) appendLine()
+        }
+        appendLine("}")
     }
 }

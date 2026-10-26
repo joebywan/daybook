@@ -198,13 +198,12 @@ internal object SudokuTeacher {
      * cell with the fewest candidates, which is where the player was most likely stuck. Says plainly
      * that it is doing this.
      */
-    private fun fallback(s: SudokuState): PlacementStep? {
-        val sight = sightOf(s.cells)
-        val cell = s.cells.indices
-            .filter { s.cells[it] == 0 }
-            .minByOrNull { sight.cand[it].countOneBits() }
-            ?: return null
-        val d = s.solution[cell]
+    private fun fallback(s: SudokuState): PlacementStep? = longerChain(s.cells, sightOf(s.cells).cand, s.solution)
+
+    /** [fallback]'s step (Cages' too): [solution]'s digit in the empty square of [cells] with the fewest of [cand]. */
+    internal fun longerChain(cells: List<Int>, cand: IntArray, solution: List<Int>): PlacementStep? {
+        val cell = cells.indices.filter { cells[it] == 0 }.minByOrNull { cand[it].countOneBits() } ?: return null
+        val d = solution[cell]
         return PlacementStep(
             FALLBACK, cell, d,
             focus = setOf(cell),

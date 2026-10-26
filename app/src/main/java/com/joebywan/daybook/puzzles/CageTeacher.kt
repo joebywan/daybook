@@ -130,18 +130,8 @@ internal object CageTeacher {
     }
 
     /** Nothing short enough to explain applied: point at a digit from the answer, and say so plainly. */
-    private fun fallback(s: CageState, board: Board): PlacementStep? {
-        val sight = Sight(board, s.cells.toIntArray())
-        val cell = s.cells.indices.filter { s.cells[it] == 0 }
-            .minByOrNull { sight.cand[it].countOneBits() } ?: return null
-        val d = s.grid.solution[cell]
-        return PlacementStep(
-            FALLBACK, cell, d, focus = setOf(cell), cited = emptySet(),
-            nudge = "This one takes a longer chain. Look at the glowing cell.",
-            explanation = "This one needs a longer chain than a hint can walk through, so here's a " +
-                "digit from the answer: the glowing cell is $d.",
-        )
-    }
+    private fun fallback(s: CageState, board: Board): PlacementStep? =
+        SudokuTeacher.longerChain(s.cells, Sight(board, s.cells.toIntArray()).cand, s.grid.solution)
 
     // ---- reasoning from what the player can see ----------------------------------------------------
 
@@ -337,10 +327,6 @@ internal object CageTeacher {
         }
     }
 
-    /** "or" lists for what a square may still be: "3 or 9", "1, 2 or 4". */
-    private fun either(digits: List<Int>) =
-        if (digits.size == 1) "${digits[0]}" else digits.dropLast(1).joinToString(", ") + " or " + digits.last()
-
     /**
      * Two or three groups (cages, innies, outies) where each after the first shares a square whose digits the ones before
      * it cut, ending in a single none of them makes alone: breadth first, so the fewest groups, then the first in index
@@ -406,7 +392,7 @@ internal object CageTeacher {
             val later = groups.drop(i + 1).flatMap { it.cells.toList() }.toSet()
             val open = g.cells.filter { link.cand[it] != 0 }
             val shared = open.filter { it in later }.ifEmpty { open }
-            val digits = either(digitsOf(shared.fold(0) { m, c -> m or link.cuts[i][c] }))
+            val digits = listed(digitsOf(shared.fold(0) { m, c -> m or link.cuts[i][c] }), "or")
             val these = if (shared.size == 1) "the shared square" else "the shared squares"
             if (g.kind == Kind.CAGE) "$who leaves $these only $digits" else "$who, so $these can only be $digits"
         }
@@ -426,32 +412,22 @@ internal object CageTeacher {
 
     /** What the generator's ladder places that no single group explains: every group worked through together. */
     private fun chain(board: Board, cells: IntArray): PlacementStep? {
-        val s = Sight(board, cells)
-        for (cell in 0 until 81) {
-            if (cells[cell] != 0 || s.cand[cell].countOneBits() != 1) continue
-            val d = digitsOf(s.cand[cell])[0]
-            return PlacementStep(
-                CAGE_CHAIN, cell, d,
-                focus = board.cages[board.cageOf[cell]].toSet() + cell,
-                cited = board.cages[board.cageOf[cell]].toSet(),
-                nudge = "What do the cage totals leave for the glowing square?",
-                explanation = "Work the cage totals through together with the digits around them, and the glowing " +
-                    "square can only be $d.",
-            )
-        }
-        for (u in 0 until 27) for (d in 1..9) {
-            if (s.holds(u, d)) continue
-            val places = s.places(u, d)
-            if (places.size != 1) continue
-            return PlacementStep(
-                CAGE_CHAIN, places[0], d,
-                focus = CageLogic.units[u].toSet(),
-                cited = board.cages[board.cageOf[places[0]]].toSet(),
-                nudge = "Look at ${unitName(u)}.",
-                explanation = "Work the cage totals through together with the digits around them, and " +
-                    "${unitName(u)} has only one place left for $d: the glowing square.",
-            )
-        }
-        return null
+        val (cell, d, u) = singleIn(Sight(board, cells)) ?: return null
+        if (u == null) return PlacementStep(
+            CAGE_CHAIN, cell, d,
+            focus = board.cages[board.cageOf[cell]].toSet() + cell,
+            cited = board.cages[board.cageOf[cell]].toSet(),
+            nudge = "What do the cage totals leave for the glowing square?",
+            explanation = "Work the cage totals through together with the digits around them, and the glowing " +
+                "square can only be $d.",
+        )
+        return PlacementStep(
+            CAGE_CHAIN, cell, d,
+            focus = CageLogic.units[u].toSet(),
+            cited = board.cages[board.cageOf[cell]].toSet(),
+            nudge = "Look at ${unitName(u)}.",
+            explanation = "Work the cage totals through together with the digits around them, and " +
+                "${unitName(u)} has only one place left for $d: the glowing square.",
+        )
     }
 }
