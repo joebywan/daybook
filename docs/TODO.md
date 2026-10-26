@@ -268,6 +268,12 @@ only spend their time railroaded through a tutorial.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
+- **Levels deal 3 opens with puzzles that are quick to solve but slow to learn.** The measured spread (`docs/LEVELS_SPEC.md`,
+  "Level difficulty") puts Mate, Atoms, Codeword, Tents and Who's Who in level 1 and Sudoku, Lexicon and Word Wheel at levels
+  10-12, nearly the reverse of `GENTLEST` (how quickly a newcomer gets going). Both are true: short, shallow hint walks, but
+  more rules to meet. If new players stall on levels 1-3, the lever is a deal 4 that adds a learning term to the score (or
+  keeps deal 2's first five levels and spreads from level 6). Sets is probably still underrated (its difficulty is the search,
+  which a three-step walk cannot see); solve times by tier would settle both.
 - **Mines: chording.** A tap on a number whose flags are met opening its other neighbours, as most versions have. Left out
   (`docs/MINES_SPEC.md`): with a wrong flag it opens a mine, a life lost to a note. Add it only if the owner wants the speed.
 - **Mines Expert on a short screen.** Eight wide keeps the square at 42-45 dp on a phone, but twelve rows are height-bound in a

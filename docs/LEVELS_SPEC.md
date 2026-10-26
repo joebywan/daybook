@@ -1,7 +1,7 @@
 # Levels — spec
 
 A third way to play beside Daily and Random: numbered levels, each a fixed set of five boards from different puzzles.
-Finish all five and the next level opens. Built: see the two "As built" sections below for where the build differs from
+Finish all five and the next level opens. Built: see the two "As built" sections and "Level difficulty (deal 3)" below for where the build differs from
 the plan that makes up the rest of this file.
 
 **Why.** A player's feedback (2026-10-22): they finish the dailies, but lose interest in Random because nothing on the
@@ -200,7 +200,7 @@ differs from the plan above:
   none being deal 1) and `Levels.LATEST` only when nothing is opened yet. Anyone who opened a level before this build keeps
   deal 1 everywhere; a new player gets deal 2 everywhere. Entries are still written once, so an opened level never moves.
   `openLevel` now returns the plan itself. `LevelsTest` pins 50 levels of each deal and runs every rule over both;
-  `LevelProgressTest` covers the old entry, the new one and the mixed history. The parity dump uses the latest deal.
+  `LevelProgressTest` covers the old entry, the new one and the mixed history. The parity dump uses the latest deal (deal 3 since "Level difficulty" below).
 - **Backup needed no change:** the web export copies every `daybook.*` localStorage entry verbatim, so the two new keys
   travel with it.
 - **Proof:** `LevelBoardsProvedTest` walks levels 1-365 (1,387 boards with a `generateVerified`) and none falls back; about
@@ -235,6 +235,53 @@ differs from the plan above:
   `tools/render/render.py --query` passes them.
 
 ## Level difficulty (deal 3)
+
+**Why (2026-10-26, approved by the owner).** Deal 2 dealt deck 0 in bands of the gentlest-first order, so the five
+hardest starters all landed in level 5, and it treated every puzzle's Standard as the same step, though some puzzles
+are simply harder than others at the same tier (the owner named Sets and Word Wheel). The owner's direction: if levels
+are tuned across a spread, do it over 100 levels, not 5. Deal 3 is `Levels.LATEST` from this build; a player who opened
+a level under deal 1 or 2 keeps it (the deal is per player, as before).
+
+**The measure (no player data).** `LevelDifficultyBuildTest` (env-gated, `DAYBOOK_LEVEL_DIFFICULTY=1`, about a minute)
+walks 60 boards of every puzzle and tier (the level seeds of levels 1-60) with the puzzle's own teacher, from the blank
+board to the end, taking every hint, and records three things a board:
+
+- **steps**: hints the walk took, the deductions or moves a player has to make;
+- **depth**: the deepest technique it needed, as its place on the puzzle's own ladder (`techniqueNamesOf`, simplest
+  first) from 0 to 1; a fallback step, or a walk the teacher loses (Lexicon, 2 and 4 of 60), counts as the top;
+- **open**: the share of steps that were the fallback: nothing short explained the move, so the player chooses or
+  recalls (the word games and Codebreaker; zero on every board a ladder gates).
+
+Snap and Pointers have no teacher. Snap's steps are its squares and its depth is 1 when the whole-board rules of
+`SnapDeducerReportTest` cannot finish it from blank (a what-if is needed); Pointers' steps are its arrows, depth and
+open 0 (nothing is hidden; its challenge is care). A Sudoku step is not a chess move, so the numbers are not compared
+as numbers: each measure becomes a percentile rank among all 93 puzzle-tiers, and their mean is the **measured** score
+(0-1000). The score deal 3 uses is the mean of that and the tier itself (Standard 0, Hard 500, Expert 1000), because
+each generator already measures and gates its own tiers (size, and the ladder rung a board must need), and the walk
+alone misreads a puzzle whose one step is a whole search: on the walk Mate is the easiest puzzle at every tier, since a
+key move is one step. So the measure moves a puzzle within its tier's band and the tiers overlap only at the edges.
+
+What it says: the word games (Crossword, Lexicon, Codebreaker, Word Wheel), Cage Sudoku and Nonogram are the hardest
+at Standard; Word Wheel's Standard (276) is harder than every ladder puzzle's but Cage Sudoku's. Sets sits
+above the middle (215, 21st of 31 Standards); what makes it hard is finding a set among the cards, which a walk of
+three or four steps cannot see, so it is probably still underrated. Mate, Atoms, Codeword, Tents and Who's Who are the
+gentlest Standards: short walks on low rungs. Known ceilings: steps favour big boards; depth depends on how finely each
+ladder is cut; open is zero for most puzzles. Player data (solve times by tier) would replace all of it.
+
+**The deal.** `Levels.spread`, built once from `core/LevelSpread.kt` (written by the test above; never edited by hand)
+and nothing else, so a plan is still `(level, poolSize, deal)` alone. Level `n` of 1-100 aims at a target rising evenly
+from the lowest score to the highest. Every puzzle not in the level before offers its tier nearest the target; they
+queue by staleness (never met first, gentlest Standard first; then the longest away, blurred by up to two levels so
+puzzles met together do not keep returning together), and the level is the five of the first 16 whose mean is nearest
+the target, each board's own distance counting 0.3 as much. A puzzle away 15 levels must come back, and the `r`-th
+gentlest Standard must be met by level `1 + 12r / 31`. Integer arithmetic only, no hash order (web parity). Tiles show
+gentlest first. Measured (`LevelsTest` holds each): every level's mean within 87 of its target (11 on average), ten-level means 159, 220, 294, 383, 469, 539, 629, 722, 796, 829; every
+puzzle met by level 13 and in 13 to 20 of levels 1-100, never away more than 15 levels nor in two levels running; 43 levels mix tiers.
+The first 31 pool ids are ranked (`LevelSpread.RANKED`); a puzzle appended later joins deal 3 from level 101, where
+deal 3 deals decks 1, 2, ... of the whole pool on the old curve (3 Hard, 2 Expert), deck 1 repaired against levels 99-100.
+That is a step down from level 100's five Experts, a breather rather than a cliff. Re-measuring, or ranking a new
+puzzle into 1-100, is a new deal: rewriting `LevelSpread.kt` would move every deal-3 plan, opened ones included.
+Building the spread costs about 150 ms on a desktop JVM, once, cold; a plan after that costs what it did.
 
 <!-- level-difficulty:start -->
 Generated by `LevelDifficultyBuildTest` (60 boards a tier, the level seeds of levels 1-60); do not edit by hand.
