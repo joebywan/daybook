@@ -22,9 +22,9 @@ import kotlinx.datetime.LocalDate
 
 /** Every achievement: earned ones as colour badges, the rest as silhouettes with their description so there is something to aim for. */
 @Composable
-fun AchievementsScreen(today: LocalDate, completions: List<Completion>, onBack: () -> Unit) {
+fun AchievementsScreen(today: LocalDate, completions: List<Completion>, onBack: () -> Unit, training: Set<String> = emptySet()) {
     val scheme = MaterialTheme.colorScheme
-    val earned = earnedAchievements(completions, today).map { it.id }.toSet()
+    val earned = earnedAchievements(completions, today, training = training).map { it.id }.toSet()
     TitledScreen("Achievements", "${earned.size} of ${ACHIEVEMENTS.size}", onBack) {
         // Definition order, so a badge keeps its place as more are earned.
         LazyVerticalGrid(

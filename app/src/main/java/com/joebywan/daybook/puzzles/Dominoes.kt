@@ -99,7 +99,8 @@ object Dominoes : PuzzleType {
         "Arrows move, ] or Tab and [ pick a domino, F or Space turns it, Enter marks a square and lays it, Backspace lifts.",
     )
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = DominoLogic.generate(seed, difficulty)
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        DominoLogic.generateVerified(seed, difficulty) ?: DominoLogic.lastResort(difficulty)
 
     /** The deepest level the generator's ladder needs, each tier exactly one; null below region values. */
     override fun neededTechnique(state: PuzzleState): String? =
@@ -502,12 +503,17 @@ object Dominoes : PuzzleType {
         val sq = fit.square(q % s.width, q / s.width)
         val rule = s.rules[r]
         val text = labelNumber(rule)?.let { labels[it]?.size?.width?.toFloat() } ?: 0f
-        val symbol = if (rule.kind == RuleKind.SUM) 0f else u * 0.17f
-        val gap = if (text > 0f && symbol > 0f) u * 0.03f else 0f
+        val (symbol, gap) = badgeParts(rule.kind, text, u)
         val h = u * 0.38f
         val w = maxOf(h, symbol + gap + text + u * 0.18f)
         val centre = Offset(sq.right + u * 0.05f, sq.top - u * 0.05f)
         return Rect(Offset(centre.x - w / 2, centre.y - h / 2), Size(w, h))
+    }
+
+    /** A badge's symbol width and the gap after it, beside a label [text] wide: [badgeRect] sizes by them, [drawBadge] lays out by them. */
+    private fun badgeParts(kind: RuleKind, text: Float, u: Float): Pair<Float, Float> {
+        val symbol = if (kind == RuleKind.SUM) 0f else u * 0.17f
+        return symbol to if (text > 0f && symbol > 0f) u * 0.03f else 0f
     }
 
     private fun DrawScope.drawBadge(rule: RegionRule, rect: Rect, u: Float, fill: Color, ring: Color, alpha: Float, label: TextLayoutResult?) {
@@ -515,9 +521,8 @@ object Dominoes : PuzzleType {
         drawRoundRect(fill.copy(alpha = alpha), rect.topLeft, rect.size, radius)
         drawRoundRect(ring, rect.topLeft, rect.size, radius, style = Stroke(maxOf(1f, u * 0.035f)))
         val ink = BoardHues.onFill(fill).copy(alpha = alpha)
-        val symbol = if (rule.kind == RuleKind.SUM) 0f else u * 0.17f
         val text = label?.size?.width?.toFloat() ?: 0f
-        val gap = if (text > 0f && symbol > 0f) u * 0.03f else 0f
+        val (symbol, gap) = badgeParts(rule.kind, text, u)
         var x = rect.center.x - (symbol + gap + text) / 2
         if (symbol > 0f) {
             drawSymbol(rule.kind, Offset(x + symbol / 2, rect.center.y), u, ink)
@@ -901,7 +906,7 @@ object Dominoes : PuzzleType {
                             if (!interactive) return@pointerInput
                             var from = -1
                             var fromTray = false
-                            fun free(b: DominoState, q: Int) = q >= 0 && b.open[q] && DominoLogic.dominoAt(b, q) < 0
+                            fun free(b: DominoState, q: Int) = q >= 0 && b.isFree(q)
                             // The overload that hands over the *down* (the web's touch slop is wide).
                             detectDragGestures(
                                 orientationLock = null,
@@ -943,7 +948,7 @@ object Dominoes : PuzzleType {
                                             abs(dx) >= abs(dy) -> if (dx > 0 && from % b.width < b.width - 1) from + 1 else if (dx < 0 && from % b.width > 0) from - 1 else -1
                                             else -> if (dy > 0) from + b.width else from - b.width
                                         }
-                                        val ok = to in b.open.indices && b.open[to] && DominoLogic.dominoAt(b, to) < 0
+                                        val ok = to in b.open.indices && b.isFree(to)
                                         ghost = if (ok) from to to else null
                                     }
                                 },

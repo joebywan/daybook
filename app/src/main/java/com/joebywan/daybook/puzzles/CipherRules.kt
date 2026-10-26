@@ -88,7 +88,7 @@ internal class CipherSum(val words: List<String>) {
  *
  * Boards come from [CipherSums]: sums of real words (the addends *and* the total), found offline by
  * `CipherSumsBuildTest` because a sum of real words with one answer is rare (about one addend pair in
- * four has one that the ladder finishes, out of 1,801 totals tried, which is far too slow to search for on a phone). The
+ * four has one that the ladder finishes, out of 1,768 totals tried, which is far too slow to search for on a phone). The
  * seed picks an entry; the device then proves it again before shipping it: the teacher's ladder must
  * finish it ([CipherTeacher.solvesByLogic]) and an exhaustive search ([prove]) must find exactly one
  * answer, which becomes the stored solution. `CipherRulesTest` checks both against a third, naive solver

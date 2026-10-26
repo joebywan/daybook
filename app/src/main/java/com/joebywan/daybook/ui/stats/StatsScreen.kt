@@ -71,6 +71,8 @@ fun StatsScreen(
     /** A day tapped on the streak calendar: that day in the archive. */
     onDay: (LocalDate) -> Unit,
     onBack: () -> Unit,
+    /** The training record (`TrainingRecord`), for the Training achievements in the count. */
+    training: Set<String> = emptySet(),
 ) {
     val scheme = MaterialTheme.colorScheme
     // Which kept card is open, as "puzzleId|tier|best", so a rotation keeps it open.
@@ -112,7 +114,7 @@ fun StatsScreen(
             }
 
             item {
-                val got = earnedAchievements(completions, today).size
+                val got = earnedAchievements(completions, today, training = training).size
                 Row(
                     Modifier.fillMaxWidth().card(scheme.surface).clickable(onClick = onAchievements).padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,

@@ -227,14 +227,8 @@ internal object LampsLogic {
             if (on > g.number[w]) return Broken(OVER, w)
             if (on + free < g.number[w]) return Broken(SHORT, w)
         }
-        for (y in squares) if (!lit[y] && !hasSource(g, k, lit, y)) return Broken(UNLIT, y)
+        for (y in squares) if (!lit[y] && onlySource(g, k, lit, y) == -1) return Broken(UNLIT, y)
         return null
-    }
-
-    private fun hasSource(g: Geo, k: IntArray, lit: BooleanArray, y: Int): Boolean {
-        if (candidate(g, k, lit, y)) return true
-        for (j in g.sight[y]) if (candidate(g, k, lit, j)) return true
-        return false
     }
 
     /** The only source of [y], -1 for none, -2 for several. */
@@ -250,15 +244,12 @@ internal object LampsLogic {
     /** The first fact of the ladder up to [rung] that [k] does not yet hold, or null when it has none. */
     fun nextFact(g: Geo, k: IntArray, rung: Int): Fact? = nextFact(g, k, rung, litBy(g, k))
 
-    /** [nextFact] with [lit] already worked out from [k]. */
+    /** The lamps beside wall [w]. */
+    private fun on(g: Geo, k: IntArray, w: Int): Int = g.beside[w].count { k[it] == LAMP }
+
     /** The first direct fact among the numbered [walls] and white [squares] given (each ascending), in the ladder's order. */
     private fun directFact(g: Geo, k: IntArray, lit: BooleanArray, walls: IntArray, squares: IntArray): Fact? {
         fun cands(w: Int) = g.beside[w].filter { candidate(g, k, lit, it) }
-        fun on(w: Int): Int {
-            var c = 0
-            for (j in g.beside[w]) if (k[j] == LAMP) c++
-            return c
-        }
         fun free(w: Int): Int {
             var c = 0
             for (j in g.beside[w]) if (candidate(g, k, lit, j)) c++
@@ -266,9 +257,9 @@ internal object LampsLogic {
         }
 
         for (w in walls) if (g.number[w] == 0 && free(w) > 0) return Fact(ZERO, NO, cands(w), wall = w)
-        for (w in walls) if (g.number[w] > 0 && on(w) == g.number[w] && free(w) > 0) return Fact(DONE, NO, cands(w), wall = w)
+        for (w in walls) if (g.number[w] > 0 && on(g, k, w) == g.number[w] && free(w) > 0) return Fact(DONE, NO, cands(w), wall = w)
         for (w in walls) {
-            val need = g.number[w] - on(w)
+            val need = g.number[w] - on(g, k, w)
             if (need > 0 && free(w) == need) return Fact(ROOM, LAMP, cands(w), wall = w)
         }
         for (y in squares) {
@@ -279,15 +270,10 @@ internal object LampsLogic {
         return null
     }
 
+    /** [nextFact] with [lit] already worked out from [k]. */
     private fun nextFact(g: Geo, k: IntArray, rung: Int, lit: BooleanArray): Fact? {
         directFact(g, k, lit, g.numbered, g.whites)?.let { return it }
         if (rung < LOOKAHEAD) return null
-        fun cands(w: Int) = g.beside[w].filter { candidate(g, k, lit, it) }
-        fun on(w: Int): Int {
-            var c = 0
-            for (j in g.beside[w]) if (k[j] == LAMP) c++
-            return c
-        }
 
         // What a lamp on x would light, as a stamp per square (x itself included).
         val stamp = IntArray(k.size) { -1 }
@@ -309,7 +295,7 @@ internal object LampsLogic {
                     if (stamp[j] == x) lost++
                 }
                 if (lost == 0) continue
-                if (on(w) + gain + free - lost < g.number[w]) {
+                if (on(g, k, w) + gain + free - lost < g.number[w]) {
                     val gone = g.beside[w].filter { it != x && candidate(g, k, lit, it) && stamp[it] == x }
                     return Fact(STARVE, NO, listOf(x), wall = w, lit = gone)
                 }

@@ -80,30 +80,23 @@ internal object NonogramLogic {
         return out
     }
 
-    private fun picture(width: Int, height: Int, solution: String) =
-        Array(height) { r -> BooleanArray(width) { c -> solution[r * width + c] == '1' } }
+    /** Each row's clue, then each column's, read off a picture ([solution], `1` filled, reading order). */
+    private fun rowsOf(width: Int, height: Int, solution: String) =
+        List(height) { r -> runs(BooleanArray(width) { c -> solution[r * width + c] == '1' }) }
 
-    fun rowClues(s: NonogramState): List<List<Int>> {
-        val p = picture(s.width, s.height, s.solution)
-        return List(s.height) { r -> runs(p[r]) }
-    }
+    private fun colsOf(width: Int, height: Int, solution: String) =
+        List(width) { c -> runs(BooleanArray(height) { r -> solution[r * width + c] == '1' }) }
 
-    fun colClues(s: NonogramState): List<List<Int>> {
-        val p = picture(s.width, s.height, s.solution)
-        return List(s.width) { c -> runs(BooleanArray(s.height) { r -> p[r][c] }) }
-    }
+    fun rowClues(s: NonogramState): List<List<Int>> = rowsOf(s.width, s.height, s.solution)
+
+    fun colClues(s: NonogramState): List<List<Int>> = colsOf(s.width, s.height, s.solution)
 
     /** Every line's clue: rows first, then columns (as [lineCells] numbers them). */
     fun clues(s: NonogramState): List<List<Int>> = rowClues(s) + colClues(s)
 
-    /** The squares of row [r], then of column [c], as indices into the board. */
-    fun rowCells(width: Int, r: Int): List<Int> = List(width) { r * width + it }
-
-    fun colCells(width: Int, height: Int, c: Int): List<Int> = List(height) { it * width + c }
-
-    /** Rows first (0 until height), then columns (height until height + width). */
+    /** A line's squares as indices into the board: rows first (0 until height), then columns (height until height + width). */
     fun lineCells(width: Int, height: Int, line: Int): List<Int> =
-        if (line < height) rowCells(width, line) else colCells(width, height, line - height)
+        if (line < height) List(width) { line * width + it } else List(height) { it * width + line - height }
 
     /** Highlight indices for the clues, which sit after the squares (see [NonogramTeacher]). */
     fun rowClueIndex(width: Int, height: Int, r: Int): Int = width * height + r
@@ -255,10 +248,7 @@ internal object NonogramLogic {
      * The generator's depth gate ([Spec.minPasses]).
      */
     fun linePasses(width: Int, height: Int, solution: String): Int? {
-        val p = picture(width, height, solution)
-        val rows = List(height) { runs(p[it]) }
-        val cols = List(width) { c -> runs(BooleanArray(height) { r -> p[r][c] }) }
-        val (done, passes) = settle(width, height, rows, cols, IntArray(width * height)) ?: return null
+        val (done, passes) = settle(width, height, rowsOf(width, height, solution), colsOf(width, height, solution), IntArray(width * height)) ?: return null
         return if (done.none { it == UNKNOWN }) passes else null
     }
 

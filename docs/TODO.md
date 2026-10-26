@@ -35,6 +35,10 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Screenshots show the old names.** Snap, Mambo, Tower and Pointers became Trail, Sun & Moon, Codebreaker and Arrows
   (2026-10-25); `docs/screenshots/home.png` and the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
   with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
+- [ ] **The walkthrough offer: players from before the re-offer.** The offer now returns on every visit until the walkthrough is
+  opened or the puzzle solved, recorded in the same `tutorialsOffered` set the once-only offer wrote on a first visit, so a
+  player who saw the old offer once is never offered it again. A new key would re-offer them; the set's doc comment in
+  `ProgressStore` still describes the old rule. *S.*
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
@@ -258,8 +262,9 @@ but do not demand thought, against the owner's stated taste. (A crossword was he
 hand-written clues are one now, see the council list.) Curated themed puzzles (four groups of four, themed word hunts)
 were declined by the owner (2026-10-25): a shipped list runs out and would need revisiting every year.
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
-A practice mode per technique was declined by the owner: players can use the hints themselves, and it would
-only spend their time railroaded through a tutorial.
+A practice mode per technique, once declined, is now wanted (2026-10-26): Training, piloted on Sudoku
+(`docs/TRAINING_SPEC.md`). Open after the pilot: where it lives (Settings for now), other puzzles, and keeping a
+half-played final board when the player leaves it.
 
 ## Owner's call
 

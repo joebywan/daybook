@@ -45,6 +45,8 @@ import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.marked
+import com.joebywan.daybook.core.only
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.rememberHintPulse
@@ -140,21 +142,6 @@ object Nonogram : PuzzleType {
     private fun tutorialBoard(cells: String = ".".repeat(TUTORIAL_N * TUTORIAL_N)) =
         NonogramState(TUTORIAL_N, TUTORIAL_N, TUTORIAL_PICTURE, cells)
 
-    /** [base] with [marks] (cell to mark) written over it. */
-    private fun marked(base: NonogramState, marks: Map<Int, Char>): NonogramState {
-        val next = base.cells.toCharArray()
-        marks.forEach { (i, c) -> next[i] = c }
-        return base.copy(cells = next.concatToString())
-    }
-
-    /**
-     * Accepts exactly [base] with [changes] made and nothing else. Strict on purpose, as Kings'
-     * is: each frame's board is written for the one before it.
-     */
-    private fun only(base: NonogramState, changes: Map<Int, Char>): (PuzzleState) -> Boolean = { next ->
-        next is NonogramState && next.cells == marked(base, changes).cells
-    }
-
     override val tutorial: List<TutorialFrame> by lazy {
         val rowIndex = { r: Int -> NonogramLogic.rowClueIndex(TUTORIAL_N, TUTORIAL_N, r) }
         val colIndex = { c: Int -> NonogramLogic.colClueIndex(TUTORIAL_N, TUTORIAL_N, c) }
@@ -163,9 +150,9 @@ object Nonogram : PuzzleType {
         val empty = tutorialBoard()
         val row2 = (5..9).toList()
         val row3 = (10..14).toList()
-        val afterRow3 = marked(empty, (row2 + row3).associateWith { NonogramLogic.FILLED })
-        val afterMiddle = marked(afterRow3, mapOf(17 to NonogramLogic.FILLED))
-        val afterCross = marked(afterMiddle, mapOf(20 to NonogramLogic.CROSSED))
+        val afterRow3 = empty.marked((row2 + row3).associateWith { NonogramLogic.FILLED })
+        val afterMiddle = afterRow3.marked(mapOf(17 to NonogramLogic.FILLED))
+        val afterCross = afterMiddle.marked(mapOf(20 to NonogramLogic.CROSSED))
         listOf(
             TutorialFrame(
                 state = solved,
@@ -185,9 +172,9 @@ object Nonogram : PuzzleType {
                 },
                 steps = { next ->
                     when {
-                        only(empty, (row2 + row3).associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.DONE
-                        only(empty, row2.associateWith { NonogramLogic.FILLED })(next) ||
-                            only(empty, row3.associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.PROGRESS
+                        empty.only((row2 + row3).associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.DONE
+                        empty.only(row2.associateWith { NonogramLogic.FILLED })(next) ||
+                            empty.only(row3.associateWith { NonogramLogic.FILLED })(next) -> TutorialStep.PROGRESS
                         else -> TutorialStep.REJECT
                     }
                 },
@@ -199,7 +186,7 @@ object Nonogram : PuzzleType {
                 caption = "Row 4 reads 3 in five squares. Slide the 3 to the far left, then the far right: " +
                     "the middle square is covered both times, so it is filled. Tap it.",
                 highlight = BoardHighlight(strong = setOf(17, rowIndex(3)), soft = (15..19).toSet() - 17),
-                accepts = only(afterRow3, mapOf(17 to NonogramLogic.FILLED)),
+                accepts = afterRow3.only(mapOf(17 to NonogramLogic.FILLED)),
                 retry = "Tap the glowing square once.",
                 done = "Filled. Sliding a run both ways shows which squares it cannot avoid.",
             ),
@@ -208,7 +195,7 @@ object Nonogram : PuzzleType {
                 caption = "Column 1 reads 2, and rows 2 and 3 already give it that 2, so the rest of the column " +
                     "is empty. Choose Cross under the board, then tap the bottom square.",
                 highlight = BoardHighlight(strong = setOf(20, colIndex(0)), soft = setOf(0, 5, 10, 15)),
-                accepts = only(afterMiddle, mapOf(20 to NonogramLogic.CROSSED)),
+                accepts = afterMiddle.only(mapOf(20 to NonogramLogic.CROSSED)),
                 retry = "Switch to Cross under the board, then tap the glowing square.",
                 done = "Crossed. A cross is only a note that the square is empty.",
             ),
