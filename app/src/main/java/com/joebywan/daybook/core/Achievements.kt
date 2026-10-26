@@ -65,10 +65,10 @@ val ACHIEVEMENTS: List<Achievement> = listOf(
         h.filter { it.day != null }.groupBy { it.puzzleId to it.day }
             .any { (_, c) -> c.mapTo(HashSet()) { it.difficulty }.size == Difficulty.entries.size }
     },
-    // The registry's three (TodaysThree), not puzzleIds: a test's fake ids would leave a three of one.
+    // The registry's three (TodaysThree), or the day's starter three, not puzzleIds: a test's fake ids would leave a three of one.
     Achievement("todaysThree", AchievementCategory.COVERAGE, "Today's three", "Finish a day's three on one tier, on the day.") { h, _, _ ->
         h.filter { it.day != null }.groupBy { it.day!! to it.difficulty }
-            .any { (k, c) -> c.mapTo(HashSet()) { it.puzzleId }.containsAll(TodaysThree.of(k.first)) }
+            .any { (k, c) -> c.mapTo(HashSet()) { it.puzzleId }.let { it.containsAll(TodaysThree.of(k.first)) || it.containsAll(TodaysThree.starter(k.first)) } }
     },
     Achievement("allPuzzles", AchievementCategory.COVERAGE, "Clean sweep", "Finish every puzzle's daily on the same day.") { h, _, ids ->
         ids.isNotEmpty() && h.filter { it.day != null }.groupBy { it.day }

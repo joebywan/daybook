@@ -5,6 +5,7 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.TodaysThree
 import com.joebywan.daybook.core.earnedAchievements
 import com.joebywan.daybook.data.Completion
+import com.joebywan.daybook.data.PuzzleOrder
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -46,5 +47,29 @@ class TodaysThreeTest {
         assertFalse("a practice board", earned(two + solve(three[2], Difficulty.HARD, on = null)))
         assertFalse("another day", earned(two + solve(three[2], Difficulty.HARD, on = LocalDate(2026, 10, 26))))
         assertTrue(earned(two + solve(three[2], Difficulty.HARD)))
+    }
+
+    @Test fun `a newcomer's starter three keeps the quick slot and draws the rest from the gentlest`() {
+        // 20751 mod 4 = 3 (mines), mod 3 = 0 (words); the quick slot is the shared three's.
+        assertEquals(listOf("sets", "mines", "words"), TodaysThree.starter(day))
+        val mids = PuzzleOrder.GENTLEST.filter { it !in TodaysThree.QUICK && it !in TodaysThree.WORDS }
+        assertEquals("the gentlest mid-weights", mids.take(TodaysThree.STARTER_MID.size), TodaysThree.STARTER_MID)
+        assertEquals("the gentlest word ones", PuzzleOrder.GENTLEST.filter { it in TodaysThree.WORDS }.take(3), TodaysThree.STARTER_WORDS)
+        val year = (0 until 365).map { LocalDate.fromEpochDays(day.toEpochDays() + it) }
+        year.forEach { d ->
+            val (quick, mid, words) = TodaysThree.starter(d)
+            assertEquals(TodaysThree.of(d)[0], quick)
+            assertTrue(mid in TodaysThree.STARTER_MID && words in TodaysThree.STARTER_WORDS)
+        }
+        assertEquals("every starter puzzle comes up", (TodaysThree.STARTER_MID + TodaysThree.STARTER_WORDS).toSet(),
+            year.flatMap { TodaysThree.starter(it).drop(1) }.toSet())
+    }
+
+    @Test fun `the achievement also takes the day's starter three`() {
+        val starter = TodaysThree.starter(day)
+        assertTrue(starter != TodaysThree.of(day))
+        val h = starter.map { Completion(it, Difficulty.STANDARD, day, 60, 0) }
+        assertTrue(earnedAchievements(h, day).any { it.id == "todaysThree" })
+        assertFalse(earnedAchievements(h.dropLast(1), day).any { it.id == "todaysThree" })
     }
 }

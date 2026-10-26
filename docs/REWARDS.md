@@ -191,8 +191,10 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   in Daily or Random mode. Always laid out at the same height (the Share button sits in a caption line of fixed height), and
   laid out unseen in Levels, so it never moves the grid. "Try me!" and the grid's pick square are gone; nothing is stored.
   Its share card (`threeShareCard`): "Daybook · 25 Oct · Today's three · Standard", a mark per puzzle and "2/3", the solved
-  boards' time and hints, the streak. An achievement, "Today's three" (all three on one tier, on the day), reads the
-  registry's lists, so changing a list (or adding a puzzle) can make an old day's read unearned, as with the other
+  boards' time and hints, the streak. A new player (fewer than five solves) gets `TodaysThree.starter` instead: the same
+  quick slot, a mid-weight from Sudoku / Crossword / Nonogram / Mines and a word one from Lexicon / Word Wheel / Target
+  (the gentlest of each kind), the same for every newcomer that day. An achievement, "Today's three" (all three on one
+  tier, on the day, either the shared three or the day's starter three), reads the registry's lists, so changing a list (or adding a puzzle) can make an old day's read unearned, as with the other
   registry-wide ones.
 - **In progress.** A tile whose board at the grid's tier and mode (today's daily; in Random, the tier's current random board)
   has a saved game that is unsolved and has a move in it says "In progress", tilted across the thumbnail with a halo, in the
@@ -230,8 +232,9 @@ would rather let people rearrange than hide.
 ## Welcome (`ui/home/Welcome.kt`)
 
 One calm screen shown in place of the grid, once, to a new player: one line on what Daybook is (new boards every day, free,
-no ads, no account, offline), then four pointers with small icons: today's three and the one-minute walkthrough under "How to play";
-Daily / Levels / Random and the three tiers; the archive, stats and achievements buttons; press and hold to move a puzzle.
+no ads, no account, offline), then four pointers with small icons: today's three (gentle ones at first) and the ? on every puzzle (rules and the
+one-minute walkthrough); Daily / Levels / Random and the three tiers; the archive and achievements buttons and the chart badge
+(stats); press and hold to move a puzzle (most played first, gentlest breaking ties).
 One button, Start. No question, no pages, nothing drawn over the grid (the owner's call). `LaunchPreferences.needsWelcome`:
 only when the launch file has no `welcomed` key and `ProgressStore.hasPlayed()` is false (the timer default's rule); a
 player who has played is marked welcomed on the spot, so an existing player never sees it. Start writes `welcomed`. Home
