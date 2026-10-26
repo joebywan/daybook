@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.PipesState
@@ -18,9 +17,7 @@ import java.time.LocalDate
  */
 class PipesFlowTest {
 
-    private val seeds = (0 until 5).map {
-        DailySeed.seedFor(LocalDate.of(2026, 5, 2).plusDays(it.toLong()), "pipes", Difficulty.STANDARD)
-    }
+    private val seeds = seeds(5, Difficulty.STANDARD, "pipes", LocalDate.of(2026, 5, 2))
 
     /** A 3x3 snake through every cell: joined, connected, and therefore solved. */
     private val solvedBoard = PipesState(

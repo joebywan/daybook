@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Broken
 import com.joebywan.daybook.puzzles.Link
@@ -12,7 +11,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
 
 /**
@@ -24,9 +22,7 @@ import java.time.LocalDate
  */
 class MamboRulesTest {
 
-    private val seeds = (0 until 6).map {
-        DailySeed.seedFor(LocalDate.of(2026, 3, 1).plusDays(it.toLong()), "x", Difficulty.STANDARD)
-    }
+    private val seeds = seeds(6, Difficulty.STANDARD, "x", LocalDate.of(2026, 3, 1))
 
     @Test
     fun `every generated board is solvable without a guess`() {
@@ -62,15 +58,14 @@ class MamboRulesTest {
         // so only the null check can fail if the search ever came up empty.
         // The tiers' gates are checked here with this file's own solver: Standard falls to the three
         // rules alone, Hard and Expert never do (MamboTeachingTest checks which rung each needs).
-        val start = LocalDate.of(2026, 1, 1)
         val report = StringBuilder()
         for (difficulty in Difficulty.entries) {
             val everyLink = Mambo.lastResort(sideOf(difficulty)).links.size
             val draws = mutableListOf<Int>()
             val millis = mutableListOf<Double>()
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, Mambo.id, difficulty)
+            for (day in 0 until 365) {
+                val date = TEST_START.plusDays(day.toLong())
+                val seed = daySeed(day, Mambo.id, difficulty)
                 val label = "mambo/${difficulty.name}/$date"
                 val t0 = System.nanoTime()
                 val proved = Mambo.proved(seed, difficulty)
@@ -100,8 +95,7 @@ class MamboRulesTest {
             )
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/mambo-draws.txt").writeText(report.toString())
+        writeReport("mambo-draws.txt", report.toString())
     }
 
     @Test
@@ -122,11 +116,10 @@ class MamboRulesTest {
     fun `generated boards have exactly one answer by exhaustive search`() {
         // A search that shares nothing with the generator: depth first over every grid, no
         // propagation. Slow on a big board, so the sample thins as the boards grow.
-        val start = LocalDate.of(2026, 1, 1)
         for ((difficulty, days) in listOf(Difficulty.STANDARD to 60, Difficulty.HARD to 30, Difficulty.EXPERT to 10)) {
-            for (day in 0 until days.toLong()) {
-                val date = start.plusDays(day)
-                val state = Mambo.generate(DailySeed.seedFor(date, Mambo.id, difficulty), difficulty) as MamboState
+            for (day in 0 until days) {
+                val date = TEST_START.plusDays(day.toLong())
+                val state = Mambo.generate(daySeed(day, Mambo.id, difficulty), difficulty) as MamboState
                 assertEquals("mambo/${difficulty.name}/$date has several answers", 1, MamboOracle.countAnswers(state.size, state.cells, state.links))
             }
         }

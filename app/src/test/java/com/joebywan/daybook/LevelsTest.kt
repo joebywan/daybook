@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LevelBoard
 import com.joebywan.daybook.core.LevelSpread
@@ -9,7 +8,6 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * The level plan (`core/Levels.kt`). The curve, the window and the pool are written out here rather than read
@@ -159,10 +157,9 @@ class LevelsTest {
 
     @Test
     fun `seeds are the level's own and never a daily board of the same puzzle and tier`() {
-        val start = LocalDate.of(2026, 1, 1)
         val daily = HashSet<Long>()
-        for (id in pinnedPool) for (tier in Difficulty.entries) for (d in 0 until 365L) {
-            daily += DailySeed.seedFor(start.plusDays(d), id, tier)
+        for (id in pinnedPool) for (tier in Difficulty.entries) for (d in 0 until 365) {
+            daily += daySeed(d, id, tier)
         }
         val boards = (1..365).flatMap { Levels.plan(it) }
         assertTrue(boards.none { it.seed in daily })
