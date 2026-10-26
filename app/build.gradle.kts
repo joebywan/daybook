@@ -40,7 +40,7 @@ val buildVersionName = System.getenv("DAYBOOK_VERSION_NAME") ?: "0.1.0"
 
 android {
     namespace = "com.joebywan.daybook"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         // Locked: changing this after the first release makes every installed copy un-updatable.
