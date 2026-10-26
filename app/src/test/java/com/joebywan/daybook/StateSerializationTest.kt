@@ -154,7 +154,7 @@ class StateSerializationTest {
             val stuck = state.arrows.indices.first { state.blocker(it) >= 0 }
             state.tap(state.arrows[free][0])!!.tap(state.arrows[stuck][0])!!
         }
-        // A flag, a reveal and a mine hit, so the marks and the lives must survive.
+        // A flag, a reveal and a mine hit, so the marks and the lost board must survive.
         is MinesState -> {
             val hidden = state.marks.indices.filter { state.marks[it] == '.' }
             val mine = hidden.first { state.isMine(it) }

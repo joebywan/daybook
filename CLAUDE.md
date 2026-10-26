@@ -303,15 +303,19 @@ shared with Cage Sudoku), `SudokuKeys.kt`. `id = "sudoku"` is hashed into every 
 
 - **Tiers are depth of the teacher's ladder, not clue counts** (`Sudoku.gate`): Standard is finished by singles in a unit (full house,
   hidden singles); Hard must need a naked single and nothing past it; Expert must need locked candidates, a pair or a what-if, and
-  never the fallback. Clues fall where minimality leaves them: about 28 on every tier (22-33). The old 38 / 30 / 24 targets dug
-  for uniqueness alone, so Hard and Expert overlapped and a third of Expert boards fell back.
+  never the fallback. Hard and Expert clues fall where minimality leaves them: about 28 (22-32, means 27.6 / 27.9). The old
+  38 / 30 / 24 targets dug for uniqueness alone, so Hard and Expert overlapped and a third of Expert boards fell back.
+- **Standard has a clue floor, `Sudoku.STANDARD_FLOOR` = 34** (the owner, 2026-10-26: minimal Standard boards, 24-33, mean 28.1,
+  felt bare). The dig skips any removal that would go below it, so every Standard board has 34 or 35 givens (mean 34.1: the
+  floor binds on every day) and is no longer minimal; Hard and Expert did not move. Not trivially easy: 47 squares still to
+  find, and the squares placeable at the start rose from 7.4 to 11.6 a board (2-16 to 4-21; a floor of 38 would give 14.8).
 - **A board ships only if the tier's ladder finishes it and `countSolutions` (exhaustive, no budget) proves one answer.** A fresh grid
   per attempt (`Rng(seed + attempt)`) is dug in 180-degree pairs (the centre alone) in random order, keeping a removal only while both
   hold, so the givens are symmetric and minimal for the tier's ladder; then the teacher's walk must have needed the tier's technique,
   else the next grid. `finishes` is the dig's shortcut (singles settled with bitmasks, the teacher asked only where they stall;
   `SudokuRulesTest` checks it gives the teacher's verdict). Attempts over a year: 1 / 4.5 / 5.6 mean, at most 1 / 25 / 38 of
-  `ATTEMPTS` = 100; `lastResort` is the board of one fixed seed, itself proved; a year never reaches it (`FallbackTest`). JVM 1.4 / 3.4 /
-  6.9 ms median, 7 / 16 / 25 ms p95; Chromium 2 / 6 / 13 ms median, 3 / 27 / 45 p95, 7 / 57 / 85 max; WebKit Expert 19 / 62 / 147.
+  `ATTEMPTS` = 100; `lastResort` is the board of one fixed seed, itself proved; a year never reaches it (`FallbackTest`). JVM 0.7 / 2.4 /
+  3.9 ms median, 1.1 / 10 / 15 ms p95, 23 / 27 / 33 max (2026-10-26, `SudokuRulesTest` report); Chromium 2 / 6 / 13 ms median, 3 / 27 / 45 p95, 7 / 57 / 85 max; WebKit Expert 19 / 62 / 147.
   The teacher's what-if chain keeps arrays, not lists, because the dig asks it on every board (same steps, checked on 34k).
   Changing the ladder changes every board (parity pins go red on purpose).
 - **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer.
@@ -454,7 +458,7 @@ hashed into every seed: never rename it.
   wide (about 23dp at 360, 26 at 390; Nonogram's 15x15 is the precedent).
 - **Press, preview, commit.** A finger down tints the arrow it would take (the keyboard cursor's band, no delay, nothing animated);
   release over the same arrow takes it, sliding off clears the tint and cancels. The arrow under the finger is `remember` state.
-  Restart (no Undo to take it back) asks "Start over?" once a move has been made.
+  Restart (no Undo to take it back) asks "Start over?" once a move has been made ("your lives come back"; Mines, also without Undo, gets the same prompt with no word of lives).
 - Hit testing (`Pointers.hit`): the square under the finger if an arrow is on it, else the nearest line within 0.75 of a square. Arrow
   colours are derived (four hues, Blue/Amber/Violet/Teal ink, touching arrows differ where four allow), never stored; a bump flashes the
   arrow and the one in its way in `scheme.error`. Keyboard: arrows move a cursor (a square) to the nearest other arrow that way, Enter or
@@ -596,15 +600,19 @@ the ladder `nextFact`, the walk, generator), `MinesTeacher.kt` (explanations of 
 pen row, walkthrough, motif). `id = "mines"` is hashed into every seed: never rename it.
 
 - **The owner's decisions; do not reopen:** no board ever needs a guess; the opening is given (the seed picks a square, its 3x3 is
-  kept clear and its spread is open when the board loads); three lives, as Pointers' (a mine revealed is shown, counts as found and
-  costs a life; Try again is `retry()`, one state, the opening again); **no undo** (`offersUndo = false`); hints on.
-- **Lives are `PuzzleState`, as Pointers':** `bumps` (the mines hit, in order; `lives` is three less those). `marks` is one string
-  ('.' hidden, 'o' open, 'f' flag). Flags are the player's notes: never checked, never a life, and a flagged square is never
-  revealed (the spread passes it by). "Mines left" is the total less flags and mines hit. **`solved` is every safe square open**
-  (a rule check; flags play no part); `failed` is no lives and not solved; losing is never a completion. No chording (with a wrong
-  flag it would spend a life on a note).
-- **Tiers: 8x8 with 10 mines / 8x10 with 16 / 8x12 with 22, all 8 wide** (a mis-tap costs a life, so a square stays about 42 dp at
-  375 wide), and the depth of the ladder a board must need (Tally's gate): Standard single numbers only, Hard a subset or pair at
+  kept clear and its spread is open when the board loads); **no lives: a mine revealed loses the board** (the owner, 2026-10-26: an
+  earlier build gave three, as Pointers'; it is shown, and Try again is `retry()`, one state, the opening again); **no undo**
+  (`offersUndo = false`); hints on.
+- **The loss is `PuzzleState`:** `bumps` (the mine hit; a list because the three-lives build saved up to three, and such a save
+  loads as lost). `marks` is one string
+  ('.' hidden, 'o' open, 'f' flag). Flags are the player's notes: never checked, never a loss, and a flagged square is never
+  revealed (the spread passes it by). "Mines left" is the total less flags and the mine hit. **`solved` is every safe square open**
+  (a rule check; flags play no part); `failed` is a mine hit and not solved; losing is never a completion. **Chording** (the owner,
+  2026-10-26; `MinesState.chord`): a tap, long press, Space or Enter on a revealed number whose flags and mines hit make its count
+  reveals its other hidden neighbours as one state; a wrong flag opens a mine there and loses the board, as a tap would; the
+  chord stops at it.
+- **Tiers: 8x8 with 10 mines / 8x10 with 16 / 9x10 with 21, never more than 9 wide or 10 tall** (a mis-tap loses the board, so a
+  square stays thumb-sized; Expert was 8x12, 21.5 dp at 375x537, and is never smaller than Hard's on a phone), and the depth of the ladder a board must need (Tally's gate): Standard single numbers only, Hard a subset or pair at
   least once, Expert the count against the numbers or a what-if (the count alone at the end, every mine found and a pocket no number
   touches, is too slight and does not qualify). An opening that shows more than 45% of the safe squares is redrawn.
 - **The ladder is the teacher's and the generator's** (`MinesLogic.nextFact`, simplest first): all found, all mines, subset, pair,
@@ -617,9 +625,9 @@ pen row, walkthrough, motif). `id = "mines"` is hashed into every seed: never re
   all flagged counts as shown. A mistake is a flag on a safe square (sound: one answer). No fallback on a generated board, measured.
   Highlight indices are squares. A subset/pair hint names the second number by where it lies ("the 2 to the right").
 - Input: a Reveal / Flag pen under the board (`rememberSaveable`, Nonogram's model, Reveal each visit); a tap uses the pen, a long
-  press the other tool. Keys: arrows, Space/Enter reveal, F flag. A mine hit shakes and rings in `scheme.error` (the ring alone
+  press the other tool. Keys: arrows, Space/Enter reveal (or chord), F flag. A mine hit shakes and rings in `scheme.error` (the ring alone
   under reduced motion) with `PlayScreen`'s bump haptic. Colours: hue A tiles the hidden squares, hue B inks flags; numbers 1-6
-  each a hue (Blue, Teal, Violet, Amber, Rose, Gold) and always a digit. Share card: Pointers' hearts, a red square after hints.
+  each a hue (Blue, Teal, Violet, Amber, Rose, Gold) and always a digit. Share card: the default move strip (no hearts).
 
 ## Lamps (light every square)
 
@@ -739,8 +747,12 @@ Display name "Crossword" (one line on a home tile), never a newspaper's.
   sound because the clues name one fill. Red, after a 1 s settle: a full slot that is no word of the list, never a real word under
   another clue (that would be reading the answer). A word the list holds glows once, for the same reason not only the right one.
 - **Teacher:** `ONE_WORD` (the letters in a slot leave one word), `CROSSING` (one word leaves every crossing slot a fit, the slots
-  named), `ALL_WORDS` (arc consistency to a fixpoint, said as such), then `CLUE`, the fallback: it reads the answer, says so, and
-  gives one letter of the open slot the fewest words fit. It cannot be designed out: from an empty grid nothing else starts, and a
+  named), `ALL_WORDS` (arc consistency to a fixpoint, said as such), then `CLUE`, the fallback: its first tap names the open slot
+  the fewest words fit (from the board alone) with that word's **second clue** ("Another way in: ..."; the owner: "I'd rather a
+  2nd clue before giving the answer"); only the next tap reads the answer, says so, and gives one letter; Show me places it.
+  Second clues are `tools/words/second-clues.txt` (one per word the grids use, a different angle from the first, linted by
+  `build.py`, which writes `MiniSecondClues.kt`; `--second-clues` writes it alone), stored on the board as `MiniState.secondClues`
+  (a save without them gets the old nudge). A new grid word needs one in the same change: `MiniSecondCluesTest`. It cannot be designed out: from an empty grid nothing else starts, and a
   clue is knowledge, not logic. 44 / 54 / 62% of steps on a hints-only walk; that share is the tier measure. Word steps are typed
   by the player; only "Show me" types the word. Highlight indices: squares, letter key `MiniLogic.letterKey(l)` = 2000 + l, the
   clue bar `MiniLogic.CLUE_BAR` = 3000.
@@ -811,6 +823,13 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
   shuffle of deck 0); deal 2 deals deck 0 in bands of `Levels.GENTLE`, a frozen copy of `GENTLEST` (edit `GENTLEST` freely,
   never `GENTLE`). The deal is **per player**: `openLevel` writes the one already stored, `Levels.LATEST` only for a first
   level, because mixing deals inside deck 0 would repeat and skip puzzles in levels 1-5. A plan is `(level, poolSize, deal)`.
+- **Deal 3 (`Levels.LATEST`) spreads difficulty over levels 1-100** (`docs/LEVELS_SPEC.md`, "Level difficulty"): each level
+  is the five boards, five puzzles, nearest a target rising from the gentlest measured puzzle-tier to the hardest, tiers mixed.
+  Puzzles are met on Standard in `Levels.LEARN` order (a frozen copy of `GENTLEST`, never edited), all by level 15, so levels
+  1-5 are the quickest to learn. The scores are `core/LevelSpread.kt`, **generated** by `LevelDifficultyBuildTest`
+  (`DAYBOOK_LEVEL_DIFFICULTY=1`) and as frozen as `GENTLE`: rewriting it moves every deal-3 plan, opened ones too, so a new
+  measurement (or ranking a new puzzle into 1-100) is a new deal. A puzzle appended to `POOL` joins deal 3 from level 101,
+  where decks and the curve take over.
 - **A level board's seed and tier come from its level's stored plan**, never from the route or the full pool, so the play route waits
   for `levelProgress` to load; open a level through `playLevel` (it calls `openLevel` first).
 - **Everything about progress is derived** (`LevelProgress.of`): the current level, done levels, "Level N done" on home. Nothing pops up.

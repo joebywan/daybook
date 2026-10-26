@@ -290,11 +290,9 @@ half-played final board when the player leaves it.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
-- **Mines: chording.** A tap on a number whose flags are met opening its other neighbours, as most versions have. Left out
-  (`docs/MINES_SPEC.md`): with a wrong flag it opens a mine, a life lost to a note. Add it only if the owner wants the speed.
-- **Mines Expert on a short screen.** Eight wide keeps the square at 42-45 dp on a phone, but twelve rows are height-bound in a
-  phone browser with both toolbars (375x537: about 21 px squares; a phone on its side puts the controls beside the board and gets
-  about 31). Shorter Expert boards (8x11) or fewer rows are the lever if a mis-tap there is reported.
+- **Sets is probably underrated in deal 3's spread.** What makes it hard is finding a set among the cards, which a hint walk
+  of three or four steps cannot see (`docs/LEVELS_SPEC.md`, "Level difficulty"). Solve times by tier would settle it; a
+  re-rating ships as a new deal.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),

@@ -131,11 +131,12 @@ class LevelProgressTest {
     }
 
     @Test
-    fun `a new player keeps deal 2 on every level they open`() = runBlocking {
+    fun `a new player keeps the latest deal on every level they open`() = runBlocking {
         val kv = MemoryStore()
         val store = ProgressStore(kv)
         for (n in 1..3) store.openLevel(n)
         val size = Levels.POOL.size
-        assertEquals(setOf("1|$size|2", "2|$size|2", "3|$size|2"), kv.sets.value["levels"])
+        val d = Levels.LATEST
+        assertEquals(setOf("1|$size|$d", "2|$size|$d", "3|$size|$d"), kv.sets.value["levels"])
     }
 }
