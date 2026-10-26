@@ -104,7 +104,6 @@ internal object PearlsTeacher {
             val wrongLine = s.edges[e] == PearlsLogic.LINE_MARK && s.loop[e] == '0'
             val wrongCross = s.edges[e] == PearlsLogic.CROSS_MARK && s.loop[e] == '1'
             if (!wrongLine && !wrongCross) continue
-            val where = "between ${squareName(n, g.endA[e])} and ${squareName(n, g.endB[e])}"
             return Step(
                 technique = MISTAKE,
                 clears = listOf(e),
@@ -112,9 +111,9 @@ internal object PearlsTeacher {
                 cited = setOf(g.endA[e], g.endB[e]),
                 nudge = "One of your marks doesn't fit the pearls.",
                 explanation = if (wrongLine) {
-                    "No loop that keeps every pearl's rule has the line $where. Rub it out."
+                    "No loop that keeps every pearl's rule has the glowing line. Rub it out."
                 } else {
-                    "The loop has to pass $where: take the cross off."
+                    "The loop has to pass through the glowing cross: take it off."
                 },
             )
         }
@@ -156,7 +155,6 @@ internal object PearlsTeacher {
     private fun localStep(g: PearlsGrid, pearls: String, st: IntArray, f: PearlsLogic.Found): Step {
         val n = g.n
         val s = f.square
-        val place = "at ${squareName(n, s)}"
         val edgesOf = (0 until 4).mapNotNull { d -> g.edge(s, d).takeIf { it >= 0 } }
         fun step(technique: String, nudge: String, why: String, focus: Set<Int>, cited: Set<Int> = focus) = Step(
             technique, f.lines.toList(), f.crosses.toList(), focus = focus, cited = cited, nudge = nudge, explanation = why,
@@ -166,7 +164,7 @@ internal object PearlsTeacher {
             PearlsLogic.K_BLACK -> {
                 val why = (0 until 2).mapNotNull { axis -> blackAxis(g, pearls, st, s, axis) }.joinToString(" ")
                 step(
-                    BLACK_PEARL, "Look at the black pearl $place.",
+                    BLACK_PEARL, "Look at the glowing black pearl.",
                     "A black pearl turns and runs straight on two squares each way. $why",
                     setOf(s) + touched,
                 )
@@ -178,7 +176,7 @@ internal object PearlsTeacher {
                 val has = (0 until 2).any { d -> st[g.edge(s, axis + 2 * d)] == PearlsLogic.LINE }
                 val reason = if (has) "The line through it already runs $run" else "It can't go $other (${whiteReason(g, st, s, 1 - axis)})"
                 step(
-                    WHITE_PEARL, "Look at the white pearl $place.",
+                    WHITE_PEARL, "Look at the glowing white pearl.",
                     "A white pearl goes straight through. $reason, so it goes straight $run.",
                     setOf(s) + touched,
                 )
@@ -192,25 +190,25 @@ internal object PearlsTeacher {
                 }
                 val q = g.next(s, straight)
                 step(
-                    WHITE_TURN, "The white pearl $place must turn on one side.",
-                    "The loop turns just before or just after a white pearl. It runs straight on through ${squareName(n, q)}, " +
-                        "so it turns at ${squareName(n, near)}: cross the edge straight on from there.",
+                    WHITE_TURN, "The glowing white pearl must turn on one side.",
+                    "The loop turns just before or just after a white pearl. It runs straight on through the square on one side, " +
+                        "so it must turn at the square on the other: cross the glowing edge straight on from there.",
                     setOf(s, near) + touched, setOf(s, q, near) + touched,
                 )
             }
             PearlsLogic.K_ONE_WAY -> step(
-                ONE_WAY, "Follow the line into the square $place.",
-                "The line into the square $place has only one way on, so it continues there.",
+                ONE_WAY, "Follow the line into the glowing square.",
+                "The line into the marked square has only one way on, so it continues there.",
                 setOf(s) + touched, setOf(s) + edgesOf.map { edgeIndex(n, it) },
             )
             PearlsLogic.K_PEARL_WAYS -> step(
-                PEARL_WAYS, "The pearl $place has only two ways in.",
-                "The loop passes every pearl, and the pearl $place has only two ways in left, so both are lines.",
+                PEARL_WAYS, "The glowing pearl has only two ways in.",
+                "The loop passes every pearl, and the marked pearl has only two ways in left, so both are lines.",
                 setOf(s) + touched, setOf(s) + edgesOf.map { edgeIndex(n, it) },
             )
             else -> step(
-                DEAD_END, "The square $place has only one way in.",
-                "A loop passing the square $place would need two ways in, and it has only one left. So no line goes there: cross it.",
+                DEAD_END, "The glowing square has only one way in.",
+                "A loop passing the marked square would need two ways in, and it has only one left. So no line goes there: cross it.",
                 setOf(s) + touched, setOf(s) + edgesOf.map { edgeIndex(n, it) },
             )
         }
@@ -229,8 +227,8 @@ internal object PearlsTeacher {
             crosses = listOf(e),
             focus = setOf(a, b, edgeIndex(n, e)),
             cited = stretch.map { edgeIndex(n, it) }.toSet() + setOf(a, b),
-            nudge = "Two ends of one line meet at ${squareName(n, a)}.",
-            explanation = "A line between ${squareName(n, a)} and ${squareName(n, b)} would close a loop that leaves out " +
+            nudge = "Two ends of one line sit side by side at the glowing squares.",
+            explanation = "A line on the glowing edge would close a loop that leaves out " +
                 "a pearl or another line. There is only one loop, so cross it.",
         )
     }
@@ -241,7 +239,6 @@ internal object PearlsTeacher {
         val line = w.assume == PearlsLogic.LINE
         val a = g.endA[e]
         val b = g.endB[e]
-        val where = "between ${squareName(n, a)} and ${squareName(n, b)}"
         val c = w.contradiction.square
         val broke = when (w.contradiction.kind) {
             PearlsLogic.C_THREE -> "${squareName(n, c)} would need three lines"
@@ -252,14 +249,14 @@ internal object PearlsTeacher {
             else -> "the line would close a loop that leaves something out"
         }
         val rounds = if (w.rounds <= 1) "" else " (${w.rounds} steps on)"
-        val suppose = if (line) "With a line $where" else "With no line $where"
+        val suppose = if (line) "With a line on the glowing edge" else "With no line on the glowing edge"
         return Step(
             WHAT_IF,
             lines = if (line) emptyList() else listOf(e),
             crosses = if (line) listOf(e) else emptyList(),
             focus = setOf(a, b, edgeIndex(n, e)),
             cited = setOf(a, b, c),
-            nudge = "Suppose ${if (line) "a line" else "no line"} ran $where.",
+            nudge = "Suppose ${if (line) "a line" else "no line"} ran between the two glowing squares.",
             explanation = "$suppose$rounds, $broke. So ${if (line) "there is none: cross it" else "there is one: draw it"}.",
         )
     }

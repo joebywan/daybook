@@ -129,7 +129,7 @@ internal object DominoTeacher {
                 focus = setOf(p.first, p.second),
                 cited = emptySet(),
                 nudge = "One of your dominoes isn't where it belongs.",
-                explanation = "The ${words.domino(s.tray[d])} at ${words.square(p.first)} can't stay as it is: no way of keeping " +
+                explanation = "The ${words.domino(s.tray[d])} you laid can't stay as it is: no way of keeping " +
                     "every rule has it there that way round. Lift it.",
             )
         }
@@ -209,8 +209,8 @@ internal object DominoTeacher {
         }
         val name = words.domino(dom)
         val so = "So the $name goes here, ${words.half(dom, p)}."
-        val where = if (q >= 0) words.square(q) else ""
-        val partner = if (q >= 0) (if (p.first == q) p.second else p.first) else -1
+        val where = if (q >= 0) words.glowing(q, partnerOf(p, q)) else ""
+        val partner = if (q >= 0) partnerOf(p, q) else -1
         fun factList(max: Int) = words.facts(facts.take(max))
         val leaves = if (q >= 0) "one way to cover $where" else "one place for the $name"
         val nudge: String
@@ -254,7 +254,7 @@ internal object DominoTeacher {
         val d = ladder.cDom[c]
         val dom = layout.tray[d]
         val p = ladder.placement(c)
-        val where = words.square(w.square)
+        val where = words.glowing(w.square, partnerOf(p, w.square))
         val so = "So the ${words.domino(dom)} goes here, ${words.half(dom, p)}."
         fun refute(r: DominoLadder.Refuted, full: Boolean): String {
             val d = ladder.cDom[r.cand]
@@ -268,11 +268,13 @@ internal object DominoTeacher {
         val cited = w.refuted.filter { it.kind == DominoLadder.REGION }.map { RULE + it.arg }.toSet()
         return Step(
             WHAT_IF, LEVEL_WHAT_IF, d, p, setOf(w.square), cited,
-            fitNudge("Try each domino that could cover $where.", "Try each domino that could cover this square."),
+            "Try each domino that could cover the glowing square.",
             fit(texts, MAX_EXPLANATION),
         )
     }
 
+
+    private fun partnerOf(p: Placement, q: Int) = if (p.first == q) p.second else p.first
 
     private fun fitNudge(nudge: String, short: String) = if (nudge.length <= MAX_NUDGE) nudge else short
 
@@ -298,8 +300,13 @@ internal object DominoTeacher {
 
         fun domino(d: Domino) = if (d.isDouble) "double ${d.a}" else "${d.b}-${d.a}"
 
-        /** Which half goes where: "its 6 on row 2, column 3" (the larger half), or "across both squares" for a double. */
-        fun half(d: Domino, p: Placement) = if (d.isDouble) "a ${d.a} on each square" else "its ${d.b} on ${square(p.second)}"
+        /** Which half goes where: "its 6 on the left square" (the larger half), or "a 6 on each square" for a double. */
+        fun half(d: Domino, p: Placement) = if (d.isDouble) "a ${d.a} on each square" else "its ${d.b} on the ${side(p.second, p.first)} square"
+
+        /** "the left glowing square": [q] told from [other], the domino's other square, by where it lies. */
+        fun glowing(q: Int, other: Int) = "the ${side(q, other)} glowing square"
+
+        private fun side(q: Int, other: Int) = when (other - q) { 1 -> "left"; -1 -> "right"; layout.width -> "top"; else -> "bottom" }
 
         private fun ruleWords(r: Int): String {
             val rule = layout.rules[r]
