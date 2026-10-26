@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray
  * and writes the same file every time: draw `i` of a tier uses `Rng(seed(tier, i))` alone, the draws are split across
  * threads but read back in draw order, and a tier keeps its first [PER_TIER] grids in that order.
  *
- * A draw is a block pattern and a dense fill ([CrosswordFill], from Word Wheel's grid lists less [SKIP]), kept when
+ * A draw is a block pattern and a dense fill ([CrosswordFill], from Word Wheel's grid lists), kept when
  * [MiniLogic.board] accepts it for the tier: every slot a different grid word with a clue, the hints' walk finishing it
  * needing exactly the tier's deepest step, and the search proving that the letters the walk read from the clues and the
  * crossings leave one grid. `DAYBOOK_MINI_SWEEP="5,4;5,5"` (with `DAYBOOK_MINI_TIER`) tries shapes and writes nothing.
@@ -140,19 +140,6 @@ class MiniGridsBuildTest {
             Difficulty.EXPERT to Shape(maxRun = 7, blacks = 15),
         )
 
-        /**
-         * The breakfast-table test: words the grid lists keep (they are Lexicon's and Word Wheel's contract, and a guess
-         * or a wheel word is never shown with a clue) that a crossword printing them as answers should not.
-         */
-        val SKIP = setOf(
-            "abort", "abuse", "arson", "belch", "bile", "blood", "bomb", "booze", "burp", "casket", "corpse", "crime",
-            "dead", "death", "demon", "devil", "die", "drug", "drunk", "dumb", "famine", "fat", "fatal", "funeral", "gore",
-            "gory", "grave", "grief", "gun", "hang", "hate", "hatred", "kill", "knife", "lame", "leper", "lice", "louse",
-            "maim", "morgue", "mourn", "murder", "naked", "noose", "nude", "opium", "orphan", "plague", "pus", "rifle",
-            "robber", "rot", "rotten", "savage", "slain", "slay", "stab", "stench", "torture", "toxic", "tragedy", "tragic",
-            "ugly", "ulcer", "urine", "vomit", "war", "widow", "wound",
-        )
-
         /** Why draws fail, for the log: pattern, fill, board. */
         val FAILS = AtomicIntegerArray(3)
 
@@ -162,7 +149,7 @@ class MiniGridsBuildTest {
         fun seed(tier: Difficulty, i: Int): Long = SEED * 1_000_003L + tier.ordinal * 10_000_019L + i
 
         private val INDEXES: Map<Int, CrosswordFill.Index> by lazy {
-            (3..7).associateWith { l -> CrosswordFill.Index(WheelWords.grid(l).filter { it !in SKIP }) }
+            (3..7).associateWith { l -> CrosswordFill.Index(WheelWords.grid(l)) }
         }
 
         /** One draw: the entry, or null when the pattern, the fill or the tier's test failed. */

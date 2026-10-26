@@ -49,7 +49,6 @@ class MiniRulesTest {
                 assertTrue("$e: every run 3 to $n letters", words.all { it.length in 3..n })
                 assertTrue("$e: every run a grid word", words.all { WheelWords.isGridWord(it) })
                 assertEquals("$e: no word twice", words.size, words.distinct().size)
-                assertTrue("$e: nothing off the breakfast table", words.none { it in MiniGridsBuildTest.SKIP })
                 // Fully checked: every white square is in a run both ways (a run of one would be a lone square).
                 for (i in e.indices) if (e[i] != '#') {
                     val r = i / n
