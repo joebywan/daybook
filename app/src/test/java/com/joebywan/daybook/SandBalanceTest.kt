@@ -10,7 +10,7 @@ import org.junit.Test
 
 /**
  * Sand's tiers, measured as `LexiconBalanceTest` measures Lexicon's: two players over a year of daily boards per tier.
- * The rules here are this test's own (`SandSupport`), not the game's, so a bug in the game's pour cannot flatter both.
+ * The rules here are the tests' own ([SandOracle]), not the game's, so a bug in the game's pour cannot flatter both.
  *
  * - The **naive** player picks uniformly among the legal pours that are not the last pour poured straight back.
  * - The **careful** player prefers a pour that finishes a tube, then one onto a matching colour that uncovers a colour
@@ -26,13 +26,13 @@ class SandBalanceTest {
         var t = t0
         var last: Pair<Int, Int>? = null
         repeat(CAP) {
-            if (SandSupport.sorted(t, h)) return true
+            if (SandOracle.isSolved(t, h)) return true
             val back = last
-            var ps = SandSupport.pours(t, h).filter { back == null || !(it.first == back.second && it.second == back.first) }
+            var ps = SandOracle.pours(t, h).filter { back == null || !(it.first == back.second && it.second == back.first) }
             if (ps.isEmpty()) return false
             if (careful) {
                 ps = ps.filter { (a, b) -> !(t[b].isEmpty() && t[a].all { it == t[a][0] }) }.ifEmpty { ps }
-                fun after(m: Pair<Int, Int>) = SandSupport.pour(t, h, m.first, m.second)
+                fun after(m: Pair<Int, Int>) = SandOracle.pour(t, h, m.first, m.second)!!
                 fun finishes(m: Pair<Int, Int>) = after(m)[m.second].let { it.size == h && it.all { c -> c == it[0] } }
                 fun uncovers(m: Pair<Int, Int>): Boolean {
                     if (t[m.second].isEmpty()) return false
@@ -43,10 +43,10 @@ class SandBalanceTest {
                 ps = listOf(ps.filter(::finishes), ps.filter(::uncovers), ps.filter { t[it.second].isNotEmpty() }, ps).first { it.isNotEmpty() }
             }
             val m = rng.pick(ps)
-            t = SandSupport.pour(t, h, m.first, m.second)
+            t = SandOracle.pour(t, h, m.first, m.second)!!
             last = m
         }
-        return SandSupport.sorted(t, h)
+        return SandOracle.isSolved(t, h)
     }
 
     private class Tier(val naive: Double, val careful: Double, val nodes: Int)

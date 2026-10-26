@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.forgivenDays
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -40,10 +41,11 @@ import kotlinx.datetime.plus
  * A month of days played, so the "5 of the last 7" rule can be seen working (`docs/REWARDS.md`). Filled
  * is a day played; a ring is a missed day the streak forgave; today has an outline; days to come are dim.
  * Everything is derived from [played] (the daily solve days) and nothing is stored. Weeks start on Monday.
- * Browsing stops at the first month with a play and at the current one.
+ * Browsing stops at the first month with a play and at the current one. A day with a daily ([DailySeed.EPOCH] to
+ * today) is a button: [onDay] opens it in the archive.
  */
 @Composable
-fun StreakCalendar(played: Set<LocalDate>, today: LocalDate, modifier: Modifier = Modifier) {
+fun StreakCalendar(played: Set<LocalDate>, today: LocalDate, modifier: Modifier, onDay: (LocalDate) -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val forgiven = forgivenDays(played, today)
     val thisMonth = today.firstOfMonth()
@@ -62,7 +64,9 @@ fun StreakCalendar(played: Set<LocalDate>, today: LocalDate, modifier: Modifier 
             onMonth = { shown = it.toEpochDays() },
         )
         Spacer(Modifier.height(6.dp))
-        MonthGrid(month) { day, m -> DayCell(day, played, forgiven, today, m) }
+        MonthGrid(month) { day, m ->
+            DayCell(day, played, forgiven, today, m, onClick = { onDay(day) }.takeIf { day >= DailySeed.EPOCH && day <= today })
+        }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(10.dp).clip(CircleShape).background(scheme.primary))
@@ -86,6 +90,7 @@ private fun DayCell(
     forgiven: Set<LocalDate>,
     today: LocalDate,
     modifier: Modifier,
+    onClick: (() -> Unit)?,
 ) {
     val scheme = MaterialTheme.colorScheme
     val on = day in played
@@ -94,6 +99,7 @@ private fun DayCell(
         contentAlignment = Alignment.Center,
     ) {
         var m = Modifier.fillMaxWidth().aspectRatio(1f).clip(CircleShape)
+        if (onClick != null) m = m.clickable(onClick = onClick)
         if (on) m = m.background(scheme.primary)
         if (day in forgiven) m = m.border(BorderStroke(1.5.dp, scheme.primary.copy(alpha = 0.6f)), CircleShape)
         if (day == today) m = m.border(BorderStroke(2.dp, scheme.onSurface), CircleShape)

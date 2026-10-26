@@ -31,4 +31,30 @@ class RouteTest {
         assertEquals(Route.Stats, backFrom(Route.Techniques))
         assertEquals(Route.Home, backFrom(Route.Archive("kings", day)))
     }
+
+    @Test fun `the archive by day round-trips, and older archive and play strings still decode`() {
+        listOf(
+            Route.Days(), Route.Days(day), Route.Days(day, fromStats = true),
+            Route.Archive("kings", day, fromDays = true), Route.Archive("kings", day, fromDays = true, fromStats = true),
+            Route.Play("kings", Difficulty.HARD, day, fromDays = true, fromStats = true),
+            Route.Play("kings", Difficulty.HARD, day, fromArchive = true, fromDays = true),
+        ).forEach { assertEquals(it, decodeRoute(encodeRoute(it))) }
+        assertEquals(Route.Days(), decodeRoute("days"))
+        assertEquals(Route.Archive("kings", day), decodeRoute("archive|kings|2026-10-03"))
+        assertEquals(Route.Play("kings", Difficulty.HARD, day, fromArchive = true), decodeRoute("play|kings|HARD|2026-10-03|0|true|"))
+    }
+
+    @Test fun `back from the archive by day goes where each screen was opened from`() {
+        // Home, archive by day, a board: back to that day; back again, Home.
+        assertEquals(Route.Days(day), backFrom(Route.Play("kings", Difficulty.HARD, day, fromDays = true)))
+        assertEquals(Route.Home, backFrom(Route.Days(day)))
+        // From the streak calendar, the same chain ends at Statistics.
+        assertEquals(Route.Days(day, fromStats = true), backFrom(Route.Play("kings", Difficulty.HARD, day, fromDays = true, fromStats = true)))
+        assertEquals(Route.Stats, backFrom(Route.Days(day, fromStats = true)))
+        // A puzzle's own calendar opened from a day, and a board played from it: back through each.
+        val board = Route.Play("kings", Difficulty.HARD, day, fromArchive = true, fromDays = true, fromStats = true)
+        assertEquals(Route.Archive("kings", day, fromDays = true, fromStats = true), backFrom(board))
+        assertEquals(Route.Days(day, fromStats = true), backFrom(backFrom(board)))
+        assertEquals(Route.Stats, backFrom(backFrom(backFrom(board))))
+    }
 }
