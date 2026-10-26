@@ -28,7 +28,7 @@ import java.io.File
  * - **open**: the share of steps that were the fallback (nothing short explained the move: choosing or recalling).
  * A walk that ends unsolved (Lexicon's teacher can run out of guesses) counts its depth as the top.
  * Snap and Pointers have no teacher. Snap: steps are the squares of its line; depth is 1 when its whole-board rules
- * ([SnapDeducerReportTest.SnapDeducer]) do not finish it from blank (a what-if is needed), else 0. Pointers: steps are
+ * ([SnapDeducer]) do not finish it from blank (a what-if is needed), else 0. Pointers: steps are
  * its arrows; depth and open are 0 (nothing is hidden; its challenge is care, not reasoning).
  *
  * The measures are not comparable across puzzles as numbers (a Sudoku step is not a chess move), so each is turned
@@ -53,10 +53,10 @@ class LevelDifficultyBuildTest {
             var s = p.generate(SeedHash.level(level, id, tier), tier)
             when (s) {
                 is SnapState -> {
-                    val dd = SnapDeducerReportTest.SnapDeducer(s.width, s.height, s.waypoints.toIntArray())
+                    val dd = SnapDeducer(s.width, s.height, s.waypoints.toIntArray())
                     val st = ByteArray(dd.m)
                     check(dd.propagate(st, 0))
-                    val inEdges = st.count { it == SnapDeducerReportTest.SnapDeducer.IN }
+                    val inEdges = st.count { it == SnapDeducer.IN }
                     Walk(s.width * s.height, if (inEdges == s.width * s.height - 1) 0.0 else 1.0, 0, true)
                 }
                 is PointersState -> Walk(s.arrows.size, 0.0, 0, true)

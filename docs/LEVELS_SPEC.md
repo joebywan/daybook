@@ -253,7 +253,7 @@ board to the end, taking every hint, and records three things a board:
   recalls (the word games and Codebreaker; zero on every board a ladder gates).
 
 Snap and Pointers have no teacher. Snap's steps are its squares and its depth is 1 when the whole-board rules of
-`SnapDeducerReportTest` cannot finish it from blank (a what-if is needed); Pointers' steps are its arrows, depth and
+`SnapDeducer` (test code) cannot finish it from blank (a what-if is needed); Pointers' steps are its arrows, depth and
 open 0 (nothing is hidden; its challenge is care). A Sudoku step is not a chess move, so the numbers are not compared
 as numbers: each measure becomes a percentile rank among all 93 puzzle-tiers, and their mean is the **measured** score
 (0-1000). The score deal 3 uses is the mean of that and the tier itself (Standard 0, Hard 500, Expert 1000), because
