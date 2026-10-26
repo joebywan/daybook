@@ -70,6 +70,11 @@ from a measurement or review, so you can check it is still true.
   compiled by CI only. Check a Play install opens the Play Store app, and a sideloaded or F-Droid install opens GitHub in
   the browser. A one-time nudge on the finish frame (say after the tenth solve) would bring more ratings than a settings
   row, but the finish frame is settled UX, so that is the owner's call. *S.*
+- [ ] **Large system font (2x): what is left outside the boards.** The play header, clock, tier pills, pen buttons, home date,
+  streak badge and tile names, Codebreaker's Submit and Who's Who's board now stop at 1.3x (`CappedFontScale`). Still
+  at 2x (web `?fontscale=2`, 375x537): the toolbar (Undo / Restart / Hint) is half again as tall; the walkthrough offer
+  overflows its 40dp slot; Lexicon's and Codebreaker's "guesses left" lines and Crossword's clue bar take board height
+  (Lexicon's board is still small); Codeword's number and letter key strips. Not checked on the emulator (shared). *S.*
 
 ## Rewards
 
