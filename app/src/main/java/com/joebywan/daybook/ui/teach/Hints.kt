@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +55,9 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.LocalReducedMotion
 import kotlinx.coroutines.delay
+
+/** Something a host adds beside the hint's Close for a deduction (Training's "Practise this"); nothing by default. */
+val LocalHintAction = staticCompositionLocalOf<@Composable (Deduction, HintStage) -> Unit> { { _, _ -> } }
 
 /** How long "That's it" stays before the hint clears itself. */
 private const val CONFIRM_MS = 1400L
@@ -323,6 +327,7 @@ fun HintPanel(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            LocalHintAction.current(d, session.stage)
             if (session.stage != HintStage.CONFIRMED) {
                 TextButton(onClick = { session.clear() }) {
                     Text("Close", color = scheme.onSurfaceVariant)
