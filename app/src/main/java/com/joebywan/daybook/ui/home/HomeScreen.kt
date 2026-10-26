@@ -291,6 +291,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
                 )
             }
+            item { ReminderOffer(completions, today) }
             item { GetTheAppCard() }
         }
         TierFlash(flash, Modifier.align(Alignment.Center))

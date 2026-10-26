@@ -65,7 +65,7 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
   and 375x537, light and dark: the board's box is identical before and after, and the tiles take taps
   over the board's raw-pointer canvas, which is switched off once solved.) The tiles come from the pure `nextOptions(daily, tier,
   doneTiers)` in `ui/play/NextSteps.kt` (`NextStepsTest`): a random board offers Another/Easier/Harder/
-  Done; a daily offers Easier Daily/Random/Harder Daily/Done, skipping tiers already done *that date*
+  Done; a daily offers Easier daily/Random/Harder daily/Done, skipping tiers already done *that date*
   (`tiersDoneOn(completions, puzzle, day)`; random games never count) and counting the tier just played
   as done, because `onSolved` records it asynchronously. A Daily tile keeps the route's `day`, so on an
   archive day it is that past date's board.

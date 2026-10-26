@@ -273,8 +273,11 @@ private fun DaybookScreens(
     val ids = remember { PuzzleOrder.gentlest(PuzzleRegistry.all.map { it.id }) }
     val playedBasis by produceState<List<Completion>?>(null, today) { value = store.completions.first() }
     val mostPlayed = remember(playedBasis, today) { PuzzleOrder.mostPlayed(playedBasis.orEmpty(), today, ids) }
-    // Today's three (TodaysThree): the date alone, the same for everyone.
-    val three = remember(today) { TodaysThree.of(today) }
+    // Today's three (TodaysThree): the date alone, the same for everyone, except a new player's gentler starter three.
+    // Read from the once-a-day basis, so a fifth solve never swaps the three mid-day.
+    val three = remember(today, playedBasis) {
+        if (playedBasis.let { it != null && it.size < TodaysThree.NEWCOMER_SOLVES }) TodaysThree.starter(today) else TodaysThree.of(today)
+    }
     val doneToday = remember(completions, today) { completions.filter { it.day == today }.mapTo(HashSet()) { it.puzzleId to it.difficulty } }
     val (customOrder, setOrder) = rememberPref(launchPrefs.puzzleOrder, emptyList(), launchPrefs::setPuzzleOrder)
     val puzzles = remember(customOrder, mostPlayed) {

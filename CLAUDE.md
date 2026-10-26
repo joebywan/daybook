@@ -821,11 +821,30 @@ Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
   through its own list), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
+  **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
+  once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,
+  Crossword, Nonogram, Mines) and `STARTER_WORDS` (Lexicon, Word Wheel, Target), the gentlest of each kind in
+  `PuzzleOrder.GENTLEST` (a test ties them). The achievement accepts either three for a day.
   The home row is always laid out at one height (unseen in Levels), so it never moves the grid.
 - **"Next puzzle today"** (`nextToday`, `NextKind.TODAY`) is offered only on today's daily opened from Home, and opens the next
   board as from Home, so back from it is Home, as from the board solved. Not on an archive board (its back is its own archive).
 - Set share cards (`threeShareCard`, `levelShareCard`) are derived from completions and `level_solves`; nothing new is stored.
   Share cards say what was done, never what is left (`REWARDS.md`).
+
+## Daily reminder (Android)
+
+One notification a day at the player's hour, off by default. Shared: `ui/home/Reminder.kt` (the text, the offer rule,
+Home's offer card), the three `reminder*` keys in `LaunchPreferences` (launch preferences, never progress), the row in
+Settings. Android: `platform/AndroidReminder.kt` (in `web/build.gradle.kts`'s `androidOnly`); the web has
+`OFFERS_REMINDER = false` and stubs, since a closed page cannot notify.
+
+- **Asked once.** Home shows one card under the grid after the first solve on a second day (`reminderOfferDue`) until the
+  player answers either way, then never again; a choice in Settings answers it too. Notification permission (Android 13+)
+  is requested only when the player turns the reminder on; refused, it stays off and Settings says why.
+- **No nagging.** One inexact `AlarmManager` alarm (`setAndAllowWhileIdle`, no exact-alarm permission, no dependency), set
+  again when it fires, on boot or update (`ReminderRestoreReceiver`) and on app open. When it fires it posts nothing if a
+  daily is solved today, the reminder is off, or it is before 5 am. The text (`reminderText`) greets for the time of day,
+  says how much of the day is left and invites; no streaks, no loss framing, no follow-ups (`ReminderTest` guards the words).
 
 ## Typography
 
