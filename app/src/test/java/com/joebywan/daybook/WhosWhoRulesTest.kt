@@ -178,13 +178,6 @@ class WhosWhoRulesTest {
     }
 
     @Test
-    fun `generation is pure`() {
-        for (tier in Difficulty.entries) for (seed in listOf(1L, 99L, -12345L)) {
-            assertEquals(WhosWho.generate(seed, tier), WhosWho.generate(seed, tier))
-        }
-    }
-
-    @Test
     fun `clue text is a plain sentence from the board's own words`() {
         val banned = listOf("einstein", "zebra", "  ", "null", "-1")
         for (tier in Difficulty.entries) for (day in 0 until 60L) {

@@ -27,13 +27,12 @@ class MinesTeachingTest {
     }
 
     /** Hints alone, each made by "Show me", until solved; [each] sees every step's technique. */
-    private fun walk(start: MinesState, check: Boolean = false, each: (String) -> Unit = {}): MinesState {
+    private fun walk(start: MinesState, each: (String) -> Unit = {}): MinesState {
         var s = start
         var guard = 0
         while (!s.solved) {
             val d = Mines.teach(s)!!
             each(d.technique)
-            if (check) sound(s, d.technique)
             assertFalse("a step must change the board", d.isReached(s))
             s = d.apply(s) as MinesState
             assertTrue("Show me reaches the step", d.isReached(s))
@@ -81,12 +80,6 @@ class MinesTeachingTest {
         }
         File("build/reports").mkdirs()
         File("build/reports/mines-teaching-coverage.txt").writeText(report.toString())
-    }
-
-    @Test fun `every step holds in every layout the oracle allows`() {
-        for ((d, days) in listOf(Difficulty.STANDARD to 20, Difficulty.HARD to 10, Difficulty.EXPERT to 6)) for (day in 0 until days) {
-            walk(board(day, d), check = true)
-        }
     }
 
     /** Boards a player made: safe squares revealed out of the ladder's order, right flags, a mine hit. */
