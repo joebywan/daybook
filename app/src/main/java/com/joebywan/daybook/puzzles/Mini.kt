@@ -49,7 +49,6 @@ import com.joebywan.daybook.puzzles.MiniLogic.BLACK
 import com.joebywan.daybook.puzzles.MiniLogic.OPEN
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled

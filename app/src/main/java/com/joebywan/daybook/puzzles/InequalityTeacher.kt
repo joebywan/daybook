@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.answerFallback
+import com.joebywan.daybook.core.lonePlace
 import com.joebywan.daybook.core.bit
 import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.digitsOf
@@ -67,16 +69,6 @@ internal object InequalityTeacher {
     private fun lines(n: Int): List<List<Int>> = LINES[n]
 
     private val LINES = List(10) { n -> List(n) { r -> List(n) { r * n + it } } + List(n) { c -> List(n) { it * n + c } } }
-
-    /** The one empty square of [line] whose mask in [m] has [d]; -1 when there are none or several, or the line holds [d]. */
-    private fun lonePlace(line: List<Int>, cells: List<Int>, m: IntArray, d: Int): Int {
-        var at = -1
-        for (i in line) {
-            if (cells[i] == d) return -1
-            if (cells[i] == 0 && has(m[i], d)) { if (at >= 0) return -1; at = i }
-        }
-        return at
-    }
 
     private class Sight(val n: Int, val cells: List<Int>, val signs: List<Sign>) {
         val base = IntArray(n * n)
@@ -289,17 +281,7 @@ internal object InequalityTeacher {
     fun teach(s: InequalityState): PlacementStep? {
         if (s.solved) return null
         mistake(s)?.let { return it }
-        return deduce(s.size, s.cells, s.signs) ?: fallback(s)
-    }
-
-    private fun fallback(s: InequalityState): PlacementStep? {
-        val i = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
-        val d = s.solution[i]
-        return PlacementStep(
-            FALLBACK, i, d, setOf(i), emptySet(),
-            "Try this square.",
-            "No short reason found: the stored answer has a $d here.",
-        )
+        return deduce(s.size, s.cells, s.signs) ?: answerFallback(FALLBACK, s.cells, s.solution)
     }
 
     private fun mistake(s: InequalityState): PlacementStep? {
