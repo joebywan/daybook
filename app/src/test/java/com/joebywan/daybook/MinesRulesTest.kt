@@ -122,7 +122,8 @@ class MinesRulesTest {
                 val t0 = System.nanoTime()
                 var a = 0
                 var s: MinesState? = null
-                while (s == null) s = MinesLogic.attempt(seed, t, a++)
+                while (s == null && a < MinesLogic.ATTEMPTS) s = MinesLogic.attempt(seed, t, a++)
+                requireNotNull(s) { "day $day $t: no draw of ${MinesLogic.ATTEMPTS} accepted" }
                 times += (System.nanoTime() - t0) / 1e6
                 assertEquals(s, Mines.generate(seed, t))
                 draws += a
