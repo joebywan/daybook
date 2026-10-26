@@ -204,7 +204,7 @@ fun TutorialRunner(
             Modifier.fillMaxWidth().height(HintSlotHeight).padding(horizontal = 18.dp),
         ) {
             if (frame.freePlay && hints.active) {
-                HintPanel(hints, accent, modifier = Modifier.fillMaxSize())
+                HintPanel(hints, accent, ::onHint, modifier = Modifier.fillMaxSize())
             } else {
                 Column(Modifier.fillMaxSize()) {
                     Text(

@@ -26,8 +26,9 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
   hold and lands on the previous frame's start. The hold is not an animation, so reduced motion leaves it alone.
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the
   panel confirms and clears when `isReached` sees it. Only an explicit "Show me" applies it. **One
-  hint is counted per deduction opened**; explaining and Show me are free. The steps are the Hint button's alone (it
-  reads Why?, then Show me); the panel's only button is Close, so the same button is never on screen twice.
+  hint is counted per deduction opened**; explaining and Show me are free. The panel carries the next step beside Close
+  (Why?, then Show me), where the reader's eye already is, and so does the toolbar's Hint button; both run the one
+  `HintSession.tap`, so they cannot count or step differently (#287 had taken it out of the panel; the owner wanted it back).
 - **Working it out rings the chime** (owner's request): when the player makes a hint's move themselves, the confirm plays
   the solve chime (`WatchHint`'s `onReached`, the play screen's and free play's `LocalChime`), muted by the Sound switch.
   "Show me" clears without confirming, so it never rings, and a move that solves the board has only the solve's own chime.
