@@ -83,11 +83,17 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
   Australian-built, played anywhere): `build.py` lints both clue files and fails on a capitalised name mid-clue, a
   sport, or a country tag ("in America"); a flagged clue that is fine goes in `tools/words/clue-lint-allow.txt` as its
   exact line (`python3 tools/words/build.py --lint` needs no inputs). Prefer a sense every dialect shares; a word whose
-  only sense is regional is tagged ", in Britain" / ", in America". Grim headline answers such as `vomit` stay (the owner).
+  only sense is regional is tagged ", in Britain" / ", in America".
+- **One breakfast-table screen for every word game** (`tools/words/grim.txt`; the owner, 2026-10-26, reversing "grim answers
+  such as vomit stay"): death, violence, bodily fluids, words near a slur, LOONY and PRICK. `build.py` takes them out of the
+  answers, so they leave Lexicon's answers, Word Wheel's grid words and wheels, and every Cipher, Codeword and Crossword word
+  built from those; they stay guesses and bonus words. An ordinary word with a grim second sense stays (die, hang, knife).
+  The bar is in the file's header. `GrimWordsTest` reads the file and fails if any game shows one. A change moves daily
+  boards: rebuild every generated list and re-pin.
 - **Daily words go round a cycle from 2026-11-01** (`SeedHash.LEXICON_CYCLE_FROM`): a hashed seed gave even odds of a repeat
   within two months. From that day `SeedHash.daily` gives `"words"` a tagged seed carrying the day (`lexiconCycleDay` reads it
   back), and `LexiconRules.cycle` maps it through one fixed shuffle of the tier's answer list per round, so no word recurs within
-  a round (1,801 / 1,801 / 1,366 days); round 0 puts the words drawn on hashed days of the same length at its back. Earlier days
+  a round (1,768 / 1,768 / 1,347 days); round 0 puts the words drawn on hashed days of the same length at its back. Earlier days
   keep their hashed seeds, so the archive, saves (which hold the word anyway) and completions are untouched; Random and Levels
   never cycle. `LexiconCycleTest` checks two rounds a tier and the cutover. Changing the list or the shuffle moves every cycled day.
 - **The opener rotates**: `LexiconState.opener` (defaulted 0, so an old save opens with RAISE/TALE) picks one of seven strong
@@ -388,7 +394,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
 
 - **The total is a real word, so the sums are found offline.** `CipherSums.kt` is written by `CipherSumsBuildTest` (env-gated, `DAYBOOK_CIPHER_SUMS=<file>`,
   `--rerun`; reproducible: a fixed seed draws addend pairs, threads are read back in draw order). Every word is a Lexicon *answer* (screened, well known).
-  Measured: about a quarter of four-letter addend pairs have a five-letter total with one answer that the ladder finishes, out of 1,801 tried, ~45 ms a pair on
+  Measured: about a quarter of four-letter addend pairs have a five-letter total with one answer that the ladder finishes, out of 1,768 tried, ~45 ms a pair on
   a desktop JVM: far too slow to search on a phone. Two five-letter addends (no leading carry, no 6-letter list) gave one ladder board per 30 pairs, three
   addends none, though both have many one-answer sums: they need trial, not columns. So **every tier is 4 + 4 = 5**, and the tier is the hardest technique the
   ladder needs (`CipherSumsBuildTest.tierOf`): Standard columns and pairs only, Hard all columns together, Expert a two-column what-if. 1,200 sums a tier, no total more than three times in one (`MAX_PER_TOTAL`; uncapped, `cacao` made 42 of Standard; now 636 / 694 / 727 different totals),
@@ -712,8 +718,7 @@ A small, fully checked crossword: a clue for every word across and down; fill th
 Display name "Crossword" (one line on a home tile), never a newspaper's.
 
 - **Grids are built offline** (`MiniGridsBuildTest`, env-gated, reproducible) with Codeword's `test/CrosswordFill.kt`, from Word
-  Wheel's grid lists less a breakfast-table list (`MiniGridsBuildTest.SKIP`: death, murder, vomit and the like, which those lists
-  keep because a guess or a wheel word is never shown under a clue; `MiniRulesTest` fails a grid holding one). The lists' order is
+  Wheel's grid lists, already screened by the app-wide `tools/words/grim.txt` (see Lexicon). The lists' order is
   a contract (`BoardPinTest` goes red on purpose). Clues are `WheelWords.clue` (`clues.txt`, `wheel-clues.txt`), distinct across
   answers, so a clue names one word; the board stores its clue texts, so a reworded clue never changes a saved game.
 - **Tiers: size and clue share, not ladder depth.** The clue share is the letters the hints' walk must read from the clues, over
