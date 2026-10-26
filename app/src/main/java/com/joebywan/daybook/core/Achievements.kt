@@ -24,7 +24,7 @@ class Achievement(
     val earned: (history: List<Completion>, today: LocalDate, puzzleIds: List<String>) -> Boolean,
 )
 
-private fun playedDays(h: List<Completion>) = h.mapNotNullTo(HashSet()) { it.day }
+private fun playedDays(h: List<Completion>) = h.mapNotNullTo(HashSet()) { it.streakDay }
 
 private fun streak(n: Int, title: String) = Achievement(
     "streak$n", AchievementCategory.STREAK, title, "Play on $n days in one streak.",
