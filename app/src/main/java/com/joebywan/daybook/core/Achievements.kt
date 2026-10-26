@@ -26,7 +26,7 @@ class Achievement(
     val earned: (history: List<Completion>, today: LocalDate, puzzleIds: List<String>) -> Boolean,
 )
 
-private fun playedDays(h: List<Completion>) = h.mapNotNullTo(HashSet()) { it.day }
+private fun playedDays(h: List<Completion>) = h.mapNotNullTo(HashSet()) { it.streakDay }
 
 private fun streak(n: Int, title: String) = Achievement(
     "streak$n", AchievementCategory.STREAK, title, "Play on $n days in one streak.",
@@ -67,14 +67,15 @@ val ACHIEVEMENTS: List<Achievement> = listOf(
         h.filter { it.day != null }.groupBy { it.puzzleId to it.day }
             .any { (_, c) -> c.mapTo(HashSet()) { it.difficulty }.size == Difficulty.entries.size }
     },
-    // The registry's three (TodaysThree), not puzzleIds: a test's fake ids would leave a three of one.
+    // The registry's three (TodaysThree), or the day's starter three, not puzzleIds: a test's fake ids would leave a three of one.
     Achievement("todaysThree", AchievementCategory.COVERAGE, "Today's three", "Finish a day's three on one tier, on the day.") { h, _, _ ->
         h.filter { it.day != null }.groupBy { it.day!! to it.difficulty }
-            .any { (k, c) -> c.mapTo(HashSet()) { it.puzzleId }.containsAll(TodaysThree.of(k.first)) }
+            .any { (k, c) -> c.mapTo(HashSet()) { it.puzzleId }.let { it.containsAll(TodaysThree.of(k.first)) || it.containsAll(TodaysThree.starter(k.first)) } }
     },
-    Achievement("allPuzzles", AchievementCategory.COVERAGE, "Clean sweep", "Finish every puzzle's daily on the same day.") { h, _, ids ->
-        ids.isNotEmpty() && h.filter { it.day != null }.groupBy { it.day }
-            .any { (_, c) -> c.mapTo(HashSet()) { it.puzzleId }.containsAll(ids) }
+    // Within a week, not one day: the puzzles are a menu, not a day's quota. The old one-day rule is a case of this one,
+    // so nobody who earned it loses it.
+    Achievement("allPuzzles", AchievementCategory.COVERAGE, "Clean sweep", "Finish every puzzle's daily within one week.") { h, _, ids ->
+        ids.isNotEmpty() && h.mapNotNullTo(HashSet()) { it.day }.any { start -> weekFrom(h, start).containsAll(ids) }
     },
     // Training (docs/TRAINING_SPEC.md): read off the training record, never the completions.
     Achievement(
@@ -88,6 +89,10 @@ val ACHIEVEMENTS: List<Achievement> = listOf(
         trained = { t -> TrainingRecord.entry(SudokuTraining.PUZZLE, SudokuTraining.EXAM) in t },
     ),
 )
+
+/** The puzzles with a daily solved in [h] for one of the seven days from [start]. */
+private fun weekFrom(h: List<Completion>, start: LocalDate): Set<String> =
+    h.filter { c -> c.day?.let { it.toEpochDays() - start.toEpochDays() in 0..6 } == true }.mapTo(HashSet()) { it.puzzleId }
 
 private fun registryIds() = PuzzleRegistry.all.map { it.id }
 
@@ -157,11 +162,13 @@ fun remaining(
             .map { (p, c) -> p to Difficulty.entries - c.mapTo(HashSet()) { it.difficulty }.toSet() }
             .filter { it.second.size in 1..2 }.minWithOrNull(compareBy({ it.second.size }, { it.first }))
             ?.let { (p, miss) ->
-                go(miss.size, "Only ${miss.joinToString(" and ") { it.label }} on ${nameOf(p)} left for all done today!")
+                go(miss.size, "${nameOf(p)} on ${miss.joinToString(" and ") { it.label }} is all that's left for a Full set today.")
             }
-        id == "allPuzzles" -> if (dailies.isEmpty() || puzzleIds.isEmpty()) null else {
-            val missing = puzzleIds - dailies.mapTo(HashSet()) { it.puzzleId }.toSet()
-            go(missing.size, "Only ${names(missing, nameOf)} left for a clean sweep today!")
+        // The week ending today: the only one a solve from now on can still finish.
+        id == "allPuzzles" -> {
+            val missing = puzzleIds - weekFrom(history, LocalDate.fromEpochDays(today.toEpochDays() - 6))
+            if (missing.size == puzzleIds.size) null
+            else go(missing.size, "${names(missing, nameOf)} ${if (missing.size == 1) "is" else "are"} all that's left for a Clean sweep this week.")
         }
         else -> null
     }

@@ -55,7 +55,7 @@ internal object LampsTeacher {
         mistake(s)?.let { return it }
         deduce(s.size, s.walls, s.marks)?.let { return it }
         val i = s.solution.indices.firstOrNull { s.solution[it] == '1' && s.marks[it] != LampsLogic.LAMP_MARK } ?: return null
-        return Step(FALLBACK, LAMP, setOf(i), setOf(i), emptySet(), "Try this square.", "No short reason found: the stored answer has a lamp here.")
+        return Step(FALLBACK, LAMP, setOf(i), setOf(i), emptySet(), "This one takes a longer chain. Look at the glowing square.", "This one needs a longer chain than a hint can walk through, so here's the answer for this square: a lamp.")
     }
 
     /** The [Deduction] for the play screen; `Lamps.teach` is just this. */

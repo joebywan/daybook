@@ -145,8 +145,9 @@ internal object DominoTeacher {
             placement = p,
             focus = setOf(p.first, p.second),
             cited = emptySet(),
-            nudge = "Try the ${words.domino(s.tray[d])}.",
-            explanation = "No step I can explain from here, so this is the answer itself: the ${words.domino(s.tray[d])} goes here, " +
+            nudge = "This one takes a longer chain. Look at the ${words.domino(s.tray[d])}.",
+            explanation = "This one needs a longer chain than a hint can walk through, so here's the answer for the " +
+                "${words.domino(s.tray[d])}: it goes here, " +
                 words.half(s.tray[d], p) + ".",
         )
     }

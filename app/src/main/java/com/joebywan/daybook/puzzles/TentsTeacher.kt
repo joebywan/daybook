@@ -70,8 +70,8 @@ internal object TentsTeacher {
         val i = s.solution.indices.firstOrNull { s.solution[it] && s.marks[it] != TENT } ?: return null
         return Step(
             FALLBACK, TENT, setOf(i), setOf(i), emptySet(),
-            "Try this square.",
-            "No short reason found: the stored answer has a tent here.",
+            "This one takes a longer chain. Look at the glowing square.",
+            "This one needs a longer chain than a hint can walk through, so here's the answer for this square: a tent.",
         )
     }
 

@@ -26,7 +26,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import com.joebywan.daybook.platform.OFFERS_REMINDER
 import com.joebywan.daybook.platform.SOLVE_SOUND_NOTE
+import com.joebywan.daybook.platform.rememberAskToNotify
+import com.joebywan.daybook.platform.rememberReminderSchedule
+import com.joebywan.daybook.ui.home.DEFAULT_REMINDER_HOUR
+import com.joebywan.daybook.ui.home.REMINDER_HOURS
+import com.joebywan.daybook.ui.home.hourLabel
+import com.joebywan.daybook.ui.home.rememberLaunchPreferences
+import kotlinx.coroutines.launch
 import com.joebywan.daybook.platform.VIBRATION_NOTE
 import com.joebywan.daybook.platform.rememberRateLink
 import com.joebywan.daybook.ui.home.SegmentedControl
@@ -86,11 +100,61 @@ fun SettingsScreen(
                     onChecked = onVibrate,
                 )
             }
+            if (OFFERS_REMINDER) item { ReminderSetting() }
             item { AppearanceChoice(appearance, onAppearance) }
             item { PuzzleOrderRow(customOrder, onResetOrder) }
             item { TrainingRow(onTraining) }
             item { RateRow(rateLink) }
             item { Credits() }
+        }
+    }
+}
+
+/**
+ * The daily reminder (`ui/home/Reminder.kt`): a switch, and the hour once it is on. It reads and writes the launch
+ * preferences itself. Turning it on asks for notification permission; refused, it stays off and says why.
+ */
+@Composable
+private fun ReminderSetting() {
+    val prefs = rememberLaunchPreferences()
+    val on by prefs.reminder.collectAsState(false)
+    val hour by prefs.reminderHour.collectAsState(DEFAULT_REMINDER_HOUR)
+    var refused by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val ask = rememberAskToNotify()
+    val schedule = rememberReminderSchedule()
+    val scheme = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth().card(scheme.surface)) {
+        SettingSwitch(
+            title = "Daily reminder",
+            detail = if (refused) "Daybook isn't allowed to send notifications. Allow them in your phone's settings, then try again."
+            else "One quiet note a day at a time you choose, and none on a day you've already solved a daily.",
+            checked = on,
+            onChecked = { want ->
+                fun apply(now: Boolean) = scope.launch {
+                    prefs.setReminder(now)
+                    schedule(now, hour)
+                }
+                if (!want) apply(false) else ask { granted -> refused = !granted; if (granted) apply(true) }
+            },
+        )
+        if (on) {
+            SegmentedControl(
+                modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+                options = REMINDER_HOURS,
+                selected = hour,
+                label = ::hourLabel,
+                tone = scheme.primary,
+                onTone = scheme.onPrimary,
+                verticalPadding = 7.dp,
+                onSelect = { h ->
+                    scope.launch {
+                        prefs.setReminderHour(h)
+                        schedule(true, h)
+                    }
+                },
+                track = scheme.background,
+            )
         }
     }
 }
