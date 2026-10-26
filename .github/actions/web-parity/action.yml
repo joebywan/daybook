@@ -19,22 +19,30 @@ runs:
         ./gradlew :app:testDebugUnitTest --rerun --tests '*WebParityDumpTest*'
         test -s "$DAYBOOK_PARITY_DUMP" || { echo "::error::WebParityDumpTest wrote no dump"; exit 1; }
 
-    # The browsers are keyed on the pinned Playwright version, so a cache hit skips the download.
+    # Keyed on the pinned Playwright version: the browsers, and the ~150 .debs their system packages
+    # need, so a warm run downloads neither (the runners' apt mirror has served at 65 kB/s).
     - uses: actions/cache@v6
       with:
-        path: ~/.cache/ms-playwright
+        path: |
+          ~/.cache/ms-playwright
+          ~/apt-archives
         key: playwright-${{ runner.os }}-${{ hashFiles('tools/web-parity/requirements.txt') }}
 
-    # The system packages (apt) and the browser download have each hung for half an hour with no output
-    # (October 2026), so each gets ten minutes and one retry rather than the job's whole budget.
+    # apt is never time-killed: a killed install left dpkg half-configured and the retry failed at once.
+    # Its downloads go to the cached folder, it waits for another apt's lock, and a failure is retried
+    # once after `dpkg --configure -a`. The browser download can hang silently, so it gets ten minutes.
     - name: Install Playwright and its browsers
       shell: bash
       run: |
         python3 -m venv "$RUNNER_TEMP/pwenv"
         "$RUNNER_TEMP/pwenv/bin/pip" install --quiet -r tools/web-parity/requirements.txt
-        try() { timeout 600 "$@" || { echo "::warning::'$*' failed or hung; retrying once"; timeout 600 "$@"; }; }
-        try "$RUNNER_TEMP/pwenv/bin/python" -m playwright install-deps chromium webkit
-        try "$RUNNER_TEMP/pwenv/bin/python" -m playwright install chromium webkit
+        mkdir -p ~/apt-archives/partial
+        printf 'Dir::Cache::Archives "%s";\nDPkg::Lock::Timeout "300";\nAPT::Keep-Downloaded-Packages "true";\n' \
+          ~/apt-archives | sudo tee /etc/apt/apt.conf.d/99daybook-cache >/dev/null
+        pw="$RUNNER_TEMP/pwenv/bin/python -m playwright"
+        $pw install-deps chromium webkit || { echo "::warning::install-deps failed; retrying once"; sudo dpkg --configure -a; $pw install-deps chromium webkit; }
+        timeout 600 $pw install chromium webkit || { echo "::warning::browser download failed or hung; retrying once"; timeout 600 $pw install chromium webkit; }
+        sudo chown -R "$USER" ~/apt-archives
 
     - name: Compare the browser's boards with the JVM's
       shell: bash
