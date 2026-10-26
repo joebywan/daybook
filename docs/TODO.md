@@ -142,10 +142,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   2025.09 -> 2026.09, activity, datastore, core-ktx) and kotlinx-serialization 1.11
   are still on older versions; Renovate opens those. The build and CLAUDE.md still say JDK 17 (CI uses
   17 too); Gradle 9 would run on newer, so moving the JDK is its own change (`renovate.json` holds it at 17).
-- [ ] **`compileSdk` 36 -> 37 before `core-ktx` 1.19.** `androidx.core:core-ktx` 1.19.1 requires `compileSdk` 37
-  (`checkDebugAarMetadata` fails, and CI then stops on the SDK preview licence), so Renovate's PR (#185) was closed rather than
-  merged. Move `compileSdk` to 37 on its own (it does not change `targetSdk` or runtime behaviour, but needs SDK 37 in CI), then
-  let Renovate offer the update again. *S.*
 - [ ] **Web icons are pinned at `material-icons-extended` 1.7.3** (`gradle/libs.versions.toml`, the last
   published; move to Material Symbols vector resources eventually). The deprecated `compose.*` accessors and
   `getting` in `web/build.gradle.kts` are gone. *S.*
