@@ -67,7 +67,7 @@ internal object MiniLogic {
         return out
     }
 
-    fun spelled(grid: String, slot: Slot): String = String(CharArray(slot.length) { grid[slot.squares[it]] })
+    fun spelled(grid: String, slot: Slot): String = CharArray(slot.length) { grid[slot.squares[it]] }.concatToString()
 
     /** The clue [word] has in the lists, or null for a word they do not hold. */
     fun clueOf(word: String): String? = if (WheelWords.isGridWord(word)) WheelWords.clue(word) else null
@@ -115,7 +115,7 @@ internal object MiniLogic {
             var best: Slot? = null
             var bestWords: List<String>? = null
             for (slot in slots) {
-                val now = String(CharArray(slot.length) { grid[slot.squares[it]] })
+                val now = CharArray(slot.length) { grid[slot.squares[it]] }.concatToString()
                 if (OPEN !in now) {
                     if (!WheelWords.isGridWord(now)) return
                     continue

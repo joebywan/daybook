@@ -156,8 +156,8 @@ private val MAX_KEYBOARD = 520.dp
 object Mini : PuzzleType {
 
     override val id = "mini"
-    override val displayName = "Mini Crossword"
-    override val tagline = "A small crossword. Solve the clues."
+    override val displayName = "Crossword"
+    override val tagline = "A mini crossword. Solve the clues."
     override val accent = 0xFFC7C785
     override val rules = listOf(
         "Every row and column of white squares is a word, and each word has a clue: 1 Across, 2 Down and so on.",
@@ -389,7 +389,6 @@ object Mini : PuzzleType {
                             style = MaterialTheme.typography.bodyMedium,
                             color = scheme.onSurface,
                             maxLines = 2,
-                            minLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }

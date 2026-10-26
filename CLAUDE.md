@@ -673,7 +673,7 @@ and every across and down run must be a word. Spec and decisions: `docs/CODEWORD
 A small, fully checked crossword: a clue for every word across and down; fill the grid. Spec and decisions: `docs/MINI_SPEC.md`.
 `puzzles/MiniRules.kt` (`MiniLogic`: slots and numbering, rules, the exhaustive proof, the pick), `MiniTeacher.kt`, `MiniKeys.kt`,
 `Mini.kt` (state, board, walkthrough, motif), `MiniGrids.kt` (generated). `id = "mini"` is hashed into every seed: never rename it.
-Display name "Mini Crossword", never a newspaper's.
+Display name "Crossword" (one line on a home tile), never a newspaper's.
 
 - **Grids are built offline** (`MiniGridsBuildTest`, env-gated, reproducible) with Codeword's `test/CrosswordFill.kt`, from Word
   Wheel's grid lists less a breakfast-table list (`MiniGridsBuildTest.SKIP`: death, murder, vomit and the like, which those lists
@@ -699,7 +699,7 @@ Display name "Mini Crossword", never a newspaper's.
   clue bar `MiniLogic.CLUE_BAR` = 3000.
 - **Cursor and direction are in the state** (Codeword's precedent; `withoutSelection` drops both). A tap selects a square, the same
   square again turns between Across and Down; typing moves on to the next empty square of the word; Del clears, or steps back and
-  clears. The clue bar (fixed height, two lines reserved) shows the cursor's clue, turns on a tap, and ‹ › walk the words. Keys:
+  clears. The clue bar (fixed height, room for two lines) shows the cursor's clue, turns on a tap, and ‹ › walk the words. Keys:
   letters, Backspace, arrows (one across the word's way turns first), Space turns.
 
 ## Pipes
