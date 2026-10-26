@@ -870,6 +870,10 @@ Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` vi
 
 Boards were coming out beige and one-note. The shared hue family, the three layers (scheme / accent / content hues)
 and the rules are in `docs/COLOUR.md`; read it before choosing colours for a new board.
+An accent drawn as text goes through `BoardHues.textOn` (fills and rings keep the raw accent); `BoardHues.ink` steps its
+lightness to 4.5:1 on the surface and background, so token palettes pinned by CIEDE2000 use the fixed `BoardHues.deep`; a
+state shown by colour also changes shape or weight (Nonogram's faded/dashed clues, Tally's dashed red chip). `ContrastTest`
+holds all of it, and `scheme.error` is a text-safe Clay in each scheme.
 A new puzzle's accent comes from `AccentSpacingTest`, which prints the candidate furthest from every accent (CIEDE2000,
 colour-blind vision included) and pins a floor between every pair; the palette tests share its maths (`ColourDistance`).
 

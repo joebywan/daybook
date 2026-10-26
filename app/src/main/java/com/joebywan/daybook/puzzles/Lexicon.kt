@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -93,9 +94,11 @@ object Lexicon : PuzzleType {
 
     // ---- colours ---------------------------------------------------------------------------------
 
-    private val correctColour = Color(0xFF4E9F6C)
-    private val presentColour = Color(0xFFD1A32F)
-    private val onMark = Color.White
+    internal val correctColour = Color(0xFF4E9F6C)
+    internal val presentColour = Color(0xFFD1A32F)
+
+    /** The letter on a green or gold tile: white was 3.2:1 on green and 2.3:1 on gold, so it is picked per fill. */
+    internal fun onMark(mark: Int): Color = BoardHues.onFill(if (mark == LexiconMark.CORRECT) correctColour else presentColour)
 
     private fun markColour(mark: Int, absent: Color): Color = when (mark) {
         LexiconMark.CORRECT -> correctColour
@@ -417,7 +420,7 @@ object Lexicon : PuzzleType {
                                     else -> markColour(mark, absent)
                                 }
                                 val text = when {
-                                    mark > LexiconMark.ABSENT -> onMark
+                                    mark > LexiconMark.ABSENT -> onMark(mark)
                                     mark == LexiconMark.ABSENT -> scheme.onSurfaceVariant.copy(alpha = 0.4f)
                                     else -> scheme.onSurfaceVariant
                                 }
@@ -481,7 +484,7 @@ object Lexicon : PuzzleType {
                     letter.uppercase(),
                     fontSize = (cell.value * 0.46f).sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (mark != null && mark > LexiconMark.ABSENT) onMark else scheme.onSurface,
+                    color = if (mark != null && mark > LexiconMark.ABSENT) onMark(mark) else scheme.onSurface,
                 )
             }
         }

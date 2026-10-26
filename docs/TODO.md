@@ -15,6 +15,14 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **Accent drawn as text outside the colour pass's files.** `BoardHues.textOn(accent, background)` (and `tileInk` on Home)
+  now make an accent readable as text; the colour pass applied it to Home tiles, the stats card header and share links, and the
+  walkthrough offer line. Still raw accent as text (under 4.5:1 for the lighter accents, Lexicon's olive, Sand's tan): the finish
+  frame's title and streak line (`PlayScreen.kt` `FinishCard`), `ResultsBlock`'s achievement title (`FinishExtras.kt`), the
+  hint panel's ink (`Hints.kt` `val ink = ... else accent`), the walkthrough status line (`TutorialRunner.kt`), the archive's
+  day number and tick (`ArchiveScreen.kt`), Today's three tile name (`TodaysThreeRow.kt`), and white text on accent-filled
+  buttons (`TutorialRunner.kt` `containerColor = accent`). Each is a one-expression swap; `ContrastTest` already covers every
+  accent. **S**. Source: the UX council's contrast review, 2026-10-26.
 - [ ] **Hints still say "cell".** Rules text says "square" everywhere now, but the Sudoku, Cage Sudoku and Mosaic teachers'
   hints (and Sudoku's and Cages' fallback nudge, "Look at the glowing cell") still say "cell". *S.*
 

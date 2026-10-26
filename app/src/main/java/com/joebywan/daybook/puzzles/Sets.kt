@@ -124,7 +124,7 @@ object Sets : PuzzleType {
      * CIEDE2000 >= 20 under deuteranopia, protanopia and tritanopia in both schemes. Index i is "colour i" in every save, so
      * only the look moved: 0 was red, 1 blue, 2 green. Colour is one of four traits, never the only one.
      */
-    fun palette(dark: Boolean): List<Color> = listOf(34f, 175f, 268f).map { BoardHues.ink(it, dark) }
+    fun palette(dark: Boolean): List<Color> = listOf(34f, 175f, 268f).map { BoardHues.deep(it, dark) }
 
     /**
      * The two cards on the home tile.
