@@ -27,6 +27,10 @@ tools/words/clues.txt holds one crossword-style clue ("word: clue") for every an
 LexiconClues.kt; the build fails if an answer has no clue or a clue has no answer. A clue must not
 contain its answer, and no two answers share a clue (LexiconCluesTest checks both).
 
+tools/words/second-clues.txt holds Crossword's second clue per grid word (a different angle from the first), written
+into MiniSecondClues.kt on every run; `python3 tools/words/build.py --second-clues` writes that file alone, needing no
+inputs. It is linted with the other clue files.
+
 Every list is written sorted and unique. The answer is picked by index, so the order is part of the
 contract: re-running this must not reorder anything unless a word is added or removed on purpose.
 """
@@ -179,11 +183,21 @@ LINT = {
 
 def lint_clues():
     allowed = {line.rstrip("\n") for line in open(os.path.join(HERE, "clue-lint-allow.txt")) if line.strip()}
-    bad = [f"  {name}: {w}: {c}   ({why})" for name in ("clues.txt", "wheel-clues.txt")
+    bad = [f"  {name}: {w}: {c}   ({why})" for name in ("clues.txt", "wheel-clues.txt", "second-clues.txt")
            for w, c in read_clues(name).items() if f"{w}: {c}" not in allowed
            for why, rx in LINT.items() if rx.search(c)]
     if bad:
         sys.exit("clues to rewrite (or add to tools/words/clue-lint-allow.txt):\n" + "\n".join(bad))
+
+
+# Crossword's second clues (tools/words/second-clues.txt): one per word its grids use, a different angle from the first
+# clue, for the hint that comes before a letter of the answer. Kept apart from the first clues; MiniSecondCluesTest
+# checks coverage of MiniGrids.kt, that none contains its word or equals a first clue, and that no two words share one.
+SECOND_OUT = os.path.join(PUZZLES, "MiniSecondClues.kt")
+
+
+def second_clues_kotlin():
+    return clue_text("MiniSecondClueText", "second-clues.txt", read_clues("second-clues.txt"))
 
 
 def clue_text(obj, source, clues):
@@ -317,6 +331,10 @@ def wheel_kotlin(grid, roots, bonus):
 if __name__ == "__main__":
     lint_clues()
     if sys.argv[1:] == ["--lint"]:
+        sys.exit(0)
+    with open(SECOND_OUT, "w") as f:
+        f.write(second_clues_kotlin())
+    if sys.argv[1:] == ["--second-clues"]:
         sys.exit(0)
     result =main(sys.argv[1], sys.argv[2], sys.argv[3])
     for n in LENGTHS:

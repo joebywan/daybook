@@ -728,8 +728,12 @@ Display name "Crossword" (one line on a home tile), never a newspaper's.
   sound because the clues name one fill. Red, after a 1 s settle: a full slot that is no word of the list, never a real word under
   another clue (that would be reading the answer). A word the list holds glows once, for the same reason not only the right one.
 - **Teacher:** `ONE_WORD` (the letters in a slot leave one word), `CROSSING` (one word leaves every crossing slot a fit, the slots
-  named), `ALL_WORDS` (arc consistency to a fixpoint, said as such), then `CLUE`, the fallback: it reads the answer, says so, and
-  gives one letter of the open slot the fewest words fit. It cannot be designed out: from an empty grid nothing else starts, and a
+  named), `ALL_WORDS` (arc consistency to a fixpoint, said as such), then `CLUE`, the fallback: its first tap names the open slot
+  the fewest words fit (from the board alone) with that word's **second clue** ("Another way in: ..."; the owner: "I'd rather a
+  2nd clue before giving the answer"); only the next tap reads the answer, says so, and gives one letter; Show me places it.
+  Second clues are `tools/words/second-clues.txt` (one per word the grids use, a different angle from the first, linted by
+  `build.py`, which writes `MiniSecondClues.kt`; `--second-clues` writes it alone), stored on the board as `MiniState.secondClues`
+  (a save without them gets the old nudge). A new grid word needs one in the same change: `MiniSecondCluesTest`. It cannot be designed out: from an empty grid nothing else starts, and a
   clue is knowledge, not logic. 44 / 54 / 62% of steps on a hints-only walk; that share is the tier measure. Word steps are typed
   by the player; only "Show me" types the word. Highlight indices: squares, letter key `MiniLogic.letterKey(l)` = 2000 + l, the
   clue bar `MiniLogic.CLUE_BAR` = 3000.

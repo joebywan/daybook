@@ -63,6 +63,86 @@ class MiniTeachingTest {
         println(report)
     }
 
+    @Test
+    fun `the fallback gives the second clue first, and the answer's letter only on the next tap`() {
+        var seen = 0
+        for (d in Difficulty.entries) for (day in 0 until 30) {
+            val s = board(day, d)
+            val step = MiniTeacher.teach(s)!!
+            assertEquals(MiniTeacher.CLUE, step.technique)
+            val slot = MiniLogic.slots(s.size, s.answer)[step.slot]
+            val word = MiniLogic.spelled(s.answer, slot)
+            // Tap 1: the slot and its word's second clue; nothing read off the answer but which clue to quote.
+            assertEquals("Another way in: ${slot.name}, \"${MiniLogic.secondClueOf(word)}\".", step.nudge)
+            // Tap 2: the letter, saying openly that it read the answer.
+            assertTrue(step.explanation, "reads the answer" in step.explanation && step.letter.uppercase() in step.explanation)
+            // The slot is chosen from the board alone: a different stored answer names the same slot.
+            assertEquals(step.slot, MiniTeacher.teach(s.copy(answer = s.answer.map { if (it == BLACK) it else 'q' }.joinToString("")))!!.slot)
+            // A save from before second clues: the old nudge, the same letter.
+            val old = MiniTeacher.teach(s.copy(secondClues = emptyList()))!!
+            assertEquals("Try ${slot.name}.", old.nudge)
+            assertEquals(step.explanation, old.explanation)
+            seen++
+        }
+        assertEquals(90, seen)
+    }
+
+    @Test
+    fun `measure - how often a solved second clue lets the walk move on`() {
+        // The walk reads letters, never clues, so on its own terms a second clue changes nothing on the board. The proxy:
+        // at each fallback step, suppose the player solves the second clue and types the whole word, and ask whether the
+        // walk's next step is then a logic step (crossings settle another word) or the board is done, rather than another
+        // fallback. Beside it: how often the one letter the next tap gives would, through the crossings, have settled the
+        // same word anyway (then the clue saved a tap, not a letter). The walk itself goes on with the letter, as hints do.
+        val report = StringBuilder()
+        for (d in Difficulty.entries) {
+            var clueSteps = 0
+            var wordMovesOn = 0
+            var letterSettlesWord = 0
+            val fit = mutableListOf<Int>()
+            for (day in 0 until 200) {
+                val s = board(day, d)
+                val shape = MiniTeacher.Shape(s.size, s.answer)
+                val now = s.letters.toCharArray()
+                // Logic steps until the walk stalls: the board the next fallback would see.
+                fun stall(from: CharArray): CharArray {
+                    val g = from.copyOf()
+                    while (OPEN in g) {
+                        val hit = MiniTeacher.findStep(shape, g.concatToString()) ?: break
+                        for (sq in shape.slots[hit.slot].squares) g[sq] = s.answer[sq]
+                    }
+                    return g
+                }
+                while (true) {
+                    val stalled = stall(now)
+                    stalled.copyInto(now)
+                    if (OPEN !in now) break
+                    val letters = now.concatToString()
+                    val r = MiniTeacher.clueSlot(shape, letters)!!
+                    val slot = shape.slots[r]
+                    clueSteps++
+                    fit += MiniTeacher.Sight(shape, letters).words[r].size
+                    val withWord = now.copyOf().also { g -> for (sq in slot.squares) g[sq] = s.answer[sq] }
+                    if (OPEN !in withWord || MiniTeacher.findStep(shape, withWord.concatToString()) != null) wordMovesOn++
+                    val sq = slot.squares.first { now[it] == OPEN }
+                    now[sq] = s.answer[sq]
+                    if (slot.squares.all { stall(now)[it] != OPEN }) letterSettlesWord++
+                }
+            }
+            fit.sort()
+            report.appendLine(
+                "${d.name}: $clueSteps fallback steps over 200 boards; a solved second clue lets the crossings move on " +
+                    "${"%.1f".format(100.0 * wordMovesOn / clueSteps)}% of the time; the letter alone settles that word " +
+                    "${"%.1f".format(100.0 * letterSettlesWord / clueSteps)}%; words fitting the slot named: median " +
+                    "${fit[fit.size / 2]}, p90 ${fit[fit.size * 9 / 10]}",
+            )
+            assertTrue(d.name, wordMovesOn > 0)
+        }
+        File("build/reports").mkdirs()
+        File("build/reports/mini-second-clue.txt").writeText(report.toString())
+        println(report)
+    }
+
     /** Every grid word a slot reading [pattern] (`' '` open) could be, by brute force over the list. */
     private fun fits(pattern: String) = WheelWords.grid(pattern.length).filter { w -> w.indices.all { pattern[it] == OPEN || pattern[it] == w[it] } }
 
@@ -140,7 +220,7 @@ class MiniTeachingTest {
             while (!s.solved) {
                 val step = MiniTeacher.teach(s)!!
                 longest = maxOf(longest, step.explanation.length)
-                assertTrue(step.nudge, step.nudge.length <= MiniTeacher.MAX_NUDGE)
+                assertTrue(step.nudge, step.nudge.length <= if (step.technique == MiniTeacher.CLUE) MiniTeacher.MAX_CLUE_NUDGE else MiniTeacher.MAX_NUDGE)
                 assertTrue(step.explanation, step.explanation.length <= MiniTeacher.MAX_EXPLANATION)
                 s = Mini.teach(s)!!.apply(s) as MiniState
             }

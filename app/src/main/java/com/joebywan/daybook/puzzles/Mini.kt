@@ -61,6 +61,9 @@ import kotlinx.serialization.Serializable
  * A Mini crossword in play. [answer] (the filled grid in reading order, [BLACK] for a black square) and [clues] (one
  * per slot, across then down, in [MiniLogic.slots] order) are fixed for the board; [letters] is what the player
  * types, [OPEN] for a square not filled. [cursor] is the selected square and [across] the way it reads.
+ * [secondClues] are the slots' second clues, in the same order, for the hint before a letter of the answer; stored as the
+ * clues are, so a reworded clue never changes a saved game. A save from before them has none, and its hints go straight
+ * to the letter, as they did.
  */
 @Serializable
 data class MiniState(
@@ -71,6 +74,7 @@ data class MiniState(
     val cursor: Int? = null,
     val across: Boolean = true,
     override val moves: Int = 0,
+    val secondClues: List<String> = emptyList(),
 ) : PuzzleState {
 
     /** The rules, not a comparison with [answer]: see [MiniLogic.isSolved]. */
