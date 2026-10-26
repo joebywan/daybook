@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Codeword
@@ -13,15 +12,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class CodewordRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
     private fun board(day: Int, d: Difficulty) =
-        Codeword.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Codeword.id, d), d) as CodewordState
+        Codeword.generate(daySeed(day, Codeword.id, d), d) as CodewordState
 
     private fun solved(s: CodewordState) = s.copy(letters = s.solution)
 
@@ -171,7 +167,7 @@ class CodewordRulesTest {
             val times = mutableListOf<Long>()
             var givens = 0
             for (day in 0 until 365) {
-                val seed = DailySeed.seedFor(start.plusDays(day.toLong()), Codeword.id, d)
+                val seed = daySeed(day, Codeword.id, d)
                 val t0 = System.nanoTime()
                 val s = CodewordLogic.generateVerified(seed, d)!!
                 times += System.nanoTime() - t0
@@ -189,7 +185,6 @@ class CodewordRulesTest {
             )
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/codeword-tiers.txt").writeText(report.toString())
+        writeReport("codeword-tiers.txt", report.toString())
     }
 }

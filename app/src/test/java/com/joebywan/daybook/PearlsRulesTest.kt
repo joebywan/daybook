@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.PearlsGrid
@@ -11,7 +10,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class PearlsRulesTest {
 
@@ -90,8 +88,8 @@ class PearlsRulesTest {
         for ((difficulty, count) in samples) {
             var slowest = 0L
             for (day in 0 until count) {
-                val date = LocalDate.of(2026, 1, 1).plusDays(day * 9L)
-                val s = Pearls.generate(DailySeed.seedFor(date, Pearls.id, difficulty), difficulty) as PearlsState
+                val date = TEST_START.plusDays(day * 9L)
+                val s = Pearls.generate(daySeed(day * 9, Pearls.id, difficulty), difficulty) as PearlsState
                 val t0 = System.nanoTime()
                 val found = PearlsOracle.answers(s.size, s.pearls)
                 val ms = (System.nanoTime() - t0) / 1_000_000

@@ -19,7 +19,6 @@ import com.joebywan.daybook.puzzles.Tents
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * How deep each tier really is: a year of daily boards per tier (seeds exactly as the daily makes them), each walked by
@@ -141,8 +140,7 @@ class TierDepthReportTest {
             }
             out.append('\n')
         }
-        File("build/reports").mkdirs()
-        File("build/reports/tier-depth.txt").writeText(out.toString())
+        writeReport("tier-depth.txt", out.toString())
         println(out)
     }
 }

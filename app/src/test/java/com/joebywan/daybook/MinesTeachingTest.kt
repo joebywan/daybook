@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -13,13 +12,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class MinesTeachingTest {
 
     private fun board(day: Int, d: Difficulty): MinesState =
-        Mines.generate(DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(day.toLong()), Mines.id, d), d) as MinesState
+        Mines.generate(daySeed(day, Mines.id, d), d) as MinesState
 
     private fun visible(s: MinesState): Pair<IntArray, BooleanArray> {
         val n = s.width * s.height
@@ -78,8 +75,7 @@ class MinesTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/mines-teaching-coverage.txt").writeText(report.toString())
+        writeReport("mines-teaching-coverage.txt", report.toString())
     }
 
     /** Boards a player made: safe squares revealed out of the ladder's order, right flags, a mine hit. */

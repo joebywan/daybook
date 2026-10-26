@@ -35,9 +35,8 @@ class SandTeachingTest {
 
     /** Takes each hint in turn until sorted; every step is one pour that keeps the board sortable. Returns the steps taken. */
     private fun walk(s: SandState, onStep: (String) -> Unit = {}): Int {
-        var now = s
         var steps = 0
-        while (!now.solved) {
+        hintWalk(s, 120) { now ->
             val d = SandTeacher.deduction(now) ?: error("no step on an unsolved board: ${now.tubes}")
             assertFalse("unexpected mistake on ${now.tubes}", d.mistake)
             assertFalse(d.fallback)
@@ -48,8 +47,8 @@ class SandTeachingTest {
             assertTrue(d.isReached(next))
             assertFalse(d.isReached(now))
             assertTrue("a step keeps the board sortable: ${next.tubes}", next.solved || provedSortable(next))
-            now = next
-            assertTrue("hints go round in circles on ${s.tubes}", ++steps <= 120)
+            steps++
+            next
         }
         return steps
     }
@@ -182,14 +181,12 @@ class SandTeachingTest {
         val rng = Rng(4)
         for (d in Difficulty.entries) for (day in 0 until 60) {
             for (s in listOf(board(day, d), wander(board(day, d), rng, 30))) {
-                var now = s
-                var guard = 0
-                while (!now.solved && guard++ < 80) {
-                    val step = SandTeacher.teach(now) ?: break
+                hintWalk(s, 80) { now ->
+                    val step = SandTeacher.teach(now) ?: return@hintWalk null
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= SandTeacher.MAX_NUDGE)
                     assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= SandTeacher.MAX_EXPLANATION)
                     longest = maxOf(longest, step.explanation.length)
-                    now = SandTeacher.deduction(now)!!.apply(now) as SandState
+                    SandTeacher.deduction(now)!!.apply(now) as SandState
                 }
             }
         }
