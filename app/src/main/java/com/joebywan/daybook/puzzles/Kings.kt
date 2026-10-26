@@ -176,7 +176,7 @@ object Kings : PuzzleType {
         "Place exactly one king in every row, every column and every coloured region.",
         "No two kings may touch, not even diagonally.",
         "Tap a square to pencil it out, and tap it again to rub the mark away.",
-        "Double-tap a square to crown a king there, or to take the crown back.",
+        "Double-tap or long-press a square to crown a king there, or to take the crown back.",
         "Drag across a run of squares to mark them all in one sweep.",
         "Squares a king already rules out are crossed off for you.",
     )
@@ -648,10 +648,10 @@ object Kings : PuzzleType {
             TutorialFrame(
                 state = cornerLeft,
                 caption = "${first.cap()} has only one square left, so its king must go there. " +
-                    "Double-tap it to crown it.",
+                    "Double-tap or long-press it to crown it.",
                 highlight = BoardHighlight(strong = setOf(0), soft = setOf(1)),
                 accepts = only(cornerLeft, mapOf(0 to Mark.KING)),
-                retry = "Double-tap the glowing square: two quick taps.",
+                retry = "Double-tap the glowing square (two quick taps), or press and hold it.",
                 done = "Crowned. The board crosses off every square it rules out.",
             ),
             TutorialFrame(
@@ -921,6 +921,17 @@ object Kings : PuzzleType {
                 pending = if (next === board) null else PendingTap(i, board, next)
             }
 
+            // A long press is the double tap's twin, for a player who finds two quick taps hard. Giving
+            // `onLongPress` to detectTapGestures never delays a tap (only `onDoubleTap` would).
+            fun press(offset: Offset) {
+                val i = cellAt(offset)
+                val live = pending?.takeIf { it.base === s }
+                lastCell = -1
+                pending = null
+                val from = if (live != null && live.cell == i) live.base else live?.after ?: s
+                onState(from.toggleKing(i))
+            }
+
             // Tap and drag are read on the grid as a whole: per-cell `clickable` boxes only ever
             // see the cell the finger went down on, which is the one thing a sweep is not about.
             Box(
@@ -930,7 +941,12 @@ object Kings : PuzzleType {
                     .gridCursor(cursor.takeIf { interactive }, s.size, s.size, scheme.primary)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
-                        detectTapGestures { offset ->
+                        detectTapGestures(
+                            onLongPress = { offset ->
+                                cursor = cellAt(offset)
+                                press(offset)
+                            },
+                        ) { offset ->
                             cursor = cellAt(offset)
                             tap(offset)
                         }

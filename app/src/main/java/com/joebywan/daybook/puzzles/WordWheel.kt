@@ -496,7 +496,7 @@ object WordWheel : PuzzleType {
             feelSquare(feel, i, topLeft, box, accent) {
                 if (letter != null) {
                     drawRoundRect(fill.copy(alpha = alpha), topLeft, box, corner)
-                    val layout = measurer.measure(letter.uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (cell * 0.5f / density).sp, fontWeight = FontWeight.Bold))
+                    val layout = measurer.measure(letter.uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (cell * 0.5f).toSp(), fontWeight = FontWeight.Bold))
                     drawText(layout, topLeft = Offset(topLeft.x + (box.width - layout.size.width) / 2f, topLeft.y + (box.height - layout.size.height) / 2f))
                 } else {
                     drawRoundRect(BoardHues.ink(hueB, dark).copy(alpha = 0.55f * alpha), topLeft, box, corner, style = Stroke(cell * 0.05f))
@@ -551,7 +551,7 @@ object WordWheel : PuzzleType {
                 drawCircle(if (look.strong) glow.copy(alpha = pulse) else glow.copy(alpha = 0.5f), radius = g.disc + w, center = c, style = Stroke(w))
             }
             val text = if (chosen) BoardHues.onFill(mark) else BoardHues.ink(hueA, dark)
-            val layout = measurer.measure(s.wheel[i].uppercase(), TextStyle(color = text, fontSize = (g.disc * 1.05f / density).sp, fontWeight = FontWeight.Bold))
+            val layout = measurer.measure(s.wheel[i].uppercase(), TextStyle(color = text, fontSize = (g.disc * 1.05f).toSp(), fontWeight = FontWeight.Bold))
             drawText(layout, topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
         }
     }

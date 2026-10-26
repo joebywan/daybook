@@ -35,7 +35,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
@@ -54,6 +53,7 @@ import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.boardSp
 
 /** Score for one submitted guess. */
 data class Feedback(val exact: Int, val misplaced: Int)
@@ -129,7 +129,7 @@ object Tower : PuzzleType {
     @Composable
     private fun PegDigit(colour: Int, size: Int) {
         val ink = if (palette[colour].luminance() > 0.35f) Color(0xFF1B2F29) else Color.White
-        Text("${colour + 1}", color = ink, fontSize = size.sp, fontWeight = FontWeight.Bold)
+        Text("${colour + 1}", color = ink, fontSize = size.dp.boardSp(), lineHeight = size.dp.boardSp() * 1.2f, fontWeight = FontWeight.Bold)
     }
 
     /**

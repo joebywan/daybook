@@ -31,7 +31,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -47,6 +46,7 @@ import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * Target: six numbers and a target; combine two tiles with + - x / (whole numbers only) and the answer is a new tile.
@@ -120,11 +120,12 @@ object Target : PuzzleType {
 
     // ---- drawing helpers ----------------------------------------------------------------------
 
-    private fun fontFor(value: Int, u: Dp) = (u.value * when {
+    @Composable
+    private fun fontFor(value: Int, u: Dp) = (u * when {
         value >= 1000 -> 0.34f
         value >= 100 -> 0.42f
         else -> 0.5f
-    }).sp
+    }).boardSp()
 
     // ---- the home motif -----------------------------------------------------------------------
 
@@ -140,18 +141,18 @@ object Target : PuzzleType {
                 Box(
                     Modifier.width(u * 2.6f).height(u * 0.95f).clip(RoundedCornerShape(u * 0.2f)).background(scheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
-                ) { Text("42", color = BoardHues.ink(hueB, dark), fontSize = (u.value * 0.6f).sp, fontWeight = FontWeight.Bold) }
+                ) { Text("42", color = BoardHues.ink(hueB, dark), fontSize = (u * 0.6f).boardSp(), lineHeight = (u * 0.6f).boardSp() * 1.2f, fontWeight = FontWeight.Bold) }
                 Row(horizontalArrangement = Arrangement.spacedBy(u * 0.12f), verticalAlignment = Alignment.CenterVertically) {
                     for (n in listOf(6, 7)) Box(
                         Modifier.size(u * 0.95f).clip(RoundedCornerShape(u * 0.2f)).background(scheme.surfaceVariant),
                         contentAlignment = Alignment.Center,
-                    ) { Text("$n", color = scheme.onSurface, fontSize = (u.value * 0.52f).sp, fontWeight = FontWeight.SemiBold) }
-                    Text("×", color = BoardHues.ink(hueA, dark), fontSize = (u.value * 0.6f).sp, fontWeight = FontWeight.Bold)
+                    ) { Text("$n", color = scheme.onSurface, fontSize = (u * 0.52f).boardSp(), lineHeight = (u * 0.52f).boardSp() * 1.2f, fontWeight = FontWeight.SemiBold) }
+                    Text("×", color = BoardHues.ink(hueA, dark), fontSize = (u * 0.6f).boardSp(), lineHeight = (u * 0.6f).boardSp() * 1.2f, fontWeight = FontWeight.Bold)
                 }
                 Box(
                     Modifier.size(u * 0.95f).clip(RoundedCornerShape(u * 0.2f)).background(made),
                     contentAlignment = Alignment.Center,
-                ) { Text("42", color = BoardHues.onFill(made), fontSize = (u.value * 0.4f).sp, fontWeight = FontWeight.SemiBold) }
+                ) { Text("42", color = BoardHues.onFill(made), fontSize = (u * 0.4f).boardSp(), lineHeight = (u * 0.4f).boardSp() * 1.2f, fontWeight = FontWeight.SemiBold) }
             }
         }
     }
@@ -223,11 +224,11 @@ object Target : PuzzleType {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text("TARGET", color = scheme.onSurfaceVariant, fontSize = (u.value * 0.17f).sp, fontWeight = FontWeight.SemiBold)
+                    Text("TARGET", color = scheme.onSurfaceVariant, fontSize = (u * 0.17f).boardSp(), lineHeight = (u * 0.17f).boardSp() * 1.2f, fontWeight = FontWeight.SemiBold)
                     Text(
                         "${s.target}",
                         color = if (s.solved) scheme.primary else BoardHues.ink(hueB, dark),
-                        fontSize = (u.value * 0.62f).sp,
+                        fontSize = (u * 0.62f).boardSp(), lineHeight = (u * 0.62f).boardSp() * 1.2f,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -237,7 +238,7 @@ object Target : PuzzleType {
                     Text(
                         captionOf(s, entry, note),
                         color = if (note != null) scheme.error else scheme.onSurfaceVariant,
-                        fontSize = (u.value * 0.2f).sp,
+                        fontSize = (u * 0.2f).boardSp(), lineHeight = (u * 0.2f).boardSp() * 1.2f,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
@@ -280,7 +281,7 @@ object Target : PuzzleType {
                                 if (value > 0) Text(
                                     "$value",
                                     color = if (fill == scheme.surface) scheme.onSurface else BoardHues.onFill(fill),
-                                    fontSize = fontFor(value, u),
+                                    fontSize = fontFor(value, u), lineHeight = fontFor(value, u) * 1.2f,
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 1,
                                 )
@@ -307,7 +308,7 @@ object Target : PuzzleType {
                                 .clickable(enabled = interactive && !s.solved) { go(s.tapOp(entry, op)) },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(op.symbol, color = BoardHues.ink(hueA, dark), fontSize = (u.value * 0.5f).sp, fontWeight = FontWeight.Bold)
+                            Text(op.symbol, color = BoardHues.ink(hueA, dark), fontSize = (u * 0.5f).boardSp(), lineHeight = (u * 0.5f).boardSp() * 1.2f, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

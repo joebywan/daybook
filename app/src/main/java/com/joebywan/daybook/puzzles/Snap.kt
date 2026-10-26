@@ -27,7 +27,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.highlightGrid
@@ -753,7 +752,7 @@ object Snap : PuzzleType {
             ) {
                 drawSnap(
                     s.width, stepPx, Offset.Zero, s.path, s.waypoints,
-                    gutter = 2f, corner = stepPx * 0.16f, join = StrokeJoin.Miter, numberSize = (step.value * 0.30f).sp,
+                    gutter = 2f, corner = stepPx * 0.16f, join = StrokeJoin.Miter, numberSize = (step * 0.30f).toSp(),
                     measurer = measurer, scheme = scheme,
                 )
 

@@ -25,7 +25,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -782,7 +781,7 @@ object Atoms : PuzzleType {
                             atom.bonds.toString(),
                             TextStyle(
                                 color = (if (complete) Color(accent) else scheme.onBackground).copy(alpha = fade),
-                                fontSize = (step.value * 0.34f).sp,
+                                fontSize = (step * 0.34f).toSp(),
                                 fontWeight = FontWeight.Bold,
                             ),
                         )

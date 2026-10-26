@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -62,6 +61,7 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * A Cipher sum in play. [words] (the addends, then the total) and [solution] are fixed for the board;
@@ -294,12 +294,12 @@ object Cipher : PuzzleType {
                         if (tile >= 28.dp) Text(
                             letter,
                             Modifier.align(Alignment.TopStart).padding(start = tile * 0.08f, top = tile * 0.02f),
-                            fontSize = (tile.value * 0.24f).sp,
+                            fontSize = (tile * 0.24f).boardSp(), lineHeight = (tile * 0.24f).boardSp() * 1.2f,
                             color = textColour(l, false).copy(alpha = 0.75f),
                         )
-                        Text(digits[l].toString(), fontSize = (tile.value * 0.56f).sp, fontWeight = FontWeight.Medium, color = textColour(l, true))
+                        Text(digits[l].toString(), fontSize = (tile * 0.56f).boardSp(), lineHeight = (tile * 0.56f).boardSp() * 1.2f, fontWeight = FontWeight.Medium, color = textColour(l, true))
                     } else {
-                        Text(letter, fontSize = (tile.value * 0.5f).sp, fontWeight = FontWeight.Bold, color = textColour(l, false))
+                        Text(letter, fontSize = (tile * 0.5f).boardSp(), lineHeight = (tile * 0.5f).boardSp() * 1.2f, fontWeight = FontWeight.Bold, color = textColour(l, false))
                     }
                 }
             }
@@ -452,7 +452,7 @@ object Cipher : PuzzleType {
                                 Text(
                                     sum.name(owner),
                                     Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
-                                    fontSize = 10.sp,
+                                    fontSize = 10.dp.boardSp(), lineHeight = 10.dp.boardSp() * 1.2f,
                                     color = scheme.outline,
                                 )
                             }
