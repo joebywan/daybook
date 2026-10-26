@@ -133,6 +133,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.json.Json
 
 /** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
 private const val PLAY_DATE = "d MMM yyyy"
@@ -147,6 +148,12 @@ private const val SAVE_DEBOUNCE_MS = 500L
 private val SavedGameSaver = Saver<SavedGame, String>(
     save = { it.encode() },
     restore = SavedGame::decode,
+)
+
+/** The finish frame across a rotation: [praiseFor] cannot be asked again once the solve is recorded. UI state, never saved to disk. */
+internal val PraiseSaver = Saver<Praise, String>(
+    save = { Json.encodeToString(it) },
+    restore = { Json.decodeFromString<Praise>(it) },
 )
 
 @Composable
@@ -192,8 +199,8 @@ fun PlayScreen(
     // Saved alongside the game: without it, rotating a finished board would record the win twice.
     var recorded by rememberSaveable(initial) { mutableStateOf(false) }
     val haptics = LocalHaptics.current
-    // Transient: a reopened solved board shows the plain frame, with its Share card.
-    var praise by remember { mutableStateOf(finishPreview ?: Praise()) }
+    // Saved too: rotating right after a solve would otherwise leave a bare frame. A reopened solved board shows the plain frame, with its Share card.
+    var praise by rememberSaveable(initial, stateSaver = PraiseSaver) { mutableStateOf(finishPreview ?: Praise()) }
     // Finished-frame state: hidden to inspect the board, and confetti played once. Never PuzzleState.
     var resultsHidden by rememberSaveable(initial) { mutableStateOf(false) }
     var confettiPlayed by rememberSaveable(initial) { mutableStateOf(false) }
