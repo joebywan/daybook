@@ -19,12 +19,22 @@ runs:
         ./gradlew :app:testDebugUnitTest --rerun --tests '*WebParityDumpTest*'
         test -s "$DAYBOOK_PARITY_DUMP" || { echo "::error::WebParityDumpTest wrote no dump"; exit 1; }
 
+    # The browsers are keyed on the pinned Playwright version, so a cache hit skips the download.
+    - uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('tools/web-parity/requirements.txt') }}
+
+    # The system packages (apt) and the browser download have each hung for half an hour with no output
+    # (October 2026), so each gets ten minutes and one retry rather than the job's whole budget.
     - name: Install Playwright and its browsers
       shell: bash
       run: |
         python3 -m venv "$RUNNER_TEMP/pwenv"
         "$RUNNER_TEMP/pwenv/bin/pip" install --quiet -r tools/web-parity/requirements.txt
-        "$RUNNER_TEMP/pwenv/bin/python" -m playwright install --with-deps chromium webkit
+        try() { timeout 600 "$@" || { echo "::warning::'$*' failed or hung; retrying once"; timeout 600 "$@"; }; }
+        try "$RUNNER_TEMP/pwenv/bin/python" -m playwright install-deps chromium webkit
+        try "$RUNNER_TEMP/pwenv/bin/python" -m playwright install chromium webkit
 
     - name: Compare the browser's boards with the JVM's
       shell: bash
