@@ -883,6 +883,10 @@ restart and counted hint, and the share graphic is drawn from it. Append to it e
 Restart is undoable (except in Pointers and Mines, which have no Undo): it pushes the cleared board, and `SavedGame.restarts` marks where, so
 an Undo that crosses one logs `u` and `PlayLog.played` hands the restarted moves back.
 
+**The streak counts only dailies solved on their own day** (the owner). `Completion.playedOn` (a sixth field, absent from
+records written before it, which count as before) is when a solve was made; read `Completion.streakDay`, never `day`, for
+anything about the streak or days played. `day` is the board's date (archive marks, best times, "solved today"). `docs/REWARDS.md`.
+
 **Back goes where the screen was opened from** (`backFrom` in `ui/DaybookApp.kt`): an archive game returns to its archive at that
 day, for system back, the web's back, the BackButton and the finish frame's Done alike (`Route.Archive.day` is the selected day;
 the archive is a month calendar, `ui/archive/ArchiveScreen.kt`, opening on that day's month). Route strings only gain fields at the end,
