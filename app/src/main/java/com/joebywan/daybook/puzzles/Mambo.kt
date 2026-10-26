@@ -130,11 +130,11 @@ object Mambo : PuzzleType {
      * together leaves nothing for "identical" to attach itself to wrongly.
      */
     override val rules = listOf(
-        "Fill every cell with a sun or a moon.",
+        "Fill every square with a sun or a moon.",
         "Each row and column holds equal numbers of suns and moons.",
         "Never more than two of the same symbol side by side, in a row or column.",
-        "A = between two cells means they match; an x means they differ.",
-        "Tap a cell to cycle moon, sun, empty.",
+        "A = between two squares means they match; an x means they differ.",
+        "Tap a square to cycle moon, sun, empty.",
         "Every puzzle can be solved by deduction alone.",
     )
 

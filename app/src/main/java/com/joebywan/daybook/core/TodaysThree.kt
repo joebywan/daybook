@@ -13,6 +13,9 @@ import kotlinx.datetime.LocalDate
  *
  * Changing a list (or adding a puzzle, which joins the mid-weight list) moves every later day's three, and can make the
  * "Today's three" achievement read unearned for an old day, as adding a puzzle does to the registry-wide achievements.
+ *
+ * A new player (fewer than [NEWCOMER_SOLVES] solves) gets [starter] instead: the same quick slot, with the mid-weight and
+ * word slots drawn from the gentlest of their kind. The achievement accepts either three for a day.
  */
 object TodaysThree {
     /** Quick: one gesture or few rules, a Standard board in a few minutes. */
@@ -20,6 +23,22 @@ object TodaysThree {
 
     /** Words and numbers. */
     val WORDS = listOf("words", "wordwheel", "target", "cipher", "tally")
+
+    /** Below this many solves in all, a player is new and gets [starter]. */
+    const val NEWCOMER_SOLVES = 5
+
+    /** The gentlest mid-weight puzzles (the first ones `PuzzleOrder.GENTLEST` names that are neither quick nor words). */
+    val STARTER_MID = listOf("sudoku", "mini", "nonogram", "mines")
+
+    /** The gentlest word and number puzzles, in `PuzzleOrder.GENTLEST`'s order. */
+    val STARTER_WORDS = listOf("words", "wordwheel", "target")
+
+    /** A new player's three for [day]: [of]'s quick slot, then a gentle mid-weight and a gentle word one. Shared by every newcomer. */
+    fun starter(day: LocalDate, ids: List<String> = PuzzleRegistry.all.map { it.id }): List<String> {
+        val d = day.toEpochDays()
+        fun List<String>.at(i: Long) = filter { it in ids }.let { if (it.isEmpty()) null else it[i.mod(it.size)] }
+        return listOfNotNull(QUICK.at(d), STARTER_MID.at(d), STARTER_WORDS.at(d))
+    }
 
     /** The three for [day], quick first, from the puzzles [ids] (the registry's, in its order); everything else is mid-weight. */
     fun of(day: LocalDate, ids: List<String> = PuzzleRegistry.all.map { it.id }): List<String> {
