@@ -720,6 +720,27 @@ walkthrough), `PipesTeacher.kt`, `PipesKeys.kt`. `id = "pipes"` is hashed into e
 - **`solved` checks the rules** (fully joined and one network), never a stored answer; there is none.
 - Counter-clockwise rotation and a lock mark were proposed and **declined by the owner**: do not add them.
 
+## Who's Who (a logic grid)
+
+People in a row of houses, each with one item of every category (a pet, a job...), and numbered clues that fix one
+assignment. Spec and measurements: `docs/WHOSWHO_SPEC.md`. Never "Einstein puzzle" or "Zebra puzzle" where the player sees.
+`puzzles/WhosWhoRules.kt` (state, `WhosWhoLogic`: candidates, the ladder, the count, generator, clue text), `WhosWhoTeacher.kt`,
+`WhosWhoKeys.kt`, `WhosWhoWords.kt` (names, five categories of five words, how a clue says each), `WhosWho.kt` (board, walkthrough,
+motif). `id = "whoswho"` is hashed into every seed: never rename it.
+
+- **The word lists are a contract** (indices are stored and drawn by index): append-only, with a re-pin.
+- **Tiers: 4 people, house + 1 category, every clue naming a person / 4 people, house + 2, plus links and next to / left of /
+  5 people, house + 2, plus either-or**, gated by the deepest ladder level the walk needs (direct / link or house / what-if).
+- **A board ships only if the ladder finishes it, every clue is needed, and `count` proves one answer** (column by column over
+  permutations, no budget, sealed `Verdict`). Clues are drawn until the ladder finishes, shown in a fixed shuffled order (the
+  ladder reads them in order, so the checks run on that order), then taken back while it still finishes, repeated until none
+  goes (the what-if is not monotone). `WhosWhoOracle` (every combination, its own clue reading) is the independent check.
+- **The table holds the player's ticks and crosses per (person, item)**; what a tick rules out is derived. One pad tap or one
+  clue strike is one state; the selection and pen are `remember`. `solved` checks the clues. A cell or clue no answer the marks
+  allow can keep turns red after a 1 s settle. The board is a Compose layout (table, scrolling clue strip, pad), not a canvas.
+- **Teacher:** clue, only, link, house, what-if (at most 3 steps). From boards marked the player's own way the short what-if
+  can be led astray (its steps are taken first come), so the teacher alone tries a 12-step one before giving up; measured.
+
 ## Motion and haptics
 
 The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s

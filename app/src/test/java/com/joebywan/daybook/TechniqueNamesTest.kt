@@ -36,6 +36,8 @@ import com.joebywan.daybook.puzzles.ShikakuTeacher
 import com.joebywan.daybook.puzzles.SudokuTeacher
 import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.TallyTeacher
+import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoTeacher
 import com.joebywan.daybook.puzzles.TargetTeacher
 import com.joebywan.daybook.puzzles.TentsTeacher
 import com.joebywan.daybook.puzzles.TowerTeacher
@@ -59,6 +61,7 @@ class TechniqueNamesTest {
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
         "codeword" to CodewordTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
+        "whoswho" to WhosWhoTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 
@@ -93,13 +96,16 @@ class TechniqueNamesTest {
             Lamps to listOf(null, LampsTeacher.STARVE, LampsTeacher.WHAT_IF),
             Codeword to listOf(null, CodewordTeacher.CROSSING, CodewordTeacher.ALL_WORDS),
             Pearls to listOf(null, PearlsTeacher.SMALL_LOOP, PearlsTeacher.WHAT_IF),
+            WhosWho to listOf(null, null, WhosWhoTeacher.WHAT_IF),
         )
         for ((p, want) in expected) for (t in Difficulty.entries) for (seed in 1L..10L) {
             val board = p.generate(seed, t)
             var got: String? = null
             val took = measureTime { got = p.neededTechnique(board) }
             // Cipher's Standard is "columns and pairs only": whichever of those its walk ends on.
-            if (p == Lamps && t == Difficulty.HARD) {
+            if (p == WhosWho && t == Difficulty.HARD) {
+                assertTrue("whoswho seed $seed: $got", got in setOf(WhosWhoTeacher.LINK, WhosWhoTeacher.HOUSE))
+            } else if (p == Lamps && t == Difficulty.HARD) {
                 // Hard needs a look-ahead: whichever of the two its walk went deepest to.
                 assertTrue("lamps seed $seed: $got", got in setOf(LampsTeacher.STARVE, LampsTeacher.DARK))
             } else if (p == Codeword && t == Difficulty.STANDARD) {

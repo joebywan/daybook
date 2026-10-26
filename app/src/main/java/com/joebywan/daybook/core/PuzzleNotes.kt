@@ -185,6 +185,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A square with only one way in is never on the loop.",
         "Never join the two ends of a line unless it is the whole loop.",
     ),
+    "whoswho" to listOf(
+        "A tick rules that item out for everyone else in its column.",
+        "If the baker has the cat, whoever can't own it isn't the baker.",
+        "Left of means the last house can't be the one on the left.",
+        "Strike a clue once it can tell you nothing more.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */

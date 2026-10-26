@@ -32,6 +32,7 @@ import com.joebywan.daybook.puzzles.SudokuState
 import com.joebywan.daybook.puzzles.Sym
 import com.joebywan.daybook.puzzles.TowerState
 import com.joebywan.daybook.puzzles.WordWheelState
+import com.joebywan.daybook.puzzles.WhosWhoState
 
 /**
  * One line per generated board, identical on the JVM and in the browser, so the two can be diffed:
@@ -96,5 +97,9 @@ object ParityFingerprint {
         is CipherState -> "words=${s.words.joinToString(",")} solution=${s.solution.joinToString("")}"
         is WordWheelState -> "wheel=${s.wheel} ${s.width}x${s.height} slots=" +
             s.slots.joinToString(";") { "${it.word}@${it.row},${it.col}${if (it.across) "a" else "d"}" }
+        is WhosWhoState -> "names=${s.names.joinToString(",")} groups=${s.groups.joinToString(",")} " +
+            "items=${s.items.joinToString("/") { it.joinToString("") }} " +
+            "clues=${s.clues.joinToString(",") { "${it.kind}:${it.a}.${it.b}.${it.c}" }} " +
+            "answer=${s.answer.joinToString("/") { it.joinToString("") }}"
     }
 }

@@ -68,6 +68,7 @@ class LevelsTest {
         assertTrue("level 3 is from the gentlest 17", level(3).all { pinnedGentle.indexOf(it) < 17 })
     }
 
+    /** Pinned at [pinnedPool]'s size: a plan is a function of the pool size, and a puzzle appended later opens new levels at its own. */
     @Test
     fun `the plans of levels 1 to 50 are pinned for each deal`() {
         // Pinned at the pool of 25: a level opened then keeps that plan however the pool grows (the test below).

@@ -12,6 +12,7 @@ WHAT'S INSIDE
 • Mines: clear a minefield by its numbers alone, never a guess
 • Lamps: light every square, with no lamp shining on another
 • Pearls: draw one loop through every black and white pearl
+• Logic grids: match everyone to their house, pet and job from the clues
 • Word puzzles: a hidden-word guessing game, a word wheel and a codeword
 • Chess puzzles: mate in 2, 3 and 4
 • Relaxing ones too: pipe rotation, flood-fill, one-line paths, colour sorting and arrows to clear

@@ -87,6 +87,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Lamps | Lamp placement | Light every white square with lamps that shine along their row and column to a wall; no lamp may light another, and a numbered wall touches that many lamps |
 | Codeword | Codeword (number crossword) | A filled crossword in which every letter is a number: work out which letter each number stands for |
 | Pearls | Masyu (pearl loop) | One closed loop through square middles and every pearl: it turns on black pearls (running straight on either side) and goes straight through white ones (turning beside them) |
+| Who's Who | Logic grid | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house" |
 
 Three difficulties each, which generally means a larger grid and fewer clues.
 
@@ -181,6 +182,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   fitting word shares, a number cut by every word it is in, every word worked through together) still finishes the
   grid; the device numbers the letters from the seed and proves the one answer again with an exhaustive search, and an
   independent solver that walks the alphabet letter by letter confirms it in the tests.
+- **Who's Who** — a random answer, then clues true of it drawn at random and added until an exhaustive count finds one
+  answer and the hint ladder (a clue naming someone, the one item left, two things a clue ties together, the houses each
+  side allows, and on Expert a short what-if) finishes it; then every clue the rest already implies is taken back. A board
+  ships only if it needs its tier's deepest step; an independent solver that tries every combination confirms it in the tests.
 - **Codebreaker and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
   guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by
