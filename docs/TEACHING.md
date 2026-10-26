@@ -264,8 +264,8 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   58% of 9x9 draws. Now Standard is untouched, Hard must take at least two locked steps and Expert at least six; givens fell
   from 21.6 / 19.1% to 19.1 / 16.6% of squares on Hard / Expert.
 
-**Snap feasibility.** `SnapDeducerReportTest` (same switch; `build/reports/snap-deducer.txt`) prototypes a whole-board
-deducer in test code: every joint between neighbours in, out or unknown; *degree* (two joints a square, one at the 1 and
+**Snap feasibility.** A test-code prototype (`SnapDeducerReportTest`, since deleted; in git history) tried a whole-board
+deducer: every joint between neighbours in, out or unknown; *degree* (two joints a square, one at the 1 and
 at the highest number: a square with two usable joints uses both), *pieces* (no joint closing a loop, joining the two
 ends' pieces early, or putting the numbers along a piece out of order: a piece holds consecutive numbers in order) and
 *pockets* (the usable joints stay connected, a bridge must be used, a square that cuts the board in two uses one joint into

@@ -28,4 +28,12 @@ class ArchiveCalendarTest {
         assertEquals(LocalDate(2026, 1, 1), ArchiveCalendar.opening(LocalDate(2025, 6, 1), played, today))
         assertEquals(LocalDate(2026, 10, 1), ArchiveCalendar.opening(LocalDate(2027, 6, 1), played, today))
     }
+
+    @Test fun `the archive by day opens on the day just played, else yesterday`() {
+        assertEquals(LocalDate(2026, 3, 9), ArchiveCalendar.openingDay(LocalDate(2026, 3, 9), today))
+        assertEquals(LocalDate(2026, 10, 22), ArchiveCalendar.openingDay(null, today))
+        // A day out of bounds is ignored; on the first day there is no yesterday, so it opens on today.
+        assertEquals(LocalDate(2026, 10, 22), ArchiveCalendar.openingDay(LocalDate(2027, 1, 1), today))
+        assertEquals(LocalDate(2026, 1, 1), ArchiveCalendar.openingDay(null, LocalDate(2026, 1, 1)))
+    }
 }

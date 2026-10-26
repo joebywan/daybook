@@ -1,30 +1,25 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.WhosWhoState
 import com.joebywan.daybook.puzzles.WhosWhoTeacher
-import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class WhosWhoTeachingTest {
-
-    private val start = LocalDate(2026, 1, 1).toEpochDays()
 
     /** Steps walked, and what-ifs that needed the teacher's longer chain (a board marked the player's own way). */
     private var steps = 0
     private var longWhatIfs = 0
 
     private fun daily(day: Int, tier: Difficulty): WhosWhoState =
-        WhosWho.generate(DailySeed.seedFor(LocalDate.fromEpochDays(start + day), WhosWho.id, tier), tier) as WhosWhoState
+        WhosWho.generate(daySeed(day, WhosWho.id, tier), tier) as WhosWhoState
 
     private fun isAnswer(s: WhosWhoState, mark: Int): Boolean {
         val cell = mark / s.n
@@ -83,8 +78,7 @@ class WhosWhoTeachingTest {
             println("$line; longer what-ifs $longWhatIfs")
             report.appendLine(line)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/whoswho-teaching-coverage.txt").writeText(report.toString())
+        writeReport("whoswho-teaching-coverage.txt", report.toString())
     }
 
     @Test
