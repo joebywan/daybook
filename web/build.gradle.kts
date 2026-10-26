@@ -17,6 +17,7 @@ val androidOnly = listOf(
     "com/joebywan/daybook/MainActivity.kt",
     "com/joebywan/daybook/data/DataStoreKeyValueStore.kt",
     "com/joebywan/daybook/platform/AndroidPlatform.kt",
+    "com/joebywan/daybook/platform/AndroidReminder.kt",
 )
 
 kotlin {
