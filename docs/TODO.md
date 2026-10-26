@@ -23,6 +23,9 @@ from a measurement or review, so you can check it is still true.
   day number and tick (`ArchiveScreen.kt`), Today's three tile name (`TodaysThreeRow.kt`), and white text on accent-filled
   buttons (`TutorialRunner.kt` `containerColor = accent`). Each is a one-expression swap; `ContrastTest` already covers every
   accent. **S**. Source: the UX council's contrast review, 2026-10-26.
+- [ ] **Hints still say "cell".** Rules text says "square" everywhere now, but the Sudoku, Cage Sudoku and Mosaic teachers'
+  hints (and Sudoku's and Cages' fallback nudge, "Look at the glowing cell") still say "cell". *S.*
+
 - [ ] **Touch targets left under 48dp.** Fixed in the UX pass: Home header buttons (48dp targets round 36dp circles), the
   play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
   Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)

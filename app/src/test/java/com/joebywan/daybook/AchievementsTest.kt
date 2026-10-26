@@ -77,6 +77,16 @@ class AchievementsTest {
         assertTrue("allPuzzles" !in got(emptyList(), emptyList()))
     }
 
+    @Test fun cleanSweepIsAnyWeek() {
+        // Seven days in a row from the first to the last: a, then b three days on, then c on the seventh day.
+        assertTrue("allPuzzles" in new(listOf(c(6, "a"), c(3, "b")), c(0, "c")))
+        // Eight days is too long; a random board (no day) never counts.
+        assertTrue("allPuzzles" !in new(listOf(c(7, "a"), c(3, "b")), c(0, "c")))
+        assertTrue("allPuzzles" !in new(listOf(c(null, "a"), c(3, "b")), c(0, "c")))
+        // Only the week ending today can still be finished, so an older week's gap is not "to go".
+        assertEquals(null, left("allPuzzles", listOf(c(9, "a"), c(8, "b"))))
+    }
+
     @Test fun randomHistoriesMatchNaiveModelAndNewIsTheDifference() {
         val rnd = Random(7)
         repeat(300) {
@@ -97,7 +107,9 @@ class AchievementsTest {
             var sweep = false
             for (back in 0..12) {
                 val day = all.filter { it.day == d(back) }
-                if (ids.all { id -> day.any { it.puzzleId == id } }) sweep = true
+                // The week from d(back): the days back..back-6 days ago.
+                val week = all.filter { w -> (0..6).any { w.day == d(back - it) } }
+                if (ids.all { id -> week.any { it.puzzleId == id } }) sweep = true
                 for (id in ids) {
                     if (Difficulty.entries.all { t -> day.any { it.puzzleId == id && it.difficulty == t } }) fullSet = true
                 }
@@ -137,8 +149,9 @@ class AchievementsTest {
 
     @Test fun fullSetAndSweepWording() {
         val h = listOf(c(0, "a", Difficulty.STANDARD), c(0, "a", Difficulty.EXPERT))
-        assertEquals("Only Hard on A left for all done today!", left("fullSet", h)!!.text)
-        assertEquals("Only B and C left for a clean sweep today!", left("allPuzzles", h)!!.text)
+        assertEquals("A on Hard is all that's left for a Full set today.", left("fullSet", h)!!.text)
+        assertEquals("B and C are all that's left for a Clean sweep this week.", left("allPuzzles", h)!!.text)
+        assertEquals("C is all that's left for a Clean sweep this week.", left("allPuzzles", h + c(6, "b"))!!.text)
         assertEquals("C is the only puzzle you haven't tried yet.", left("oneOfEach", h + c(1, "b"))!!.text)
         assertEquals("2 puzzles you haven't tried yet: B and C.", left("oneOfEach", h)!!.text)
     }
@@ -169,8 +182,9 @@ class AchievementsTest {
                 if (todays.any { it.puzzleId == id } && m in 1..2) best = minOf(best ?: 9, m)
             }
             assertEquals(if ("fullSet" in earned) null else best, left("fullSet", all)?.left)
-            val sweepMissing = ids.count { id -> todays.none { it.puzzleId == id } }
-            val sweep = if (todays.isNotEmpty() && sweepMissing in 1..2) sweepMissing else null
+            val week = all.filter { w -> (0..6).any { w.day == d(it) } }
+            val sweepMissing = ids.count { id -> week.none { it.puzzleId == id } }
+            val sweep = if (sweepMissing in 1..2) sweepMissing else null
             assertEquals(if ("allPuzzles" in earned) null else sweep, left("allPuzzles", all)?.left)
             // Streak: the walk of days played, from the independent definition of a live run.
             val st = streakOf(all.mapNotNull { it.day }.toSet(), today)

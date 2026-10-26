@@ -194,7 +194,7 @@ object Lexicon : PuzzleType {
         listOf(
             TutorialFrame(
                 state = tutorialBoard(1),
-                caption = "A four-letter word is hidden, and you have six guesses. Every guess must be a real " +
+                caption = "A word is hidden, here one of four letters. Every guess must be a real " +
                     "word, and each letter comes back marked. Green means right letter, right place.",
                 highlight = BoardHighlight(soft = tiles(0, 0, 1, 2, 3)),
             ),
