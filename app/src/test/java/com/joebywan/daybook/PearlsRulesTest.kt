@@ -9,7 +9,6 @@ import com.joebywan.daybook.puzzles.PearlsState
 import com.joebywan.daybook.puzzles.PearlsVerdict
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -153,23 +152,5 @@ class PearlsRulesTest {
         assertEquals('.', drawnOnce.tap(g.between(0, 1)).edges[g.between(0, 1)])
         // A drag that never leaves its square is no move.
         assertTrue(s.drag(listOf(3)) === s)
-    }
-
-    @Test
-    fun `generation time - a year of seeds per tier`() {
-        for (difficulty in Difficulty.entries) {
-            val times = ArrayList<Double>()
-            for (day in 0 until 365) {
-                val seed = DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(day.toLong()), Pearls.id, difficulty)
-                val t0 = System.nanoTime()
-                assertNotNull(PearlsLogic.generateVerified(seed, difficulty))
-                times += (System.nanoTime() - t0) / 1e6
-            }
-            times.sort()
-            println(
-                "TIME ${difficulty.name} median ${"%.1f".format(times[182])} p95 ${"%.1f".format(times[346])} " +
-                    "max ${"%.1f".format(times.last())} ms",
-            )
-        }
     }
 }
