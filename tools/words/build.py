@@ -21,7 +21,8 @@ Two lists per word length (4 and 5 letters):
   answers  common words only: SCOWL levels 10, 20 and 35 of the dialect-neutral list (so no
            word that has an American/Australian spelling variant), minus inflections of another
            word on the list (plurals, -ed, -er/-est), minus tools/words/exclude.txt (offensive,
-           obscure, or not a word a person would guess), plus tools/words/include.txt.
+           obscure, or not a word a person would guess) and tools/words/grim.txt (the breakfast-table
+           screen every word game shares), plus tools/words/include.txt.
 
 tools/words/clues.txt holds one crossword-style clue ("word: clue") for every answer, written into
 LexiconClues.kt; the build fails if an answer has no clue or a clue has no answer. A clue must not
@@ -116,7 +117,7 @@ def main(pkg, wordnet_dir, enable_path, lengths=LENGTHS):
     for d in dialects:
         everything |= load(pkg, d, all_levels)
     common = load(pkg, "english", (10, 20, 35))
-    exclude, include = read_list("exclude.txt"), read_list("include.txt")
+    exclude, include = read_list("exclude.txt") | read_list("grim.txt"), read_list("include.txt")
     out = {}
     for n in lengths:
         guesses = {w for w in everything | both | extras if len(w) == n}

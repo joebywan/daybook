@@ -10,7 +10,6 @@ abode: Dwelling
 abort: Call off a mission
 about: Approximately
 above: Overhead
-abuse: Mistreat
 abyss: Bottomless pit
 ache: Dull, lasting pain
 acid: Lemon juice, chemically
@@ -113,7 +112,6 @@ aroma: Pleasant smell
 arose: Got up
 array: Orderly display
 arrow: Cupid's missile
-arson: Setting fires illegally
 ashen: Pale as a ghost
 aside: Actor's whispered remark
 askew: Crooked, as a picture
@@ -211,7 +209,6 @@ began: Started
 begin: Start
 begun: Has started
 beige: Pale tan
-belch: Burp
 belie: Contradict
 bell: Church tower ringer
 belly: Stomach
@@ -231,7 +228,6 @@ bible: Holy book
 bide: ___ one's time
 bigot: Intolerant person
 bike: Two-wheeler
-bile: Liver fluid
 bill: Restaurant check, or duck's beak
 bind: Tie up
 bingo: Game of called numbers
@@ -267,7 +263,6 @@ blob: Shapeless drop
 block: Obstruct
 blog: Online journal
 blond: Fair-haired
-blood: Red fluid
 bloom: Flower
 blot: Ink stain
 blow: Gust, or hard punch
@@ -289,7 +284,6 @@ bogus: Phoney, as a cheque
 boil: Heat water to 100 degrees
 bold: Daring
 bolt: Door lock, or a sprint
-bomb: Explosive device
 bond: Tie that unites, or a debt certificate
 bone: Dog's treat
 bonus: Extra payment
@@ -301,7 +295,6 @@ boor: Rude, crude person
 boost: A lift
 boot: Winter footwear
 booth: Phone enclosure
-booze: Alcohol, informally
 bore: Dull person, or drilled
 born: Brought into the world
 borne: Carried
@@ -313,7 +306,6 @@ both: The two together
 bough: Tree limb
 bound: Tied up
 bout: Boxing match
-bowel: Part of the gut
 bowl: Cereal holder
 brace: Dental wire, or support
 brag: Boast
@@ -379,7 +371,6 @@ buoy: Float marking a channel
 burly: Strong and heavy-set
 burn: Scorch
 burnt: Scorched
-burp: Baby's after-feed noise
 burr: Prickly seed case
 burro: Small pack donkey
 burst: Pop
@@ -607,7 +598,6 @@ crept: Sneaked
 crest: Top of a wave
 crew: Ship's workers
 crib: Baby's bed
-crime: Offence
 crisp: Fresh and crunchy
 croak: Frog's call
 crock: Earthen pot
@@ -667,13 +657,11 @@ daub: Smear roughly with paint
 daunt: Intimidate
 dawn: Sunrise
 daze: Stupor
-dead: No longer living
 deaf: Unable to hear
 deal: Hand out the cards
 dealt: Handed out cards
 dean: College official
 dear: Beloved
-death: End of life
 debit: Account withdrawal
 debt: What you owe
 debug: Remove errors from code
@@ -695,7 +683,6 @@ delay: Hold up
 deli: Sandwich shop
 delta: River's mouth, or a Greek letter
 delve: Dig deeply
-demon: Evil spirit
 denim: Jeans fabric
 dense: Thick
 dent: Car door blemish
@@ -704,7 +691,6 @@ depot: Station
 depth: How deep
 desk: Office furniture
 deter: Discourage
-devil: Satan
 dial: Phone number input, or clock face
 diary: Daily journal
 dice: Craps cubes
@@ -782,7 +768,6 @@ drove: Steered
 drown: Die in water
 drug: Medicine
 drum: Percussion instrument
-drunk: Intoxicated
 dual: Double
 duck: Quacker
 duct: Air conditioning pipe
@@ -793,7 +778,6 @@ duke: Nobleman above a marquis
 dull: Not sharp, as a knife
 dully: Without liveliness
 duly: As is proper
-dumb: Unable to speak, or foolish
 dummy: Mannequin
 dump: Landfill
 dumpy: Short and stout
@@ -908,7 +892,6 @@ farce: Absurd comedy
 fare: Bus ticket price
 farm: Place to raise crops
 fast: Speedy, or abstain from eating
-fatal: Deadly
 fate: Destiny
 fatty: Greasy, as food
 fault: Blame, or an earthquake line
@@ -1163,9 +1146,7 @@ gooey: Sticky and soft
 goof: Silly mistake
 goofy: Silly
 goose: Honker
-gore: Blood from a wound
 gorge: Ravine, or stuff oneself
-gory: Bloody
 gouge: Dig out
 gourd: Pumpkin's relative
 gown: Formal dress
@@ -1182,7 +1163,6 @@ graph: Plot's picture
 grasp: Understand
 grass: Lawn
 grate: Fireplace rack, or irritate
-grave: Burial plot, or serious
 gravy: Sauce for a roast
 graze: Feed on the field
 great: Terrific
@@ -1190,7 +1170,6 @@ green: Colour of grass
 greet: Say hello to
 grew: Got taller
 grid: Crossword framework
-grief: Deep sorrow
 grill: Barbecue rack
 grim: Stern, or dismal
 grime: Ingrained dirt
@@ -1259,7 +1238,6 @@ hash: Corned beef dish, or a pound sign
 haste: Great speed
 hasty: Rushed
 hatch: Come out of an egg
-hate: Loathe
 haul: Drag, or a big catch
 haunt: Spook's hangout
 have: Own
@@ -1440,7 +1418,6 @@ kelp: Large seaweed
 kept: Held on to
 khaki: Army-uniform colour
 kick: Strike with the foot
-kill: Slay
 kiln: Pottery oven
 kilo: Thousand grams
 kilt: Scotsman's skirt
@@ -1478,7 +1455,6 @@ lain: Reclined, once
 lair: Wild animal's den
 lake: Inland body of water
 lamb: Young sheep
-lame: Feeble, as an excuse
 lamp: Bedside light
 lance: Knight's weapon
 land: Not sea
@@ -1524,17 +1500,14 @@ lemon: Sour fruit, or a bad car
 lend: Let borrow
 lens: Camera glass
 lent: Loaned
-leper: Outcast with a disease
 less: Not as much
 lest: For fear that
 letup: Pause
 levee: River embankment
 level: Even
 levy: Impose a tax
-lewd: Vulgar
 liar: Pants-on-fire person
 libel: Written defamation
-lice: Head pests
 lick: Ice cream eater's move
 lieu: Place, in "in ___ of"
 life: Existence
@@ -1581,7 +1554,6 @@ long: Not short
 look: Glance
 loom: Weaver's device
 loon: Diving water bird
-loony: Crazy
 loop: Circle of rope
 loose: Not tight
 loot: Plunder
@@ -1594,7 +1566,6 @@ loss: Defeat
 lost: Misplaced
 lotus: Water lily
 loud: Noisy
-louse: Tiny parasite
 lousy: Awful
 love: Tennis zero
 lowly: Humble
@@ -1628,7 +1599,6 @@ madly: Insanely
 magic: Wizard's art
 maid: Hotel cleaner
 mail: Post
-maim: Cripple
 main: Chief
 maize: Corn
 major: Important, or a military officer
@@ -1745,7 +1715,6 @@ motor: Engine
 motto: Slogan
 mound: Heap of earth
 mount: Climb
-mourn: Grieve
 mouse: Computer pointer
 mousy: Drab and timid
 mouth: Where food goes in
@@ -1753,7 +1722,6 @@ move: Chess turn
 movie: Film
 much: A great deal
 muck: Mud
-mucus: Slime in the nose
 muddy: Covered in mire
 muff: Fumble, or hand warmer
 muggy: Hot and humid
@@ -1777,7 +1745,6 @@ mutt: Mixed-breed dog
 myth: Fable
 nail: Hammer's target
 naive: Innocent and unworldly
-naked: Without clothes
 name: Title
 nape: Back of the neck
 nasal: Of the nose
@@ -1817,7 +1784,6 @@ nomad: Wanderer
 none: Not any
 nook: Cosy corner
 noon: Midday
-noose: Hangman's loop
 norm: Standard, expected behaviour
 north: Compass point opposite south
 nose: Sniffer
@@ -1827,7 +1793,6 @@ note: Quarter ___, or a short letter
 noun: Grammar's name for a thing
 nova: Exploding star
 novel: Long story, or new
-nude: Unclothed
 nudge: Poke gently
 null: Void, as a contract
 numb: Without feeling
@@ -1837,7 +1802,6 @@ nylon: Synthetic fibre
 nymph: Spirit of nature
 oasis: Desert refuge
 oath: Courtroom promise
-obese: Very fat
 obey: Follow orders
 oboe: Double-reed woodwind
 occur: Happen
@@ -1862,7 +1826,6 @@ ooze: Seep slowly
 opal: Iridescent gem
 open: Not shut
 opera: Drama sung on a stage
-opium: Poppy-derived narcotic
 optic: Of the eye
 opus: Composer's work
 oral: Spoken
@@ -2041,7 +2004,6 @@ preen: Groom feathers
 press: Newspapers, or iron
 prey: Hunted animal
 price: Cost
-prick: Pierce slightly
 pride: Group of lions, or one of the seven deadly sins
 prim: Stiffly proper
 prime: Chief, or divisible only by itself and 1
@@ -2192,7 +2154,6 @@ rich: Wealthy
 ride: Go on a horse
 ridge: Mountain crest
 rife: Widespread
-rifle: Long gun
 rift: Split between friends
 right: Correct
 rigid: Stiff
@@ -2319,7 +2280,6 @@ scrap: Bit of waste
 screw: Fastener with a thread
 scrub: Clean vigorously
 scuff: Mark on a shoe
-scum: Pond film
 seal: Flipper-footed marine mammal
 seam: Stitched join
 sear: Burn the surface of a steak
@@ -2437,7 +2397,6 @@ skunk: Smelly striped animal
 slab: Thick slice
 slack: Loose
 slag: Smelting waste
-slain: Killed
 slam: Shut forcefully
 slang: Informal vocabulary
 slant: Slope
@@ -2445,7 +2404,6 @@ slap: Smack
 slash: Cut with a sweep
 slat: Venetian blind part
 slate: Roof tile, or a candidate list
-slay: Kill, as a dragon
 sled: Toboggan
 sleek: Smooth and glossy
 sleep: Snooze
@@ -2551,7 +2509,6 @@ sown: Planted, as seeds
 space: Final frontier
 spade: Shovel, or a card suit
 span: Bridge length
-spank: Smack on the bottom
 spar: Practise boxing
 spare: Extra, or a bowling feat
 spark: Flash from a flint
@@ -2567,7 +2524,6 @@ speed: Velocity
 spell: Magic words, or to write letter by letter
 spend: Pay out
 spent: Exhausted, or paid out
-spew: Gush out
 spice: Cinnamon, say
 spicy: Hot
 spike: Sharp point, or a sudden rise
@@ -2600,7 +2556,6 @@ spurt: Sudden gush
 squad: Team
 squat: Short and wide, or a deep knee bend
 squid: Ink-squirting cephalopod
-stab: Knife thrust
 stack: Neat pile
 staff: Employees, or a musical set of lines
 stag: Male deer
@@ -2861,7 +2816,6 @@ tour: Guided trip
 tout: Praise highly, or sell tickets illegally
 towel: Bathroom drier
 town: Bigger than a village
-toxic: Poisonous
 toxin: Poisonous substance
 trace: Slight sign, or copy by following lines
 track: Rail, or follow
@@ -2925,8 +2879,6 @@ twist: Plot surprise, or wring
 tying: Making a knot
 type: Kind, or keyboard
 udder: Milk producer on a cow
-ugly: Not pretty
-ulcer: Stomach sore
 ultra: Beyond the norm
 uncle: Parent's brother
 uncut: Unabridged
@@ -2945,7 +2897,6 @@ upper: Higher
 upset: Distressed
 urban: City-dwelling
 urge: Strong impulse
-urine: Waste fluid from the kidneys
 usage: Way of using
 usher: Theatre seat-finder
 usual: Customary
@@ -3003,7 +2954,6 @@ vogue: Magazine for the fashionable
 voice: Singer's instrument
 void: Empty space
 volt: Electrical unit
-vomit: Throw up
 vote: Ballot
 vouch: Guarantee
 vowel: A, E, I, O or U
@@ -3077,7 +3027,6 @@ whose: Of whom
 wick: Candle's string
 wide: Broad
 widen: Make broader
-widow: Woman who has lost her husband
 width: How wide
 wield: Brandish
 wife: Married woman
@@ -3123,7 +3072,6 @@ worse: Less good
 worst: Least good
 worth: Value
 would: Past of "will"
-wound: Cut or gash
 wove: Made on a loom
 woven: Made by interlacing threads
 wrap: Gift cover
