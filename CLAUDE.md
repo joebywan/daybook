@@ -294,15 +294,19 @@ shared with Cage Sudoku), `SudokuKeys.kt`. `id = "sudoku"` is hashed into every 
 
 - **Tiers are depth of the teacher's ladder, not clue counts** (`Sudoku.gate`): Standard is finished by singles in a unit (full house,
   hidden singles); Hard must need a naked single and nothing past it; Expert must need locked candidates, a pair or a what-if, and
-  never the fallback. Clues fall where minimality leaves them: about 28 on every tier (22-33). The old 38 / 30 / 24 targets dug
-  for uniqueness alone, so Hard and Expert overlapped and a third of Expert boards fell back.
+  never the fallback. Hard and Expert clues fall where minimality leaves them: about 28 (22-32, means 27.6 / 27.9). The old
+  38 / 30 / 24 targets dug for uniqueness alone, so Hard and Expert overlapped and a third of Expert boards fell back.
+- **Standard has a clue floor, `Sudoku.STANDARD_FLOOR` = 34** (the owner, 2026-10-26: minimal Standard boards, 24-33, mean 28.1,
+  felt bare). The dig skips any removal that would go below it, so every Standard board has 34 or 35 givens (mean 34.1: the
+  floor binds on every day) and is no longer minimal; Hard and Expert did not move. Not trivially easy: 47 squares still to
+  find, and the squares placeable at the start rose from 7.4 to 11.6 a board (2-16 to 4-21; a floor of 38 would give 14.8).
 - **A board ships only if the tier's ladder finishes it and `countSolutions` (exhaustive, no budget) proves one answer.** A fresh grid
   per attempt (`Rng(seed + attempt)`) is dug in 180-degree pairs (the centre alone) in random order, keeping a removal only while both
   hold, so the givens are symmetric and minimal for the tier's ladder; then the teacher's walk must have needed the tier's technique,
   else the next grid. `finishes` is the dig's shortcut (singles settled with bitmasks, the teacher asked only where they stall;
   `SudokuRulesTest` checks it gives the teacher's verdict). Attempts over a year: 1 / 4.5 / 5.6 mean, at most 1 / 25 / 38 of
-  `ATTEMPTS` = 100; `lastResort` is the board of one fixed seed, itself proved; a year never reaches it (`FallbackTest`). JVM 1.4 / 3.4 /
-  6.9 ms median, 7 / 16 / 25 ms p95; Chromium 2 / 6 / 13 ms median, 3 / 27 / 45 p95, 7 / 57 / 85 max; WebKit Expert 19 / 62 / 147.
+  `ATTEMPTS` = 100; `lastResort` is the board of one fixed seed, itself proved; a year never reaches it (`FallbackTest`). JVM 0.7 / 2.4 /
+  3.9 ms median, 1.1 / 10 / 15 ms p95, 23 / 27 / 33 max (2026-10-26, `SudokuRulesTest` report); Chromium 2 / 6 / 13 ms median, 3 / 27 / 45 p95, 7 / 57 / 85 max; WebKit Expert 19 / 62 / 147.
   The teacher's what-if chain keeps arrays, not lists, because the dig asks it on every board (same steps, checked on 34k).
   Changing the ladder changes every board (parity pins go red on purpose).
 - **`solved` checks the rules**; a mistake is a digit that differs from the stored square, sound because the board has one answer.

@@ -188,10 +188,13 @@ object Sudoku : PuzzleType {
      * a unit; Hard: a naked single, nothing past it; Expert: an elimination (locked candidates or a pair) or a what-if,
      * never the fallback. So the tiers cannot overlap: each has a depth of its own.
      */
-    private class Gate(val ceiling: String, val needs: String)
+    private class Gate(val ceiling: String, val needs: String, val floor: Int = 0)
+
+    /** Standard's fewest givens: its dig stops before it would go below this, so the gentlest tier is not bare. */
+    internal const val STANDARD_FLOOR = 34
 
     private fun gate(difficulty: Difficulty) = when (difficulty) {
-        Difficulty.STANDARD -> Gate(SudokuTeacher.HIDDEN_SINGLE_LINE, SudokuTeacher.FULL_HOUSE)
+        Difficulty.STANDARD -> Gate(SudokuTeacher.HIDDEN_SINGLE_LINE, SudokuTeacher.FULL_HOUSE, STANDARD_FLOOR)
         Difficulty.HARD -> Gate(SudokuTeacher.NAKED_SINGLE, SudokuTeacher.NAKED_SINGLE)
         Difficulty.EXPERT -> Gate(SudokuTeacher.WHAT_IF, SudokuTeacher.LOCKED)
     }
@@ -206,7 +209,8 @@ object Sudoku : PuzzleType {
      * The board when it was proved, null otherwise. What `FallbackTest` asserts on. Each attempt fills a grid from
      * `Rng(seed + attempt)` and digs it in 180-degree pairs (the centre alone), in a random order, keeping each removal
      * only while [countSolutions] (exhaustive) still finds one answer and the tier's ladder still finishes the board:
-     * the givens are minimal for that ladder, symmetric, and the clue count is whatever that leaves. The dug board then
+     * the givens are minimal for that ladder, symmetric, and the clue count is whatever that leaves, except that a removal
+     * taking the board below the tier's [Gate.floor] is skipped (Standard: [STANDARD_FLOOR]). The dug board then
      * ships only if its walk needed the tier's technique ([Gate.needs]); otherwise the next grid is tried.
      */
     internal fun generateVerified(seed: Long, difficulty: Difficulty, attempts: Int = ATTEMPTS): SudokuState? {
@@ -216,10 +220,13 @@ object Sudoku : PuzzleType {
             val rng = Rng(seed + attempt)
             val solution = fullGrid(rng)
             val puzzle = solution.toMutableList()
+            var givens = 81
             for (i in rng.shuffled((0..40).toList())) {
+                val pair = if (i == 40) 1 else 2
+                if (givens - pair < gate.floor) continue
                 puzzle[i] = 0
                 puzzle[80 - i] = 0
-                if (countSolutions(puzzle) == 1 && finishes(puzzle, gate.ceiling)) continue
+                if (countSolutions(puzzle) == 1 && finishes(puzzle, gate.ceiling)) { givens -= pair; continue }
                 puzzle[i] = solution[i]
                 puzzle[80 - i] = solution[80 - i]
             }

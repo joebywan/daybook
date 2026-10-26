@@ -149,6 +149,7 @@ class SudokuRulesTest {
             report.appendLine("  attempts mean ${"%.1f".format(meanAttempts)}, most ${attempts.lastKey()} of ${Sudoku.ATTEMPTS}: $attempts")
             report.appendLine("  ms median ${"%.1f".format(ms[182])} p95 ${"%.1f".format(ms[346])} max ${"%.1f".format(ms.last())}")
             assertTrue("${d.name} needed ${attempts.lastKey()} of ${Sudoku.ATTEMPTS} attempts", attempts.lastKey() <= Sudoku.ATTEMPTS / 2)
+            if (d == Difficulty.STANDARD) assertTrue("Standard went below its floor: $clues", clues.firstKey() >= Sudoku.STANDARD_FLOOR)
         }
         println(report)
         File("build/reports").mkdirs()
