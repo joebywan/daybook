@@ -56,7 +56,7 @@ internal object MinesTeacher {
         val n = s.width * s.height
         val open = (0 until n).filter { !s.isMine(it) && !s.isOpen(it) && !s.isFlag(it) }
         val i = open.firstOrNull { j -> MinesLogic.neighbours(s.width, s.height, j).any { s.isOpen(it) } } ?: open.firstOrNull() ?: return null
-        return Step(FALLBACK, setOf(i), emptySet(), setOf(i), emptySet(), "Try this square.", "No short reason found: the stored answer says this square is safe.")
+        return Step(FALLBACK, setOf(i), emptySet(), setOf(i), emptySet(), "This one takes a longer chain. Look at the glowing square.", "This one needs a longer chain than a hint can walk through, so here's the answer for this square: it's safe.")
     }
 
     /** Each square's number when it is revealed, else -1: what the player can read off the board. */

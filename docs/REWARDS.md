@@ -26,8 +26,12 @@ under "Rewards".
 
 ## Streak implementation (`core/Streak.kt`)
 
-`streakOf(playedDays, today): Streak(current, best, atRisk)` (+ `alive`, `lapsed`), derived from the daily
-`Completion.day`s; nothing new is stored. A run starts on a played day and is judged each day over the last
+`streakOf(playedDays, today): Streak(current, best, atRisk)` (+ `alive`, `lapsed`), derived from
+`Completion.streakDay`: the day of a daily solved **on that day** (the owner, 2026-10-26). Each solve stores the date it
+was made (`Completion.playedOn`, a sixth field); an archive solve still counts for totals, best times and the archive's
+marks, never for the streak, the streak achievements, "Regular" (30 days played) or This week. Records from before
+`playedOn` cannot be told apart and count as they always did (`ArchiveStreakTest`). A board started before midnight
+and solved after it is not on its own day, so it does not count. A run starts on a played day and is judged each day over the last
 seven days, never reaching back before the run's first day: alive while at most 2 of those days were missed
 (which is 5 of 7 for an established run, and "at most 2 missed since the first play" for a new one). The third
 miss ends the run and the next play starts a fresh one. `current` counts days played. Home shows "Welcome back"
@@ -97,8 +101,8 @@ history already satisfies one sees it earned in the list and is never told, so t
   (so badges keep their place), title and description under each. Home header has a rosette button (`MedalIcon`) that opens
   it; back returns to wherever it was opened from (`Route.Achievements.fromHome`). The header buttons are 36dp and the
   title 24sp so they fit at 360dp. Statistics has no button: the streak badge opens it (a chart icon on its left).
-- `streakOf` is only monotone when the new play is the newest day; an archive play can in rare cases split a run, so
-  a streak achievement could in theory read unearned again. The diff never announces an already-earned one.
+- `streakOf` is only monotone when the new play is the newest day. Archive plays no longer add streak days, but an
+  old record (no `playedOn`) could in theory have split a run; the diff never announces an already-earned one.
 
 ## The finished frame (`ui/play/PlayScreen.kt`, `ui/play/FinishExtras.kt`)
 
@@ -191,8 +195,10 @@ forgiven when they happened. `StreakCalendar(played, today)` takes the played-da
   in Daily or Random mode. Always laid out at the same height (the Share button sits in a caption line of fixed height), and
   laid out unseen in Levels, so it never moves the grid. "Try me!" and the grid's pick square are gone; nothing is stored.
   Its share card (`threeShareCard`): "Daybook · 25 Oct · Today's three · Standard", a mark per puzzle and "2/3", the solved
-  boards' time and hints, the streak. An achievement, "Today's three" (all three on one tier, on the day), reads the
-  registry's lists, so changing a list (or adding a puzzle) can make an old day's read unearned, as with the other
+  boards' time and hints, the streak. A new player (fewer than five solves) gets `TodaysThree.starter` instead: the same
+  quick slot, a mid-weight from Sudoku / Crossword / Nonogram / Mines and a word one from Lexicon / Word Wheel / Target
+  (the gentlest of each kind), the same for every newcomer that day. An achievement, "Today's three" (all three on one
+  tier, on the day, either the shared three or the day's starter three), reads the registry's lists, so changing a list (or adding a puzzle) can make an old day's read unearned, as with the other
   registry-wide ones.
 - **In progress.** A tile whose board at the grid's tier and mode (today's daily; in Random, the tier's current random board)
   has a saved game that is unsolved and has a move in it says "In progress", tilted across the thumbnail with a halo, in the
@@ -230,8 +236,9 @@ would rather let people rearrange than hide.
 ## Welcome (`ui/home/Welcome.kt`)
 
 One calm screen shown in place of the grid, once, to a new player: one line on what Daybook is (new boards every day, free,
-no ads, no account, offline), then four pointers with small icons: today's three and the one-minute walkthrough under "How to play";
-Daily / Levels / Random and the three tiers; the archive, stats and achievements buttons; press and hold to move a puzzle.
+no ads, no account, offline), then four pointers with small icons: today's three (gentle ones at first) and the ? on every puzzle (rules and the
+one-minute walkthrough); Daily / Levels / Random and the three tiers; the archive and achievements buttons and the chart badge
+(stats); press and hold to move a puzzle (most played first, gentlest breaking ties).
 One button, Start. No question, no pages, nothing drawn over the grid (the owner's call). `LaunchPreferences.needsWelcome`:
 only when the launch file has no `welcomed` key and `ProgressStore.hasPlayed()` is false (the timer default's rule); a
 player who has played is marked welcomed on the spot, so an existing player never sees it. Start writes `welcomed`. Home
@@ -253,8 +260,8 @@ that day, today outlined), then "N days played, M daily boards solved.", or "A f
 week is empty; never a count of what is missing. Under each puzzle's tiers, once its most solved tier (the easier on a tie) has a
 solve in 3 of the last 8 weeks, "Your recent median" with that tier and time (the latest
 week with a solve), then a line through each week's median (gaps bridged). No axis, no "faster" or "slower": the line is the player's own times and says nothing about them.
-Decision: **only dated completions count.** A `Completion` holds the day of the board it solved and no time of play, so practice
-and level solves (`day == null`) cannot be put in a week; an archive board counts on its own day. Weeks end today, so none splits
+Decision: **only dailies solved on their own day count** (`Completion.streakDay`, as the streak), so practice, level and
+archive solves are left out; median times (`weeklyMedians`) still put an archive board on its own day. Weeks end today, so none splits
 at a month or year. Pure and tested: `ThisWeek.days`, `summary`, `weeklyMedians`, `trend` (`ThisWeekTest`). Static: nothing animates.
 
 ## Kept share cards (`KeptCard` in `data/ProgressStore.kt`, `ui/stats/StatsScreen.kt`)
