@@ -519,7 +519,7 @@ fun PlayScreen(
                     Text(
                         "${puzzle.tagline}\nOne-minute walkthrough",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(puzzle.accent),
+                        color = com.joebywan.daybook.ui.theme.BoardHues.textOn(Color(puzzle.accent), scheme.background),
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         modifier = Modifier
@@ -591,7 +591,7 @@ fun PlayScreen(
         Box {
             if (wide && hintSession.active && !state.solved) {
                 HintPanel(
-                    hintSession, Color(puzzle.accent),
+                    hintSession, Color(puzzle.accent), ::onHint,
                     modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth(),
                     fill = false,
                 )
@@ -665,6 +665,7 @@ fun PlayScreen(
         HintPopover(
             session = hintSession,
             accent = Color(puzzle.accent),
+            onNext = ::onHint,
             highlight = highlightBounds.rect,
             keepClear = highlightBounds.keepClear,
             origin = overlayOrigin,

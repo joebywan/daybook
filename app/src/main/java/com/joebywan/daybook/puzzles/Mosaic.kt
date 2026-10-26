@@ -201,9 +201,9 @@ object Mosaic : PuzzleType {
      */
     val palette: List<Color> = listOf(
         BoardHues.fill(34f, false),
-        BoardHues.ink(175f, false),
+        BoardHues.deep(175f, false),
         BoardHues.mark(268f),
-        BoardHues.ink(330f, false),
+        BoardHues.deep(330f, false),
         BoardHues.fill(215f, false),
     )
 
