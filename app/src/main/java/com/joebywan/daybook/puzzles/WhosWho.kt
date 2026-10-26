@@ -222,12 +222,7 @@ object WhosWho : PuzzleType {
         val s = state as WhosWhoState
         val step = WhosWhoTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == WhosWhoTeacher.MISTAKE,
             applyTo = { now -> applyStep(now as WhosWhoState, step) },
             reachedBy = { now -> reached(now as WhosWhoState, step) },

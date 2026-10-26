@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TeachStep
 
 /**
  * Word Wheel, reasoned from what the player can see: the wheel, the shape of each slot, the letters already in the grid,
@@ -50,18 +51,18 @@ internal object WordWheelTeacher {
     }
 
     class Step(
-        val technique: String,
+        override val technique: String,
         val slot: Int,
         /** The word the move enters: the one word left for [PINNED] and [CROSSING], the stored one for [CLUE]. */
         val word: String,
         /** How many grid words fit the slot. */
         val choices: Int,
-        val nudge: String,
-        val explanation: String,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
-    )
+        override val nudge: String,
+        override val explanation: String,
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
+    ) : TeachStep
 
     fun shapes(s: WordWheelState): List<Shape> = s.slots.map { Shape(it.row, it.col, it.across, it.length) }
 
@@ -220,12 +221,7 @@ internal object WordWheelTeacher {
     fun deduction(s: WordWheelState): Deduction? {
         val step = teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             fallback = step.technique in FALLBACKS,
             applyTo = { now -> (now as WordWheelState).enter(step.word) },
             reachedBy = { now -> step.word in (now as WordWheelState).found },

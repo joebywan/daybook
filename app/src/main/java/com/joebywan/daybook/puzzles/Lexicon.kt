@@ -243,12 +243,7 @@ object Lexicon : PuzzleType {
         fun fits(word: String) = LexiconRules.consistent(word, base.guesses, marks)
         fun newGuesses(now: LexiconState) = now.guesses.drop(base.guesses.size)
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == LexiconTeacher.MISTAKE,
             fallback = step.technique in LexiconTeacher.FALLBACKS,
             applyTo = { now -> applyMove(now as LexiconState, step.move) },

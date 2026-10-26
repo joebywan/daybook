@@ -118,11 +118,7 @@ object Dominoes : PuzzleType {
         val s = state as DominoState
         val step = DominoTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
+            step,
             // A mistake's targets name only its tray slot; the squares it lies on glow too, so the domino to lift is seen.
             targets = if (step.mistake) step.targets + step.focus else step.targets,
             mistake = step.mistake,

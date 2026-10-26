@@ -826,12 +826,7 @@ object Mosaic : PuzzleType {
         val base = s.cells
         val after = if (mistake) null else s.flood(step.cell, step.colour).cells
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = mistake,
             fallback = step.technique == MosaicTeacher.KEEPS,
             applyTo = { now ->

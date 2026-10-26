@@ -1102,12 +1102,7 @@ object Lits : PuzzleType {
         val s = state as LitsState
         val step = LitsTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == LitsTeacher.MISTAKE,
             fallback = step.technique == LitsTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as LitsState, step) },

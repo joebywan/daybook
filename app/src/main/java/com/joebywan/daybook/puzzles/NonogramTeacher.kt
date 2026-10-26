@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.listed
 
 /**
@@ -54,16 +55,16 @@ internal object NonogramTeacher {
      * mistake being taken back.
      */
     class Step(
-        val technique: String,
+        override val technique: String,
         val fills: List<Int> = emptyList(),
         val crosses: List<Int> = emptyList(),
         val clears: List<Int> = emptyList(),
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    ) {
-        val targets: Set<Int> get() = (fills + crosses + clears).toSet()
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
+        override val targets: Set<Int> get() = (fills + crosses + clears).toSet()
     }
 
     fun teach(s: NonogramState): Step? {

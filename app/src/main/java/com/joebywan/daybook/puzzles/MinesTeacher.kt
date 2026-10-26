@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.plural
 
 /**
@@ -35,16 +36,18 @@ internal object MinesTeacher {
     const val MAX_EXPLANATION = 230
 
     class Step(
-        val technique: String,
+        override val technique: String,
         /** Squares to reveal. */
         val safe: Set<Int>,
         /** Squares to flag; for a mistake, the flag to take off. */
         val mines: Set<Int>,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
+        override val targets: Set<Int> get() = safe + mines
+    }
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback -----------------------------------------
 
@@ -67,12 +70,7 @@ internal object MinesTeacher {
         val step = teach(s) ?: return null
         val mistake = step.technique == MISTAKE
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.safe + step.mines,
+            step,
             mistake = mistake,
             fallback = step.technique == FALLBACK,
             applyTo = { now -> apply(now as MinesState, step) },

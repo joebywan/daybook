@@ -411,12 +411,7 @@ object Pipes : PuzzleType {
         val step = PipesTeacher.teach(s) ?: return null
         val wrong = step.wrong
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = setOf(step.cell),
+            step,
             mistake = step.technique == PipesTeacher.MISTAKE,
             fallback = step.technique == PipesTeacher.FALLBACK,
             applyTo = { now -> turnTo(now as PipesState, step.cell, step.mask) },

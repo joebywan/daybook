@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.forEachBit
 
 /**
@@ -63,17 +64,17 @@ internal object MosaicTeacher {
      * player's fills are on record; [rewindTo] is how many fills had been used there.
      */
     class Step(
-        val technique: String,
+        override val technique: String,
         val cell: Int = -1,
         val colour: Int = -1,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
-        val nudge: String,
-        val explanation: String,
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
         val rewind: MosaicState? = null,
         val rewindTo: Int = -1,
-    )
+    ) : TeachStep
 
     // ---- the board as areas --------------------------------------------------------------------
 

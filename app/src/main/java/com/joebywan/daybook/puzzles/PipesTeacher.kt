@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.listed
 
 /**
@@ -67,15 +68,17 @@ internal object PipesTeacher {
      * left it at, and the step is taken back as soon as the tile reads anything else.
      */
     class Step(
-        val technique: String,
+        override val technique: String,
         val cell: Int,
         val mask: Int,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
         val wrong: Int? = null,
-    )
+    ) : TeachStep {
+        override val targets: Set<Int> get() = setOf(cell)
+    }
 
     /**
      * Why a side is known open or shut: the border (from = -1), or a neighbour [from] whose every

@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.numberWord
+import com.joebywan.daybook.core.TeachStep
 
 /**
  * LITS, reasoned the way a person reasons it, one named step at a time.
@@ -64,15 +65,15 @@ internal object LitsTeacher {
 
     /** One step: what to shade or clear, where to look, and why. [clears] only ever undoes a mistake. */
     class Step(
-        val technique: String,
+        override val technique: String,
         val shades: List<Int> = emptyList(),
         val clears: List<Int> = emptyList(),
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    ) {
-        val targets: Set<Int> get() = (shades + clears).toSet()
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
+        override val targets: Set<Int> get() = (shades + clears).toSet()
     }
 
     // ---- the board's fixed geometry ----------------------------------------------------------

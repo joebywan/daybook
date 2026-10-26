@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TeachStep
 import kotlin.math.abs
 
 /**
@@ -29,15 +30,15 @@ internal object ChessTeacher {
 
     /** [move] is the key to play, or (for a mistake) the move to take back. */
     class Step(
-        val technique: String,
+        override val technique: String,
         val move: Int,
         val keys: List<Int>,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    ) {
-        val targets: Set<Int>
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
+        override val targets: Set<Int>
             get() {
                 val squares = setOf(ChessRules.from(move), ChessRules.to(move))
                 val promo = ChessRules.promo(move)
@@ -96,14 +97,8 @@ internal object ChessTeacher {
         val base = s.played
         val index = if (step.technique == MISTAKE) line.mistakeIndex else base.size
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == MISTAKE,
-            fallback = false,
             applyTo = { now ->
                 now as ChessState
                 if (step.technique == MISTAKE) now.copy(played = now.played.take(index), moves = minOf(now.moves, index))

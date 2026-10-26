@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.lineName
 import com.joebywan.daybook.core.plural
@@ -51,15 +52,15 @@ internal object TentsTeacher {
     private const val GRASS = TentsLogic.GRASS
 
     class Step(
-        val technique: String,
+        override val technique: String,
         /** What the targets become: TENT, GRASS, or 0 to clear (a mistake). */
         val value: Int,
-        val targets: Set<Int>,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val targets: Set<Int>,
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep
 
     // ---- the whole hint: mistakes, then reasoning, then the honest fallback ---------------------------
 
@@ -81,12 +82,7 @@ internal object TentsTeacher {
         val mistake = step.technique == MISTAKE
         val v = step.value
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = mistake,
             fallback = step.technique == FALLBACK,
             applyTo = { now -> step.targets.fold(now as TentsState) { acc, i -> acc.withMark(i, v) } },

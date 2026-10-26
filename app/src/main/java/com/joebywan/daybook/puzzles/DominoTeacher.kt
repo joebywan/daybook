@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.listed
 
 /**
@@ -72,16 +73,16 @@ internal object DominoTeacher {
      * (lift [domino]). [level] is the ladder level the step needed.
      */
     class Step(
-        val technique: String,
+        override val technique: String,
         val level: Int,
         val domino: Int,
         val placement: Placement?,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    ) {
-        val targets: Set<Int>
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
+        override val targets: Set<Int>
             get() = (placement?.let { setOf(it.first, it.second) } ?: emptySet()) + (TRAY + domino)
         val mistake: Boolean get() = technique == MISTAKE
         val fallback: Boolean get() = technique == FALLBACK

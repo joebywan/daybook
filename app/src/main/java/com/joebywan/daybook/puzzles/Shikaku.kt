@@ -458,12 +458,7 @@ object Shikaku : PuzzleType {
         val s = state as ShikakuState
         val step = ShikakuTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == ShikakuTeacher.MISTAKE,
             fallback = step.technique == ShikakuTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as ShikakuState, step) },

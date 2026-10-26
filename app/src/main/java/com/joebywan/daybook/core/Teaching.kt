@@ -45,6 +45,16 @@ class Deduction(
     applyTo: (PuzzleState) -> PuzzleState,
     reachedBy: (PuzzleState) -> Boolean,
 ) {
+    /** The deduction whose words and cells are [step]'s. */
+    constructor(
+        step: TeachStep,
+        mistake: Boolean = false,
+        fallback: Boolean = false,
+        targets: Set<Int> = step.targets,
+        applyTo: (PuzzleState) -> PuzzleState,
+        reachedBy: (PuzzleState) -> Boolean,
+    ) : this(step.technique, step.nudge, step.explanation, step.focus, step.cited, targets, mistake, fallback, applyTo, reachedBy)
+
     /** The board after the move, made on the state given. "Show me" — never applied without that tap. */
     val apply = applyTo
 
@@ -52,19 +62,31 @@ class Deduction(
     val isReached = reachedBy
 }
 
+/** What a teacher's step hands its [Deduction]: the same six fields, read the same way. */
+interface TeachStep {
+    val technique: String
+    val nudge: String
+    val explanation: String
+    val focus: Set<Int>
+    val cited: Set<Int>
+    val targets: Set<Int>
+}
+
 /**
  * A teacher's step that puts [digit] on square [cell] (Sudoku, Cages, Inequality, Regions), or, for a
  * mistake, takes the square's digit back ([digit] is then 0).
  */
 class PlacementStep(
-    val technique: String,
+    override val technique: String,
     val cell: Int,
     val digit: Int,
-    val focus: Set<Int>,
-    val cited: Set<Int>,
-    val nudge: String,
-    val explanation: String,
-)
+    override val focus: Set<Int>,
+    override val cited: Set<Int>,
+    override val nudge: String,
+    override val explanation: String,
+) : TeachStep {
+    override val targets: Set<Int> get() = setOf(cell)
+}
 
 /**
  * Inequality's and Regions' honest fallback: [solution]'s digit in the first empty square of [cells], said
@@ -100,7 +122,7 @@ inline fun <reified S : PuzzleState> placementDeduction(
     step: PlacementStep,
     mistake: Boolean,
     fallback: Boolean,
-    targets: Set<Int> = setOf(step.cell),
+    targets: Set<Int> = step.targets,
     crossinline valueAt: (S, Int) -> Int,
     crossinline place: (S, Int, Int) -> S,
 ): Deduction {
@@ -108,11 +130,7 @@ inline fun <reified S : PuzzleState> placementDeduction(
     val digit = step.digit
     val wrong = valueAt(state, cell)
     return Deduction(
-        technique = step.technique,
-        nudge = step.nudge,
-        explanation = step.explanation,
-        focus = step.focus,
-        cited = step.cited,
+        step,
         targets = targets,
         mistake = mistake,
         fallback = fallback,

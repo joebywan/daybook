@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.lineName
 import com.joebywan.daybook.core.listed
 
@@ -59,16 +60,16 @@ internal object TallyTeacher {
 
     /** One step: what to circle, remove or clear, where to look, and why. [clears] is only ever a mistake. */
     class Step(
-        val technique: String,
+        override val technique: String,
         val stays: List<Int> = emptyList(),
         val goes: List<Int> = emptyList(),
         val clears: List<Int> = emptyList(),
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    ) {
-        val targets: Set<Int> get() = (stays + goes + clears).toSet()
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
+        override val targets: Set<Int> get() = (stays + goes + clears).toSet()
     }
 
     fun teach(s: TallyState): Step? {
