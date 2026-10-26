@@ -519,7 +519,7 @@ fun PlayScreen(
                     Text(
                         "${puzzle.tagline}\nOne-minute walkthrough",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(puzzle.accent),
+                        color = com.joebywan.daybook.ui.theme.BoardHues.textOn(Color(puzzle.accent), scheme.background),
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         modifier = Modifier
