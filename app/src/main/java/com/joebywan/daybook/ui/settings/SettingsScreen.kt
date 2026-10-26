@@ -50,6 +50,8 @@ fun SettingsScreen(
     appearance: Appearance,
     onAppearance: (Appearance) -> Unit,
     onBack: () -> Unit,
+    /** Opens Training (`docs/TRAINING_SPEC.md`), the Sudoku pilot. */
+    onTraining: () -> Unit = {},
 ) {
     val rateLink = rememberRateLink()
 
@@ -86,6 +88,7 @@ fun SettingsScreen(
             }
             item { AppearanceChoice(appearance, onAppearance) }
             item { PuzzleOrderRow(customOrder, onResetOrder) }
+            item { TrainingRow(onTraining) }
             item { RateRow(rateLink) }
             item { Credits() }
         }
@@ -201,5 +204,20 @@ private fun SettingSwitch(
             CardText(title, detail)
         }
         Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+/** Training's way in for the pilot: the whole row opens it. Its final place is decided after the pilot. */
+@Composable
+private fun TrainingRow(onOpen: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .card(scheme.surface)
+            .clickable(onClick = onOpen)
+            .padding(14.dp),
+    ) {
+        CardText("Training", "Practise Sudoku's techniques one at a time, on real boards.")
     }
 }

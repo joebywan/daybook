@@ -244,8 +244,9 @@ but do not demand thought, against the owner's stated taste. (A crossword was he
 hand-written clues are one now, see the council list.) Curated themed puzzles (four groups of four, themed word hunts)
 were declined by the owner (2026-10-25): a shipped list runs out and would need revisiting every year.
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
-A practice mode per technique was declined by the owner: players can use the hints themselves, and it would
-only spend their time railroaded through a tutorial.
+A practice mode per technique, once declined, is now wanted (2026-10-26): Training, piloted on Sudoku
+(`docs/TRAINING_SPEC.md`). Open after the pilot: where it lives (Settings for now), other puzzles, and keeping a
+half-played final board when the player leaves it.
 
 ## Owner's call
 

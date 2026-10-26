@@ -1,5 +1,14 @@
 package com.joebywan.daybook.ui
 
+import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.SudokuTraining
+import com.joebywan.daybook.core.TrainingRecord
+import com.joebywan.daybook.ui.teach.HintStage
+import com.joebywan.daybook.ui.teach.LocalHintAction
+import com.joebywan.daybook.ui.training.FinalBoard
+import com.joebywan.daybook.ui.training.PractiseLink
+import com.joebywan.daybook.ui.training.TechniquePractice
+import com.joebywan.daybook.ui.training.TrainingScreen
 import com.joebywan.daybook.core.SeedHash
 import kotlinx.coroutines.flow.Flow
 import com.joebywan.daybook.data.levelBoardDone
@@ -91,6 +100,11 @@ sealed interface Route {
     data class Achievements(val fromHome: Boolean = false) : Route
     /** The techniques hints have explained, opened from Statistics. */
     data object Techniques : Route
+    /**
+     * Training (`docs/TRAINING_SPEC.md`): the list, or with [technique] that technique's practice (`exam` the final board).
+     * [fromHint]: opened from a hint's "Practise this", so back returns to that game.
+     */
+    data class Training(val technique: String? = null, val fromHint: Boolean = false) : Route
     /** [day]: the day last played from it, which the list opens at. */
     data class Archive(val puzzleId: String, val day: LocalDate? = null) : Route
     /** The levels list; [level] shows that level's five boards instead. */
@@ -113,6 +127,8 @@ sealed interface Route {
 internal fun backFrom(r: Route): Route = when {
     r is Route.Achievements && !r.fromHome -> Route.Stats
     r is Route.Techniques -> Route.Stats
+    r is Route.Training && r.technique != null && !r.fromHint -> Route.Training()
+    r is Route.Training && !r.fromHint -> Route.Settings
     r is Route.Play && r.fromArchive -> Route.Archive(r.puzzleId, r.day)
     r is Route.Levels && r.level != null -> Route.Levels()
     else -> Route.Home
@@ -129,6 +145,7 @@ internal fun encodeRoute(r: Route): String =
         Route.Settings -> "settings"
         Route.Techniques -> "techniques"
         is Route.Achievements -> "achievements|${r.fromHome}"
+        is Route.Training -> "training|${r.technique ?: ""}|${r.fromHint}"
         is Route.Archive -> "archive|${r.puzzleId}|${r.day ?: ""}"
         is Route.Levels -> "levels|${r.level ?: ""}"
         is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}|${r.fromArchive}|${r.level ?: ""}"
@@ -141,6 +158,7 @@ internal fun decodeRoute(text: String): Route {
         "settings" -> Route.Settings
         "techniques" -> Route.Techniques
         "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
+        "training" -> Route.Training(f.getOrNull(1)?.takeIf { it.isNotEmpty() }, f.getOrNull(2) == "true")
         // The fields after the first few came later: a string saved before them still decodes.
         "archive" -> Route.Archive(f[1], f.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse))
         "levels" -> Route.Levels(f.getOrNull(1)?.toIntOrNull())
@@ -257,6 +275,11 @@ private fun DaybookScreens(
     }
     val metRaw by store.techniquesMet.collectAsState(initial = emptySet())
     val techniquesMet = remember(metRaw, puzzles) { TechniquesMet.of(metRaw, puzzles.map { it.id }) }
+    val training = remember(progressFile) { TrainingRecord(progressFile) }
+    val trained by training.passed.collectAsState(initial = emptySet())
+    // The game a hint's "Practise this" left, for back from that practice. Saveable, like the route.
+    var practiseFrom by rememberSaveable(stateSaver = RouteSaver) { mutableStateOf<Route>(Route.Home) }
+    fun back(r: Route): Route = if (r is Route.Training && r.fromHint) practiseFrom else backFrom(r)
 
     // Roll the date over without needing the app to be restarted at midnight.
     LaunchedEffect(Unit) {
@@ -279,7 +302,7 @@ private fun DaybookScreens(
     // so this cannot fire while the archive picker or the rules sheet is open.
     //
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
-    PlatformBackHandler(enabled = route != Route.Home) { route = backFrom(route) }
+    PlatformBackHandler(enabled = route != Route.Home) { route = back(route) }
 
     CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics) {
     // A short fade between screens (none under reduced motion). Each route is its own keyed content, so a screen's
@@ -377,6 +400,7 @@ private fun DaybookScreens(
             techniques = techniquesMet,
             onTechniques = { route = Route.Techniques },
             onBack = { route = Route.Home },
+            training = trained,
         )
 
         Route.Techniques -> TechniquesScreen(
@@ -388,7 +412,17 @@ private fun DaybookScreens(
             today = today,
             completions = completions,
             onBack = { route = backFrom(current) },
+            training = trained,
         )
+
+        is Route.Training -> CompositionLocalProvider(LocalChime provides playSolveSound) {
+            val pass: (String) -> Unit = { t -> scope.launch { training.pass(SudokuTraining.PUZZLE, t) } }
+            when (current.technique) {
+                null -> TrainingScreen(trained, onOpen = { route = Route.Training(it) }, onBack = { route = back(current) })
+                SudokuTraining.EXAM -> FinalBoard(trained, pass, onBack = { route = back(current) })
+                else -> TechniquePractice(current.technique, trained, pass, onBack = { route = back(current) })
+            }
+        }
 
         Route.Settings -> SettingsScreen(
             showTimer = showTimer,
@@ -402,6 +436,7 @@ private fun DaybookScreens(
             customOrder = customOrder.isNotEmpty(),
             onResetOrder = { setOrder(emptyList()) },
             onBack = { route = Route.Home },
+            onTraining = { route = Route.Training() },
         )
 
         is Route.Levels -> LevelsScreen(
@@ -459,7 +494,14 @@ private fun DaybookScreens(
                 }
                 // Keyed on the board: a level's next step goes straight to another puzzle, and PlayScreen's
                 // produced board would otherwise be the old puzzle's state for a frame (a ClassCastException in Board).
-                CompositionLocalProvider(LocalChime provides playSolveSound) { key(puzzle.id, seed) {
+                // Training's "Practise this" beside a Sudoku hint's Close (docs/TRAINING_SPEC.md).
+                val practise: @Composable (Deduction, HintStage) -> Unit = { d, stage ->
+                    if (puzzle.id == SudokuTraining.PUZZLE) PractiseLink(d, stage) { t ->
+                        practiseFrom = current
+                        route = Route.Training(t, fromHint = true)
+                    }
+                }
+                CompositionLocalProvider(LocalChime provides playSolveSound, LocalHintAction provides practise) { key(puzzle.id, seed) {
                 PlayScreen(
                     puzzle = puzzle,
                     difficulty = difficulty,

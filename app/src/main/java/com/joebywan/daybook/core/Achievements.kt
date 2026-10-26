@@ -21,6 +21,8 @@ class Achievement(
     val category: AchievementCategory,
     val title: String,
     val description: String,
+    /** For a Training achievement: whether the training record (`TrainingRecord`, `puzzleId|technique`) earns it. */
+    val trained: ((training: Set<String>) -> Boolean)? = null,
     val earned: (history: List<Completion>, today: LocalDate, puzzleIds: List<String>) -> Boolean,
 )
 
@@ -74,14 +76,25 @@ val ACHIEVEMENTS: List<Achievement> = listOf(
         ids.isNotEmpty() && h.filter { it.day != null }.groupBy { it.day }
             .any { (_, c) -> c.mapTo(HashSet()) { it.puzzleId }.containsAll(ids) }
     },
+    // Training (docs/TRAINING_SPEC.md): read off the training record, never the completions.
+    Achievement(
+        "sudokuTrained", AchievementCategory.MILESTONE, "Sudoku trained", "Pass every Sudoku technique in Training.",
+        earned = { _, _, _ -> false },
+        trained = { t -> SudokuTraining.TECHNIQUES.all { TrainingRecord.entry(SudokuTraining.PUZZLE, it) in t } },
+    ),
+    Achievement(
+        "sudokuGraduate", AchievementCategory.MILESTONE, "Sudoku graduate", "Then solve Training's final board.",
+        earned = { _, _, _ -> false },
+        trained = { t -> TrainingRecord.entry(SudokuTraining.PUZZLE, SudokuTraining.EXAM) in t },
+    ),
 )
 
 private fun registryIds() = PuzzleRegistry.all.map { it.id }
 
-/** Every achievement [history] has earned. */
+/** Every achievement [history] (and [training], the training record) has earned. */
 fun earnedAchievements(
-    history: List<Completion>, today: LocalDate, puzzleIds: List<String> = registryIds(),
-): List<Achievement> = ACHIEVEMENTS.filter { it.earned(history, today, puzzleIds) }
+    history: List<Completion>, today: LocalDate, puzzleIds: List<String> = registryIds(), training: Set<String> = emptySet(),
+): List<Achievement> = ACHIEVEMENTS.filter { it.earned(history, today, puzzleIds) || it.trained?.invoke(training) == true }
 
 /** What [solve] earns: true after it, false before. History that already satisfied one never re-fires it. */
 fun newlyEarned(
