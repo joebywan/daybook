@@ -1,6 +1,7 @@
 package com.joebywan.daybook.core
 
 import androidx.compose.ui.input.key.Key
+import com.joebywan.daybook.puzzles.PuzzleState
 
 /**
  * A board marked with two pens on a grid of squares (Nonogram's Fill/Cross, Tally's Remove/Keep): one
@@ -80,6 +81,21 @@ interface PenMarks<S : PenMarks<S>> {
     companion object {
         const val UNMARKED = '.'
     }
+}
+
+/** This board with [changes] (square to mark) written over it and no move counted: a walkthrough frame. */
+fun <S : PenMarks<S>> S.marked(changes: Map<Int, Char>): S {
+    val next = penMarks.toCharArray()
+    changes.forEach { (i, c) -> next[i] = c }
+    return withPenMarks(next.concatToString(), 0)
+}
+
+/**
+ * Accepts exactly this board with [changes] made and nothing else. Strict on purpose, as Kings' is: each
+ * walkthrough frame's board is written for the one before it.
+ */
+inline fun <reified S : PenMarks<S>> S.only(changes: Map<Int, Char>): (PuzzleState) -> Boolean = { next ->
+    next is S && next.penMarks == marked(changes).penMarks
 }
 
 /** What a physical key asks of a pen board. */

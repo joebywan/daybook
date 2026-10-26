@@ -4,6 +4,7 @@ import com.joebywan.daybook.core.bit
 import com.joebywan.daybook.core.has
 import com.joebywan.daybook.core.listed
 import com.joebywan.daybook.puzzles.CodewordLogic.EMPTY
+import com.joebywan.daybook.puzzles.CodewordLogic.up
 
 /**
  * Codeword, reasoned from the shapes of words.
@@ -45,7 +46,6 @@ internal object CodewordTeacher {
 
     private const val ALL = (1 shl 26) - 1
 
-    private fun single(m: Int) = m != 0 && m and (m - 1) == 0
 
     /** The board's runs, as squares and as number indices (number - 1), and which runs each number is in. */
     internal class Shape(val size: Int, val numbers: List<Int>, val k: Int) {
@@ -108,7 +108,7 @@ internal object CodewordTeacher {
         fun allDifferent(): Int {
             var changed = 0
             for (i in 0 until shape.k) {
-                if (!single(cand[i])) continue
+                if (cand[i].countOneBits() != 1) continue
                 for (j in 0 until shape.k) {
                     if (j == i || cand[j] and cand[i] == 0) continue
                     cand[j] = cand[j] and cand[i].inv()
@@ -165,7 +165,7 @@ internal object CodewordTeacher {
             for (n in shape.runs[r].distinct()) {
                 if (letters[n] != EMPTY) continue
                 val m = base.support(r, n)
-                if (single(m)) hits += Hit(RUN_AGREES, n, m.countTrailingZeroBits(), r, base.words[r])
+                if (m.countOneBits() == 1) hits += Hit(RUN_AGREES, n, m.countTrailingZeroBits(), r, base.words[r])
             }
         }
         if (hits.isNotEmpty() || upTo < 2) return hits
@@ -174,14 +174,14 @@ internal object CodewordTeacher {
             if (letters[n] != EMPTY) continue
             var m = base.cand[n]
             for (r in shape.runsOf[n]) m = m and base.support(r, n)
-            if (single(m)) hits += Hit(CROSSING, n, m.countTrailingZeroBits(), -1)
+            if (m.countOneBits() == 1) hits += Hit(CROSSING, n, m.countTrailingZeroBits(), -1)
         }
         if (hits.isNotEmpty() || upTo < 3) return hits
         // 4. Everything worked through together.
         val all = base.copy()
         if (!all.settle()) return emptyList()
         for (n in 0 until shape.k) {
-            if (letters[n] == EMPTY && single(all.cand[n])) hits += Hit(ALL_WORDS, n, all.cand[n].countTrailingZeroBits(), -1)
+            if (letters[n] == EMPTY && all.cand[n].countOneBits() == 1) hits += Hit(ALL_WORDS, n, all.cand[n].countTrailingZeroBits(), -1)
         }
         return hits
     }
@@ -224,7 +224,6 @@ internal object CodewordTeacher {
         return deduce(s.size, s.numbers, s.letters) ?: fallback(s)
     }
 
-    private fun up(l: Int) = ('A' + l).toString()
 
     /** Run [r] as the player reads it: placed letters as letters, open squares as their numbers. */
     private fun read(shape: Shape, letters: List<Int>, r: Int): String =

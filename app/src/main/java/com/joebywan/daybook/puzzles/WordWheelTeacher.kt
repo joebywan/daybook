@@ -46,7 +46,7 @@ internal object WordWheelTeacher {
 
     /** A slot as the player sees it: where it runs and how long it is, not its word. */
     class Shape(val row: Int, val col: Int, val across: Boolean, val length: Int) {
-        fun cell(i: Int, width: Int): Int = if (across) row * width + col + i else (row + i) * width + col
+        fun cells(width: Int): List<Int> = List(length) { slotCell(row, col, across, it, width) }
     }
 
     class Step(
@@ -94,12 +94,12 @@ internal object WordWheelTeacher {
         val fitsOf = arrayOfNulls<List<String>>(shapes.size)
         for (k in empty) {
             val shape = shapes[k]
-            val pattern = List(shape.length) { shown[shape.cell(it, width)] }
+            val pattern = shape.cells(width).map { shown[it] }
             val fits = candidates(wheel, pattern, tried)
             fitsOf[k] = fits
             if (fits.size != 1) continue
             val word = fits[0]
-            val cells = List(shape.length) { shape.cell(it, width) }
+            val cells = shape.cells(width)
             val known = cells.filter { shown[it] != null }.toSet()
             val shapeText = pattern.joinToString(" ") { it?.uppercaseChar()?.toString() ?: "_" }
             val explanation = if (known.isEmpty()) {
@@ -126,10 +126,10 @@ internal object WordWheelTeacher {
             val fits = fitsOf[a]!!
             if (fits.size < 2) continue
             val shape = shapes[a]
-            val cells = List(shape.length) { shape.cell(it, width) }
+            val cells = shape.cells(width)
             // (letter of a, crossing slot, its letter) for each empty slot sharing a square with a
             val crossers = empty.filter { it != a }.mapNotNull { b ->
-                val other = List(shapes[b].length) { shapes[b].cell(it, width) }
+                val other = shapes[b].cells(width)
                 val i = cells.indexOfFirst { it in other }
                 if (i < 0) null else Triple(i, b, other.indexOf(cells[i]))
             }
@@ -142,7 +142,7 @@ internal object WordWheelTeacher {
             }
             if (left.size != 1) continue
             val word = left[0]
-            val crossCells = blocking.flatMap { b -> List(shapes[b].length) { shapes[b].cell(it, width) } }.toSet()
+            val crossCells = blocking.flatMap { b -> shapes[b].cells(width) }.toSet()
             val them = if (blocking.size == 1) "the slot crossing it" else "the slots crossing it"
             return Step(
                 CROSSING, a, word, 1,
@@ -165,7 +165,7 @@ internal object WordWheelTeacher {
         var bestCount = Int.MAX_VALUE
         for (k in empty) {
             val slot = s.slots[k]
-            val pattern = List(slot.length) { shown[slot.cell(it, s.width)] }
+            val pattern = slot.cells(s.width).map { shown[it] }
             val n = candidates(s.wheel, pattern, tried).size
             if (n < bestCount) {
                 best = k
