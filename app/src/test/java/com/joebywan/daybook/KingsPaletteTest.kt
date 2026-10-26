@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.KingsState
@@ -8,14 +7,13 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /** The display-only colouring of Kings regions: a real assignment, and a stable one. */
 class KingsPaletteTest {
 
-    private fun boards() = (0L until 60L).flatMap { d ->
+    private fun boards() = (0 until 60).flatMap { d ->
         Difficulty.entries.map { tier ->
-            val seed = DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(d), Kings.id, tier)
+            val seed = daySeed(d, Kings.id, tier)
             Kings.generate(seed, tier) as KingsState
         }
     }

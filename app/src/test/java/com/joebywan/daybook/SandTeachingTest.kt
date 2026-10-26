@@ -17,8 +17,8 @@ import org.junit.Test
 import java.time.LocalDate
 
 /**
- * Sand's hints. Soundness is checked with the test's own rules (`SandSupport`): a board is sortable when the search's
- * road replays to sorted under those rules, and unsortable only when `SandSupport.sortable`, a breadth-first search of
+ * Sand's hints. Soundness is checked with the tests' own rules ([SandOracle]): a board is sortable when the search's
+ * road replays to sorted under those rules, and unsortable only when [SandOracle.solve], a breadth-first search of
  * raw positions sharing nothing with `SandLogic.solve`, exhausts it.
  */
 class SandTeachingTest {
@@ -30,26 +30,25 @@ class SandTeachingTest {
     /** Sortable, proved by a witness that replays under the test's own rules. */
     private fun provedSortable(s: SandState): Boolean {
         val v = SandLogic.solve(s.tubes, s.height, SandTeacher.HINT_BUDGET)
-        return v is SandLogic.Verdict.Solvable && SandSupport.replays(s.tubes, s.height, v.path)
+        return v is SandLogic.Verdict.Solvable && SandOracle.replays(s.tubes, s.height, v.path)
     }
 
     /** Takes each hint in turn until sorted; every step is one pour that keeps the board sortable. Returns the steps taken. */
     private fun walk(s: SandState, onStep: (String) -> Unit = {}): Int {
-        var now = s
         var steps = 0
-        while (!now.solved) {
+        hintWalk(s, 120) { now ->
             val d = SandTeacher.deduction(now) ?: error("no step on an unsolved board: ${now.tubes}")
             assertFalse("unexpected mistake on ${now.tubes}", d.mistake)
             assertFalse(d.fallback)
             onStep(d.technique)
             val next = d.apply(now) as SandState
             assertEquals("a step is one pour", now.moves + 1, next.moves)
-            assertTrue("the step is a legal pour", SandSupport.pours(now.tubes, now.height).any { (a, b) -> SandSupport.pour(now.tubes, now.height, a, b) == next.tubes })
+            assertTrue("the step is a legal pour", SandOracle.pours(now.tubes, now.height).any { (a, b) -> SandOracle.pour(now.tubes, now.height, a, b)!! == next.tubes })
             assertTrue(d.isReached(next))
             assertFalse(d.isReached(now))
             assertTrue("a step keeps the board sortable: ${next.tubes}", next.solved || provedSortable(next))
-            now = next
-            assertTrue("hints go round in circles on ${s.tubes}", ++steps <= 120)
+            steps++
+            next
         }
         return steps
     }
@@ -72,7 +71,7 @@ class SandTeachingTest {
     private fun wander(s: SandState, rng: Rng, pours: Int): SandState {
         var now = s
         repeat(pours) {
-            val ps = SandSupport.pours(now.tubes, now.height)
+            val ps = SandOracle.pours(now.tubes, now.height)
             if (ps.isEmpty() || now.solved) return now
             val (a, b) = rng.pick(ps)
             now = now.pour(a, b)!!
@@ -100,13 +99,13 @@ class SandTeachingTest {
                         if (step.technique == SandTeacher.STUCK) stuck++ else mistakes++
                         assertTrue(hint.mistake)
                         assertEquals(step.technique == SandTeacher.STUCK, now.stuck)
-                        assertEquals("only a proved unsortable board is a mistake: ${now.tubes}", false, SandSupport.sortable(now.tubes, now.height))
+                        assertEquals("only a proved unsortable board is a mistake: ${now.tubes}", false, SandOracle.solve(now.tubes, now.height, 2_000_000).solvable)
                         val mended = hint.apply(now) as SandState
                         assertEquals(now.moves + 1, mended.moves)
                         assertTrue("Show me leaves it sortable", provedSortable(mended))
                         assertTrue("to a board on the player's own road", now.log.subList(0, mended.log.size) == mended.log)
                         val wrong = now.log[mended.log.size]
-                        assertEquals("whose next pour loses it", false, SandSupport.sortable(SandSupport.pour(mended.tubes, mended.height, wrong.from, wrong.to), mended.height))
+                        assertEquals("whose next pour loses it", false, SandOracle.solve(SandOracle.pour(mended.tubes, mended.height, wrong.from, wrong.to)!!, mended.height, 2_000_000).solvable)
                         assertTrue(hint.isReached(mended))
                         assertFalse(hint.isReached(now))
                     }
@@ -145,7 +144,7 @@ class SandTeachingTest {
         val bare = stuck.copy(log = emptyList())
         val mended = SandTeacher.deduction(bare)!!.apply(bare) as SandState
         assertTrue(provedSortable(mended))
-        assertTrue(SandSupport.pours(mended.tubes, 4).any { (a, b) -> SandSupport.pour(mended.tubes, 4, a, b) == bare.tubes })
+        assertTrue(SandOracle.pours(mended.tubes, 4).any { (a, b) -> SandOracle.pour(mended.tubes, 4, a, b)!! == bare.tubes })
         // Taking back exactly undoes: every board on the way, pour by pour.
         var t = stuck
         while (t.log.isNotEmpty()) t = t.withoutFrom(t.log.size - 1)
@@ -182,14 +181,12 @@ class SandTeachingTest {
         val rng = Rng(4)
         for (d in Difficulty.entries) for (day in 0 until 60) {
             for (s in listOf(board(day, d), wander(board(day, d), rng, 30))) {
-                var now = s
-                var guard = 0
-                while (!now.solved && guard++ < 80) {
-                    val step = SandTeacher.teach(now) ?: break
+                hintWalk(s, 80) { now ->
+                    val step = SandTeacher.teach(now) ?: return@hintWalk null
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= SandTeacher.MAX_NUDGE)
                     assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= SandTeacher.MAX_EXPLANATION)
                     longest = maxOf(longest, step.explanation.length)
-                    now = SandTeacher.deduction(now)!!.apply(now) as SandState
+                    SandTeacher.deduction(now)!!.apply(now) as SandState
                 }
             }
         }
