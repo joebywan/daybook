@@ -453,7 +453,7 @@ object Mines : PuzzleType {
         BoxWithConstraints(Modifier.fillMaxSize().then(keys).padding(horizontal = 16.dp)) {
             if (maxWidth > maxHeight * 1.1f) {
                 // A wide box (a phone on its side, a tablet) puts the lives and the pen beside the board, which then has
-                // the whole height: twelve rows on a phone on its side are short of it.
+                // the whole height: ten rows on a phone on its side are short of it.
                 Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                     Grid(Modifier.weight(1f).fillMaxHeight().padding(vertical = 8.dp))
                     Column(

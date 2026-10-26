@@ -28,21 +28,25 @@ standards win.
   life; a wrong flag is allowed (the hint calls it out). "Mines left" is `mines - flags - mines hit`, and can go below 0.
 - **Solved** when every square without a mine is revealed: a rule check on the board, flags play no part.
 - **Failed** when no lives are left and the board is not solved.
-- **No chording** (a tap on a satisfied number opening its neighbours). With a wrong flag it would open a mine, which is a
-  life lost to a note; a tap per square is the safe default. Revisit only if the owner asks (`docs/TODO.md`).
+- **Chording** (the owner asked for it, 2026-10-26): a tap on a revealed number whose neighbouring flags and mines hit
+  already make its count reveals every other hidden neighbour, in reading order, as one move (`MinesState.chord`; each safe
+  square spreads as a reveal does). A wrong flag means a mine among them: **each mine revealed costs a life**, as a tap on
+  it would, and the chord stops when the last life goes (the squares after it stay hidden). Nothing happens when the
+  count is not met or nothing is left to reveal.
 
 ## Tiers
 
-Every tier is **8 squares wide**: a mis-tap costs a life, so the square must be a thumb's width. At 375 dp wide, with the
-board's 16 dp gutters, an 8-wide square is 42 dp (Pointers capped its width for the same reason). The tiers differ in
-height, density and the deepest step of the ladder a board must need (Tally's `Spec.needs` gate): a draw needing more or
-less is redrawn.
+A mis-tap costs a life, so the square must stay a thumb's width (Pointers capped its width for the same reason). No tier
+is more than **9 wide or 10 tall**: Expert was 8x12, and twelve rows were height-bound on a short screen (21.5 dp squares at
+375x537); 9x10 holds as many squares less six and is never smaller than Hard's on the three phone sizes below. The tiers
+differ in size, density and the deepest step of the ladder a board must need (Tally's `Spec.needs` gate): a draw needing
+more or less is redrawn.
 
 | Tier | Board | Mines | Must need |
 |---|---|---|---|
 | Standard | 8x8 | 10 (16%) | the single-number rules only |
 | Hard | 8x10 | 16 (20%) | a subset or pair step at least once |
-| Expert | 8x12 | 22 (23%) | the count against the numbers or a what-if at least once |
+| Expert | 9x10 | 21 (23%) | the count against the numbers or a what-if at least once |
 
 ## Generator and proof
 
@@ -90,8 +94,10 @@ Highlight indices: squares `0 until width * height` (the counter is never highli
 
 - **A Reveal / Flag pen** under the board (Nonogram's pen model: `rememberSaveable` in the board, never state, Reveal by
   default each visit). A tap uses the pen; a **long press uses the other tool**, so a flag never needs a trip to the pen.
-- A tap on a revealed square does nothing. One tap = one state (a cascade is one state).
-- Keyboard (pure, tested, `MinesKeys.kt`): arrows move a cursor, Space or Enter reveals, F flags or unflags.
+- A tap or long press on a revealed number chords (above), whatever the pen. One tap = one state (a cascade or a chord is
+  one state).
+- Keyboard (pure, tested, `MinesKeys.kt`): arrows move a cursor, Space or Enter reveals (chords on a revealed number), F
+  flags or unflags (nothing on a revealed square).
 - A hit mine flashes in `scheme.error` and the board gives Pointers' bump shake (the flash alone under reduced motion),
   with `PlayScreen`'s firmer bump haptic.
 
@@ -135,11 +141,13 @@ mine." with all three and no hints.
 
 A year of daily boards per tier (`MinesRulesTest`, `build/reports/mines-generation.txt`), Standard / Hard / Expert:
 
-- Draws per board (of `ATTEMPTS` = 3000): mean 9.3 / 5.6 / 28.2, most 54 / 46 / 161. No day reaches `lastResort` (`FallbackTest`).
-- Opening (share of the safe squares open at load): median 35 / 25 / 24%, at most 44 / 44 / 45% (the cap).
+- Draws per board (of `ATTEMPTS` = 3000): mean 9.3 / 5.6 / 28.8, most 54 / 46 / 218. No day reaches `lastResort` (`FallbackTest`).
+- Opening (share of the safe squares open at load): median 35 / 25 / 26%, at most 44 / 44 / 45% (the cap).
 - Generation, desktop JVM, ms median / p95 / max: 0.3 / 1.3 / 4.1, 0.4 / 2.1 / 8.7, 2.5 / 12.1 / 30.9. Chromium: 0.7 / 2.7 / 6.8,
   0.9 / 3.7 / 12.3, 6.9 / 32.4 / 54.3. WebKit: 1 / 3 / 7, 1 / 4 / 10, 7 / 28 / 63.
-- Hints alone (200 boards per tier, `MinesTeachingTest`): 20.8 / 32.8 / 42.8 steps per board; subset 0 / 2.1 / 2.8, pair 0 / 0.8 / 1.2,
-  count against the numbers 0 / 0 / 0.9, what-if 0 / 0 / 0.16 per board; the plain count never appears on a shipped board.
+- Hints alone (200 boards per tier, `MinesTeachingTest`): 20.8 / 32.8 / 39.5 steps per board; subset 0 / 2.1 / 2.6, pair 0 / 0.8 / 1.2,
+  count against the numbers 0 / 0 / 0.9, what-if 0 / 0 / 0.11 per board; the plain count appears on 2 Expert boards of 200 (each also
+  needs the count against the numbers or a what-if). Expert at 8x12 was 42.8 steps, subset 2.8, pair 1.2, against the numbers 0.9,
+  what-if 0.16: the reshape kept its depth.
   **Fallback: 0** on every tier, and none from boards a player made.
 - Of raw draws before the gate (2,000 a tier), the walk stalls (a guess would be needed) on 30 / 63 / 86%.

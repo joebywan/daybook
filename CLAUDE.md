@@ -589,10 +589,12 @@ pen row, walkthrough, motif). `id = "mines"` is hashed into every seed: never re
 - **Lives are `PuzzleState`, as Pointers':** `bumps` (the mines hit, in order; `lives` is three less those). `marks` is one string
   ('.' hidden, 'o' open, 'f' flag). Flags are the player's notes: never checked, never a life, and a flagged square is never
   revealed (the spread passes it by). "Mines left" is the total less flags and mines hit. **`solved` is every safe square open**
-  (a rule check; flags play no part); `failed` is no lives and not solved; losing is never a completion. No chording (with a wrong
-  flag it would spend a life on a note).
-- **Tiers: 8x8 with 10 mines / 8x10 with 16 / 8x12 with 22, all 8 wide** (a mis-tap costs a life, so a square stays about 42 dp at
-  375 wide), and the depth of the ladder a board must need (Tally's gate): Standard single numbers only, Hard a subset or pair at
+  (a rule check; flags play no part); `failed` is no lives and not solved; losing is never a completion. **Chording** (the owner,
+  2026-10-26; `MinesState.chord`): a tap, long press, Space or Enter on a revealed number whose flags and mines hit make its count
+  reveals its other hidden neighbours as one state; a wrong flag opens a mine there, **a life per mine**, as a tap would, and the
+  chord stops when the last life goes.
+- **Tiers: 8x8 with 10 mines / 8x10 with 16 / 9x10 with 21, never more than 9 wide or 10 tall** (a mis-tap costs a life, so a
+  square stays thumb-sized; Expert was 8x12, 21.5 dp at 375x537, and is never smaller than Hard's on a phone), and the depth of the ladder a board must need (Tally's gate): Standard single numbers only, Hard a subset or pair at
   least once, Expert the count against the numbers or a what-if (the count alone at the end, every mine found and a pocket no number
   touches, is too slight and does not qualify). An opening that shows more than 45% of the safe squares is redrawn.
 - **The ladder is the teacher's and the generator's** (`MinesLogic.nextFact`, simplest first): all found, all mines, subset, pair,
@@ -605,7 +607,7 @@ pen row, walkthrough, motif). `id = "mines"` is hashed into every seed: never re
   all flagged counts as shown. A mistake is a flag on a safe square (sound: one answer). No fallback on a generated board, measured.
   Highlight indices are squares. A subset/pair hint names the second number by where it lies ("the 2 to the right").
 - Input: a Reveal / Flag pen under the board (`rememberSaveable`, Nonogram's model, Reveal each visit); a tap uses the pen, a long
-  press the other tool. Keys: arrows, Space/Enter reveal, F flag. A mine hit shakes and rings in `scheme.error` (the ring alone
+  press the other tool. Keys: arrows, Space/Enter reveal (or chord), F flag. A mine hit shakes and rings in `scheme.error` (the ring alone
   under reduced motion) with `PlayScreen`'s bump haptic. Colours: hue A tiles the hidden squares, hue B inks flags; numbers 1-6
   each a hue (Blue, Teal, Violet, Amber, Rose, Gold) and always a digit. Share card: Pointers' hearts, a red square after hints.
 
