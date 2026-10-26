@@ -7,10 +7,10 @@ import kotlinx.serialization.Serializable
 /**
  * A Mines board (`docs/MINES_SPEC.md`). Squares are numbered in reading order. [mines] is the board: '1' a mine, '0'
  * none. [marks] is what the player has done: [MinesLogic.HIDDEN], [MinesLogic.OPEN] or [MinesLogic.FLAG]; the opening
- * (the spread from [opening]) is open when the board loads. [bumps] are the mines revealed, in order, one life each
- * ([lives] is [MinesLogic.LIVES] less those, so the two cannot disagree); a mine hit stays shown and counts as found.
+ * (the spread from [opening]) is open when the board loads. [bumps] is the mine revealed, which loses the board: at most
+ * one, but a list because builds with three lives saved up to three (such a save loads as lost, with Try again).
  *
- * [bumps] has a default, so a save that lacks it loads as a board with every life left.
+ * [bumps] has a default, so a save that lacks it loads as a board still in play.
  */
 @Serializable
 data class MinesState(
@@ -22,8 +22,6 @@ data class MinesState(
     val bumps: List<Int> = emptyList(),
     override val moves: Int = 0,
 ) : PuzzleState {
-
-    val lives: Int get() = MinesLogic.LIVES - bumps.size
 
     val total: Int get() = mines.count { it == '1' }
 
@@ -40,10 +38,10 @@ data class MinesState(
     /** Every square without a mine revealed: the rule, flags play no part. */
     override val solved: Boolean get() = marks.indices.all { mines[it] == '1' || marks[it] == MinesLogic.OPEN }
 
-    override val failed: Boolean get() = !solved && lives <= 0
+    override val failed: Boolean get() = !solved && bumps.isNotEmpty()
 
     /**
-     * Reveals [i]: a mine costs a life and stays shown; a safe square opens, spreading from a 0. Null (nothing happens,
+     * Reveals [i]: a mine stays shown and loses the board; a safe square opens, spreading from a 0. Null (nothing happens,
      * nothing is spent) on a square already open, flagged or hit, or a board already won or lost.
      */
     fun reveal(i: Int): MinesState? {
@@ -54,8 +52,8 @@ data class MinesState(
 
     /**
      * Chording: on a revealed number whose neighbouring flags and mines hit already make its count, reveals every other
-     * hidden neighbour, in reading order, as one move. A wrong flag means a mine among them: each mine revealed costs a
-     * life, as a tap on it would, and the chord stops when the last life goes. Null when the count is not met by flags
+     * hidden neighbour, in reading order, as one move. A wrong flag means a mine among them: the first one revealed loses
+     * the board, as a tap on it would, and the chord stops there. Null when the count is not met by flags
      * and hits, when nothing is left to reveal, or on a board already won or lost.
      */
     fun chord(i: Int): MinesState? {
@@ -69,7 +67,7 @@ data class MinesState(
         for (j in todo) {
             if (isMine(j)) {
                 hit += j
-                if (hit.size >= MinesLogic.LIVES) break
+                break
             } else MinesLogic.openInPlace(width, height, mines, m, j)
         }
         return copy(marks = m.concatToString(), bumps = hit, moves = moves + 1)
@@ -83,7 +81,7 @@ data class MinesState(
         return copy(marks = m.concatToString(), moves = moves + 1)
     }
 
-    /** The board from the opening again, no flags, lives restored: one state, so one move. */
+    /** The board from the opening again, no flags, no mine shown: one state, so one move. */
     fun retry(): MinesState = copy(marks = MinesLogic.openingMarks(width, height, mines, opening), bumps = emptyList(), moves = moves + 1)
 }
 
@@ -95,8 +93,6 @@ data class MinesState(
  * is over a list.
  */
 internal object MinesLogic {
-
-    const val LIVES = 3
 
     const val HIDDEN = '.'
     const val OPEN = 'o'

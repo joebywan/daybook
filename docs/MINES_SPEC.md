@@ -12,31 +12,31 @@ standards win.
 | `id` | `"mines"` (hashed into every seed: never rename). Display name **Mines**. Never "Minesweeper" in anything the player sees. |
 | No guessing | **No board ever needs a guess.** A board ships only if the teacher's ladder clears it from the opening, which also makes the answer unique: every mine is forced. |
 | Opening | **Given.** The seed picks a square; it and its eight neighbours are kept clear of mines, and the squares it opens (the usual spread from a square with no mines around it) are revealed when the board loads. No first-click luck, and everyone gets the same board. |
-| Lives | **Three, as Pointers'.** Revealing a mine shows it, marks it as a mine and costs a life. Lose all three and the board is failed: Try again restarts it from the opening with the lives restored. Losing is never a completion. |
-| Undo | **None** (`offersUndo = false`). A reveal is never wrong except on a mine, and undo would only hand back a life. Flags are notes and toggle off by the same gesture. |
+| Lives | **None** (the owner, 2026-10-26; the first build gave three, as Pointers'). Revealing a mine shows it and the board is failed: Try again restarts it from the opening. Losing is never a completion. |
+| Undo | **None** (`offersUndo = false`). A reveal is never wrong except on a mine, and undo would only take back a lost board. Flags are notes and toggle off by the same gesture. |
 | Hints | **On** (unlike Pointers). |
 
 ## Rules
 
 - A `width` x `height` grid; `mines` of its squares hold a mine. A revealed square shows the number of mines among its eight
   neighbours, or nothing for none.
-- **Reveal** a hidden square: a mine costs a life and stays shown as a mine (it counts as found). A safe square opens; if its
+- **Reveal** a hidden square: a mine stays shown and the board is lost. A safe square opens; if its
   number is 0, its neighbours open too, and so on outward (breadth first in reading order, so it is the same on every
   platform). A flagged square is never revealed (take the flag off first), so a flag protects the square under it, and
   the spread from a 0 passes flagged squares by.
-- **Flag** a hidden square: a note that it holds a mine. Flags are the player's, never checked when placed and never a
-  life; a wrong flag is allowed (the hint calls it out). "Mines left" is `mines - flags - mines hit`, and can go below 0.
+- **Flag** a hidden square: a note that it holds a mine. Flags are the player's, never checked when placed and never
+  lose the board; a wrong flag is allowed (the hint calls it out). "Mines left" is `mines - flags - mines hit`, and can go below 0.
 - **Solved** when every square without a mine is revealed: a rule check on the board, flags play no part.
-- **Failed** when no lives are left and the board is not solved.
+- **Failed** when a mine has been revealed and the board is not solved.
 - **Chording** (the owner asked for it, 2026-10-26): a tap on a revealed number whose neighbouring flags and mines hit
   already make its count reveals every other hidden neighbour, in reading order, as one move (`MinesState.chord`; each safe
-  square spreads as a reveal does). A wrong flag means a mine among them: **each mine revealed costs a life**, as a tap on
-  it would, and the chord stops when the last life goes (the squares after it stay hidden). Nothing happens when the
+  square spreads as a reveal does). A wrong flag means a mine among them: **the first mine revealed loses the board**, as a tap
+  on it would, and the chord stops there (the squares after it stay hidden). Nothing happens when the
   count is not met or nothing is left to reveal.
 
 ## Tiers
 
-A mis-tap costs a life, so the square must stay a thumb's width (Pointers capped its width for the same reason). No tier
+A mis-tap loses the board, so the square must stay a thumb's width (Pointers capped its width for the same reason). No tier
 is more than **9 wide or 10 tall**: Expert was 8x12, and twelve rows were height-bound on a short screen (21.5 dp squares at
 375x537); 9x10 holds as many squares less six and is never smaller than Hard's on the three phone sizes below. The tiers
 differ in size, density and the deepest step of the ladder a board must need (Tally's `Spec.needs` gate): a draw needing
@@ -103,9 +103,9 @@ Highlight indices: squares `0 until width * height` (the counter is never highli
 
 ## Layout
 
-A row above the board holds the hearts (Pointers' `Hearts`) and "N mines left" or, when failed, "Out of lives" and Try
+A row above the board holds "N mines left" or, when failed, "Mine hit" and Try
 again, always the same height. The board sizes from both axes; the pen row sits under it and is `keepClear`. A box wider
-than 1.1 times its height (a phone on its side, a tablet) puts the hearts, the count and the pens in a column beside the
+than 1.1 times its height (a phone on its side, a tablet) puts the count and the pens in a column beside the
 board instead, which then has the whole height.
 
 Square size (CSS px / dp, measured with `tools/render/render.py`, the same in Chromium and WebKit), Hard / Expert:
@@ -120,8 +120,8 @@ surface. Numbers take one hue each, as a digit always (colour is never the only 
 
 ## Share card
 
-As Pointers': the hearts left at the solve (`❤️❤️🖤`), then the hint count as every card shows it. Nudge "Not a single
-mine." with all three and no hints.
+The default card: a strip of the moves, red after a hint. A solved board never hit a mine (a hit loses it), so there are
+no hearts to show.
 
 ## State
 
@@ -131,7 +131,7 @@ mine." with all three and no hints.
     val mines: String,            // '1' a mine, '0' none, per square in reading order
     val opening: Int,             // the square the opening spreads from
     val marks: String,            // '.' hidden, 'o' revealed, 'f' flagged
-    val bumps: List<Int> = emptyList(), // mines hit, in order: lives = 3 - bumps.size
+    val bumps: List<Int> = emptyList(), // the mine hit (a three-lives save may hold up to three): failed when not empty
     override val moves: Int = 0,
 ) : PuzzleState
 ```

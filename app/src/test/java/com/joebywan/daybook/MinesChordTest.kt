@@ -29,7 +29,6 @@ class MinesChordTest {
         val c = s.chord(4)!!
         assertEquals(s.moves + 1, c.moves)
         assertEquals("f" + "oooo" + "ooo" + "f", c.marks)
-        assertEquals(3, c.lives)
         assertTrue(c.solved)
     }
 
@@ -42,26 +41,13 @@ class MinesChordTest {
         assertNull("a won board", done.chord(4))
     }
 
-    @Test fun `a mine hit counts toward the number like a flag`() {
-        val s = board().reveal(0)!!.flag(8)!!
-        assertEquals(2, s.lives)
-        assertTrue(s.chord(4)!!.solved)
-    }
-
-    @Test fun `a wrong flag opens a mine, a life each, and the chord stops when the lives run out`() {
-        val wrong = board().flag(1)!!.flag(2)!!.chord(4)!!
-        assertEquals(listOf(0, 8), wrong.bumps)
-        assertEquals(1, wrong.lives)
-        assertFalse(wrong.failed)
-        // One life left (two mines hit, two flags: the 4 is made): the chord opens 5, then the mine at 6 ends it.
-        val b = "101" + "000" + "101"
-        val oneLeft = MinesState(3, 3, b, 4, "...." + "o" + "....").reveal(0)!!.reveal(2)!!.flag(1)!!.flag(3)!!
-        assertEquals(1, oneLeft.lives)
-        val lost = oneLeft.chord(4)!!
-        assertEquals(listOf(0, 2, 6), lost.bumps)
+    @Test fun `a wrong flag opens a mine, which loses the board, and the chord stops there`() {
+        // Flags on 1 and 2 make the 2: the chord reveals 0, a mine, and goes no further.
+        val lost = board().flag(1)!!.flag(2)!!.chord(4)!!
+        assertEquals(listOf(0), lost.bumps)
         assertTrue(lost.failed)
-        assertEquals('o', lost.marks[5])
-        assertEquals("never reached", '.', lost.marks[7])
+        assertEquals("never reached", '.', lost.marks[3])
+        assertNull("nothing happens on a lost board", lost.chord(4))
     }
 
     @Test fun `the walkthrough's chord frame takes the chord and refuses a single reveal`() {
@@ -72,7 +58,6 @@ class MinesChordTest {
         assertEquals(Mines.CHORDED, MinesLogic.neighbours(5, 5, Mines.CHORD_ONE).filter { s.marks[it] == MinesLogic.HIDDEN })
         val chorded = s.chord(Mines.CHORD_ONE)!!
         assertEquals(TutorialStep.DONE, f.judge!!(chorded))
-        assertEquals(2, chorded.lives)
         assertEquals(TutorialStep.REJECT, f.judge!!(s.reveal(Mines.CHORDED[0])!!))
         assertEquals(chorded, Mines.tutorial[5].state)
     }
