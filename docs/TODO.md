@@ -273,6 +273,9 @@ half-played final board when the player leaves it.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
+- **Sets is probably underrated in deal 3's spread.** What makes it hard is finding a set among the cards, which a hint walk
+  of three or four steps cannot see (`docs/LEVELS_SPEC.md`, "Level difficulty"). Solve times by tier would settle it; a
+  re-rating ships as a new deal.
 - **Mines: chording.** A tap on a number whose flags are met opening its other neighbours, as most versions have. Left out
   (`docs/MINES_SPEC.md`): with a wrong flag it opens a mine, a life lost to a note. Add it only if the owner wants the speed.
 - **Mines Expert on a short screen.** Eight wide keeps the square at 42-45 dp on a phone, but twelve rows are height-bound in a

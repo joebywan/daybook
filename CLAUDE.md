@@ -815,6 +815,13 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
   shuffle of deck 0); deal 2 deals deck 0 in bands of `Levels.GENTLE`, a frozen copy of `GENTLEST` (edit `GENTLEST` freely,
   never `GENTLE`). The deal is **per player**: `openLevel` writes the one already stored, `Levels.LATEST` only for a first
   level, because mixing deals inside deck 0 would repeat and skip puzzles in levels 1-5. A plan is `(level, poolSize, deal)`.
+- **Deal 3 (`Levels.LATEST`) spreads difficulty over levels 1-100** (`docs/LEVELS_SPEC.md`, "Level difficulty"): each level
+  is the five boards, five puzzles, nearest a target rising from the gentlest measured puzzle-tier to the hardest, tiers mixed.
+  Puzzles are met on Standard in `Levels.LEARN` order (a frozen copy of `GENTLEST`, never edited), all by level 15, so levels
+  1-5 are the quickest to learn. The scores are `core/LevelSpread.kt`, **generated** by `LevelDifficultyBuildTest`
+  (`DAYBOOK_LEVEL_DIFFICULTY=1`) and as frozen as `GENTLE`: rewriting it moves every deal-3 plan, opened ones too, so a new
+  measurement (or ranking a new puzzle into 1-100) is a new deal. A puzzle appended to `POOL` joins deal 3 from level 101,
+  where decks and the curve take over.
 - **A level board's seed and tier come from its level's stored plan**, never from the route or the full pool, so the play route waits
   for `levelProgress` to load; open a level through `playLevel` (it calls `openLevel` first).
 - **Everything about progress is derived** (`LevelProgress.of`): the current level, done levels, "Level N done" on home. Nothing pops up.
