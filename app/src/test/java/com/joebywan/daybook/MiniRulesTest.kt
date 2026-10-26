@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Mini
@@ -16,14 +15,11 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class MiniRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
-    private fun board(day: Int, d: Difficulty) = Mini.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Mini.id, d), d) as MiniState
+    private fun board(day: Int, d: Difficulty) = Mini.generate(daySeed(day, Mini.id, d), d) as MiniState
 
     private fun solved(s: MiniState) = s.copy(letters = s.answer)
 
@@ -198,7 +194,7 @@ class MiniRulesTest {
             var whites = 0
             val needs = mutableMapOf<String?, Int>()
             for (day in 0 until 365) {
-                val seed = DailySeed.seedFor(start.plusDays(day.toLong()), Mini.id, d)
+                val seed = daySeed(day, Mini.id, d)
                 val t0 = System.nanoTime()
                 val s = MiniLogic.generateVerified(seed, d)!!
                 times += System.nanoTime() - t0
@@ -215,8 +211,7 @@ class MiniRulesTest {
             )
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/mini-tiers.txt").writeText(report.toString())
+        writeReport("mini-tiers.txt", report.toString())
         assertTrue("clue letters rise with the tier: $means", means[0] < means[1] && means[1] < means[2])
     }
 }

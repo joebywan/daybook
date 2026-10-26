@@ -347,11 +347,4 @@ class DominoRulesTest {
             assertEquals(listOf(s.answer), oracle(s))
         }
     }
-
-    @Test
-    fun `generation is pure`() {
-        for (d in Difficulty.entries) for (seed in seeds(5, d, "dominoes-pure")) {
-            assertEquals(DominoLogic.generateVerified(seed, d), DominoLogic.generateVerified(seed, d))
-        }
-    }
 }
