@@ -831,6 +831,21 @@ Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - Set share cards (`threeShareCard`, `levelShareCard`) are derived from completions and `level_solves`; nothing new is stored.
   Share cards say what was done, never what is left (`REWARDS.md`).
 
+## Daily reminder (Android)
+
+One notification a day at the player's hour, off by default. Shared: `ui/home/Reminder.kt` (the text, the offer rule,
+Home's offer card), the three `reminder*` keys in `LaunchPreferences` (launch preferences, never progress), the row in
+Settings. Android: `platform/AndroidReminder.kt` (in `web/build.gradle.kts`'s `androidOnly`); the web has
+`OFFERS_REMINDER = false` and stubs, since a closed page cannot notify.
+
+- **Asked once.** Home shows one card under the grid after the first solve on a second day (`reminderOfferDue`) until the
+  player answers either way, then never again; a choice in Settings answers it too. Notification permission (Android 13+)
+  is requested only when the player turns the reminder on; refused, it stays off and Settings says why.
+- **No nagging.** One inexact `AlarmManager` alarm (`setAndAllowWhileIdle`, no exact-alarm permission, no dependency), set
+  again when it fires, on boot or update (`ReminderRestoreReceiver`) and on app open. When it fires it posts nothing if a
+  daily is solved today, the reminder is off, or it is before 5 am. The text (`reminderText`) greets for the time of day,
+  says how much of the day is left and invites; no streaks, no loss framing, no follow-ups (`ReminderTest` guards the words).
+
 ## Typography
 
 Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` via `Typography.withFamily`;
@@ -892,8 +907,11 @@ records written before it, which count as before) is when a solve was made; read
 anything about the streak or days played. `day` is the board's date (archive marks, best times, "solved today"). `docs/REWARDS.md`.
 
 **Back goes where the screen was opened from** (`backFrom` in `ui/DaybookApp.kt`): an archive game returns to its archive at that
-day, for system back, the web's back, the BackButton and the finish frame's Done alike (`Route.Archive.day` is the selected day;
-the archive is a month calendar, `ui/archive/ArchiveScreen.kt`, opening on that day's month). Route strings only gain fields at the end,
+day, for system back, the web's back, the BackButton and the finish frame's Done alike. The archive opens by day (`Route.Days`,
+`ArchiveDaysScreen` in `ui/archive/ArchiveScreen.kt`: a month calendar over that day's puzzles, in the home grid's order, each tier
+one tap; it opens on yesterday), from Home's Archive button and from a tapped day on the streak calendar (`fromStats`, so the chain
+ends at Statistics). A puzzle's name there drills down to its own calendar (`Route.Archive`, `fromDays`). `fromDays`/`fromStats` ride
+on `Route.Play` so back walks the same chain. Route strings only gain fields at the end,
 read with `getOrNull`, so a route saved by an older build still decodes (`RouteTest`).
 
 **Feedback must not move the board.** Mambo's caption shifted it ~45dp when an error appeared,

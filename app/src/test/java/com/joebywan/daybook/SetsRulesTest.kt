@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Card
@@ -23,9 +22,7 @@ import java.time.LocalDate
  */
 class SetsRulesTest {
 
-    private val seeds = (0 until 12).map {
-        DailySeed.seedFor(LocalDate.of(2026, 2, 1).plusDays(it.toLong()), "sets", Difficulty.HARD)
-    }
+    private val seeds = seeds(12, Difficulty.HARD, "sets", LocalDate.of(2026, 2, 1))
 
     @Test
     fun `the advertised target is the number of sets actually on the board`() {
@@ -171,16 +168,15 @@ class SetsRulesTest {
      */
     @Test
     fun `sets proves every daily board of a year on every tier`() {
-        val start = LocalDate.of(2026, 1, 1)
         for (difficulty in Difficulty.entries) {
             val (cards, target) = when (difficulty) {
                 Difficulty.STANDARD -> 9 to 3
                 Difficulty.HARD -> 12 to 4
                 Difficulty.EXPERT -> 12 to 6
             }
-            for (day in 0 until 365L) {
-                val date = start.plusDays(day)
-                val seed = DailySeed.seedFor(date, "sets", difficulty)
+            for (day in 0 until 365) {
+                val date = TEST_START.plusDays(day.toLong())
+                val seed = daySeed(day, "sets", difficulty)
                 val proved = Sets.generateVerified(seed, difficulty)
                 assertNotNull("sets $date/${difficulty.name} needed the last resort", proved)
                 assertValid("sets $date/${difficulty.name}", proved!!, cards, target)

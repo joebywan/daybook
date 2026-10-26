@@ -172,6 +172,9 @@ Five independent design reviews (puzzle construction, player experience, daily m
 accepted by the owner except where noted. Each item is one workstream and one PR; delete it here when it lands.
 Generator changes move every daily board of that puzzle (parity pins go red on purpose): batch them, one PR per puzzle.
 
+- [ ] **Daily reminder follow-ups** (`ui/home/Reminder.kt`). The hour is one of five presets (8 am to 9 pm), not a
+  clock picker: add one if players ask. Home's one offer counts the days of the boards solved, so an archive board can
+  stand in for a second day; read the day a solve was made instead once completions record it (WS6). *S.*
 - [ ] **Snap depth gate:** not possible yet. Snap has no teacher (a whole-board deducer leaves the real choices to a
   13-joint what-if; `docs/TEACHING.md`).
 

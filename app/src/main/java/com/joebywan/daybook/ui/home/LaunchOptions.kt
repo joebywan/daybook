@@ -148,7 +148,30 @@ class LaunchPreferences(private val store: KeyValueStore) {
         store.putString(KEY_WELCOMED, "yes")
     }
 
+    /** The daily reminder (`Reminder.kt`, Android only): off unless the player turned it on. */
+    val reminder: Flow<Boolean> = store.string(KEY_REMINDER).map { it == "on" }
+
+    /** Turning it either way also answers Home's one offer, so a player who chose in Settings is not asked. */
+    suspend fun setReminder(on: Boolean) {
+        setFlag(KEY_REMINDER, on)
+        setReminderOffered()
+    }
+
+    /** The hour the reminder goes off, local time; [DEFAULT_REMINDER_HOUR] until the player picks. */
+    val reminderHour: Flow<Int> =
+        store.string(KEY_REMINDER_HOUR).map { it?.toIntOrNull()?.takeIf { h -> h in 0..23 } ?: DEFAULT_REMINDER_HOUR }
+
+    suspend fun setReminderHour(hour: Int) = store.putString(KEY_REMINDER_HOUR, hour.toString())
+
+    /** Whether Home's one offer of the reminder was answered; it is never shown again after. */
+    val reminderOffered: Flow<Boolean> = store.string(KEY_REMINDER_OFFERED).map { it != null }
+
+    suspend fun setReminderOffered() = store.putString(KEY_REMINDER_OFFERED, "yes")
+
     private companion object {
+        const val KEY_REMINDER = "reminder"
+        const val KEY_REMINDER_HOUR = "reminder_hour"
+        const val KEY_REMINDER_OFFERED = "reminder_offered"
         const val KEY_WELCOMED = "welcomed"
         const val KEY_VIBRATE = "vibrate"
         const val KEY_ORDER = "puzzle_order"

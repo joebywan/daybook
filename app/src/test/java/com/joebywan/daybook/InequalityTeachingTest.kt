@@ -19,21 +19,15 @@ class InequalityTeachingTest {
         Inequality.generate(daySeed(day, Inequality.id, d), d) as InequalityState
 
     /** Follows the teacher's steps from [s] to the end, applying each. Fails on a step that disagrees with the answer. */
-    private fun walk(s: InequalityState, onStep: (String) -> Unit = {}): InequalityState {
-        var now = s
-        var guard = 0
-        while (!now.solved) {
-            val d = Inequality.teach(now) ?: error("no step on an unsolved board")
-            onStep(d.technique)
-            val t = d.targets.single()
-            val next = d.apply(now) as InequalityState
-            assertEquals("${d.technique} put the wrong digit in square $t", s.solution[t], next.cells[t])
-            assertNotEquals("a step must change something", now.cells, next.cells)
-            assertTrue(d.isReached(next))
-            now = next
-            assertTrue("walk does not end", ++guard <= 36)
-        }
-        return now
+    private fun walk(s: InequalityState, onStep: (String) -> Unit = {}): InequalityState = hintWalk(s, 36) { now ->
+        val d = Inequality.teach(now) ?: error("no step on an unsolved board")
+        onStep(d.technique)
+        val t = d.targets.single()
+        val next = d.apply(now) as InequalityState
+        assertEquals("${d.technique} put the wrong digit in square $t", s.solution[t], next.cells[t])
+        assertNotEquals("a step must change something", now.cells, next.cells)
+        assertTrue(d.isReached(next))
+        next
     }
 
     @Test
@@ -113,14 +107,12 @@ class InequalityTeachingTest {
             // Plant a mistake at the start so those texts are measured too.
             val at = s.cells.indices.first { s.cells[it] == 0 }
             for (state in listOf(now, now.withCell(at, s.solution[at] % s.size + 1))) {
-                var cur = state
-                var guard = 0
-                while (!cur.solved && guard++ < 40) {
+                hintWalk(state, 40) { cur ->
                     val step = Inequality.teach(cur)!!
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= 70)
                     assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= 200)
                     longest = maxOf(longest, step.explanation.length)
-                    cur = step.apply(cur) as InequalityState
+                    step.apply(cur) as InequalityState
                 }
             }
         }
@@ -176,14 +168,14 @@ class InequalityTeachingTest {
         assertEquals(TutorialStep.DONE, clash(cleared))
         // Frame 5 is free play, and hints alone finish it with no fallback and no mistake.
         assertTrue(frames[4].freePlay)
-        var now = frames[4].state as InequalityState
+        val now = frames[4].state as InequalityState
         assertEquals(Inequality.tutorialBoard(mapOf(0 to 1)).cells, now.cells)
-        while (!now.solved) {
-            val d = Inequality.teach(now)!!
+        val end = hintWalk(now, 36) { cur ->
+            val d = Inequality.teach(cur)!!
             assertFalse(d.fallback); assertFalse(d.mistake)
-            now = d.apply(now) as InequalityState
+            d.apply(cur) as InequalityState
         }
-        assertEquals(Inequality.TUTORIAL_SOLUTION, now.cells)
+        assertEquals(Inequality.TUTORIAL_SOLUTION, end.cells)
         for (f in frames) assertTrue("caption ${f.caption.length}", f.caption.length <= 200)
         // Every claim a caption makes: the sign is the first and says square 0 is smaller than square 1.
         assertEquals(com.joebywan.daybook.puzzles.Sign(0, 1), Inequality.TUTORIAL_SIGNS.first())
