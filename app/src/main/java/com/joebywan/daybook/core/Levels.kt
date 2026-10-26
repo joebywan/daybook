@@ -47,6 +47,9 @@ object Levels {
 
     const val SIZE = 5
 
+    /** Every level number the app plans or accepts from storage or a link; far past any player, and `SIZE * level` never overflows. */
+    val LEVELS: IntRange = 1..10_000
+
     /**
      * Append-only. Its order is part of the contract: a new puzzle goes on the end and nothing is removed or
      * reordered, or every level not yet opened changes and every opened one plans differently.
@@ -114,7 +117,7 @@ object Levels {
 
     /** [plan] over any pool, so tests can append puzzles that do not exist yet. */
     internal fun plan(level: Int, pool: List<String>, deal: Int = LATEST): List<LevelBoard> {
-        require(level >= 1) { "levels start at 1, not $level" }
+        require(level in LEVELS) { "no level $level" }
         require(pool.size >= STARTER)
         require(deal in 1..LATEST) { "no deal $deal" }
         if (deal == 3) {

@@ -1,6 +1,9 @@
 package com.joebywan.daybook.web
 
+import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.KeyValueStore
+import com.joebywan.daybook.data.ProgressStore
+import com.joebywan.daybook.data.replaceEntries
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -147,23 +150,41 @@ object Backup {
         return "Exported ${entries.size} entries."
     }
 
-    /** Replaces this browser's progress with a backup's, once the player has picked the file. */
-    fun import(onResult: (String) -> Unit) {
-        pickTextFile { text -> onResult(restore(text)) }
+    /** A backup read and checked, held until the player confirms it should replace this browser's progress. */
+    class Pending internal constructor(internal val entries: Map<String, String>) {
+        val solvesHere: Int = solves(ownEntries())
+        val solvesInBackup: Int = solves(entries)
     }
 
-    internal fun restore(text: String): String {
-        val root = runCatching { StoreJson.parseToJsonElement(text).jsonObject }.getOrNull()
-        if (root == null || root["format"]?.jsonPrimitive?.content != FORMAT) {
-            return "That file is not a Daybook backup."
-        }
-        val entries = runCatching {
-            StoreJson.decodeFromJsonElement(Entries, root.getValue("entries"))
-        }.getOrNull() ?: return "That backup is damaged."
-        val wanted = entries.filterKeys(::isOwn)
-        ownKeys().forEach(::lsRemove)
-        val failed = wanted.count { (key, value) -> !lsSet(key, value) }
+    private fun ownEntries(): Map<String, String> = ownKeys().associateWith { lsGet(it).orEmpty() }
+
+    /** The finished puzzles an entry set holds, for the confirmation; a damaged list counts none. */
+    private fun solves(entries: Map<String, String>): Int =
+        entries["${KeyValueStore.PROGRESS}.${ProgressStore.KEY_COMPLETIONS}"]
+            ?.let { raw -> runCatching { StoreJson.decodeFromString(StringList, raw) }.getOrNull() }
+            .orEmpty().count { Completion.decode(it) != null }
+
+    /** Asks for a file and reads it: [onReady] with it to confirm, or [onError] with why it cannot be used. */
+    fun import(onError: (String) -> Unit, onReady: (Pending) -> Unit) {
+        pickTextFile { text -> read(text)?.let(onReady) ?: onError(problem(text)) }
+    }
+
+    private fun read(text: String): Pending? {
+        val root = runCatching { StoreJson.parseToJsonElement(text).jsonObject }.getOrNull() ?: return null
+        if (root["format"]?.jsonPrimitive?.content != FORMAT) return null
+        val entries = runCatching { StoreJson.decodeFromJsonElement(Entries, root.getValue("entries")) }.getOrNull() ?: return null
+        return Pending(entries.filterKeys(::isOwn))
+    }
+
+    private fun problem(text: String): String =
+        if (runCatching { StoreJson.parseToJsonElement(text).jsonObject["format"]?.jsonPrimitive?.content }.getOrNull() == FORMAT) {
+            "That backup is damaged."
+        } else "That file is not a Daybook backup."
+
+    /** Replaces this browser's progress with [pending]'s; if it does not all fit, what was here is put back. */
+    fun restore(pending: Pending): String {
+        val ok = replaceEntries(ownEntries(), pending.entries, ::lsSet, ::lsRemove)
         WebStores.reloadAll()
-        return if (failed == 0) "Restored ${wanted.size} entries." else "Restored, but $failed entries did not fit."
+        return if (ok) "Restored ${pending.entries.size} entries." else "That backup did not fit in this browser's storage. Nothing changed."
     }
 }

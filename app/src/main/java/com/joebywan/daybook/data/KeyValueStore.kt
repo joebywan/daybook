@@ -32,3 +32,23 @@ interface KeyValueStore {
         const val LAUNCH = "daybook_launch"
     }
 }
+
+/**
+ * Replaces the entries [current] with [incoming] (a restored backup) through [set], which reports whether a write fit,
+ * and [remove]. Every incoming entry is written before any stale one is removed, and when a write fails the entries
+ * [current] had are put back and the new ones taken out again, so a full store loses nothing. False when rolled back.
+ */
+fun replaceEntries(
+    current: Map<String, String>,
+    incoming: Map<String, String>,
+    set: (String, String) -> Boolean,
+    remove: (String) -> Unit,
+): Boolean {
+    if (incoming.all { (k, v) -> set(k, v) }) {
+        (current.keys - incoming.keys).forEach(remove)
+        return true
+    }
+    (incoming.keys - current.keys).forEach(remove) // first, to free the room the old values need
+    current.filterKeys { it in incoming }.forEach { (k, v) -> set(k, v) }
+    return false
+}

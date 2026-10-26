@@ -104,6 +104,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.core.undone
 import com.joebywan.daybook.data.SavedGame
+import com.joebywan.daybook.data.fits
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.GENERATION_ANIMATES
 import com.joebywan.daybook.platform.LOADING_MESSAGE_DELAY_MS
@@ -268,7 +269,8 @@ fun PlayScreen(
         if (consulted) return@LaunchedEffect
         val stored = restore()
         // Reading the store takes a moment; a tap that landed in the meantime outranks it.
-        if (stored != null && game == pristine) {
+        // A stored game that does not fit this board (a crafted backup) is dropped: the board starts fresh.
+        if (stored != null && game == pristine && stored.fits(initial)) {
             game = stored
             if (stored.state.solved) {
                 // Already counted; just the board, with the finish frame out of the way.

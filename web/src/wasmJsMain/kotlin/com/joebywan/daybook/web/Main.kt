@@ -90,7 +90,7 @@ private fun dump(params: Map<String, String>, today: LocalDate, tier: Difficulty
     val types = if (levelsOnly) emptyList() else if (only != null) listOf(only) else PuzzleRegistry.all
     for (type in types) for (d in PARITY_DAYS) for (t in Difficulty.entries) println("PARITY ${fingerprint(type, d, t)}")
     for (type in types) println("TODAY ${fingerprint(type, today, tier)}")
-    val range = params["range"]?.toIntOrNull() ?: 0
+    val range = params["range"]?.toIntOrNull()?.coerceIn(0, 3650) ?: 0 // ten years; a crafted huge range hung the tab
     val times = "times" in params
     val start = LocalDate(2026, 1, 1).toEpochDays()
     for (type in types) {
@@ -145,7 +145,7 @@ private fun sampleShare(id: String?, tier: Difficulty) = (id?.let(PuzzleRegistry
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
     val params = query()
-    dateOverride = params["date"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    dateOverride = DailySeed.fromLink(params["date"])
     val day = currentDate()
     val tier = params["tier"]?.let { Difficulty.fromKey(it.uppercase()) } ?: Difficulty.STANDARD
     println("daybook: date=$day epochDay=${day.toEpochDays()}")
