@@ -28,14 +28,27 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Pull requests only check the limits, so a too-long description fails before it merges.
       - name: Check
         run: python3 tools/play/upload-listing.py --check
 
+  # A job of its own so that only the upload, never a pull request's check, runs in the release environment.
+  upload:
+    needs: listing
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    environment: release   # holds the Play service account
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Upload to Play
-        if: github.event_name != 'pull_request'
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |

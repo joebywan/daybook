@@ -1098,6 +1098,12 @@ assertion loose enough to survive the bug is the same thing wearing a number.
 - Signing key: `~/Documents/github/Claude/daybook-android-signing/` — the only readable copy.
   Certificate pinned in `android/release-key.sha256`; `tools/verify-apk.sh` fails a release whose
   certificate, name or debuggable flag is wrong. A green Gradle build is **not** proof of signing.
+- Actions are pinned to commit SHAs (`# vX.Y.Z` beside each); pin a new one the same way. Gradle
+  verifies every dependency against `gradle/verification-metadata.xml` (sha256). A dependency or
+  plugin change must regenerate it: `./gradlew --no-daemon --write-verification-metadata sha256 test
+  assembleRelease bundleRelease :app:assembleDebug :web:wasmJsBrowserDistribution`, and the diff
+  reviewed. Renovate does not do it here (it needs `allowedUnsafeExecutions`), so its Gradle PRs fail
+  CI until someone does.
 
 ## Settled — do not reopen
 
