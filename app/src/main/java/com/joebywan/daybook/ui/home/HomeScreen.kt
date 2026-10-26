@@ -362,7 +362,7 @@ private fun Header(
             if (compact) {
                 Spacer(Modifier.width(14.dp))
                 HeaderDate(today, oneLine = true, Modifier.weight(1f))
-                StreakBadge(streak, onStats)
+                CappedFontScale { StreakBadge(streak, onStats) } // shares the date's line
                 Spacer(Modifier.width(10.dp))
             }
             // Each button's touch target is 48dp (Material's minimum) around its 36dp circle; neighbours overlap by
@@ -378,7 +378,7 @@ private fun Header(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HeaderDate(today, oneLine = false, Modifier.weight(1f))
-            StreakBadge(streak, onStats)
+            CappedFontScale { StreakBadge(streak, onStats) } // shares the date's line
         }
     }
 }

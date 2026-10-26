@@ -71,15 +71,6 @@ from a measurement or review, so you can check it is still true.
   the browser. A one-time nudge on the finish frame (say after the tenth solve) would bring more ratings than a settings
   row, but the finish frame is settled UX, so that is the owner's call. *S.*
 
-- [ ] **Large system font (2x) squeezes the boards from outside.** Glyphs in boards no longer scale (`boardSp`), but
-  at font scale 2 (web renders with a `Density` override, 375x537) the chrome around them still grows: the play
-  header's "Expert · 15 Jun 2026" wraps to two lines and the tagline line grows, so Lexicon's board shrinks to dots
-  and Codeword's and Crossword's grids get small; on Home the date wraps mid-word ("Monda/y"), the selected tier pill
-  breaks "Standar/d" (`SegmentedControl`), tile names ellipsise ("Regio..."); Tally's and Nonogram's pen buttons
-  (`PenRow`) clip "Remove"; Codebreaker's "Submit" wraps; Who's Who's clue list gets two lines of room. All fine at
-  1.3x. Not checked on the emulator (its font scale is shared). Lamps' lamp still has no long press (Tents and
-  Kings have one). *M.*
-
 ## Rewards
 
 Design and decisions: `docs/REWARDS.md`. Items 1 (streak, `core/Streak.kt`), 2 and 3 (finished-frame praise, `ui/play/FinishPraise.kt`), 4 (achievements) 5 (calendar) and 6 (daily variety) are done; the rest are separate PRs.
