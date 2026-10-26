@@ -166,7 +166,7 @@ class NonogramTeachingTest {
         val step = NonogramTeacher.teach(s)!!
         assertEquals(NonogramTeacher.OVERLAP, step.technique)
         assertEquals(listOf(1), step.fills)
-        assertTrue(step.explanation, "row 1" in step.explanation && "square 2" in step.explanation && "covered both times" in step.explanation)
+        assertTrue(step.explanation, "row 1" in step.explanation && "The glowing square is" in step.explanation && "covered both times" in step.explanation)
     }
 
     @Test
@@ -264,7 +264,7 @@ class NonogramTeachingTest {
         val step = NonogramTeacher.teach(s)!!
         assertEquals(NonogramTeacher.MISTAKE, step.technique)
         assertEquals(listOf(24), step.clears)
-        assertTrue(step.explanation, "row 5, column 5" in step.explanation && "filled" in step.explanation)
+        assertTrue(step.explanation, "the glowing square" in step.explanation && "filled" in step.explanation)
         assertEquals(
             setOf(NonogramLogic.rowClueIndex(5, 5, 4), NonogramLogic.colClueIndex(5, 5, 4)),
             step.cited,

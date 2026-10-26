@@ -230,7 +230,7 @@ internal object RegionsTeacher {
                 val n = layout.n
                 val why = "This region's ${hit.lockDigit} must go in one of the marked squares. They all touch the square at " +
                     "${squareName(n, hit.struck)}, so it is not a ${hit.lockDigit}."
-                val then = if (hit.byPlace) "That leaves ${squareName(n, x)} as its region's only place for a $d."
+                val then = if (hit.byPlace) "That leaves the glowing square as its region's only place for a $d."
                 else "That leaves it only $d."
                 PlacementStep(
                     LOCKED, x, d, members.toSet() + hit.struck, hit.places.toSet() + hit.struck + x,

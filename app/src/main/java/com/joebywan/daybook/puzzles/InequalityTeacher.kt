@@ -338,7 +338,7 @@ internal object InequalityTeacher {
                 PlacementStep(
                     LAST, x, d, all[hit.line].toSet(), all[hit.line].filter { cells[it] != 0 }.toSet(),
                     "Look at $name.",
-                    "$name has every digit but $d, so its last empty square is a $d.",
+                    "${name.cap()} has every digit but $d, so its last empty square is a $d.",
                 )
             }
             ONLY_DIGIT -> {
@@ -346,7 +346,7 @@ internal object InequalityTeacher {
                 PlacementStep(
                     ONLY_DIGIT, x, d, setOf(x), holders(n, cells, x, seen),
                     "Which digits can this square still take?",
-                    "Row ${x / n + 1} and column ${x % n + 1} already hold ${listed(seen)}, so only $d is left here.",
+                    "Its row and column already hold ${listed(seen)}, so only $d is left here.",
                 )
             }
             ONLY_PLACE -> {
@@ -388,9 +388,9 @@ internal object InequalityTeacher {
         val r = hit.cell / n + 1
         val c = hit.cell % n + 1
         val close = when {
-            hit.line < 0 -> "$again leaves the square at row $r, column $c only ${hit.digit}."
-            hit.line < n -> "$again leaves column $c as the only place for the ${hit.digit} in row $r."
-            else -> "$again leaves row $r as the only place for the ${hit.digit} in column $c."
+            hit.line < 0 -> "$again leaves the glowing square only ${hit.digit}."
+            hit.line < n -> "$again leaves the glowing square as the only place for the ${hit.digit} in row $r."
+            else -> "$again leaves the glowing square as the only place for the ${hit.digit} in column $c."
         }
         val signsNear = if (hit.needsSigns) signs.indices.filter { signs[it].lo == hit.cell || signs[it].hi == hit.cell }.map { n * n + it } else emptyList()
         return PlacementStep(
