@@ -3,6 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.Codeword
 import com.joebywan.daybook.puzzles.CodewordLogic
 import com.joebywan.daybook.puzzles.CodewordLogic.EMPTY
@@ -196,7 +197,7 @@ class CodewordTeachingTest {
         val b0 = Codeword.tutorialBoard()
         // The board has one answer, and it is the stored one; the oracle agrees.
         assertEquals(1, CodewordOracle.count(5, b0.numbers, b0.letters))
-        assertEquals(b0.solution, (CodewordLogic.solve(5, b0.numbers, b0.letters) as CodewordLogic.Verdict.ExactlyOne).letters)
+        assertEquals(b0.solution, (CodewordLogic.solve(5, b0.numbers, b0.letters) as Verdict.ExactlyOne).value)
         // The captions' claims: only ATE fits the top word from the givens, only EXTRA the middle row once A is in.
         val shape = CodewordTeacher.Shape(5, b0.numbers, b0.letters.size)
         fun onlyWord(letters: List<Int>, squares: Set<Int>): String? {

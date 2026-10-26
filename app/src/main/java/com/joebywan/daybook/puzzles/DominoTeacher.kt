@@ -1,7 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.fit
 import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.squareName
 
 /**
  * Dominoes, reasoned the way a person reasons it (`docs/DOMINO_SPEC.md` "Teacher").
@@ -239,7 +241,7 @@ internal object DominoTeacher {
                     "That leaves $leaves. $so" }
             }
         }
-        val explanation = fit(listOf(3, 2, 1).map(text) + "${words.techniqueName(technique).cap()}. $so")
+        val explanation = fit(listOf(3, 2, 1).map(text) + "${words.techniqueName(technique).cap()}. $so", MAX_EXPLANATION)
         val cited = regionsIn(facts).map { RULE + it }.toSet() + (if (partner >= 0) setOf(q, partner) else emptySet())
         return Step(technique, used, d, p, setOf(p.first, p.second), cited, fitNudge(nudge, "Look at the $name."), explanation)
     }
@@ -266,11 +268,10 @@ internal object DominoTeacher {
         return Step(
             WHAT_IF, LEVEL_WHAT_IF, d, p, setOf(w.square), cited,
             fitNudge("Try each domino that could cover $where.", "Try each domino that could cover this square."),
-            fit(texts),
+            fit(texts, MAX_EXPLANATION),
         )
     }
 
-    private fun fit(options: List<String>): String = options.firstOrNull { it.length <= MAX_EXPLANATION } ?: options.last()
 
     private fun fitNudge(nudge: String, short: String) = if (nudge.length <= MAX_NUDGE) nudge else short
 
@@ -284,7 +285,7 @@ internal object DominoTeacher {
     // ---- words -------------------------------------------------------------------------------------
 
     private class Words(val layout: DominoLogic.Layout) {
-        fun square(q: Int) = "row ${q / layout.width + 1}, column ${q % layout.width + 1}"
+        fun square(q: Int) = squareName(layout.width, q)
 
         /** "6-3 going right, its 3 here": a candidate as seen from square [q]. */
         fun way(d: Domino, p: Placement, q: Int, which: Boolean): String {

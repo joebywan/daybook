@@ -1,5 +1,6 @@
 package com.joebywan.daybook
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.PearlsGrid
@@ -7,6 +8,7 @@ import com.joebywan.daybook.puzzles.PearlsKeyAction
 import com.joebywan.daybook.puzzles.PearlsState
 import com.joebywan.daybook.puzzles.applyKey
 import com.joebywan.daybook.puzzles.pearlsKeyAction
+import com.joebywan.daybook.ui.gridCellAt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -86,7 +88,7 @@ class PearlsKeysTest {
         // Not a neighbour of the last square: ignored.
         assertEquals(p, Pearls.trail(p, 15, 4))
         assertEquals(p, Pearls.trail(p, 5, 4))
-        assertEquals(5, Pearls.cellAt(4, 1.2f, 1.9f))
-        assertEquals(15, Pearls.cellAt(4, 9f, 9f))
+        assertEquals(5, gridCellAt(Offset(1.2f, 1.9f), 1f, 4, 4))
+        assertEquals(15, gridCellAt(Offset(9f, 9f), 1f, 4, 4))
     }
 }

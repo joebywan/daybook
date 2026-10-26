@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.neighbours8
 import kotlinx.serialization.Serializable
 
 /**
@@ -35,7 +36,7 @@ data class MinesState(
     val minesLeft: Int get() = total - marks.count { it == MinesLogic.FLAG } - bumps.size
 
     /** The number a revealed square shows: the mines among its eight neighbours. */
-    fun number(i: Int): Int = MinesLogic.neighbours(width, height, i).count { mines[it] == '1' }
+    fun number(i: Int): Int = neighbours8(width, height, i).count { mines[it] == '1' }
 
     /** Every square without a mine revealed: the rule, flags play no part. */
     override val solved: Boolean get() = marks.indices.all { mines[it] == '1' || marks[it] == MinesLogic.OPEN }
@@ -106,21 +107,6 @@ internal object MinesLogic {
         Difficulty.EXPERT -> Spec(8, 12, 22, 3)
     }
 
-    /** The up to eight neighbours of [i], in reading order. */
-    fun neighbours(w: Int, h: Int, i: Int): IntArray {
-        val r = i / w
-        val c = i % w
-        val out = IntArray(8)
-        var k = 0
-        for (dr in -1..1) for (dc in -1..1) {
-            if (dr == 0 && dc == 0) continue
-            val nr = r + dr
-            val nc = c + dc
-            if (nr in 0 until h && nc in 0 until w) out[k++] = nr * w + nc
-        }
-        return out.copyOf(k)
-    }
-
     /** [marks] with [start] opened and the spread from every 0 it reaches; flagged squares are passed by. */
     fun open(w: Int, h: Int, mines: String, marks: String, start: Int): String {
         val m = marks.toCharArray()
@@ -137,7 +123,7 @@ internal object MinesLogic {
         var head = 0
         while (head < opened.size) {
             val i = opened[head++]
-            val nb = neighbours(w, h, i)
+            val nb = neighbours8(w, h, i)
             if (nb.any { mines[it] == '1' }) continue
             for (j in nb) if (m[j] == HIDDEN) {
                 m[j] = OPEN
@@ -178,7 +164,7 @@ internal object MinesLogic {
      */
     fun nextFact(w: Int, h: Int, num: IntArray, st: IntArray, total: Int): Fact? {
         val n = w * h
-        val nbs = Array(n) { neighbours(w, h, it) }
+        val nbs = Array(n) { neighbours8(w, h, it) }
         fun unknownOf(i: Int) = nbs[i].filter { st[it] == UNKNOWN }
         fun needOf(i: Int) = num[i] - nbs[i].count { st[it] == MINE }
 
@@ -296,7 +282,7 @@ internal object MinesLogic {
         val st = IntArray(n)
         val total = mines.count { it == '1' }
         fun reveal(i: Int) {
-            num[i] = neighbours(w, h, i).count { mines[it] == '1' }
+            num[i] = neighbours8(w, h, i).count { mines[it] == '1' }
             st[i] = SAFE
         }
         for (i in 0 until n) if (m[i] == OPEN) reveal(i)
@@ -349,7 +335,7 @@ internal object MinesLogic {
         val w = spec.width
         val h = spec.height
         val opening = rng.nextInt(w * h)
-        val clear = neighbours(w, h, opening).toList() + opening
+        val clear = neighbours8(w, h, opening).toList() + opening
         val pool = (0 until w * h).filter { it !in clear }
         val chosen = rng.shuffled(pool).take(spec.mines)
         val mines = CharArray(w * h) { '0' }

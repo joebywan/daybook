@@ -243,7 +243,7 @@ internal object WhosWhoTeacher {
                     is Break.Clue -> "clue ${b.clue + 1} can't hold"
                     null -> "nothing fits"
                 }
-                val steps = (chain + end).let { if (it.size == 1) it[0] else it.dropLast(1).joinToString(", ") + ", and " + it.last() }
+                val steps = listed(chain + end, oxford = true)
                 "Suppose $who ${WhosWhoLogic.has(s, itemOf(s, supposed))}: then $steps. So ${crossOff(s, step.crosses)}."
             }
         }

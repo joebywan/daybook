@@ -2,6 +2,8 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
+import com.joebywan.daybook.core.orthogonalReading
 
 /**
  * The rules of Cage Sudoku, its logic, and its generator.
@@ -353,15 +355,6 @@ internal object CageLogic {
 
     // ---- the proof ---------------------------------------------------------------------------------------
 
-    /**
-     * How many answers a board has. Only [ExactlyOne] may ship, and it carries the answer; there is no
-     * budget, so there is no "gave up" to mistake for it.
-     */
-    sealed interface Verdict {
-        data object None : Verdict
-        class ExactlyOne(val cells: List<Int>) : Verdict
-        data object Ambiguous : Verdict
-    }
 
     /** Exhaustive: settle, then branch on the emptiest square, until a second answer turns up or the tree is gone. */
     fun solutions(board: Board, start: List<Int>): Verdict {
@@ -389,11 +382,7 @@ internal object CageLogic {
             }
         }
         walk(start.toIntArray())
-        return when (count) {
-            0 -> Verdict.None
-            1 -> Verdict.ExactlyOne(first!!)
-            else -> Verdict.Ambiguous
-        }
+        return Verdict.of(count) { first!! }
     }
 
     // ---- the generator -----------------------------------------------------------------------------------
@@ -419,17 +408,6 @@ internal object CageLogic {
     }
 
     /** Four-way neighbours of [cell], in a fixed order. */
-    private fun around(cell: Int): IntArray {
-        val r = cell / 9
-        val c = cell % 9
-        val out = ArrayList<Int>(4)
-        if (r > 0) out += cell - 9
-        if (c > 0) out += cell - 1
-        if (c < 8) out += cell + 1
-        if (r < 8) out += cell + 9
-        return out.toIntArray()
-    }
-
     /**
      * Cages grown at random over [solution]: each from a random free square by random neighbours, to a size
      * drawn from the tier's mix, never taking a digit the cage already holds. A lone square is folded into
@@ -445,7 +423,7 @@ internal object CageLogic {
             owner[start] = cages.size
             val target = rng.pick(spec.sizes)
             while (cage.size < target) {
-                val options = cage.flatMap { around(it).toList() }.filter {
+                val options = cage.flatMap { orthogonalReading(it, 9) }.filter {
                     owner[it] < 0 && seen and (1 shl solution[it]) == 0
                 }.distinct()
                 if (options.isEmpty()) break
@@ -459,7 +437,7 @@ internal object CageLogic {
         for (k in cages.indices) {
             if (cages[k].size != 1) continue
             val cell = cages[k][0]
-            val host = around(cell).map { owner[it] }.distinct().firstOrNull { h ->
+            val host = orthogonalReading(cell, 9).map { owner[it] }.distinct().firstOrNull { h ->
                 h != k && cages[h].size < spec.cap && cages[h].none { solution[it] == solution[cell] }
             } ?: continue
             cages[host] += cell
@@ -481,7 +459,7 @@ internal object CageLogic {
 
     /** Whether cages [a] and [b] touch edge to edge. */
     private fun touching(cages: Array<IntArray>, a: Int, b: Int): Boolean =
-        cages[a].any { c -> around(c).any { it in cages[b] } }
+        cages[a].any { c -> orthogonalReading(c, 9).any { it in cages[b] } }
 
     /** The givens-and-cages a ladder-finishing board ended with, before it is proved. */
     private class Draft(val cageOf: List<Int>, val givens: BooleanArray)
@@ -555,7 +533,7 @@ internal object CageLogic {
         val board = Board(d.cageOf, sumsOf(d.cageOf, solution))
         val start = List(81) { if (d.givens[it]) solution[it] else 0 }
         val verdict = solutions(board, start)
-        if (verdict !is Verdict.ExactlyOne || verdict.cells != solution) return null
+        if (verdict !is Verdict.ExactlyOne || verdict.value != solution) return null
         return CageState(
             grid = SudokuState(givens = d.givens.toList(), cells = start, solution = solution),
             cageOf = d.cageOf,

@@ -1,8 +1,10 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.fit
 import com.joebywan.daybook.core.lineName
 import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.squareName
 
 /**
  * Tally, reasoned the way a person reasons it: one row or column at a time, and on Expert one
@@ -87,7 +89,7 @@ internal object TallyTeacher {
             val removedWrongly = mark == TallyLogic.REMOVED && s.keep[i] == '1'
             val keptWrongly = mark == TallyLogic.KEPT && s.keep[i] == '0'
             if (!removedWrongly && !keptWrongly) continue
-            val what = "The ${s.digitAt(i)} at ${at(n, i)}"
+            val what = "The ${s.digitAt(i)} at ${squareName(n, i)}"
             return Step(
                 technique = MISTAKE,
                 clears = listOf(i),
@@ -199,16 +201,21 @@ internal object TallyTeacher {
             stays.isNotEmpty() -> "Every one uses ${names(values, stays)}, so circle ${if (stays.size == 1) "it" else "them"}."
             else -> "None uses ${names(values, goes, "or")}, so remove ${if (goes.size == 1) "it" else "them"}."
         }
-        var why = how + verdict
-        if (why.length > MAX_EXPLANATION) why = "There are ${ways.size} ways to make $target in $name. $verdict"
-        if (why.length > MAX_EXPLANATION) why = "Every way to make $target in $name settles ${stays.size + goes.size} of its numbers."
+        val why = fit(
+            listOf(
+                how + verdict,
+                "There are ${ways.size} ways to make $target in $name. $verdict",
+                "Every way to make $target in $name settles ${stays.size + goes.size} of its numbers.",
+            ),
+            MAX_EXPLANATION,
+        )
         return step(WAYS, stays, goes, "Look at the ways $name can make $target.", why)
     }
 
     private fun whatIfStep(n: Int, digits: IntArray, targets: List<Int>, w: TallyLogic.WhatIf): Step {
         val i = w.square
         val stayed = w.assume == TallyLogic.STAY
-        val square = "the ${digits[i]} at ${at(n, i)}"
+        val square = "the ${digits[i]} at ${squareName(n, i)}"
         val suppose = "If $square ${if (stayed) "stayed" else "went"}"
         val fail = "${lineName(n, w.line)} could no longer make ${targets[w.line]}"
         val verdict = "So it ${if (stayed) "goes" else "stays"}."
@@ -231,9 +238,7 @@ internal object TallyTeacher {
             val chain = listed(parts, oxford = true)
             return "$suppose, $chain. $verdict"
         }
-        var why = sentence(true)
-        if (why.length > MAX_EXPLANATION) why = sentence(false)
-        if (why.length > MAX_EXPLANATION) why = "$suppose, following ${w.links.size} lines on, $fail. $verdict"
+        val why = fit(listOf(sentence(true), sentence(false), "$suppose, following ${w.links.size} lines on, $fail. $verdict"), MAX_EXPLANATION)
 
         val cited = w.links.flatMap { it.stays + it.goes }.toSet() + (n * n + w.line)
         return Step(
@@ -242,14 +247,13 @@ internal object TallyTeacher {
             goes = if (stayed) listOf(i) else emptyList(),
             focus = setOf(i),
             cited = cited,
-            nudge = "Suppose the ${digits[i]} at ${at(n, i)} ${if (stayed) "stays" else "goes"}.",
+            nudge = "Suppose the ${digits[i]} at ${squareName(n, i)} ${if (stayed) "stays" else "goes"}.",
             explanation = why,
         )
     }
 
     // ---- words ----------------------------------------------------------------------------
 
-    private fun at(n: Int, i: Int) = "row ${i / n + 1}, column ${i % n + 1}"
 
     /**
      * "the 8", "the 8 and 3", "the 8, 3 and 1", with a square number where the line repeats a

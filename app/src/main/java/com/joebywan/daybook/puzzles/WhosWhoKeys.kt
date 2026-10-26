@@ -2,6 +2,8 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.arrowStep
+import com.joebywan.daybook.core.digitKey
+import com.joebywan.daybook.core.isEraseKey
 import com.joebywan.daybook.core.stepCursor
 
 /** What a physical key asks of a Who's Who board. */
@@ -16,19 +18,12 @@ sealed interface WhosWhoKeyAction {
     data object Clear : WhosWhoKeyAction
 }
 
-private val DIGITS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five)
-private val PAD_DIGITS = listOf(Key.NumPad1, Key.NumPad2, Key.NumPad3, Key.NumPad4, Key.NumPad5)
-
 /** The action for [key], or null for a key the board does not use. The caller has already ruled out chords. */
 fun whosWhoKeyAction(key: Key, shift: Boolean): WhosWhoKeyAction? {
     if (!shift) arrowStep(key)?.let { (r, c) -> return WhosWhoKeyAction.Move(r, c) }
-    val digit = DIGITS.indexOf(key).takeIf { it >= 0 } ?: PAD_DIGITS.indexOf(key).takeIf { it >= 0 }
-    if (digit != null) return WhosWhoKeyAction.Mark(digit, tick = !shift)
-    if (shift) return null
-    return when (key) {
-        Key.Backspace, Key.Delete -> WhosWhoKeyAction.Clear
-        else -> null
-    }
+    val digit = digitKey(key)?.takeIf { it in 1..5 }
+    if (digit != null) return WhosWhoKeyAction.Mark(digit - 1, tick = !shift)
+    return if (!shift && isEraseKey(key)) WhosWhoKeyAction.Clear else null
 }
 
 /** The selection after a key and the board it leaves; [board] is the same instance when nothing changed. */

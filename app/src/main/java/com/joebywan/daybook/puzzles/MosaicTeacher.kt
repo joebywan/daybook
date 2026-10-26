@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.forEachBit
+import com.joebywan.daybook.core.plural
 
 /**
  * Mosaic, taught one fill at a time.
@@ -474,5 +475,5 @@ internal object MosaicTeacher {
 
     // ---- words ----------------------------------------------------------------------------------
 
-    private fun fills(n: Int) = if (n == 1) "1 fill" else "$n fills"
+    private fun fills(n: Int) = plural(n, "fill")
 }

@@ -2,6 +2,8 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
+import com.joebywan.daybook.core.orthogonalReading
 import kotlinx.serialization.Serializable
 
 /**
@@ -41,7 +43,7 @@ data class LampsState(
     fun clashes(): Set<Int> = LampsLogic.clashes(size, walls, lamps())
 
     /** Lamps beside numbered wall [w]. */
-    fun lampsBeside(w: Int): Int = LampsLogic.orth(size, w).count { marks[it] == LampsLogic.LAMP_MARK }
+    fun lampsBeside(w: Int): Int = orthogonalReading(w, size).count { marks[it] == LampsLogic.LAMP_MARK }
 
     /** Sets [mark] on white square [i]; `this` on a wall or when nothing changes. */
     fun withMark(i: Int, mark: Char): LampsState =
@@ -49,12 +51,6 @@ data class LampsState(
         else copy(marks = marks.substring(0, i) + mark + marks.substring(i + 1), moves = moves + 1)
 }
 
-/** What an exhaustive count found. Only [ExactlyOne] carries an answer, so nothing else can be shipped as one. */
-sealed interface LampsVerdict {
-    data object None : LampsVerdict
-    data class ExactlyOne(val lamps: String) : LampsVerdict
-    data object Several : LampsVerdict
-}
 
 /**
  * The rules, the ladder, the exhaustive count and the generator. Nothing here touches the screen, the platform or a
@@ -100,15 +96,6 @@ internal object LampsLogic {
 
     // ---- geometry -----------------------------------------------------------------------------
 
-    fun orth(n: Int, i: Int): List<Int> = buildList {
-        val r = i / n
-        val c = i % n
-        if (r > 0) add(i - n)
-        if (c > 0) add(i - 1)
-        if (c < n - 1) add(i + 1)
-        if (r < n - 1) add(i + n)
-    }
-
     /** The white squares a lamp on [i] lights besides [i]: its row and column, out to a wall or the edge. */
     fun sight(n: Int, walls: String, i: Int): List<Int> = buildList {
         for ((dr, dc) in DIRS) {
@@ -130,9 +117,9 @@ internal object LampsLogic {
         val sight: Array<IntArray> = Array(n * n) { if (white[it]) sight(n, walls, it).toIntArray() else IntArray(0) }
         val number = IntArray(n * n) { walls[it].let { ch -> if (ch in '0'..'4') ch - '0' else -1 } }
         val numbered: IntArray = (0 until n * n).filter { number[it] >= 0 }.toIntArray()
-        val beside: Array<IntArray> = Array(n * n) { orth(n, it).filter { j -> white[j] }.toIntArray() }
+        val beside: Array<IntArray> = Array(n * n) { orthogonalReading(it, n).filter { j -> white[j] }.toIntArray() }
         val whites: IntArray = (0 until n * n).filter { white[it] }.toIntArray()
-        val numbersBeside: Array<IntArray> = Array(n * n) { orth(n, it).filter { j -> number[j] >= 0 }.toIntArray() }
+        val numbersBeside: Array<IntArray> = Array(n * n) { orthogonalReading(it, n).filter { j -> number[j] >= 0 }.toIntArray() }
     }
 
     // ---- the rules ----------------------------------------------------------------------------
@@ -156,7 +143,7 @@ internal object LampsLogic {
         for (i in 0 until n * n) {
             val ch = walls[i]
             if (ch == WHITE && !lit[i]) return false
-            if (ch in '0'..'4' && orth(n, i).count { lamps[it] } != ch - '0') return false
+            if (ch in '0'..'4' && orthogonalReading(i, n).count { lamps[it] } != ch - '0') return false
         }
         return clashes(n, walls, lamps).isEmpty()
     }
@@ -457,9 +444,9 @@ internal object LampsLogic {
      * How many lamp sets obey the rules, with no budget. The direct facts are propagated at every node (they are sound,
      * so no answer is lost); then the unlit square with the fewest sources is split by which of them is its first lamp
      * (sources before it hold none), a partition of the answers, so none is counted twice. Only
-     * [LampsVerdict.ExactlyOne] carries the answer.
+     * [Verdict.ExactlyOne] carries the answer.
      */
-    fun countSolutions(n: Int, walls: String): LampsVerdict {
+    fun countSolutions(n: Int, walls: String): Verdict {
         val g = Geo(n, walls)
         var found = 0
         var answer = ""
@@ -492,11 +479,7 @@ internal object LampsLogic {
             }
         }
         walk(IntArray(n * n))
-        return when (found) {
-            0 -> LampsVerdict.None
-            1 -> LampsVerdict.ExactlyOne(answer)
-            else -> LampsVerdict.Several
-        }
+        return Verdict.of(found) { answer }
     }
 
     // ---- generation -------------------------------------------------------------------------
@@ -550,7 +533,7 @@ internal object LampsLogic {
     fun accepts(s: LampsState, spec: Spec): Boolean {
         if (depth(s) != spec.needs) return false
         val verdict = countSolutions(s.size, s.walls)
-        return verdict is LampsVerdict.ExactlyOne && verdict.lamps == s.solution
+        return verdict is Verdict.ExactlyOne && verdict.value == s.solution
     }
 
     /** Half-turn-symmetric walls, every wall numbered, and a lamp on each white square still dark in a random order. */
@@ -574,7 +557,7 @@ internal object LampsLogic {
             lit[i] = true
             for (j in sight(n, walls, i)) lit[j] = true
         }
-        for (i in 0 until n * n) if (w[i] == WALL) w[i] = '0' + orth(n, i).count { lamps[it] }
+        for (i in 0 until n * n) if (w[i] == WALL) w[i] = '0' + orthogonalReading(i, n).count { lamps[it] }
         return LampsState(n, w.concatToString(), CharArray(n * n) { if (lamps[it]) '1' else '0' }.concatToString())
     }
 

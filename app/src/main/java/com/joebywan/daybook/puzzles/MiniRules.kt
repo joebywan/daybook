@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 
 /**
  * The rules of the Mini crossword, its proof and its generator.
@@ -92,12 +93,6 @@ internal object MiniLogic {
 
     // ---- proof -------------------------------------------------------------------------------------
 
-    /** What an exhaustive search says. Only [ExactlyOne] carries a fill, so "gave up" cannot pass for one. */
-    sealed interface Verdict {
-        data object None : Verdict
-        class ExactlyOne(val grid: String) : Verdict
-        data object Several : Verdict
-    }
 
     /**
      * Every fill of [letters]' open squares in which every slot spells a word of the grid lists, counted to two. The open
@@ -138,11 +133,7 @@ internal object MiniLogic {
             }
         }
         search()
-        return when (found) {
-            0 -> Verdict.None
-            1 -> Verdict.ExactlyOne(first!!)
-            else -> Verdict.Several
-        }
+        return Verdict.of(found) { first!! }
     }
 
     // ---- generator ---------------------------------------------------------------------------------
@@ -195,7 +186,7 @@ internal object MiniLogic {
         val read = CharArray(size * size) { if (entry[it] == BLACK) BLACK else OPEN }
         for (hit in walk) if (hit.technique == MiniTeacher.CLUE) read[hit.square] = hit.letter
         val proof = solve(size, read.concatToString()) as? Verdict.ExactlyOne ?: return null
-        if (proof.grid != entry) return null
+        if (proof.value != entry) return null
         return MiniState(size = size, answer = entry, clues = clues, letters = read.map { if (it == BLACK) BLACK else OPEN }.joinToString(""))
     }
 

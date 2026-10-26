@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.squareName
 
 /**
  * Nonograms, reasoned the way a person reasons them: one row or column at a time.
@@ -86,7 +87,7 @@ internal object NonogramTeacher {
             if (!wrong) continue
             val r = i / s.width
             val c = i % s.width
-            val where = "row ${r + 1}, column ${c + 1}"
+            val where = squareName(s.width, i)
             return Step(
                 technique = MISTAKE,
                 clears = listOf(i),

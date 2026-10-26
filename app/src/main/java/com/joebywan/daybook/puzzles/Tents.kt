@@ -52,6 +52,7 @@ import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.union
+import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
@@ -75,8 +76,6 @@ object Tents : PuzzleType {
 
     private const val DOUBLE_TAP_MS = 300L
     private val tapClock = TimeSource.Monotonic.markNow()
-
-    private class Cell<T>(var v: T)
 
     private data class Pending(val cell: Int, val base: TentsState, val after: TentsState)
 

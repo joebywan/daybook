@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.numberWord
+import com.joebywan.daybook.core.orthogonal
 
 /**
  * LITS, reasoned the way a person reasons it, one named step at a time.
@@ -91,7 +92,7 @@ internal object LitsTeacher {
             Lits.tetrominoes(cellsOf[k], w, h).map { (cells, piece) -> Shape(cells.sorted(), piece) }
         }
 
-        fun neighbours(cell: Int) = Lits.neighbours(cell, w, h)
+        fun neighbours(cell: Int) = orthogonal(cell, w, h)
 
         /** Top-left corners of every 2x2 window containing [cell]. */
         fun windowsAt(cell: Int): List<Int> {

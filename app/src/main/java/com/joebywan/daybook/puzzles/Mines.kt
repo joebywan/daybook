@@ -66,6 +66,8 @@ import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.neighbours8
+import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
@@ -161,7 +163,7 @@ object Mines : PuzzleType {
         val s1 = s0.reveal(BUMP)!!
         val s2 = SAFE.fold(s1) { acc, i -> acc.reveal(i)!! }
         val s3 = s2.flag(FLAG_SQUARE)!!
-        fun around(i: Int) = MinesLogic.neighbours(5, 5, i).toSet()
+        fun around(i: Int) = neighbours8(5, 5, i).toSet()
         listOf(
             TutorialFrame(
                 state = s0,
@@ -476,7 +478,7 @@ object Mines : PuzzleType {
         } else {
             val left = s.minesLeft
             Text(
-                if (s.solved) "All clear" else "$left mine${if (left == 1) "" else "s"} left",
+                if (s.solved) "All clear" else "${plural(left, "mine")} left",
                 style = MaterialTheme.typography.labelLarge,
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,

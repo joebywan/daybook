@@ -56,6 +56,8 @@ import com.joebywan.daybook.ui.hintOutline
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
 import androidx.compose.foundation.layout.BoxScope
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.orthogonal
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -516,18 +518,8 @@ object Kings : PuzzleType {
      * already did, so no board on Android changed.
      */
     private fun hostsOf(cell: Int, n: Int, region: List<Int>): Set<Int> =
-        neighbours(cell, n).mapNotNullTo(HashSet()) { region[it].takeIf { id -> id != -1 } }
+        orthogonal(cell, n).mapNotNullTo(HashSet()) { region[it].takeIf { id -> id != -1 } }
 
-    private fun neighbours(cell: Int, n: Int): List<Int> {
-        val r = cell / n
-        val c = cell % n
-        return listOfNotNull(
-            if (r > 0) cell - n else null,
-            if (r < n - 1) cell + n else null,
-            if (c > 0) cell - 1 else null,
-            if (c < n - 1) cell + 1 else null,
-        )
-    }
 
     /**
      * Counts legal king layouts for these regions, stopping at two.
@@ -655,7 +647,7 @@ object Kings : PuzzleType {
             ),
             TutorialFrame(
                 state = cornerLeft,
-                caption = "${first.replaceFirstChar { it.uppercaseChar() }} has only one square left, so its king must go there. " +
+                caption = "${first.cap()} has only one square left, so its king must go there. " +
                     "Double-tap it to crown it.",
                 highlight = BoardHighlight(strong = setOf(0), soft = setOf(1)),
                 accepts = only(cornerLeft, mapOf(0 to Mark.KING)),
@@ -664,7 +656,7 @@ object Kings : PuzzleType {
             ),
             TutorialFrame(
                 state = crowned,
-                caption = "${second.replaceFirstChar { it.uppercaseChar() }} sits entirely in column 3, so column 3's king is $second. Drag down the " +
+                caption = "${second.cap()} sits entirely in column 3, so column 3's king is $second. Drag down the " +
                     "glowing squares to cross them all out in one sweep.",
                 highlight = BoardHighlight(strong = setOf(12, 17, 22), soft = secondCells),
                 accepts = only(crowned, mapOf(12 to Mark.BLOCKED, 17 to Mark.BLOCKED, 22 to Mark.BLOCKED)),

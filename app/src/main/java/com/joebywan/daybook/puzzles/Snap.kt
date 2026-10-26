@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.Path
+import com.joebywan.daybook.core.orthogonal
+import com.joebywan.daybook.ui.gridCellAt
 
 @Serializable
 data class SnapState(
@@ -206,17 +208,6 @@ object Snap : PuzzleType {
         }
     }
 
-    private fun neighbours(cell: Int, w: Int, h: Int): List<Int> {
-        val r = cell / w
-        val c = cell % w
-        return buildList {
-            if (r > 0) add(cell - w)
-            if (r < h - 1) add(cell + w)
-            if (c > 0) add(cell - 1)
-            if (c < w - 1) add(cell + 1)
-        }
-    }
-
     /** Randomised search for a Hamiltonian path, starting from a random square. */
     private fun hamiltonian(rng: Rng, w: Int, h: Int): List<Int>? {
         val n = w * h
@@ -230,8 +221,8 @@ object Snap : PuzzleType {
             path += cell
             if (path.size == n) return true
             // Warnsdorff-ish: try the most hemmed-in neighbour first.
-            val options = rng.shuffled(neighbours(cell, w, h).filter { !seen[it] })
-                .sortedBy { neighbours(it, w, h).count { next -> !seen[next] } }
+            val options = rng.shuffled(orthogonal(cell, w, h).filter { !seen[it] })
+                .sortedBy { orthogonal(it, w, h).count { next -> !seen[next] } }
             for (next in options) {
                 if (extend(next)) return true
             }
@@ -260,7 +251,7 @@ object Snap : PuzzleType {
             seen[cell] = true
         }
         for (i in 1 until n) {
-            if (path[i] !in neighbours(path[i - 1], s.width, s.height)) return false
+            if (path[i] !in orthogonal(path[i - 1], s.width, s.height)) return false
         }
         val order = path.mapNotNull { s.waypoints[it].takeIf { mark -> mark > 0 } }
         val top = order.size
@@ -292,7 +283,7 @@ object Snap : PuzzleType {
         val start = marks.indexOf(1)
         if (start < 0) return Verdict.NONE
 
-        val nbr = Array(n) { neighbours(it, w, h).toIntArray() }
+        val nbr = Array(n) { orthogonal(it, w, h).toIntArray() }
         val seen = BooleanArray(n)
         val stack = IntArray(n)
         val stamp = IntArray(n)
@@ -379,12 +370,6 @@ object Snap : PuzzleType {
 
     // ---- drawing ------------------------------------------------------------------------------
 
-    private fun cellOf(s: SnapState, x: Float, y: Float): Int {
-        val c = x.toInt().coerceIn(0, s.width - 1)
-        val r = y.toInt().coerceIn(0, s.height - 1)
-        return r * s.width + c
-    }
-
     /** Appends or rubs out one square, following the drag. Anything illegal leaves [current] as it was. */
     internal fun extend(current: SnapState, cell: Int): SnapState {
         val path = current.path
@@ -398,13 +383,13 @@ object Snap : PuzzleType {
             return current.copy(path = path.dropLast(1), moves = current.moves + 1)
         }
         if (cell in path) return current
-        if (cell !in neighbours(path.last(), current.width, current.height)) return current
+        if (cell !in orthogonal(path.last(), current.width, current.height)) return current
         return current.copy(path = path + cell, moves = current.moves + 1)
     }
 
     /** A drag begins at ([x], [y]), in cell units: on the line it trims back to that square, else it extends. */
     internal fun dragStart(current: SnapState, x: Float, y: Float): SnapState {
-        val cell = cellOf(current, x, y)
+        val cell = gridCellAt(Offset(x, y), 1f, current.width, current.height)
         return if (cell in current.path) {
             current.copy(path = current.path.take(current.path.indexOf(cell) + 1))
         } else {

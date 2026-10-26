@@ -27,7 +27,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +49,7 @@ import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.joebywan.daybook.ui.theme.BoardHues
 
 /** An axis-aligned block of cells, inclusive on both corners. */
 @Serializable
@@ -513,7 +513,7 @@ object Shikaku : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
-        val dark = scheme.background.luminance() < 0.5f
+        val dark = BoardHues.isDark(scheme)
         BoxWithConstraints(modifier) {
             // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
             // shorter box than it is wide should shrink rather than draw its bottom row outside.
@@ -533,7 +533,7 @@ object Shikaku : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as ShikakuState
         val scheme = MaterialTheme.colorScheme
-        val dark = scheme.background.luminance() < 0.5f
+        val dark = BoardHues.isDark(scheme)
         val highlight = LocalBoardHighlight.current
         val glow = if (highlight.warning) scheme.error else scheme.onBackground
         // Breathes, as the other teaching boards' do, so a glowing square is findable at a glance on

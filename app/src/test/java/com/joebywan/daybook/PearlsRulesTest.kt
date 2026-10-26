@@ -1,11 +1,11 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.PearlsGrid
 import com.joebywan.daybook.puzzles.PearlsLogic
 import com.joebywan.daybook.puzzles.PearlsState
-import com.joebywan.daybook.puzzles.PearlsVerdict
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -70,7 +70,7 @@ class PearlsRulesTest {
         val stored = PearlsState(4, pearls, loopString(4, border4))
         assertTrue(stored.copy(edges = drawn(4, border4)).solved)
         assertTrue(stored.copy(edges = drawn(4, small)).solved)
-        assertEquals(PearlsVerdict.Several, PearlsLogic.solutions(4, pearls))
+        assertEquals(Verdict.Several, PearlsLogic.solutions(4, pearls))
         assertTrue(PearlsOracle.answers(4, pearls).size == 2)
     }
 
@@ -78,7 +78,7 @@ class PearlsRulesTest {
     fun `the count says none for a board with no loop`() {
         // Two black pearls side by side can never both turn with straight arms.
         val pearls = pearlsAt(4, 5 to 'b', 6 to 'b')
-        assertEquals(PearlsVerdict.None, PearlsLogic.solutions(4, pearls))
+        assertEquals(Verdict.None, PearlsLogic.solutions(4, pearls))
         assertTrue(PearlsOracle.answers(4, pearls).isEmpty())
     }
 

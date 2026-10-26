@@ -44,6 +44,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.forEachBit
 import com.joebywan.daybook.core.jvmHashSetOrder
+import com.joebywan.daybook.core.orthogonal
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -209,7 +210,7 @@ object Lits : PuzzleType {
         // shaded square belongs to the one tetromino.
         for (cell in 0 until n) {
             if (!shaded[cell]) continue
-            for (next in neighbours(cell, width, height)) {
+            for (next in orthogonal(cell, width, height)) {
                 if (!shaded[next] || region[next] == region[cell]) continue
                 if (letters[cell] == letters[next]) return false
             }
@@ -724,7 +725,7 @@ object Lits : PuzzleType {
         private val notFirstColumn: Long
         private val notLastColumn: Long
 
-        val adjacent: Array<IntArray> = Array(n) { neighbours(it, w, h).toIntArray() }
+        val adjacent: Array<IntArray> = Array(n) { orthogonal(it, w, h).toIntArray() }
 
         val mask: LongArray
         /** [Piece] ordinal, or -1 for the 2x2 block. */
@@ -762,7 +763,7 @@ object Lits : PuzzleType {
                         return
                     }
                     for (c in current) {
-                        for (next in neighbours(c, w, h)) {
+                        for (next in orthogonal(c, w, h)) {
                             if (next in current) continue
                             grow((current + next).sorted())
                         }
@@ -847,17 +848,6 @@ object Lits : PuzzleType {
         geometries.firstOrNull { it.w == w && it.h == h }
             ?: Geometry(w, h).also { geometries = geometries + it }
 
-    internal fun neighbours(cell: Int, w: Int, h: Int): List<Int> {
-        val r = cell / w
-        val c = cell % w
-        return buildList {
-            if (r > 0) add(cell - w)
-            if (r < h - 1) add(cell + w)
-            if (c > 0) add(cell - 1)
-            if (c < w - 1) add(cell + 1)
-        }
-    }
-
     /** Every four-square legal tetromino that fits inside [cells]. Internal for [LitsTeacher]. */
     internal fun tetrominoes(cells: List<Int>, w: Int, h: Int): List<kotlin.Pair<List<Int>, Piece>> {
         val out = mutableListOf<kotlin.Pair<List<Int>, Piece>>()
@@ -881,7 +871,7 @@ object Lits : PuzzleType {
         seen += cells.first()
         while (stack.isNotEmpty()) {
             val cell = stack.removeLast()
-            for (next in neighbours(cell, w, h)) {
+            for (next in orthogonal(cell, w, h)) {
                 if (next in set && seen.add(next)) stack.addLast(next)
             }
         }

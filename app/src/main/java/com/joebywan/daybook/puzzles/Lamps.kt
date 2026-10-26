@@ -49,6 +49,8 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.movedCursor
+import com.joebywan.daybook.core.orthogonalReading
+import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
@@ -72,8 +74,6 @@ object Lamps : PuzzleType {
 
     private const val DOUBLE_TAP_MS = 300L
     private val tapClock = TimeSource.Monotonic.markNow()
-
-    private class Cell<T>(var v: T)
 
     private data class Pending(val cell: Int, val base: LampsState, val after: LampsState)
 
@@ -198,7 +198,7 @@ object Lamps : PuzzleType {
     internal fun badNumbers(s: LampsState, lit: BooleanArray = s.lit()): Set<Int> = (0 until s.size * s.size).filterTo(mutableSetOf()) { w ->
         val want = s.numberAt(w)
         if (want < 0) return@filterTo false
-        val beside = LampsLogic.orth(s.size, w).filter { !s.isWall(it) }
+        val beside = orthogonalReading(w, s.size).filter { !s.isWall(it) }
         val on = beside.count { s.marks[it] == LampsLogic.LAMP_MARK }
         val room = beside.count { s.marks[it] != LampsLogic.LAMP_MARK && !lit[it] }
         on > want || on + room < want
@@ -373,7 +373,7 @@ object Lamps : PuzzleType {
         // A numbered wall's squares glow once when its count is met.
         val units = remember(base.walls) {
             (0 until n * n).filter { base.numberAt(it) > 0 }.map { w ->
-                (listOf(w) + LampsLogic.orth(n, w).filter { !base.isWall(it) }).toIntArray()
+                (listOf(w) + orthogonalReading(w, n).filter { !base.isWall(it) }).toIntArray()
             }
         }
         val feel = rememberMoveFeel(base.marks.toList(), units) { u ->

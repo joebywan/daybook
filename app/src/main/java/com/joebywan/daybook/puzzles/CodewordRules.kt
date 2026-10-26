@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.core.bit
 
 /**
@@ -124,12 +125,6 @@ internal object CodewordLogic {
 
     // ---- proof -------------------------------------------------------------------------------------
 
-    /** What an exhaustive search says. Only [ExactlyOne] carries an answer, so "gave up" cannot pass for one. */
-    sealed interface Verdict {
-        data object None : Verdict
-        class ExactlyOne(val letters: List<Int>) : Verdict
-        data object Several : Verdict
-    }
 
     /**
      * Every substitution for the board, counted to two. [known] is a letter per number ([EMPTY] for open). Of the runs
@@ -210,11 +205,7 @@ internal object CodewordLogic {
             }
         }
         search()
-        return when (found) {
-            0 -> Verdict.None
-            1 -> Verdict.ExactlyOne(first!!)
-            else -> Verdict.Several
-        }
+        return Verdict.of(found) { first!! }
     }
 
     // ---- generator ---------------------------------------------------------------------------------
@@ -263,7 +254,7 @@ internal object CodewordLogic {
         val letters = List(order.size) { if (it + 1 in given) order[it] else EMPTY }
         if (given.isEmpty() || !CodewordTeacher.solvesByLogic(entry.size, numbers, letters)) return null
         val verdict = solve(entry.size, numbers, letters) as? Verdict.ExactlyOne ?: return null
-        return CodewordState(size = entry.size, numbers = numbers, solution = verdict.letters, given = given, letters = letters)
+        return CodewordState(size = entry.size, numbers = numbers, solution = verdict.value, given = given, letters = letters)
     }
 
     fun generate(seed: Long, difficulty: Difficulty): CodewordState = generateVerified(seed, difficulty) ?: lastResort(difficulty)

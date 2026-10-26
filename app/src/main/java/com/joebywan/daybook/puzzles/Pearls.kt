@@ -45,6 +45,7 @@ import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.geometry.Rect
+import com.joebywan.daybook.ui.gridCellAt
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -88,10 +89,6 @@ object Pearls : PuzzleType {
     }
 
     // ---- input geometry (pure, tested) ----------------------------------------------------------
-
-    /** The square under ([x], [y]), in square units, clamped onto the board. */
-    fun cellAt(n: Int, x: Float, y: Float): Int =
-        floor(y).toInt().coerceIn(0, n - 1) * n + floor(x).toInt().coerceIn(0, n - 1)
 
     /** How near the middle of an edge a tap must land to name it, in squares. */
     const val TAP_REACH = 0.42f
@@ -505,7 +502,7 @@ object Pearls : PuzzleType {
                             onDragStart = { down, _, _ ->
                                 lastX = down.position.x / unitPx
                                 lastY = down.position.y / unitPx
-                                path = listOf(cellAt(n, lastX, lastY))
+                                path = listOf(gridCellAt(Offset(lastX, lastY), 1f, n, n))
                             },
                             onDrag = { change, _ ->
                                 change.consume()

@@ -63,7 +63,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.Font
 import kotlin.coroutines.resume
-import kotlin.random.Random
 
 // The web half of the platform seam: the same functions, in the same package, as
 // app/src/main/java/com/joebywan/daybook/platform/AndroidPlatform.kt. The shared screens call them
@@ -79,15 +78,8 @@ internal var dateOverride: LocalDate? = null
 private fun localDateCode(): Int =
     js("(() => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); })()")
 
-private fun nowMillis(): Double = js("Date.now()")
-
 fun currentDate(): LocalDate =
     dateOverride ?: localDateCode().let { LocalDate(it / 10000, it / 100 % 100, it % 100) }
-
-fun currentTimeMillis(): Long = nowMillis().toLong()
-
-/** Only has to be fresh, never ordered: it seeds a random board. */
-fun freshNonce(): Long = Random.nextLong()
 
 private val DAY_NAMES = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 private val MONTH_NAMES = listOf(
@@ -111,8 +103,6 @@ fun formatDate(date: LocalDate, pattern: String): String =
             else -> error("formatDate: unsupported field '$field' in '$pattern'")
         }
     }
-
-fun formatClock(seconds: Int): String = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"
 
 @Composable
 fun rememberKeyValueStore(name: String): KeyValueStore = remember(name) { WebStores.get(name) }
@@ -367,13 +357,6 @@ const val GENERATION_ANIMATES: Boolean = false
 /** Settings text under the Sound switch: what else keeps the chime quiet on this platform. */
 const val SOLVE_SOUND_NOTE: String =
     "A browser cannot see your phone's silent switch, so turn this off if you want it quiet."
-
-/**
- * Zero, deliberately. A delayed message would never be seen: generation holds the only thread, so
- * the message has to be painted before it starts (see [awaitPaint]). Boards that are cheap are
- * mostly in the cache and skip the loading screen entirely.
- */
-const val LOADING_MESSAGE_DELAY_MS: Long = 0L
 
 /** How long the home grid is up before the first board is made, so an early tap is not kept waiting. */
 private const val PREPARE_AFTER_MS = 400L

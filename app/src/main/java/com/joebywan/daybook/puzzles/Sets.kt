@@ -56,6 +56,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.core.isConfirmKey
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
@@ -567,7 +568,7 @@ object Sets : PuzzleType {
             Modifier.fillMaxWidth().boardKeys(interactive) { key, _, repeat ->
                 movedCursor(cursor, key, boardRows(s.cards.size), boardColumns(s.cards.size))?.let { cursor = it.coerceAtMost(s.cards.lastIndex); return@boardKeys true }
                 val at = cursor ?: return@boardKeys false
-                if (!setsPickKey(key)) return@boardKeys false
+                if (!isConfirmKey(key)) return@boardKeys false
                 if (!repeat) {
                     peeked = -1
                     onState(tap(s, at))
