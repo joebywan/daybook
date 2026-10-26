@@ -40,6 +40,7 @@ import com.joebywan.daybook.platform.rememberKeyValueStore
 import com.joebywan.daybook.platform.rememberReducedMotion
 import com.joebywan.daybook.platform.rememberSolveSoundPlayer
 import com.joebywan.daybook.ui.tutorial.LocalChime
+import com.joebywan.daybook.ui.archive.ArchiveDaysScreen
 import com.joebywan.daybook.ui.archive.ArchiveScreen
 import com.joebywan.daybook.ui.home.HomeScreen
 import com.joebywan.daybook.ui.home.LaunchMode
@@ -91,13 +92,24 @@ sealed interface Route {
     data class Achievements(val fromHome: Boolean = false) : Route
     /** The techniques hints have explained, opened from Statistics. */
     data object Techniques : Route
-    /** [day]: the day last played from it, which the list opens at. */
-    data class Archive(val puzzleId: String, val day: LocalDate? = null) : Route
+    /** The archive by day. [day]: the day selected; [fromStats]: opened from the streak calendar, so back is Statistics. */
+    data class Days(val day: LocalDate? = null, val fromStats: Boolean = false) : Route
+    /**
+     * One puzzle's archive. [day]: the day last played from it, which the list opens at.
+     * [fromDays]: opened from the archive by day, so back returns there (and on to Statistics if [fromStats]).
+     */
+    data class Archive(
+        val puzzleId: String,
+        val day: LocalDate? = null,
+        val fromDays: Boolean = false,
+        val fromStats: Boolean = false,
+    ) : Route
     /** The levels list; [level] shows that level's five boards instead. */
     data class Levels(val level: Int? = null) : Route
     /**
      * [fromArchive]: back returns to the puzzle's archive, at this day, rather than Home.
      * [level]: a board of that level, seeded from its plan (then [day] is null and [nonce] unused).
+     * [fromDays]: opened from the archive by day (or from a puzzle's archive opened there); [fromStats]: and that from Statistics.
      */
     data class Play(
         val puzzleId: String,
@@ -106,6 +118,8 @@ sealed interface Route {
         val nonce: Long = 0L,
         val fromArchive: Boolean = false,
         val level: Int? = null,
+        val fromDays: Boolean = false,
+        val fromStats: Boolean = false,
     ) : Route
 }
 
@@ -113,7 +127,10 @@ sealed interface Route {
 internal fun backFrom(r: Route): Route = when {
     r is Route.Achievements && !r.fromHome -> Route.Stats
     r is Route.Techniques -> Route.Stats
-    r is Route.Play && r.fromArchive -> Route.Archive(r.puzzleId, r.day)
+    r is Route.Play && r.fromArchive -> Route.Archive(r.puzzleId, r.day, r.fromDays, r.fromStats)
+    r is Route.Play && r.fromDays -> Route.Days(r.day, r.fromStats)
+    r is Route.Archive && r.fromDays -> Route.Days(r.day, r.fromStats)
+    r is Route.Days && r.fromStats -> Route.Stats
     r is Route.Levels && r.level != null -> Route.Levels()
     else -> Route.Home
 }
@@ -129,9 +146,11 @@ internal fun encodeRoute(r: Route): String =
         Route.Settings -> "settings"
         Route.Techniques -> "techniques"
         is Route.Achievements -> "achievements|${r.fromHome}"
-        is Route.Archive -> "archive|${r.puzzleId}|${r.day ?: ""}"
+        is Route.Days -> "days|${r.day ?: ""}|${r.fromStats}"
+        is Route.Archive -> "archive|${r.puzzleId}|${r.day ?: ""}|${r.fromDays}|${r.fromStats}"
         is Route.Levels -> "levels|${r.level ?: ""}"
-        is Route.Play -> "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}|${r.fromArchive}|${r.level ?: ""}"
+        is Route.Play ->
+            "play|${r.puzzleId}|${r.difficulty.name}|${r.day ?: ""}|${r.nonce}|${r.fromArchive}|${r.level ?: ""}|${r.fromDays}|${r.fromStats}"
     }
 
 internal fun decodeRoute(text: String): Route {
@@ -142,7 +161,11 @@ internal fun decodeRoute(text: String): Route {
         "techniques" -> Route.Techniques
         "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
         // The fields after the first few came later: a string saved before them still decodes.
-        "archive" -> Route.Archive(f[1], f.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse))
+        "days" -> Route.Days(f.getOrNull(1)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse), f.getOrNull(2) == "true")
+        "archive" -> Route.Archive(
+            f[1], f.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse),
+            fromDays = f.getOrNull(3) == "true", fromStats = f.getOrNull(4) == "true",
+        )
         "levels" -> Route.Levels(f.getOrNull(1)?.toIntOrNull())
         "play" -> Route.Play(
             puzzleId = f[1],
@@ -151,6 +174,8 @@ internal fun decodeRoute(text: String): Route {
             nonce = f[4].toLong(),
             fromArchive = f.getOrNull(5) == "true",
             level = f.getOrNull(6)?.toIntOrNull(),
+            fromDays = f.getOrNull(7) == "true",
+            fromStats = f.getOrNull(8) == "true",
         )
         // Anything else, such as "arrange|..." from the Arrange screen that the drag on the grid replaced, goes home.
         else -> Route.Home
@@ -276,7 +301,7 @@ private fun DaybookScreens(
     // leaving a game this way — the board is saved on the way out and restored on the way back in.
     //
     // A dialog is a window of its own and takes the back press before the activity ever sees it,
-    // so this cannot fire while the archive picker or the rules sheet is open.
+    // so this cannot fire while the rules sheet is open.
     //
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
     PlatformBackHandler(enabled = route != Route.Home) { route = backFrom(route) }
@@ -347,7 +372,7 @@ private fun DaybookScreens(
                 },
                 levels = levels,
                 onLevels = { route = Route.Levels() },
-                onArchive = { puzzleId -> route = Route.Archive(puzzleId) },
+                onArchive = { route = Route.Days() },
                 onStats = { route = Route.Stats },
                 onAchievements = { route = Route.Achievements(fromHome = true) },
                 onSettings = { route = Route.Settings },
@@ -376,6 +401,7 @@ private fun DaybookScreens(
             onAchievements = { route = Route.Achievements() },
             techniques = techniquesMet,
             onTechniques = { route = Route.Techniques },
+            onDay = { route = Route.Days(it, fromStats = true) },
             onBack = { route = Route.Home },
         )
 
@@ -412,19 +438,40 @@ private fun DaybookScreens(
             onBack = { route = backFrom(current) },
         )
 
+        is Route.Days -> ArchiveDaysScreen(
+            today = today,
+            completions = completions,
+            // The home grid's order: the player's own, or most played first.
+            puzzles = puzzles,
+            onPlay = { puzzleId, day, difficulty ->
+                route = Route.Play(puzzleId, difficulty, day, fromDays = true, fromStats = current.fromStats)
+            },
+            onPuzzle = { puzzleId, day -> route = Route.Archive(puzzleId, day, fromDays = true, fromStats = current.fromStats) },
+            onBack = { route = backFrom(current) },
+            inProgress = { day ->
+                val keys = PuzzleRegistry.all.flatMap { p ->
+                    Difficulty.entries.map { savedGameKey(p.id, it, DailySeed.seedFor(day, p.id, it)) to (p.id to it) }
+                }.toMap()
+                store.inProgress(keys.keys).map { saved -> saved.mapNotNullTo(HashSet(), keys::get) }
+            },
+            openAt = current.day,
+        )
+
         is Route.Archive -> ArchiveScreen(
             puzzleId = current.puzzleId,
             today = today,
             completions = completions,
             onPlay = { day, difficulty ->
-                route = Route.Play(current.puzzleId, difficulty, day, fromArchive = true)
+                route = Route.Play(
+                    current.puzzleId, difficulty, day, fromArchive = true, fromDays = current.fromDays, fromStats = current.fromStats,
+                )
             },
             inProgress = { day ->
                 val keys = Difficulty.entries.associateBy { savedGameKey(current.puzzleId, it, DailySeed.seedFor(day, current.puzzleId, it)) }
                 store.inProgress(keys.keys).map { saved -> saved.mapNotNullTo(HashSet(), keys::get) }
             },
             openAt = current.day,
-            onBack = { route = Route.Home },
+            onBack = { route = backFrom(current) },
         )
 
         is Route.Play -> {
@@ -452,7 +499,7 @@ private fun DaybookScreens(
                     // Only what the store already holds, for the same reason.
                     // "Next puzzle today" on today's own daily opened from Home only, so back from the next board (Home) is
                     // where this one was opened from; an archive board's back is its own puzzle's archive.
-                    val next = if (current.day == today && !current.fromArchive) {
+                    val next = if (current.day == today && !current.fromArchive && !current.fromDays) {
                         nextToday(three, puzzles.map { it.id }, difficulty, doneToday, puzzle.id)
                     } else null
                     nextOptions(daily = current.day != null, tier = difficulty, doneTiers = tiersDoneOn(completions, puzzle.id, current.day), today = next)

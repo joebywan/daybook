@@ -67,6 +67,8 @@ fun StatsScreen(
     /** Per puzzle with a teacher, what its hints have explained (`TechniquesMet`). */
     techniques: List<PuzzleTechniques>,
     onTechniques: () -> Unit,
+    /** A day tapped on the streak calendar: that day in the archive. */
+    onDay: (LocalDate) -> Unit,
     onBack: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -137,7 +139,7 @@ fun StatsScreen(
             }
 
             item {
-                StreakCalendar(completions.mapNotNullTo(HashSet()) { it.day }, today, Modifier.fillMaxWidth())
+                StreakCalendar(completions.mapNotNullTo(HashSet()) { it.day }, today, Modifier.fillMaxWidth(), onDay)
                 Spacer(Modifier.height(8.dp))
             }
 
