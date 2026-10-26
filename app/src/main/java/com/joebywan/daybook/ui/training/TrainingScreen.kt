@@ -199,6 +199,12 @@ fun TechniquePractice(technique: String, record: Set<String>, onPass: (String) -
         }
     }
 
+    // The Hint button's and the hint panel's next step: one path.
+    fun onHint() {
+        val now = board ?: return
+        scope.launch { hints.tap(Sudoku, now, onOpened = { hinted = true }, onApply = { judge(it as SudokuState) }) }
+    }
+
     TitledScreen(titleOf(technique), subtitle, onBack) {
         val b = board
         if (p == null || b == null) {
@@ -217,7 +223,7 @@ fun TechniquePractice(technique: String, record: Set<String>, onPass: (String) -
                 }
             }
             Box(Modifier.fillMaxWidth().height(SlotHeight).padding(horizontal = 18.dp)) {
-                if (verdict == null && hints.active) HintPanel(hints, accent, Modifier.fillMaxSize())
+                if (verdict == null && hints.active) HintPanel(hints, accent, ::onHint, Modifier.fillMaxSize())
                 else {
                     val step = p.step
                     val text = when (verdict) {
@@ -244,12 +250,7 @@ fun TechniquePractice(technique: String, record: Set<String>, onPass: (String) -
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedButton(
-                onClick = {
-                    val now = board ?: return@OutlinedButton
-                    scope.launch {
-                        hints.tap(Sudoku, now, onOpened = { hinted = true }, onApply = { judge(it as SudokuState) })
-                    }
-                },
+                onClick = ::onHint,
                 enabled = board != null && verdict == null,
                 modifier = Modifier.weight(1f),
             ) { Text(hints.buttonLabel()) }
@@ -289,6 +290,10 @@ fun FinalBoard(record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit
     var earned by remember { mutableStateOf<String?>(null) }
     val hints = rememberHintSession("exam")
     WatchHint(hints, Sudoku, board)
+    fun onHint() {
+        val now = board
+        scope.launch { hints.tap(Sudoku, now, onOpened = {}, onApply = { shown = true; board = it as SudokuState }) }
+    }
     LaunchedEffect(board.solved) {
         if (!board.solved) return@LaunchedEffect
         hints.clear()
@@ -305,7 +310,7 @@ fun FinalBoard(record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit
             }
         }
         Box(Modifier.fillMaxWidth().height(SlotHeight).padding(horizontal = 18.dp)) {
-            if (hints.active) HintPanel(hints, accent, Modifier.fillMaxSize())
+            if (hints.active) HintPanel(hints, accent, ::onHint, Modifier.fillMaxSize())
             else Text(
                 when {
                     board.solved && shown -> "Solved, with a Show me along the way. Start again to solve it on your own."
@@ -322,10 +327,7 @@ fun FinalBoard(record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedButton(
-                onClick = {
-                    val now = board
-                    scope.launch { hints.tap(Sudoku, now, onOpened = {}, onApply = { shown = true; board = it as SudokuState }) }
-                },
+                onClick = ::onHint,
                 enabled = !board.solved,
                 modifier = Modifier.weight(1f),
             ) { Text(hints.buttonLabel()) }

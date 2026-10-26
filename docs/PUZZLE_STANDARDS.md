@@ -41,7 +41,7 @@ A puzzle is done when all of these are true:
 |---|---|---|
 | `id` | yes | Saved games, completions, seeds and `?puzzle=` key off it. Never rename. It is hashed into the seed (`SeedHash.stableHash`), so renaming also changes every board. |
 | `displayName`, `tagline` | yes | Tagline is one line on the home card. |
-| `rules: List<String>` | yes | Short summary. Shown as "Rules" inside the walkthrough, and directly by "How to play" if there is no walkthrough. |
+| `rules: List<String>` | yes | Short summary. Shown by the play screen's "?" (under the tagline, with a button into the walkthrough), and as "Rules" inside the walkthrough. |
 | `accent: Long` (ARGB) | yes | Card colour, board highlights, walkthrough buttons. |
 | `generate(seed, difficulty)` | yes | Pure. Section 4. |
 | `Preview(modifier)` | effectively yes | Default is a plain accent block. All of them override it. Fixed motif; never calls `generate`. |
@@ -397,12 +397,14 @@ Hint button and the walkthrough's free-play frame omits it.
 
 ## 8. The walkthrough
 
-Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.kt`, offered once, replayable.
+Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.kt`, offered until taken or not needed, replayable.
 
 **Behaviour.**
-- Offered once as one passive line over the clock on a first visit until the first move; recorded the moment it
-  is shown in `ProgressStore.tutorialsOffered`. No popups, no focus stealing. "How to play" (`?`) opens it
-  whenever; the `rules` list is the runner's "Rules" button. Skip is always on screen.
+- Offered as one passive line over the clock (tagline, then "One-minute walkthrough") on every visit, until the first
+  move of that visit, until the player has opened the walkthrough or solved the puzzle once at any tier; either is
+  recorded in `ProgressStore.tutorialsOffered` (a player whose set already held a puzzle under the old once-only rule
+  is not offered it again). No popups, no focus stealing. "How to play" (`?`) opens a rules sheet (tagline, the `rules`
+  list, "Play the one-minute walkthrough"); the `rules` list is also the runner's "Rules" button. Skip is always on screen.
 - Frame, board and hint state are transient (never in a saved game). The walkthrough draws over the game, so
   the board, undo stack and clock are where the player left them, and the clock pauses.
 - **A finished move moves on by itself.** The move lands, the chime plays, the frame's `done` line shows for

@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -94,6 +95,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
@@ -223,15 +225,20 @@ fun PlayScreen(
         }
     }
     val hintScope = rememberCoroutineScope()
-    // Offered on this visit, and only this one. Saved, so a rotation keeps the line it already
-    // showed rather than losing it to the store's "already offered".
+    // The offer returns on every visit until the player opens the walkthrough or solves this puzzle once, at any tier:
+    // either one is recorded through [onTutorialOffered] (the store's set now means "no longer needs offering"). Saved, so a
+    // rotation keeps the line it already showed.
     var offering by rememberSaveable(initial) { mutableStateOf(false) }
     LaunchedEffect(tutorialOffered) {
-        if (tutorialOffered == false && hasTutorial && !offering) {
-            offering = true
-            onTutorialOffered()
-        }
+        if (tutorialOffered == false && hasTutorial) offering = true
     }
+    fun openTutorial() {
+        showTutorial = true
+        if (offering || tutorialOffered == false) onTutorialOffered()
+        offering = false
+    }
+    // Arrows has no Undo, so its Restart is asked first once a move would be lost.
+    var askStartOver by rememberSaveable(initial) { mutableStateOf(false) }
 
     val state = game.state
     val seconds = game.seconds
@@ -295,6 +302,7 @@ fun PlayScreen(
 
     LaunchedEffect(state.solved) {
         if (!state.solved) return@LaunchedEffect
+        if (tutorialOffered == false) onTutorialOffered()
         if (!recorded) {
             recorded = true
             // Asked before onSolved: the history must not yet contain this solve.
@@ -417,6 +425,9 @@ fun PlayScreen(
     val windowHeight = LocalWindowInfo.current.containerSize.height.toFloat()
     val buttonPad = if (windowHeight < with(LocalDensity.current) { 640.dp.toPx() }) 10.dp else 22.dp
     val highlightBounds = remember { HighlightBounds() }
+    LaunchedEffect(hintSession.deduction) {
+        highlightBounds.named = hintSession.deduction?.let { BoardHighlight(soft = it.focus + it.cited + it.targets) } ?: BoardHighlight.None
+    }
     var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
     var contentTop by remember { mutableStateOf(0f) }
     var boardTop by remember { mutableStateOf(0f) }
@@ -478,7 +489,7 @@ fun PlayScreen(
                 )
             }
             Box(
-                Modifier.size(48.dp).clip(CircleShape).clickable { if (hasTutorial) showTutorial = true else showRules = true },
+                Modifier.size(48.dp).clip(CircleShape).clickable { showRules = true },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.AutoMirrored.Filled.HelpOutline, "How to play", tint = scheme.onSurfaceVariant)
@@ -508,13 +519,13 @@ fun PlayScreen(
                     Text(
                         "${puzzle.tagline}\nOne-minute walkthrough",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(puzzle.accent),
+                        color = com.joebywan.daybook.ui.theme.BoardHues.textOn(Color(puzzle.accent), scheme.background),
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         modifier = Modifier
                             .requiredHeight(40.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .clickable { showTutorial = true }
+                            .clickable { openTutorial() }
                             .padding(horizontal = 12.dp)
                             .wrapContentHeight(Alignment.CenterVertically),
                     )
@@ -561,7 +572,11 @@ fun PlayScreen(
                 ToolButton(Icons.Default.Refresh, "Restart", Modifier.weight(1f)) {
                     if (solved) return@ToolButton
                     // A random game can be replaced as well as restarted; a daily has only the one board.
-                    if (onNewGame != null) askRestart = true else restart()
+                    when {
+                        onNewGame != null -> askRestart = true
+                        !puzzle.offersUndo && state.moves > 0 -> askStartOver = true
+                        else -> restart()
+                    }
                 }
                 if (puzzle.offersHints) {
                     ToolButton(Icons.Default.AutoAwesome, hintSession.buttonLabel(), Modifier.weight(1f)) {
@@ -576,7 +591,7 @@ fun PlayScreen(
         Box {
             if (wide && hintSession.active && !state.solved) {
                 HintPanel(
-                    hintSession, Color(puzzle.accent),
+                    hintSession, Color(puzzle.accent), ::onHint,
                     modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth(),
                     fill = false,
                 )
@@ -650,6 +665,7 @@ fun PlayScreen(
         HintPopover(
             session = hintSession,
             accent = Color(puzzle.accent),
+            onNext = ::onHint,
             highlight = highlightBounds.rect,
             keepClear = highlightBounds.keepClear,
             origin = overlayOrigin,
@@ -683,7 +699,22 @@ fun PlayScreen(
         )
     }
 
-    if (showRules) RulesDialog("How to play ${puzzle.displayName}", puzzle) { showRules = false }
+    if (askStartOver) {
+        AlertDialog(
+            onDismissRequest = { askStartOver = false },
+            title = { Text("Start over?") },
+            text = { Text("The board resets and your lives come back.") },
+            confirmButton = { TextButton(onClick = { askStartOver = false; restart() }) { Text("Start over") } },
+            dismissButton = { TextButton(onClick = { askStartOver = false }) { Text("Keep playing") } },
+        )
+    }
+
+    if (showRules) {
+        RulesDialog(
+            "How to play ${puzzle.displayName}", puzzle,
+            onWalkthrough = if (hasTutorial) ({ showRules = false; openTutorial() }) else null,
+        ) { showRules = false }
+    }
 }
 
 /**
@@ -958,14 +989,28 @@ private fun ToolButton(icon: ImageVector, label: String, modifier: Modifier, onC
     }
 }
 
-/** A puzzle's rules, scrolling, under [title], with a "Got it". */
+/**
+ * A puzzle's rules, scrolling, under [title]: the tagline first, then the bullets, with a "Got it" and, given [onWalkthrough],
+ * a way into the walkthrough (the play screen's "?": the rules are a tap away, the walkthrough one more).
+ */
 @Composable
-internal fun RulesDialog(title: String, puzzle: PuzzleType, onDismiss: () -> Unit) {
+internal fun RulesDialog(title: String, puzzle: PuzzleType, onWalkthrough: (() -> Unit)? = null, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Got it") } },
         title = { Text(title) },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) { RulesList(puzzle) } },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(puzzle.tagline, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(10.dp))
+                RulesList(puzzle)
+                // In the text, not the button row: beside "Got it" a label this long wraps the row onto two lines.
+                onWalkthrough?.let {
+                    Spacer(Modifier.height(12.dp))
+                    FilledTonalButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Play the one-minute walkthrough") }
+                }
+            }
+        },
     )
 }
 
