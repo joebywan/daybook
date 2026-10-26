@@ -57,31 +57,28 @@ class MinesRulesTest {
         assertTrue(flagged.isFlag(7))
         assertEquals(1, flagged.moves)
         assertNull("a flagged square is never revealed", flagged.reveal(7))
-        assertEquals(3, flagged.lives)
         val opened = flagged.reveal(3)!!
         assertTrue("the spread passes the flag by", opened.isFlag(7) && !opened.isOpen(7))
         assertFalse(opened.flag(7)!!.isFlag(7))
         assertNull("an open square takes no flag", opened.flag(3))
         // A wrong flag is allowed and costs nothing.
-        assertEquals(3, blank.flag(0)!!.lives)
+        assertFalse(blank.flag(0)!!.failed)
         assertEquals(blank.total - 1, blank.flag(0)!!.minesLeft)
     }
 
-    @Test fun `a mine costs a life and stays shown, three lose the board, and Try again restores it`() {
+    @Test fun `a mine stays shown and loses the board, and Try again restores it`() {
         var s = MinesState(4, 4, "1110" + "0000" + "0000" + "0000", 15, MinesLogic.openingMarks(4, 4, "1110" + "0000" + "0000" + "0000", 15))
         s = s.reveal(0)!!
         assertEquals(listOf(0), s.bumps)
-        assertEquals(2, s.lives)
+        assertTrue(s.failed)
         assertNull("a mine hit is not revealed twice", s.reveal(0))
         assertNull("nor flagged", s.flag(0))
         assertEquals(s.total - 1, s.minesLeft)
-        s = s.reveal(1)!!.reveal(2)!!
-        assertTrue(s.failed)
         assertFalse(s.solved)
         assertNull("nothing happens on a lost board", s.reveal(3))
         assertNull(s.flag(3))
         val again = s.retry()
-        assertEquals(3, again.lives)
+        assertTrue(again.bumps.isEmpty())
         assertEquals(MinesLogic.openingMarks(4, 4, s.mines, 15), again.marks)
         assertFalse(again.failed)
     }
@@ -95,10 +92,11 @@ class MinesRulesTest {
         s = s.flag(5)!!.reveal(0)!!
         assertTrue("solved with a flag on one mine and none on the other", s.solved)
         assertNull("nothing happens on a won board", s.flag(15))
-        // A board solved with a mine hit along the way still counts: the mine is not a safe square.
+        // A mine hit along the way loses the board: nothing more opens.
         var t = board().reveal(5)!!
         for (i in safe) t = t.reveal(i) ?: t
-        assertTrue(t.solved)
+        assertFalse(t.solved)
+        assertTrue(t.failed)
     }
 
     // ---- generated boards ----------------------------------------------------------------------------------------

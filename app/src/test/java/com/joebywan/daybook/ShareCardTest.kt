@@ -9,7 +9,6 @@ import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Mines
-import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsState
@@ -183,25 +182,14 @@ class ShareCardTest {
         assertEquals("❤️❤️❤️", card(Pointers, clean, "mmmmm").lines.single().text(false))
     }
 
-    @Test fun `mines is the lives left as hearts, and a red square for hints`() {
-        val board = Mines.tutorialBoard()
-        var s: MinesState = board.reveal(Mines.BUMP)!!
+    @Test fun `mines has no hearts, only its moves and the hints`() {
+        var s = Mines.tutorialBoard()
         for (i in 0 until 25) if (!s.isMine(i)) s = s.reveal(i) ?: s
         assertTrue(s.solved)
-        val c = card(Mines, s, "m".repeat(9))
-        assertEquals(
-            "Daybook · Mines · Expert · 22 Oct\n❤️❤️🖤\n12:04 · 6 day streak\n" +
-                "❤️ life left  🖤 life lost\n$SHARE_URL",
-            c.text,
-        )
-        assertEquals("1 mine found the hard way. None tomorrow?", c.nudge)
-        val hinted = card(Mines, s, "mhmm")
-        assertEquals("❤️❤️🖤 🟥", hinted.lines.single().text(false))
-        assertEquals("The hints got you there. Try tomorrow's with fewer.", hinted.nudge)
-        var clean = board
-        for (i in 0 until 25) if (!clean.isMine(i)) clean = clean.reveal(i) ?: clean
-        assertEquals("Not a single mine.", card(Mines, clean, "mmmmm").nudge)
-        assertEquals("❤️❤️❤️", card(Mines, clean, "mmmmm").lines.single().text(false))
+        val c = card(Mines, s, "mmmmm")
+        assertFalse(c.text, "❤" in c.text)
+        assertEquals("A clean solve. Nothing to improve on.", c.nudge)
+        assertEquals("The hints got you there. Try tomorrow's with fewer.", card(Mines, s, "mhmm").nudge)
     }
 
     @Test fun `sets is a square a claim`() {
