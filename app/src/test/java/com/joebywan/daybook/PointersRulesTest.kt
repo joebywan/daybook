@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.puzzles.Pointers
@@ -21,8 +20,8 @@ import java.time.LocalDate
  */
 class PointersRulesTest {
 
-    private fun board(day: Long, tier: Difficulty): PointersState {
-        val seed = DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(day), Pointers.id, tier)
+    private fun board(day: Int, tier: Difficulty): PointersState {
+        val seed = daySeed(day, Pointers.id, tier)
         return Pointers.generate(seed, tier) as PointersState
     }
 
@@ -91,7 +90,7 @@ class PointersRulesTest {
     @Test
     fun `a year of boards per tier is well formed, acyclic and cleared by the greedy player`() {
         for (tier in Difficulty.entries) {
-            for (day in 0 until 365L) {
+            for (day in 0 until 365) {
                 val s = board(day, tier)
                 val label = "${tier.name} day $day"
                 assertWellFormed(s, label)
@@ -104,7 +103,7 @@ class PointersRulesTest {
 
     @Test
     fun `taking an arrow away never blocks another`() {
-        for (tier in Difficulty.entries) for (day in 0 until 20L) {
+        for (tier in Difficulty.entries) for (day in 0 until 20) {
             val s = board(day, tier)
             val gone = mutableSetOf<Int>()
             // Along a greedy clearing, every arrow free before a removal is free after it.
@@ -122,7 +121,7 @@ class PointersRulesTest {
         var lastCells = 0
         var lastDepth = -1.0
         for (tier in Difficulty.entries) {
-            val boards = (0 until 100L).map { board(it, tier) }
+            val boards = (0 until 100).map { board(it, tier) }
             val cells = boards[0].width * boards[0].height
             val depth = boards.map { PointersLogic.depths(it).average() }.average()
             val bare = boards.map { s -> s.width * s.height - s.arrows.sumOf { it.size } }.average() / cells
@@ -150,8 +149,8 @@ class PointersRulesTest {
     @Test
     fun `generation time on the JVM`() {
         for (tier in Difficulty.entries) {
-            val ms = (0 until 200L).map { day ->
-                val seed = DailySeed.seedFor(LocalDate.of(2027, 1, 1).plusDays(day), Pointers.id, tier)
+            val ms = (0 until 200).map { day ->
+                val seed = daySeed(day, Pointers.id, tier, LocalDate.of(2027, 1, 1))
                 val t = System.nanoTime()
                 Pointers.generate(seed, tier)
                 (System.nanoTime() - t) / 1e6

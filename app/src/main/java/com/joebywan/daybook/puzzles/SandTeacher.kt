@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.TeachStep
 
 /**
  * Sand, taught by searching what is on the board.
@@ -48,12 +49,12 @@ internal object SandTeacher {
     private const val BACK_DEPTH = 3
 
     class Step(
-        val technique: String,
-        val nudge: String,
-        val explanation: String,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
+        override val technique: String,
+        override val nudge: String,
+        override val explanation: String,
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
         /** The tubes after the step: the pour made, or the sand put back. */
         val after: List<List<Int>>,
         /** The pour, or -1s for a mistake (which puts sand back rather than pouring). */
@@ -61,7 +62,7 @@ internal object SandTeacher {
         val to: Int = -1,
         /** For a mistake: how much of the log to keep ([SandState.withoutFrom]), or -1 when the board had no log. */
         val keep: Int = -1,
-    )
+    ) : TeachStep
 
     fun teach(s: SandState): Step? {
         if (s.solved) return null
@@ -238,7 +239,7 @@ internal object SandTeacher {
     private fun back(s: SandState, technique: String): Step? {
         val (nudge, why) = when (technique) {
             STUCK -> "No pours left." to "No pour is possible, and the board is not sorted."
-            UNSURE -> "I can't see a way through from here quickly." to "I can't find a way through from here quickly; try undoing."
+            UNSURE -> "There's no quick way through from here." to "There's no quick way through from here. Try undoing a few pours."
             else -> "This board can no longer be sorted." to "No order of pours sorts this board now."
         }
         badPour(s)?.let { j ->
@@ -279,8 +280,7 @@ internal object SandTeacher {
         val back = step.from < 0
         val target = canonical(step.after)
         return Deduction(
-            technique = step.technique, nudge = step.nudge, explanation = step.explanation,
-            focus = step.focus, cited = step.cited, targets = step.targets,
+            step,
             mistake = step.technique == MISTAKE || step.technique == STUCK,
             applyTo = { now ->
                 val n = now as SandState

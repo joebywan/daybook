@@ -3,6 +3,7 @@ package com.joebywan.daybook.puzzles
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PenMarks
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import kotlinx.serialization.Serializable
 
 /**
@@ -38,12 +39,6 @@ data class TallyState(
     override fun withPenMarks(marks: String, changed: Int) = copy(marks = marks, moves = moves + changed)
 }
 
-/** What an exhaustive count found. Only [ExactlyOne] carries an answer, so nothing else can be shipped as one. */
-sealed interface TallyVerdict {
-    data object None : TallyVerdict
-    data class ExactlyOne(val keep: String) : TallyVerdict
-    data object Several : TallyVerdict
-}
 
 /**
  * The rules, the line logic, the exhaustive count and the generator. Nothing here touches the
@@ -319,9 +314,9 @@ internal object TallyLogic {
     /**
      * How many keep masks satisfy every target, with no budget: row by row over each row's ways,
      * cutting a branch as soon as a column passes its target or can no longer reach it. Only
-     * [TallyVerdict.ExactlyOne] carries the answer.
+     * [Verdict.ExactlyOne] carries the answer.
      */
-    fun countSolutions(n: Int, digits: IntArray, targets: List<Int>): TallyVerdict {
+    fun countSolutions(n: Int, digits: IntArray, targets: List<Int>): Verdict<String> {
         val rowWays = List(n) { r -> ways(IntArray(n) { digits[r * n + it] }, IntArray(n), targets[r]) }
         // What each column can still gain from rows r.. : the sum of its digits there.
         val rest = Array(n + 1) { IntArray(n) }
@@ -355,11 +350,7 @@ internal object TallyLogic {
             }
         }
         walk(0)
-        return when (found) {
-            0 -> TallyVerdict.None
-            1 -> TallyVerdict.ExactlyOne(CharArray(n * n) { if (answer shr it and 1L == 1L) '1' else '0' }.concatToString())
-            else -> TallyVerdict.Several
-        }
+        return Verdict.of(found) { CharArray(n * n) { if (answer shr it and 1L == 1L) '1' else '0' }.concatToString() }
     }
 
     // ---- generation -------------------------------------------------------------------------
@@ -422,7 +413,7 @@ internal object TallyLogic {
     fun accepts(s: TallyState, spec: Spec): Boolean {
         if (depth(s) != spec.needs) return false
         val verdict = countSolutions(s.size, digitArray(s), targets(s))
-        return verdict is TallyVerdict.ExactlyOne && verdict.keep == s.keep
+        return verdict is Verdict.ExactlyOne && verdict.value == s.keep
     }
 
     /**

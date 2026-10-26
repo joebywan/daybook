@@ -1,8 +1,8 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.CageLogic
 import com.joebywan.daybook.puzzles.CageState
 import com.joebywan.daybook.puzzles.Cages
@@ -13,7 +13,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * Cage Sudoku's rules, its win check, and the claim that every board it makes has one answer. The checkers are
@@ -23,9 +22,8 @@ import java.time.LocalDate
  */
 class CageRulesTest {
 
-    private fun day(i: Int) = LocalDate.of(2026, 1, 1).plusDays(i.toLong())
     private fun board(i: Int, d: Difficulty) =
-        CageLogic.generateVerified(DailySeed.seedFor(day(i), Cages.id, d), d) ?: error("no proved board day $i ${d.name}")
+        CageLogic.generateVerified(daySeed(i, Cages.id, d), d) ?: error("no proved board day $i ${d.name}")
 
     /** An independent rule check: a Sudoku grid whose cages add up and hold no digit twice. */
     private fun legal(g: List<Int>, cageOf: List<Int>, sums: List<Int>): Boolean {
@@ -104,9 +102,9 @@ class CageRulesTest {
     fun `the prover agrees with the oracle on ambiguous and impossible boards`() {
         val cageOf = CageLogic.dominoes()
         val sums = CageLogic.sumsOf(cageOf, grid)
-        assertTrue(CageLogic.solutions(CageLogic.Board(cageOf, sums), List(81) { 0 }) is CageLogic.Verdict.Ambiguous)
+        assertTrue(CageLogic.solutions(CageLogic.Board(cageOf, sums), List(81) { 0 }) is Verdict.Several)
         val broken = sums.toMutableList().also { it[0] = 40 }
-        assertTrue(CageLogic.solutions(CageLogic.Board(cageOf, broken), List(81) { 0 }) is CageLogic.Verdict.None)
+        assertTrue(CageLogic.solutions(CageLogic.Board(cageOf, broken), List(81) { 0 }) is Verdict.None)
     }
 
     @Test
@@ -116,7 +114,7 @@ class CageRulesTest {
         assertTrue(legal(s.grid.solution, s.cageOf, s.sums))
         assertEquals(1, CageOracle.count(s.cageOf, s.sums, s.grid.cells))
         val verdict = CageLogic.solutions(CageLogic.Board(s.cageOf, s.sums), s.grid.cells)
-        assertTrue(verdict is CageLogic.Verdict.ExactlyOne && verdict.cells == s.grid.solution)
+        assertTrue(verdict is Verdict.ExactlyOne && verdict.value == s.grid.solution)
     }
 
     @Test

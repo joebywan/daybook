@@ -1,8 +1,6 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.SeedHash
 import com.joebywan.daybook.puzzles.LexiconRules
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.LexiconTeacher
@@ -35,11 +33,8 @@ internal object LexiconSupport {
     /** Every accepted guess of this length, for claims that must hold beyond the answer list. */
     fun guessList(length: Int): List<String> = if (length == 4) LexiconWords.GUESSES_4 else LexiconWords.GUESSES_5
 
-    fun dailySeed(day: Int, difficulty: Difficulty): Long =
-        SeedHash.daily(DailySeed.EPOCH.toEpochDays() + day, "words", difficulty)
-
     fun board(day: Int, difficulty: Difficulty): LexiconState =
-        LexiconRules.newBoard(dailySeed(day, difficulty), difficulty)
+        LexiconRules.newBoard(daySeed(day, "words", difficulty), difficulty)
 
     class Walk(val answer: String, val guesses: List<String>, val steps: List<LexiconTeacher.Step>, val solved: Boolean)
 

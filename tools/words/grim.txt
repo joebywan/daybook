@@ -1,0 +1,118 @@
+# The breakfast-table screen, one list for every word game (the owner, 2026-10-26: "one app-wide grim-word list
+# across every word game"). A word here is never an answer or a printed grid word: not Lexicon's daily word, not a
+# Word Wheel grid word or wheel, not a Codeword or Crossword grid word, not a word of a Cipher sum. It stays a legal
+# guess and a Word Wheel bonus word: a player may still type it.
+#
+# The bar: a word you would not want as the daily answer, or printed in a grid, on the breakfast table. Death and
+# killing, violence and weapons, bodily fluids and functions, disease that marks a person, drink and drugs, and
+# words used to insult a body or a mind. An ordinary word with a grim second sense stays (die, hang, knife, drug,
+# abort, gash, tomb, coma): do not over-screen. Crude and sexual words are in exclude.txt; this list is for words
+# that are clean English but grim.
+#
+# Read by tools/words/build.py, which takes these out of the answers (so out of every list the other games draw
+# their words from), and by GrimWordsTest, which fails if any game shows one. A change here moves daily boards:
+# rebuild every generated list (CLAUDE.md, Lexicon) and re-pin BoardPinTest.
+#
+# Started from the Crossword's own list (MiniGridsBuildTest.SKIP, now gone), less die, hang, knife, drug and abort.
+
+# Death and dying
+bereave
+casket
+corpse
+cremate
+dead
+death
+fatal
+funeral
+gallows
+grave
+grief
+hearse
+morgue
+mourn
+noose
+orphan
+slain
+widow
+
+# Killing, violence and weapons
+abuse
+arson
+bayonet
+bomb
+carnage
+crime
+grenade
+gun
+gunfire
+gunshot
+kill
+maim
+murder
+ravish
+rifle
+robber
+robbery
+savage
+shotgun
+slay
+spank
+stab
+torture
+war
+wound
+
+# Bodily fluids, functions and decay
+belch
+bile
+blood
+bowel
+burp
+gore
+gory
+lesion
+mucus
+pus
+putrid
+rot
+rotten
+spew
+stench
+ulcer
+urine
+vomit
+
+# Disease, disaster and suffering
+famine
+leper
+lice
+louse
+plague
+toxic
+tragedy
+tragic
+
+# Drink and drugs
+booze
+drunk
+opium
+
+# Insulting a body or a mind, and words near a slur
+dumb
+fat
+lame
+loony
+obese
+prick
+scum
+senile
+ugly
+
+# Hate, evil and nakedness
+demon
+devil
+hate
+hatred
+lewd
+naked
+nude

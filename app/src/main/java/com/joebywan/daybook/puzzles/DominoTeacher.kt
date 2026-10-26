@@ -1,7 +1,10 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
+import com.joebywan.daybook.core.fit
 import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.squareName
 
 /**
  * Dominoes, reasoned the way a person reasons it (`docs/DOMINO_SPEC.md` "Teacher").
@@ -72,16 +75,16 @@ internal object DominoTeacher {
      * (lift [domino]). [level] is the ladder level the step needed.
      */
     class Step(
-        val technique: String,
+        override val technique: String,
         val level: Int,
         val domino: Int,
         val placement: Placement?,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    ) {
-        val targets: Set<Int>
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
+        override val targets: Set<Int>
             get() = (placement?.let { setOf(it.first, it.second) } ?: emptySet()) + (TRAY + domino)
         val mistake: Boolean get() = technique == MISTAKE
         val fallback: Boolean get() = technique == FALLBACK
@@ -145,8 +148,9 @@ internal object DominoTeacher {
             placement = p,
             focus = setOf(p.first, p.second),
             cited = emptySet(),
-            nudge = "Try the ${words.domino(s.tray[d])}.",
-            explanation = "No step I can explain from here, so this is the answer itself: the ${words.domino(s.tray[d])} goes here, " +
+            nudge = "This one takes a longer chain. Look at the ${words.domino(s.tray[d])}.",
+            explanation = "This one needs a longer chain than a hint can walk through, so here's the answer for the " +
+                "${words.domino(s.tray[d])}: it goes here, " +
                 words.half(s.tray[d], p) + ".",
         )
     }
@@ -238,7 +242,7 @@ internal object DominoTeacher {
                     "That leaves $leaves. $so" }
             }
         }
-        val explanation = fit(listOf(3, 2, 1).map(text) + "${words.techniqueName(technique).cap()}. $so")
+        val explanation = fit(listOf(3, 2, 1).map(text) + "${words.techniqueName(technique).cap()}. $so", MAX_EXPLANATION)
         val cited = regionsIn(facts).map { RULE + it }.toSet() + (if (partner >= 0) setOf(q, partner) else emptySet())
         return Step(technique, used, d, p, setOf(p.first, p.second), cited, fitNudge(nudge, "Look at the $name."), explanation)
     }
@@ -265,11 +269,10 @@ internal object DominoTeacher {
         return Step(
             WHAT_IF, LEVEL_WHAT_IF, d, p, setOf(w.square), cited,
             fitNudge("Try each domino that could cover $where.", "Try each domino that could cover this square."),
-            fit(texts),
+            fit(texts, MAX_EXPLANATION),
         )
     }
 
-    private fun fit(options: List<String>): String = options.firstOrNull { it.length <= MAX_EXPLANATION } ?: options.last()
 
     private fun fitNudge(nudge: String, short: String) = if (nudge.length <= MAX_NUDGE) nudge else short
 
@@ -283,7 +286,7 @@ internal object DominoTeacher {
     // ---- words -------------------------------------------------------------------------------------
 
     private class Words(val layout: DominoLogic.Layout) {
-        fun square(q: Int) = "row ${q / layout.width + 1}, column ${q % layout.width + 1}"
+        fun square(q: Int) = squareName(layout.width, q)
 
         /** "6-3 going right, its 3 here": a candidate as seen from square [q]. */
         fun way(d: Domino, p: Placement, q: Int, which: Boolean): String {
@@ -617,48 +620,12 @@ internal class DominoLadder private constructor(
         return changed
     }
 
-    /** Level 3: a candidate that breaks a region's rule whatever goes on the region's other empty squares. */
-    fun ruleFit(): Boolean {
-        var changed = false
-        val look = ruleDirty.copyOf()
-        ruleDirty.fill(false)
-        val struck = IntArray(regions.size) { -2 }
-        val pips = pipsBuf
-        for (c in alive.indices) {
-            if (!alive[c] || fixedAt[cDom[c]] == c) continue
-            val rs = layout.regionOf[cS[c]]
-            val rt = layout.regionOf[cT[c]]
-            for (r in intArrayOf(rs, if (rt == rs) -1 else rt)) {
-                if (r < 0 || !look[r]) continue
-                var count = 0
-                var open = 0
-                for (q in regions[r]) {
-                    when {
-                        q == cS[c] -> pips[count++] = cVs[c]
-                        q == cT[c] -> pips[count++] = cVt[c]
-                        known[q] >= 0 -> pips[count++] = known[q]
-                        else -> open++
-                    }
-                }
-                if (DominoLogic.ruleBroken(layout.rules[r], pips, count, open)) {
-                    if (struck[r] == -2) struck[r] = reason(DominoTeacher.LEVEL_RULE_FIT, RULE_KIND, r)
-                    changed = kill(c, struck[r]) || changed
-                    break
-                }
-            }
-        }
-        return changed
-    }
-
-    /** Each square's possible pips, as a bit mask, as they stand now (a copy: a pass reads the board it started from). */
-    private fun domains(): IntArray = domMask.copyOf()
-
-    /** Level 4: a candidate after which a region cannot keep its rule from the values its other squares can still take. */
-    fun regionValue(): Boolean {
-        val look = valueDirty.copyOf()
-        if (look.none { it }) return false
-        valueDirty.fill(false)
-        val dom = domains()
+    /**
+     * Levels 3 and 4: strikes every live, unfixed candidate after which [breaks] says a region in [look] it touches
+     * fails, given the region's placed pips (the candidate's own included, in [pipsBuf], nf of them) and the [dom]
+     * masks of its other empty squares ([maskBuf], nm of them). One reason per region, at [level].
+     */
+    private inline fun strike(look: BooleanArray, dom: IntArray, level: Int, kind: Int, breaks: (r: Int, nf: Int, nm: Int) -> Boolean): Boolean {
         var changed = false
         val struck = IntArray(regions.size) { -2 }
         val fixed = pipsBuf
@@ -679,14 +646,32 @@ internal class DominoLadder private constructor(
                         else -> masks[nm++] = dom[q]
                     }
                 }
-                if (!feasible(layout.rules[r], fixed, nf, masks, nm)) {
-                    if (struck[r] == -2) struck[r] = reason(DominoTeacher.LEVEL_REGION_VALUE, VALUE_KIND, r)
+                if (breaks(r, nf, nm)) {
+                    if (struck[r] == -2) struck[r] = reason(level, kind, r)
                     changed = kill(c, struck[r]) || changed
                     break
                 }
             }
         }
         return changed
+    }
+
+    /** Level 3: a candidate that breaks a region's rule whatever goes on the region's other empty squares. */
+    fun ruleFit(): Boolean {
+        val look = ruleDirty.copyOf()
+        ruleDirty.fill(false)
+        return strike(look, domMask, DominoTeacher.LEVEL_RULE_FIT, RULE_KIND) { r, nf, nm -> DominoLogic.ruleBroken(layout.rules[r], pipsBuf, nf, nm) }
+    }
+
+    /** Level 4: a candidate after which a region cannot keep its rule from the values its other squares can still take. */
+    fun regionValue(): Boolean {
+        val look = valueDirty.copyOf()
+        if (look.none { it }) return false
+        valueDirty.fill(false)
+        // A copy of each square's pips mask: the pass reads the board it started from.
+        return strike(look, domMask.copyOf(), DominoTeacher.LEVEL_REGION_VALUE, VALUE_KIND) { r, nf, nm ->
+            !feasible(layout.rules[r], pipsBuf, nf, maskBuf, nm)
+        }
     }
 
     /**
@@ -696,7 +681,7 @@ internal class DominoLadder private constructor(
     fun counting(): Boolean {
         if (!countingDirty) return false
         countingDirty = false
-        val dom = domains()
+        val dom = domMask.copyOf() // the pips each square can take as the pass starts
         val need = IntArray(DominoLogic.MAX_PIPS + 1)
         for (q in 0 until n) {
             val m = dom[q]

@@ -1,20 +1,28 @@
 Daily Sudoku, killer sudoku, nonograms, word games and logic puzzles, free and with no ads. No account, no internet needed, and every past day is open from the start.
 
-Every day brings a fresh set of classic pencil puzzles and brain games, each in three difficulties (Standard, Hard and Expert), each built so it has exactly one answer you can reach by reasoning. Nothing needs guessing.
+Every day brings a fresh set of classic pencil puzzles and brain games, each in three difficulties (Standard, Hard and Expert). The grid puzzles are built so they have exactly one answer you can reach by reasoning alone, with nothing to guess. Play one a day or as many as you like: a streak needs just one solve.
 
 WHAT'S INSIDE
 • Sudoku, and Cage Sudoku (killer sudoku, with sum cages)
 • Nonogram picture grids
-• Futoshiki-style inequality grids, Shikaku rectangles, LITS, Tents and trees
-• Star Battle-style crown placement, Takuzu-style binary grids, Hashi-style bridges
-• Number puzzles: sums, letter sums (cryptarithms) and hit-the-target arithmetic
+• Futoshiki-style inequality grids, Shikaku rectangles, LITS, Tents and trees, Regions
+• Kings, a Star Battle-style crown placement; Sun & Moon, a Takuzu-style binary grid; Atoms, Hashi-style bonds
+• Number puzzles: Tally sums, Cipher letter sums (cryptarithms) and Target arithmetic
 • Dominoes: lay every tile so each coloured region keeps its rule
-• Word puzzles: a hidden-word guessing game and a word wheel
-• Chess puzzles: mate in 2, 3 and 4
-• Relaxing ones too: pipe rotation, flood-fill, one-line paths, colour sorting and arrows to clear
+• Mines: clear a minefield by its numbers alone, never a guess
+• Lamps: light every square, with no lamp shining on another
+• Pearls: draw one loop through every black and white pearl
+• Who's Who: match everyone to their house, pet and job from the clues
+• Word puzzles: Lexicon (find the hidden word in a few guesses), Word Wheel, Codeword and a mini Crossword
+• Codebreaker: crack a hidden colour code from scored guesses
+• Mate: chess puzzles, mate in 2, 3 and 4
+• Quick ones too: Pipes, Mosaic flood-fill, Trail one-line paths, Sand colour sorting, Sets, and Arrows, where every bump costs one of three lives
 
 HINTS THAT TEACH
-Stuck? Ask for a hint and Daybook explains the next step in plain language, pointing at the squares it is talking about. You make the move yourself, so you learn the technique instead of watching it get filled in. Every puzzle has a short walkthrough for first-timers, and "How to play" is always one tap away.
+Stuck? Ask for a hint and Daybook explains the next step in plain language, pointing at the squares it is talking about. You make the move yourself, so you learn the technique instead of watching it get filled in. Every puzzle has a one-minute walkthrough, and its rules are always one tap away.
+
+LEVELS AND ACHIEVEMENTS
+Levels give you five boards from five different puzzles at a time; finish them and the next level opens. Achievements mark the milestones along the way, from your first Expert board to a week-long streak.
 
 NO ADS. NO SUBSCRIPTION. NO ACCOUNT.
 There are no adverts, no paywall, no sign-in and no in-app purchases. The app does not even ask for network access, so these are true offline puzzles: they work on a plane, on a train and in a tunnel.

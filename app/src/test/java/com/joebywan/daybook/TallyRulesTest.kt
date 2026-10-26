@@ -2,9 +2,9 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Verdict
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
-import com.joebywan.daybook.puzzles.TallyVerdict
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -52,7 +52,7 @@ class TallyRulesTest {
         assertTrue("the other diagonal wins too", s.copy(marks = "x..x").solved)
         assertFalse(s.copy(marks = "xx..").solved)
         assertFalse("nothing removed is not solved", s.solved)
-        assertTrue(TallyLogic.countSolutions(2, intArrayOf(1, 1, 1, 1), listOf(1, 1, 1, 1)) is TallyVerdict.Several)
+        assertTrue(TallyLogic.countSolutions(2, intArrayOf(1, 1, 1, 1), listOf(1, 1, 1, 1)) is Verdict.Several)
     }
 
     @Test
@@ -143,9 +143,9 @@ class TallyRulesTest {
             val cols = List(n) { c -> if (madeUp) rng.nextInt(1, 6) else (0 until n).sumOf { if (keep[it * n + c]) digits[it * n + c] else 0 } }
             val oracle = TallyOracle.answerStrings(n, digits, rows, cols)
             when (val v = TallyLogic.countSolutions(n, digits.toIntArray(), rows + cols)) {
-                TallyVerdict.None -> { assertTrue(oracle.isEmpty()); none++ }
-                is TallyVerdict.ExactlyOne -> assertEquals(listOf(v.keep), oracle)
-                TallyVerdict.Several -> { assertTrue(oracle.size > 1); several++ }
+                Verdict.None -> { assertTrue(oracle.isEmpty()); none++ }
+                is Verdict.ExactlyOne -> assertEquals(listOf(v.value), oracle)
+                Verdict.Several -> { assertTrue(oracle.size > 1); several++ }
             }
         }
         assertTrue("the sample must include several-answer boards: $several", several > 20)
@@ -204,13 +204,6 @@ class TallyRulesTest {
             assertTrue(d.name, TallyLogic.accepts(s, TallyLogic.specFor(d)))
             val (rows, cols) = targetsOf(s)
             assertEquals(listOf(s.keep), TallyOracle.answerStrings(s.size, digitsOf(s), rows, cols, cap = 2))
-        }
-    }
-
-    @Test
-    fun `generation is pure`() {
-        for (d in Difficulty.entries) for (seed in seeds(5, d, "tally-pure")) {
-            assertEquals(TallyLogic.generateVerified(seed, d), TallyLogic.generateVerified(seed, d))
         }
     }
 

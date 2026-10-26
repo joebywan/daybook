@@ -15,6 +15,9 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **Hints still say "cell".** Rules text says "square" everywhere now, but the Sudoku, Cage Sudoku and Mosaic teachers'
+  hints (and Sudoku's and Cages' fallback nudge, "Look at the glowing cell") still say "cell". *S.*
+
 - [ ] **Touch targets left under 48dp.** Fixed in the UX pass: Home header buttons (48dp targets round 36dp circles), the
   play screen's help button, the web back arrow, the calendar arrows, the archive tier buttons and the web backup buttons.
   Not fixed: the "One-minute walkthrough" offer over the clock (the clock row's height, ~24dp; growing it moves the board)
@@ -24,6 +27,10 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Screenshots show the old names.** Snap, Mambo, Tower and Pointers became Trail, Sun & Moon, Codebreaker and Arrows
   (2026-10-25); `docs/screenshots/home.png` and the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
   with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
+- [ ] **The walkthrough offer: players from before the re-offer.** The offer now returns on every visit until the walkthrough is
+  opened or the puzzle solved, recorded in the same `tutorialsOffered` set the once-only offer wrote on a first visit, so a
+  player who saw the old offer once is never offered it again. A new key would re-offer them; the set's doc comment in
+  `ProgressStore` still describes the old rule. *S.*
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
@@ -63,6 +70,15 @@ from a measurement or review, so you can check it is still true.
   compiled by CI only. Check a Play install opens the Play Store app, and a sideloaded or F-Droid install opens GitHub in
   the browser. A one-time nudge on the finish frame (say after the tenth solve) would bring more ratings than a settings
   row, but the finish frame is settled UX, so that is the owner's call. *S.*
+
+- [ ] **Large system font (2x) squeezes the boards from outside.** Glyphs in boards no longer scale (`boardSp`), but
+  at font scale 2 (web renders with a `Density` override, 375x537) the chrome around them still grows: the play
+  header's "Expert · 15 Jun 2026" wraps to two lines and the tagline line grows, so Lexicon's board shrinks to dots
+  and Codeword's and Crossword's grids get small; on Home the date wraps mid-word ("Monda/y"), the selected tier pill
+  breaks "Standar/d" (`SegmentedControl`), tile names ellipsise ("Regio..."); Tally's and Nonogram's pen buttons
+  (`PenRow`) clip "Remove"; Codebreaker's "Submit" wraps; Who's Who's clue list gets two lines of room. All fine at
+  1.3x. Not checked on the emulator (its font scale is shared). Lamps' lamp still has no long press (Tents and
+  Kings have one). *M.*
 
 ## Rewards
 
@@ -161,12 +177,11 @@ Five independent design reviews (puzzle construction, player experience, daily m
 accepted by the owner except where noted. Each item is one workstream and one PR; delete it here when it lands.
 Generator changes move every daily board of that puzzle (parity pins go red on purpose): batch them, one PR per puzzle.
 
-- [ ] **Depth gates**, Tally's `Spec.needs` pattern: each tier must need its technique. Measured (`docs/TEACHING.md`,
-  "Tier depth"; `TierDepthReportTest`), the gate each puzzle's numbers support:
-  - Snap: no teacher (a whole-board deducer leaves the real choices to a 13-joint what-if; `docs/TEACHING.md`).
-- [ ] **New puzzles, in order:** Lamps (Light Up rules), Mines (no guessing: a given opening, a solver-proved board, three
-  lives as Pointers', no undo), Pearl loop, Who's Who (a logic grid from templated clues), Codeword, Mini crossword (5x5,
-  fills built offline from the hand-written clues). Each gets a spec first (`docs/<NAME>_SPEC.md`).
+- [ ] **Daily reminder follow-ups** (`ui/home/Reminder.kt`). The hour is one of five presets (8 am to 9 pm), not a
+  clock picker: add one if players ask. Home's one offer counts the days of the boards solved, so an archive board can
+  stand in for a second day; read the day a solve was made instead once completions record it (WS6). *S.*
+- [ ] **Snap depth gate:** not possible yet. Snap has no teacher (a whole-board deducer leaves the real choices to a
+  13-joint what-if; `docs/TEACHING.md`).
 
 ## Future puzzle candidates
 
@@ -183,22 +198,6 @@ below have a famous branded version; use the descriptive name).
 
 ### Asked for by the owner
 
-- [ ] **Nonogram: pinch to zoom.** Expert's squares are small: 19.3dp at 390x844, 15.8 at 375x537, 17.3 at 844x390 (web
-  renders, 2026-10-25). A board reshaped to fit was rendered and dropped: 12x18 grew squares to 24dp on a tall phone but
-  shrank them to 13 / 14dp on a short phone and a phone on its side, and it moves every Expert board. Narrower clue slots
-  and a cap of 5 runs a line gained under 1dp. Zoom helps every screen and changes no board. Design agreed with the owner:
-  - Pinch zooms about the fingers (up to about 2.5x); there is no two-finger pan to learn.
-  - Zoomed: one finger taps to mark and drags to pan (past touch slop it is a pan, never a mark). Whole board: as now
-    (tap marks, drag sweeps). The owner mostly taps single squares on Expert, so losing the sweep while zoomed is fine.
-  - A second finger drops a sweep already started (the sweep is `remember` until lift, so nothing reaches undo).
-  - Clues stay pinned: row clues on the left scroll only up and down with the grid, column clues on the top only sideways.
-  - A "fit" button shows in a corner only while zoomed; pinching out also returns to the whole board. No double-tap zoom
-    (every fill tap would wait ~300 ms).
-  - A hint pans to its line, and solving zooms out for the solve wave. The zoom is `remember` state, never saved.
-  - Web: Ctrl+wheel (and trackpad pinch) zooms, a mouse drag pans. Check that the page itself does not zoom, in Chromium
-    and WebKit, and on the emulator.
-  - How-to-play text and walkthrough get a line about zoom. It is a feature a player notices: bump `version.txt`'s middle
-    number and write "What's new". *M.*
 - [ ] **Nonogram and Lexicon: short phone screens on the emulator.** Both were driven on the Android emulator
   (1080x2160 and 1080x2400, 2026-10-03): the Lexicon hint popover over a highlighted row and keys, its nine-frame
   walkthrough, hardware keys, and a Nonogram 5x5 swept by touch drag to the finish frame all work, and a save made on
@@ -242,19 +241,13 @@ and Battleships is close to Tents.
   with a unique shortest ladder to keep it provable. *M after the lists exist.*
 - [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
   exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
-  prototype the input before committing. *L.*
-- [ ] **Mines, no guessing.** Minesweeper rules: tap reveals, long-press flags. Ship only boards logic clears from the
-  first reveal (a solver proves it, as the Tents and Tally ladders do); a hint names the deduction ("this 2 already
-  touches two flags, so the rest are safe"). Tiers: size and density. A mine loses the board, as Pointers' lives do. *M.*
-- [ ] **Codeword.** A filled crossword grid with a number for each letter and a few letters given; work out the
-  substitution. No clues, so it avoids the clue-database problem below. Reuses Lexicon's and Word Wheel's lists and
-  Word Wheel's grid layout; uniqueness is pattern matching against the list. Not Cipher: word shapes, not columns. *M–L.*
+  prototype the input before committing. *L.* Pearls (built) has a loop's machinery to reuse: the loop rule, the
+  exhaustive count, edge hit testing (`Pearls.edgeNear`) and crosses as notes; its loop runs through squares, this one
+  along their edges.
 - [ ] **Skyscrapers.** A Latin square with edge clues (how many buildings are visible from that side). Inequality's
   Latin-square rules, generator and prover carry over; only the clue type is new. *S–M.*
 - [ ] **Hitori.** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.
   Tap-only; the connectivity proof is LITS's shape. *M.*
-- [ ] **Pearl loop (Masyu rules).** One closed loop through squares: it turns on black pearls, goes straight through
-  white ones. Drawn through squares, not along edges, so Snap's drag works and the edge-tapping problem goes away. *L.*
 - [ ] **Dominosa.** A pip grid holds each domino 0-0..N-N once; find where each lies. Tap between two squares to
   place one. Pairs well with the domino-placement idea above. *M.*
 - [ ] **Galaxies.** Cut the grid into regions, each symmetric under a half-turn about its dot. Shikaku's input,
@@ -270,8 +263,9 @@ but do not demand thought, against the owner's stated taste. (A crossword was he
 hand-written clues are one now, see the council list.) Curated themed puzzles (four groups of four, themed word hunts)
 were declined by the owner (2026-10-25): a shipped list runs out and would need revisiting every year.
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
-A practice mode per technique was declined by the owner: players can use the hints themselves, and it would
-only spend their time railroaded through a tutorial.
+A practice mode per technique, once declined, is now wanted (2026-10-26): Training, piloted on Sudoku
+(`docs/TRAINING_SPEC.md`). Open after the pilot: where it lives (Settings for now), other puzzles, and keeping a
+half-played final board when the player leaves it.
 
 ## Owner's call
 
@@ -288,6 +282,9 @@ only spend their time railroaded through a tutorial.
   the `production` track through `publish-play.yml`. Check the Console home page's Android developer verification notice: sideloaded
   APKs may need their own registration (package name plus signing key).
   The owner is fine with the developer name being public.
+- **Sets is probably underrated in deal 3's spread.** What makes it hard is finding a set among the cards, which a hint walk
+  of three or four steps cannot see (`docs/LEVELS_SPEC.md`, "Level difficulty"). Solve times by tier would settle it; a
+  re-rating ships as a new deal.
 - **Colour rollout** (`docs/COLOUR.md`). Rough audit: only Shikaku and Nonogram bring several hues of their own; Lits,
   Sets, Tower and Mosaic hard-code hex lists that are the old accents (so they overlap right/wrong colours); the rest
   are scheme greys plus one accent. One PR per step, each with a true-size render in both schemes (`tools/render/render.py`),

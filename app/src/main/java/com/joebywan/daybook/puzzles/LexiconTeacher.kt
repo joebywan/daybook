@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.TeachStep
 
 /**
  * Lexicon, reasoned the way a person reasons it: from the marks already on the board.
@@ -103,14 +104,14 @@ internal object LexiconTeacher {
     }
 
     class Step(
-        val technique: String,
+        override val technique: String,
         val move: Move,
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val targets: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    )
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val targets: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep
 
     /** Answer-list words that would have drawn every mark on the board. */
     fun candidates(length: Int, guesses: List<String>, marks: List<List<Int>>): List<String> =
@@ -260,7 +261,7 @@ internal object LexiconTeacher {
     /** The best answer-list word that fits every mark and has [letter] in [slot], or null. */
     private fun wordWith(c: Clues, letter: Char, slot: Int): String? {
         val fits = candidates(c.length, c.guesses, c.marks).filter { it[slot] == letter }
-        return if (fits.isEmpty()) null else bestGuess(fits, fits)
+        return if (fits.isEmpty()) null else bestGuess(fits)
     }
 
     // ---- choosing a word --------------------------------------------------------------------------
@@ -293,7 +294,7 @@ internal object LexiconTeacher {
                 explanation = "Only one word on the answer list fits every mark. Its clue: ${clueFor(word)}. Type it.",
             )
         }
-        val word = bestGuess(fits, fits)
+        val word = bestGuess(fits)
         val shown = splitText(word, fits)
         return Step(
             CHOOSE, Move.Fill(word),
@@ -306,11 +307,12 @@ internal object LexiconTeacher {
     }
 
     /**
-     * The word in [pool] that leaves the fewest of [fits] in its worst case (then in the most
-     * outcomes, then first alphabetically, so the pick is the same everywhere). A long pool is
+     * The word of [fits] that leaves the fewest of them in its worst case (then in the most
+     * outcomes, then first alphabetically, so the pick is the same everywhere). A long list is
      * thinned by a fixed stride rather than at random.
      */
-    fun bestGuess(pool: List<String>, fits: List<String>): String {
+    fun bestGuess(fits: List<String>): String {
+        val pool = fits
         val stride = (pool.size + POOL - 1) / POOL
         var best = pool[0]
         var bestWorst = Int.MAX_VALUE

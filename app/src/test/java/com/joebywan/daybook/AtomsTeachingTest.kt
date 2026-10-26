@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Atom
@@ -14,7 +13,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * The Atoms hint solver, checked against an enumerator written out again here on a different
@@ -149,9 +147,9 @@ class AtomsTeachingTest {
         )
         val wrong = mutableListOf<String>()
         for (difficulty in Difficulty.entries) {
-            for (day in 0 until 365L) {
-                val date = LocalDate.of(2026, 1, 1).plusDays(day)
-                var s = Atoms.generate(DailySeed.seedFor(date, Atoms.id, difficulty), difficulty) as AtomsState
+            for (day in 0 until 365) {
+                val date = TEST_START.plusDays(day.toLong())
+                var s = Atoms.generate(daySeed(day, Atoms.id, difficulty), difficulty) as AtomsState
                 var deepest = -1
                 var guard = 0
                 while (!s.solved && guard++ < 300) {

@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.teach
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
@@ -43,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +56,9 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.LocalReducedMotion
 import kotlinx.coroutines.delay
+
+/** Something a host adds beside the hint's Close for a deduction (Training's "Practise this"); nothing by default. */
+val LocalHintAction = staticCompositionLocalOf<@Composable (Deduction, HintStage) -> Unit> { { _, _ -> } }
 
 /** How long "That's it" stays before the hint clears itself. */
 private const val CONFIRM_MS = 1400L
@@ -269,13 +274,14 @@ fun HintSession.buttonLabel(): String = when {
  * wraps its text up to the height it is offered, and scrolls behind a fade beyond that (the play
  * screen's popover, see [HintPopover]). [raised] draws it as a card that floats over a board: a
  * solid ground, an outline and a shadow, where the slot's wash would let the board show through.
- * Its one button is Close: the next step belongs to the Hint button, which reads "Why?" and then
- * "Show me" (its [buttonLabel]), so the same button never shows twice.
+ * Its buttons are Close and the next step, "Why?" then "Show me", where the eye already is. [onNext] is
+ * whatever the caller's Hint button does, so the two are one path ([HintSession.tap]) and count alike.
  */
 @Composable
 fun HintPanel(
     session: HintSession,
     accent: Color,
+    onNext: () -> Unit,
     modifier: Modifier = Modifier,
     fill: Boolean = true,
     raised: Boolean = false,
@@ -323,10 +329,12 @@ fun HintPanel(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            LocalHintAction.current(d, session.stage)
             if (session.stage != HintStage.CONFIRMED) {
                 TextButton(onClick = { session.clear() }) {
                     Text("Close", color = scheme.onSurfaceVariant)
                 }
+                TextButton(onClick = onNext) { Text(session.buttonLabel(), color = BoardHues.textOn(ink, fade)) }
             }
         }
     }
@@ -354,6 +362,7 @@ fun HintPanel(
 fun HintPopover(
     session: HintSession,
     accent: Color,
+    onNext: () -> Unit,
     highlight: Rect?,
     keepClear: Collection<Rect>,
     origin: Offset,
@@ -405,7 +414,7 @@ fun HintPopover(
     }
 
     HintPanel(
-        session, accent,
+        session, accent, onNext,
         modifier = Modifier
             .offset { IntOffset(0, (y.value - origin.y).roundToInt()) }
             .padding(horizontal = 12.dp)

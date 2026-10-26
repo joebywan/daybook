@@ -41,7 +41,7 @@ A puzzle is done when all of these are true:
 |---|---|---|
 | `id` | yes | Saved games, completions, seeds and `?puzzle=` key off it. Never rename. It is hashed into the seed (`SeedHash.stableHash`), so renaming also changes every board. |
 | `displayName`, `tagline` | yes | Tagline is one line on the home card. |
-| `rules: List<String>` | yes | Short summary. Shown as "Rules" inside the walkthrough, and directly by "How to play" if there is no walkthrough. |
+| `rules: List<String>` | yes | Short summary. Shown by the play screen's "?" (under the tagline, with a button into the walkthrough), and as "Rules" inside the walkthrough. |
 | `accent: Long` (ARGB) | yes | Card colour, board highlights, walkthrough buttons. |
 | `generate(seed, difficulty)` | yes | Pure. Section 4. |
 | `Preview(modifier)` | effectively yes | Default is a plain accent block. All of them override it. Fixed motif; never calls `generate`. |
@@ -50,14 +50,14 @@ A puzzle is done when all of these are true:
 | `hint(state)` | no | Legacy "move goes straight on the board", used only when `teach` returns null. Six boards still define it (`Lits`, `Mambo`, `Mosaic`, `Sets`, `Shikaku`, `Sudoku`) as a fallback; a new puzzle should not write one. |
 | `tutorial: List<TutorialFrame>` | yes | Section 8. |
 | `offersHints` | default true | `false` only for Snap and Pointers (section 7). Hides the Hint button in `PlayScreen` and the walkthrough's free-play frame. |
-| `offersUndo` | default true | `false` only for Pointers (the owner's call: a cleared arrow never needs to come back, so undo could only hand back a life). Hides the Undo button and Ctrl/Cmd+Z in `PlayScreen`, in both layouts. |
+| `offersUndo` | default true | `false` only for Pointers and Mines (the owner's call: a cleared arrow never needs to come back, and a Mines reveal is never wrong but on a mine, so undo could only hand back a life). Hides the Undo button and Ctrl/Cmd+Z in `PlayScreen`, in both layouts. |
 
 `PuzzleState` (`puzzles/PuzzleState.kt`): `solved` (computed), `moves`, optional `failed`
-(computed; only `MosaicState`, `TowerState` and `PointersState` override it, and only their own boards draw the lost
-state: `PlayScreen` never reads it. Pointers, having no undo, draws its own Try again, one state that restores the
+(computed; only `MosaicState`, `TowerState`, `PointersState` and `MinesState` override it, and only their own boards draw the lost
+state: `PlayScreen` never reads it. Pointers and Mines, having no undo, draw their own Try again, one state that restores the
 board and its lives).
 
-Registry line: `core/PuzzleRegistry.kt` `all` is the archive picker's order; the home grid starts from `PuzzleOrder.GENTLEST`. Today's three (`core/TodaysThree.kt`) puts a new puzzle in its mid-weight slot unless it is listed as quick or word/number.
+Registry line: `core/PuzzleRegistry.kt` `all` is the archive picker's order; the home grid starts from `PuzzleOrder.GENTLEST`. Today's three (`core/TodaysThree.kt`) puts a new puzzle in its mid-weight slot unless it is listed as quick or word/number; choose its slot by what it asks, keep the three lengths pairwise coprime, and re-pin `TodaysThreeTest`.
 The home grid is three columns (`ui/home/HomeScreen.kt` `COLUMNS`, with a comment that four rows of tiles is what one
 phone screenful holds); adding a puzzle that starts a new row, or changing the tile size, means checking that screen again.
 
@@ -95,8 +95,14 @@ What varies, as built:
 | Cipher | hardest technique the ladder needs (every tier is two four-letter words and a five-letter total) | columns and pairs / all columns together / a two-column what-if (`CipherSumsBuildTest.tierOf`; `CipherRulesTest` `a year of daily boards - the tiers get harder`) |
 | Word Wheel | wheel letters, words, box | 5 letters, 4-6 words, 6x6 / 6, 6-8, 7x7 / 7, 8-11, 8x8 with a six besides the root (`WordWheelLogic.specFor`; `WordWheelRulesTest` `a year of daily boards ...` asserts the mean word count rises) |
 | Sand | colours (height 4 and two spare tubes on every tier) | 5 / 7 / 8 colours (`SandLogic.specFor`; `SandBalanceTest` `the tiers get harder in the order they are offered`: over a year a naive pourer sorts 79 / 44 / 27% of tries, a careful one 84 / 52 / 33%, the solver's median search is 21 / 30 / 37 positions; 8x4 is clearly harder than 7x4, so Expert kept height 4). Deals redrawn for giving the board away: 15 / 14 / 10% of attempts; the difficulty filter (a random pourer sorts it six times out of six) redraws about half of Standard's deals, 3% of Hard's, none of Expert's. Generation on the JVM, median / p95 / max ms: 0.7 / 2.1 / 8, 0.2 / 1.2 / 1.8, 0.2 / 1.4 / 3.1 |
+| Mines | size, mines, and the deepest step of the ladder a board must need (at most 9 wide and 10 tall: a mis-tap loses the board) | 8x8 with 10, single numbers only / 8x10 with 16, needs a subset or pair / 9x10 with 21, needs the count against the numbers or a what-if (`MinesLogic.specFor`, `accepts`; `MinesRulesTest` `a year of daily boards - ... the tiers get harder`) |
 | Pointers | grid, arrow length and bends | 6x7, 2-4 squares / 12x12, 3-7 / 14x17, 3-9 (`PointersLogic.specFor`; `PointersRulesTest` `the tiers get bigger and more tangled in the order they are offered`, by mean depth) |
+| Lamps | side, and the rung of the ladder a board must need (walls about a quarter, half-turn symmetric) | 7x7 direct facts only / 10x10 needs a look-ahead (a lamp that would starve a number or leave a square dark) / 12x12 needs a what-if (`LampsLogic.specFor`; `LampsRulesTest` `a year of daily boards - every tier needs exactly its rung`) |
+| Pearls | side, and the deepest rung of the ladder a board must need | 6x6 local rules only / 8x8 needs the small-loop rule / 10x10 needs a what-if (`PearlsLogic.specFor`, `depth`; `PearlsRulesTest` `the tiers get harder in the order they are offered`) |
 | Dominoes | box and tray, rule kinds, and the deepest step of the ladder a board must need | 5x5 with 6-7 dominoes, sums, bounds and =, needs a region-value step / 6x6 with 9-10, adds all-different, needs counting / 7x7 with 12-14, needs a what-if (`DominoLogic.specFor`; `DominoRulesTest` `the tiers get harder in the order they are offered`) |
+| Codeword | grid side, and the deepest step of the ladder a board must need (givens minimal for that ladder) | 7x7 finished one run at a time / 9x9 needs a number cut by every word it is in / 11x11 needs every word worked through together (`CodewordLogic.specFor`; `CodewordRulesTest` `a year of daily boards - the tiers get bigger and need more`) |
+| Who's Who | people, categories, clue kinds, and the deepest ladder level a board must need | 4 people, house + 1, clues naming a person, direct steps only / 4, house + 2, links and next to / left of, needs a link or house step / 5, house + 2, either-or too, needs a what-if (`WhosWhoLogic.specFor`; `WhosWhoRulesTest` `the tiers get harder in the order they are offered`) |
+| Crossword (mini) | grid side, and the clue share: the letters the hints' walk must read from the clues, over the white squares (ladder depth does not separate grids, see `docs/MINI_SPEC.md`) | 5x5 at most 30% / 6x6 over 30% to 40% / 7x7 over 40% (`MiniLogic.specFor`; `MiniRulesTest` `a year of daily boards - the tiers get bigger and leave more to the clues`) |
 
 Rules for the tiers:
 
@@ -142,7 +148,7 @@ without editing it.
   returns `null` when the budget runs out, and `test/MosaicOptimumTest` `a search that runs out of budget reports
   nothing at all` pins that.
 - *Expose the split.* `generateVerified(seed, difficulty): State?` (null when nothing was proved) is what tests
-  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap`, `Inequality`, `Cipher`, `WordWheel` and `Tally` (internal). `generate` is
+  assert on. It exists on `Kings`, `Atoms` and `Sets` (public) and `Lits`, `Mambo`, `Shikaku`, `Snap`, `Inequality`, `Cipher`, `WordWheel`, `Tally`, `Lamps`, `Codeword` and `Mini` (internal, on the logic objects). `generate` is
   `generateVerified(...) ?: lastResort(...)` (Shikaku's is `fallbackBoard`).
 - *Fallbacks.* Keep it named, tiny and honest (`Atoms.lastResort` is a three-atom chain; Snap's is a numbered
   boustrophedon). Before adding one, ask what fraction of seeds reach it and measure it; size the test sample
@@ -252,6 +258,19 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
   bounded rather than by arithmetic. The board's box is the whole space between header and toolbar and must be
   the same size before and after solving and while a hint opens (CLAUDE.md audits at 390x844, 390x664,
   360x640).
+- **System font size: glyphs in a board are sized from their square, never by the font size.** A digit, letter,
+  clue or label drawn in a square (or a fixed slot of the board: a peg, a table cell) takes its size from that
+  square with `(cell * 0.5f).boardSp()` (`ui/BoardText.kt`), or `toSp()` in a draw scope, so it fits at any font
+  scale. Never `(cell.value * 0.5f).sp`: that grows with the system setting and clips (Sudoku's digits at 2x,
+  cage totals over half a square). A label in a key of fixed dp height (Lexicon's, Crossword's and Codeword's
+  keyboards) is a slot too. Give such a `Text` a `lineHeight` from the same size (`size * 1.2f`), or it inherits
+  the theme's sp line height, which does scale (Target's number vanished at 2x). Text outside the grid (headers,
+  captions, clue lists, buttons that grow with their label) keeps plain `sp` and `MaterialTheme.typography`, and
+  scales. `test/BoardTextSizeTest` fails on the scaling pattern. To look at a board at a font scale, a local
+  `Density(d.density, fontScale)` around `DaybookApp` in `web/.../WebApp.kt` and the render harness will do.
+- **A double tap has a long press as its twin** (Tents' tent, Kings' crown, Dominoes' turn; Lamps' lamp not yet, `docs/TODO.md`), given as
+  `onLongPress` to `detectTapGestures`, which never delays a tap; `onDoubleTap` would, so double taps are counted
+  by hand. Rules text and the walkthrough name both.
 - **Feedback must not move the board.** Reserve the space (`minLines == maxLines`) or float over the content.
   Reference: `Mambo.CAPTION_LINES` with `test/MamboCaptionTest` (every message must fit the reserved lines;
   overflow ellipsises silently). Rule violations are debounced ~1 s so passing through an illegal
@@ -378,12 +397,14 @@ Hint button and the walkthrough's free-play frame omits it.
 
 ## 8. The walkthrough
 
-Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.kt`, offered once, replayable.
+Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.kt`, offered until taken or not needed, replayable.
 
 **Behaviour.**
-- Offered once as one passive line over the clock on a first visit until the first move; recorded the moment it
-  is shown in `ProgressStore.tutorialsOffered`. No popups, no focus stealing. "How to play" (`?`) opens it
-  whenever; the `rules` list is the runner's "Rules" button. Skip is always on screen.
+- Offered as one passive line over the clock (tagline, then "One-minute walkthrough") on every visit, until the first
+  move of that visit, until the player has opened the walkthrough or solved the puzzle once at any tier; either is
+  recorded in `ProgressStore.tutorialsOffered` (a player whose set already held a puzzle under the old once-only rule
+  is not offered it again). No popups, no focus stealing. "How to play" (`?`) opens a rules sheet (tagline, the `rules`
+  list, "Play the one-minute walkthrough"); the `rules` list is also the runner's "Rules" button. Skip is always on screen.
 - Frame, board and hint state are transient (never in a saved game). The walkthrough draws over the game, so
   the board, undo stack and clock are where the player left them, and the clock pauses.
 - **A finished move moves on by itself.** The move lands, the chime plays, the frame's `done` line shows for
@@ -554,12 +575,18 @@ Y = yes, P = partial, N = no.
 | Regions | Y side | Y `generateVerified` (partition and fill built together, a board ships only if the ladder finishes it, then `countSolutions` == 1; `lastResort` is one fixed seed's proved board), year test | Y `RegionsLogic.isSolved` (rules, not the stored digits) | Y `RegionsOracle` (naive reading-order search, counts every answer), `RegionsTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares + digit-key indices | Y | Y | Y 200 / 70 |
 | Cage Sudoku | Y givens, cage size | Y `generateVerified` (ladder finishes it, then `CageLogic.solutions` == `ExactlyOne`; `lastResort` proved unique), year test | Y `CageLogic.isSolved` (rules, not the stored answer) | Y `CageOracle` (fills one cage at a time, no inference), `CageTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares, Sudoku's anchors + keepClear | Y | Y | Y 200 / 70 |
 | Tally | Y side, ladder depth | Y `generateVerified` (internal; the tier's ladder finishes it needing exactly its deepest step, then `countSolutions` == `TallyVerdict.ExactlyOne`; `lastResort` a fixed board per tier, accepted by a test), year test | Y `TallyLogic.isSolved` (every line's sum, not the stored answer) | Y `TallyOracle` (every column's subsets, no lookahead), `TallyTeachingTest` | Y no fallback exists | Y 5 | Y grid + target indices | Y | Y | Y 200 / 70 |
+| Mines | Y height, mines, ladder depth | Y `generateVerified` (internal; the ladder walked from the given opening reveals every safe square needing exactly the tier's deepest step, which forces every mine; `lastResort` the first seed the tier accepts, checked), year test | Y `MinesState.solved` (every safe square open, flags ignored) | Y `MinesOracle` (every layout the numbers and the total allow, no inference), `MinesTeachingTest` | Y no fallback on generated boards; `offersUndo = false` | Y 5 | Y grid | Y | Y | Y 230 / 70 |
 | Pointers | Y size, length, bends | n/a many orders win; `generateVerified` (built acyclic, density checked, cleared greedily; `lastResort` rows pointing right, checked), year test | Y `PointersState.solved` (every arrow gone) | Y `PointersRulesTest` (own heading arithmetic, greedy player, DFS cycle check, monotone removal) | N by design (`offersHints = false`, and `offersUndo = false`) | Y 6 | n/a no hints (arrow indices for the walkthrough) | Y | Y | Y 170 |
 | Target | Y large numbers, steps | n/a many answers; `generateVerified` (exhaustive table puts the target a tier-specific number of steps away; `lastResort` fixed and checked), year test | Y `TargetState.solved` (a tile is the target) | Y `TargetOracle` (breadth-first over positions) | Y a search of the visible tiles, no fallback exists | Y 6 | Y tile / operator / target anchors + keepClear | Y | Y | Y 200 / 70 |
 | Cipher | Y technique depth | Y a bundled list of real-word sums (`CipherSums`, built offline), each re-proved on the device: ladder finishes it, then `CipherLogic.prove` == `ExactlyOne`; `lastResort` proved, year test | Y `CipherLogic.isSolved` (rules, not the stored answer) | Y `CipherOracle` (every digit for every letter, no columns), `CipherTeachingTest` | Y no fallback on generated boards | Y 7 | Y tiles via `reportHighlight` + key and digit anchors + keepClear | Y | Y | Y 200 / 70 |
 | Word Wheel | Y letters, words | n/a the grid's words are the answer; `generateVerified` (laid to the tier's size, and no clued slot leaves more than 6 words; `lastResort` is seed 1's proved board), year test | Y `WordWheelState.solved` (every slot's word found) | Y `WordWheelOracle` (re-reads every run of the squares) | Y clue fallback measured | Y 5 | Y squares + wheel letters via `reportHighlight` + keepClear | Y | Y | Y 200 / 70 |
-| Sand | Y colours (spares fixed) | n/a many answers; `generateVerified` (internal; a found sorting road is the witness, sealed `SandLogic.Verdict` with `Solvable(path)` / `Unsolvable` / `Truncated`, only `Solvable` ships; deals that give the board away and boards a random pourer always sorts are redrawn; `lastResort` fixed and proved), year test | Y `SandLogic.isSolved` (rules) | Y `SandSupport` (one layer at a time, breadth-first over raw positions), `SandOracle` (differential) | Y a search of the visible tubes, no fallback exists | Y 6 | Y tube anchors | Y | Y | Y 200 / 70 |
+| Sand | Y colours (spares fixed) | n/a many answers; `generateVerified` (internal; a found sorting road is the witness, sealed `SandLogic.Verdict` with `Solvable(path)` / `Unsolvable` / `Truncated`, only `Solvable` ships; deals that give the board away and boards a random pourer always sorts are redrawn; `lastResort` fixed and proved), year test | Y `SandLogic.isSolved` (rules) | Y `SandOracle` (one layer at a time, breadth-first over raw positions; differential) | Y a search of the visible tubes, no fallback exists | Y 6 | Y tube anchors | Y | Y | Y 200 / 70 |
+| Lamps | Y side, ladder rung | Y `generateVerified` (internal; numbers taken back while the tier's ladder finishes it, needing exactly its rung, then `LampsLogic.countSolutions` == `LampsVerdict.ExactlyOne`; `lastResort` a fixed board per tier, accepted by a test), year test | Y `LampsLogic.isSolved` (rules, not the stored lamps) | Y `LampsOracle` (row runs in reading order, no propagation), `LampsTeachingTest` | Y no fallback on generated boards | Y 6 | Y grid | Y | Y | Y 260 / 70 |
+| Pearls | Y side, ladder depth | Y `generateVerified` (internal; a loop grown to be pinned by its pearls, pearls taken back while the tier's ladder finishes it needing exactly its rung, then `PearlsLogic.solutions` == `PearlsVerdict.ExactlyOne`; `lastResort` a fixed board per tier, accepted by a test), year test | Y `PearlsLogic.isSolved` (lines only, not the stored loop) | Y `PearlsOracle` (edges in reading order, frontier memo, no propagation), `PearlsTeachingTest` | Y no fallback exists | Y 7 | Y squares + edges via `reportHighlight` | Y `BoardPinTest` | Y | Y 200 / 70 |
 | Dominoes | Y box, tray, ladder depth | Y `generateVerified` (internal; the tier's ladder finishes it needing exactly its deepest step, then `DominoLogic.solutions` == `Verdict.ExactlyOne`; `lastResort` one fixed seed's board per tier, proved by the oracle), year test | Y `DominoLogic.isSolved` (rules, not the stored answer) | Y `DominoOracle` (reading order, no pruning), `DominoTeachingTest` | Y no fallback on generated boards | Y 6 | Y squares + tray slots + rule badges via `reportHighlight` + keepClear | N not yet (the lead adds it) | Y | Y 200 / 70 |
+| Crossword (mini) | Y side, clue share | Y a bundled list of dense fills (`MiniGrids`, built offline by `MiniGridsBuildTest`), each re-proved on the device: every slot a different clued word, the hints' walk finishes it with the tier's clue share, then `MiniLogic.solve` == `Verdict.ExactlyOne` from the clue letters alone; `lastResort` proved, year test | Y `MiniLogic.isSolved` (every slot the word of its clue, not the stored answer) | Y `MiniOracle` (square by square over the alphabet, prefix sets), `MiniTeachingTest` | Y clue fallback measured (44 / 54 / 62% of steps: the tier measure) | Y 5 | Y grid + letter key and clue bar anchors + keepClear | Y `BoardPinTest` | Y | Y 200 / 70 |
+| Codeword | Y side, ladder depth | Y a bundled list of dense fills (`CodewordGrids`, built offline by `CodewordGridsBuildTest`), each re-proved on the device: numbered from the seed, ladder finishes it from its givens, then `CodewordLogic.solve` == `Verdict.ExactlyOne`; `lastResort` proved, year test | Y `CodewordLogic.isSolved` (rules, not the stored answer) | Y `CodewordOracle` (letter by letter over the alphabet, no word index), `CodewordTeachingTest` | Y no fallback on generated boards | Y 5 | Y grid + key and letter anchors + keepClear | Y `BoardPinTest` | Y | Y 200 / 70 |
+| Who's Who | Y people, categories, ladder depth | Y `generateVerified` (internal; ladder finishes it at exactly the tier's depth, every clue needed, then `WhosWhoLogic.count` == `Verdict.ExactlyOne`; `lastResort` seed 1's board, proved by a test), year test | Y `WhosWhoLogic.isSolved` (one tick each, every clue) | Y `WhosWhoOracle` (every combination of permutations), `WhosWhoTeachingTest` | Y no fallback on generated boards | Y 9 | Y cells + clue rows via `highlightAnchor` + keepClear pad | Y `BoardPinTest` | Y | Y 260 / 70 |
 
 ### Known gaps and open items
 

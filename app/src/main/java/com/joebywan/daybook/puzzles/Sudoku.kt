@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -29,6 +28,7 @@ import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
+import com.joebywan.daybook.ui.boardSp
 
 @Serializable
 data class SudokuState(
@@ -123,13 +123,13 @@ object Sudoku : PuzzleType {
     override val id = "sudoku"
     override val displayName = "Sudoku"
     override val tagline = "One to nine, once per row, column and box"
-    override val accent = 0xFF4C86D9
+    override val accent = 0xFF6F7DF7
     override val rules = listOf(
-        "Fill every cell with a digit from 1 to 9.",
+        "Fill every square with a digit from 1 to 9.",
         "No digit may repeat within a row, a column or a 3x3 box.",
-        "Tap a cell, then tap a digit. Tap the digit again to clear it.",
-        "Tap the pencil to take notes: while it is lit, a digit is pencilled small in the cell " +
-            "instead of placed. Placing a digit clears it from the notes of the cells it sees.",
+        "Tap a square, then tap a digit. Tap the digit again to clear it.",
+        "Tap the pencil to take notes: while it is lit, a digit is pencilled small in the square " +
+            "instead of placed. Placing a digit clears it from the notes of the squares it sees.",
         "Clashing digits are shown in red as you go.",
     )
 
@@ -163,21 +163,8 @@ object Sudoku : PuzzleType {
      * digit exactly once. Reads only the grid, never a stored answer, so a legal fill that is not
      * the generator's still wins.
      */
-    fun isSolved(cells: List<Int>): Boolean {
-        if (cells.size != 81 || cells.any { it !in 1..9 }) return false
-        for (k in 0 until 9) {
-            var row = 0
-            var col = 0
-            var box = 0
-            for (j in 0 until 9) {
-                row = row or (1 shl cells[k * 9 + j])
-                col = col or (1 shl cells[j * 9 + k])
-                box = box or (1 shl cells[(k / 3 * 3 + j / 3) * 9 + k % 3 * 3 + j % 3])
-            }
-            if (row != ALL_DIGITS || col != ALL_DIGITS || box != ALL_DIGITS) return false
-        }
-        return true
-    }
+    fun isSolved(cells: List<Int>): Boolean =
+        cells.size == 81 && cells.all { it in 1..9 } && SUDOKU_UNITS.all { cells.holdsOneToNine(it) }
 
     /** Bits 1..9 set. */
     private const val ALL_DIGITS = 0b11_1111_1110
@@ -188,10 +175,13 @@ object Sudoku : PuzzleType {
      * a unit; Hard: a naked single, nothing past it; Expert: an elimination (locked candidates or a pair) or a what-if,
      * never the fallback. So the tiers cannot overlap: each has a depth of its own.
      */
-    private class Gate(val ceiling: String, val needs: String)
+    private class Gate(val ceiling: String, val needs: String, val floor: Int = 0)
+
+    /** Standard's fewest givens: its dig stops before it would go below this, so the gentlest tier is not bare. */
+    internal const val STANDARD_FLOOR = 34
 
     private fun gate(difficulty: Difficulty) = when (difficulty) {
-        Difficulty.STANDARD -> Gate(SudokuTeacher.HIDDEN_SINGLE_LINE, SudokuTeacher.FULL_HOUSE)
+        Difficulty.STANDARD -> Gate(SudokuTeacher.HIDDEN_SINGLE_LINE, SudokuTeacher.FULL_HOUSE, STANDARD_FLOOR)
         Difficulty.HARD -> Gate(SudokuTeacher.NAKED_SINGLE, SudokuTeacher.NAKED_SINGLE)
         Difficulty.EXPERT -> Gate(SudokuTeacher.WHAT_IF, SudokuTeacher.LOCKED)
     }
@@ -206,7 +196,8 @@ object Sudoku : PuzzleType {
      * The board when it was proved, null otherwise. What `FallbackTest` asserts on. Each attempt fills a grid from
      * `Rng(seed + attempt)` and digs it in 180-degree pairs (the centre alone), in a random order, keeping each removal
      * only while [countSolutions] (exhaustive) still finds one answer and the tier's ladder still finishes the board:
-     * the givens are minimal for that ladder, symmetric, and the clue count is whatever that leaves. The dug board then
+     * the givens are minimal for that ladder, symmetric, and the clue count is whatever that leaves, except that a removal
+     * taking the board below the tier's [Gate.floor] is skipped (Standard: [STANDARD_FLOOR]). The dug board then
      * ships only if its walk needed the tier's technique ([Gate.needs]); otherwise the next grid is tried.
      */
     internal fun generateVerified(seed: Long, difficulty: Difficulty, attempts: Int = ATTEMPTS): SudokuState? {
@@ -216,10 +207,13 @@ object Sudoku : PuzzleType {
             val rng = Rng(seed + attempt)
             val solution = fullGrid(rng)
             val puzzle = solution.toMutableList()
+            var givens = 81
             for (i in rng.shuffled((0..40).toList())) {
+                val pair = if (i == 40) 1 else 2
+                if (givens - pair < gate.floor) continue
                 puzzle[i] = 0
                 puzzle[80 - i] = 0
-                if (countSolutions(puzzle) == 1 && finishes(puzzle, gate.ceiling)) continue
+                if (countSolutions(puzzle) == 1 && finishes(puzzle, gate.ceiling)) { givens -= pair; continue }
                 puzzle[i] = solution[i]
                 puzzle[80 - i] = solution[80 - i]
             }
@@ -259,7 +253,7 @@ object Sudoku : PuzzleType {
             var changed = true
             while (changed) {
                 changed = false
-                for (unit in unitTable) for (d in 1..9) {
+                for (unit in SUDOKU_UNITS) for (d in 1..9) {
                     var at = -1
                     var count = 0
                     for (i in unit) if (cand[i] and (1 shl d) != 0) { at = i; count++ }
@@ -274,18 +268,6 @@ object Sudoku : PuzzleType {
             // No single is left, so the teacher's next step is its first elimination or what-if, exactly as on its walk.
             val step = SudokuTeacher.deduce(grid, ceiling) ?: return false
             grid[step.cell] = step.digit
-        }
-    }
-
-    /** The 27 rows, columns and boxes, as cell indices. */
-    private val unitTable: List<IntArray> = List(27) { u ->
-        val k = u % 9
-        IntArray(9) { j ->
-            when (u / 9) {
-                0 -> k * 9 + j
-                1 -> j * 9 + k
-                else -> (k / 3 * 3 + j / 3) * 9 + k % 3 * 3 + j % 3
-            }
         }
     }
 
@@ -568,7 +550,7 @@ object Sudoku : PuzzleType {
                         if (PREVIEW_DIGITS[i] != 0) {
                             Text(
                                 text = PREVIEW_DIGITS[i].toString(),
-                                fontSize = (cell.value * 0.52f).sp,
+                                fontSize = (cell * 0.52f).boardSp(), lineHeight = (cell * 0.52f).boardSp() * 1.2f,
                                 fontWeight = if (given) FontWeight.Bold else FontWeight.Normal,
                                 color = if (given) scheme.onSurface else BoardHues.ink(hueB, dark),
                                 textAlign = TextAlign.Center,

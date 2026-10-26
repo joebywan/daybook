@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.tutorial
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -204,7 +205,7 @@ fun TutorialRunner(
             Modifier.fillMaxWidth().height(HintSlotHeight).padding(horizontal = 18.dp),
         ) {
             if (frame.freePlay && hints.active) {
-                HintPanel(hints, accent, modifier = Modifier.fillMaxSize())
+                HintPanel(hints, accent, ::onHint, modifier = Modifier.fillMaxSize())
             } else {
                 Column(Modifier.fillMaxSize()) {
                     Text(
@@ -225,7 +226,7 @@ fun TutorialRunner(
                     if (judge != null || frame.freePlay || carried != null) Text(
                         feedback,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (status == Status.RETRY) scheme.onSurfaceVariant else accent,
+                        color = if (status == Status.RETRY) scheme.onSurfaceVariant else BoardHues.textOn(accent, scheme.background),
                         maxLines = 2,
                         minLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -260,7 +261,7 @@ fun TutorialRunner(
                     if (last) onClose() else index++
                 },
                 enabled = showNext && canAdvance,
-                colors = ButtonDefaults.buttonColors(containerColor = accent),
+                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = BoardHues.onFill(accent)),
                 modifier = Modifier.weight(1f).alpha(if (showNext) 1f else 0f),
             ) { Text(if (last) "Play" else "Next") }
         }

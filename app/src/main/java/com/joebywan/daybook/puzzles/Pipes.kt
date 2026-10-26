@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
@@ -43,7 +42,7 @@ import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.LocalReducedMotion
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.drawHintRings
@@ -133,7 +132,7 @@ object Pipes : PuzzleType {
     override val id = "pipes"
     override val displayName = "Pipes"
     override val tagline = "Rotate until every pipe joins up"
-    override val accent = 0xFF48B9C4
+    override val accent = 0xFF1C7EAB
     override val rules = listOf(
         "Tap a tile to rotate it a quarter turn.",
         "Water enters at the ringed tile; pipes joined back to it run full.",
@@ -411,12 +410,7 @@ object Pipes : PuzzleType {
         val step = PipesTeacher.teach(s) ?: return null
         val wrong = step.wrong
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = setOf(step.cell),
+            step,
             mistake = step.technique == PipesTeacher.MISTAKE,
             fallback = step.technique == PipesTeacher.FALLBACK,
             applyTo = { now -> turnTo(now as PipesState, step.cell, step.mask) },
@@ -577,11 +571,7 @@ object Pipes : PuzzleType {
         // the translucent version used to show while being opaque everywhere it overlaps itself.
         val dry = scheme.onSurfaceVariant.copy(alpha = DRY_TINT).compositeOver(scheme.surface)
         val wetCells = remember(s.cells, s.source) { filled(s) }
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // Breathes, as Kings' does, so a glowing tile is findable at a glance on an 8x11 board. Only
-        // runs while something glows, and is read in the draw phase.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // One angle per tile, held outside the state so a rotation can be shown turning while the
         // board itself has already moved on. Only the grid shape resets them.

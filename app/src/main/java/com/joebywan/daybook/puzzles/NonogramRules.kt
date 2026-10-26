@@ -80,30 +80,23 @@ internal object NonogramLogic {
         return out
     }
 
-    private fun picture(width: Int, height: Int, solution: String) =
-        Array(height) { r -> BooleanArray(width) { c -> solution[r * width + c] == '1' } }
+    /** Each row's clue, then each column's, read off a picture ([solution], `1` filled, reading order). */
+    private fun rowsOf(width: Int, height: Int, solution: String) =
+        List(height) { r -> runs(BooleanArray(width) { c -> solution[r * width + c] == '1' }) }
 
-    fun rowClues(s: NonogramState): List<List<Int>> {
-        val p = picture(s.width, s.height, s.solution)
-        return List(s.height) { r -> runs(p[r]) }
-    }
+    private fun colsOf(width: Int, height: Int, solution: String) =
+        List(width) { c -> runs(BooleanArray(height) { r -> solution[r * width + c] == '1' }) }
 
-    fun colClues(s: NonogramState): List<List<Int>> {
-        val p = picture(s.width, s.height, s.solution)
-        return List(s.width) { c -> runs(BooleanArray(s.height) { r -> p[r][c] }) }
-    }
+    fun rowClues(s: NonogramState): List<List<Int>> = rowsOf(s.width, s.height, s.solution)
+
+    fun colClues(s: NonogramState): List<List<Int>> = colsOf(s.width, s.height, s.solution)
 
     /** Every line's clue: rows first, then columns (as [lineCells] numbers them). */
     fun clues(s: NonogramState): List<List<Int>> = rowClues(s) + colClues(s)
 
-    /** The squares of row [r], then of column [c], as indices into the board. */
-    fun rowCells(width: Int, r: Int): List<Int> = List(width) { r * width + it }
-
-    fun colCells(width: Int, height: Int, c: Int): List<Int> = List(height) { it * width + c }
-
-    /** Rows first (0 until height), then columns (height until height + width). */
+    /** A line's squares as indices into the board: rows first (0 until height), then columns (height until height + width). */
     fun lineCells(width: Int, height: Int, line: Int): List<Int> =
-        if (line < height) rowCells(width, line) else colCells(width, height, line - height)
+        if (line < height) List(width) { line * width + it } else List(height) { it * width + line - height }
 
     /** Highlight indices for the clues, which sit after the squares (see [NonogramTeacher]). */
     fun rowClueIndex(width: Int, height: Int, r: Int): Int = width * height + r
@@ -255,10 +248,7 @@ internal object NonogramLogic {
      * The generator's depth gate ([Spec.minPasses]).
      */
     fun linePasses(width: Int, height: Int, solution: String): Int? {
-        val p = picture(width, height, solution)
-        val rows = List(height) { runs(p[it]) }
-        val cols = List(width) { c -> runs(BooleanArray(height) { r -> p[r][c] }) }
-        val (done, passes) = settle(width, height, rows, cols, IntArray(width * height)) ?: return null
+        val (done, passes) = settle(width, height, rowsOf(width, height, solution), colsOf(width, height, solution), IntArray(width * height)) ?: return null
         return if (done.none { it == UNKNOWN }) passes else null
     }
 
@@ -266,9 +256,7 @@ internal object NonogramLogic {
 
     /**
      * Side length, the share of squares drawn filled, and the fewest line passes ([linePasses]) a
-     * board must need, per tier. Mirrored pictures finish in fewer passes than noise did (half of
-     * 5x5 boards in one), so the gate keeps each tier at least as deep as it was and puts Hard
-     * and Expert apart in passes as well as size.
+     * board must need, per tier. The gate puts Hard and Expert apart in passes as well as size.
      */
     class Spec(val side: Int, val density: Double, val minPasses: Int)
 
@@ -313,26 +301,14 @@ internal object NonogramLogic {
     }
 
     /**
-     * Random squares at [density], mirrored so the finished picture looks drawn rather than noise:
-     * left to right, top to bottom, or both, chosen by the draw. Rejected when any line is blank or
-     * full (a clue of "0" or of the whole width needs no thought and makes a board look broken) or
-     * when the board is a long way from the tier's density.
+     * Random squares at [density]. Rejected when any line is blank or full (a clue of "0" or of the
+     * whole width needs no thought and makes a board look broken), when the board is a long way from
+     * the tier's density, or when it reads the same mirrored either way (half of it would give the
+     * rest away: mirrored pictures were tried and dropped).
      */
     private fun drawPicture(rng: Rng, n: Int, density: Double): String? {
         val threshold = (density * 1000).toInt()
-        val axes = rng.nextInt(3)
-        val acrossMirrored = axes != 1
-        val downMirrored = axes != 0
-        val cells = BooleanArray(n * n)
-        for (r in 0 until n) {
-            for (c in 0 until n) {
-                val fromR = if (downMirrored) minOf(r, n - 1 - r) else r
-                val fromC = if (acrossMirrored) minOf(c, n - 1 - c) else c
-                val from = fromR * n + fromC
-                // The mirror image comes earlier in reading order, so it is already drawn.
-                cells[r * n + c] = if (from < r * n + c) cells[from] else rng.nextInt(1000) < threshold
-            }
-        }
+        val cells = BooleanArray(n * n) { rng.nextInt(1000) < threshold }
         val total = cells.count { it }
         if (total < n * n * 0.45 || total > n * n * 0.8) return null
         for (r in 0 until n) {
@@ -340,6 +316,9 @@ internal object NonogramLogic {
             val col = (0 until n).count { cells[it * n + r] }
             if (row == 0 || row == n || col == 0 || col == n) return null
         }
+        val across = (0 until n * n).all { cells[it] == cells[it - it % n + n - 1 - it % n] }
+        val down = (0 until n * n).all { cells[it] == cells[(n - 1 - it / n) * n + it % n] }
+        if (across || down) return null
         return cells.joinToString("") { if (it) "1" else "0" }
     }
 }

@@ -1,9 +1,12 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.answerFallback
+import com.joebywan.daybook.core.lonePlace
 import com.joebywan.daybook.core.bit
 import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.digitsOf
+import com.joebywan.daybook.core.fullMask
 import com.joebywan.daybook.core.has
 import com.joebywan.daybook.core.lineName
 import com.joebywan.daybook.core.listed
@@ -68,23 +71,13 @@ internal object InequalityTeacher {
 
     private val LINES = List(10) { n -> List(n) { r -> List(n) { r * n + it } } + List(n) { c -> List(n) { it * n + c } } }
 
-    /** The one empty square of [line] whose mask in [m] has [d]; -1 when there are none or several, or the line holds [d]. */
-    private fun lonePlace(line: List<Int>, cells: List<Int>, m: IntArray, d: Int): Int {
-        var at = -1
-        for (i in line) {
-            if (cells[i] == d) return -1
-            if (cells[i] == 0 && has(m[i], d)) { if (at >= 0) return -1; at = i }
-        }
-        return at
-    }
-
     private class Sight(val n: Int, val cells: List<Int>, val signs: List<Sign>) {
         val base = IntArray(n * n)
         val cand = IntArray(n * n)
         var consistent = true
 
         init {
-            val full = InequalityLogic.fullMask(n)
+            val full = fullMask(n)
             val row = IntArray(n)
             val col = IntArray(n)
             for (i in 0 until n * n) if (cells[i] != 0) { row[i / n] = row[i / n] or bit(cells[i]); col[i % n] = col[i % n] or bit(cells[i]) }
@@ -183,7 +176,7 @@ internal object InequalityTeacher {
         for ((li, line) in all.withIndex()) {
             val empty = line.filter { cells[it] == 0 }
             if (empty.size == 1) {
-                val missing = InequalityLogic.fullMask(n) and line.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
+                val missing = fullMask(n) and line.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
                 if (missing.countOneBits() == 1) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), li)
             }
         }
@@ -289,17 +282,7 @@ internal object InequalityTeacher {
     fun teach(s: InequalityState): PlacementStep? {
         if (s.solved) return null
         mistake(s)?.let { return it }
-        return deduce(s.size, s.cells, s.signs) ?: fallback(s)
-    }
-
-    private fun fallback(s: InequalityState): PlacementStep? {
-        val i = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
-        val d = s.solution[i]
-        return PlacementStep(
-            FALLBACK, i, d, setOf(i), emptySet(),
-            "Try this square.",
-            "No short reason found: the stored answer has a $d here.",
-        )
+        return deduce(s.size, s.cells, s.signs) ?: answerFallback(FALLBACK, s.cells, s.solution)
     }
 
     private fun mistake(s: InequalityState): PlacementStep? {
@@ -399,7 +382,7 @@ internal object InequalityTeacher {
         val cut = if (hit.technique == NAKED_PAIR) {
             "Two squares of $name can only be $a or $b, so they take both, and no other square there can."
         } else {
-            "${name.replaceFirstChar { it.uppercase() }} needs a $a and a $b, which fit only the same two squares, so those hold nothing else."
+            "${name.cap()} needs a $a and a $b, which fit only the same two squares, so those hold nothing else."
         }
         val again = if (hit.needsSigns) "Counting the signs again, that" else "That"
         val r = hit.cell / n + 1

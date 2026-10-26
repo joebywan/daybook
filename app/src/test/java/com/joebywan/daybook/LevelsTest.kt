@@ -1,14 +1,13 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LevelBoard
+import com.joebywan.daybook.core.LevelSpread
 import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * The level plan (`core/Levels.kt`). The curve, the window and the pool are written out here rather than read
@@ -16,7 +15,10 @@ import java.time.LocalDate
  */
 class LevelsTest {
 
-    /** Today's pool, copied. Appending to [Levels.POOL] is fine; anything else changes opened levels. */
+    /**
+     * The pool levels shipped with, copied (Lamps came after). Appending to [Levels.POOL] is fine; anything else changes
+     * opened levels. The pins below are at this size: every level opened with it keeps planning exactly so.
+     */
     private val pinnedPool = listOf(
         "sudoku", "kings", "mambo", "pipes", "shikaku", "mosaic", "sets", "atoms", "snap", "lits",
         "tower", "words", "nonogram", "inequality", "chess", "tents", "regions", "cages", "target",
@@ -30,7 +32,11 @@ class LevelsTest {
         "tally", "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes",
     )
 
-    private val deals = 1..Levels.LATEST
+    /** The deals dealt from decks from level 1. Deal 3 plans levels 1-100 by difficulty instead (its own tests below). */
+    private val deals = 1..2
+
+    /** Every puzzle deal 3 ranks, copied: its levels 1-100 draw on these 31. */
+    private val ranked = pinnedPool + listOf("mines", "lamps", "codeword", "pearls", "whoswho", "mini")
 
     /** Puzzles that do not exist yet, appended to see what a bigger pool does. */
     private val future = pinnedPool + (1..35).map { "future$it" }
@@ -54,6 +60,9 @@ class LevelsTest {
             }
             assertEquals("deal $deal: levels 1-5 deal the starter puzzles once each", Levels.POOL.take(Levels.STARTER).sorted(), starters.sorted())
         }
+        for (id in (1..5).flatMap { ids(Levels.plan(it, Levels.POOL.size, 3)) }) {
+            assertTrue("$id has no walkthrough", PuzzleRegistry.byId(id)!!.tutorial.isNotEmpty())
+        }
     }
 
     @Test
@@ -65,19 +74,22 @@ class LevelsTest {
         assertTrue("level 3 is from the gentlest 17", level(3).all { pinnedGentle.indexOf(it) < 17 })
     }
 
+    /** Pinned at [pinnedPool]'s size: a plan is a function of the pool size, and a puzzle appended later opens new levels at its own. */
     @Test
     fun `the plans of levels 1 to 50 are pinned for each deal`() {
-        fun got(deal: Int) = (1..50).map { n -> Levels.plan(n, Levels.POOL.size, deal).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
+        // Pinned at the pool of 25: a level opened then keeps that plan however the pool grows (the test below).
+        fun got(deal: Int) = (1..50).map { n -> Levels.plan(n, pinnedPool.size, deal).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
         assertEquals(GOLDEN, got(1))
         assertEquals(GOLDEN_2, got(2))
+        assertEquals(3, Levels.LATEST)
         assertEquals("the default is the latest deal", Levels.plan(7, Levels.POOL.size, Levels.LATEST), Levels.plan(7))
         assertEquals(
             listOf(-3215747372223080039L, 6085545774054540416L, -4480082772839746525L, -8359627411479413995L, 7328236594175289981L),
-            Levels.plan(1, Levels.POOL.size, 1).map { it.seed },
+            Levels.plan(1, pinnedPool.size, 1).map { it.seed },
         )
         assertEquals(
             listOf(7688255564085075123L, -4094480006933299752L, -224227637783284087L, -7924503025723838927L, 6766780658332473636L),
-            Levels.plan(500, Levels.POOL.size, 1).map { it.seed },
+            Levels.plan(500, pinnedPool.size, 1).map { it.seed },
         )
     }
 
@@ -115,17 +127,17 @@ class LevelsTest {
             in 51..80 -> Triple(1, 3, 1)
             else -> Triple(0, 3, 2)
         }
-        for (n in 1..500) {
-            val tiers = Levels.plan(n).map { it.difficulty }
+        for (deal in Levels.LATEST downTo 1) for (n in (if (deal == 3) 101 else 1)..500) {
+            val tiers = Levels.plan(n, Levels.POOL.size, deal).map { it.difficulty }
             val got = Triple(tiers.count { it == Difficulty.STANDARD }, tiers.count { it == Difficulty.HARD }, tiers.count { it == Difficulty.EXPERT })
-            assertEquals("level $n", curve(n), got)
+            assertEquals("deal $deal level $n", curve(n), got)
         }
     }
 
     @Test
     fun `every puzzle appears in any ten levels in a row`() {
         for (deal in deals) {
-            val plans = (1..510).map { ids(Levels.plan(it, Levels.POOL.size, deal)) }
+            val plans = (1..510).map { ids(Levels.plan(it, pinnedPool.size, deal)) }
             for (start in 0..500) {
                 val seen = plans.subList(start, start + 10).flatten().toSet()
                 assertEquals("levels ${start + 1}-${start + 10} miss ${pinnedPool - seen}", pinnedPool.toSet(), seen)
@@ -145,10 +157,9 @@ class LevelsTest {
 
     @Test
     fun `seeds are the level's own and never a daily board of the same puzzle and tier`() {
-        val start = LocalDate.of(2026, 1, 1)
         val daily = HashSet<Long>()
-        for (id in pinnedPool) for (tier in Difficulty.entries) for (d in 0 until 365L) {
-            daily += DailySeed.seedFor(start.plusDays(d), id, tier)
+        for (id in pinnedPool) for (tier in Difficulty.entries) for (d in 0 until 365) {
+            daily += daySeed(d, id, tier)
         }
         val boards = (1..365).flatMap { Levels.plan(it) }
         assertTrue(boards.none { it.seed in daily })
@@ -175,10 +186,144 @@ class LevelsTest {
         assertEquals("Two Standard, two Hard, one Expert", of(e, s, h, s, h))
         assertEquals("Mostly Hard, one Standard, one Expert", of(h, s, h, e, h))
         assertEquals("Mostly Hard, two Expert", of(h, e, h, e, h))
-        assertEquals("Mostly Hard, one Standard, one Expert", Levels.summary(Levels.plan(60)))
+        assertEquals("Mostly Hard, one Standard, one Expert", Levels.summary(Levels.plan(60, pinnedPool.size, 1)))
+    }
+
+    /** Deal 3's learning order, copied: `PuzzleOrder.GENTLEST` on 2026-10-26. It must never change. */
+    private val pinnedLearn = listOf(
+        "pointers", "pipes", "snap", "sudoku", "words", "sand", "wordwheel", "mini", "target", "nonogram", "mines",
+        "kings", "mambo", "mosaic", "sets", "inequality", "tents", "lamps", "regions", "tally",
+        "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", "codeword", "pearls", "whoswho", "tower",
+    )
+
+    /** Deal 3's pool, and that pool with puzzles that do not exist yet appended. */
+    private val future3 = ranked + (1..35).map { "future$it" }
+
+    @Test
+    fun `deal 3's plans are pinned`() {
+        fun got(levels: IntRange) = levels.map { n -> Levels.plan(n, ranked, 3).joinToString(" ") { "${it.puzzleId}/${it.difficulty.name[0]}" } }
+        assertEquals(GOLDEN_3, got(1..50))
+        assertEquals(GOLDEN_3_TURN, got(98..103))
+        assertEquals(Levels.plan(40, ranked.size, 3), Levels.plan(40, ranked, 3))
+    }
+
+    @Test
+    fun `deal 3 keeps every level five puzzles, none from the level before, at any later pool size`() {
+        for (size in ranked.size..future3.size) {
+            val pool = future3.take(size)
+            var before = emptyList<String>()
+            for (n in 1..400) {
+                val plan = Levels.plan(n, pool, 3)
+                if (n <= Levels.SPREAD_LEVELS) assertEquals("pool $size level $n", Levels.plan(n, ranked, 3), plan)
+                val now = ids(plan)
+                assertEquals("pool $size level $n: $now", Levels.SIZE, now.toSet().size)
+                assertTrue("pool $size level $n repeats ${now.intersect(before.toSet())}", now.none { it in before })
+                assertTrue(now.all { it in pool })
+                before = now
+            }
+        }
+    }
+
+    /** Levels 1-100 of deal 3, read against the measured scores (`LevelSpread`, generated; `docs/LEVELS_SPEC.md`). */
+    @Test
+    fun `deal 3 rises smoothly, mixes tiers and brings every puzzle in early`() {
+        val levels = (1..100).map { Levels.plan(it, ranked, 3) }
+        val score = { b: LevelBoard -> LevelSpread.SCORE.getValue(b.puzzleId)[b.difficulty.ordinal] }
+        val mean = levels.map { l -> l.sumOf(score) / 5.0 }
+        val lo = pinnedLearn.take(5).sumOf { LevelSpread.SCORE.getValue(it)[0] } / 5.0
+        val hi = LevelSpread.SCORE.values.map { it[2] }.sortedDescending().take(5).sum() / 5.0
+        for ((i, m) in mean.withIndex()) {
+            val target = lo + (hi - lo) * i / 99.0
+            assertTrue("level ${i + 1}: mean $m, target $target", kotlin.math.abs(m - target) < 100)
+        }
+        val tens = mean.chunked(10).map { it.average() }
+        assertTrue("ten-level means rise: $tens", tens.zipWithNext().all { (a, b) -> b > a + 25 })
+        val mixed = levels.count { l -> l.map { it.difficulty }.toSet().size > 1 }
+        assertTrue("levels mixing tiers: $mixed", mixed >= 20)
+        assertEquals(pinnedLearn, Levels.LEARN)
+        assertEquals(ranked.sorted(), pinnedLearn.sorted())
+        for (n in 1..5) for (b in levels[n - 1]) {
+            assertTrue("level $n: ${b.puzzleId} is not among the 15 quickest to learn", b.puzzleId in pinnedLearn.take(15))
+            assertEquals("level $n: ${b.puzzleId}", Difficulty.STANDARD, b.difficulty)
+        }
+        val first = ranked.associateWith { id -> levels.indexOfFirst { l -> l.any { it.puzzleId == id } } + 1 }
+        assertTrue("every puzzle by level 15: $first", first.values.all { it in 1..15 })
+        for (id in ranked) {
+            val at = levels.indices.filter { n -> levels[n].any { it.puzzleId == id } }
+            val gap = (at + 100).zipWithNext().maxOf { (a, b) -> b - a }
+            assertTrue("$id is away $gap levels in a row", gap <= 15)
+        }
+        // After the spread, the decks: every puzzle in about 2 * poolSize / 5 levels, as deals 1 and 2.
+        val window = (2 * ranked.size + Levels.SIZE - 1) / Levels.SIZE + 1
+        val after = (101..400 + window).map { ids(Levels.plan(it, ranked, 3)) }
+        for (start in 0..300) assertEquals("levels ${start + 101}+", ranked.toSet(), after.subList(start, start + window).flatten().toSet())
     }
 
     private companion object {
+        val GOLDEN_3 = listOf(
+            "pointers/S target/S pipes/S sudoku/S wordwheel/S",
+            "kings/S sand/S snap/S nonogram/S words/S",
+            "target/S pipes/S sudoku/S mambo/S wordwheel/S",
+            "kings/S sand/S snap/S nonogram/S mini/S",
+            "sets/S target/S sudoku/S wordwheel/S words/S",
+            "mines/S pipes/S mambo/S nonogram/S mini/S",
+            "mosaic/S target/S sudoku/S wordwheel/S words/S",
+            "tents/S inequality/S mambo/S nonogram/S mini/S",
+            "lamps/S tally/S regions/S wordwheel/S words/S",
+            "atoms/S shikaku/S pipes/S sudoku/S mambo/S",
+            "chess/S lits/S nonogram/S cages/S words/S",
+            "cipher/S dominoes/S wordwheel/S mini/S pointers/H",
+            "codeword/S pipes/S sudoku/S shikaku/H tents/H",
+            "whoswho/S pearls/S nonogram/S words/S atoms/H",
+            "target/S mambo/S cages/S tower/S chess/H",
+            "sets/S pipes/S wordwheel/S cipher/H pointers/H",
+            "sand/S snap/S mini/S atoms/H shikaku/H",
+            "pearls/S mambo/S tower/S dominoes/H codeword/H",
+            "sets/S nonogram/S words/S pointers/H kings/H",
+            "wordwheel/S cages/S chess/H mini/S target/H",
+            "pipes/S sudoku/S atoms/H cipher/H mines/H",
+            "regions/S mambo/S shikaku/H dominoes/H mosaic/H",
+            "nonogram/S wordwheel/S tower/S pointers/H inequality/H",
+            "pearls/S words/S chess/H lamps/H tally/H",
+            "cages/S mini/S atoms/H cipher/H shikaku/H",
+            "regions/S dominoes/H codeword/H tents/H lits/H",
+            "mambo/S tower/S mines/H sets/H target/H",
+            "words/S chess/H shikaku/H pointers/H kings/H",
+            "nonogram/S mini/S atoms/H sand/H whoswho/H",
+            "cages/S cipher/H dominoes/H codeword/H tents/H",
+            "tower/S chess/H mines/H sets/H sudoku/H",
+            "words/S shikaku/H target/H kings/H snap/H",
+            "mini/S pointers/H sand/H lits/H whoswho/H",
+            "tower/S cipher/H dominoes/H sudoku/H tally/H",
+            "chess/H codeword/H mines/H sets/H lamps/H",
+            "atoms/H shikaku/H pointers/H tents/H pipes/H",
+            "mini/S target/H kings/H lits/H mosaic/H",
+            "chess/H cipher/H sand/H inequality/H wordwheel/H",
+            "shikaku/H dominoes/H mines/H sets/H pearls/H",
+            "codeword/H tents/H snap/H whoswho/H mosaic/H",
+            "cipher/H pointers/H target/H sudoku/H regions/H",
+            "atoms/H lits/H lamps/H tally/H mambo/H",
+            "sets/H kings/H sand/H pipes/H pearls/H",
+            "codeword/H mines/H whoswho/H inequality/H nonogram/H",
+            "tents/H snap/H mosaic/H wordwheel/H cages/H",
+            "target/H lits/H lamps/H pipes/H mini/H",
+            "sand/H sudoku/H tally/H words/H tower/H",
+            "snap/H whoswho/H inequality/H pearls/H regions/H",
+            "kings/H mosaic/H mambo/H cages/H nonogram/H",
+            "dominoes/H sets/H wordwheel/H mini/H chess/E",
+        )
+
+        /** Levels 98-103: the spread's end, then deck 1 on the curve. */
+        val GOLDEN_3_TURN = listOf(
+            "target/E cipher/E inequality/E cages/E mini/E",
+            "sand/E wordwheel/E tally/E whoswho/E regions/E",
+            "sets/E words/E tower/E lamps/E pearls/E",
+            "sand/E regions/H mosaic/H pointers/E tally/H",
+            "pearls/E words/H tents/H nonogram/H sets/E",
+            "codeword/E tower/E snap/H whoswho/H cages/H",
+        )
+
+
         /**
          * Deal 2: levels 1-5 differ. Deck 1 on is shuffled as in deal 1 and its repair reads deck 0's last ten, which
          * could differ; today neither deal's tail clashes with deck 1's start, so levels 6 on are deal 1's.

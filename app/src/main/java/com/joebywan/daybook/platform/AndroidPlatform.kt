@@ -64,20 +64,11 @@ import java.time.format.DateTimeFormatter
 /** Today on the device's own calendar and time zone. */
 fun currentDate(): LocalDate = java.time.LocalDate.now().toKotlinLocalDate()
 
-/** Wall-clock milliseconds, used only to order saved games by how recently they were left. */
-fun currentTimeMillis(): Long = System.currentTimeMillis()
-
-/** A fresh nonce for a random board: a second random game must be a new board. */
-fun freshNonce(): Long = System.nanoTime()
-
 private val formatters = HashMap<String, DateTimeFormatter>()
 
 /** [date] in a `DateTimeFormatter` [pattern], in the device's locale. */
 fun formatDate(date: LocalDate, pattern: String): String =
     date.toJavaLocalDate().format(formatters.getOrPut(pattern) { DateTimeFormatter.ofPattern(pattern) })
-
-/** A clock reading such as 3:07. */
-fun formatClock(seconds: Int): String = "%d:%02d".format(seconds / 60, seconds % 60)
 
 /** The DataStore file named [name], behind the shared [KeyValueStore] interface. */
 @Composable
@@ -143,9 +134,6 @@ const val GENERATION_ANIMATES: Boolean = true
 /** Settings text under the Sound switch: what else keeps the chime quiet on this platform. */
 const val SOLVE_SOUND_NOTE: String =
     "It follows your media volume and stays quiet when your phone is on silent or vibrate."
-
-/** How long a board may take before "Setting out..." appears, so a quick one does not flash it. */
-const val LOADING_MESSAGE_DELAY_MS: Long = 150L
 
 /**
  * Called while the home grid is showing. Android generates each board off the main thread when it

@@ -9,10 +9,15 @@ import com.joebywan.daybook.puzzles.Cipher
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Kings
+import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mambo
+import com.joebywan.daybook.puzzles.MiniLogic
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.PointersLogic
+import com.joebywan.daybook.puzzles.MinesLogic
+import com.joebywan.daybook.puzzles.PearlsLogic
+import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.RegionsLogic
 import com.joebywan.daybook.puzzles.Sand
@@ -58,6 +63,10 @@ class LevelBoardsProvedTest {
         "cages" to Cages::generateVerified,
         "nonogram" to NonogramLogic::generateVerified,
         "dominoes" to DominoLogic::generateVerified,
+        "mines" to MinesLogic::generateVerified,
+        "lamps" to LampsLogic::generateVerified,
+        "pearls" to PearlsLogic::generateVerified,
+        "mini" to MiniLogic::generateVerified,
     )
 
     @Test

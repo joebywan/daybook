@@ -37,11 +37,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
@@ -54,14 +52,16 @@ import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
 import com.joebywan.daybook.ui.PAD_HEIGHT
 import com.joebywan.daybook.ui.PadKey
+import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * A Cipher sum in play. [words] (the addends, then the total) and [solution] are fixed for the board;
@@ -109,7 +109,7 @@ object Cipher : PuzzleType {
     override val id = "cipher"
     override val displayName = "Cipher"
     override val tagline = "Each letter is a digit. Make the sum true."
-    override val accent = 0xFFC84161
+    override val accent = 0xFFA879AA
     override val rules = listOf(
         "Each letter stands for one digit, 0 to 9, the same digit everywhere it appears.",
         "Different letters are different digits, and no word starts with 0.",
@@ -294,12 +294,12 @@ object Cipher : PuzzleType {
                         if (tile >= 28.dp) Text(
                             letter,
                             Modifier.align(Alignment.TopStart).padding(start = tile * 0.08f, top = tile * 0.02f),
-                            fontSize = (tile.value * 0.24f).sp,
+                            fontSize = (tile * 0.24f).boardSp(), lineHeight = (tile * 0.24f).boardSp() * 1.2f,
                             color = textColour(l, false).copy(alpha = 0.75f),
                         )
-                        Text(digits[l].toString(), fontSize = (tile.value * 0.56f).sp, fontWeight = FontWeight.Medium, color = textColour(l, true))
+                        Text(digits[l].toString(), fontSize = (tile * 0.56f).boardSp(), lineHeight = (tile * 0.56f).boardSp() * 1.2f, fontWeight = FontWeight.Medium, color = textColour(l, true))
                     } else {
-                        Text(letter, fontSize = (tile.value * 0.5f).sp, fontWeight = FontWeight.Bold, color = textColour(l, false))
+                        Text(letter, fontSize = (tile * 0.5f).boardSp(), lineHeight = (tile * 0.5f).boardSp() * 1.2f, fontWeight = FontWeight.Bold, color = textColour(l, false))
                     }
                 }
             }
@@ -336,9 +336,7 @@ object Cipher : PuzzleType {
         val (hueA, hueB) = BoardHues.pair(s.solution.hashCode())
         val mark = BoardHues.mark(hueA)
         val ink = BoardHues.ink(hueB, dark)
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // A broken rule shows after a pause and goes at once when mended; held here, not in the state (undo).
         val live = remember(s.digits) { CipherLogic.conflicts(sum, s.digits) }
@@ -398,7 +396,7 @@ object Cipher : PuzzleType {
                         val look = highlight.look(sum.tile(r, c))
                         Modifier
                             .moveFeel(feel, l, Color(accent))
-                            .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
+                            .dimmed(look)
                             .ring(look, glow, pulse, corner = 8.dp)
                             .then(if (sum.tile(r, c) in redColumn) Modifier.border(2.dp, scheme.error, RoundedCornerShape(8.dp)) else Modifier)
                             .clickable(enabled = interactive) { onState(s.select(l)) }
@@ -454,7 +452,7 @@ object Cipher : PuzzleType {
                                 Text(
                                     sum.name(owner),
                                     Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
-                                    fontSize = 10.sp,
+                                    fontSize = 10.dp.boardSp(), lineHeight = 10.dp.boardSp() * 1.2f,
                                     color = scheme.outline,
                                 )
                             }

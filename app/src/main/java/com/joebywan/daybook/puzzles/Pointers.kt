@@ -5,7 +5,8 @@ import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -43,13 +44,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.ui.LocalReducedMotion
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -67,7 +68,7 @@ object Pointers : PuzzleType {
     override val id = "pointers"
     override val displayName = "Arrows"
     override val tagline = "Clear every arrow, without a bump"
-    override val accent = 0xFFC95E77
+    override val accent = 0xFFB96BCB
     override val rules = listOf(
         "Tap an arrow and it slides off the board the way its head points, if nothing is in its way to the edge.",
         "If another arrow is in the way, it bumps and you lose a life. Lose all three and the board is lost: try it again from the start.",
@@ -314,7 +315,7 @@ object Pointers : PuzzleType {
     }
 
     @Composable
-    private fun Hearts(lives: Int, modifier: Modifier) {
+    internal fun Hearts(lives: Int, modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
         Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             repeat(PointersLogic.LIVES) { k ->
@@ -358,13 +359,15 @@ object Pointers : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         val hues = remember(s.arrows) { colouring(s) }
-        val highlight = LocalBoardHighlight.current
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty(), 0.35f, 0.8f)
+        val (highlight, _, pulse) = rememberHintPaint(low = 0.35f, high = 0.8f)
         // Animations are transient: they live here, in a scope that outlives the state that started them.
         val scope = rememberCoroutineScope()
         val slides = remember(s.arrows) { mutableStateListOf<Slide>() }
         var bump by remember(s.arrows) { mutableStateOf<Bump?>(null) }
         var cursor by remember(s.arrows) { mutableStateOf<Int?>(null) }
+        // The arrow under a finger that is down: tinted at once, taken on release over the same arrow; sliding off it clears
+        // the tint and cancels. Transient, never state.
+        var pressed by remember(s.arrows) { mutableStateOf(-1) }
         // Reduced motion: a cleared arrow simply goes and a bump flashes without the shake.
         val still = LocalReducedMotion.current
         val live = interactive && !s.solved && !s.failed
@@ -436,10 +439,24 @@ object Pointers : PuzzleType {
                         .size(step * s.width, step * s.height)
                         .pointerInput(s, live) {
                             if (!live) return@pointerInput
-                            detectTapGestures { p ->
+                            fun arrowUnder(p: Offset): Int {
                                 val unit = size.width.toFloat() / s.width
-                                val cell = hit(s, p.x / unit, p.y / unit)
-                                if (cell >= 0) tapAt(cell)
+                                return hit(s, p.x / unit, p.y / unit).let { if (it >= 0) s.arrowAt(it) else -1 }
+                            }
+                            awaitEachGesture {
+                                val first = awaitFirstDown()
+                                val a = arrowUnder(first.position)
+                                pressed = a
+                                while (true) {
+                                    val c = awaitPointerEvent().changes.firstOrNull { it.id == first.id } ?: break
+                                    val over = arrowUnder(c.position)
+                                    if (!c.pressed) {
+                                        if (a >= 0 && over == a) tapAt(s.arrows[a].last())
+                                        break
+                                    }
+                                    pressed = if (over == a) a else -1
+                                }
+                                pressed = -1
                             }
                         },
                 ) {
@@ -448,6 +465,10 @@ object Pointers : PuzzleType {
                     drawDots(s.width, s.height, unit, scheme.onSurfaceVariant.copy(alpha = 0.35f))
                     val b = bump
                     val flash = if (b == null) 0f else minOf(1f, 2f * (1f - b.progress.value)) // full warning for the first half, then fading
+                    // A finger down on an arrow: the same band as the keyboard cursor's, under it.
+                    if (pressed >= 0 && pressed !in s.removed) {
+                        drawArrow(s.arrows[pressed], s.width, unit, Color(accent).copy(alpha = 0.45f), width = 0.75f, head = false)
+                    }
                     // The keyboard cursor: a soft band under the arrow it is on, or a ring on a bare square.
                     cursor?.let { at ->
                         val a = s.arrowAt(at)
@@ -458,8 +479,9 @@ object Pointers : PuzzleType {
                     for (i in s.arrows.indices) {
                         if (i in s.removed) continue
                         var colour = BoardHues.ink(HUES[hues[i]], dark)
-                        if (!highlight.isEmpty && i !in highlight.strong && i !in highlight.soft) colour = colour.copy(alpha = 0.3f)
-                        if (i in highlight.strong) drawArrow(s.arrows[i], s.width, unit, scheme.onBackground.copy(alpha = pulse.value * 0.5f), width = 0.6f, head = false)
+                        val look = highlight.look(i)
+                        if (look.dim) colour = colour.copy(alpha = 0.3f)
+                        if (look.strong) drawArrow(s.arrows[i], s.width, unit, scheme.onBackground.copy(alpha = pulse.value * 0.5f), width = 0.6f, head = false)
                         var shift = 0f
                         if (b != null && (i == b.arrow || i == b.blocker)) colour = lerp(colour, scheme.error, flash)
                         if (b != null && i == b.arrow && !still) {

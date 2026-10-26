@@ -4,11 +4,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,31 +32,30 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.DigitKeyAction
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.digitKeyAction
 import com.joebywan.daybook.core.highlightGrid
-import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.PAD_GAP
-import com.joebywan.daybook.ui.PAD_HEIGHT
-import com.joebywan.daybook.ui.PadKey
+import com.joebywan.daybook.ui.DigitPadRow
+import com.joebywan.daybook.ui.padBoardSide
+import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * An Inequality square in play. [signs] and [solution] are fixed for the board; [cells] holds 0 for
@@ -100,7 +97,7 @@ object Inequality : PuzzleType {
     override val id = "inequality"
     override val displayName = "Inequality"
     override val tagline = "Each digit once per line, signs point to the smaller"
-    override val accent = 0xFF3FA89A
+    override val accent = 0xFF1E76D8
     override val rules = listOf(
         "Fill every square with a digit from 1 to the size of the grid.",
         "No digit may repeat in a row or a column.",
@@ -284,7 +281,7 @@ object Inequality : PuzzleType {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             PREVIEW_DIGITS[i].toString(),
-                            fontSize = (cell.value * 0.6f).sp,
+                            fontSize = (cell * 0.6f).boardSp(), lineHeight = (cell * 0.6f).boardSp() * 1.2f,
                             fontWeight = if (PREVIEW_GIVEN[i]) FontWeight.Bold else FontWeight.Normal,
                             color = if (PREVIEW_GIVEN[i]) scheme.onSurface else BoardHues.ink(hueB, dark),
                         )
@@ -314,9 +311,7 @@ object Inequality : PuzzleType {
         val twin = BoardHues.fill(hueB, dark)
         val band = BoardHues.fill(hueA, dark).copy(alpha = 0.45f)
         val selectedValue = s.selected?.let { s.cells[it] } ?: 0
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         // A row or column is finished when it holds 1..n and every sign inside it is true.
         val units = remember(n) { lineUnits(n, n) }
         val feel = rememberMoveFeel(s.cells, units) { u ->
@@ -337,11 +332,7 @@ object Inequality : PuzzleType {
                 },
             contentAlignment = Alignment.Center,
         ) {
-            val side = if (constraints.hasBoundedHeight) {
-                minOf(maxWidth, (maxHeight - PAD_GAP - PAD_HEIGHT).coerceAtLeast(0.dp))
-            } else {
-                maxWidth
-            }
+            val side = padBoardSide()
             val slot = side / n
             val cell = slot * CELL
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -353,7 +344,7 @@ object Inequality : PuzzleType {
                                 .padding(start = slot * (i % n) + (slot - cell) / 2, top = slot * (i / n) + (slot - cell) / 2)
                                 .size(cell)
                                 .moveFeel(feel, i, Color(accent))
-                                .then(if (look.dim) Modifier.alpha(0.3f) else Modifier)
+                                .dimmed(look)
                                 .ring(look, glow, pulse, corner = 8.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
@@ -371,7 +362,7 @@ object Inequality : PuzzleType {
                             if (s.cells[i] != 0) {
                                 Text(
                                     s.cells[i].toString(),
-                                    fontSize = (cell.value * 0.6f).sp,
+                                    fontSize = (cell * 0.6f).boardSp(), lineHeight = (cell * 0.6f).boardSp() * 1.2f,
                                     fontWeight = if (s.givens[i]) FontWeight.Bold else FontWeight.Normal,
                                     color = when {
                                         i in conflicts -> scheme.error
@@ -402,29 +393,13 @@ object Inequality : PuzzleType {
 
                 Spacer(Modifier.height(PAD_GAP))
 
-                Row(
-                    Modifier.width(side).keepClear(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    (1..n).forEach { digit ->
-                        val remaining = n - s.cells.count { it == digit }
-                        val at = s.selected
-                        PadKey(
-                            InequalityTeacher.pad(digit), highlight, glow, pulse,
-                            fill = if (remaining == 0) scheme.surfaceVariant else scheme.surface,
-                            enabled = interactive && at != null,
-                            onClick = {
-                                val next = s.enter(at ?: return@PadKey, digit)
-                                if (next !== s) onState(next)
-                            },
-                        ) {
-                            Text(
-                                digit.toString(),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (remaining == 0) scheme.outline else scheme.onSurface,
-                            )
-                        }
-                    }
+                DigitPadRow(
+                    side, n, InequalityTeacher::pad, highlight, glow, pulse,
+                    enabled = interactive && s.selected != null,
+                    done = { d -> s.cells.count { it == d } == n },
+                ) { digit ->
+                    val next = s.enter(s.selected ?: return@DigitPadRow, digit)
+                    if (next !== s) onState(next)
                 }
             }
         }

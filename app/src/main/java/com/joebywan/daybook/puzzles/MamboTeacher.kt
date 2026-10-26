@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.numberWord
 
 /**
@@ -57,15 +58,15 @@ internal object MamboTeacher {
      * is only ever a mistake being taken back.
      */
     class Step(
-        val technique: String,
+        override val technique: String,
         val places: Map<Int, Sym> = emptyMap(),
         val clears: List<Int> = emptyList(),
-        val focus: Set<Int>,
-        val cited: Set<Int>,
-        val nudge: String,
-        val explanation: String,
-    ) {
-        val targets: Set<Int> get() = places.keys + clears
+        override val focus: Set<Int>,
+        override val cited: Set<Int>,
+        override val nudge: String,
+        override val explanation: String,
+    ) : TeachStep {
+        override val targets: Set<Int> get() = places.keys + clears
     }
 
     /** A row or a column, with the name the board would be read by. */

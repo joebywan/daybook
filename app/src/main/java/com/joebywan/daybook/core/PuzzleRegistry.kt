@@ -4,15 +4,20 @@ import com.joebywan.daybook.puzzles.Atoms
 import com.joebywan.daybook.puzzles.Cages
 import com.joebywan.daybook.puzzles.Chess
 import com.joebywan.daybook.puzzles.Cipher
+import com.joebywan.daybook.puzzles.Codeword
+import com.joebywan.daybook.puzzles.Mini
 import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Inequality
 import com.joebywan.daybook.puzzles.Kings
+import com.joebywan.daybook.puzzles.Lamps
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Nonogram
 import com.joebywan.daybook.puzzles.Mambo
+import com.joebywan.daybook.puzzles.Mines
+import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.Pipes
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Sets
@@ -24,6 +29,7 @@ import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
+import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WordWheel
 
 /**
@@ -60,6 +66,12 @@ object PuzzleRegistry {
         Sand,
         Pointers,
         Dominoes,
+        Mines,
+        Lamps,
+        Codeword,
+        Pearls,
+        WhosWho,
+        Mini,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }

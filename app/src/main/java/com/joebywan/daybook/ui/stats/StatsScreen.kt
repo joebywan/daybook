@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.stats
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.TitledScreen
 import androidx.compose.foundation.clickable
@@ -67,7 +68,11 @@ fun StatsScreen(
     /** Per puzzle with a teacher, what its hints have explained (`TechniquesMet`). */
     techniques: List<PuzzleTechniques>,
     onTechniques: () -> Unit,
+    /** A day tapped on the streak calendar: that day in the archive. */
+    onDay: (LocalDate) -> Unit,
     onBack: () -> Unit,
+    /** The training record (`TrainingRecord`), for the Training achievements in the count. */
+    training: Set<String> = emptySet(),
 ) {
     val scheme = MaterialTheme.colorScheme
     // Which kept card is open, as "puzzleId|tier|best", so a rotation keeps it open.
@@ -103,17 +108,13 @@ fun StatsScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Tile("Solved", completions.size.toString(), Modifier.weight(1f))
-                    Tile(
-                        if (streak.lapsed) "Welcome back" else "Streak",
-                        if (streak.alive) streak.current.toString() else "-",
-                        Modifier.weight(1f),
-                    )
-                    Tile("Best", streak.best.toString(), Modifier.weight(1f))
+                    Tile("Streak", if (streak.alive) streak.current.toString() else DASH, Modifier.weight(1f))
+                    Tile("Best streak", streak.best.toString(), Modifier.weight(1f))
                 }
             }
 
             item {
-                val got = earnedAchievements(completions, today).size
+                val got = earnedAchievements(completions, today, training = training).size
                 Row(
                     Modifier.fillMaxWidth().card(scheme.surface).clickable(onClick = onAchievements).padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -137,7 +138,7 @@ fun StatsScreen(
             }
 
             item {
-                StreakCalendar(completions.mapNotNullTo(HashSet()) { it.day }, today, Modifier.fillMaxWidth())
+                StreakCalendar(completions.mapNotNullTo(HashSet()) { it.streakDay }, today, Modifier.fillMaxWidth(), onDay)
                 Spacer(Modifier.height(8.dp))
             }
 
@@ -158,7 +159,10 @@ fun StatsScreen(
     }
 }
 
-/** One puzzle's card: per tier, its best time over its solve count and share links. */
+/** The one dash the screen uses for "nothing yet". */
+private const val DASH = "–"
+
+/** One puzzle's card: per tier, its best time over its solve count and share links; one line when never played. */
 @Composable
 private fun PuzzleStats(
     puzzle: PuzzleType,
@@ -171,14 +175,18 @@ private fun PuzzleStats(
     val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
     Column(modifier.card(scheme.surface).padding(14.dp)) {
-        Text(puzzle.displayName, style = MaterialTheme.typography.titleMedium, color = accent, maxLines = 1)
-        Difficulty.entries.forEach { difficulty ->
+        Text(puzzle.displayName, style = MaterialTheme.typography.titleMedium, color = BoardHues.textOn(accent, scheme.surface), maxLines = 1)
+        // Never played: one line, not three tiers of dashes and zeroes.
+        if (completions.none { it.puzzleId == puzzle.id }) {
+            Spacer(Modifier.height(8.dp))
+            Text("Not played yet", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+        } else Difficulty.entries.forEach { difficulty ->
             val best = Stats.bestTime(completions, puzzle.id, difficulty)
             val count = completions.count { it.puzzleId == puzzle.id && it.difficulty == difficulty }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth()) {
                 Text(difficulty.label, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                Text(if (best == null) "—" else formatClock(best), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurface)
+                Text(if (best == null) DASH else formatClock(best), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurface)
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("$count solved", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant, modifier = Modifier.weight(1f))
@@ -211,7 +219,7 @@ private fun ShareLink(label: String, kept: KeptCard?, accent: Color, onOpen: (Ke
     Text(
         label,
         style = MaterialTheme.typography.labelLarge,
-        color = if (kept != null) accent else scheme.outlineVariant,
+        color = if (kept != null) BoardHues.textOn(accent, scheme.surface) else scheme.outlineVariant,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .clickable(enabled = kept != null) { kept?.let(onOpen) }

@@ -44,13 +44,12 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -61,6 +60,7 @@ import com.joebywan.daybook.ui.GLOW_ALPHA
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.graphics.drawscope.scale
+import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.rememberSettledFlags
@@ -83,7 +83,7 @@ object Dominoes : PuzzleType {
     override val id = "dominoes"
     override val displayName = "Dominoes"
     override val tagline = "Lay every domino so each region keeps its rule"
-    override val accent = 0xFF76B43C
+    override val accent = 0xFF8F5DD6
 
     override val rules = listOf(
         "Lay every domino from the tray on two neighbouring squares, either way round.",
@@ -99,7 +99,8 @@ object Dominoes : PuzzleType {
         "Arrows move, ] or Tab and [ pick a domino, F or Space turns it, Enter marks a square and lays it, Backspace lifts.",
     )
 
-    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = DominoLogic.generate(seed, difficulty)
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        DominoLogic.generateVerified(seed, difficulty) ?: DominoLogic.lastResort(difficulty)
 
     /** The deepest level the generator's ladder needs, each tier exactly one; null below region values. */
     override fun neededTechnique(state: PuzzleState): String? =
@@ -117,11 +118,7 @@ object Dominoes : PuzzleType {
         val s = state as DominoState
         val step = DominoTeacher.teach(s) ?: return null
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
+            step,
             // A mistake's targets name only its tray slot; the squares it lies on glow too, so the domino to lift is seen.
             targets = if (step.mistake) step.targets + step.focus else step.targets,
             mistake = step.mistake,
@@ -336,13 +333,7 @@ object Dominoes : PuzzleType {
 
     // ---- colours --------------------------------------------------------------------------------
 
-    /**
-     * Violet, Amber, Teal, Blue: docs/COLOUR.md's content hues less Coral and Green (the badges show right and wrong) and
-     * Rose (too near the red of a broken rule); a region graph is planar, so four always do. Gold stands by.
-     */
-    private val REGION_HUES = listOf(268f, 34f, 175f, 215f, 46f)
-
-    /** A hue index per region, neighbouring regions different: a 4 (else 5) colouring of the region graph, derived, never stored. */
+    /** A hue index per region, neighbouring regions different: a 4 (else 5) colouring of the region graph (planar, so four do). */
     internal fun regionColours(s: DominoState): IntArray {
         val count = s.rules.size
         val adj = List(count) { BooleanArray(count) }
@@ -353,25 +344,7 @@ object Dominoes : PuzzleType {
             val down = if (i + s.width < s.regionOf.size) s.regionOf[i + s.width] else -1
             for (b in intArrayOf(right, down)) if (b >= 0 && b != a) { adj[a][b] = true; adj[b][a] = true }
         }
-        // Four hues, region r trying hue r first, so a board spreads them rather than leaning on the first three.
-        for (k in 4..REGION_HUES.size) {
-            val colour = IntArray(count) { -1 }
-            var budget = 50_000
-            fun go(r: Int): Boolean {
-                if (r == count) return true
-                if (--budget < 0) return false
-                for (j in 0 until k) {
-                    val c = (r + j) % k
-                    if ((0 until count).any { adj[r][it] && colour[it] == c }) continue
-                    colour[r] = c
-                    if (go(r + 1)) return true
-                }
-                colour[r] = -1
-                return false
-            }
-            if (go(0)) return colour
-        }
-        return IntArray(count) { it % REGION_HUES.size } // not reached on a planar layout; the outlines still show the regions
+        return BoardHues.regionColours(adj, minColours = 4)
     }
 
     private val Ink = Color(0xFF11201C)
@@ -380,8 +353,8 @@ object Dominoes : PuzzleType {
         val surface = scheme.surface
         val line = scheme.outline
         val rim = scheme.onSurfaceVariant.copy(alpha = 0.55f)
-        val tint = hues.map { BoardHues.fill(REGION_HUES[it], dark).copy(alpha = if (dark) 0.75f else 0.55f) }
-        val edge = hues.map { BoardHues.ink(REGION_HUES[it], dark) }
+        val tint = hues.map { BoardHues.fill(BoardHues.REGION_HUES[it], dark).copy(alpha = if (dark) 0.75f else 0.55f) }
+        val edge = hues.map { BoardHues.ink(BoardHues.REGION_HUES[it], dark) }
         val good = BoardHues.mark(145f)
         val error = scheme.error
         val body = if (dark) Color(0xFFDCD4C3) else Color.White
@@ -502,12 +475,17 @@ object Dominoes : PuzzleType {
         val sq = fit.square(q % s.width, q / s.width)
         val rule = s.rules[r]
         val text = labelNumber(rule)?.let { labels[it]?.size?.width?.toFloat() } ?: 0f
-        val symbol = if (rule.kind == RuleKind.SUM) 0f else u * 0.17f
-        val gap = if (text > 0f && symbol > 0f) u * 0.03f else 0f
+        val (symbol, gap) = badgeParts(rule.kind, text, u)
         val h = u * 0.38f
         val w = maxOf(h, symbol + gap + text + u * 0.18f)
         val centre = Offset(sq.right + u * 0.05f, sq.top - u * 0.05f)
         return Rect(Offset(centre.x - w / 2, centre.y - h / 2), Size(w, h))
+    }
+
+    /** A badge's symbol width and the gap after it, beside a label [text] wide: [badgeRect] sizes by them, [drawBadge] lays out by them. */
+    private fun badgeParts(kind: RuleKind, text: Float, u: Float): Pair<Float, Float> {
+        val symbol = if (kind == RuleKind.SUM) 0f else u * 0.17f
+        return symbol to if (text > 0f && symbol > 0f) u * 0.03f else 0f
     }
 
     private fun DrawScope.drawBadge(rule: RegionRule, rect: Rect, u: Float, fill: Color, ring: Color, alpha: Float, label: TextLayoutResult?) {
@@ -515,9 +493,8 @@ object Dominoes : PuzzleType {
         drawRoundRect(fill.copy(alpha = alpha), rect.topLeft, rect.size, radius)
         drawRoundRect(ring, rect.topLeft, rect.size, radius, style = Stroke(maxOf(1f, u * 0.035f)))
         val ink = BoardHues.onFill(fill).copy(alpha = alpha)
-        val symbol = if (rule.kind == RuleKind.SUM) 0f else u * 0.17f
         val text = label?.size?.width?.toFloat() ?: 0f
-        val gap = if (text > 0f && symbol > 0f) u * 0.03f else 0f
+        val (symbol, gap) = badgeParts(rule.kind, text, u)
         var x = rect.center.x - (symbol + gap + text) / 2
         if (symbol > 0f) {
             drawSymbol(rule.kind, Offset(x + symbol / 2, rect.center.y), u, ink)
@@ -740,8 +717,6 @@ object Dominoes : PuzzleType {
 
     private const val DOUBLE_TAP_MS = 300L
 
-    private class Cell<T>(var v: T)
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as DominoState
@@ -784,9 +759,7 @@ object Dominoes : PuzzleType {
             }
         }
 
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // Green at once when a covered region keeps its rule; red only once it has stayed broken for a second.
         val layout = s.layout
@@ -901,7 +874,7 @@ object Dominoes : PuzzleType {
                             if (!interactive) return@pointerInput
                             var from = -1
                             var fromTray = false
-                            fun free(b: DominoState, q: Int) = q >= 0 && b.open[q] && DominoLogic.dominoAt(b, q) < 0
+                            fun free(b: DominoState, q: Int) = q >= 0 && b.isFree(q)
                             // The overload that hands over the *down* (the web's touch slop is wide).
                             detectDragGestures(
                                 orientationLock = null,
@@ -943,7 +916,7 @@ object Dominoes : PuzzleType {
                                             abs(dx) >= abs(dy) -> if (dx > 0 && from % b.width < b.width - 1) from + 1 else if (dx < 0 && from % b.width > 0) from - 1 else -1
                                             else -> if (dy > 0) from + b.width else from - b.width
                                         }
-                                        val ok = to in b.open.indices && b.open[to] && DominoLogic.dominoAt(b, to) < 0
+                                        val ok = to in b.open.indices && b.isFree(to)
                                         ghost = if (ok) from to to else null
                                     }
                                 },

@@ -8,6 +8,7 @@ import com.joebywan.daybook.puzzles.ChessState
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.Pointers
+import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.SetsState
@@ -33,6 +34,7 @@ import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The share text, written out in full for each format, so a change to any of them is seen here first. */
@@ -49,7 +51,7 @@ class ShareCardTest {
         val c = card(Sudoku, sudoku, "m".repeat(23))
         assertEquals(
             "Daybook · Sudoku · Expert · 22 Oct\n🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n12:04 · 6 day streak\n" +
-                "🟩 own move  🟨 undone  🟥 hint\n$SHARE_URL",
+                "🟩 own move  🟨 taken back  🟥 hint\n$SHARE_URL",
             c.text,
         )
         assertEquals("A clean solve. Nothing to improve on.", c.nudge)
@@ -60,7 +62,7 @@ class ShareCardTest {
         val c = card(Sudoku, sudoku, "mmmumhm" + "m".repeat(15), date = null, streak = 1)
         assertEquals(
             "Daybook · Sudoku · Expert · random board\n🟩🟨🟥🟩🟩🟩🟩🟩🟩🟩\n12:04 · 1 hint\n" +
-                "🟩 own move  🟨 undone  🟥 hint\n$SHARE_URL",
+                "🟩 own move  🟨 taken back  🟥 hint\n$SHARE_URL",
             c.text,
         )
         assertEquals("The hints got you there. Try the next one with fewer.", c.nudge)
@@ -80,9 +82,9 @@ class ShareCardTest {
         val lex = LexiconState(5, 6, "crane", listOf("slate", "pride", "crane"))
         val op = TargetMove(0, 1, 2, 3, TargetOp.Add, 5)
         val target = TargetState(listOf(2, 3, 4, 5, 25, 50), target = 999, par = 2, log = listOf(op, op, op))
-        assertEquals("No hints. 1 undone from a clean strip. Next time?", card(Sudoku, sudoku, "mmum", date = null).nudge)
+        assertEquals("No hints, 1 move taken back. Fewer next time?", card(Sudoku, sudoku, "mmum", date = null).nudge)
         assertEquals("No hints, 3 guesses. Fewer next time?", card(Lexicon, lex, "mmm", date = null).nudge)
-        assertEquals("No hints, nothing undone. Par is 2: next time?", card(Target, target, "mmm", date = null).nudge)
+        assertEquals("No hints, nothing taken back. Par is 2: next time?", card(Target, target, "mmm", date = null).nudge)
         val random = listOf(
             card(Sudoku, sudoku, "mhm", date = null), card(Sudoku, sudoku, "mmum", date = null),
             card(Lexicon, lex, "mmm", date = null), card(Target, target, "mmm", date = null),
@@ -107,7 +109,7 @@ class ShareCardTest {
         assertEquals("🟩🟨🟩🟥", card(Sudoku, sudoku, "mmumhm").lines.single().text(false))
         val undid = card(Sudoku, sudoku, "mmum")
         assertEquals("🟩🟨🟩", undid.lines.single().text(false))
-        assertEquals("No hints. 1 undone from a clean strip. Tomorrow?", undid.nudge)
+        assertEquals("No hints, 1 move taken back. Fewer tomorrow?", undid.nudge)
         // Restart takes back every move so far.
         assertEquals("🟨🟨🟩🟩", card(Sudoku, sudoku, "mmrmm").lines.single().text(false))
         // Undoing the restart hands those moves back; a move made after it is taken back first.
@@ -147,7 +149,7 @@ class ShareCardTest {
                 "🟩 move  🟨 taken back  🟥 hint\n$SHARE_URL",
             c.text,
         )
-        assertEquals("No hints. 1 move taken back from a clean mate. Tomorrow?", c.nudge)
+        assertEquals("No hints, 1 move taken back. Fewer tomorrow?", c.nudge)
         assertEquals("🟥🟩#", card(Chess, s, "hmm").lines.single().text(false))
     }
 
@@ -157,11 +159,11 @@ class ShareCardTest {
         val c = card(Target, s, "mmmum")
         assertEquals(
             "Daybook · Target · Expert · 22 Oct\n🟩🟩🟨🟩   3 steps · par 3\n12:04 · 6 day streak\n" +
-                "🟩 step  🟨 undone  🟥 hint\n$SHARE_URL",
+                "🟩 step  🟨 taken back  🟥 hint\n$SHARE_URL",
             c.text,
         )
-        assertEquals("No hints. 1 undone from a clean run. Tomorrow?", c.nudge)
-        assertEquals("On par, nothing undone. Nothing to improve on.", card(Target, s, "mmm").nudge)
+        assertEquals("No hints, 1 step taken back. Fewer tomorrow?", c.nudge)
+        assertEquals("On par, nothing taken back. Nothing to improve on.", card(Target, s, "mmm").nudge)
     }
 
     @Test fun `pointers is the lives left as hearts`() {
@@ -180,15 +182,26 @@ class ShareCardTest {
         assertEquals("❤️❤️❤️", card(Pointers, clean, "mmmmm").lines.single().text(false))
     }
 
+    @Test fun `mines has no hearts, only its moves and the hints`() {
+        var s = Mines.tutorialBoard()
+        for (i in 0 until 25) if (!s.isMine(i)) s = s.reveal(i) ?: s
+        assertTrue(s.solved)
+        val c = card(Mines, s, "mmmmm")
+        assertFalse(c.text, "❤" in c.text)
+        assertEquals("A clean solve. Nothing to improve on.", c.nudge)
+        assertEquals("The hints got you there. Try tomorrow's with fewer.", card(Mines, s, "mhmm").nudge)
+    }
+
     @Test fun `sets is a square a claim`() {
         val s = SetsState(emptyList(), 0, emptyList(), emptyList())
         assertEquals(
             "Daybook · Sets · Expert · 22 Oct\n🟩⬜🟨🟩🟥\n12:04 · 1 hint · 6 day streak\n" +
-                "🟩 a set  ⬜ not a set  🟨 undone  🟥 hint\n$SHARE_URL",
+                "🟩 a set  ⬜ not a set  🟨 taken back  🟥 hint\n$SHARE_URL",
             card(Sets, s, "mwmumhm").text,
         )
-        assertEquals("Every claim a set. Nothing to improve on.", card(Sets, s, "mmm").nudge)
-        assertEquals("No hints. 1 claim off a clean run. Tomorrow?", card(Sets, s, "mwm").nudge)
+        assertEquals("Every pick a set. Nothing to improve on.", card(Sets, s, "mmm").nudge)
+        assertEquals("No hints, 1 pick that wasn't a set. Fewer tomorrow?", card(Sets, s, "mwm").nudge)
+        assertEquals("No hints, 2 picks that weren't sets and 1 set taken back. Fewer tomorrow?", card(Sets, s, "mwwmum").nudge)
     }
 
     @Test fun `the log records board changes, guesses and wrong claims, not picks or letters`() {
@@ -220,7 +233,7 @@ class ShareCardTest {
         val c = card(WordWheel, s.copy(bonus = listOf("one", "two", "three")), "m".repeat(8), tier = Difficulty.STANDARD)
         assertEquals(
             "Daybook · Word Wheel · Standard · 22 Oct\n🟩🟩🟩🟩🟩🟩🟩🟩\n12:04 · +3 bonus words · 6 day streak\n" +
-                "🟩 own move  🟨 undone  🟥 hint\n$SHARE_URL",
+                "🟩 own move  🟨 taken back  🟥 hint\n$SHARE_URL",
             c.text,
         )
         assertEquals("12:04 · +1 bonus word · 6 day streak", card(WordWheel, s.copy(bonus = listOf("one")), "m").stats)
@@ -231,31 +244,43 @@ class ShareCardTest {
     private val ids = List(26) { "p$it" }
     private fun solved(tier: Difficulty, vararg at: Int, day: LocalDate? = today) = at.map { Completion("p$it", tier, day, 60, 0) }
 
-    @Test fun `the day's card marks every puzzle per tier solved today, two lines a tier`() {
+    @Test fun `the day's card shows only what was solved, per tier, never a count out of every puzzle`() {
         val completions = solved(Difficulty.STANDARD, 0, 2, 5, 13, 20, 25) + solved(Difficulty.HARD, 1, 14) +
             solved(Difficulty.EXPERT, 0) +
             // Not today's dailies: an archive day's board, a level board; and a second solve of one counts once.
             solved(Difficulty.EXPERT, 3, day = LocalDate(2026, 10, 23)) + solved(Difficulty.HARD, 4, day = null) +
             solved(Difficulty.STANDARD, 0)
-        val c = dayShareCard(ids, completions, today, "24 Oct", 12)!!
+        val c = dayShareCard(ids, completions, today, "24 Oct", 12, name)!!
         assertEquals(
             "Daybook · 24 Oct · today's dailies\n" +
-                "Standard 6/26\n🟩⬜🟩⬜⬜🟩⬜⬜⬜⬜⬜⬜⬜\n🟩⬜⬜⬜⬜⬜⬜🟩⬜⬜⬜⬜🟩\n" +
-                "Hard 2/26\n⬜🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜\n⬜🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜\n" +
-                "Expert 1/26\n🟩⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜\n⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜\n" +
-                "9 solved today · 12 day streak\n🟩 solved  ⬜ not yet\n$SHARE_URL",
+                "Standard · 6 puzzles\n🟩🟩🟩🟩🟩🟩\n" +
+                "Hard · P1, P14\n🟩🟩\n" +
+                "Expert · P0\n🟩\n" +
+                "9 solved today · 12 day streak\n🟩 solved\n$SHARE_URL",
             c.text,
         )
-        assertEquals("never what is left", "Well played. Same time tomorrow?", c.nudge)
+        assertFalse(c.text, "⬜" in c.text || "/26" in c.text)
+        assertEquals("nothing about the rest while many are left", "Well played. Same time tomorrow?", c.nudge)
     }
 
     @Test fun `the day's card leaves out untouched tiers, and is not offered before a solve`() {
-        assertNull(dayShareCard(ids, solved(Difficulty.HARD, 1, day = LocalDate(2026, 10, 23)), today, "24 Oct", 1))
-        val c = dayShareCard(ids, solved(Difficulty.HARD, *IntArray(26) { it }), today, "24 Oct", 1)!!
-        assertEquals(listOf("Hard 26/26"), c.lines.filter { it.marks.isEmpty() }.map { it.tail })
+        assertNull(dayShareCard(ids, solved(Difficulty.HARD, 1, day = LocalDate(2026, 10, 23)), today, "24 Oct", 1, name))
+        val c = dayShareCard(ids, solved(Difficulty.HARD, *IntArray(26) { it }), today, "24 Oct", 1, name)!!
+        assertEquals(listOf("Hard · 26 puzzles"), c.lines.filter { it.marks.isEmpty() }.map { it.tail })
+        assertEquals(listOf(13, 13), c.lines.filter { it.marks.isNotEmpty() }.map { it.marks.size })
         assertEquals("26 solved today", c.stats)
-        assertEquals("Every Hard board done. A clean sweep.", c.nudge)
+        assertEquals("Every Hard daily done today.", c.nudge)
     }
+
+    @Test fun `the day's card names what is left only when one or two are`() {
+        val two = dayShareCard(ids, solved(Difficulty.STANDARD, *IntArray(24) { it }), today, "24 Oct", 1, name)!!
+        assertEquals("P24 and P25 are all that's left for every Standard daily today.", two.nudge)
+        val one = dayShareCard(ids, solved(Difficulty.STANDARD, *IntArray(25) { it }) + solved(Difficulty.HARD, 0), today, "24 Oct", 1, name)!!
+        assertEquals("P25 is all that's left for every Standard daily today.", one.nudge)
+        assertEquals("Well played. Same time tomorrow?", dayShareCard(ids, solved(Difficulty.STANDARD, *IntArray(23) { it }), today, "24 Oct", 1, name)!!.nudge)
+    }
+
+    private val name = { id: String -> id.uppercase() }
 
     private fun mmss(s: Int) = "${s / 60}:${(s % 60).toString().padStart(2, '0')}"
 

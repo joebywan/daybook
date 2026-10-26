@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
@@ -45,7 +44,8 @@ import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberHintPaint
 import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -56,6 +56,8 @@ import com.joebywan.daybook.ui.hintOutline
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
 import androidx.compose.foundation.layout.BoxScope
+import com.joebywan.daybook.core.cap
+import com.joebywan.daybook.core.orthogonal
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -169,12 +171,12 @@ object Kings : PuzzleType {
     override val id = "kings"
     override val displayName = "Kings"
     override val tagline = "One crown per row, column and colour"
-    override val accent = 0xFF9B6FD0
+    override val accent = 0xFF94669F
     override val rules = listOf(
         "Place exactly one king in every row, every column and every coloured region.",
         "No two kings may touch, not even diagonally.",
         "Tap a square to pencil it out, and tap it again to rub the mark away.",
-        "Double-tap a square to crown a king there, or to take the crown back.",
+        "Double-tap or long-press a square to crown a king there, or to take the crown back.",
         "Drag across a run of squares to mark them all in one sweep.",
         "Squares a king already rules out are crossed off for you.",
     )
@@ -516,18 +518,8 @@ object Kings : PuzzleType {
      * already did, so no board on Android changed.
      */
     private fun hostsOf(cell: Int, n: Int, region: List<Int>): Set<Int> =
-        neighbours(cell, n).mapNotNullTo(HashSet()) { region[it].takeIf { id -> id != -1 } }
+        orthogonal(cell, n).mapNotNullTo(HashSet()) { region[it].takeIf { id -> id != -1 } }
 
-    private fun neighbours(cell: Int, n: Int): List<Int> {
-        val r = cell / n
-        val c = cell % n
-        return listOfNotNull(
-            if (r > 0) cell - n else null,
-            if (r < n - 1) cell + n else null,
-            if (c > 0) cell - 1 else null,
-            if (c < n - 1) cell + 1 else null,
-        )
-    }
 
     /**
      * Counts legal king layouts for these regions, stopping at two.
@@ -655,16 +647,16 @@ object Kings : PuzzleType {
             ),
             TutorialFrame(
                 state = cornerLeft,
-                caption = "${first.replaceFirstChar { it.uppercaseChar() }} has only one square left, so its king must go there. " +
-                    "Double-tap it to crown it.",
+                caption = "${first.cap()} has only one square left, so its king must go there. " +
+                    "Double-tap or long-press it to crown it.",
                 highlight = BoardHighlight(strong = setOf(0), soft = setOf(1)),
                 accepts = only(cornerLeft, mapOf(0 to Mark.KING)),
-                retry = "Double-tap the glowing square: two quick taps.",
+                retry = "Double-tap the glowing square (two quick taps), or press and hold it.",
                 done = "Crowned. The board crosses off every square it rules out.",
             ),
             TutorialFrame(
                 state = crowned,
-                caption = "${second.replaceFirstChar { it.uppercaseChar() }} sits entirely in column 3, so column 3's king is $second. Drag down the " +
+                caption = "${second.cap()} sits entirely in column 3, so column 3's king is $second. Drag down the " +
                     "glowing squares to cross them all out in one sweep.",
                 highlight = BoardHighlight(strong = setOf(12, 17, 22), soft = secondCells),
                 accepts = only(crowned, mapOf(12 to Mark.BLOCKED, 17 to Mark.BLOCKED, 22 to Mark.BLOCKED)),
@@ -691,12 +683,7 @@ object Kings : PuzzleType {
         val step = KingsTeacher.teach(s) ?: return null
         val base = s.marks
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == KingsTeacher.MISTAKE,
             fallback = step.technique == KingsTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as KingsState, step) },
@@ -853,12 +840,7 @@ object Kings : PuzzleType {
         val shown = held?.after ?: s
         val conflicts = shown.conflicts()
         val eliminated = shown.eliminated()
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else MarkInk // on opaque tiles, in both themes
-        // A glow that breathes is findable at a glance on a 9x9 board; a static outline is not much
-        // louder than the gaps between squares. Only runs while something glows, and is read in
-        // the draw phase, so it repaints the outlines without recomposing the board every frame.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint(ink = MarkInk) // on opaque tiles, in both themes
         val palette = remember(s.region) { regionPalette(s.size, s.region) }
         // Rows, columns and regions: one finished holds exactly one king, clashing with nothing.
         val units = remember(s.region) {
@@ -939,6 +921,17 @@ object Kings : PuzzleType {
                 pending = if (next === board) null else PendingTap(i, board, next)
             }
 
+            // A long press is the double tap's twin, for a player who finds two quick taps hard. Giving
+            // `onLongPress` to detectTapGestures never delays a tap (only `onDoubleTap` would).
+            fun press(offset: Offset) {
+                val i = cellAt(offset)
+                val live = pending?.takeIf { it.base === s }
+                lastCell = -1
+                pending = null
+                val from = if (live != null && live.cell == i) live.base else live?.after ?: s
+                onState(from.toggleKing(i))
+            }
+
             // Tap and drag are read on the grid as a whole: per-cell `clickable` boxes only ever
             // see the cell the finger went down on, which is the one thing a sweep is not about.
             Box(
@@ -948,7 +941,12 @@ object Kings : PuzzleType {
                     .gridCursor(cursor.takeIf { interactive }, s.size, s.size, scheme.primary)
                     .pointerInput(s, interactive) {
                         if (!interactive) return@pointerInput
-                        detectTapGestures { offset ->
+                        detectTapGestures(
+                            onLongPress = { offset ->
+                                cursor = cellAt(offset)
+                                press(offset)
+                            },
+                        ) { offset ->
                             cursor = cellAt(offset)
                             tap(offset)
                         }
@@ -1006,19 +1004,17 @@ object Kings : PuzzleType {
                             sweepMark != null && i in swept && shown.marks[i] != Mark.KING -> sweepMark
                             else -> shown.marks[i]
                         }
-                        val strong = i in highlight.strong
-                        val soft = !strong && i in highlight.soft
                         // Everything the highlight does not name steps back, so the named squares
                         // read without having to hunt for their outlines. The tiles are opaque, so
                         // stepping back means fading toward the page rather than going see-through.
-                        val dim = !(highlight.isEmpty || strong || soft)
+                        val look = highlight.look(i)
                         Tile(
                             cell, r, c,
                             Color(regionColours[palette[s.region[i]]]).let {
-                                if (dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
+                                if (look.dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
                             },
                             feel = Modifier.moveFeel(feel, i, Color(accent)),
-                            outline = Modifier.hintOutline(strong, soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
+                            outline = Modifier.hintOutline(look.strong, look.soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
                         ) {
                             when (mark) {
                                 // A clashing crown is filled in the error colour, which on a red

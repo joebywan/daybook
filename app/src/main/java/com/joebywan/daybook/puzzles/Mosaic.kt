@@ -31,13 +31,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -46,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
@@ -61,6 +61,8 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawWalls
 import com.joebywan.daybook.ui.drawHintDim
+import com.joebywan.daybook.ui.hintRims
+import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.gridCellAt
 
 /** One fill: the cell tapped, and the colour poured into the area it belongs to. */
@@ -172,9 +174,9 @@ object Mosaic : PuzzleType {
     override val id = "mosaic"
     override val displayName = "Mosaic"
     override val tagline = "Flood the board down to one colour"
-    override val accent = 0xFFD97FB0
+    override val accent = 0xFFBC4C9C
     override val rules = listOf(
-        "Cells of one colour joined edge to edge form a single area, drawn with a heavy outline.",
+        "Squares of one colour joined edge to edge form a single area, drawn with a heavy outline.",
         "Pick a colour below, then tap an area to flood it with that colour.",
         "A flooded area merges with every neighbouring area already in that colour — " +
             "growing one big blob is how you cover ground quickly.",
@@ -198,9 +200,9 @@ object Mosaic : PuzzleType {
      */
     val palette: List<Color> = listOf(
         BoardHues.fill(34f, false),
-        BoardHues.ink(175f, false),
+        BoardHues.deep(175f, false),
         BoardHues.mark(268f),
-        BoardHues.ink(330f, false),
+        BoardHues.deep(330f, false),
         BoardHues.fill(215f, false),
     )
 
@@ -823,12 +825,7 @@ object Mosaic : PuzzleType {
         val base = s.cells
         val after = if (mistake) null else s.flood(step.cell, step.colour).cells
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = mistake,
             fallback = step.technique == MosaicTeacher.KEEPS,
             applyTo = { now ->
@@ -922,7 +919,7 @@ object Mosaic : PuzzleType {
         listOf(
             TutorialFrame(
                 state = start,
-                caption = "Touching cells of one colour make an area, outlined in black. Turn the whole board " +
+                caption = "Touching squares of one colour make an area, outlined in black. Turn the whole board " +
                     "one colour. The line above counts your fills against the fewest this board needs: here 3.",
                 highlight = BoardHighlight(strong = tealArea),
             ),
@@ -1036,11 +1033,7 @@ object Mosaic : PuzzleType {
         var selected by rememberSaveable(s.colours) { mutableIntStateOf(0) }
         val measurer = rememberTextMeasurer()
         val live = interactive && !s.failed
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // A rim that breathes is findable at a glance; a still one is not much louder than the
-        // seams. Only runs while something glows, and is read in the draw phase.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
 
         // The keyboard cursor (see MosaicKeys): transient, so not in the state.
         var cursor by remember(s.colours, s.width, s.height) { mutableStateOf<Int?>(null) }
@@ -1137,41 +1130,17 @@ object Mosaic : PuzzleType {
                         // a 160-cell board full of outlines.
                         drawHintDim(highlight, s.width, s.height, stepPx, scheme.background)
 
-                        // A rim just inside the outline of a set of cells: one stroke per cell side
-                        // that faces out of the set, inset by half its width so a neighbour's dimming
-                        // cannot cover it.
-                        fun rim(set: Set<Int>, width: Float, colour: Color) {
-                            val h = width / 2
-                            for (cell in set) {
-                                val r = cell / s.width
-                                val c = cell % s.width
-                                val x0 = c * stepPx
-                                val y0 = r * stepPx
-                                val x1 = x0 + stepPx
-                                val y1 = y0 + stepPx
-                                if (r == 0 || cell - s.width !in set) {
-                                    drawLine(colour, Offset(x0, y0 + h), Offset(x1, y0 + h), width)
-                                }
-                                if (r == s.height - 1 || cell + s.width !in set) {
-                                    drawLine(colour, Offset(x0, y1 - h), Offset(x1, y1 - h), width)
-                                }
-                                if (c == 0 || cell - 1 !in set) {
-                                    drawLine(colour, Offset(x0 + h, y0), Offset(x0 + h, y1), width)
-                                }
-                                if (c == s.width - 1 || cell + 1 !in set) {
-                                    drawLine(colour, Offset(x1 - h, y0), Offset(x1 - h, y1), width)
-                                }
-                            }
-                        }
-
-                        rim(highlight.soft - highlight.strong, stepPx * 0.07f, glow.copy(alpha = 0.5f))
                         // A band of page colour just inside the glow, so a strong rim reads as
                         // something other than one more of the black seams between areas. Widths
                         // checked in a rendered mock, light and dark: much wider and the band eats
                         // a one-cell arm's colour.
-                        val a = pulse.value
-                        rim(highlight.strong, stepPx * 0.2f, scheme.background.copy(alpha = 0.9f * a))
-                        rim(highlight.strong, stepPx * 0.11f, glow.copy(alpha = a))
+                        hintRims(highlight, stepPx, glow, pulse.value, scheme.background) { set, width, colour ->
+                            squareRim(set, width, colour, s.width, s.height, { i ->
+                                val x0 = i % s.width * stepPx
+                                val y0 = i / s.width * stepPx
+                                Rect(x0, y0, x0 + stepPx, y0 + stepPx)
+                            })
+                        }
                     }
                 }
             }

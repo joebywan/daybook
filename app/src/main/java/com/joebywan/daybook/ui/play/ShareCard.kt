@@ -1,6 +1,7 @@
 package com.joebywan.daybook.ui.play
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.data.Completion
@@ -159,7 +160,6 @@ fun shareCard(
     val key: List<Pair<Mark, String>>
     // A daily comes back tomorrow; a random or level board does not, so its nudges look to the next one instead.
     val next = if (date != null) "tomorrow" else "next time"
-    val nextCap = next.replaceFirstChar { it.uppercase() }
     // Rows are the final guesses; the log's live moves are the last of them (an older save logged none before).
     fun hintedRows(guessed: Int): (Int) -> Boolean {
         val live = moves.filter { !it.undone && !it.wrong }
@@ -200,30 +200,31 @@ fun shareCard(
         }
         is SetsState -> {
             lines = listOf(ShareLine(moves.map { it.mark() }))
-            key = listOf(Mark.GREEN to "a set", Mark.WHITE to "not a set", Mark.YELLOW to "undone", Mark.RED to "hint")
-            val off = undone + moves.count { it.wrong }
-            own = when {
-                off > 0 -> "No hints. ${plural(off, "claim")} off a clean run. $nextCap?"
-                else -> "Every claim a set. Nothing to improve on."
-            }
+            key = listOf(Mark.GREEN to "a set", Mark.WHITE to "not a set", Mark.YELLOW to "taken back", Mark.RED to "hint")
+            val misses = moves.count { it.wrong }
+            val off = listOfNotNull(
+                misses.takeIf { it > 0 }?.let { if (it == 1) "1 pick that wasn't a set" else "$it picks that weren't sets" },
+                undone.takeIf { it > 0 }?.let { "${plural(it, "set")} taken back" },
+            )
+            own = if (off.isEmpty()) "Every pick a set. Nothing to improve on." else "No hints, ${off.joinToString(" and ")}. Fewer $next?"
         }
         is ChessState -> {
             suffix = " · mate in ${state.mateIn}"
             lines = listOf(ShareLine(moves.map { it.mark() }, tail = "#"))
             key = listOf(Mark.GREEN to "move", Mark.YELLOW to "taken back", Mark.RED to "hint")
             own = when {
-                undone > 0 -> "No hints. ${plural(undone, "move")} taken back from a clean mate. $nextCap?"
+                undone > 0 -> "No hints, ${plural(undone, "move")} taken back. Fewer $next?"
                 else -> "A clean mate. Nothing to improve on."
             }
         }
         is TargetState -> {
             val steps = state.log.size
             lines = listOf(ShareLine(moves.map { it.mark() }, tail = "   ${plural(steps, "step")} · par ${state.par}"))
-            key = listOf(Mark.GREEN to "step", Mark.YELLOW to "undone", Mark.RED to "hint")
+            key = listOf(Mark.GREEN to "step", Mark.YELLOW to "taken back", Mark.RED to "hint")
             own = when {
-                undone > 0 -> "No hints. $undone undone from a clean run. $nextCap?"
-                steps > state.par -> "No hints, nothing undone. Par is ${state.par}: $next?"
-                else -> "On par, nothing undone. Nothing to improve on."
+                undone > 0 -> "No hints, ${plural(undone, "step")} taken back. Fewer $next?"
+                steps > state.par -> "No hints, nothing taken back. Par is ${state.par}: $next?"
+                else -> "On par, nothing taken back. Nothing to improve on."
             }
         }
         // No hints and no undo: the lives are the whole story.
@@ -235,9 +236,9 @@ fun shareCard(
         }
         else -> {
             lines = listOf(ShareLine(strip(moves)))
-            key = listOf(Mark.GREEN to "own move", Mark.YELLOW to "undone", Mark.RED to "hint")
+            key = listOf(Mark.GREEN to "own move", Mark.YELLOW to "taken back", Mark.RED to "hint")
             own = when {
-                undone > 0 -> "No hints. $undone undone from a clean strip. $nextCap?"
+                undone > 0 -> "No hints, ${plural(undone, "move")} taken back. Fewer $next?"
                 else -> "A clean solve. Nothing to improve on."
             }
         }
@@ -256,27 +257,40 @@ fun shareCard(
     )
 }
 
+/** Most names a tier's line of the day's card lists before it gives a count instead. */
+private const val DAY_NAMES = 3
+
 /**
- * Today's dailies in one card, null until one is solved. Per tier with a solve: a line "Standard 6/26", then a mark per
- * puzzle of [ids] (in that order) over two lines, so 26 marks never wrap a messenger's line. [date] is today, formatted.
- * Spoiler-free: which puzzles are done, never a board.
+ * Today's dailies in one card, null until one is solved. Per tier with a solve: a line naming what was solved
+ * ("Standard · Kings, Sudoku", or "Standard · 6 puzzles" past [DAY_NAMES]), then a green mark per solve, 13 a line so a
+ * messenger never wraps one. Only what was done: never a count out of [ids] or a square for a puzzle not played, since
+ * the puzzles are a menu, not a quota. [date] is today, formatted. Spoiler-free: which puzzles are done, never a board.
  */
-fun dayShareCard(ids: List<String>, completions: List<Completion>, today: LocalDate, date: String, streak: Int): ShareCard? {
+fun dayShareCard(
+    ids: List<String>, completions: List<Completion>, today: LocalDate, date: String, streak: Int,
+    nameOf: (String) -> String = { PuzzleRegistry.byId(it)?.displayName ?: it },
+): ShareCard? {
     val done = completions.filter { it.day == today }.map { it.puzzleId to it.difficulty }.toSet()
-    val tiers = Difficulty.entries.map { tier -> tier to ids.count { (it to tier) in done } }.filter { it.second > 0 }
+    val tiers = Difficulty.entries.map { tier -> tier to ids.filter { (it to tier) in done } }.filter { it.second.isNotEmpty() }
     if (tiers.isEmpty()) return null
-    val lines = tiers.flatMap { (tier, n) ->
-        listOf(ShareLine(emptyList(), tail = "${tier.label} $n/${ids.size}")) +
-            ids.chunked((ids.size + 1) / 2).map { row -> ShareLine(row.map { if ((it to tier) in done) Mark.GREEN else Mark.WHITE }) }
+    val lines = tiers.flatMap { (tier, solved) ->
+        val what = if (solved.size <= DAY_NAMES) solved.joinToString(", ") { nameOf(it) } else "${solved.size} puzzles"
+        listOf(ShareLine(emptyList(), tail = "${tier.label} · $what")) + solved.chunked(13).map { row -> ShareLine(row.map { Mark.GREEN }) }
     }
-    val (best, most) = tiers.maxBy { it.second }
+    // The preview's one line about the rest of the day: only when a tier is done or one or two are left at it.
+    val left = tiers.map { (tier, solved) -> tier to ids.filter { it !in solved } }.minBy { it.second.size }
+    val nudge = when (left.second.size) {
+        0 -> "Every ${left.first.label} daily done today."
+        1, 2 -> "${left.second.joinToString(" and ") { nameOf(it) }} ${if (left.second.size == 1) "is" else "are"} all that's left " +
+            "for every ${left.first.label} daily today."
+        else -> "Well played. Same time tomorrow?"
+    }
     return ShareCard(
         header = "Daybook · $date · today's dailies",
         lines = lines,
-        stats = "${tiers.sumOf { it.second }} solved today" + if (streak >= 2) " · $streak day streak" else "",
-        key = listOf(Mark.GREEN to "solved", Mark.WHITE to "not yet"),
-        // Never what is left: the card is for what was done (docs/REWARDS.md).
-        nudge = if (most == ids.size) "Every ${best.label} board done. A clean sweep." else "Well played. Same time tomorrow?",
+        stats = "${tiers.sumOf { it.second.size }} solved today" + if (streak >= 2) " · $streak day streak" else "",
+        key = listOf(Mark.GREEN to "solved"),
+        nudge = nudge,
     )
 }
 

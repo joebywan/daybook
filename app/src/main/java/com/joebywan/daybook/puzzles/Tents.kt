@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Deduction
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
@@ -52,8 +51,9 @@ import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.union
+import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.gridCellAt
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -68,7 +68,7 @@ import com.joebywan.daybook.ui.rememberSettled
 
 /**
  * Tents. The board is one canvas: a row of column counts across the top, a column of row counts down the
- * left, and the grid. A tap marks grass (a note, never counted), a double tap places a tent and sprouts grass around it.
+ * left, and the grid. A tap marks grass (a note, never counted), a double tap or long press places a tent and sprouts grass around it.
  * Highlight indices follow [TentsState]: squares `0 until n*n`, row clue `n*n + r`, column clue `n*n + n + c`.
  */
 object Tents : PuzzleType {
@@ -76,19 +76,17 @@ object Tents : PuzzleType {
     private const val DOUBLE_TAP_MS = 300L
     private val tapClock = TimeSource.Monotonic.markNow()
 
-    private class Cell<T>(var v: T)
-
     private data class Pending(val cell: Int, val base: TentsState, val after: TentsState)
 
     override val id = "tents"
     override val displayName = "Tents"
     override val tagline = "A tent beside every tree, none touching"
-    override val accent = 0xFFC45EC9
+    override val accent = 0xFFBE6B0B
     override val rules = listOf(
         "Put one tent beside every tree, up, down, left or right of it. Each tent belongs to one tree.",
         "Tents never touch each other, not even at a corner.",
         "The numbers say how many tents each row and column holds.",
-        "Tap a square for grass (a note that a tent can't go there), tap again to clear it. Drag to lay grass across squares. Double-tap for a tent (grass sprouts around it); tap a tent to remove it.",
+        "Tap a square for grass (a note that a tent can't go there), tap again to clear it. Drag to lay grass across squares. Double-tap or long-press for a tent (grass sprouts around it); tap a tent to remove it.",
     )
 
     override val keyboardHelp = listOf(
@@ -159,7 +157,7 @@ object Tents : PuzzleType {
             TutorialFrame(
                 state = grass,
                 caption = "The top row needs two tents, and only two of its squares sit beside a tree, " +
-                    "so both are tents. Double-tap each glowing square to place one.",
+                    "so both are tents. Double-tap or long-press each glowing square to place one.",
                 // Each square glows until it holds its tent.
                 glow = { s ->
                     BoardHighlight(strong = pair.filter { (s as TentsState).marks[it] != TentsLogic.TENT }.toSet(), soft = setOf(rowClue0))
@@ -173,7 +171,7 @@ object Tents : PuzzleType {
                         else -> TutorialStep.REJECT
                     }
                 },
-                retry = "Double-tap the glowing square: two quick taps.",
+                retry = "Double-tap the glowing square (two quick taps), or press and hold it.",
                 done = "Two tents, and grass sprouts around them.",
             ),
             TutorialFrame(
@@ -379,9 +377,7 @@ object Tents : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         val hues = remember(s.solution) { BoardHues.pair(s.solution.hashCode()) }
 
         // Wrong now, and still wrong a second on: touching tents, a row or column with too many.
@@ -467,7 +463,20 @@ object Tents : PuzzleType {
                         }
                         .pointerInput(interactive, unitPx) {
                             if (!interactive) return@pointerInput
-                            detectTapGestures { offset ->
+                            // A long press is the double tap's twin: a tent, or one taken back. `onLongPress`
+                            // never delays a tap (only `onDoubleTap` would).
+                            detectTapGestures(
+                                onLongPress = { offset ->
+                                    val i = gridCellAt(offset, unitPx, n, n)
+                                    val held = pending?.takeIf { it.base === latest.v }
+                                    commit.v?.cancel()
+                                    lastCell = -1
+                                    pending = null
+                                    val from = if (held != null && held.cell != i) held.after else latest.v
+                                    val next = from.withTent(i)
+                                    if (next !== latest.v) emit(next)
+                                },
+                            ) { offset ->
                                 val i = gridCellAt(offset, unitPx, n, n)
                                 val held = pending?.takeIf { it.base === latest.v }
                                 commit.v?.cancel()

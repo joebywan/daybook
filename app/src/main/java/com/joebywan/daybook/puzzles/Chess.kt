@@ -40,17 +40,15 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.rememberHintPaint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -58,6 +56,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import com.joebywan.daybook.core.union
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * A Mate puzzle in play: a position and the player's moves so far. Only the player's moves are stored; the
@@ -158,7 +157,7 @@ object Chess : PuzzleType {
     override val id = "chess"
     override val displayName = "Mate"
     override val tagline = "Find the forced checkmate"
-    override val accent = 0xFF58A744
+    override val accent = 0xFFBE7C1C
     override val rules = listOf(
         "You play the side shown at the bottom. Checkmate the opposing king in the number of moves shown.",
         "Tap a piece, then tap where it goes. Tap another of your pieces to change your mind.",
@@ -248,9 +247,7 @@ object Chess : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as ChessState
         val scheme = MaterialTheme.colorScheme
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         val whiteBottom = s.playerIsWhite
         val replay = remember(s) { s.replay() }
         val moves = remember(s) { s.legalMoves() }
@@ -385,14 +382,14 @@ object Chess : PuzzleType {
                                         Text(
                                             "${'a' + sq % 8}",
                                             Modifier.align(Alignment.BottomEnd).padding(end = cell * 0.06f),
-                                            fontSize = (cell.value * 0.2f).sp, color = labelColor, lineHeight = (cell.value * 0.2f).sp,
+                                            fontSize = (cell * 0.2f).boardSp(), color = labelColor, lineHeight = (cell * 0.2f).boardSp(),
                                         )
                                     }
                                     if (cc == 0) {
                                         Text(
                                             "${'1' + sq / 8}",
                                             Modifier.align(Alignment.TopStart).padding(start = cell * 0.06f),
-                                            fontSize = (cell.value * 0.2f).sp, color = labelColor, lineHeight = (cell.value * 0.2f).sp,
+                                            fontSize = (cell * 0.2f).boardSp(), color = labelColor, lineHeight = (cell * 0.2f).boardSp(),
                                         )
                                     }
                                 }

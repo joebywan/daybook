@@ -1,9 +1,13 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.answerFallback
+import com.joebywan.daybook.core.lonePlace
 import com.joebywan.daybook.core.bit
+import com.joebywan.daybook.core.fullMask
 import com.joebywan.daybook.core.has
 import com.joebywan.daybook.core.listed
+import com.joebywan.daybook.core.squareName
 
 /**
  * Regions, reasoned a step at a time.
@@ -53,7 +57,7 @@ internal object RegionsTeacher {
         val base = IntArray(layout.n * layout.n)
         for (i in base.indices) {
             if (cells[i] != 0) continue
-            var m = RegionsLogic.fullMask(layout.sizeOf[i])
+            var m = fullMask(layout.sizeOf[i])
             for (j in layout.peers[i]) if (cells[j] != 0) m = m and bit(cells[j]).inv()
             base[i] = m
         }
@@ -78,16 +82,6 @@ internal object RegionsTeacher {
     /** The deepest rung any board may use. */
     val DEEPEST = rung(LOCKED)
 
-    /** The one empty square of [members] whose mask in [m] has [d]; -1 when there are none or several, or one holds [d]. */
-    private fun lonePlace(members: List<Int>, cells: List<Int>, m: IntArray, d: Int): Int {
-        var at = -1
-        for (i in members) {
-            if (cells[i] == d) return -1
-            if (cells[i] == 0 && has(m[i], d)) { if (at >= 0) return -1; at = i }
-        }
-        return at
-    }
-
     private fun findStep(layout: RegionsLayout, cells: List<Int>, deepest: Int = DEEPEST): Hit? {
         val base = candidates(layout, cells)
         if (cells.indices.any { cells[it] == 0 && base[it] == 0 }) return null
@@ -95,7 +89,7 @@ internal object RegionsTeacher {
         for ((r, members) in layout.members.withIndex()) {
             val empty = members.filter { cells[it] == 0 }
             if (empty.size != 1) continue
-            val missing = RegionsLogic.fullMask(members.size) and members.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
+            val missing = fullMask(members.size) and members.fold(0) { m, i -> if (cells[i] != 0) m or bit(cells[i]) else m }.inv()
             if (missing.countOneBits() == 1) return Hit(LAST, empty[0], missing.countTrailingZeroBits(), r)
         }
         // 2. A square whose region and neighbours leave one digit.
@@ -180,17 +174,7 @@ internal object RegionsTeacher {
     fun teach(s: RegionsState): PlacementStep? {
         if (s.solved) return null
         mistake(s)?.let { return it }
-        return deduce(RegionsLayout(s.size, s.region), s.cells) ?: fallback(s)
-    }
-
-    private fun fallback(s: RegionsState): PlacementStep? {
-        val i = s.cells.indices.firstOrNull { s.cells[it] == 0 } ?: return null
-        val d = s.solution[i]
-        return PlacementStep(
-            FALLBACK, i, d, setOf(i), emptySet(),
-            "Try this square.",
-            "No short reason found: the stored answer has a $d here.",
-        )
+        return deduce(RegionsLayout(s.size, s.region), s.cells) ?: answerFallback(FALLBACK, s.cells, s.solution)
     }
 
     private fun mistake(s: RegionsState): PlacementStep? {
@@ -244,10 +228,9 @@ internal object RegionsTeacher {
             }
             LOCKED -> {
                 val n = layout.n
-                fun at(i: Int) = "row ${i / n + 1}, column ${i % n + 1}"
                 val why = "This region's ${hit.lockDigit} must go in one of the marked squares. They all touch the square at " +
-                    "${at(hit.struck)}, so it is not a ${hit.lockDigit}."
-                val then = if (hit.byPlace) "That leaves ${at(x)} as its region's only place for a $d."
+                    "${squareName(n, hit.struck)}, so it is not a ${hit.lockDigit}."
+                val then = if (hit.byPlace) "That leaves ${squareName(n, x)} as its region's only place for a $d."
                 else "That leaves it only $d."
                 PlacementStep(
                     LOCKED, x, d, members.toSet() + hit.struck, hit.places.toSet() + hit.struck + x,

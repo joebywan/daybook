@@ -35,11 +35,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
@@ -47,14 +46,15 @@ import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.HintLook
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.ring
 import kotlinx.coroutines.delay
 import com.joebywan.daybook.ui.moveFeel
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.boardSp
 
 /**
  * Lexicon: Mastermind for words.
@@ -72,7 +72,7 @@ object Lexicon : PuzzleType {
     override val id = "words"
     override val displayName = "Lexicon"
     override val tagline = "Find the hidden word"
-    override val accent = 0xFF9CB83E
+    override val accent = 0xFF278E8E
     override val rules = listOf(
         "A word is hidden. Type a real word and press Enter to guess it.",
         "Green: the right letter in the right place.",
@@ -93,9 +93,11 @@ object Lexicon : PuzzleType {
 
     // ---- colours ---------------------------------------------------------------------------------
 
-    private val correctColour = Color(0xFF4E9F6C)
-    private val presentColour = Color(0xFFD1A32F)
-    private val onMark = Color.White
+    internal val correctColour = Color(0xFF4E9F6C)
+    internal val presentColour = Color(0xFFD1A32F)
+
+    /** The letter on a green or gold tile: white was 3.2:1 on green and 2.3:1 on gold, so it is picked per fill. */
+    internal fun onMark(mark: Int): Color = BoardHues.onFill(if (mark == LexiconMark.CORRECT) correctColour else presentColour)
 
     private fun markColour(mark: Int, absent: Color): Color = when (mark) {
         LexiconMark.CORRECT -> correctColour
@@ -191,7 +193,7 @@ object Lexicon : PuzzleType {
         listOf(
             TutorialFrame(
                 state = tutorialBoard(1),
-                caption = "A four-letter word is hidden, and you have six guesses. Every guess must be a real " +
+                caption = "A word is hidden, here one of four letters. Every guess must be a real " +
                     "word, and each letter comes back marked. Green means right letter, right place.",
                 highlight = BoardHighlight(soft = tiles(0, 0, 1, 2, 3)),
             ),
@@ -243,12 +245,7 @@ object Lexicon : PuzzleType {
         fun fits(word: String) = LexiconRules.consistent(word, base.guesses, marks)
         fun newGuesses(now: LexiconState) = now.guesses.drop(base.guesses.size)
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == LexiconTeacher.MISTAKE,
             fallback = step.technique in LexiconTeacher.FALLBACKS,
             applyTo = { now -> applyMove(now as LexiconState, step.move) },
@@ -302,8 +299,7 @@ object Lexicon : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as LexiconState
         val scheme = MaterialTheme.colorScheme
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
+        val (highlight, glow, pulse) = rememberHintPaint()
         val tilesNamed = highlight.strong.any { it < LexiconTeacher.KEY } || highlight.soft.any { it < LexiconTeacher.KEY }
         val absent = scheme.outline.copy(alpha = 0.45f)
         val playable = interactive && s.open
@@ -319,9 +315,6 @@ object Lexicon : PuzzleType {
             }
         }
         LaunchedEffect(s.current, s.guesses.size) { notice = null }
-
-        // Breathes only while something glows, as on Kings.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
 
         fun press(action: LexiconKeyAction) {
             if (!playable) return
@@ -417,7 +410,7 @@ object Lexicon : PuzzleType {
                                     else -> markColour(mark, absent)
                                 }
                                 val text = when {
-                                    mark > LexiconMark.ABSENT -> onMark
+                                    mark > LexiconMark.ABSENT -> onMark(mark)
                                     mark == LexiconMark.ABSENT -> scheme.onSurfaceVariant.copy(alpha = 0.4f)
                                     else -> scheme.onSurfaceVariant
                                 }
@@ -479,9 +472,9 @@ object Lexicon : PuzzleType {
             if (letter != null) {
                 Text(
                     letter.uppercase(),
-                    fontSize = (cell.value * 0.46f).sp,
+                    fontSize = (cell * 0.46f).boardSp(), lineHeight = (cell * 0.46f).boardSp() * 1.2f,
                     fontWeight = FontWeight.Bold,
-                    color = if (mark != null && mark > LexiconMark.ABSENT) onMark else scheme.onSurface,
+                    color = if (mark != null && mark > LexiconMark.ABSENT) onMark(mark) else scheme.onSurface,
                 )
             }
         }
@@ -516,7 +509,8 @@ object Lexicon : PuzzleType {
         ) {
             Text(
                 label,
-                fontSize = (if (small) 12f else 16f).times(scale).sp,
+                fontSize = (if (small) 12.dp else 16.dp).times(scale).boardSp(),
+                lineHeight = (if (small) 14.dp else 19.dp).times(scale).boardSp(),
                 fontWeight = FontWeight.SemiBold,
                 color = text,
                 maxLines = 1,

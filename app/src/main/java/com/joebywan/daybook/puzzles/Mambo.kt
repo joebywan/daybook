@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.boardKeys
@@ -52,7 +51,9 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
-import com.joebywan.daybook.ui.rememberHintPulse
+import com.joebywan.daybook.ui.HintLook
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberHintPaint
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -121,7 +122,7 @@ object Mambo : PuzzleType {
     override val id = "mambo"
     override val displayName = "Sun & Moon"
     override val tagline = "Balance two symbols, never three alike in a line"
-    override val accent = 0xFF6E8FD8
+    override val accent = 0xFF8C79E0
 
     /**
      * The third line used to read "No three identical symbols may sit next to each other in a
@@ -130,11 +131,11 @@ object Mambo : PuzzleType {
      * together leaves nothing for "identical" to attach itself to wrongly.
      */
     override val rules = listOf(
-        "Fill every cell with a sun or a moon.",
+        "Fill every square with a sun or a moon.",
         "Each row and column holds equal numbers of suns and moons.",
         "Never more than two of the same symbol side by side, in a row or column.",
-        "A = between two cells means they match; an x means they differ.",
-        "Tap a cell to cycle moon, sun, empty.",
+        "A = between two squares means they match; an x means they differ.",
+        "Tap a square to cycle moon, sun, empty.",
         "Every puzzle can be solved by deduction alone.",
     )
 
@@ -549,12 +550,7 @@ object Mambo : PuzzleType {
         val step = MamboTeacher.teach(s) ?: return null
         val base = s.cells
         return Deduction(
-            technique = step.technique,
-            nudge = step.nudge,
-            explanation = step.explanation,
-            focus = step.focus,
-            cited = step.cited,
-            targets = step.targets,
+            step,
             mistake = step.technique == MamboTeacher.MISTAKE,
             fallback = step.technique == MamboTeacher.FALLBACK,
             applyTo = { now -> applyStep(now as MamboState, step) },
@@ -1020,12 +1016,7 @@ object Mambo : PuzzleType {
             .map { it.cells[0] to it.cells[1] }
             .toSet()
 
-        val highlight = LocalBoardHighlight.current
-        val glow = if (highlight.warning) scheme.error else scheme.onBackground
-        // A glow that breathes is findable at a glance on a 10x10 board; a static ring is not much
-        // louder than the violation rings. Only runs while something glows, and is read in the draw
-        // phase, so it repaints the rings without recomposing the board every frame.
-        val pulse = rememberHintPulse(highlight.strong.isNotEmpty())
+        val (highlight, glow, pulse) = rememberHintPaint()
         fun named(i: Int) = highlight.isEmpty || i in highlight.strong || i in highlight.soft
         // A row or column is finished when it is full and breaks no rule that lies inside it.
         val units = remember(s.size) { lineUnits(s.size, s.size) }
@@ -1085,12 +1076,7 @@ object Mambo : PuzzleType {
                                 sym = s.cells[i],
                                 given = s.givens[i],
                                 ringed = i in ringed,
-                                look = when {
-                                    i in highlight.strong -> Look.STRONG
-                                    i in highlight.soft -> Look.SOFT
-                                    named(i) -> Look.PLAIN
-                                    else -> Look.DIM
-                                },
+                                look = highlight.look(i),
                                 glow = glow,
                                 pulse = { pulse.value },
                                 modifier = Modifier
@@ -1161,7 +1147,7 @@ object Mambo : PuzzleType {
         given: Boolean,
         ringed: Boolean,
         modifier: Modifier,
-        look: Look = Look.PLAIN,
+        look: HintLook = HintLook(strong = false, soft = false, dim = false),
         glow: Color = Color.Unspecified,
         pulse: () -> Float = { 1f },
     ) {
@@ -1177,14 +1163,14 @@ object Mambo : PuzzleType {
         }.let {
             // Stepping back means fading toward the page, not going see-through: the violation halo
             // is drawn under the tiles and would bleed through a translucent one.
-            if (look == Look.DIM) it.copy(alpha = DIM_ALPHA).compositeOver(scheme.background) else it
+            if (look.dim) it.copy(alpha = DIM_ALPHA).compositeOver(scheme.background) else it
         }
         Box(
             modifier
                 .clip(shape)
                 .background(fill)
                 .then(if (ringed) Modifier.border(2.dp, scheme.error, shape) else Modifier)
-                .hintOutline(look == Look.STRONG, look == Look.SOFT, glow, pulse, 3.dp, shape),
+                .hintOutline(look.strong, look.soft, glow, pulse, 3.dp, shape),
             contentAlignment = Alignment.Center,
         ) {
             if (sym != Sym.NONE) {
@@ -1195,9 +1181,6 @@ object Mambo : PuzzleType {
             }
         }
     }
-
-    /** How a hint asks a square to be drawn: glowing, quietly marked, as usual, or stepped back. */
-    private enum class Look { STRONG, SOFT, PLAIN, DIM }
 
     /** How far a square or link the hint does not name fades toward the page. */
     private const val DIM_ALPHA = 0.4f

@@ -44,7 +44,7 @@ data class NextOption(
  * A random board offers Another (same tier), Easier and Harder (one tier either way, absent at the
  * ends), Done.
  *
- * A daily offers Easier Daily, Random (same tier), Harder Daily, Done. The two dailies are the same
+ * A daily offers Easier daily, Random (same tier), Harder daily, Done. The two dailies are the same
  * date at another tier and are never offered for a tier already done that day: the nearest undone
  * tier in that direction is offered instead, and the button is dropped if nothing in that direction
  * is undone. [doneTiers] need not include [tier]; the board just solved counts as done regardless,
@@ -64,9 +64,9 @@ fun nextOptions(daily: Boolean, tier: Difficulty, doneTiers: Set<Difficulty>, to
                 // The tier is the one just played; the pill has room for the name alone.
                 add(NextOption("Next puzzle", NextKind.TODAY, tier, id, note = name))
             }
-            if (easier != null) add(NextOption("Easier Daily", NextKind.DAILY, easier))
+            if (easier != null) add(NextOption("Easier daily", NextKind.DAILY, easier))
             add(NextOption("Random", NextKind.RANDOM, tier))
-            if (harder != null) add(NextOption("Harder Daily", NextKind.DAILY, harder))
+            if (harder != null) add(NextOption("Harder daily", NextKind.DAILY, harder))
             add(NextOption("Done", NextKind.DONE, null))
         }
     } else {

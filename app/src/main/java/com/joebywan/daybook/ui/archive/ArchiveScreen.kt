@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.archive
 
+import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.TitledScreen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -19,6 +20,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import com.joebywan.daybook.core.PuzzleType
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -50,7 +60,9 @@ import com.joebywan.daybook.ui.stats.MonthGrid
 import com.joebywan.daybook.ui.stats.firstOfMonth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 
 /** A `DateTimeFormatter` pattern; see `formatDate` in the platform seam. */
 private const val DAY_DATE = "EEE d MMM yyyy"
@@ -76,6 +88,10 @@ internal object ArchiveCalendar {
         val day = openAt ?: played.filter { playable(it, today) }.maxOrNull() ?: today
         return day.firstOfMonth().coerceIn(firstMonth(), today.firstOfMonth())
     }
+
+    /** The day the archive by day selects: [openAt] (the day just played from it), else yesterday, the first day to catch up on. */
+    fun openingDay(openAt: LocalDate?, today: LocalDate): LocalDate =
+        openAt?.takeIf { playable(it, today) } ?: today.minus(DatePeriod(days = 1)).coerceIn(minOf(DailySeed.EPOCH, today), today)
 }
 
 /**
@@ -199,7 +215,7 @@ private fun DayCell(
     var m = modifier.aspectRatio(1f).padding(2.dp).clip(shape)
     if (open) m = m.background(if (all) accent.copy(alpha = 0.22f) else scheme.surface).clickable(onClick = onClick)
     when {
-        isSelected -> m = m.border(BorderStroke(2.5.dp, accent), shape)
+        isSelected -> m = m.border(BorderStroke(2.5.dp, BoardHues.onTint(accent, scheme.background, 3f)), shape)
         day == today -> m = m.border(BorderStroke(1.5.dp, scheme.onSurface), shape)
     }
     Column(
@@ -210,7 +226,7 @@ private fun DayCell(
         Text(
             day.day.toString(),
             style = MaterialTheme.typography.labelLarge,
-            color = if (all) accent else scheme.onSurface,
+            color = if (all) BoardHues.onTint(accent, scheme.background) else scheme.onSurface,
         )
         if (open) {
             Spacer(Modifier.height(2.dp))
@@ -242,7 +258,7 @@ private fun TierPanel(
         Row(Modifier.fillMaxWidth().height(TIER_ROW), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (day != null) Difficulty.entries.forEach { difficulty ->
                 val isSolved = solved(difficulty)
-                val ink = if (isSolved) accent else scheme.onSurfaceVariant
+                val ink = if (isSolved) BoardHues.onTint(accent, scheme.background) else scheme.onSurfaceVariant
                 Box(
                     Modifier
                         .weight(1f)
@@ -254,7 +270,7 @@ private fun TierPanel(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isSolved) {
-                            Icon(Icons.Default.Check, "Solved", tint = accent, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Check, "Solved", tint = ink, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
                         }
                         Text(difficulty.label, style = MaterialTheme.typography.labelLarge, color = ink)
@@ -267,6 +283,212 @@ private fun TierPanel(
                             color = ink,
                             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp),
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The day's list: a tier column's width and a puzzle's row. */
+private val TIER_COL = 60.dp
+private val PUZZLE_ROW = 52.dp
+/** The least room the list keeps under the calendar on a narrow screen: the date line, the tier headings and two rows. */
+private val LIST_MIN = DATE_LINE + 20.dp + PUZZLE_ROW * 2
+
+/**
+ * The archive by day, the way in from Home and from the streak calendar: a month calendar (a dot under a day with a
+ * daily solved) and the selected day's puzzles, in the home grid's order, each with its three tiers, played from here
+ * in one tap. A puzzle's name opens its own calendar ([ArchiveScreen]) as a drill-down. It opens on [openAt] (the day
+ * just played from it) or yesterday, the first day there is to catch up on.
+ */
+@Composable
+fun ArchiveDaysScreen(
+    today: LocalDate,
+    completions: List<Completion>,
+    puzzles: List<PuzzleType>,
+    onPlay: (String, LocalDate, Difficulty) -> Unit,
+    onPuzzle: (String, LocalDate) -> Unit,
+    onBack: () -> Unit,
+    /** The puzzles and tiers of a day's dailies with a game left part-way. */
+    inProgress: (LocalDate) -> Flow<Set<Pair<String, Difficulty>>>,
+    openAt: LocalDate? = null,
+) {
+    val done = remember(completions) {
+        completions.mapNotNullTo(HashSet()) { c -> c.day?.let { Triple(c.puzzleId, it, c.difficulty) } }
+    }
+    val playedDays = remember(done) { done.mapTo(HashSet()) { it.second } }
+    // Epoch days go through the saver; a LocalDate does not.
+    var picked by rememberSaveable { mutableStateOf(ArchiveCalendar.openingDay(openAt, today).toEpochDays()) }
+    val selected = LocalDate.fromEpochDays(picked)
+    var shown by rememberSaveable { mutableStateOf(selected.firstOfMonth().toEpochDays()) }
+    val month = LocalDate.fromEpochDays(shown)
+    val started by remember(selected) { inProgress(selected) }.collectAsState(emptySet())
+
+    TitledScreen(
+        "Archive",
+        "${today.toEpochDays() - DailySeed.EPOCH.toEpochDays() + 1} days, all unlocked",
+        onBack,
+    ) {
+        BoxWithConstraints(
+            Modifier.fillMaxSize().padding(start = 18.dp, end = 18.dp, bottom = 12.dp),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            // Sized from both axes. Narrow: the calendar over the list, leaving the list room for two rows at least.
+            // Wide (a phone on its side, a tablet across): the calendar beside it, as tall as the box allows.
+            val wide = maxWidth > maxHeight
+            val cell = if (wide) {
+                minOf((maxHeight - MONTH_BAR - WEEKDAYS) / 6, maxWidth * 0.45f / 7, 48.dp)
+            } else {
+                minOf(maxWidth / 7, (maxHeight - MONTH_BAR - WEEKDAYS - GAP - LIST_MIN) / 6, 48.dp)
+            }
+            val calendar = @Composable {
+                Column(Modifier.width(cell * 7)) {
+                    MonthBar(
+                        month,
+                        back = month > ArchiveCalendar.firstMonth(),
+                        forward = month < today.firstOfMonth(),
+                        onMonth = { shown = it.toEpochDays() },
+                    )
+                    // Sized for six weeks, laid out with the month's own: a five-week month gives the list a row more.
+                    MonthGrid(month, cell) { day, m ->
+                        if (day < DailySeed.EPOCH) {
+                            Spacer(m.aspectRatio(1f))
+                        } else {
+                            DayMark(day, today, day == selected, day in playedDays, onClick = { picked = day.toEpochDays() }, modifier = m)
+                        }
+                    }
+                }
+            }
+            val list = @Composable { m: Modifier ->
+                DayPuzzles(
+                    selected, today, puzzles,
+                    solved = { id, tier -> Triple(id, selected, tier) in done },
+                    started = started,
+                    onPlay = { id, tier -> onPlay(id, selected, tier) },
+                    onPuzzle = { onPuzzle(it, selected) },
+                    modifier = m,
+                )
+            }
+            if (wide) {
+                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(GAP, Alignment.CenterHorizontally)) {
+                    calendar()
+                    list(Modifier.weight(1f, fill = false).widthIn(max = 440.dp).fillMaxWidth().fillMaxHeight())
+                }
+            } else {
+                Column(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(GAP),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    calendar()
+                    list(Modifier.widthIn(max = 440.dp).fillMaxWidth().weight(1f))
+                }
+            }
+        }
+    }
+}
+
+/** A day of the month: its number, and a dot under it when a daily of that day was solved. */
+@Composable
+private fun DayMark(day: LocalDate, today: LocalDate, isSelected: Boolean, played: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    val open = ArchiveCalendar.playable(day, today)
+    val shape = RoundedCornerShape(10.dp)
+    var m = modifier.aspectRatio(1f).padding(2.dp).clip(shape)
+    if (open) m = m.background(scheme.surface).clickable(onClick = onClick)
+    when {
+        isSelected -> m = m.border(BorderStroke(2.5.dp, scheme.primary), shape)
+        day == today -> m = m.border(BorderStroke(1.5.dp, scheme.onSurface), shape)
+    }
+    Column(
+        m.alpha(if (open) 1f else 0.35f),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(day.day.toString(), style = MaterialTheme.typography.labelLarge, color = scheme.onSurface)
+        // Always laid out, so a day with a solve and one without keep their numbers level.
+        Box(Modifier.padding(top = 2.dp).size(5.dp).clip(CircleShape).background(if (played) scheme.primary else Color.Transparent))
+    }
+}
+
+/** The selected day's date, the tier headings, and a row per puzzle: its name (its own calendar) and three tier squares. */
+@Composable
+private fun DayPuzzles(
+    day: LocalDate,
+    today: LocalDate,
+    puzzles: List<PuzzleType>,
+    solved: (String, Difficulty) -> Boolean,
+    started: Set<Pair<String, Difficulty>>,
+    onPlay: (String, Difficulty) -> Unit,
+    onPuzzle: (String) -> Unit,
+    modifier: Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Column(modifier) {
+        Text(
+            formatDate(day, DAY_DATE) + if (day == today) "  ·  today" else "",
+            style = MaterialTheme.typography.titleMedium,
+            color = scheme.onSurface,
+            maxLines = 1,
+            modifier = Modifier.height(DATE_LINE),
+        )
+        Row(Modifier.fillMaxWidth().height(20.dp)) {
+            Spacer(Modifier.weight(1f))
+            Difficulty.entries.forEach {
+                Text(
+                    it.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.width(TIER_COL),
+                )
+            }
+        }
+        LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
+            items(puzzles, key = { it.id }) { puzzle ->
+                val accent = Color(puzzle.accent)
+                Row(Modifier.fillMaxWidth().height(PUZZLE_ROW), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(10.dp))
+                            .clickable { onPuzzle(puzzle.id) }.padding(end = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        puzzle.Preview(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            puzzle.displayName,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Icon(
+                            Icons.Default.CalendarToday, "${puzzle.displayName} archive",
+                            tint = scheme.onSurfaceVariant, modifier = Modifier.padding(start = 6.dp).size(14.dp),
+                        )
+                    }
+                    Difficulty.entries.forEach { tier ->
+                        val isSolved = solved(puzzle.id, tier)
+                        Box(
+                            Modifier.width(TIER_COL).fillMaxHeight().padding(3.dp).clip(RoundedCornerShape(10.dp))
+                                .background(if (isSolved) accent.copy(alpha = 0.22f) else scheme.surfaceVariant)
+                                .clickable { onPlay(puzzle.id, tier) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            when {
+                                isSolved -> Icon(Icons.Default.Check, "${tier.label} solved", tint = BoardHues.onTint(accent, scheme.background, 3f), modifier = Modifier.size(18.dp))
+                                (puzzle.id to tier) in started -> Text(
+                                    "started", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant,
+                                )
+                                else -> Icon(
+                                    Icons.Default.PlayArrow, "Play ${tier.label}",
+                                    tint = scheme.onSurfaceVariant.copy(alpha = 0.6f), modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
                     }
                 }
             }
