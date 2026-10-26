@@ -40,7 +40,10 @@ All puzzles teach (Snap and Pointers through their walkthrough only; Pointers an
 section 7. The settled play-screen UX (popover, finish frame, solve sound) and the measured fallback table:
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
-never a drill): `docs/REWARDS.md` (Techniques). What must not be broken:
+never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: Sudoku's techniques
+practised on real positions found by walking generated boards by hints (`core/Training.kt`, `ui/training/`, its own
+`training_passed` key set, two appended achievements), opened from Settings and a Sudoku hint's "Practise this":
+`docs/TRAINING_SPEC.md`. What must not be broken:
 
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the panel confirms
   when `isReached` sees it. Only an explicit "Show me" applies it. **One hint is counted per deduction opened.**
@@ -825,11 +828,11 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths, 11 / 13 / 7, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
   **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
   once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,
-  Crossword, Nonogram, Mines) and `STARTER_WORDS` (Lexicon, Word Wheel, Target), the gentlest of each kind in
+  Nonogram, Mines) and `STARTER_WORDS` (Lexicon, Word Wheel, Crossword, Target), the gentlest of each kind in
   `PuzzleOrder.GENTLEST` (a test ties them). The achievement accepts either three for a day.
   The home row is always laid out at one height (unseen in Levels), so it never moves the grid.
 - **"Next puzzle today"** (`nextToday`, `NextKind.TODAY`) is offered only on today's daily opened from Home, and opens the next
