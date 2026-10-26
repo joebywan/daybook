@@ -50,9 +50,9 @@ object ThisWeek {
     /** One day of the strip. */
     data class Day(val day: LocalDate, val solved: Int)
 
-    /** Today and the six days before it, oldest first, with the boards solved on each. */
+    /** Today and the six days before it, oldest first, with the dailies solved on their own day ([Completion.streakDay]). */
     fun days(all: List<Completion>, today: LocalDate): List<Day> {
-        val counts = all.mapNotNull { it.day }.groupingBy { it }.eachCount()
+        val counts = all.mapNotNull { it.streakDay }.groupingBy { it }.eachCount()
         return (6 downTo 0).map { back -> today.minus(DatePeriod(days = back)).let { Day(it, counts[it] ?: 0) } }
     }
 

@@ -81,7 +81,7 @@ fun finishPraise(
         val before = Stats.streak(history, today)
         val after = Stats.streak(history + solve, today)
         val n = after.current
-        val savedByWindow = n > 1 && history.none { it.day == LocalDate.fromEpochDays(today.toEpochDays() - 1) }
+        val savedByWindow = n > 1 && history.none { it.streakDay == LocalDate.fromEpochDays(today.toEpochDays() - 1) }
         when {
             n == 1 && before.lapsed -> { title = "Welcome back"; lines += "A new streak starts today." }
             n == 1 -> { title = "Day one"; lines += "Your streak starts today." }
