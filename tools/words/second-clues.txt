@@ -87,6 +87,7 @@ day: Daily shift, as in "a hard ___'s work"
 den: Cosy study at home
 dew: Honey___ melon
 did: "That ___ it!"
+die: Expire
 dig: Archaeologist's site
 dim: Slow on the uptake
 din: Racket of a building site
@@ -136,6 +137,7 @@ fly: Travel by air
 foe: Opponent in a duel
 fog: Cloud the mind
 for: On behalf of
+fox: Baffle
 fry: Young fish
 fun: Good time
 fur: Scale in a kettle
@@ -201,6 +203,7 @@ jet: Spurt of water
 job: Bank raid, in crime slang
 jog: Nudge, as a memory
 jot: Smallest amount, as in "not one ___"
+joy: Pride and ___
 jut: Overhang, as a cliff
 keg: Small cask of gunpowder
 key: Piano lever
@@ -227,6 +230,7 @@ log: Ship's record
 lop: Prune a branch
 lot: Plot of land
 low: Moo
+lug: Handle on a pot
 lye: Drain cleaner's caustic
 mad: Wildly keen, as in "___ about"
 man: Staff, as a desk
@@ -237,6 +241,7 @@ may: Might
 men: Chess pieces
 met: Joined, as two roads
 mew: Gull's cry
+mix: Blend, as at a party
 mob: Gang of criminals
 mod: Change to a car or game
 moo: Low, in a field
@@ -389,6 +394,7 @@ use: Purpose
 van: Front of an army
 vat: Tub for dyeing
 vet: Check thoroughly
+vex: Puzzle, as a "___ed question"
 via: Through the medium of
 vie: Go head to head
 vow: Wedding pledge
@@ -396,6 +402,7 @@ wad: Lump of chewing gum
 wag: Joker
 wan: Weak, as a smile
 was: "Once upon a time there ___"
+wax: Grow, as the moon
 way: "No ___!"
 web: Online network
 wed: Unite, as two ideas
@@ -418,6 +425,7 @@ yen: Currency whose sign is ¥
 yes: Word of consent
 yet: Nevertheless
 yew: Tree used for longbows
+zip: Postcode, in some places
 abet: Egg on to a crime
 able: Fit and ready, as in "___ to work"
 ache: Long, as for home
@@ -426,6 +434,7 @@ acne: Spots on the face
 acre: Field size on a farm
 afar: Where the wise men came from, in a carol
 aide: Right-hand person in an office
+airy: Light-hearted and offhand, as a wave of the hand
 ajar: When is a door not a door? When it's ___
 akin: Like, as in "___ to"
 ally: Back up, as in "___ oneself with"
@@ -452,15 +461,23 @@ awry: Crooked, as a tie
 axis: Line on a graph
 axle: Bar a cart's wheels turn on
 babe: Innocent, as "a ___ in the woods"
+baby: Youngest of the family
+back: Support, as a candidate
+bail: Scoop water out of a boat
 bait: Goad into a fight
 bale: Rectangular block on a field after harvest
+ball: Formal dance with gowns
 balm: Comfort for the spirit
 bang: Slam, as a door
+bank: Tilt, as a plane turning
 barb: Hook's sharp point
 bard: Wandering minstrel poet
 bare: Reveal, as teeth
+base: Morally low
 bash: Hit hard
+bask: Revel, as in praise
 bass: Lowest part in harmony
+bath: Spa town's tub, or a long soak
 bead: Drop, as of sweat
 beak: Hooked nose, jokingly
 beam: Smile broadly
@@ -476,24 +493,30 @@ bend: Give way, as rules might
 bent: Natural talent
 best: Outdo
 beta: Test version of software
+bide: Wait patiently
 bill: Proposed law
 bird: Shuttlecock, informally
 blab: Chatterbox
 bled: Ran, as wet dye
 blew: Wasted, as money
+blip: Brief setback in a trend
 blob: Spot of ink
 blog: Post online diary entries
 blot: Dab dry with paper
 blow: Setback
 blue: Sad
+blur: Rush of activity, as in "the week was a ___"
 boar: Male pig
 bode: Promise, as in "___ well"
 boil: Seethe with anger
 bolt: Flash of lightning
 bond: Glue together
 bone: Fishbone, say
+bony: Full of small fish bones
 book: Reserve a table
+boor: Lout at a dinner party
 bore: Inner width of a gun barrel
+boss: Stud on a shield
 both: Each of two
 bout: Spell, as of illness
 bowl: Basin
@@ -505,7 +528,9 @@ brew: Pot of tea
 brow: Crest of a hill
 buff: Pale yellow-brown
 bull: Centre of a target
+buoy: Lift, as spirits
 burr: Rough edge on metal
+bury: Hide away, as a secret
 bush: Wild, untamed countryside
 cage: Lift car on a mine shaft
 cake: Bar, as of soap
@@ -544,6 +569,7 @@ clap: Thunder's sound
 claw: Hammer's split end
 clay: Earth for bricks
 clef: Sign at the start of a stave
+clip: Short video excerpt
 clog: Wooden shoe
 clot: Thicken, as cream
 club: Society
@@ -551,10 +577,12 @@ clue: Help in solving a crossword
 coal: Ember
 coat: Layer of paint
 code: Rules of behaviour
+coil: Loop of rope on a deck
 coke: Fuel from coal
 cold: Common winter sniffle
 colt: Inexperienced youngster
 coma: Long, deep sleep in hospital
+comb: Rooster's red crest
 come: Draw near
 cone: Traffic marker
 cook: Prepare a meal
@@ -564,8 +592,10 @@ cope: Priest's long cloak
 copy: Single issue of a newspaper
 cord: Ribbed fabric
 core: Central group, as of supporters
+cork: Bark of a tree used for floats
 corn: Painful bit on a toe
 cost: Charge for something
+coup: Brilliant stroke, as of business
 cove: Fellow, in old slang
 crab: Grumpy person
 crag: Cliff face for climbers
@@ -574,6 +604,7 @@ crew: Rowing team
 crib: Copy dishonestly
 crop: Cut short, as hair
 crow: Boast loudly
+cube: Number times itself twice
 cuff: Box on the ear
 cull: Pick out
 cult: Kind of film with a devoted following
@@ -586,10 +617,12 @@ damp: Muffle, as a sound
 dank: Clammy, as a basement
 dare: Truth or ___
 dark: Night-time
+darn: Mild curse word
 dart: Dash
 dash: Pinch, as of salt
 data: Plural of datum
 date: Sweet palm fruit
+daub: Plaster for a wattle wall
 dawn: Begin to be understood, with "on"
 daze: Bewildered state, as in "in a ___"
 deaf: Unwilling to listen, as in "turn a ___ ear"
@@ -613,6 +646,7 @@ diet: Lose weight
 dill: Herb for gravlax
 dine: Wine and ___
 dire: Awful, as a performance
+dirt: Scandal, as "dish the ___"
 disc: Flat round plate
 dish: Food for a meal
 dodo: Out-of-date person
@@ -633,8 +667,11 @@ draw: Sketch
 drew: Pulled
 drip: Feeble person
 drop: Small amount of liquid
+drug: Sedate
 drum: Large barrel
+duct: Tube in the body, as for tears
 dude: City slicker
+duet: Pair of performers
 dull: Overcast
 dune: Hill shaped by the wind
 dunk: Jump-up shot in hoops
@@ -661,24 +698,30 @@ evil: "Speak no ___"
 exam: Final at school
 exit: Leave the stage
 face: Confront
+fact: "___ of life"
 fade: Disappear slowly
+fail: Let down
 fair: Light-haired
 fake: Feint in a game
+fall: Drop
 fame: Being well known
 fare: Get on, as in "how did you ___?"
 fast: Firmly fixed
 fate: Doom of the hero
 fear: Respect, as for a god
+feat: Deed of daring
 feel: Sense
 feet: Paws
 fell: Rugged hill
 felt: Sensed
+fern: Plant of shady woods
 feud: Fight between neighbours
 fill: Enough, as in "eat your ___"
 film: Thin coating
 fine: Very good
 fire: Let go from a job
 fish: Fumble around, as in a bag
+fist: Handwriting, in old slang
 five: Number of points on a star
 flag: Wilt
 flap: Panic
@@ -695,6 +738,7 @@ flow: Pour
 flue: Pipe for exhaust gases
 foal: Give birth, as a mare
 foil: Fencing sword
+fold: Sheep pen
 fond: Keen, as in "___ of"
 font: Basin for baptism
 food: Fare
@@ -705,8 +749,11 @@ fowl: Bird reared for the table
 fray: Wear thin, as nerves
 free: At liberty
 fret: Agonise
+from: "___ A to B"
+full: Satisfied after a meal
 fume: Smoke
 furl: Roll up, as an umbrella
+fury: Avenging spirit of myth
 fuse: Merge
 fuss: Make a big deal
 gait: Walk, as of a horse
@@ -715,6 +762,7 @@ gale: Burst, as of laughter
 gall: Cheek
 game: Willing
 gape: Gap wide open
+garb: Dress, as of a monk
 gash: Cut deep into
 gasp: Last breath, as in "at the last ___"
 gate: Attendance at a match
@@ -729,6 +777,7 @@ gill: Quarter of a pint
 gilt: Gold leaf
 girl: Daughter
 gist: General drift
+give: Stretch, as a rope
 glad: Pleased to oblige, as in "I'd be ___"
 glee: Song for three or more voices
 glen: Wooded dale in the north
@@ -741,6 +790,7 @@ gnaw: Worry, as doubts can
 goal: Ambition
 goat: Kid's parent
 goes: Turns, as in "whose ___ is it?"
+gold: Colour of a wedding ring
 golf: Letter g in the radio alphabet
 gone: Pregnant, as in "six months ___"
 gown: Doctor's surgical garment
@@ -755,6 +805,7 @@ grow: Raise, as vegetables
 grub: Dig
 guru: Wise mentor
 gush: Rave, as a fan
+hail: Call to, as a cab
 hair: Strand on the head
 half: Part of a match
 hall: Large room for events
@@ -798,12 +849,16 @@ hole: Burrow
 holy: "___ cow!"
 home: Base
 hone: Whet, as a knife
+honk: Sound a car horn
+hook: Catchy part of a song
+hoot: Something very funny
 hope: "Where there's life there's ___"
 horn: Car's warning sound
 hose: Stockings
 host: Large number
 hour: Time on a clock
 howl: Gale's roar
+huge: Like a whale
 hull: Pod, as of peas
 hunt: Treasure ___
 hurl: Toss, as abuse
@@ -829,11 +884,16 @@ item: Article
 jade: Tire
 jail: Square on a board game where you might lose turns
 jamb: Upright a door's latch clicks into
+jest: Playful remark, as "in ___"
 judo: Sport in a gi
+just: Only
 keel: Fall, with "over"
 keen: Sharp
+keep: Castle's central tower
+kelp: Seaweed forest
 kept: Stored
 kiln: Oven for drying hops
+kite: Bird of prey that hovers
 kiwi: Flightless bird
 knee: Nudge with a joint
 knew: Recognised
@@ -848,6 +908,8 @@ laid: Set, as a table
 lain: Rested
 lair: Villain's base
 lake: Large pool of wine, as a surplus
+lamb: Gentle person
+lamp: Genie's home
 land: Touch down, as a plane
 lane: Narrow road
 lard: Pig fat
@@ -879,16 +941,20 @@ lilt: Swing
 lily: Pond flower
 limb: Arm or leg
 lime: Mortar ingredient
+limp: Lacking firmness
 line: Rope
 lint: Fluff on a tumble dryer's filter
 lion: Celebrity, as in "literary ___"
 list: Lean to one side
 live: Reside
+load: Washing in the machine
+loaf: Lounge about
 loam: Soil of sand, silt and clay
 loan: Advance
 lobe: Part of the brain
 loft: Hit high, as a ball
 logo: Symbol on a tee shirt
+loin: Lower back
 loll: Hang down, as a tongue
 lone: ___ wolf
 long: Yearn
@@ -945,6 +1011,7 @@ mess: Army dining hall
 mice: Computer pointers
 mild: Ale that is lightly hopped
 mile: Long distance, as in "went the extra ___"
+milk: Exploit
 mime: Street performer trapped in an invisible box
 mind: Look after, as a baby
 mine: Rich source, as of information
@@ -960,8 +1027,10 @@ mode: Setting, as on a camera
 mole: Small dark spot on the skin
 mood: Atmosphere of a place
 moon: Gaze dreamily
+moor: Open upland
 mope: Gloomy person
 more: "Please, sir, I want some ___"
+morn: Dawn, in verse
 moss: "A rolling stone gathers no ___"
 most: "Make the ___ of it"
 moth: Wool-eating pest
@@ -972,8 +1041,10 @@ muse: One of nine goddesses of the arts
 muss: Fuss, in old speech
 must: Something essential
 mute: Device that softens a trumpet
+myth: Untrue story believed by many
 nail: Get exactly right
 name: Reputation
+nape: Scruff
 navy: Seagoing service
 near: Stingy, in old usage
 neat: Undiluted, as whisky
@@ -1024,6 +1095,7 @@ pact: Deal sealed with a handshake
 page: Call over a speaker
 paid: Earning, as work
 pail: Container a nursery rhyme pair fetched water in
+pain: Pest, as "a ___ in the neck"
 pair: Cards of the same rank, two of them
 pale: Fence stake, as in "beyond the ___"
 pall: Cloud, as of smoke
@@ -1056,6 +1128,7 @@ pill: Bitter thing to swallow
 pine: Waste away for love
 pint: Glass of beer
 pipe: Smoker's bowl
+pity: Shame, as in "what a ___"
 plan: Diagram of a floor
 play: Have fun
 plea: Answer to a charge in court
@@ -1098,9 +1171,12 @@ punt: Kick
 puny: Pathetically small, as an effort
 pure: Sheer, as in "___ luck"
 purr: Engine's soft hum
+push: Campaign drive
 putt: Shot a mini-golf player makes on every hole
 race: People of shared descent
+rack: Rib cut, as of lamb
 racy: Lively and a bit naughty
+raft: Lot, as "a ___ of measures"
 rage: All the ___ (in fashion)
 raid: Fridge visit at midnight
 rail: Complain bitterly, with "against"
@@ -1148,13 +1224,17 @@ robe: Garment of a monk
 rode: Travelled by bus
 role: Function
 roll: Turn over and over
+romp: Easy win
 rook: Crow-like bird
 room: Space to move, as "elbow ___"
+root: Cheer, with "for"
 rope: "Show someone the ___s"
 rose: Pink shade
+rosy: Promising
 rout: Root about, as a pig
 rude: Rough and simple, as a hut
 ruff: Bird with a frilly breeding collar
+ruin: Remains of a castle
 rule: Straight edge for measuring
 rung: Level, as in a hierarchy
 runt: Weakest piglet
@@ -1171,6 +1251,7 @@ salt: Sailor, old style
 same: "___ difference"
 sand: Smooth wood
 sane: Of sound mind
+sang: Squealed, in police slang
 sari: Six yards of silk worn draped
 sash: Window that slides up and down
 save: Store up
@@ -1190,8 +1271,10 @@ self: Ego
 sell: Persuade, as of an idea
 send: Thrill
 sent: Transported, as with joy
+sham: Bogus, as a marriage
 shin: Climb, with "up"
 ship: Post a parcel
+shod: Wearing shoes, as a horse
 shoe: Horse's iron
 shoo: ___-in (sure winner)
 shop: Workshop
@@ -1201,9 +1284,12 @@ shun: Give the cold shoulder
 side: Flank
 sift: Sort through, as evidence
 sigh: Gentle rustle, as of the wind
+silk: Senior barrister, informally
 sill: Base of a window frame
 silo: Missile launch pit
+silt: Mud at a river mouth
 sing: Inform on, as a criminal
+sink: Drop, as a ship
 sire: Your majesty, of old
 site: Web address
 skew: At an angle
@@ -1225,7 +1311,9 @@ slop: Swill
 slow: Behind, as a clock
 slur: Smear
 smog: Smoke mixed with fog
+smug: Like a cat that got the cream
 snap: Photo
+snip: Sound of scissors
 snob: One who looks down on others
 snow: Static on an old screen
 soak: Heavy drinker
@@ -1240,12 +1328,14 @@ sold: Convinced
 sole: Bottom of a foot
 solo: Flight without a co-pilot
 some: Quite a, as in "that was ___ party"
+song: Bird's call
 soon: "See you ___!"
 soot: Black from a candle
 sore: Annoyed
 sort: Good ___ (decent person)
 soul: Feeling, in music
 sour: Whisky ___ (a cocktail)
+sown: Scattered, as seeds
 span: Period of time
 spar: Argue
 spat: Spurted saliva
@@ -1286,11 +1376,13 @@ take: Receipts
 talc: Soft mineral
 tale: Old wives' ___
 talk: Rumour, as in "the ___ of the town"
+tall: Far-fetched, as a tale
 tame: Dull
 tank: Fish container
 tape: Record
 tart: Sharp-tasting
 task: Take to ___ (tell off)
+taut: Tight-knit, as a thriller's plot
 taxi: Move along a runway
 teak: Tree of tropical forests
 team: Pair of horses yoked together
@@ -1303,6 +1395,7 @@ tent: Pavilion at a show
 term: Word
 test: Trial
 text: Words of a book
+than: "Rather ___"
 that: The one there
 thaw: Warming of relations
 them: Those ones
@@ -1310,13 +1403,16 @@ then: Next
 they: Those
 thin: Watery, as soup
 this: The one here
+thug: Heavy hired by a gangster
 thus: In this way
 tide: Current, as of opinion
 tiff: Brief row
 tile: Scrabble piece
 till: Until
 tilt: Joust
+time: Prison sentence
 tint: Dye lightly
+tiny: Fit to hide in a thimble
 tire: Lose interest, with "of"
 toad: Loathsome person
 toga: Draped sheet worn to a fancy-dress party
@@ -1325,6 +1421,7 @@ told: Instructed
 toll: Cost in lives
 tomb: Unknown soldier's resting place
 tone: Muscle firmness
+took: Captured
 tool: Instrument
 toot: Blast, as on a trumpet
 tore: Dashed off
@@ -1368,7 +1465,11 @@ vest: Singlet
 veto: Block
 vial: Little bottle of perfume
 vice: Department of police for crimes like gambling
+vile: Foul, as weather
 vine: Video clip site, once
+void: Invalid
+wade: Plough on, with "through"
+waft: Breath, as of perfume
 wage: Carry on, as a war
 waif: Stray child
 wail: Siren's sound
@@ -1381,6 +1482,7 @@ ward: Child under a guardian
 warm: Close, in a guessing game
 warn: Put on notice
 warp: Distortion
+wart: Flaw, as "___s and all"
 wash: Load of laundry
 wasp: Insect at a summer picnic
 watt: Unit of power
@@ -1400,6 +1502,7 @@ wild: Untamed, as a stallion
 will: Determination
 wilt: Fade, as lettuce
 wily: Like a fox
+wind: Breath
 wine: Deep red
 wipe: Clean, as a slate
 wire: Telegram
@@ -1427,6 +1530,8 @@ yoga: Practice with downward dog and other poses
 yoke: Burden
 yolk: Sunny side of a fried egg
 your: "Mind ___ head"
+zest: Grated citrus rind in a cake
+zone: Time ___
 zoom: Speed
 aback: Backwards, of a sail pressed by the wind
 abate: Ease off, as a fever
@@ -1435,6 +1540,8 @@ abbot: Monk in charge
 abhor: Find utterly repugnant
 abide: Stay, in old speech
 abode: "Of no fixed ___"
+abort: Stop a computer program halfway
+about: On the subject of
 above: Higher in rank than
 acorn: Nut a squirrel buries
 acrid: Biting, as a remark
@@ -1528,6 +1635,7 @@ avail: "To no ___"
 avert: Look away, as eyes
 avoid: Dodge, as a question
 await: Lie in store for
+awake: Alert to, as a danger
 award: Grant, as damages in court
 aware: Wide awake to
 awful: Fearful, in its first sense
@@ -1552,6 +1660,7 @@ baste: Stitch loosely
 bathe: Swim in the sea
 baton: Relay runner's stick
 beach: Run aground, as a whale
+beady: Watchful, as a "___ eye"
 beard: Confront boldly
 beast: Brute
 beech: Tree with nuts and copper leaves
@@ -1568,6 +1677,8 @@ berry: Holly fruit
 beset: Hem in on all sides
 bible: Authoritative handbook
 bigot: One who won't hear other views
+bingo: "Got it!"
+biped: Animal that walks on two legs, as we do
 birth: Family background, as in "of noble ___"
 bison: Wild ox of the prairies
 blade: Leaf of grass
@@ -1581,6 +1692,7 @@ blend: Coffee mixed from several beans
 bless: "___ you!" after a sneeze
 blind: Window shade
 blink: "In the ___ of an eye"
+bliss: Heaven, as in "wedded ___"
 blond: Light-haired, of a man
 bloom: Rosy glow of youth
 blunt: Dull-edged, as a pencil
@@ -1589,6 +1701,7 @@ board: Committee of directors
 boast: Proud claim
 bogus: Sham, as a cheque
 bonus: Christmas extra in a pay packet
+boost: Shot in the arm
 booth: Market stall
 borne: Endured
 bosom: Close, as a friend
@@ -1597,6 +1710,7 @@ bough: Branch where a cradle rocks, in a lullaby
 bound: Heading, as in "___ for home"
 bowel: Inner depths, in old speech
 brace: Pair, as of birds
+braid: Trim on a uniform
 brain: Mastermind
 brake: Slow down
 brand: Mark burned on cattle
@@ -1604,7 +1718,9 @@ brave: Warrior of old
 bravo: Hired thug, in old plays
 brawl: Bar fight
 bread: Money, in slang
+break: Time off between lessons
 bribe: Sweetener, figuratively
+brick: Reliable friend, in old slang
 bride: Woman marrying
 brine: The sea
 bring: Lead to, as in "___ about"
@@ -1612,30 +1728,37 @@ brink: Edge, as of war
 briny: The sea, with "the"
 broad: Plain, as an accent
 broil: Bake in heat, as a sweltering day
+broke: Shattered
 brood: Family of young birds
 brook: Tolerate
 broom: Yellow-flowered shrub
 broth: Scotch ___ (a barley soup)
 brunt: Bear the ___ (take the worst)
 brute: Sheer, as force
+bugle: Horn sounding the last post
+build: Physique
 built: Well-muscled
 bulge: Bump in a pocket
 bulky: Heavy and awkward to move
 bully: Excellent, as in "___ for you"
 burly: Built like a bouncer
+burnt: Overcooked, as toast
 burro: Donkey of the deserts
 burst: Rush, as of energy
 butte: Lone flat-topped rock in a desert
 buxom: Shapely and full-bosomed
 cabin: Ship's bedroom
+cable: Telegram, of old
 cacao: Tree with beans
 cache: Fast memory store in a computer
 cadet: Younger son, in old use
+cagey: Unwilling to say much
 calve: Break off, as an iceberg
 camel: Light brown colour
 cameo: Carved brooch
 canal: Tube in the body
 candy: Crystallised sugar
+canny: Careful with money
 canoe: Paddle your own ___
 canon: Accepted body of work
 carat: Purity of a ring's gold
@@ -1656,6 +1779,7 @@ charm: Spell or incantation
 chart: Map for sailors
 chase: Engrave metal
 chasm: Wide gap, as between views
+cheap: Tacky
 cheek: Nerve
 chide: Tick off
 chill: Slight cold, as in "catch a ___"
@@ -1670,6 +1794,7 @@ churn: Turnover, as of customers
 chute: Rubbish shaft in a block of flats
 cider: Scrumpy
 cigar: Close but no ___
+civic: Of citizens
 civil: Not military
 clack: Click of knitting needles
 claim: Insurance request
@@ -1688,12 +1813,16 @@ clink: Prison, in slang
 cloak: Disguise
 clone: Lookalike
 close: Shut
+cloth: The clergy, as "a man of the ___"
 cloud: Mist over a mirror
+clout: Heavy blow
 clove: Split
 clump: Tread heavily
 clung: Hung on, as to hope
+coach: Long-distance bus
 cobra: Venomous snake that spits
 cocoa: Bean from a tropical pod
+colic: Fit of crying in a newborn
 colon: Two stacked dots
 comet: Icy body with a glowing tail
 comma: Butterfly with ragged wings
@@ -1713,9 +1842,11 @@ crash: Fall sharply, as markets
 crass: Vulgar and stupid
 crate: Old car, jokingly
 crave: Desire badly
+crawl: Swimming stroke
 craze: Network of fine cracks in a glaze
 creak: Groan of a ship's timbers
 cream: The best, as of the crop
+creek: Up the ___ without a paddle
 creep: Unpleasant person
 crepe: Thin crinkled fabric
 crept: Inched forward
@@ -1723,6 +1854,7 @@ crest: Coat of arms
 crisp: Brisk, as air
 croak: Die, in slang
 crock: Old wreck
+crook: Shepherd's staff
 croon: Sing like a lounge singer
 cross: Hybrid
 crown: Top of a tooth
@@ -1731,8 +1863,10 @@ cruel: Harsh, as fate
 crust: Living, as in "earn a ___"
 curio: Collector's item
 curve: Bowler's ball that swerves
+cycle: Washing machine's run
 daddy: Biggest of all, as in "the ___ of them all"
 daily: Newspaper
+dairy: Shop for milk, once
 dally: Flirt
 dance: Ball
 dandy: Fine, as in "fine and ___"
@@ -1744,6 +1878,7 @@ debug: Sweep for listening devices
 debut: Coming out in society
 decay: Tooth trouble
 decoy: Lure into a trap
+decry: Condemn openly
 defer: Yield, as to an expert
 deign: Lower oneself
 delay: Flight trouble at an airport
@@ -1752,6 +1887,7 @@ delve: Rummage, as in a bag
 denim: Fabric of overalls
 dense: Dim-witted
 depot: Storehouse
+depth: Profundity
 deter: Prevent by fear
 diary: Engagement book
 digit: Numeral
@@ -1766,6 +1902,7 @@ dogma: Belief accepted without question
 doily: Lacy cloth under a vase
 dolly: Trolley for heavy loads
 donor: Organ ___
+doubt: "Beyond reasonable ___"
 douse: Put out, as a fire
 dozen: Baker's ___
 draft: Conscription
@@ -1773,8 +1910,10 @@ drain: Exhaust
 drama: Fuss
 drank: Toasted
 drape: Curtain
+drawn: Haggard, as a face
 dread: Hair in long locks, in the plural
 dream: Aspiration
+drift: General meaning, as "catch my ___"
 drill: Practice routine
 drink: Have a glass of something
 drive: Road up to a house
@@ -1820,6 +1959,8 @@ enter: Type in, as data
 entry: Item in a contest
 envoy: Ambassador's deputy
 epoch: Turning point in history
+equal: Peer
+equip: Prepare, as for life
 erase: Clear, as a whiteboard
 erect: Put up, as a tent
 erode: Eat away, as rights
@@ -1827,6 +1968,7 @@ error: Typo
 erupt: Break out, as a rash
 essay: Piece of homework
 ether: Upper sky
+ethic: Work ___
 ethos: Character of a group
 evade: Escape from, as a pursuer
 event: Contest
@@ -1842,13 +1984,19 @@ exist: Live on very little
 expel: Breathe out, as air
 extol: Sing the praises of
 extra: Film's walk-on
+exude: Give off, as confidence
 exult: Be jubilant
 fable: Myth, or a lie
 facet: Flat face of a cut diamond
+faint: Light, as a pencil line
 faith: Trust, as in "good ___"
 false: Fake, as teeth
+farce: Mockery, as of justice
 fatty: Rich, as meat
 fault: Error by a server
+fauna: Wildlife, alongside flora
+feast: Holy day of a saint
+feign: Put on, as surprise
 felon: Inmate
 fence: Fight with swords
 fetch: Command to a dog
@@ -1864,6 +2012,7 @@ final: Deciding match
 first: Original
 flail: Threshing tool
 flair: Gift, as for languages
+flaky: Unreliable
 flare: Widen, as nostrils
 flash: Showy
 fleet: Company's set of cars
@@ -1899,9 +2048,12 @@ frank: Stamp, as a letter
 freak: Enthusiast, as in "fitness ___"
 friar: Begging brother of an order
 frond: Long leaf of seaweed
+front: Weather boundary
+frown: Disapprove, with "on"
 fruit: Result, as of one's labours
 furry: Like a teddy bear
 gable: Peak of a house's side
+gamma: Third letter of an old alphabet
 gamut: Range of notes a voice can reach
 gauge: Estimate
 gaunt: Bleak and desolate
@@ -1919,6 +2071,7 @@ glade: Sunny patch among trees
 gland: Lump in the neck that swells with a cold
 glare: Dazzle
 glass: Tumbler
+glaze: Glassy coat on pottery
 gleam: Glimmer, as of hope
 glean: Gather leftover grain after a harvest
 glint: Twinkle in the eye
@@ -1927,8 +2080,10 @@ globe: The world
 gloom: Dim light of an overcast day
 glory: Halo
 gloss: Lipstick with a shine
+glove: Boxer's handwear
 gnome: Small earth spirit of folklore
 godly: Devout and upright
+going: Conditions on the turf, at the races
 goody: Good guy, in films
 gooey: Sentimental
 goose: Silly person
@@ -1937,10 +2092,12 @@ gouge: Overcharge
 gourd: Dried shell used as a bottle
 grace: Favour, as in "in his good ___s"
 grade: Year at school
+graft: Hard work, in slang
 grain: Wood's pattern
 grand: Piano for a concert
 grant: Funding award
 grape: Raisin, before drying
+graph: Chart with axes
 grass: Informer, in old slang
 grate: Shred, as cheese
 gravy: Easy money
@@ -1955,8 +2112,10 @@ grind: Daily routine
 gripe: Stomach cramp
 groan: Creak under a heavy load
 groin: Where a pulled muscle often is
+groom: Train, as a successor
 grope: Search blindly, as for words
 gross: Twelve dozen
+group: Band
 grove: Olive ___
 grunt: Foot soldier
 guard: Protect
@@ -1968,6 +2127,7 @@ gully: Gutter
 gusty: Prone to sudden blasts, as a coastal day
 habit: Cowl and robe
 hairy: Scary, as a situation
+halve: Split, as costs
 handy: Skilled with tools
 happy: Willing, as in "___ to help"
 hardy: Able to survive frost
@@ -1984,14 +2144,18 @@ heady: Strong, as a perfume
 heart: Courage
 heath: Low shrub of the moors
 heave: Retch
+heavy: Bouncer, in slang
 hedge: Protect against loss, as a bet
 hello: Word said on picking up the phone
 hence: From now, as in "a week ___"
 heron: Fish-eating bird that stands still
 hilly: Like a rolling landscape of downs
 hinge: Depend, with "on"
+hippy: Wide around the hips
 hoard: Squirrel's winter store
+hobby: Small falcon
 hoist: Lifting gear
+holly: Prickly evergreen
 homey: Lived-in, as a kitchen
 honey: Golden colour of a spoonful from a jar
 horde: Nomad tribe on the move
@@ -2011,6 +2175,7 @@ idiom: Way of speaking peculiar to a people
 igloo: Shelter built on the ice
 image: Likeness
 inane: Silly and empty, as chatter
+incur: Run up, as debts
 index: Pointing finger
 inept: Hopeless at the job
 inert: Chemically inactive
@@ -2046,6 +2211,7 @@ lapel: Where a buttonhole flower goes
 lapse: Expire, as a policy
 large: At liberty, as in "at ___"
 larva: Grub
+latch: Grab hold, with "on"
 latex: Paint with a water base
 lathe: Machine for making table legs
 leach: Wash out, as minerals from soil
@@ -2083,6 +2249,7 @@ loose: Unleashed, as a dog
 lorry: Juggernaut on a motorway
 lotus: Sacred flower of the east
 lousy: Infested
+loyal: True to the end, as a dog
 lucky: Born under a good star
 lumpy: Bumpy, as a mattress
 lunar: Like a crescent
@@ -2125,6 +2292,7 @@ might: Main force, as in "with all one's ___"
 mince: Walk with dainty steps
 minor: Key that can sound sad
 minus: Drawback
+misty: Teary
 modal: Mood of a verb, in grammar
 model: Example
 moist: Clammy, as hands
@@ -2229,6 +2397,7 @@ pence: Pennies, in plural
 penny: Cent
 peony: Big blousy bloom of early summer
 peril: "At your ___"
+perky: Pert, as a nose
 petal: Darling, as a term of endearment
 petty: Minor, as cash
 phase: Moon shape
@@ -2244,26 +2413,33 @@ pitch: Field of play
 pivot: Swivel
 pixie: Short elfin haircut
 place: Seat at a table
+plaid: Cloak worn over the shoulder
 plain: Easy to see, as in "___ as day"
 plane: Woodworking tool
 plank: Policy item
 plant: Spy placed undercover
 plate: Coating, as of silver
+plaza: Open square where a market is held
 plead: Answer, as "guilty"
 pleat: Crease in a kilt
 plumb: Weight on a builder's line
 plume: Column, as of smoke
 plump: Choose, with "for"
+plush: Velvety fabric
 poach: Simmer, as an egg
+point: Headland jutting into the sea
 poise: Grace
 polar: Of the far north or south
 polio: Paralysing disease
 polka: Dotted pattern
+pouch: Tobacco bag
 pound: Enclosure for strays
 preen: Pride oneself
+press: Push down on
 price: Cost of a mistake, as in "pay the ___"
 prick: Sting
 pride: Self-respect
+primp: Fix one's hair in the mirror
 print: Fingerprint
 prior: Monk of rank
 prism: Solid with two triangular ends
@@ -2278,6 +2454,7 @@ prove: Rise, as dough
 prude: Spoilsport about naughty jokes
 prune: Cut back
 psalm: One of a hundred and fifty in a holy book
+pudgy: Podgy, as a puppy
 pulse: Lentils and beans
 punch: Hole maker
 pupil: Learner
@@ -2313,6 +2490,7 @@ recap: Run through again, briefly
 recur: Repeat, as a decimal
 regal: Stately, as a bearing
 reign: Hold sway, as silence might
+relax: Loosen, as rules
 relay: Pass on, as a message
 relic: Saint's bone kept in a shrine
 remit: Area of responsibility
@@ -2326,6 +2504,7 @@ retry: Hear a case again in court
 reuse: Give a jar a second life
 revel: Delight, with "in"
 rhino: Thick-skinned grazer with one or two horns
+rhyme: Verse, as "nursery ___"
 ridge: Raised strip, as on a ploughed field
 right: Entitlement
 rigid: Strict, as a timetable
@@ -2336,6 +2515,7 @@ risky: Like a bet on an outsider
 rival: Equal, as in "has no ___"
 rivet: Fix, as eyes on a screen
 roach: Small freshwater fish
+roast: Sunday joint
 robin: Bird on many winter cards
 robot: Machine on an assembly line
 rocky: Shaky, as a start
@@ -2350,12 +2530,15 @@ rough: Draft, as in "in ___"
 round: Drinks bought for the group
 rouse: Wake up, as a sleeper
 route: Bus service number
+rowdy: Like a stag party
 royal: Paper size, or a sail above the topgallant
 rummy: Gin ___
 runny: Like a soft-boiled yolk
 rural: Of farms and villages
 rusty: Reddish-brown
+sadly: Unhappily
 salad: Fruit ___
+sally: Rush out from a besieged fort
 salon: Elegant drawing room
 salty: Earthy, as language
 salve: Soothe, as a conscience
@@ -2366,8 +2549,12 @@ sauce: Impudence
 sauna: Sweat lodge with wooden benches
 scald: Heat milk to just below boiling
 scale: Ladder of notes
+scalp: Trophy taken, figuratively
 scaly: Flaky, as dry skin
+scant: Bare, as "___ regard for the rules"
 scare: Panic in the news, as in "health ___"
+scarf: Gobble, as food
+scary: Like a haunted house ride
 scene: Fuss, as in "make a ___"
 scent: Trail for a hound
 scold: Nagging person
@@ -2392,6 +2579,7 @@ seven: Number of days in a week
 sever: Break off, as ties
 shack: Live, with "up", in slang
 shade: Ghost
+shady: Leafy, as a lane
 shall: Word in "___ we dance?"
 shame: Pity, as in "what a ___"
 shape: Condition, as in "in good ___"
@@ -2405,9 +2593,11 @@ shear: Cut, as metal
 sheet: Piece of paper
 shell: Bomb from a big gun
 shine: Polish, as shoes
+shiny: Brand new, as a penny
 shire: Heavy draught horse
 shoal: Sandbank
 shone: Excelled
+shoot: Young sprout
 shore: Land seen from a ship
 short: Brief film before the feature
 shove: Barge
@@ -2415,6 +2605,8 @@ shown: Screened, as a film
 shred: Scrap, as of evidence
 shrew: Tiny insect eater with a long snout
 shrub: Hedge plant
+shrug: Short cropped cardigan
+shuck: Open, as an oyster
 siege: Long stand-off
 sieve: Leaky memory, figuratively
 silly: Field position near the batsman
@@ -2435,12 +2627,15 @@ sleek: Streamlined
 sleep: Crust in the eyes on waking
 sleet: Hail mixed with rain
 slept: Spent the night
+slice: Share
 slide: Lantern picture
 slime: Trail left by a slug
 slink: Move like a cat on the prowl
 slope: Ski run
 slosh: Wade through a puddle
+sloth: Idleness
 slung: Thrown
+slush: Mushy sentiment
 smack: Loud kiss
 small: Minor
 smash: Huge hit
@@ -2459,6 +2654,7 @@ snide: Mean in a sly way
 snipe: Long-billed marsh bird
 snoop: Nose about
 snore: Sound of deep sleep, through the nose
+snort: Laugh through the nose
 snout: Informer, in prison slang
 snowy: Owl of the tundra
 soapy: Like a television serial
@@ -2469,6 +2665,7 @@ solve: Work out, as a puzzle like this one
 sonic: Of the speed of sound
 sooty: Like a sweep's face
 sorry: Pitiful, as a state
+sound: Healthy, as "safe and ___"
 south: Where birds head for winter, often
 space: Room
 spade: Call a ___ a ___
@@ -2482,6 +2679,7 @@ spend: Use up, as energy
 spent: Used up
 spice: Excitement
 spicy: Racy, as gossip
+spill: Fall from a horse
 spine: Back of a book
 spire: Point of a pine tree
 spite: "Cut off your nose to ___ your face"
@@ -2506,6 +2704,7 @@ stale: Past its best
 stalk: Plant stem
 stall: Stop dead, as an engine
 stand: Stall at a fair
+stank: Was of poor quality, in slang
 stare: Fixed look
 stark: Utter, as in "___ naked"
 start: Jump with fright
@@ -2519,6 +2718,7 @@ steep: Too pricey
 steer: Hint, as in "a bum ___"
 stern: Strict
 stick: Cane
+still: Apparatus for distilling spirits
 stink: Uproar, as in "kick up a ___"
 stint: Spell on duty
 stoke: Fan, as anger
@@ -2539,11 +2739,13 @@ straw: Stalk of dried grain
 stray: Lost pet
 strew: Spread, as straw on a floor
 strip: Comic sequence
+strum: Brush the strings
 strut: Brace in a frame
 study: Reading room
 stump: Campaign trail, as in "on the ___"
 stung: Cheated of money
 stunt: Hold back, as growth
+style: Way of doing things
 suave: Polished in manner
 suede: Blue ___ shoes
 sugar: Honey, as a pet name
@@ -2556,10 +2758,14 @@ swear: Use bad language
 sweat: Toil
 sweep: Chimney cleaner
 swell: Large wave
+swill: Rinse out
 swine: Pigs, as a group
 swipe: Pass a card through a reader
+swoop: Police raid
 sword: Weapon in a scabbard
 swore: Vowed
+sworn: Pledged, as enemies
+syrup: Cough medicine
 tabby: Female cat
 table: Chart of figures
 taboo: Swear word, figuratively, at the dinner table
@@ -2578,6 +2784,7 @@ teach: Train
 tease: Comb backwards, as hair
 teeth: Gears' cogs
 tempo: Pace of a game
+tempt: Dangle a carrot before
 tenet: Core belief
 tenor: Voice part between alto and bass
 tense: On edge
@@ -2587,9 +2794,13 @@ tepid: Unenthusiastic
 terse: Short in speech
 thank: Credit, as in "you have him to ___"
 theft: Identity ___
+their: Belonging to those people
+theme: Melody, as of a film
 there: "___, ___, don't cry"
 these: "___ are a few of my favourite things"
 theta: Eighth letter of an old alphabet
+thigh: Chicken cut
+third: Fraction of a whole
 thong: Flip-flop
 thorn: Constant irritation, as in "a ___ in one's side"
 those: "___ were the days"
@@ -2606,6 +2817,7 @@ tiger: Fierce competitor
 tight: Close-fitting
 timid: Mouselike
 tinge: Faint hint, as of regret
+tinny: Cheap-sounding, as a radio
 tipsy: Merry after a glass or two
 title: Championship
 toast: Celebrity, as in "the ___ of the town"
@@ -2624,6 +2836,7 @@ trace: Track down
 track: Song on an album
 tract: System in the body, as the digestive one
 trade: Craft
+trail: Follow
 train: Bridal gown's tail
 trait: Quirk
 trash: Talk ___ (boast and insult)
@@ -2670,8 +2883,10 @@ upper: Shoe top
 upset: Overturn
 urban: Of towns and cities
 usage: Wear and tear
+usher: Bring in, as a new era
 usual: "The ___" (a regular's order)
 utter: Absolute
+vague: Absent-minded
 valet: Gentleman's servant
 valid: Still in date, as a ticket
 value: Good ___ for money
@@ -2680,8 +2895,10 @@ venom: Spite
 venue: Scene of a crime or event
 verge: Grassy strip by a road
 verse: Chapter and ___
+video: Recording
 vigil: Wake kept by candlelight
 villa: Holiday home
+vinyl: Plastic covering
 viola: Pansy family flower
 viper: Treacherous person
 viral: Caused by a microbe
@@ -2691,7 +2908,10 @@ vista: Long view down an avenue
 vital: Of life, as signs
 vivid: Lifelike, as a dream
 vocal: Outspoken
+vogue: In ___ (in fashion)
 voice: Say
+vowel: Sound like ah or oo
+wafer: Ice-cream biscuit
 wagon: On the ___ (not drinking)
 waist: Narrowest part of a guitar
 waive: Not insist on, as a fee
@@ -2717,6 +2937,7 @@ winch: Wind up with a windlass
 windy: Long-winded, as a speaker
 wispy: Fine, as hair
 witch: Hag in a fairy tale
+witty: Like a good after-dinner speaker
 woman: Wife
 women: Females in a group
 woody: Like a tree stem
@@ -2752,6 +2973,9 @@ adroit: Nimble in a tricky situation
 advent: Season of waiting before a holiday
 aerial: In the air, as a stunt
 agenda: Hidden motive, as in "a hidden ___"
+allege: Claim in a court filing, before it is proved
+amulet: Talisman against evil
+anchor: Newsreader holding a broadcast together
 anoint: Choose as successor
 antler: Branching horn shed each year
 apathy: Voter turnout's enemy
@@ -2783,11 +3007,13 @@ beaver: Hard worker, as in "eager ___"
 beggar: Rascal, jokingly, as in "lucky ___"
 bemoan: Grumble about one's lot
 betray: Give away, as a secret
+bettor: One who puts money on a horse
 bitmap: Picture format made of dots, not lines
 bleary: Like eyes after a long night
 blouse: Top tucked into a skirt
 botany: Science taught in a greenhouse
 bottle: Courage, in slang
+bounty: Generosity of harvest
 braise: Pot-roast
 bridle: Bristle with anger
 brutal: Harsh, as honesty
@@ -2795,7 +3021,10 @@ bundle: Lot of money, as in "cost a ___"
 butler: Servant in charge of the wine
 calico: Printed cotton for a frock
 camera: In ___ (in private, in law)
+canary: Bright lemon colour
+cancel: Strike out, as a stamp
 canine: Of dogs
+cannot: "I ___ tell a lie"
 captor: Hostage taker
 caress: Brush lightly, as a breeze
 carpet: Scold, as in "on the ___"
@@ -2805,22 +3034,27 @@ carton: Two hundred cigarettes
 castle: Rook, in chess
 catnap: Power nap
 cattle: Bulls and bullocks
+caviar: Delicacy served on blinis
 censor: Bleep out, as a word
 cereal: Grain crop
 chapel: Workers' union branch in printing
 chaste: Simple in style
 choral: Like a hymn sung in parts
 cinder: Ember left in the grate
+cinema: Film as an art
 clause: Part of a sentence
 client: Computer that asks a server for data
 clothe: Cover, as in a shroud of mist
 coarse: Rude, as a joke
 cogent: Hard to argue with
 collie: Dog bred for herding flocks
+compel: Make, as in "I feel ___led to say"
 condor: Vulture of the high mountains
 copper: Police officer, in slang
 cornea: Part of the eye a laser can reshape
 cornet: Paper cone
+cotton: Thread on a reel
+county: Administrative region
 course: Golf links
 cousin: Relative, as in "kissing ___"
 covert: Thicket hiding game
@@ -2830,11 +3064,15 @@ create: Fuss, in old slang
 credit: Honour, as in "to her ___"
 cringe: Feel second-hand embarrassment
 crispy: Like good bacon
+curdle: Turn, as the blood in fright
 cutter: Tool for shaping biscuits
 dangle: Hold out as a lure
 dapper: Neat and natty
+dearly: At great cost
 debate: Consider, as options
+demean: Belittle
 depose: Testify under oath
+derail: Throw off course, as a plan
 derive: Get, as pleasure
 desire: Lust
 devise: Leave by will
@@ -2867,12 +3105,16 @@ entire: Uncastrated, of a horse
 entrap: Lure into crime
 errant: Mistaken, as a throw
 exotic: Unusual and colourful
+fairly: "___ and squarely"
 falter: Lose nerve
 father: Priest
 fatten: Feed for market
 finale: Last movement of a symphony
+finger: Point out, as a culprit
 forage: Fodder for animals
 foster: Encourage, as talent
+fringe: Edge of the arts festival scene
+galley: Ancient ship rowed by oars
 gander: Quick look, as in "take a ___"
 garage: Petrol station
 garden: Botanical park
@@ -2885,8 +3127,10 @@ glance: Ricochet, with "off"
 goalie: Shot-stopper
 gravel: Rough sound, as in a voice
 grouse: Red bird of the moors
+guilty: Ashamed, as a conscience
 gyrate: Rotate, as hips
 harden: Inure
+hassle: Bother, as "too much ___"
 hasten: Hurry up
 hearse: Black car at a funeral
 hereby: Formal word in a declaration
@@ -2908,10 +3152,12 @@ insert: Leaflet in a magazine
 instep: Part of a shoe over the arch
 invert: Flip
 iodine: Element in seaweed
+ironic: Said with a straight face but meaning the reverse
 karate: Martial art with belts of many colours
 kipper: Split and smoked fish
 kitten: Have ___s (be very nervous)
 ladder: Run in tights
+lagoon: Pool inside an atoll
 lament: Song for a lost love
 latent: Waiting to show, as a talent
 lessen: Take the edge off
@@ -2921,11 +3167,13 @@ liable: Likely
 linear: Like a ruler's edge
 linger: Dawdle on the way out
 listen: "Are you ___ing?"
+litany: Prayer of many petitions
 litter: Bedding for animals
 locale: Neighbourhood where a story is set
 locate: Pin down on a map
 logger: Data recorder
 loosen: Untie, as a knot
+lumber: Move heavily
 magnet: Thing that draws a crowd
 mainly: In the main
 malice: Wicked intent
@@ -2952,6 +3200,7 @@ misery: Killjoy
 misuse: Abuse of power
 mitten: Child's glove on a string
 molten: Like hot glass
+morale: Spirits of a team
 motion: Proposal in a meeting
 motive: Driving force
 mutant: Creature in a comic with a strange power
@@ -2964,6 +3213,7 @@ negate: Deny the truth of
 nether: Underworld's, as regions
 nettle: Plant whose leaves sting
 neuter: Gender of "it", in grammar
+notice: Warning of leaving a job
 nougat: Filling in many chocolate bars
 oblong: Shape of a door
 onrush: Flood of fans at the gates
@@ -2990,6 +3240,7 @@ parrot: Repeat without thinking
 parson: Country cleric
 pastel: Chalky crayon
 pastor: Shepherd of a flock
+patent: Glossy leather
 patter: Pitter-___
 perish: Spoil, as food
 permit: Let
@@ -3001,7 +3252,9 @@ phrase: Express
 pierce: Make a hole in, as an ear
 piracy: Copying without a licence
 pirate: Copy illegally
+plaice: Flatfish with orange spots
 planet: Neptune, say
+please: "Pretty ___"
 poetry: Grace and beauty, as "___ in motion"
 police: Keep order
 polite: Refined, as society
@@ -3017,19 +3270,27 @@ proton: Particle in every nucleus
 racial: Relating to ethnic origin
 racket: Fraud
 radial: Branching from the centre
+raisin: Purplish brown
 random: Odd, in slang
+ransom: Price for a captive's release
+rashly: Hastily
 ratify: Make official, as a treaty
 ration: Allocate
 rattle: Fluster
+ravage: Lay to ruin, as a storm does a coast
 ravine: Steep valley
 really: "Oh, ___?"
 reason: Logic
 rebate: Tax refund
 recant: Renounce, as a belief
 recent: Latest
+recipe: Formula for success
 recite: Perform from memory
+recoil: Kick of a gun
+record: Best ever, as a time
 rector: Head of some colleges
 redone: Done up again
+reform: Change for the better
 refute: Show to be wrong
 regain: Get back to, as land
 regale: Feast
@@ -3041,6 +3302,7 @@ relent: Ease up
 relish: Zest
 relive: Replay in the mind
 reload: Refresh, as a web page
+remain: Be left
 remark: Passing observation
 remote: Far off
 rename: Change the label
@@ -3063,9 +3325,12 @@ retail: Repeat, as gossip
 retina: Screen at the back of the eye
 retire: Go to bed
 retort: Lab flask
+return: Profit on an investment
 reveal: Unveil
 review: Inspection of troops
+revile: Heap scorn on
 revise: Swot up
+ridden: Plagued, as "debt-___"
 riddle: Pierce with holes
 ripple: Raspberry ice cream
 ritual: Habit
@@ -3073,6 +3338,8 @@ rodent: Beaver or squirrel
 roster: List of players on a team
 rotary: Like a dial phone
 rotund: Full and rich, as a voice
+rudely: Abruptly, as woken
+ruffle: Frill
 rumple: Mess, as bedclothes
 runway: Catwalk
 rustle: Steal cattle
@@ -3088,6 +3355,7 @@ scythe: Mow
 seaman: Rating in the navy
 search: Look, as online
 secure: Fasten
+seduce: Win over, as an audience
 senate: Governing body of a university
 senile: Of old age
 senior: Older pupil
@@ -3096,20 +3364,27 @@ sentry: Soldier at a gate
 serial: Television drama in episodes
 settle: Wooden bench with a high back
 shadow: Tail
+sheath: Close-fitting dress
 silver: Grey, as hair
 simile: Comparison using "like"
 single: Track on a record
+sister: Senior nurse, in some hospitals
+sliver: Splinter
 snatch: Fragment
 sodden: Soaked, as a lawn
 soften: Tenderise
+sonnet: Poem of three quatrains and a couplet
 sorely: Severely, as "___ tempted"
 source: Spring
+spider: Rest for a snooker cue
 spinal: ___ cord
+splash: Small amount, as of milk
 splice: Join, as a strand of DNA
 sprain: Twist, as a wrist
 spread: Ranch with plenty of land
 spring: Coil
 sprout: Grow
+stable: Steady
 stance: Attitude
 staple: Main item
 starch: Stiffen, as a collar
@@ -3120,9 +3395,11 @@ stolen: Hot, as goods
 strain: Variety of a plant
 strait: Difficulty, as in "dire ___s"
 stream: School group by ability
+street: Lane
 stride: Make great ___s
 strive: Push yourself
 strode: Took big steps
+stupor: Drowsy fog after a heavy meal
 subtle: Delicate
 supper: Late snack
 tailor: Adapt
@@ -3138,6 +3415,7 @@ tendon: Hamstring, say
 tennis: Lawn sport with a net
 thatch: Mop of hair
 thread: Theme
+thrice: Once, twice, then this
 throne: Crown, as an institution
 tickle: Amuse
 tingle: Pins and needles
@@ -3163,6 +3441,8 @@ unrest: Ferment among workers
 unseat: Topple from office
 untrue: Disloyal
 virtue: Chastity
+wallow: Indulge, as in self-pity
+weight: Dumbbell in a gym
 winter: Spend the cold season
 abreast: Up to date, as in "keep ___"
 absence: Leave of ___
@@ -3170,8 +3450,10 @@ actress: Film star in a gown at an awards night
 airport: Place of departures and arrivals
 algebra: Branch of mathematics with unknowns
 amnesty: Time to hand in weapons without charge
+anarchy: Chaos with nobody in charge
 animate: Make a cartoon move
 apostle: Champion of a cause
+baptism: First experience, as "___ of fire"
 battery: Set of tests
 beneath: Unworthy of, as in "___ contempt"
 bereave: Rob of a loved one
@@ -3189,19 +3471,26 @@ clatter: Noise of a falling pan lid
 clutter: Junk on a desk
 collate: Put pages in order
 collide: Meet head-on
+concede: Give up, as a point
 concise: Short and to the point, as a summary
 confirm: Admit as a full church member
 congeal: Set, as gravy
 congest: Crowd, as traffic
 consent: Say yes to
 contend: Maintain, as a claim
+contort: Twist, as the facts
 corrode: Wear down, as acid does
 corsage: Bouquet pinned on at a dance
+costume: Period clothes for a play
+courage: "Dutch ___", from a bottle
+crinkle: Crease, as the eyes when smiling
 current: Running, as an account
 declare: Admit to, at customs
 degrade: Break down chemically
+derange: Put out of order
 despair: Slough of ___
 dessert: Final course
+dialect: Way a region talks
 diamond: Card suit with red lozenges
 disrupt: Shake up, as a market
 dissent: Minority opinion in a court
@@ -3211,6 +3500,7 @@ dormant: Asleep for the winter, as bulbs
 drapery: Folds of cloth in a painting
 dribble: Run of paint
 dualism: Belief in mind and body as separate
+eagerly: With bated breath
 earmark: Tag on a sheep's ear
 earshot: Out of ___ (can't be heard)
 edition: Limited print run
@@ -3218,6 +3508,7 @@ elegant: Neat and clever, as a proof
 elitism: Rule by the select few
 emotion: Mood
 emotive: Tear-jerking
+emulate: Try to match
 endless: Like a loop
 engrave: Carve into memory
 engross: Hold rapt
@@ -3250,14 +3541,18 @@ glisten: Glimmer with dew
 glitter: Craft sparkles
 gondola: Basket of a balloon
 granite: Unyielding
+granule: Bit of instant coffee
 gratify: Indulge, as a whim
 gravely: Critically, as ill
+greatly: To a large extent, as missed
 grenade: Pin-pulled explosive
 grimace: Wry face
 gunfire: Crack of rifles
 hapless: Born under a bad star
 harpist: Player of strings in an orchestra
 hostile: Opposed, as a takeover
+imagine: Suppose
+impress: Stamp, as a mark
 inertia: Sluggishness
 intense: Deep, as feeling
 kindred: ___ spirit
@@ -3271,6 +3566,7 @@ literal: Unimaginative
 machine: Political party organisation
 magenta: Printer's ink colour
 magnate: Press baron
+magnify: Exaggerate
 mandate: Voters' authority
 masonry: Bricks and mortar
 mastery: Control
@@ -3289,6 +3585,7 @@ neutral: Beige or grey, as a colour
 neutron: Particle with no charge
 newborn: Just hatched
 nitrate: Salt of nitric acid
+nourish: Foster, as hope
 nurture: Upbringing, as opposed to nature
 operate: Work a machine
 oration: Funeral speech
@@ -3319,7 +3616,9 @@ precise: Particular, as a person
 predict: Call, as a result
 premier: Top, as a league
 premise: Grounds of a building
+premium: Extra charge
 present: Here, at a roll call
+preside: Be in charge, as a judge
 presume: Overstep, as in "dare to ___"
 pretend: Dress up as
 prevent: Ward off
@@ -3350,7 +3649,9 @@ relieve: Take over from
 replace: Put back
 replica: Model copy
 reptile: Creepy person
+rescind: Take back, as an offer
 respite: Breathing space
+restart: Begin again after a pause, as play
 restive: Impatient for change
 retrace: Follow back, as steps
 reunion: Get-together of a class
@@ -3359,14 +3660,17 @@ rickety: Liable to fall apart, as an old staircase
 romance: Novel of love
 routine: Run-of-the-mill
 salient: Projecting part of a front line
+saunter: Walk along without a care, hands in pockets
 scarlet: Colour of a soldier's old coat
 seaport: Dockside town
+sensory: Of touch, taste and the rest
 serpent: Old wind instrument with a twisted tube
 several: Separate, in law
 shallow: Shoal
 shatter: Exhaust completely
 shorten: Take up, as trousers
 shutter: Close for good, as a shop
+shuttle: Badminton's feathered missile
 skipper: Butterfly that darts
 slipper: Cinderella's footwear
 smitten: Head over heels
@@ -3380,6 +3684,7 @@ startle: Take aback
 stature: Standing in a profession
 statute: Rule on the books
 stencil: Lettering guide
+strange: Unfamiliar
 striven: Pushed hard
 stubble: Five o'clock shadow
 sunrise: Dawn chorus time
@@ -3388,6 +3693,7 @@ supreme: ___ court
 surmise: Hunch
 surname: Name a family shares
 tarnish: Stain on silver or a name
+tearful: Like a farewell at a station
 teenage: Of high-school years
 tenable: Holdable, as a position
 tendril: Wisp of hair
@@ -3399,8 +3705,10 @@ therapy: Counselling sessions
 torment: Persecute
 torpedo: Wreck, as a plan
 torrent: Rushing stream
+tractor: Machine pulling a plough
 transit: Journey across
 treason: Disloyalty to the crown
+tremble: Shiver with fear
 trestle: Frame under a table top
 trickle: Slow flow of visitors
 trivial: Of little consequence
