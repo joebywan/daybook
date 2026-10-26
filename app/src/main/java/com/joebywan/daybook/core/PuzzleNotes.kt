@@ -179,6 +179,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "No lamp where it would light both of a 1's last two squares.",
         "Crosses help: a crossed square can still be lit from afar.",
     ),
+    "pearls" to listOf(
+        "A black pearl on the edge of the board runs two squares inward.",
+        "Three white pearls in a row can never share one straight line.",
+        "A square with only one way in is never on the loop.",
+        "Never join the two ends of a line unless it is the whole loop.",
+    ),
 )
 
 /** The note for [puzzleId] on [epochDay]: pure, so the same day always says the same thing. Null for an unknown id. */

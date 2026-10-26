@@ -25,6 +25,7 @@ import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.LampsState
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
+import com.joebywan.daybook.puzzles.PearlsState
 import com.joebywan.daybook.puzzles.TargetOp
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.WordWheelState
@@ -131,6 +132,7 @@ class StateSerializationTest {
         is LampsState -> state.walls.indexOf(LampsLogic.WHITE).let {
             state.withMark(it, LampsLogic.LAMP_MARK).withMark(state.walls.indexOf(LampsLogic.WHITE, it + 1), LampsLogic.CROSS)
         }
+        is PearlsState -> state.drag(listOf(0, 1, 1 + state.size)).tap(state.size * (state.size - 1))
         is DominoState -> DominoLogic.flip(DominoLogic.place(DominoLogic.place(state, 0, state.answer[0]), 1, state.answer[1]), 1)
         is TargetState -> state.combine(0, TargetOp.Add, 1)!!
         is WordWheelState -> state.enter(state.slots[1].word)

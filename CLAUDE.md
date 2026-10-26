@@ -673,6 +673,36 @@ and every across and down run must be a word. Spec and decisions: `docs/CODEWORD
   its numbers can take. `ONE_WORD`, `RUN_AGREES`, `CROSSING`, `ALL_WORDS` (named as Cipher's chain is). No "only number
   for a letter": a grid uses part of the alphabet. Highlight indices: squares `0 until size*size`, number key
   `CodewordLogic.key(n)` = 1000 + n, letter key `CodewordLogic.letterKey(l)` = 2000 + l.
+## Pearls (a pearl loop)
+
+One closed loop through square middles passing every pearl: on a black pearl it turns and runs straight on through the
+next square each way; on a white pearl it goes straight and turns on a square beside it. Spec: `docs/PEARLS_SPEC.md`. The
+genre is published as Masyu; that name never appears where the player sees it. `puzzles/PearlsRules.kt` (`PearlsState`,
+`PearlsGrid`, `PearlsLogic`: rules, ladder, count, generator), `PearlsTeacher.kt`, `PearlsKeys.kt`, `Pearls.kt` (board,
+hit testing, walkthrough, motif). `id = "pearls"` is hashed into every seed: never rename it.
+
+- **State is the edges**, strings: `pearls` per square, `loop` (`1` per answer edge), the player's `edges` (`.`, `-` line,
+  `x` cross: a note). Horizontal edges first (`r * (n-1) + c`), then vertical (`n(n-1) + r * n + c`).
+- **Tiers: 6x6 / 8x8 / 10x10 and the rung a board must need** (`PearlsLogic.depth`): Standard the pearls' and squares'
+  local rules alone; Hard needs the small-loop rule; Expert needs a what-if (at most `MAX_ROUNDS` = 6 rounds). A draw
+  needing more or less is redrawn.
+- **The loop is grown to be pinned by its pearls.** A random loop with every pearl it allows almost always has two answers
+  (37 of 39 six-by-six), so `randomLoop` grows a face region greedily by the pearls its boundary allows. Then pearls are taken
+  back in random order while the tier's ladder finishes (on Expert, a cheap pass with the loop rule first, then the full
+  ladder), and `solutions` (local + loop rules, branching, no budget, sealed `PearlsVerdict`) must say `ExactlyOne(loop)`.
+  `PearlsOracle` (test: edges decided in reading order with a frontier memo, no propagation) is the independent check. A
+  year per tier never reaches `lastResort` (`FallbackTest`).
+- **`solved` checks the rules** (`PearlsLogic.isSolved`, lines only); a mistake is a line off the loop or a cross on it,
+  sound because the loop is unique. Red after a 1 s settle, derived from the lines alone: three lines at a square, a pearl its
+  lines already break, a closed loop that leaves something out.
+- **Input:** a drag through squares draws (its first edge decides: over a line it rubs out), one state on lift; backing up
+  along the drag undoes it (`Pearls.trail`). A tap near an edge's middle (`Pearls.edgeNear`, within 0.42 of a square)
+  crosses it, or rubs out the line or cross there. Detectors are keyed on the size and read the board through
+  `rememberUpdatedState` (Snap's lesson). Keys: arrows, Shift+arrow draws or rubs, X then an arrow crosses.
+- **Teacher:** the local rules (black pearl, white pearl, white turn, one way on, a pearl's two ways, dead end), then the
+  small loop, then a what-if (the shortest within the cap; if a player's own order has left none short, the shortest of any
+  length, so hints never run out). A square with two lines has its other edges read as crossed (`PearlsTeacher.view`), so the
+  hints never ask for tidying. Highlight indices: squares `0 until n*n`, edge `e` is `n*n + e`.
 
 ## Pipes
 
