@@ -337,13 +337,14 @@ internal object KingsTeacher {
                     nudge = if (k == 1) "Look at ${group[0].name}." else "Look at ${listed(group.map { it.name })} together.",
                     explanation = if (k == 1) {
                         val line = lineHouses[0].name
-                        "Every open square of ${group[0].name} is in $line, so $line's king must be " +
-                            "${group[0].name}. The rest of $line can be crossed out."
+                        val kind = line.substringBefore(' ')
+                        "Every open square of ${group[0].name} is in $line, so that $kind's king must be " +
+                            "${group[0].name}. The rest of the $kind can be crossed out."
                     } else {
                         val names = listed(group.map { it.name })
                         val where = linesPhrase(lineKind, lines)
-                        "$names only fit in $where, so those ${numberWord(k, upTo = 9)} kings are theirs. " +
-                            "Nothing else in $where can hold a king."
+                        "${names.cap()} only fit in $where, so those ${numberWord(k, upTo = 9)} kings are theirs. " +
+                            "Nothing else in those ${if (lineKind == Kind.ROW) "rows" else "columns"} can hold a king."
                     },
                     width = if (k == 1) 0 else k,
                 )
@@ -374,7 +375,7 @@ internal object KingsTeacher {
                     explanation = if (k == 1) {
                         val line = group[0].name
                         "Every open square in $line is ${colours[0]}, so ${colours[0]}'s king must be in " +
-                            "$line. The rest of ${colours[0]} can be crossed out."
+                            "that ${line.substringBefore(' ')}. The rest of ${colours[0]} can be crossed out."
                     } else {
                         val where = linesPhrase(lineKind, lines.sorted())
                         "${where.cap()} only reach ${listed(colours)}, so those ${numberWord(k, upTo = 9)} colours' kings " +

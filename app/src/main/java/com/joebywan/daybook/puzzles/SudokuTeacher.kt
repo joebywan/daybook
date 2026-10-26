@@ -294,7 +294,7 @@ internal object SudokuTeacher {
             cited = u.cells.toSet() + blockers(s, u, d, h.cell),
             nudge = "Look at ${u.name}.",
             explanation = "Every other empty square in ${u.name} already sees a $d in its row, " +
-                "column or box. So ${u.name}'s $d goes in the glowing square.",
+                "column or box. So its $d goes in the glowing square.",
         )
     }
 
@@ -352,7 +352,7 @@ internal object SudokuTeacher {
                             LOCKED, removed, places.toSet(), box.cells.toSet() + line.cells,
                             nudge = "Look at ${box.name}, then ${line.name}.",
                             reason = "In ${box.name}, $d fits only in ${line.name}, so the rest of " +
-                                "${line.name} can't be $d.",
+                                "that ${line.name.substringBefore(' ')} can't be $d.",
                         )
                     )
                 }

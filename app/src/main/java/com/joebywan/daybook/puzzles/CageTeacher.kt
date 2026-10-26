@@ -203,7 +203,7 @@ internal object CageTeacher {
                     cited = CageLogic.units[u].toSet() + blockers,
                     nudge = "Look at ${unitName(u)}.",
                     explanation = "Every other empty square in ${unitName(u)} already sees a $d in its row, " +
-                        "column, box or cage. So ${unitName(u)}'s $d goes in the glowing square.",
+                        "column, box or cage. So its $d goes in the glowing square.",
                 )
             }
         }

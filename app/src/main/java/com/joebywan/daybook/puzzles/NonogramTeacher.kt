@@ -3,7 +3,6 @@ package com.joebywan.daybook.puzzles
 import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.listed
-import com.joebywan.daybook.core.squareName
 
 /**
  * Nonograms, reasoned the way a person reasons them: one row or column at a time.
@@ -88,7 +87,6 @@ internal object NonogramTeacher {
             if (!wrong) continue
             val r = i / s.width
             val c = i % s.width
-            val where = squareName(s.width, i)
             return Step(
                 technique = MISTAKE,
                 clears = listOf(i),
@@ -99,9 +97,9 @@ internal object NonogramTeacher {
                 ),
                 nudge = "One of your marks doesn't fit the clues.",
                 explanation = if (mark == NonogramLogic.FILLED) {
-                    "No picture that fits the clues has $where filled. Take the fill back."
+                    "No picture that fits the clues has the glowing square filled. Take the fill back."
                 } else {
-                    "$where can't be empty: every picture that fits the clues fills it. Take the cross back."
+                    "The glowing square can't be empty: every picture that fits the clues fills it. Take the cross back."
                 },
             )
         }
@@ -190,7 +188,7 @@ internal object NonogramTeacher {
             return step(
                 OVERLAP, overlap.map { at[it] }, emptyList(), "Slide the clues along $name.",
                 "In $name, push the $clues as far $start as they go, then as far $end. " +
-                    "${describe(overlap)} ${if (overlap.size == 1) "is" else "are"} covered both times, so filled.",
+                    "${if (overlap.size == 1) "The glowing square is" else "The glowing squares are"} covered both times, so filled.",
             )
         }
 
