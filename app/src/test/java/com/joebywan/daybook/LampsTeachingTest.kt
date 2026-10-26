@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.LampsLogic
@@ -11,33 +10,24 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class LampsTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
     private fun board(day: Int, d: Difficulty) =
-        LampsLogic.generateVerified(DailySeed.seedFor(start.plusDays(day.toLong()), "lamps", d), d)
+        LampsLogic.generateVerified(daySeed(day, "lamps", d), d)
             ?: error("no proved board for day $day ${d.name}")
 
     /** Every step's conclusion must hold in the (unique) answer; applies each until solved. */
-    private fun walk(s: LampsState, onStep: (String) -> Unit = {}): LampsState {
-        var now = s
-        var guard = 0
-        while (!now.solved) {
-            val d = LampsTeacher.deduction(now) ?: error("no step on an unsolved board")
-            assertFalse("unexpected mistake", d.mistake)
-            onStep(d.technique)
-            val lamp = LampsTeacher.teach(now)!!.value == LampsLogic.LAMP
-            for (t in d.targets) assertEquals("${d.technique} is wrong at $t", lamp, s.solution[t] == '1')
-            val next = d.apply(now) as LampsState
-            assertNotEquals("a step must change something", now.marks, next.marks)
-            assertTrue(d.isReached(next))
-            now = next
-            assertTrue("walk does not end", ++guard <= 400)
-        }
-        return now
+    private fun walk(s: LampsState, onStep: (String) -> Unit = {}): LampsState = hintWalk(s, 400) { now ->
+        val d = LampsTeacher.deduction(now) ?: error("no step on an unsolved board")
+        assertFalse("unexpected mistake", d.mistake)
+        onStep(d.technique)
+        val lamp = LampsTeacher.teach(now)!!.value == LampsLogic.LAMP
+        for (t in d.targets) assertEquals("${d.technique} is wrong at $t", lamp, s.solution[t] == '1')
+        val next = d.apply(now) as LampsState
+        assertNotEquals("a step must change something", now.marks, next.marks)
+        assertTrue(d.isReached(next))
+        next
     }
 
     @Test
@@ -65,8 +55,7 @@ class LampsTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/lamps-teaching-coverage.txt").writeText(report.toString())
+        writeReport("lamps-teaching-coverage.txt", report.toString())
     }
 
     @Test
@@ -115,14 +104,12 @@ class LampsTeachingTest {
             val s = board(day, d)
             val at = s.walls.indices.first { s.walls[it] == '.' && s.solution[it] == '0' }
             for (state in listOf(s, s.withMark(at, LampsLogic.LAMP_MARK))) {
-                var cur = state
-                var guard = 0
-                while (!cur.solved && guard++ < 400) {
+                hintWalk(state, 400) { cur ->
                     val step = LampsTeacher.teach(cur)!!
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= LampsTeacher.MAX_NUDGE)
                     assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= LampsTeacher.MAX_EXPLANATION)
                     longest = maxOf(longest, step.explanation.length)
-                    cur = LampsTeacher.deduction(cur)!!.apply(cur) as LampsState
+                    LampsTeacher.deduction(cur)!!.apply(cur) as LampsState
                 }
             }
         }
@@ -158,14 +145,12 @@ class LampsTeachingTest {
             val all = LampsOracle.solutions(n, walls, limit = 40)
             if (all.size < 2 || all.size == 40) return@repeat
             boards++
-            var now = LampsState(n, walls, all[0])
-            var guard = 0
-            while (!now.solved && guard++ < 100) {
-                val step = LampsTeacher.deduce(n, walls, now.marks) ?: break
+            hintWalk(LampsState(n, walls, all[0]), 100) { now ->
+                val step = LampsTeacher.deduce(n, walls, now.marks) ?: return@hintWalk null
                 val keep = all.filter { a -> now.marks.indices.all { now.marks[it] != LampsLogic.LAMP_MARK || a[it] == '1' } }
                 for (a in keep) for (t in step.targets) assertEquals("${step.technique} at $t on $walls", step.value == LampsLogic.LAMP, a[t] == '1')
                 steps++
-                now = step.targets.fold(now) { acc, t -> acc.withMark(t, if (step.value == LampsLogic.LAMP) LampsLogic.LAMP_MARK else LampsLogic.CROSS) }
+                step.targets.fold(now) { acc, t -> acc.withMark(t, if (step.value == LampsLogic.LAMP) LampsLogic.LAMP_MARK else LampsLogic.CROSS) }
             }
         }
         println("multi-answer check: $boards boards, $steps steps")

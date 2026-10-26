@@ -19,7 +19,6 @@ import com.joebywan.daybook.puzzles.Tents
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * How deep each tier really is: a year of daily boards per tier (seeds exactly as the daily makes them), each walked by
@@ -27,7 +26,7 @@ import java.io.File
  * order) and how often it fell back. Measurement only; nothing here gates a board. Writes `build/reports/tier-depth.txt`.
  *
  * Env-gated (a few minutes): `DAYBOOK_DEPTH_REPORT=1`, or `=<days>` for a smaller sample. Results: `docs/TEACHING.md`,
- * "Tier depth (measured 2026-10)". Snap's whole-board deducer is [SnapDeducerReportTest], under the same switch.
+ * "Tier depth (measured 2026-10)".
  */
 class TierDepthReportTest {
 
@@ -141,8 +140,7 @@ class TierDepthReportTest {
             }
             out.append('\n')
         }
-        File("build/reports").mkdirs()
-        File("build/reports/tier-depth.txt").writeText(out.toString())
+        writeReport("tier-depth.txt", out.toString())
         println(out)
     }
 }

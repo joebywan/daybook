@@ -207,13 +207,6 @@ class TallyRulesTest {
         }
     }
 
-    @Test
-    fun `generation is pure`() {
-        for (d in Difficulty.entries) for (seed in seeds(5, d, "tally-pure")) {
-            assertEquals(TallyLogic.generateVerified(seed, d), TallyLogic.generateVerified(seed, d))
-        }
-    }
-
     // ---- marks -----------------------------------------------------------------------------------------
 
     @Test

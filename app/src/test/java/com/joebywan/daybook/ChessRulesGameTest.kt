@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.SavedGame
@@ -13,7 +12,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * The Mate game around the engine: what `solved`, `lost` and the derived replies mean, and that the shipped data
@@ -67,11 +65,10 @@ class ChessRulesGameTest {
 
     @Test
     fun `a year of daily seeds picks valid entries on every tier, and the same one twice`() {
-        val start = LocalDate.of(2026, 1, 1)
         for (d in Difficulty.entries) {
             val list = Chess.positionsFor(d)
             for (k in 0 until 365) {
-                val seed = DailySeed.seedFor(start.plusDays(k.toLong()), Chess.id, d)
+                val seed = daySeed(k, Chess.id, d)
                 val s = Chess.generate(seed, d) as ChessState
                 assertEquals(s, Chess.generate(seed, d))
                 assertTrue(list.any { it.startsWith(s.start) })

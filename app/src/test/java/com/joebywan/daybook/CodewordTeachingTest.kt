@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -15,15 +14,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class CodewordTeachingTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
     private fun board(day: Int, d: Difficulty) =
-        Codeword.generate(DailySeed.seedFor(start.plusDays(day.toLong()), Codeword.id, d), d) as CodewordState
+        Codeword.generate(daySeed(day, Codeword.id, d), d) as CodewordState
 
     @Test
     fun `coverage - which techniques boards need, per difficulty`() {
@@ -54,8 +50,7 @@ class CodewordTeachingTest {
             )
             assertEquals("${d.name} never falls back", 0, fallbackBoards)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/codeword-teaching-coverage.txt").writeText(report.toString())
+        writeReport("codeword-teaching-coverage.txt", report.toString())
         println(report)
     }
 

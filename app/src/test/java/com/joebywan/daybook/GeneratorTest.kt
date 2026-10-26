@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.puzzles.Snap
@@ -17,7 +16,7 @@ import java.time.LocalDate
  */
 class GeneratorTest {
 
-    private val seeds = (0 until 6).map { DailySeed.seedFor(LocalDate.of(2026, 3, 1).plusDays(it.toLong()), "x", Difficulty.STANDARD) }
+    private val seeds = seeds(6, Difficulty.STANDARD, "x", LocalDate.of(2026, 3, 1))
 
     @Test
     fun `every puzzle generates an unsolved board`() {
