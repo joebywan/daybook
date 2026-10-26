@@ -8,12 +8,16 @@ import kotlinx.serialization.Serializable
  * One word of the grid: [word] written from square ([row], [col]) across or down. Its squares are numbered
  * `row * width + col` on the board, which is also what a highlight index means for them.
  */
+/** Letter [i] of a slot starting at ([row], [col]) on a [width]-wide grid, as `row * width + col`. */
+internal fun slotCell(row: Int, col: Int, across: Boolean, i: Int, width: Int): Int =
+    if (across) row * width + col + i else (row + i) * width + col
+
 @Serializable
 data class WheelSlot(val word: String, val row: Int, val col: Int, val across: Boolean) {
     val length: Int get() = word.length
 
     /** The square of letter [i], as `row * width + col`. */
-    fun cell(i: Int, width: Int): Int = if (across) row * width + col + i else (row + i) * width + col
+    fun cell(i: Int, width: Int): Int = slotCell(row, col, across, i, width)
 
     fun cells(width: Int): List<Int> = List(word.length) { cell(it, width) }
 }

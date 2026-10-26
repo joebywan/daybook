@@ -52,7 +52,7 @@ import com.joebywan.daybook.core.digitKeyAction
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.ui.PAD_GAP
-import com.joebywan.daybook.ui.PAD_HEIGHT
+import com.joebywan.daybook.ui.padBoardSide
 import com.joebywan.daybook.ui.PadKey
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
@@ -135,11 +135,7 @@ internal fun SudokuGridBoard(
             },
         contentAlignment = Alignment.Center,
     ) {
-        val side = if (constraints.hasBoundedHeight) {
-            minOf(maxWidth, (maxHeight - PAD_GAP - PAD_HEIGHT).coerceAtLeast(0.dp))
-        } else {
-            maxWidth
-        }
+        val side = padBoardSide()
         val cell = side / 9
         val padWidth = maxWidth
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

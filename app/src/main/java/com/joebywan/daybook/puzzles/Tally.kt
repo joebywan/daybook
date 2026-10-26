@@ -44,6 +44,8 @@ import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.marked
+import com.joebywan.daybook.core.only
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.theme.BoardHues
@@ -124,27 +126,16 @@ object Tally : PuzzleType {
     private fun tutorialBoard(marks: String = ".".repeat(TUTORIAL_N * TUTORIAL_N)) =
         TallyState(TUTORIAL_N, TUTORIAL_DIGITS, TUTORIAL_KEEP, marks)
 
-    private fun marked(base: TallyState, changes: Map<Int, Char>): TallyState {
-        val next = base.marks.toCharArray()
-        changes.forEach { (i, c) -> next[i] = c }
-        return base.copy(marks = next.concatToString())
-    }
-
-    /** Accepts exactly [base] with [changes] made and nothing else (Nonogram's rule). */
-    private fun only(base: TallyState, changes: Map<Int, Char>): (PuzzleState) -> Boolean = { next ->
-        next is TallyState && next.marks == marked(base, changes).marks
-    }
-
     override val tutorial: List<TutorialFrame> by lazy {
         val n = TUTORIAL_N
         val row = { r: Int -> TallyLogic.rowTargetIndex(n, r) }
         val col = { c: Int -> TallyLogic.colTargetIndex(n, c) }
         val solved = tutorialBoard(TUTORIAL_KEEP.map { if (it == '1') TallyLogic.UNMARKED else TallyLogic.REMOVED }.joinToString(""))
         val empty = tutorialBoard()
-        val afterNine = marked(empty, mapOf(1 to TallyLogic.REMOVED))
-        val afterSweep = marked(afterNine, mapOf(7 to TallyLogic.REMOVED, 11 to TallyLogic.REMOVED))
-        val afterSlip = marked(afterSweep, mapOf(5 to TallyLogic.REMOVED))
-        val afterKeep = marked(afterSweep, mapOf(5 to TallyLogic.KEPT))
+        val afterNine = empty.marked(mapOf(1 to TallyLogic.REMOVED))
+        val afterSweep = afterNine.marked(mapOf(7 to TallyLogic.REMOVED, 11 to TallyLogic.REMOVED))
+        val afterSlip = afterSweep.marked(mapOf(5 to TallyLogic.REMOVED))
+        val afterKeep = afterSweep.marked(mapOf(5 to TallyLogic.KEPT))
         listOf(
             TutorialFrame(
                 state = solved,
@@ -156,7 +147,7 @@ object Tally : PuzzleType {
                 state = empty,
                 caption = "Row 1 needs 7, and its 9 is bigger than 7 on its own, so the 9 can't stay. Tap it to remove it.",
                 highlight = BoardHighlight(strong = setOf(1, row(0)), soft = setOf(0, 2, 3)),
-                accepts = only(empty, mapOf(1 to TallyLogic.REMOVED)),
+                accepts = empty.only(mapOf(1 to TallyLogic.REMOVED)),
                 retry = "Tap the glowing 9 once, with Remove chosen under the board.",
                 done = "Removed. A number bigger than what its line needs always goes.",
             ),
@@ -164,7 +155,7 @@ object Tally : PuzzleType {
                 state = afterNine,
                 caption = "Column 4 needs 3, so both of its 9s go. Drag down across the two of them to remove both in one sweep.",
                 highlight = BoardHighlight(strong = setOf(7, 11, col(3)), soft = setOf(3, 15)),
-                accepts = only(afterNine, mapOf(7 to TallyLogic.REMOVED, 11 to TallyLogic.REMOVED)),
+                accepts = afterNine.only(mapOf(7 to TallyLogic.REMOVED, 11 to TallyLogic.REMOVED)),
                 retry = "Drag along the glowing 9s in one sweep.",
                 done = "Both gone. A sweep marks a run of squares along one row or column.",
             ),
@@ -172,7 +163,7 @@ object Tally : PuzzleType {
                 state = afterSweep,
                 caption = "Row 2 now adds up to 10, 4 over its 6. Remove its 5 and see what happens.",
                 highlight = BoardHighlight(strong = setOf(5, row(1)), soft = setOf(4, 6)),
-                accepts = only(afterSweep, mapOf(5 to TallyLogic.REMOVED)),
+                accepts = afterSweep.only(mapOf(5 to TallyLogic.REMOVED)),
                 retry = "Tap the glowing 5 once.",
                 done = "Too much: 4 + 1 can never make 6, so row 2 turns red, and column 2 with it.",
             ),
@@ -180,7 +171,7 @@ object Tally : PuzzleType {
                 state = afterSlip,
                 caption = "So the 5 stays. Choose Keep under the board, then tap the 5 to circle it.",
                 highlight = BoardHighlight(strong = setOf(5, row(1))),
-                accepts = only(afterSweep, mapOf(5 to TallyLogic.KEPT)),
+                accepts = afterSweep.only(mapOf(5 to TallyLogic.KEPT)),
                 retry = "Choose Keep under the board, then tap the glowing 5.",
                 done = "Circled: a note that you are sure. It counts like any number left in.",
             ),
