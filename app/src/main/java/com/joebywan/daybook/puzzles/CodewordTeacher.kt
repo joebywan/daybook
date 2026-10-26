@@ -108,7 +108,7 @@ internal object CodewordTeacher {
         fun allDifferent(): Int {
             var changed = 0
             for (i in 0 until shape.k) {
-                if (!cand[i].countOneBits() == 1) continue
+                if (cand[i].countOneBits() != 1) continue
                 for (j in 0 until shape.k) {
                     if (j == i || cand[j] and cand[i] == 0) continue
                     cand[j] = cand[j] and cand[i].inv()
