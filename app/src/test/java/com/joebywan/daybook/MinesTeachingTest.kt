@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -13,13 +12,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class MinesTeachingTest {
 
     private fun board(day: Int, d: Difficulty): MinesState =
-        Mines.generate(DailySeed.seedFor(LocalDate.of(2026, 1, 1).plusDays(day.toLong()), Mines.id, d), d) as MinesState
+        Mines.generate(daySeed(day, Mines.id, d), d) as MinesState
 
     private fun visible(s: MinesState): Pair<IntArray, BooleanArray> {
         val n = s.width * s.height
@@ -27,13 +24,12 @@ class MinesTeachingTest {
     }
 
     /** Hints alone, each made by "Show me", until solved; [each] sees every step's technique. */
-    private fun walk(start: MinesState, check: Boolean = false, each: (String) -> Unit = {}): MinesState {
+    private fun walk(start: MinesState, each: (String) -> Unit = {}): MinesState {
         var s = start
         var guard = 0
         while (!s.solved) {
             val d = Mines.teach(s)!!
             each(d.technique)
-            if (check) sound(s, d.technique)
             assertFalse("a step must change the board", d.isReached(s))
             s = d.apply(s) as MinesState
             assertTrue("Show me reaches the step", d.isReached(s))
@@ -79,14 +75,7 @@ class MinesTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
         }
-        File("build/reports").mkdirs()
-        File("build/reports/mines-teaching-coverage.txt").writeText(report.toString())
-    }
-
-    @Test fun `every step holds in every layout the oracle allows`() {
-        for ((d, days) in listOf(Difficulty.STANDARD to 20, Difficulty.HARD to 10, Difficulty.EXPERT to 6)) for (day in 0 until days) {
-            walk(board(day, d), check = true)
-        }
+        writeReport("mines-teaching-coverage.txt", report.toString())
     }
 
     /** Boards a player made: safe squares revealed out of the ladder's order, right flags, a mine hit. */

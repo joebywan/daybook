@@ -82,7 +82,6 @@ internal class CipherWorking(private val sum: CipherSum, private val digits: Lis
         fun told(clash: String): Pair<String, Set<Int>> {
             val head = when (found.size) {
                 0 -> ""
-                1 -> "${found[0]} and "
                 else -> found.joinToString(", ") + " and "
             }
             return "$head$clash" to read

@@ -9,11 +9,13 @@ import com.joebywan.daybook.core.techniqueToPraise
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.Stats
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.Serializable
 
 /**
  * What the finished frame says (`docs/REWARDS.md`). [title] is the banner's headline (null: "Congratulations!", for a
  * frame nobody judged); [big] makes it louder (7, 30, 100 days); [lines] is at most one, so the frame stays calm.
  */
+@Serializable
 data class Praise(
     val title: String? = null,
     val big: Boolean = false,
@@ -37,6 +39,7 @@ data class Praise(
 )
 
 /** What the frame shows for one achievement. */
+@Serializable
 data class EarnedAchievement(val id: String, val title: String, val description: String)
 
 /** Streak lengths that get the loud treatment. */

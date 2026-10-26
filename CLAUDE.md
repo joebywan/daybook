@@ -40,7 +40,10 @@ All puzzles teach (Snap and Pointers through their walkthrough only; Pointers an
 section 7. The settled play-screen UX (popover, finish frame, solve sound) and the measured fallback table:
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
-never a drill): `docs/REWARDS.md` (Techniques). What must not be broken:
+never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: Sudoku's techniques
+practised on real positions found by walking generated boards by hints (`core/Training.kt`, `ui/training/`, its own
+`training_passed` key set, two appended achievements), opened from Settings and a Sudoku hint's "Practise this":
+`docs/TRAINING_SPEC.md`. What must not be broken:
 
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the panel confirms
   when `isReached` sees it. Only an explicit "Show me" applies it. **One hint is counted per deduction opened.**
@@ -443,6 +446,9 @@ hashed into every seed: never rename it.
 - **Tiers: size, length and bends.** 6x7 / 12x12 / 14x17 squares, arrows of 2-4 / 3-7 / 3-9 squares: about 14 / 33 / 49 arrows, 2% of squares bare, mean depth 2.0 / 4.4 / 6.3 (depth: rounds of "take every free arrow" before an arrow can go; `PointersLogic.depths`), worst 10 / 23 / 27. Generation on the JVM: 0.02 / 0.2 / 0.8 ms median, 1.2 ms p95 on Expert. Expert was
   meant to be 18x20; at 360dp wide that is a square of about 18dp, too small for a thumb when a mis-tap costs a life, so it is capped at 14
   wide (about 23dp at 360, 26 at 390; Nonogram's 15x15 is the precedent).
+- **Press, preview, commit.** A finger down tints the arrow it would take (the keyboard cursor's band, no delay, nothing animated);
+  release over the same arrow takes it, sliding off clears the tint and cancels. The arrow under the finger is `remember` state.
+  Restart (no Undo to take it back) asks "Start over?" once a move has been made.
 - Hit testing (`Pointers.hit`): the square under the finger if an arrow is on it, else the nearest line within 0.75 of a square. Arrow
   colours are derived (four hues, Blue/Amber/Violet/Teal ink, touching arrows differ where four allow), never stored; a bump flashes the
   arrow and the one in its way in `scheme.error`. Keyboard: arrows move a cursor (a square) to the nearest other arrow that way, Enter or
@@ -819,11 +825,11 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths, 11 / 13 / 7, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
   **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
   once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,
-  Crossword, Nonogram, Mines) and `STARTER_WORDS` (Lexicon, Word Wheel, Target), the gentlest of each kind in
+  Nonogram, Mines) and `STARTER_WORDS` (Lexicon, Word Wheel, Crossword, Target), the gentlest of each kind in
   `PuzzleOrder.GENTLEST` (a test ties them). The achievement accepts either three for a day.
   The home row is always laid out at one height (unseen in Levels), so it never moves the grid.
 - **"Next puzzle today"** (`nextToday`, `NextKind.TODAY`) is offered only on today's daily opened from Home, and opens the next
@@ -903,8 +909,11 @@ records written before it, which count as before) is when a solve was made; read
 anything about the streak or days played. `day` is the board's date (archive marks, best times, "solved today"). `docs/REWARDS.md`.
 
 **Back goes where the screen was opened from** (`backFrom` in `ui/DaybookApp.kt`): an archive game returns to its archive at that
-day, for system back, the web's back, the BackButton and the finish frame's Done alike (`Route.Archive.day` is the selected day;
-the archive is a month calendar, `ui/archive/ArchiveScreen.kt`, opening on that day's month). Route strings only gain fields at the end,
+day, for system back, the web's back, the BackButton and the finish frame's Done alike. The archive opens by day (`Route.Days`,
+`ArchiveDaysScreen` in `ui/archive/ArchiveScreen.kt`: a month calendar over that day's puzzles, in the home grid's order, each tier
+one tap; it opens on yesterday), from Home's Archive button and from a tapped day on the streak calendar (`fromStats`, so the chain
+ends at Statistics). A puzzle's name there drills down to its own calendar (`Route.Archive`, `fromDays`). `fromDays`/`fromStats` ride
+on `Route.Play` so back walks the same chain. Route strings only gain fields at the end,
 read with `getOrNull`, so a route saved by an older build still decodes (`RouteTest`).
 
 **Feedback must not move the board.** Mambo's caption shifted it ~45dp when an error appeared,

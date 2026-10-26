@@ -67,7 +67,11 @@ fun StatsScreen(
     /** Per puzzle with a teacher, what its hints have explained (`TechniquesMet`). */
     techniques: List<PuzzleTechniques>,
     onTechniques: () -> Unit,
+    /** A day tapped on the streak calendar: that day in the archive. */
+    onDay: (LocalDate) -> Unit,
     onBack: () -> Unit,
+    /** The training record (`TrainingRecord`), for the Training achievements in the count. */
+    training: Set<String> = emptySet(),
 ) {
     val scheme = MaterialTheme.colorScheme
     // Which kept card is open, as "puzzleId|tier|best", so a rotation keeps it open.
@@ -109,7 +113,7 @@ fun StatsScreen(
             }
 
             item {
-                val got = earnedAchievements(completions, today).size
+                val got = earnedAchievements(completions, today, training = training).size
                 Row(
                     Modifier.fillMaxWidth().card(scheme.surface).clickable(onClick = onAchievements).padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -133,7 +137,7 @@ fun StatsScreen(
             }
 
             item {
-                StreakCalendar(completions.mapNotNullTo(HashSet()) { it.streakDay }, today, Modifier.fillMaxWidth())
+                StreakCalendar(completions.mapNotNullTo(HashSet()) { it.streakDay }, today, Modifier.fillMaxWidth(), onDay)
                 Spacer(Modifier.height(8.dp))
             }
 

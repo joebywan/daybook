@@ -36,6 +36,9 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
   board's box is the whole of the space between header and toolbar and never changes size: not when
   a hint opens, not for the first-visit offer, not on solve. (A reserved slot did the opposite: a
   blank ~156dp band all game on every teaching puzzle, and a visible jump larger on completion.)
+  What it keeps off is everything the hint names at any stage, not only what glows: the nudge lights the focus alone,
+  but `HighlightBounds.named` adds the squares the explanation will cite and change, so the popover does not sit on them
+  and does not jump when the second tap lights them.
   It sits on the opposite half from the highlight: highlight low, popover above (under the clock);
   highlight high, popover below (hugging the toolbar, which it never covers). Both clear, then
   the half rule decides, ties below. A control the player needs (`keepClear`: Sudoku's digit pad,
@@ -262,8 +265,8 @@ Verdicts (a gate is Tally's `Spec.needs`: a tier's draw is redrawn unless the wa
   58% of 9x9 draws. Now Standard is untouched, Hard must take at least two locked steps and Expert at least six; givens fell
   from 21.6 / 19.1% to 19.1 / 16.6% of squares on Hard / Expert.
 
-**Snap feasibility.** `SnapDeducerReportTest` (same switch; `build/reports/snap-deducer.txt`) prototypes a whole-board
-deducer in test code: every joint between neighbours in, out or unknown; *degree* (two joints a square, one at the 1 and
+**Snap feasibility.** A test-code prototype (`SnapDeducerReportTest`, since deleted; in git history) tried a whole-board
+deducer: every joint between neighbours in, out or unknown; *degree* (two joints a square, one at the 1 and
 at the highest number: a square with two usable joints uses both), *pieces* (no joint closing a loop, joining the two
 ends' pieces early, or putting the numbers along a piece out of order: a piece holds consecutive numbers in order) and
 *pockets* (the usable joints stay connected, a bridge must be used, a square that cuts the board in two uses one joint into

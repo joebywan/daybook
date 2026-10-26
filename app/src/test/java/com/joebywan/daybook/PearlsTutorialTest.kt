@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.PearlsGrid
@@ -105,13 +104,11 @@ class PearlsTutorialTest {
 
     // ---- the hint glue --------------------------------------------------------------------------
 
-    private fun seeds(count: Int, difficulty: Difficulty) = (0 until count).map {
-        DailySeed.seedFor(LocalDate.of(2026, 3, 1).plusDays(it.toLong()), "pearls-glue", difficulty)
-    }
+    private val glue = LocalDate.of(2026, 3, 1)
 
     @Test
     fun `a hint's move reaches its own goal, and one move is one undo entry`() {
-        for (d in Difficulty.entries) for (seed in seeds(4, d)) {
+        for (d in Difficulty.entries) for (seed in seeds(4, d, "pearls-glue", glue)) {
             var s = Pearls.generate(seed, d) as PearlsState
             while (!s.solved) {
                 val deduction = Pearls.teach(s)!!
@@ -126,7 +123,7 @@ class PearlsTutorialTest {
 
     @Test
     fun `a mistake's hint is reached by rubbing the line out`() {
-        val base = Pearls.generate(seeds(1, Difficulty.STANDARD).single(), Difficulty.STANDARD) as PearlsState
+        val base = Pearls.generate(daySeed(0, "pearls-glue", Difficulty.STANDARD, glue), Difficulty.STANDARD) as PearlsState
         val e = base.loop.indexOf('0')
         val wrong = base.copy(edges = base.edges.toCharArray().also { it[e] = '-' }.concatToString())
         val d = Pearls.teach(wrong)!!

@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.MosaicMove
@@ -22,9 +21,7 @@ import java.time.LocalDate
  */
 class MosaicFloodTest {
 
-    private val seeds = (0 until 6).map {
-        DailySeed.seedFor(LocalDate.of(2026, 5, 3).plusDays(it.toLong()), "mosaic", Difficulty.HARD)
-    }
+    private val seeds = seeds(6, Difficulty.HARD, "mosaic", LocalDate.of(2026, 5, 3))
 
     private fun boards(): List<Triple<Difficulty, Long, MosaicState>> =
         Difficulty.entries.flatMap { difficulty ->

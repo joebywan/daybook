@@ -60,8 +60,7 @@ class TechniqueNamesTest {
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
-        "codeword" to CodewordTeacher.TECHNIQUES,
-        "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
+        "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
         "whoswho" to WhosWhoTeacher.TECHNIQUES,
         "mini" to MiniTeacher.TECHNIQUES,
     )

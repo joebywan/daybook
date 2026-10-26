@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.CageLogic
@@ -13,7 +12,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 /**
  * Cage Sudoku's rules, its win check, and the claim that every board it makes has one answer. The checkers are
@@ -23,9 +21,8 @@ import java.time.LocalDate
  */
 class CageRulesTest {
 
-    private fun day(i: Int) = LocalDate.of(2026, 1, 1).plusDays(i.toLong())
     private fun board(i: Int, d: Difficulty) =
-        CageLogic.generateVerified(DailySeed.seedFor(day(i), Cages.id, d), d) ?: error("no proved board day $i ${d.name}")
+        CageLogic.generateVerified(daySeed(i, Cages.id, d), d) ?: error("no proved board day $i ${d.name}")
 
     /** An independent rule check: a Sudoku grid whose cages add up and hold no digit twice. */
     private fun legal(g: List<Int>, cageOf: List<Int>, sums: List<Int>): Boolean {

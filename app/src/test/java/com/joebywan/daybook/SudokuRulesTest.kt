@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Sudoku
@@ -9,8 +8,6 @@ import com.joebywan.daybook.puzzles.SudokuTeacher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 /**
  * Sudoku's generator: symmetric givens, one answer by a solver that shares nothing with [Sudoku.countSolutions], and
@@ -19,9 +16,8 @@ import java.time.LocalDate
  */
 class SudokuRulesTest {
 
-    private val start = LocalDate.of(2026, 1, 1)
 
-    private fun daily(day: Long, d: Difficulty) = DailySeed.seedFor(start.plusDays(day), Sudoku.id, d)
+    private fun daily(day: Int, d: Difficulty) = daySeed(day, Sudoku.id, d)
 
     /** Naive reading-order search, counting up to two: no candidate masks, no most-constrained cell, no shared code. */
     private fun oracleCount(g: IntArray, from: Int = 0): Int {
@@ -44,7 +40,7 @@ class SudokuRulesTest {
 
     @Test
     fun `givens are symmetric, true to the answer, and have one answer by an independent solver`() {
-        for (d in Difficulty.entries) for (day in 0 until 25L) {
+        for (d in Difficulty.entries) for (day in 0 until 25) {
             val s = Sudoku.generate(daily(day, d), d) as SudokuState
             val where = "${d.name} day $day"
             for (i in 0 until 81) {
@@ -72,7 +68,7 @@ class SudokuRulesTest {
     @Test
     fun `each tier needs its own depth of the ladder, and none falls back`() {
         val t = SudokuTeacher.TECHNIQUES
-        for (d in Difficulty.entries) for (day in 0 until 120L) {
+        for (d in Difficulty.entries) for (day in 0 until 120) {
             val deepest = deepest(Sudoku.generate(daily(day, d), d) as SudokuState)
             val ok = when (d) {
                 Difficulty.STANDARD -> t.indexOf(deepest) <= t.indexOf(SudokuTeacher.HIDDEN_SINGLE_LINE)
@@ -132,7 +128,7 @@ class SudokuRulesTest {
             val clues = sortedMapOf<Int, Int>()
             val attempts = sortedMapOf<Int, Int>()
             val ms = mutableListOf<Double>()
-            for (day in 0 until 365L) {
+            for (day in 0 until 365) {
                 val seed = daily(day, d)
                 val t0 = System.nanoTime()
                 val s = Sudoku.generateVerified(seed, d)!!
@@ -151,7 +147,6 @@ class SudokuRulesTest {
             assertTrue("${d.name} needed ${attempts.lastKey()} of ${Sudoku.ATTEMPTS} attempts", attempts.lastKey() <= Sudoku.ATTEMPTS / 2)
         }
         println(report)
-        File("build/reports").mkdirs()
-        File("build/reports/sudoku-generation.txt").writeText(report.toString())
+        writeReport("sudoku-generation.txt", report.toString())
     }
 }
