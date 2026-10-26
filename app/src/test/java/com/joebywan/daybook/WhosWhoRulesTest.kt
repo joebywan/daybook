@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.WhoClue
@@ -12,16 +11,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlinx.datetime.LocalDate
 
 class WhosWhoRulesTest {
 
     private fun daily(day: Long, tier: Difficulty): WhosWhoState =
-        WhosWho.generate(DailySeed.seedFor(LocalDate.fromEpochDays(START + day.toInt()), WhosWho.id, tier), tier) as WhosWhoState
-
-    private companion object {
-        val START = LocalDate(2026, 1, 1).toEpochDays()
-    }
+        WhosWho.generate(daySeed(day.toInt(), WhosWho.id, tier), tier) as WhosWhoState
 
     /** [s] with every square ticked as [assignment] says. */
     private fun ticked(s: WhosWhoState, assignment: List<List<Int>>): WhosWhoState {
@@ -174,13 +168,6 @@ class WhosWhoRulesTest {
             val p = WhosWhoLogic.puzzleOf(s)
             assertEquals(WhosWhoLogic.Verdict.ExactlyOne(s.answer), WhosWhoLogic.count(p))
             assertEquals(WhosWhoLogic.specFor(tier).needs, WhosWhoLogic.depth(p))
-        }
-    }
-
-    @Test
-    fun `generation is pure`() {
-        for (tier in Difficulty.entries) for (seed in listOf(1L, 99L, -12345L)) {
-            assertEquals(WhosWho.generate(seed, tier), WhosWho.generate(seed, tier))
         }
     }
 

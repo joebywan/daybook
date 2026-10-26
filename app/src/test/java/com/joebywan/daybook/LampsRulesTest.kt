@@ -1,6 +1,5 @@
 package com.joebywan.daybook
 
-import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Lamps
@@ -12,8 +11,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.time.LocalDate
 
 class LampsRulesTest {
 
@@ -142,15 +139,14 @@ class LampsRulesTest {
     @Test
     fun `a year of daily boards - every tier needs exactly its rung, and the tiers get harder`() {
         val report = StringBuilder()
-        val start = LocalDate.of(2026, 1, 1)
         for (d in Difficulty.entries) {
             val spec = LampsLogic.specFor(d)
             val ms = ArrayList<Double>()
             var walls = 0
             var numbered = 0
             var squares = 0
-            for (day in 0 until 365L) {
-                val seed = DailySeed.seedFor(start.plusDays(day), Lamps.id, d)
+            for (day in 0 until 365) {
+                val seed = daySeed(day, Lamps.id, d)
                 val t = System.nanoTime()
                 val s = Lamps.generate(seed, d) as LampsState
                 ms += (System.nanoTime() - t) / 1e6
@@ -167,8 +163,7 @@ class LampsRulesTest {
             )
         }
         print(report)
-        File("build/reports").mkdirs()
-        File("build/reports/lamps-generation.txt").writeText(report.toString())
+        writeReport("lamps-generation.txt", report.toString())
         assertTrue(Difficulty.entries.map { LampsLogic.specFor(it).needs }.zipWithNext().all { (a, b) -> a < b })
     }
 }
