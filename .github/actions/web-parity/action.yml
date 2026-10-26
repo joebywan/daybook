@@ -26,7 +26,7 @@ runs:
         path: |
           ~/.cache/ms-playwright
           ~/apt-archives
-        key: playwright-${{ runner.os }}-${{ hashFiles('tools/web-parity/requirements.txt') }}
+        key: playwright-apt-${{ runner.os }}-${{ hashFiles('tools/web-parity/requirements.txt') }}
 
     # apt is never time-killed: a killed install left dpkg half-configured and the retry failed at once.
     # Its downloads go to the cached folder, it waits for another apt's lock, and a failure is retried
