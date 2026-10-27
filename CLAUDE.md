@@ -30,6 +30,9 @@ sounded. Do not turn it off.
   `hash(date, puzzleId, difficulty)`, so purity is what makes the whole archive free and offline.
 - `PuzzleState` is a sealed `@Serializable` interface living in `puzzles/` — Kotlin requires
   sealed implementations to share the sealed type's *package*, not merely its module.
+- `core/TierNotes.kt` says, one line per tier, what the player sees change (a size, a count, what is given; never
+  "harder"); the rules sheet ("?") shows them with the board's tier marked. `TierNotesTest` fails a registered puzzle
+  without three, and a tier change needs its line changed in the same PR.
 - `Preview(modifier)` draws a fixed motif for the home grid. **Never call `generate()` in it** —
   every one of them draws on every composition.
 
@@ -802,7 +805,7 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
 
 ## Motion and haptics
 
-The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s
+The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
 A move's feel (the changed squares settle, a unit finished by the rules glows once) is `ui/MoveFeel.kt`'s
@@ -884,8 +887,11 @@ Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` vi
 `Palette.kt` names no family. Static instances only; how they were made and cut: `docs/WEB_BUILD.md` (Fonts).
 
 **Glyphs inside a board are sized from their square with `boardSp()` (`ui/BoardText.kt`), never `(cell.value * k).sp`**, so the
-system font size cannot push them out of their square; text outside the grid scales. Rule and the line-height catch:
+system font size cannot push them out of their square; text outside the grid scales, but chrome in a fixed slot (play
+header, tier pills, pen buttons, tile names) stops at 1.3x (`CappedFontScale`; web `?fontscale=2` to check). Rule and the line-height catch:
 `docs/PUZZLE_STANDARDS.md` section 6; `BoardTextSizeTest` fails on the old pattern.
+Digits take a role from the one scale, `BoardGlyph` in the same file (given, entered, clue, corner, note: a share of
+the square and a weight); heavy region walls and frames take `ColorScheme.wall` (`ui/BoardDraw.kt`), never black or `onBackground`.
 
 ## Colour
 

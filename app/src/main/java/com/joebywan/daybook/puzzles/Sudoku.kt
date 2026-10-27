@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
@@ -28,7 +27,8 @@ import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
-import com.joebywan.daybook.ui.boardSp
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.style
 
 @Serializable
 data class SudokuState(
@@ -550,8 +550,7 @@ object Sudoku : PuzzleType {
                         if (PREVIEW_DIGITS[i] != 0) {
                             Text(
                                 text = PREVIEW_DIGITS[i].toString(),
-                                fontSize = (cell * 0.52f).boardSp(), lineHeight = (cell * 0.52f).boardSp() * 1.2f,
-                                fontWeight = if (given) FontWeight.Bold else FontWeight.Normal,
+                                style = (if (given) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(cell),
                                 color = if (given) scheme.onSurface else BoardHues.ink(hueB, dark),
                                 textAlign = TextAlign.Center,
                             )

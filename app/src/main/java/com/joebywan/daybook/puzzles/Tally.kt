@@ -34,9 +34,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -48,9 +46,12 @@ import com.joebywan.daybook.core.marked
 import com.joebywan.daybook.core.only
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.ui.wall
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.input.key.Key
@@ -223,10 +224,11 @@ object Tally : PuzzleType {
     private class Texts(val digits: List<TextLayoutResult>, val targets: List<TextLayoutResult>)
 
     private fun measure(measurer: TextMeasurer, s: TallyState, unitPx: Float, density: Density): Texts {
-        fun style(f: Float) = TextStyle(fontSize = with(density) { (unitPx * f).toSp() }, fontWeight = FontWeight.SemiBold)
+        val digit = density.boardStyle(BoardGlyph.GIVEN, unitPx)
+        val target = density.boardStyle(BoardGlyph.CLUE, unitPx)
         return Texts(
-            digits = (0..9).map { measurer.measure(it.toString(), style(0.5f)) },
-            targets = TallyLogic.targets(s).map { measurer.measure(it.toString(), style(0.42f)) },
+            digits = (0..9).map { measurer.measure(it.toString(), digit) },
+            targets = TallyLogic.targets(s).map { measurer.measure(it.toString(), target) },
         )
     }
 
@@ -282,7 +284,7 @@ object Tally : PuzzleType {
         val thin = maxOf(u * 0.03f, 1f)
         for (k in 0..n) {
             val edge = k == 0 || k == n
-            val colour = if (edge) scheme.onSurfaceVariant.copy(alpha = 0.7f) else scheme.outline
+            val colour = if (edge) scheme.wall else scheme.outline
             val w = if (edge) thin * 2f else thin
             drawLine(colour, Offset(k * u, 0f), Offset(k * u, n * u), w)
             drawLine(colour, Offset(0f, k * u), Offset(n * u, k * u), w)
