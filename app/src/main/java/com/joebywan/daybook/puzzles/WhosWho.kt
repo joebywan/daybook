@@ -58,6 +58,7 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
+import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
@@ -325,30 +326,33 @@ object WhosWho : PuzzleType {
                 },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.TopCenter) {
-                val wide = maxWidth > maxHeight * 1.3f && maxWidth >= 520.dp
-                val onCell = { c: Int -> selected = c }
-                val onPad = { slot: Int ->
-                    val c = selected
-                    if (c != null) onState(s.mark(c / s.columns, c % s.columns, slot, tick))
-                }
-                val onClue = { k: Int -> onState(s.strike(k)) }
-                if (wide) {
-                    val rowH = ((maxHeight - HEADER - PAD - 12.dp) / s.n).coerceIn(30.dp, 52.dp)
-                    Row(Modifier.widthIn(max = 1000.dp).fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Column(Modifier.weight(0.55f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+            // Capped (the table, the clue list and the pad are text in sp): at 2x the clue list had two lines of room.
+            CappedFontScale {
+                BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.TopCenter) {
+                    val wide = maxWidth > maxHeight * 1.3f && maxWidth >= 520.dp
+                    val onCell = { c: Int -> selected = c }
+                    val onPad = { slot: Int ->
+                        val c = selected
+                        if (c != null) onState(s.mark(c / s.columns, c % s.columns, slot, tick))
+                    }
+                    val onClue = { k: Int -> onState(s.strike(k)) }
+                    if (wide) {
+                        val rowH = ((maxHeight - HEADER - PAD - 12.dp) / s.n).coerceIn(30.dp, 52.dp)
+                        Row(Modifier.widthIn(max = 1000.dp).fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Column(Modifier.weight(0.55f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                                Table(s, grid, rowH, selected, badCell, look, feel, interactive, onCell)
+                                Spacer(Modifier.height(12.dp))
+                                Pad(s, grid, selected, tick, interactive, look, { tick = it }, onPad)
+                            }
+                            Clues(s, badClue, look, interactive, onClue, Modifier.weight(0.45f).fillMaxHeight())
+                        }
+                    } else {
+                        val rowH = ((maxHeight - HEADER - PAD - MIN_CLUES - 12.dp) / s.n).coerceIn(30.dp, 48.dp)
+                        Column(Modifier.widthIn(max = 560.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                             Table(s, grid, rowH, selected, badCell, look, feel, interactive, onCell)
-                            Spacer(Modifier.height(12.dp))
+                            Clues(s, badClue, look, interactive, onClue, Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp))
                             Pad(s, grid, selected, tick, interactive, look, { tick = it }, onPad)
                         }
-                        Clues(s, badClue, look, interactive, onClue, Modifier.weight(0.45f).fillMaxHeight())
-                    }
-                } else {
-                    val rowH = ((maxHeight - HEADER - PAD - MIN_CLUES - 12.dp) / s.n).coerceIn(30.dp, 48.dp)
-                    Column(Modifier.widthIn(max = 560.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Table(s, grid, rowH, selected, badCell, look, feel, interactive, onCell)
-                        Clues(s, badClue, look, interactive, onClue, Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp))
-                        Pad(s, grid, selected, tick, interactive, look, { tick = it }, onPad)
                     }
                 }
             }

@@ -457,10 +457,10 @@ internal object MosaicTeacher {
         val slipCells = at.area(slip / 8).toSet()
         val undo = s.moves - good
         val back = if (good == 0) {
-            "Undo back to the start: your first fill, ${name(slip % 8)} on the glowing cells, lost it."
+            "Undo back to the start: your first fill, ${name(slip % 8)} on the glowing squares, lost it."
         } else {
             "Undo ${fills(undo)}, back to $good used: fill ${good + 1}, ${name(slip % 8)} on the glowing " +
-                "cells, lost it."
+                "squares, lost it."
         }
         return Step(
             technique = MISTAKE,
