@@ -425,6 +425,7 @@ fun platformTypography(base: Typography): Typography {
  * [content] once the symbol fonts are preloaded, which is what makes Skia fall back to them. Text laid out
  * before then finds a glyph missing and Compose fetches a Noto font from fonts.gstatic.com for it, which the
  * CSP blocks, so it stays a box: ↻ ✕ on a Word Wheel opened from a link did, until this held the app back.
+ * It holds it back at most [SYMBOL_FONTS_WAIT_MS]: a font that fails to load costs its glyphs, never the app.
  */
 @OptIn(ExperimentalResourceApi::class)
 @Composable
@@ -436,14 +437,20 @@ fun WithSymbolFonts(content: @Composable () -> Unit) {
     ).map { it.value }
     val resolver = LocalFontFamilyResolver.current
     var ready by remember { mutableStateOf(false) }
-    val loaded = fonts.all { it != null }
-    LaunchedEffect(resolver, loaded) {
-        if (!loaded) return@LaunchedEffect
-        fonts.forEach { resolver.preload(FontFamily(it!!)) }
+    // Restarts as each font arrives, preloading whichever have (again: the resolver caches them).
+    LaunchedEffect(resolver, fonts) {
+        fonts.filterNotNull().forEach { resolver.preload(FontFamily(it)) }
+        if (fonts.all { it != null }) ready = true
+    }
+    LaunchedEffect(Unit) {
+        delay(SYMBOL_FONTS_WAIT_MS)
         ready = true
     }
     if (ready) content()
 }
+
+/** How long [WithSymbolFonts] waits for a font before showing the app without it. */
+private const val SYMBOL_FONTS_WAIT_MS = 2500L
 
 // --- The solve sound (Web Audio) ---------------------------------------------------------------
 // The samples are the shared SolveTone; JS only holds them and a lazily made AudioContext. Browsers

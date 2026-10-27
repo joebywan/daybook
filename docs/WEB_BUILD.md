@@ -75,7 +75,8 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   gzipped), `✓ ✕` from Symbols 2 (25 / 5 KB) and `↻ −` from Math (33 / 12 KB). A character no loaded font
   has is not just a box: Compose's `FallbackFontDownloader` fetches a Noto font from fonts.gstatic.com for it,
   which the page's CSP (`connect-src 'self'`) blocks and which would break "sends nothing anywhere" if it
-  did not. So `WithSymbolFonts` (the seam) holds the app back until the three are preloaded: text laid out
+  did not. So `WithSymbolFonts` (the seam) holds the app back until the three are preloaded (at most 2.5 s, so a font that fails
+  to load costs its glyphs, not the app): text laid out
   earlier, such as a Word Wheel opened from a link, triggered the fetch even with the fonts bundled.
   `tools/render/glyphs.py` opens the screens that draw these and fails on any request off the local
   server. The statics are the variable `Fredoka.ttf` from Google
