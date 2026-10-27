@@ -295,12 +295,23 @@ private val BoardSaver = Saver<PuzzleState, String>(
  */
 @Composable
 fun FinalBoard(course: Course, record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit) {
+    // An Expert board can take a while to generate (Regions' up to a second or two in a browser), so off the main thread.
+    val start by produceState<PuzzleState?>(null, course) { value = withContext(Dispatchers.Default) { course.exam() } }
+    val s = start
+    if (s == null) TitledScreen("Final board", "Every technique, in one board", onBack) {
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Text("Finding a board...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    } else FinalBoardOn(course, s, record, onPass, onBack)
+}
+
+@Composable
+private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit) {
     val puzzle = course.puzzle
     val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
     val chime = LocalChime.current
     val scope = rememberCoroutineScope()
-    val start = remember(course) { course.exam() } ?: return
     var board by rememberSaveable(course.id, stateSaver = BoardSaver) { mutableStateOf(start) }
     var shown by rememberSaveable(course.id) { mutableStateOf(false) }
     var earned by remember { mutableStateOf<String?>(null) }
