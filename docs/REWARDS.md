@@ -160,7 +160,8 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
 
 - A record, not practice: per puzzle that teaches, its praised techniques (`praisedTechniquesOf`, in `TechniqueNames.kt`'s
   order), with a tick on each a hint has explained. The rest are plain, never greyed, locked or counted "of" a total; the
-  page itself starts no drill; practice is Training (`docs/TRAINING_SPEC.md`). Pointers and Snap (no teacher) and Target
+  page itself starts no drill; practice is Training (`docs/TRAINING_SPEC.md`), which a "Practise" link beside each
+  technique Training has opens (back returns here). Pointers and Snap (no teacher) and Target
   (its steps are not skills) have no list.
 - Opened from a row on Statistics under Achievements ("N shown" once any is), back returns to Statistics; route `techniques`.
 - Stored as its own key set, `techniques_met` (`"puzzleId|technique"`), written when a hint opens a deduction (mistakes

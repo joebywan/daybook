@@ -503,11 +503,12 @@ object TechniquesMet {
             val praised = praisedTechniquesOf(id)
             val names = techniqueNamesOf(id).filterKeys { it in praised }
             if (names.isEmpty()) null
-            else PuzzleTechniques(id, names.map { (technique, name) -> MetTechnique(name, encode(id, technique) in raw) })
+            else PuzzleTechniques(id, names.map { (technique, name) -> MetTechnique(name, encode(id, technique) in raw, technique) })
         }
 }
 
-data class MetTechnique(val name: String, val met: Boolean)
+/** [id] is the teacher's technique id (`Deduction.technique`), for Training's link. */
+data class MetTechnique(val name: String, val met: Boolean, val id: String)
 
 data class PuzzleTechniques(val puzzleId: String, val techniques: List<MetTechnique>)
 

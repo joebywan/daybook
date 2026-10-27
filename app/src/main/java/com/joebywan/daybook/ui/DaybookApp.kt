@@ -1,10 +1,11 @@
 package com.joebywan.daybook.ui
 
 import com.joebywan.daybook.core.Deduction
-import com.joebywan.daybook.core.SudokuTraining
+import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.TrainingRecord
 import com.joebywan.daybook.ui.teach.HintStage
 import com.joebywan.daybook.ui.teach.LocalHintAction
+import com.joebywan.daybook.ui.training.CourseScreen
 import com.joebywan.daybook.ui.training.FinalBoard
 import com.joebywan.daybook.ui.training.PractiseLink
 import com.joebywan.daybook.ui.training.TechniquePractice
@@ -103,10 +104,17 @@ sealed interface Route {
     /** The techniques hints have explained, opened from Statistics. */
     data object Techniques : Route
     /**
-     * Training (`docs/TRAINING_SPEC.md`): the list, or with [technique] that technique's practice (`exam` the final board).
-     * [fromHint]: opened from a hint's "Practise this", so back returns to that game.
+     * Training (`docs/TRAINING_SPEC.md`): the list of puzzles; with [puzzle], its techniques; with [technique] too, that
+     * technique's practice (`exam` the final board). [fromHint]: opened from outside Training (a hint's "Practise this",
+     * the rules sheet, the Techniques page), so back returns to where that was. [listFromHint]: a practice opened from a
+     * [fromHint] list, so back is that list. A route saved before [puzzle] existed was Sudoku's.
      */
-    data class Training(val technique: String? = null, val fromHint: Boolean = false) : Route
+    data class Training(
+        val technique: String? = null,
+        val fromHint: Boolean = false,
+        val puzzle: String? = null,
+        val listFromHint: Boolean = false,
+    ) : Route
     /** The archive by day. [day]: the day selected; [fromStats]: opened from the streak calendar, so back is Statistics. */
     data class Days(val day: LocalDate? = null, val fromStats: Boolean = false) : Route
     /**
@@ -142,7 +150,8 @@ sealed interface Route {
 internal fun backFrom(r: Route): Route = when {
     r is Route.Achievements && !r.fromHome -> Route.Stats
     r is Route.Techniques -> Route.Stats
-    r is Route.Training && r.technique != null && !r.fromHint -> Route.Training()
+    r is Route.Training && r.technique != null && !r.fromHint -> Route.Training(fromHint = r.listFromHint, puzzle = r.puzzle)
+    r is Route.Training && r.puzzle != null && !r.fromHint -> Route.Training()
     r is Route.Training && !r.fromHint -> Route.Settings
     r is Route.Play && r.fromArchive -> Route.Archive(r.puzzleId, r.day, r.fromDays, r.fromStats)
     r is Route.Play && r.fromDays -> Route.Days(r.day, r.fromStats)
@@ -163,7 +172,7 @@ internal fun encodeRoute(r: Route): String =
         Route.Settings -> "settings"
         Route.Techniques -> "techniques"
         is Route.Achievements -> "achievements|${r.fromHome}"
-        is Route.Training -> "training|${r.technique ?: ""}|${r.fromHint}"
+        is Route.Training -> "training|${r.technique ?: ""}|${r.fromHint}|${r.puzzle ?: ""}|${r.listFromHint}"
         is Route.Days -> "days|${r.day ?: ""}|${r.fromStats}"
         is Route.Archive -> "archive|${r.puzzleId}|${r.day ?: ""}|${r.fromDays}|${r.fromStats}"
         is Route.Levels -> "levels|${r.level ?: ""}"
@@ -178,7 +187,11 @@ internal fun decodeRoute(text: String): Route {
         "settings" -> Route.Settings
         "techniques" -> Route.Techniques
         "achievements" -> Route.Achievements(f.getOrNull(1) == "true")
-        "training" -> Route.Training(f.getOrNull(1)?.takeIf { it.isNotEmpty() }, f.getOrNull(2) == "true")
+        "training" -> {
+            val technique = f.getOrNull(1)?.takeIf { it.isNotEmpty() }
+            val puzzle = f.getOrNull(3)?.takeIf { it.isNotEmpty() } ?: technique?.let { "sudoku" }
+            Route.Training(technique, f.getOrNull(2) == "true", puzzle, f.getOrNull(4) == "true")
+        }
         // The fields after the first few came later: a string saved before them still decodes.
         "days" -> Route.Days(f.getOrNull(1)?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse), f.getOrNull(2) == "true")
         "archive" -> Route.Archive(
@@ -443,6 +456,10 @@ private fun DaybookScreens(
         Route.Techniques -> TechniquesScreen(
             techniques = techniquesMet,
             onBack = { route = backFrom(current) },
+            onPractise = { puzzleId, technique ->
+                practiseFrom = current
+                route = Route.Training(technique, fromHint = true, puzzle = puzzleId)
+            },
         )
 
         is Route.Achievements -> AchievementsScreen(
@@ -453,11 +470,18 @@ private fun DaybookScreens(
         )
 
         is Route.Training -> CompositionLocalProvider(LocalChime provides playSolveSound) {
-            val pass: (String) -> Unit = { t -> scope.launch { training.pass(SudokuTraining.PUZZLE, t) } }
-            when (current.technique) {
-                null -> TrainingScreen(trained, onOpen = { route = Route.Training(it) }, onBack = { route = back(current) })
-                SudokuTraining.EXAM -> FinalBoard(trained, pass, onBack = { route = back(current) })
-                else -> TechniquePractice(current.technique, trained, pass, onBack = { route = back(current) })
+            val course = Training.of(current.puzzle)
+            val onBack = { route = back(current) }
+            when {
+                course == null -> TrainingScreen(trained, onOpen = { route = Route.Training(puzzle = it) }, onBack = onBack)
+                current.technique == null -> CourseScreen(course, trained, onBack = onBack, onOpen = {
+                    route = Route.Training(it, puzzle = course.id, listFromHint = current.fromHint)
+                })
+                else -> {
+                    val pass: (String) -> Unit = { t -> scope.launch { training.pass(course.id, t) } }
+                    if (current.technique == Training.EXAM) FinalBoard(course, trained, pass, onBack)
+                    else TechniquePractice(course, current.technique, trained, pass, onBack)
+                }
             }
         }
 
@@ -555,12 +579,12 @@ private fun DaybookScreens(
                 }
                 // Keyed on the board: a level's next step goes straight to another puzzle, and PlayScreen's
                 // produced board would otherwise be the old puzzle's state for a frame (a ClassCastException in Board).
-                // Training's "Practise this" beside a Sudoku hint's Close (docs/TRAINING_SPEC.md).
+                // Training's "Practise this" beside the hint's Close, for a puzzle with a course (docs/TRAINING_SPEC.md).
                 val practise: @Composable (Deduction, HintStage) -> Unit = { d, stage ->
-                    if (puzzle.id == SudokuTraining.PUZZLE) PractiseLink(d, stage) { t ->
+                    Training.of(puzzle.id)?.let { c -> PractiseLink(c, d, stage) { t ->
                         practiseFrom = current
-                        route = Route.Training(t, fromHint = true)
-                    }
+                        route = Route.Training(t, fromHint = true, puzzle = c.id)
+                    } }
                 }
                 CompositionLocalProvider(LocalChime provides playSolveSound, LocalHintAction provides practise) { key(puzzle.id, seed) {
                 PlayScreen(
@@ -674,6 +698,12 @@ private fun DaybookScreens(
                     level = level,
                     onTaught = { technique -> scope.launch { store.recordTechniqueMet(puzzle.id, technique) } },
                     onBack = { route = backFrom(current) },
+                    onTrain = Training.of(puzzle.id)?.let { c ->
+                        {
+                            practiseFrom = current
+                            route = Route.Training(fromHint = true, puzzle = c.id)
+                        }
+                    },
                 )
                 } }
             }

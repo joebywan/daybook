@@ -61,6 +61,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -185,6 +186,8 @@ fun PlayScreen(
     level: Int?,
     /** A hint explained this technique (`Deduction.technique`), for the techniques page. */
     onTaught: (String) -> Unit,
+    /** Opens this puzzle's Training (`docs/TRAINING_SPEC.md`) from the rules sheet; null for a puzzle without one. */
+    onTrain: (() -> Unit)? = null,
 ) {
     // The harder boards take hundreds of milliseconds to generate, which would freeze the frame if
     // it happened during composition. Android runs it off the main thread; the web has only one
@@ -737,6 +740,7 @@ fun PlayScreen(
         RulesDialog(
             "How to play ${puzzle.displayName}", puzzle, difficulty,
             onWalkthrough = if (hasTutorial) ({ showRules = false; openTutorial() }) else null,
+            onTrain = onTrain?.let { train -> { showRules = false; train() } },
         ) { showRules = false }
     }
 }
@@ -1025,6 +1029,7 @@ internal fun RulesDialog(
     puzzle: PuzzleType,
     difficulty: Difficulty? = null,
     onWalkthrough: (() -> Unit)? = null,
+    onTrain: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -1041,6 +1046,11 @@ internal fun RulesDialog(
                 onWalkthrough?.let {
                     Spacer(Modifier.height(12.dp))
                     FilledTonalButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Play the one-minute walkthrough") }
+                }
+                // Training: each technique the hints use, practised on real boards.
+                onTrain?.let {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Train: practise the techniques") }
                 }
             }
         },

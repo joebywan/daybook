@@ -1,4 +1,4 @@
-- New: a walkthrough the first time you open a puzzle; Training for Sudoku techniques.
+- New: a first-time walkthrough; Training for Sudoku, Cage Sudoku, Inequality and Regions.
 - Settings: Accessibility, and a daily reminder.
 - Mines: tap a number to clear around it; bigger Expert squares; a mine ends the board.
 - Levels ramp up over 100 levels.

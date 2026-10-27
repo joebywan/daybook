@@ -43,10 +43,11 @@ All puzzles teach (Snap and Pointers through their walkthrough only; Pointers an
 section 7. The settled play-screen UX (popover, finish frame, solve sound) and the measured fallback table:
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
-never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: Sudoku's techniques
-practised on real positions found by walking generated boards by hints (`core/Training.kt`, `ui/training/`, its own
-`training_passed` key set, two appended achievements), opened from Settings and a Sudoku hint's "Practise this":
-`docs/TRAINING_SPEC.md`. What must not be broken:
+never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
+Sudoku, Inequality and Regions, each technique practised on real positions found by walking generated boards by hints
+(`core/Training.kt`: one `Course` per puzzle; `ui/training/`; its own `training_passed` key set, `puzzleId|technique`;
+two appended achievements per puzzle), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
+"Practise this" and Settings: `docs/TRAINING_SPEC.md`. What must not be broken:
 
 - A puzzle's first board opens on its walkthrough, once (`autoWalkthrough`: never solved, never opened, not a level
   board, no saved moves; Skip one tap). The offer line and the "?" sheet are the way back. `tools/render/render.py` marks
