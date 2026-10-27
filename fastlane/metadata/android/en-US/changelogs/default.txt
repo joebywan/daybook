@@ -1,7 +1,8 @@
-- New: Training, to practise each Sudoku technique on real boards.
-- The archive opens by day, and an optional daily reminder.
-- Mines: tap a number to clear around it, bigger Expert squares, and a mine ends the board.
-- Levels ramp up over 100 levels; Today's three is rebalanced.
-- Crossword hints give a second clue first; Show me is back in the hint panel.
-- Clearer, more distinct colours; word games skip grim words.
-- Streaks count dailies solved on the day; Sudoku Standard starts gentler.
+- New: a walkthrough the first time you open a puzzle; Training for Sudoku techniques.
+- Settings: Accessibility, and a daily reminder.
+- Mines: tap a number to clear around it; bigger Expert squares; a mine ends the board.
+- Levels ramp up over 100 levels.
+- Hints point at the glowing square; Crossword gives a second clue first.
+- The rules explain each tier. Lamps: hold for a lamp.
+- Clearer colours and digits; word games skip grim words.
+- Streaks count dailies solved on the day.

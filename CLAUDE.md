@@ -79,8 +79,8 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
 - **Tiers: 5 letters / 6 guesses, 5 letters / 5 guesses, 4 letters / 7 guesses.** Any real word is a legal guess on
   every tier: there is **no hard mode** (the owner: don't force players to use their clues, "if they don't, that's on
   them"; an earlier build had one, and it is gone). Four letters is the *harder* length: a player who always guesses
-  a word still possible wins every five-letter board in six and 98% in five, but only 92% of four-letter boards in
-  six and 96% in seven (families like -ATE); one who also spends turns on words that cannot be the answer wins them
+  a word still possible wins every five-letter board in six and 98% in five, but only 94% of four-letter boards in
+  six and 98% in seven (families like -ATE); one who also spends turns on words that cannot be the answer wins them
   all. So Expert gets a guess more than Hard and is still the tier that asks the most. `LexiconBalanceTest` measures
   both players; the constants alone prove nothing. A saved game from the hard-mode build still loads (the old
   `hard` key is ignored) and plays under the new rules.
@@ -293,8 +293,9 @@ motif). `id = "regions"` is hashed into every seed: never rename it.
   budget) proves one answer. `RegionsOracle` (naive reading-order search) is the independent check. `lastResort` is the board of one fixed seed, itself
   proved by a test. A dig that misses the gate is dug again in a new order (up to `DIGS` = 4) before the fill is redrawn, because the fill is ~85 ms of
   a 9x9 draw; about 14% of Expert days need a second fill (`RegionsRulesTest`), and a year per tier never reaches `lastResort` (`FallbackTest`).
-  Generation costs what it did before the gate (JVM 1.4 / 8 / 73 ms median, 7 / 32 / 319 p95; Chromium 3 / 18 / 187 median, 14 / 80 / 822 p95,
-  36 / 172 / 1700 max, was 3 / 19 / 173, 15 / 87 / 738, 58 / 175 / 1828; WebKit about the same). Changing the ladder or the draw changes every board
+  Generation, a year a tier, median / p95 / max (2026-10-27): Chromium 1.5 / 7 / 17, 11 / 39 / 92, 99 / 433 / 799 ms; WebKit 2 / 11 / 26,
+  17 / 65 / 144, 165 / 719 / 1378; JVM 0.7 / 3.4 / 7.5, 5.1 / 19 / 41, 44 / 188 / 358 (a quiet machine, load 1-3 on 32 cores).
+  The fill is 93% of Expert's time; the slowest days throw away 1-2 fills that dead-ended and draw 3-4 (`docs/TODO.md`). Changing the ladder or the draw changes every board
   (parity pins go red on purpose).
 - **The generator's walk is `lockedSteps`, not `depth`**: it places every single of a pass at once (the single rungs are order-free while every digit
   is right), so it meets the same stuck boards and locked steps as the hints. `RegionsRulesTest` checks the two agree.
@@ -410,7 +411,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
   Measured: about a quarter of four-letter addend pairs have a five-letter total with one answer that the ladder finishes, out of 1,768 tried, ~45 ms a pair on
   a desktop JVM: far too slow to search on a phone. Two five-letter addends (no leading carry, no 6-letter list) gave one ladder board per 30 pairs, three
   addends none, though both have many one-answer sums: they need trial, not columns. So **every tier is 4 + 4 = 5**, and the tier is the hardest technique the
-  ladder needs (`CipherSumsBuildTest.tierOf`): Standard columns and pairs only, Hard all columns together, Expert a two-column what-if. 1,200 sums a tier, no total more than three times in one (`MAX_PER_TOTAL`; uncapped, `cacao` made 42 of Standard; now 636 / 694 / 727 different totals),
+  ladder needs (`CipherSumsBuildTest.tierOf`): Standard columns and pairs only, Hard all columns together, Expert a two-column what-if. 1,200 sums a tier, no total more than three times in one (`MAX_PER_TOTAL`; uncapped, `cacao` made 42 of Standard; now 632 / 684 / 721 different totals),
   sorted; the list's order is a contract (`BoardPinTest` goes red on purpose when it moves). Rebuilding after a ladder change re-rates every sum.
 - **The device proves each board again:** `generateVerified` picks an entry with `Rng(seed + attempt)`, requires the ladder to finish it and
   `CipherLogic.prove` (column by column, no budget, sealed `Verdict` where only `ExactlyOne` carries an answer) to find one answer, which becomes the stored
@@ -429,7 +430,7 @@ A sum of words in which each letter stands for one digit: different letters, dif
   which L has"), then the column as a sum with every other digit ruled out by name ("at most 1 + 9 + 1 = 11, so I is 0 or 1; T has 1"), else each
   other digit followed until it breaks. `deduce` picks, of the placements the first productive technique allows, the shortest it can show within
   `MAX_EXPLANATION` (260, more than other teachers: the popover scrolls beyond its room); the walk keeps `findStep`'s first, so tiers are unchanged. Shown
-  on 89 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
+  on 90 / 80 / 75% of steps (`CipherTeachingTest` floors them); the all-columns and what-if steps mostly keep their summary (`docs/TODO.md`).
 - State: `words`, `solution`, `digits` (a digit per letter in alphabetical order, -1 for none) and `selected` (in state, as Inequality's; `withoutSelection`).
   The letter key row under the sum shows each letter's digit and selects it; keyboard: a letter key selects it, a digit sets it, Backspace clears, arrows walk the letters.
 ## Pointers (clear the arrows; shown to players as Arrows)
@@ -494,7 +495,7 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   no side-by-side squares and nothing before or after a word, so every run is exactly one word; every word crosses the grid. The pool
   is shuffled from the sorted list (no hash order), longest first, each placed at a spot drawn from those with the most crossings.
 - **A board ships only if it is winnable without luck:** walking it by hints alone, the slot a clue names never has more than
-  `MAX_CHOICE` (6) grid words that fit. `generateVerified` tries 40 seeds (Expert: 70% first attempt, at most 6 in a year);
+  `MAX_CHOICE` (6) grid words that fit. `generateVerified` tries 40 seeds (Expert: 71% first attempt, at most 5 in a year);
   `lastResort` is the board of seed 1, proved by a test; a year per tier never reaches it (`FallbackTest`). `WordWheelOracle` (test)
   re-reads every board's squares run by run, shares nothing with the placer. JVM: median 0.3 / 0.5 / 0.7 ms a board, max 3.5 ms;
   Chromium Expert median / p95 / max 1.7 / 4.4 / 10.6 ms, WebKit 4 / 12 / 19 ms.
@@ -505,7 +506,7 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
 - **Teacher:** `PINNED` (an empty slot whose length, crossing letters and the wheel leave one grid word, found and bonus words excluded:
   reads the public grid list, never a slot's word; given as that word's clue, as Lexicon's hints are: only "Show me" types it), then `CROSSING` (of the words that fit an empty slot,
   only one leaves every empty slot crossing it a different word that fits and agrees at the crossing; same list, same clue), then `CLUE` (the slot with the fewest words that fit, given as its word's clue: reads
-  the stored word, so it is the fallback: 33 / 37 / 33% of steps over a year a tier, and an exhaustive search of every consistent filling
+  the stored word, so it is the fallback: 33 / 35 / 33% of steps over a year a tier, and an exhaustive search of every consistent filling
   pins only 0.1-0.2 points more, so the rest is honestly open). The generator's `walk` keeps the old ladder (`crossings = false`) so a
   stronger teacher never moves a board. No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
   `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.

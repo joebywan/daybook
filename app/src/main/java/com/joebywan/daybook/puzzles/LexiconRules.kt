@@ -76,8 +76,8 @@ object LexiconRules {
      * Any word is a legal guess on every tier; there is no rule that forces a clue to be reused.
      * Four letters is the harder length, not the easier: a short word has far more look-alikes
      * (-ALE, -ILL, -ATE). Measured (`LexiconBalanceTest`), a player who always guesses a word still
-     * possible wins every five-letter board in six and 98% in five, but only 92% of four-letter
-     * boards in six and 96% in seven; one who also spends turns on words that cannot be the answer wins
+     * possible wins every five-letter board in six and 98% in five, but only 94% of four-letter
+     * boards in six and 98% in seven; one who also spends turns on words that cannot be the answer wins
      * them all. So four letters get a guess more, and are still the tier that asks the most.
      */
     fun shape(difficulty: Difficulty): Shape = when (difficulty) {

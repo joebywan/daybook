@@ -50,7 +50,7 @@ class CipherTeachingTest {
             report.appendLine("${d.name}: fallback on $fallbackBoards of 200 boards; working shown on %.0f%% of steps; steps per board ".format(100.0 * shown / steps) +
                 counts.map { "${it.key} %.2f".format(it.value / 200.0) })
             assertEquals("${d.name} never falls back", 0, fallbackBoards)
-            // Measured 89 / 80 / 75%: the rest are the all-columns and what-if steps, still given as a summary.
+            // Measured 90 / 80 / 75%: the rest are the all-columns and what-if steps, still given as a summary.
             assertTrue("${d.name}: working shown on $shown of $steps steps", shown >= steps * minShown.getValue(d))
         }
         writeReport("cipher-teaching-coverage.txt", report.toString())
