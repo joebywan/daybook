@@ -30,6 +30,9 @@ sounded. Do not turn it off.
   `hash(date, puzzleId, difficulty)`, so purity is what makes the whole archive free and offline.
 - `PuzzleState` is a sealed `@Serializable` interface living in `puzzles/` — Kotlin requires
   sealed implementations to share the sealed type's *package*, not merely its module.
+- `core/TierNotes.kt` says, one line per tier, what the player sees change (a size, a count, what is given; never
+  "harder"); the rules sheet ("?") shows them with the board's tier marked. `TierNotesTest` fails a registered puzzle
+  without three, and a tier change needs its line changed in the same PR.
 - `Preview(modifier)` draws a fixed motif for the home grid. **Never call `generate()` in it** —
   every one of them draws on every composition.
 
