@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.data.KeyValueStore
+import com.joebywan.daybook.ui.MotionChoice
 import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.home.timerShown
 import com.joebywan.daybook.ui.theme.Appearance
@@ -144,5 +145,21 @@ class LaunchPreferencesTest {
         assertEquals(8, prefs.reminderHour.first())
         store.putString("reminder_hour", "99")
         assertEquals("a bad hour falls back to the default", 19, prefs.reminderHour.first())
+    }
+
+    @Test
+    fun reducedMotionFollowsTheDeviceUntilThePlayerPicks() = runBlocking {
+        val store = MemoryStore()
+        val prefs = LaunchPreferences(store)
+        assertEquals("nothing stored: the device decides, as before", MotionChoice.DEVICE, prefs.reducedMotion.first())
+        for (device in listOf(false, true)) {
+            assertEquals(device, MotionChoice.DEVICE.reduced(device))
+            assertEquals(true, MotionChoice.ON.reduced(device))
+            assertEquals(false, MotionChoice.OFF.reduced(device))
+        }
+        prefs.setReducedMotion(MotionChoice.OFF)
+        assertEquals(MotionChoice.OFF, prefs.reducedMotion.first())
+        store.putString("reduced_motion", "garbage")
+        assertEquals(MotionChoice.DEVICE, prefs.reducedMotion.first())
     }
 }

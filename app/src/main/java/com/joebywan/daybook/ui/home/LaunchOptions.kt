@@ -33,7 +33,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.data.KeyValueStore
+import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.MotionChoice
 import com.joebywan.daybook.ui.theme.Appearance
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -117,6 +119,13 @@ class LaunchPreferences(private val store: KeyValueStore) {
 
     suspend fun setVibrate(on: Boolean) = setFlag(KEY_VIBRATE, on)
 
+    /** Reduced motion: [MotionChoice.DEVICE] until the player picks, so nothing changes for anyone who doesn't. */
+    val reducedMotion: Flow<MotionChoice> = store.string(KEY_REDUCED_MOTION).map { stored ->
+        MotionChoice.entries.firstOrNull { it.name == stored } ?: MotionChoice.DEVICE
+    }
+
+    suspend fun setReducedMotion(choice: MotionChoice) = store.putString(KEY_REDUCED_MOTION, choice.name)
+
     /** An on/off switch, stored as "on" or "off"; anything but "off" (nothing stored included) is on. */
     private fun flag(key: String): Flow<Boolean> = store.string(key).map { it != "off" }
 
@@ -174,6 +183,7 @@ class LaunchPreferences(private val store: KeyValueStore) {
         const val KEY_REMINDER_OFFERED = "reminder_offered"
         const val KEY_WELCOMED = "welcomed"
         const val KEY_VIBRATE = "vibrate"
+        const val KEY_REDUCED_MOTION = "reduced_motion"
         const val KEY_ORDER = "puzzle_order"
         const val KEY_SOUND = "play_sound"
         const val KEY_DIFFICULTY = "difficulty"
@@ -289,13 +299,17 @@ internal fun <T> SegmentedControl(
                     .padding(vertical = verticalPadding),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    label(option),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    // The ink follows the pill across, so a label is never light on the bare track.
-                    color = lerp(scheme.onSurfaceVariant, onTone, (1f - abs(at - i)).coerceIn(0f, 1f)),
-                )
+                // Capped: at 2x the pill broke "Standar/d".
+                CappedFontScale {
+                    Text(
+                        label(option),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        // The ink follows the pill across, so a label is never light on the bare track.
+                        color = lerp(scheme.onSurfaceVariant, onTone, (1f - abs(at - i)).coerceIn(0f, 1f)),
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }

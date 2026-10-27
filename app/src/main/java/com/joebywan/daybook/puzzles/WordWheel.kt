@@ -95,7 +95,6 @@ object WordWheel : PuzzleType {
         "A word the grid holds fills its slot. Fill every slot to finish.",
         "Other real words count as bonus words. They are never needed.",
         "Shuffle moves the letters round the wheel and changes nothing else.",
-        "Standard: five letters, 4 to 6 words. Hard: six letters, 6 to 8. Expert: seven letters, 8 to 11, with a six-letter word besides the wheel's own.",
     )
 
     override val keyboardHelp = listOf(

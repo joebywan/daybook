@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -37,7 +36,8 @@ import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
-import com.joebywan.daybook.ui.boardSp
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.style
 
 /**
  * A Sudoku grid ([grid], which carries the digits, the answer, the selection, the pencil marks and the move count)
@@ -88,7 +88,7 @@ data class CageState(
 }
 
 /** The share of a square's height that a cage's total takes from the top of its first square. */
-private const val LABEL_BAND = 0.27f
+private const val LABEL_BAND = 0.34f
 
 /**
  * Cage Sudoku — a Sudoku whose dashed cages must add up. The grid, the pad, the notes and the keys are
@@ -309,7 +309,7 @@ object Cages : PuzzleType {
             if (seen[k]) continue
             seen[k] = true
             val laid = measurer.measure(sums[k].toString(), style, maxLines = 1)
-            drawText(laid, topLeft = Offset(i % n * cell + cell * 0.13f, i / n * cell + cell * 0.10f))
+            drawText(laid, topLeft = Offset(i % n * cell + cell * 0.09f, i / n * cell + cell * 0.04f))
         }
     }
 
@@ -345,8 +345,7 @@ object Cages : PuzzleType {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             text = PREVIEW_DIGITS[i].toString(),
-                            fontSize = (cell * 0.5f).boardSp(), lineHeight = (cell * 0.5f).boardSp() * 1.2f,
-                            fontWeight = FontWeight.Normal,
+                            style = BoardGlyph.ENTERED.style(cell),
                             color = BoardHues.ink(hueB, dark),
                             textAlign = TextAlign.Center,
                         )
@@ -354,7 +353,7 @@ object Cages : PuzzleType {
                 }
             }
             val ink = BoardHues.ink(hueA, dark)
-            val label = TextStyle(fontSize = (cell * 0.26f).boardSp(), fontWeight = FontWeight.Medium, color = scheme.onSurface)
+            val label = BoardGlyph.CORNER.style(cell).copy(color = scheme.onSurface)
             Canvas(Modifier.fillMaxSize()) {
                 val px = size.width.coerceAtMost(size.height) / 3f
                 drawCages(PREVIEW_CAGES, 3, px, ink, stroke = px * 0.045f)
@@ -410,7 +409,7 @@ object Cages : PuzzleType {
 
     @Composable
     private fun BoxScope.CageOverlay(s: CageState, cell: Dp, ink: Color, labelInk: Color, measurer: TextMeasurer) {
-        val label = TextStyle(fontSize = (cell * 0.26f).boardSp(), fontWeight = FontWeight.Medium, color = labelInk)
+        val label = BoardGlyph.CORNER.style(cell).copy(color = labelInk)
         // Not a pointer target: taps fall through to the squares underneath.
         Canvas(Modifier.fillMaxSize()) {
             val px = size.width / 9f

@@ -102,8 +102,10 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LocalBoardHighlight
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.plural
+import com.joebywan.daybook.core.tierNotes
 import com.joebywan.daybook.core.undone
 import com.joebywan.daybook.data.SavedGame
+import com.joebywan.daybook.data.fits
 import com.joebywan.daybook.platform.BackButton
 import com.joebywan.daybook.platform.GENERATION_ANIMATES
 import com.joebywan.daybook.platform.LOADING_MESSAGE_DELAY_MS
@@ -115,6 +117,7 @@ import com.joebywan.daybook.platform.readyBoard
 import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.LocalHaptics
 import com.joebywan.daybook.ui.LocalBoardArrives
 import com.joebywan.daybook.ui.LocalMoveCount
@@ -129,6 +132,7 @@ import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
 import com.joebywan.daybook.ui.tutorial.LocalChime
 import com.joebywan.daybook.ui.tutorial.TutorialRunner
+import com.joebywan.daybook.ui.tutorial.autoWalkthrough
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -174,6 +178,8 @@ fun PlayScreen(
     onNewGame: (() -> Unit)?,
     tutorialOffered: Boolean?,
     onTutorialOffered: () -> Unit,
+    /** Whether this puzzle has ever been solved, or has a game saved on any board; null until the store has answered. */
+    playedBefore: Boolean?,
     showTimer: Boolean,
     /** The level this board belongs to, if any: the subtitle says so where a daily shows its date. */
     level: Int?,
@@ -239,6 +245,15 @@ fun PlayScreen(
         if (offering || tutorialOffered == false) onTutorialOffered()
         offering = false
     }
+    // A first board starts the walkthrough by itself (autoWalkthrough), once the store has said what was solved and seen
+    // and the saved game has been read. Asked once per board (saved), and recorded as it opens, so it never comes back.
+    var autoAsked by rememberSaveable(initial) { mutableStateOf(false) }
+    LaunchedEffect(consulted, tutorialOffered, playedBefore) {
+        if (autoAsked || !consulted || tutorialOffered == null || playedBefore == null) return@LaunchedEffect
+        autoAsked = true
+        val played = game.state.moves + game.restarts.size + game.history.size
+        if (hasTutorial && finishPreview == null && autoWalkthrough(playedBefore, tutorialOffered, level != null, played)) openTutorial()
+    }
     // Arrows has no Undo, so its Restart is asked first once a move would be lost.
     var askStartOver by rememberSaveable(initial) { mutableStateOf(false) }
 
@@ -268,7 +283,8 @@ fun PlayScreen(
         if (consulted) return@LaunchedEffect
         val stored = restore()
         // Reading the store takes a moment; a tap that landed in the meantime outranks it.
-        if (stored != null && game == pristine) {
+        // A stored game that does not fit this board (a crafted backup) is dropped: the board starts fresh.
+        if (stored != null && game == pristine && stored.fits(initial)) {
             game = stored
             if (stored.state.solved) {
                 // Already counted; just the board, with the finish frame out of the way.
@@ -468,33 +484,36 @@ fun PlayScreen(
         // Title at the start, the one remaining action at the end. Centring what is left over
         // after removing the arrow would have hung the title 44dp off true, and padding the gap
         // back out would keep reserving room for a control that no longer exists.
-        Row(
-            Modifier.fillMaxWidth().padding(start = 18.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Nothing on Android, where the system back button is the way out.
-            BackButton(onBack)
-            Column(Modifier.weight(1f)) {
-                Text(
-                    puzzle.displayName,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = scheme.onBackground,
-                )
-                Text(
-                    buildString {
-                        append(difficulty.label)
-                        append(" · ")
-                        append(level?.let { "Level $it" } ?: day?.let { formatDate(it, PLAY_DATE) } ?: "Random")
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
-            Box(
-                Modifier.size(48.dp).clip(CircleShape).clickable { showRules = true },
-                contentAlignment = Alignment.Center,
+        // Held to the chrome cap: at 2x the date wrapped and the header took the board's room.
+        CappedFontScale {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 18.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.AutoMirrored.Filled.HelpOutline, "How to play", tint = scheme.onSurfaceVariant)
+                // Nothing on Android, where the system back button is the way out.
+                BackButton(onBack)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        puzzle.displayName,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = scheme.onBackground,
+                    )
+                    Text(
+                        buildString {
+                            append(difficulty.label)
+                            append(" · ")
+                            append(level?.let { "Level $it" } ?: day?.let { formatDate(it, PLAY_DATE) } ?: "Random")
+                        },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
+                Box(
+                    Modifier.size(48.dp).clip(CircleShape).clickable { showRules = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.HelpOutline, "How to play", tint = scheme.onSurfaceVariant)
+                }
             }
         }
 
@@ -507,13 +526,15 @@ fun PlayScreen(
         ) {
             // Hidden by the player's setting: still laid out, so the row, the board and the hint
             // popover (placed from this row's bottom) are exactly where they would be with it.
-            // The time keeps counting and is shown on the solved card.
-            Text(
-                text = formatClock(seconds),
-                style = MaterialTheme.typography.titleMedium,
-                color = scheme.onSurfaceVariant,
-                modifier = if (showTimer) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
-            )
+            // The time keeps counting and is shown on the solved card. It sets the row's height, so it is capped too.
+            CappedFontScale {
+                Text(
+                    text = formatClock(seconds),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = scheme.onSurfaceVariant,
+                    modifier = if (showTimer) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
+                )
+            }
             if (offering && game.history.isEmpty() && !hintSession.active && !state.solved) {
                 Box(Modifier.matchParentSize().background(scheme.background), contentAlignment = Alignment.Center) {
                     // What the puzzle is about, then the offer: two small lines (the longest tagline fits one at 360dp),
@@ -714,7 +735,7 @@ fun PlayScreen(
 
     if (showRules) {
         RulesDialog(
-            "How to play ${puzzle.displayName}", puzzle,
+            "How to play ${puzzle.displayName}", puzzle, difficulty,
             onWalkthrough = if (hasTutorial) ({ showRules = false; openTutorial() }) else null,
         ) { showRules = false }
     }
@@ -994,11 +1015,18 @@ private fun ToolButton(icon: ImageVector, label: String, modifier: Modifier, onC
 }
 
 /**
- * A puzzle's rules, scrolling, under [title]: the tagline first, then the bullets, with a "Got it" and, given [onWalkthrough],
- * a way into the walkthrough (the play screen's "?": the rules are a tap away, the walkthrough one more).
+ * A puzzle's rules, scrolling, under [title]: the tagline first, then the bullets, then what each tier changes (the board's
+ * own [difficulty] marked), with a "Got it" and, given [onWalkthrough], a way into the walkthrough (the play screen's "?":
+ * the rules are a tap away, the walkthrough one more).
  */
 @Composable
-internal fun RulesDialog(title: String, puzzle: PuzzleType, onWalkthrough: (() -> Unit)? = null, onDismiss: () -> Unit) {
+internal fun RulesDialog(
+    title: String,
+    puzzle: PuzzleType,
+    difficulty: Difficulty? = null,
+    onWalkthrough: (() -> Unit)? = null,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Got it") } },
@@ -1008,6 +1036,7 @@ internal fun RulesDialog(title: String, puzzle: PuzzleType, onWalkthrough: (() -
                 Text(puzzle.tagline, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(10.dp))
                 RulesList(puzzle)
+                TierList(puzzle, difficulty)
                 // In the text, not the button row: beside "Got it" a label this long wraps the row onto two lines.
                 onWalkthrough?.let {
                     Spacer(Modifier.height(12.dp))
@@ -1016,6 +1045,29 @@ internal fun RulesDialog(title: String, puzzle: PuzzleType, onWalkthrough: (() -
             }
         },
     )
+}
+
+/**
+ * "Standard · Hard · Expert", then a line each saying what that tier changes ([tierNotes]); the [current] tier's line is
+ * bold, in the primary colour, and says "this board", so it is marked by more than colour.
+ */
+@Composable
+private fun TierList(puzzle: PuzzleType, current: Difficulty?) {
+    val notes = tierNotes(puzzle.id)
+    if (notes.size != Difficulty.entries.size) return
+    Spacer(Modifier.height(14.dp))
+    Text(Difficulty.entries.joinToString(" · ") { it.label }, style = MaterialTheme.typography.titleSmall)
+    Spacer(Modifier.height(8.dp))
+    Difficulty.entries.forEachIndexed { i, d ->
+        val here = d == current
+        Text(
+            "${d.label}: ${notes[i]}" + if (here) " (this board)" else "",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (here) FontWeight.Bold else null,
+            color = if (here) MaterialTheme.colorScheme.primary else Color.Unspecified,
+        )
+        Spacer(Modifier.height(6.dp))
+    }
 }
 
 /**

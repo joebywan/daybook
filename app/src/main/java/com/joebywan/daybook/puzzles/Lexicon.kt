@@ -80,9 +80,7 @@ object Lexicon : PuzzleType {
         "Grey: the word has no (more) of that letter.",
         "A letter is marked only as many times as the word holds it, so a second E can be grey while the first is yellow.",
         "The keys keep the best clue for each letter.",
-        "Standard: five letters, six guesses.",
-        "Hard: five letters, five guesses.",
-        "Expert: four letters, seven guesses. Short words have more look-alikes.",
+        "Four-letter words have more look-alikes than five.",
     )
 
     override val keyboardHelp = listOf(
@@ -159,7 +157,7 @@ object Lexicon : PuzzleType {
 
     private fun tutorialBoard(guesses: Int, current: String = "") = LexiconState(
         length = 4,
-        maxGuesses = 6,
+        maxGuesses = 7, // Expert's shape: no tier has four letters and six guesses
         answer = TUTORIAL_ANSWER,
         guesses = TUTORIAL_GUESSES.take(guesses),
         current = current,

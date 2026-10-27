@@ -48,6 +48,8 @@ TIERS = ["standard", "hard", "expert"]
 BROWSERS = ["chromium", "webkit"]
 SCHEMES = ["light", "dark"]
 DEVICE_SCALE = 2
+# The progress store's set of puzzles whose walkthrough was opened (ProgressStore.tutorialsOffered).
+SEEN_KEY = "daybook.tutorials_offered"
 AFTER_TAP_SETTLE_S = 8
 
 # Console noise that is not the app's fault. Matched against the message text.
@@ -333,6 +335,9 @@ def build_parser():
     ap.add_argument("--storage", type=Path, metavar="JSON",
                     help="a JSON object of localStorage entries ({\"file.key\": \"value\"}) to seed before the page "
                          "loads, e.g. a saved game copied out of a browser; this is how a solved board is shown")
+    ap.add_argument("--first-visit", action="store_true",
+                    help="leave every walkthrough unseen, so a board opens on its walkthrough as for a new player "
+                         "(by default the harness marks them seen, to show the board itself)")
     ap.add_argument("--user-agent", metavar="UA",
                     help="browser user agent, e.g. an Android or iPhone one, for device-specific screens")
     ap.add_argument("--timeout", type=float, default=60, help="seconds to wait for a page to settle (default 60)")
@@ -365,7 +370,11 @@ def main(argv=None) -> int:
     except ImportError:
         print(f"error: pillow and numpy are needed (blank-frame detection).\n{SETUP_HINT}", file=sys.stderr)
         return 2
-    seed = json.loads(args.storage.read_text()) if args.storage else None
+    seed = json.loads(args.storage.read_text()) if args.storage else {}
+    if not args.first_visit:
+        # A first board of a puzzle starts its walkthrough by itself (autoWalkthrough); mark them all seen
+        # so the board is what gets shot. A --storage entry for the same key wins.
+        seed.setdefault(SEEN_KEY, json.dumps(all_ids))
     args.out.mkdir(parents=True, exist_ok=True)
 
     from playwright.sync_api import sync_playwright
@@ -381,8 +390,8 @@ def main(argv=None) -> int:
             try:
                 for (w, h) in sizes:
                     for scheme in schemes:
-                        # A fresh context per size and scheme: empty localStorage, so every board is
-                        # a first visit (the walkthrough offer line is on screen, as for a new player).
+                        # A fresh context per size and scheme: localStorage holds only the seed, so every
+                        # board is unplayed (with --first-visit, it opens on its walkthrough as for a new player).
                         ctx = browser.new_context(
                             viewport={"width": w, "height": h}, device_scale_factor=DEVICE_SCALE,
                             has_touch=True, color_scheme=scheme, locale="en-US",

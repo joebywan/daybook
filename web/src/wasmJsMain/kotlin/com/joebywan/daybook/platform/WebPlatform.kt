@@ -18,10 +18,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -205,6 +207,23 @@ const val OFFERS_BACKUP: Boolean = true
 fun BackupControls() {
     val scheme = MaterialTheme.colorScheme
     var message by remember { mutableStateOf<String?>(null) }
+    // A backup picked and read, waiting for the player to say it may replace what is here.
+    var pending by remember { mutableStateOf<Backup.Pending?>(null) }
+    pending?.let { p ->
+        fun solves(n: Int) = if (n == 1) "1 solve" else "$n solves"
+        AlertDialog(
+            onDismissRequest = { pending = null },
+            title = { Text("Replace your progress?") },
+            text = {
+                Text(
+                    "This browser has ${solves(p.solvesHere)}; the backup has ${solves(p.solvesInBackup)}. " +
+                        "Importing replaces everything here with the backup.",
+                )
+            },
+            confirmButton = { TextButton(onClick = { pending = null; message = Backup.restore(p) }) { Text("Replace") } },
+            dismissButton = { TextButton(onClick = { pending = null; message = "Nothing imported." }) { Text("Cancel") } },
+        )
+    }
     Column(
         Modifier
             .fillMaxWidth()
@@ -219,7 +238,7 @@ fun BackupControls() {
                 message = Backup.export()
             }
             BackupButton("Import", Modifier.weight(1f)) {
-                Backup.import { result -> message = result }
+                Backup.import(onError = { message = it }, onReady = { pending = it })
             }
         }
         // Reserved, so a message appearing does not move the buttons.

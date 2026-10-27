@@ -77,6 +77,7 @@ import com.joebywan.daybook.ui.stats.TechniquesScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import com.joebywan.daybook.ui.theme.Appearance
 import com.joebywan.daybook.ui.theme.DaybookTheme
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -240,6 +241,11 @@ private fun DaybookScreens(
     // Null until the store has answered, so a returning player never sees the walkthrough offer
     // flash up for the instant before their "already offered" loads.
     val tutorialsOffered by store.tutorialsOffered.collectAsState(initial = null)
+    // The puzzles ever solved or with a game saved on any board, null until loaded: a first board's walkthrough must not
+    // start for a player who has played the puzzle, including one updating with a game of it in progress.
+    val playedPuzzles by remember(store) {
+        store.completions.combine(store.puzzlesWithSaves) { all, saved -> all.mapTo(HashSet(saved)) { it.puzzleId } }
+    }.collectAsState(initial = null)
 
     // Saveable, so turning the phone keeps the player on their board. Under plain `remember` a
     // rotation dropped them back on Home, which also made every rememberSaveable below Play
@@ -263,7 +269,9 @@ private fun DaybookScreens(
     val playSolveSound = rememberSolveSoundPlayer(playSound)
     val (vibrate, setVibrate) = rememberPref(launchPrefs.vibrate, true, launchPrefs::setVibrate)
     val haptics = rememberHaptics(vibrate)
-    val reducedMotion = rememberReducedMotion()
+    // The player's choice in Settings, or the device's (the default): Accessibility in SettingsScreen.
+    val (motionChoice, setMotionChoice) = rememberPref(launchPrefs.reducedMotion, MotionChoice.DEVICE, launchPrefs::setReducedMotion)
+    val reducedMotion = motionChoice.reduced(rememberReducedMotion())
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
     // back to Daily, because that is what the app is for.
     var mode by rememberSaveable { mutableStateOf(startMode) }
@@ -460,6 +468,8 @@ private fun DaybookScreens(
             onPlaySound = setPlaySound,
             vibrate = vibrate,
             onVibrate = setVibrate,
+            motionChoice = motionChoice,
+            onMotionChoice = setMotionChoice,
             appearance = appearance,
             onAppearance = onAppearance,
             customOrder = customOrder.isNotEmpty(),
@@ -516,7 +526,8 @@ private fun DaybookScreens(
             val puzzle = PuzzleRegistry.byId(current.puzzleId)
             val level = current.level
             // A level board's tier and seed come from its level's plan, read with the pool size it was opened with.
-            val levelBoard = level?.let { n -> loadedLevels?.plan(n)?.firstOrNull { it.puzzleId == current.puzzleId } }
+            // A level not unlocked (a crafted `&level=` link or saved route) has no board, so it goes home.
+            val levelBoard = level?.let { n -> loadedLevels?.board(n, current.puzzleId) }
             if (puzzle == null || (level != null && loadedLevels != null && levelBoard == null)) {
                 // A saved route can name a puzzle that no longer exists. Navigating has to happen
                 // in an effect rather than inline: writing state while composing is what starts a
@@ -658,6 +669,7 @@ private fun DaybookScreens(
                     },
                     tutorialOffered = tutorialsOffered?.let { puzzle.id in it },
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
+                    playedBefore = playedPuzzles?.let { puzzle.id in it },
                     showTimer = showTimer,
                     level = level,
                     onTaught = { technique -> scope.launch { store.recordTechniqueMet(puzzle.id, technique) } },

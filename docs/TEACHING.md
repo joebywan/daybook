@@ -56,10 +56,11 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
   (`LocalHighlightBounds`): `highlightGrid(cols, rows)` on an even grid's node, `highlightAnchor(i)`
   on one element that is itself a highlight index (Tower, Sudoku's keys), `reportHighlight { }` for
   custom geometry (Atoms: an atom's cell, a line's two atoms). A new board must report or the
-  popover assumes "below". Outside the play screen (the walkthrough) the local is null and these
-  do nothing.
-- The walkthrough's `TutorialRunner` keeps its own fixed `HintSlotHeight` (156dp) slot: its board
-  never changes size either way.
+  popover assumes "below". The walkthrough provides one too, for a free-play frame's hint popover.
+- The walkthrough's `TutorialRunner` sizes the slot under its board once, from its own text (the tallest caption plus
+  that frame's feedback lines, at most 156dp; captions a size down under 640dp tall), and a free-play frame's hint is a
+  popover as in play, so its board never changes size between frames or when a hint opens. At 375x537 that gave
+  boards 55-105dp more height than the old fixed 156dp slot (measured on every walkthrough, PR #358).
 - The finish is a compact "Congratulations!" frame (`FinishedFrame`) docked to the bottom of the play screen, an
   overlay with the time, hints and next-step tiles; the toolbar stays laid out (hidden), so
   completing a puzzle cannot resize the board. It is docked on every height: centred, it hid 50-58% of

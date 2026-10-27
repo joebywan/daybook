@@ -30,6 +30,9 @@ sounded. Do not turn it off.
   `hash(date, puzzleId, difficulty)`, so purity is what makes the whole archive free and offline.
 - `PuzzleState` is a sealed `@Serializable` interface living in `puzzles/` — Kotlin requires
   sealed implementations to share the sealed type's *package*, not merely its module.
+- `core/TierNotes.kt` says, one line per tier, what the player sees change (a size, a count, what is given; never
+  "harder"); the rules sheet ("?") shows them with the board's tier marked. `TierNotesTest` fails a registered puzzle
+  without three, and a tier change needs its line changed in the same PR.
 - `Preview(modifier)` draws a fixed motif for the home grid. **Never call `generate()` in it** —
   every one of them draws on every composition.
 
@@ -45,6 +48,9 @@ practised on real positions found by walking generated boards by hints (`core/Tr
 `training_passed` key set, two appended achievements), opened from Settings and a Sudoku hint's "Practise this":
 `docs/TRAINING_SPEC.md`. What must not be broken:
 
+- A puzzle's first board opens on its walkthrough, once (`autoWalkthrough`: never solved, never opened, not a level
+  board, no saved moves; Skip one tap). The offer line and the "?" sheet are the way back. `tools/render/render.py` marks
+  every walkthrough seen unless `--first-visit`, so a fresh context still shoots the board.
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the panel confirms
   when `isReached` sees it. Only an explicit "Show me" applies it. **One hint is counted per deduction opened.**
 - **The solver must not be able to see the answer.** A teacher's reasoning entry point takes only visible
@@ -800,7 +806,7 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
 
 ## Motion and haptics
 
-The system's reduced-motion setting (`LocalReducedMotion`) stills decoration; the hint glow is `ui/Motion.kt`'s
+The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
 A move's feel (the changed squares settle, a unit finished by the rules glows once) is `ui/MoveFeel.kt`'s
@@ -882,8 +888,11 @@ Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` vi
 `Palette.kt` names no family. Static instances only; how they were made and cut: `docs/WEB_BUILD.md` (Fonts).
 
 **Glyphs inside a board are sized from their square with `boardSp()` (`ui/BoardText.kt`), never `(cell.value * k).sp`**, so the
-system font size cannot push them out of their square; text outside the grid scales. Rule and the line-height catch:
+system font size cannot push them out of their square; text outside the grid scales, but chrome in a fixed slot (play
+header, tier pills, pen buttons, tile names) stops at 1.3x (`CappedFontScale`; web `?fontscale=2` to check). Rule and the line-height catch:
 `docs/PUZZLE_STANDARDS.md` section 6; `BoardTextSizeTest` fails on the old pattern.
+Digits take a role from the one scale, `BoardGlyph` in the same file (given, entered, clue, corner, note: a share of
+the square and a weight); heavy region walls and frames take `ColorScheme.wall` (`ui/BoardDraw.kt`), never black or `onBackground`.
 
 ## Colour
 

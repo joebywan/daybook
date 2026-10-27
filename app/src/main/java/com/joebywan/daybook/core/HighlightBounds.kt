@@ -65,7 +65,7 @@ class HighlightBounds {
 infix fun Rect.union(other: Rect): Rect =
     Rect(minOf(left, other.left), minOf(top, other.top), maxOf(right, other.right), maxOf(bottom, other.bottom))
 
-/** Null where nothing is listening (the walkthrough), in which case boards report nothing. */
+/** Null where nothing is listening (the home grid's motifs, Training), in which case boards report nothing. */
 val LocalHighlightBounds = staticCompositionLocalOf<HighlightBounds?> { null }
 
 /**
