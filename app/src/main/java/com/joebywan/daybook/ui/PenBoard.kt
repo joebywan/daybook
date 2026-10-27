@@ -167,7 +167,8 @@ fun PenRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Canvas(Modifier.size(20.dp)) { icon(option) }
-                Text(label(option), style = MaterialTheme.typography.labelLarge, color = scheme.onSurface)
+                // A fixed 124 x 46 button: "Remove" clipped at 2x.
+                CappedFontScale { Text(label(option), style = MaterialTheme.typography.labelLarge, color = scheme.onSurface, maxLines = 1) }
             }
         }
     }

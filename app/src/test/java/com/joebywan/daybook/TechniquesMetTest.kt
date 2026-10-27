@@ -45,7 +45,7 @@ class TechniquesMetTest {
         assertEquals(listOf("words", "sudoku"), page.map { it.puzzleId })
         val sudoku = page[1].techniques
         assertEquals(techniqueNamesOf("sudoku").values.toList(), sudoku.map { it.name })
-        assertEquals(listOf(MetTechnique("a cell with one digit left", true)), sudoku.filter { it.met })
+        assertEquals(listOf(MetTechnique("a square with one digit left", true)), sudoku.filter { it.met })
         // "a good opening word" points at a guess rather than teaching a way of seeing, so it is not on the page.
         assertEquals(listOf("a letter pinned to its slot"), page[0].techniques.filter { it.met }.map { it.name })
         assertEquals(praisedTechniquesOf("words").size, page[0].techniques.size)

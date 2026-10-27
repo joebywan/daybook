@@ -242,7 +242,7 @@ class PearlsTeachingTest {
             val step = PearlsTeacher.teach(s)!!
             assertEquals("$d/$seed", PearlsTeacher.MISTAKE, step.technique)
             assertTrue(step.clears.single() <= e)
-            assertTrue(step.explanation, if (wrong == '-') "Rub it out" in step.explanation else "take the cross off" in step.explanation)
+            assertTrue(step.explanation, if (wrong == '-') "Rub it out" in step.explanation else "take it off" in step.explanation)
             // Taking it back clears the hint.
             val fixed = applied(s, step)
             assertTrue(Pearls.reached(fixed, step, s.edges))

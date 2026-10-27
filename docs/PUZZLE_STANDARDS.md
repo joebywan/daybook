@@ -261,14 +261,17 @@ and palette), **Snap** (continuous drag), **Sudoku** / **Tower** (controls besid
 - **System font size: glyphs in a board are sized from their square, never by the font size.** A digit, letter,
   clue or label drawn in a square (or a fixed slot of the board: a peg, a table cell) takes its size from that
   square with `(cell * 0.5f).boardSp()` (`ui/BoardText.kt`), or `toSp()` in a draw scope, so it fits at any font
-  scale. Never `(cell.value * 0.5f).sp`: that grows with the system setting and clips (Sudoku's digits at 2x,
+  scale. A digit takes its share and weight from the one scale, `BoardGlyph` (given, entered, clue beside the grid, corner
+  label, pencil mark): `BoardGlyph.GIVEN.style(cell)` for a `Text`, `boardStyle(BoardGlyph.CLUE, px)` in a draw scope. Never `(cell.value * 0.5f).sp`: that grows with the system setting and clips (Sudoku's digits at 2x,
   cage totals over half a square). A label in a key of fixed dp height (Lexicon's, Crossword's and Codeword's
   keyboards) is a slot too. Give such a `Text` a `lineHeight` from the same size (`size * 1.2f`), or it inherits
   the theme's sp line height, which does scale (Target's number vanished at 2x). Text outside the grid (headers,
   captions, clue lists, buttons that grow with their label) keeps plain `sp` and `MaterialTheme.typography`, and
-  scales. `test/BoardTextSizeTest` fails on the scaling pattern. To look at a board at a font scale, a local
-  `Density(d.density, fontScale)` around `DaybookApp` in `web/.../WebApp.kt` and the render harness will do.
-- **A double tap has a long press as its twin** (Tents' tent, Kings' crown, Dominoes' turn; Lamps' lamp not yet, `docs/TODO.md`), given as
+  scales, except chrome in a fixed slot (the play header and clock, tier pills, pen buttons, a home tile's name, a
+  board's own text-only buttons), which stops at 1.3x inside `CappedFontScale` (`ui/BoardText.kt`): at 2x those
+  wrapped mid-word or took the board's room. `test/BoardTextSizeTest` fails on the scaling pattern. To look at a
+  screen at a font scale, render the web build with `--query fontscale=2`.
+- **A double tap has a long press as its twin** (Tents' tent, Kings' crown, Dominoes' turn, Lamps' lamp), given as
   `onLongPress` to `detectTapGestures`, which never delays a tap; `onDoubleTap` would, so double taps are counted
   by hand. Rules text and the walkthrough name both.
 - **Feedback must not move the board.** Reserve the space (`minLines == maxLines`) or float over the content.

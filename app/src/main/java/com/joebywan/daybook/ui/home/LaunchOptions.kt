@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.data.KeyValueStore
+import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.MotionChoice
 import com.joebywan.daybook.ui.theme.Appearance
@@ -298,13 +299,17 @@ internal fun <T> SegmentedControl(
                     .padding(vertical = verticalPadding),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    label(option),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    // The ink follows the pill across, so a label is never light on the bare track.
-                    color = lerp(scheme.onSurfaceVariant, onTone, (1f - abs(at - i)).coerceIn(0f, 1f)),
-                )
+                // Capped: at 2x the pill broke "Standar/d".
+                CappedFontScale {
+                    Text(
+                        label(option),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        // The ink follows the pill across, so a label is never light on the bare track.
+                        color = lerp(scheme.onSurfaceVariant, onTone, (1f - abs(at - i)).coerceIn(0f, 1f)),
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }

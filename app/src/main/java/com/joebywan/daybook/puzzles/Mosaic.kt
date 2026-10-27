@@ -34,7 +34,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -60,6 +59,9 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawWalls
+import com.joebywan.daybook.ui.wall
+import com.joebywan.daybook.ui.BoardGlyph
+import com.joebywan.daybook.ui.boardStyle
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
@@ -1017,7 +1019,7 @@ object Mosaic : PuzzleType {
                 )
             }
 
-            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, stepPx, stepPx * 0.1f, scheme.onBackground) { PREVIEW_CELLS[it] }
+            drawWalls(PREVIEW_SIDE, PREVIEW_SIDE, stepPx, stepPx * 0.1f, scheme.wall) { PREVIEW_CELLS[it] }
         }
     }
 
@@ -1110,7 +1112,7 @@ object Mosaic : PuzzleType {
                         val fill = palette[s.cells[cell]]
                         val layout = measurer.measure(
                             (s.cells[cell] + 1).toString(),
-                            TextStyle(color = BoardHues.onFill(fill), fontSize = (stepPx * 0.34f).toSp(), fontWeight = FontWeight.Bold),
+                            boardStyle(BoardGlyph.CORNER, stepPx).copy(color = BoardHues.onFill(fill)),
                         )
                         drawText(
                             layout,
@@ -1123,7 +1125,7 @@ object Mosaic : PuzzleType {
 
                     // Heavy strokes only where the colour changes, so each area reads as one
                     // outlined shape rather than a grid of tiles.
-                    drawWalls(s.width, s.height, stepPx, stepPx * 0.1f, scheme.onBackground) { s.cells[it] }
+                    drawWalls(s.width, s.height, stepPx, stepPx * 0.1f, scheme.wall) { s.cells[it] }
 
                     if (!highlight.isEmpty) {
                         // Everything the hint does not name steps back, so the glow is findable on
@@ -1131,7 +1133,7 @@ object Mosaic : PuzzleType {
                         drawHintDim(highlight, s.width, s.height, stepPx, scheme.background)
 
                         // A band of page colour just inside the glow, so a strong rim reads as
-                        // something other than one more of the black seams between areas. Widths
+                        // something other than one more of the seams between areas. Widths
                         // checked in a rendered mock, light and dark: much wider and the band eats
                         // a one-cell arm's colour.
                         hintRims(highlight, stepPx, glow, pulse.value, scheme.background) { set, width, colour ->

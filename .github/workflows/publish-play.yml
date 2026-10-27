@@ -48,6 +48,7 @@ permissions:
 jobs:
   upload:
     runs-on: ubuntu-26.04
+    environment: release   # holds the Play service account
     steps:
       # Play is live, so a missing key is a failed release, not a skipped one.
       - name: Is Play configured?
@@ -56,7 +57,9 @@ jobs:
         run: |
           test -n "$PLAY_JSON" || { echo "::error::PLAY_SERVICE_ACCOUNT_JSON is not set; nothing was uploaded to Play."; exit 1; }
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Fetch the bundle from the release
         env:
@@ -79,7 +82,7 @@ jobs:
           test "$n" -le 500 || { echo "::error::changelogs/default.txt is $n characters; Play allows 500."; exit 1; }
 
       - name: Upload to Play
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.joebywan.daybook
