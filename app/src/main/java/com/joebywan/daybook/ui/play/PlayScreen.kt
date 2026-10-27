@@ -131,6 +131,7 @@ import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
 import com.joebywan.daybook.ui.tutorial.LocalChime
 import com.joebywan.daybook.ui.tutorial.TutorialRunner
+import com.joebywan.daybook.ui.tutorial.autoWalkthrough
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -176,6 +177,8 @@ fun PlayScreen(
     onNewGame: (() -> Unit)?,
     tutorialOffered: Boolean?,
     onTutorialOffered: () -> Unit,
+    /** Whether this puzzle has ever been solved, at any tier in any mode; null until the store has answered. */
+    solvedBefore: Boolean?,
     showTimer: Boolean,
     /** The level this board belongs to, if any: the subtitle says so where a daily shows its date. */
     level: Int?,
@@ -240,6 +243,15 @@ fun PlayScreen(
         showTutorial = true
         if (offering || tutorialOffered == false) onTutorialOffered()
         offering = false
+    }
+    // A first board starts the walkthrough by itself (autoWalkthrough), once the store has said what was solved and seen
+    // and the saved game has been read. Asked once per board (saved), and recorded as it opens, so it never comes back.
+    var autoAsked by rememberSaveable(initial) { mutableStateOf(false) }
+    LaunchedEffect(consulted, tutorialOffered, solvedBefore) {
+        if (autoAsked || !consulted || tutorialOffered == null || solvedBefore == null) return@LaunchedEffect
+        autoAsked = true
+        val played = game.state.moves + game.restarts.size + game.history.size
+        if (hasTutorial && finishPreview == null && autoWalkthrough(solvedBefore, tutorialOffered, level != null, played)) openTutorial()
     }
     // Arrows has no Undo, so its Restart is asked first once a move would be lost.
     var askStartOver by rememberSaveable(initial) { mutableStateOf(false) }

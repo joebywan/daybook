@@ -406,7 +406,10 @@ Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.
 - Offered as one passive line over the clock (tagline, then "One-minute walkthrough") on every visit, until the first
   move of that visit, until the player has opened the walkthrough or solved the puzzle once at any tier; either is
   recorded in `ProgressStore.tutorialsOffered` (a player whose set already held a puzzle under the old once-only rule
-  is not offered it again). No popups, no focus stealing. "How to play" (`?`) opens a rules sheet (tagline, the `rules`
+  is not offered it again). No popups, no focus stealing, with one exception: **a first board opens on its
+  walkthrough** (`autoWalkthrough` in `TutorialRunner.kt`): a puzzle never solved (`Completion`s, any tier and mode) and
+  never opened (`tutorialsOffered`), not a level board, not a restored game with moves. Recorded as it opens, so once per
+  puzzle; Skip leaves at once. Players from before it who played a puzzle have a solve or a save for it. "How to play" (`?`) opens a rules sheet (tagline, the `rules`
   list, "Play the one-minute walkthrough"); the `rules` list is also the runner's "Rules" button. Skip is always on screen.
 - Frame, board and hint state are transient (never in a saved game). The walkthrough draws over the game, so
   the board, undo stack and clock are where the player left them, and the clock pauses.
@@ -443,7 +446,9 @@ Interactive, played on the puzzle's real `Board` by `ui/tutorial/TutorialRunner.
 6. **Finish with a free-play frame** (`freePlay = true`): every move applies, hints are available (when the puzzle
    offers them) and the frame ends when the board is solved. The test must prove hints alone finish it with no
    fallback and no mistake.
-7. Captions: at most four lines in the runner's fixed `HintSlotHeight` (156 dp) slot; the tests cap them at
+7. Captions: at most four lines. The runner's slot under the board is sized from the walkthrough's own text (its
+   tallest caption plus that frame's feedback lines, measured once, at most `MaxCaptionSlot`, 156 dp), so the longest
+   caption costs every frame's board its room; the tests cap them at
    170 chars (LITS, Sudoku, Tower, Sets) or 200 (Snap). Teach with the board's own numbers and names, not
    abstractions (Kings builds region names with `regionNames`).
 

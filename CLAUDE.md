@@ -48,6 +48,9 @@ practised on real positions found by walking generated boards by hints (`core/Tr
 `training_passed` key set, two appended achievements), opened from Settings and a Sudoku hint's "Practise this":
 `docs/TRAINING_SPEC.md`. What must not be broken:
 
+- A puzzle's first board opens on its walkthrough, once (`autoWalkthrough`: never solved, never opened, not a level
+  board, no saved moves; Skip one tap). The offer line and the "?" sheet are the way back. `tools/render/render.py` marks
+  every walkthrough seen unless `--first-visit`, so a fresh context still shoots the board.
 - UX, settled by the owner: tap 1 nudges, tap 2 explains, the **player makes the move**, and the panel confirms
   when `isReached` sees it. Only an explicit "Show me" applies it. **One hint is counted per deduction opened.**
 - **The solver must not be able to see the answer.** A teacher's reasoning entry point takes only visible
