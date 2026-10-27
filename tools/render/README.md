@@ -48,8 +48,8 @@ change; keep it out of the repo tree) as `<puzzle>-<tier>-<W>x<H>-<scheme>-<brow
 
 Each page is served from a private port on 127.0.0.1 (chosen by the OS, with `.wasm` served as
 `application/wasm`) that is shut down on exit. Each viewport/scheme gets a fresh browser context, so
-every board is a first visit with empty `localStorage`: the walkthrough offer line is showing, as it
-would for a new player. The service worker is blocked so a rebuilt dist is never masked by a cached one.
+every board is unplayed. Every walkthrough is marked seen (`daybook.tutorials_offered`), since a first board
+opens on its walkthrough by itself; `--first-visit` leaves them unseen to show that. The service worker is blocked so a rebuilt dist is never masked by a cached one.
 
 ### How it waits
 

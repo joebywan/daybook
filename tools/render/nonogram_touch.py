@@ -152,6 +152,8 @@ def run(ctx, url, browser, tier, w, h, scheme, date):
     page = ctx.new_page()
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))
+    # The walkthrough seen, so the board opens rather than its first-visit walkthrough.
+    page.add_init_script("localStorage.setItem(%r, %r)" % (R.SEEN_KEY, '["nonogram"]'))
     page.goto(f"{url}?date={date}&tier={tier}&puzzle=nonogram", wait_until="load")
     png0 = shot(page)
     L = find_layout(png0, n)

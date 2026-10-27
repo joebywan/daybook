@@ -42,6 +42,7 @@ fun DaybookWebApp(params: Map<String, String>) {
         when {
             params["screen"] == "levels" -> Route.Levels(level)
             params["screen"] == "stats" -> Route.Stats
+            params["screen"] == "settings" -> Route.Settings
             params["screen"] == "techniques" -> Route.Techniques
             params["screen"] == "training" -> Route.Training(params["technique"])
             params["screen"] == "archive" && puzzleParam != null ->

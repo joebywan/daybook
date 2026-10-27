@@ -240,6 +240,9 @@ private fun DaybookScreens(
     // Null until the store has answered, so a returning player never sees the walkthrough offer
     // flash up for the instant before their "already offered" loads.
     val tutorialsOffered by store.tutorialsOffered.collectAsState(initial = null)
+    // The puzzles ever solved, null until loaded: a first board's walkthrough must not start for a solver before this arrives.
+    val solvedPuzzles by remember(store) { store.completions.map { all -> all.mapTo(HashSet()) { it.puzzleId } } }
+        .collectAsState(initial = null)
 
     // Saveable, so turning the phone keeps the player on their board. Under plain `remember` a
     // rotation dropped them back on Home, which also made every rememberSaveable below Play
@@ -263,7 +266,9 @@ private fun DaybookScreens(
     val playSolveSound = rememberSolveSoundPlayer(playSound)
     val (vibrate, setVibrate) = rememberPref(launchPrefs.vibrate, true, launchPrefs::setVibrate)
     val haptics = rememberHaptics(vibrate)
-    val reducedMotion = rememberReducedMotion()
+    // The player's choice in Settings, or the device's (the default): Accessibility in SettingsScreen.
+    val (motionChoice, setMotionChoice) = rememberPref(launchPrefs.reducedMotion, MotionChoice.DEVICE, launchPrefs::setReducedMotion)
+    val reducedMotion = motionChoice.reduced(rememberReducedMotion())
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
     // back to Daily, because that is what the app is for.
     var mode by rememberSaveable { mutableStateOf(startMode) }
@@ -460,6 +465,8 @@ private fun DaybookScreens(
             onPlaySound = setPlaySound,
             vibrate = vibrate,
             onVibrate = setVibrate,
+            motionChoice = motionChoice,
+            onMotionChoice = setMotionChoice,
             appearance = appearance,
             onAppearance = onAppearance,
             customOrder = customOrder.isNotEmpty(),
@@ -659,6 +666,7 @@ private fun DaybookScreens(
                     },
                     tutorialOffered = tutorialsOffered?.let { puzzle.id in it },
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
+                    solvedBefore = solvedPuzzles?.let { puzzle.id in it },
                     showTimer = showTimer,
                     level = level,
                     onTaught = { technique -> scope.launch { store.recordTechniqueMet(puzzle.id, technique) } },

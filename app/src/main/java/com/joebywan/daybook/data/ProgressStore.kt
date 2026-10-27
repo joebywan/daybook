@@ -455,9 +455,8 @@ class ProgressStore(private val store: KeyValueStore) {
     }
 
     /**
-     * Puzzles whose walkthrough has been offered. The offer is one passive line under the board,
-     * shown on a player's first visit and never again — recorded as soon as it is shown, not when
-     * it is taken up, because an offer that returned until accepted would be nagging.
+     * Puzzles that no longer need their walkthrough offered: it was opened (by the player, or by itself on a first
+     * board: `autoWalkthrough`), or the puzzle was solved. Builds before the offer line returned recorded it when shown.
      */
     val tutorialsOffered: Flow<Set<String>> = store.stringSet(KEY_TUTORIALS_OFFERED)
 
