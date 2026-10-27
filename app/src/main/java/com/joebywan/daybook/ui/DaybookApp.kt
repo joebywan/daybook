@@ -263,7 +263,9 @@ private fun DaybookScreens(
     val playSolveSound = rememberSolveSoundPlayer(playSound)
     val (vibrate, setVibrate) = rememberPref(launchPrefs.vibrate, true, launchPrefs::setVibrate)
     val haptics = rememberHaptics(vibrate)
-    val reducedMotion = rememberReducedMotion()
+    // The player's choice in Settings, or the device's (the default): Accessibility in SettingsScreen.
+    val (motionChoice, setMotionChoice) = rememberPref(launchPrefs.reducedMotion, MotionChoice.DEVICE, launchPrefs::setReducedMotion)
+    val reducedMotion = motionChoice.reduced(rememberReducedMotion())
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
     // back to Daily, because that is what the app is for.
     var mode by rememberSaveable { mutableStateOf(startMode) }
@@ -460,6 +462,8 @@ private fun DaybookScreens(
             onPlaySound = setPlaySound,
             vibrate = vibrate,
             onVibrate = setVibrate,
+            motionChoice = motionChoice,
+            onMotionChoice = setMotionChoice,
             appearance = appearance,
             onAppearance = onAppearance,
             customOrder = customOrder.isNotEmpty(),
