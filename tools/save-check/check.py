@@ -18,6 +18,7 @@ import glob, json, os, re, subprocess, sys, time, xml.etree.ElementTree as ET
 PKG = "com.joebywan.daybook"
 STORE = f"/data/data/{PKG}/files/datastore/daybook.preferences_pb"
 KEY = "saved_games"  # ProgressStore.KEY_SAVED
+OFFERED = "tutorials_offered"  # ProgressStore.KEY_TUTORIALS_OFFERED: Sudoku's walkthrough seen, so it never opens over the board
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 
 
@@ -36,9 +37,9 @@ def ld(field, payload):
             return v + payload
 
 
-def encode(strings):
+def encode(key, strings):
     value = ld(6, b"".join(ld(1, s.encode()) for s in strings))
-    return ld(1, ld(1, KEY.encode()) + ld(2, value))
+    return ld(1, ld(1, key.encode()) + ld(2, value))
 
 
 def fields(buf):
@@ -98,7 +99,7 @@ def run(batch):
     adb("shell", "am", "force-stop", PKG)
     injected = [json.dumps(e, separators=(", ", ": ")) for e in batch.values()]
     local = os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "save-check.pb")
-    with open(local, "wb") as f: f.write(encode(injected))
+    with open(local, "wb") as f: f.write(encode(KEY, injected) + encode(OFFERED, ["sudoku"]))
     adb("push", local, "/data/local/tmp/save-check.pb")
     owner = adb("shell", f"stat -c %u:%g /data/data/{PKG}").strip()
     context = adb("shell", f"stat -c %C /data/data/{PKG}").strip()

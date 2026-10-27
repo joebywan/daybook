@@ -441,6 +441,11 @@ class ProgressStore(private val store: KeyValueStore) {
             .mapTo(mutableSetOf()) { it.key }
     }
 
+    /** The puzzles with a saved game on any board, read as far as their keys: a player who has played one is no newcomer to it. */
+    val puzzlesWithSaves: Flow<Set<String>> = store.stringSet(KEY_SAVED).map { raw ->
+        raw.mapNotNullTo(HashSet()) { r -> runCatching { SavedJson.decodeFromString<StoredKey>(r).key.substringBefore('|') }.getOrNull() }
+    }
+
     suspend fun clearSavedGame(key: String) {
         store.updateStringSet(KEY_SAVED) { raw ->
             SavedGames.without(raw.savedGames(), key).encodeAll()

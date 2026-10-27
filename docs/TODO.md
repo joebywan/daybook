@@ -37,6 +37,9 @@ from a measurement or review, so you can check it is still true.
 - [ ] **Walkthroughs: two moves not walked through.** Every walkthrough follows the style rules (`docs/PUZZLE_STANDARDS.md`
   section 8). Not walked through, because neither emits a state a frame could ask for: Word Wheel's Shuffle (a labelled
   button) and Sand's refused pour (it shakes and tints). *S.*
+- [ ] **Walkthroughs on a wide window stack.** On a tablet in landscape the first-board walkthrough draws the stacked phone
+  layout, not the side panel the play screen uses (`PlayLayout`). Seen while recapturing the README shots (2026-10-27); not checked
+  on the web.
 - [ ] **Web: a touch right after a mouse gesture may be dropped.** Driving the walkthroughs in Playwright (Chromium and
   WebKit), the first touch tap after a mouse drag or click did nothing (Shikaku's remove, LITS's 2x2, Atoms' gap); the
   same taps by mouse, and by touch on the Android emulator, work. Probably the harness mixing pointer types, but a
