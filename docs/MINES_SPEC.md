@@ -146,8 +146,9 @@ A year of daily boards per tier (`MinesRulesTest`, `build/reports/mines-generati
 - Opening (share of the safe squares open at load): median 35 / 25 / 26%, at most 44 / 44 / 45% (the cap).
 - Generation, desktop JVM, ms median / p95 / max: 0.3 / 1.3 / 4.1, 0.4 / 2.1 / 8.7, 2.6 / 12.4 / 27.1 (8x12 was 2.5 / 12.1 / 30.9).
   Chromium: 0.7 / 2.7 / 6.8, 0.9 / 3.7 / 12.3, 6.9 / 32.4 / 54.3 at 8x12. WebKit: 1 / 3 / 7, 1 / 4 / 10, 7 / 28 / 63 at 8x12.
-  Expert at 9x10, on a busier machine (Standard measured about twice its numbers above in the same run): Chromium 13.8 / 63 / 121,
-  WebKit 16 / 71 / 180; against Standard in that run (1.4 / 7.3 / 13.2, 2 / 7 / 17) it costs what 8x12 did.
+  Re-measured at 9x10 (2026-10-27), a year a tier: Chromium 0.3 / 1.2 / 3.1, 0.4 / 1.9 / 5.5, 2.9 / 13 / 31; WebKit 1 / 2 / 3,
+  1 / 2 / 8, 4 / 17 / 42; JVM 0.3 / 1.4 / 2.5, 0.3 / 1.3 / 4.4, 1.4 / 6.9 / 17 (a quiet machine, load 1-3 on 32 cores).
+  (The first 9x10 figures, 13.8 / 63 / 121 in Chromium and 16 / 71 / 180 in WebKit, came from a busy machine.)
 - Hints alone (200 boards per tier, `MinesTeachingTest`): 20.8 / 32.8 / 39.5 steps per board; subset 0 / 2.1 / 2.6, pair 0 / 0.8 / 1.2,
   count against the numbers 0 / 0 / 0.9, what-if 0 / 0 / 0.11 per board; the plain count appears on 2 Expert boards of 200 (each also
   needs the count against the numbers or a what-if). Expert at 8x12 was 42.8 steps, subset 2.8, pair 1.2, against the numbers 0.9,

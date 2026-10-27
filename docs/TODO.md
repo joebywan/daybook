@@ -55,8 +55,9 @@ from a measurement or review, so you can check it is still true.
   glow ring is now rounded to match its clip but has not been seen rendered (no way to reach a promotion in the web harness; a
   `?fen=` style hook would do it). *S.*
 - [ ] **Regions: README screenshots.** (Its sparser boards came with the locked candidate.) *S.*
-- [ ] **Regions: Expert's fill is slow in the browser.** `randomBoard` is about 85 ms of a 9x9 draw on the JVM, and Expert
-  generation is 187 ms median, 0.8 s p95, 1.7 s worst in Chromium (it was as slow before the depth gate). A cheaper fill
+- [ ] **Regions: Expert's fill is slow in the browser.** `randomBoard` is about 85 ms of a 9x9 draw on the JVM, and 93% of Expert
+  generation; Expert is 99 ms median, 0.43 s p95, 0.8 s worst in Chromium, 0.17 / 0.72 / 1.4 s in WebKit (a quiet
+  machine, 2026-10-27); the worst days are those whose first fills dead-end and are redrawn (3-4 draws). A cheaper fill
   (fewer restarts, or growing regions where the fill is already forced) would fix it; it moves every board. *M.*
 
 - [ ] **Cage Sudoku: the cage-first test oracle is slow on Expert** (3-13 s a board, so `CageRulesTest` samples three). Not a
@@ -223,7 +224,7 @@ below have a famous branded version; use the descriptive name).
 - [ ] **Cipher: other shapes need longer words.** Every tier is 4 + 4 = 5 because the leading carry is the foothold the no-trial ladder needs, and the
   answer lists stop at five letters. A screened six-letter answer list (SCOWL through `tools/words/build.py`, screened by hand as the others were) would
   allow 5 + 5 = 6, which would give Hard and Expert a different look. Measured without it: 5 + 5 = 5 gave one ladder board per 30 pairs, three addends none.
-- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 89 / 80 / 75% of steps (Standard / Hard /
+- [ ] **Cipher: show the working for the deepest steps too.** `CipherWorking` shows its reasoning on 90 / 80 / 75% of steps (Standard / Hard /
   Expert); most all-columns steps and nearly every two-column what-if still say "only X = d" in summary. Those need two columns combined as algebra
   ("U + O + carry is 11, and O is 1 + U + carry, so 2U ...") or a case split on a carry whose branches stall without a second split; tried, the second
   split ran every explanation past 260 characters. A hint in two parts (the carry first, then the letter) may be the shape that fits. *M–L.*

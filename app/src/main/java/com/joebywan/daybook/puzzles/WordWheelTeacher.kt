@@ -15,7 +15,7 @@ import com.joebywan.daybook.core.TeachStep
  * - [CROSSING]: no slot is pinned alone, but of the words that fit an empty slot, only one leaves the empty slots crossing it
  *   a word (one that fits them, agrees at the crossing square and is not the same word: every slot holds a different one).
  *   Given by its clue as [PINNED] is. Still the public list only. Measured: this takes the fallback from 41 / 44 / 38% of
- *   steps to 33 / 37 / 33% (a year of daily boards a tier), and an exhaustive search over every consistent filling of the
+ *   steps to 33 / 35 / 33% (a year of daily boards a tier), and an exhaustive search over every consistent filling of the
  *   empty slots reaches only 0.1-0.2 points further, so what is left is honestly open: several fillings fit what shows.
  *   Slots sharing their only words ("two slots, two words") were measured too and pinned nothing more.
  * - [CLUE]: nothing is pinned. The slot with the fewest words that fit is named with its word's crossword clue. That reads
