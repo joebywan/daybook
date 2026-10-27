@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <!-- Nothing but this site's own files may run, load or be fetched. The two inline scripts and the inline style are
+       allowed by their sha256: edit one and its hash here must change too, or the browser refuses it (the console
+       says so, with the new hash). The second style hash is the <style> Compose puts in its canvas's shadow root, so a
+       Compose upgrade can change it the same way. 'wasm-unsafe-eval' is what lets the page compile its own .wasm. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-mGZrC6Dgrs0oN0UPUF29t26BQzc6CElA2OaDF1okyzs=' 'sha256-XwJvRn+ByUiDox172VpzmszzbXnt8GYevtWvUziRBWk='; style-src 'self' 'sha256-hhyJ2SVvXl8iKxtPLDl+EzckJaCCb2k/DvVanNmC8RY=' 'sha256-2DtT88WYuzB8DiHdoLqEYkONEwxf9gqsOdTY44QuLA4='; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <!-- viewport-fit=cover lets the page reach under the notch; the safe-area insets below put the
        board back inside it. Zoom is off because a pinch or double-tap zoom mid-puzzle is never
        what the player meant on a board that is itself driven by taps. -->

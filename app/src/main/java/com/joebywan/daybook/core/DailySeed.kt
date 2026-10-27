@@ -17,6 +17,18 @@ object DailySeed {
     /** Day zero for the app's own calendar. Daily puzzles exist from here onward. */
     val EPOCH: LocalDate = LocalDate(2026, 1, 1)
 
+    /**
+     * Every epoch day the app accepts from outside: a stored solve, a backup, a `?date=` link. Fixed bounds rather than
+     * "today" keep decoding pure, and they are wide (tests and old records hold days before [EPOCH]): what matters is
+     * that they are bounded, so a crafted day can neither throw (`fromEpochDays` of a huge number does) nor send the
+     * streak walk across billions of days.
+     */
+    val DAYS: LongRange = LocalDate(2000, 1, 1).toEpochDays()..LocalDate(2200, 1, 1).toEpochDays()
+
+    /** A date from a link (`?date=`, `?day=`): null when it does not parse or lies outside [DAYS]. */
+    fun fromLink(raw: String?): LocalDate? =
+        raw?.let { runCatching { LocalDate.parse(it) }.getOrNull() }?.takeIf { it.toEpochDays() in DAYS }
+
     fun seedFor(date: LocalDate, puzzleId: String, difficulty: Difficulty): Long =
         SeedHash.daily(date.toEpochDays(), puzzleId, difficulty)
 }

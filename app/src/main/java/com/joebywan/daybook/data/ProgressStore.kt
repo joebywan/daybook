@@ -1,5 +1,6 @@
 package com.joebywan.daybook.data
 
+import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LevelBoard
 import com.joebywan.daybook.core.Levels
@@ -11,6 +12,7 @@ import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.platform.currentTimeMillis
 import com.joebywan.daybook.platform.freshNonce
 import com.joebywan.daybook.puzzles.PuzzleState
+import com.joebywan.daybook.puzzles.SudokuState
 import com.joebywan.daybook.ui.play.ShareCard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -55,17 +57,21 @@ data class Completion(
             .joinToString("|")
 
     companion object {
-        /** Reads the old five-field record and the newer one ending in [playedOn]; anything else is null. */
+        /**
+         * Reads the old five-field record and the newer one ending in [playedOn]; anything else is null, and so is a
+         * day outside `DailySeed.DAYS` (a backup is untrusted: such a day threw, or hung the streak walk).
+         */
         fun decode(raw: String): Completion? {
             val parts = raw.split("|")
             if (parts.size !in 5..6) return null
+            fun day(n: String): LocalDate? = n.toLongOrNull()?.takeIf { it in DailySeed.DAYS }?.let(LocalDate::fromEpochDays)
             return Completion(
                 puzzleId = parts[0],
                 difficulty = Difficulty.fromKey(parts[1]),
-                day = parts[2].toLongOrNull()?.let { LocalDate.fromEpochDays(it) },
+                day = parts[2].toLongOrNull()?.let { day(parts[2]) ?: return null },
                 seconds = parts[3].toIntOrNull() ?: return null,
                 hints = parts[4].toIntOrNull() ?: return null,
-                playedOn = parts.getOrNull(5)?.let { LocalDate.fromEpochDays(it.toLongOrNull() ?: return null) },
+                playedOn = parts.getOrNull(5)?.let { day(it) ?: return null },
             )
         }
     }
@@ -80,7 +86,7 @@ data class LevelSolve(val level: Int, val puzzleId: String, val seconds: Int, va
             val parts = raw.split("|")
             if (parts.size != 4) return null
             return LevelSolve(
-                level = parts[0].toIntOrNull() ?: return null,
+                level = parts[0].toIntOrNull()?.takeIf { it in Levels.LEVELS } ?: return null,
                 puzzleId = parts[1],
                 seconds = parts[2].toIntOrNull() ?: return null,
                 hints = parts[3].toIntOrNull() ?: return null,
@@ -119,6 +125,10 @@ data class LevelProgress(
     /** Playable: done, or the current level. Nothing past [current] can be opened. */
     fun isUnlocked(level: Int): Boolean = level in done || level == current
 
+    /** [puzzleId]'s board of [level], or null when the level is not unlocked (a crafted link or saved route) or has none. */
+    fun board(level: Int, puzzleId: String): LevelBoard? =
+        level.takeIf(::isUnlocked)?.let(::plan)?.firstOrNull { it.puzzleId == puzzleId }
+
     companion object {
         val FRESH = of(emptySet(), emptySet())
 
@@ -132,20 +142,20 @@ data class LevelProgress(
             for (raw in levels) {
                 val parts = raw.split("|")
                 if (parts.size !in 2..3) continue
-                val n = parts[0].toIntOrNull() ?: continue
+                val n = parts[0].toIntOrNull()?.takeIf { it in Levels.LEVELS } ?: continue
                 val size = parts[1].toIntOrNull()?.takeIf { it in Levels.STARTER..Levels.POOL.size } ?: continue
                 val d = (if (parts.size == 2) 1 else parts[2].toIntOrNull())?.takeIf { it in 1..Levels.LATEST } ?: continue
                 opened[n] = minOf(size, opened[n] ?: size)
                 deal = minOf(d, deal ?: d)
             }
             val playerDeal = deal ?: Levels.LATEST
-            val solves = levelSolves.mapNotNull(LevelSolve::decode).filter { it.level >= 1 }.groupBy { it.level }
+            val solves = levelSolves.mapNotNull(LevelSolve::decode).groupBy { it.level }
             fun isDone(n: Int): Boolean {
                 val solved = solves[n].orEmpty().map { it.puzzleId }.toSet()
                 return Levels.plan(n, opened[n] ?: Levels.POOL.size, playerDeal).all { levelBoardDone(it.puzzleId, solved) }
             }
-            val done = (opened.keys + solves.keys).filter { it >= 1 && isDone(it) }.toSet()
-            val current = opened.keys.filter { it >= 1 && it !in done }.minOrNull() ?: ((done.maxOrNull() ?: 0) + 1)
+            val done = (opened.keys + solves.keys).filter(::isDone).toSet()
+            val current = opened.keys.filter { it !in done }.minOrNull() ?: ((done.maxOrNull() ?: 0) + 1).coerceAtMost(Levels.LEVELS.last)
             return LevelProgress(current, opened, solves, done, playerDeal)
         }
     }
@@ -204,6 +214,25 @@ data class SavedGame(
         fun decode(raw: String): SavedGame? =
             runCatching { SavedJson.decodeFromString<SavedGame>(raw) }.getOrNull()
     }
+}
+
+/**
+ * Whether this saved game can be played on the board [initial] starts. A backup is untrusted: a Kings state under a
+ * Sudoku key cast-crashed, and a Sudoku of one-cell lists decoded and indexed out of range once drawn. A misfit is
+ * dropped and the board starts fresh.
+ *
+ * The state and every undo entry must be [initial]'s class, and well formed on its own. It is deliberately not
+ * compared with [initial]'s board: a save holds its whole board, and one made before a generator change carries the
+ * old board under the same key (Atoms, Cipher, Codeword, Mambo and others in `SaveCompatibilityTest`'s captures), which
+ * is still a game the player must get back.
+ */
+fun SavedGame.fits(initial: PuzzleState): Boolean =
+    (listOf(state) + history).all { it::class == initial::class && it.wellFormed() }
+
+/** ponytail: Sudoku only, the shape a crafted save was shown to crash; add a branch per state if another is shown to. */
+private fun PuzzleState.wellFormed(): Boolean = when (this) {
+    is SudokuState -> listOf(givens, cells, solution, notes).all { it.size == 81 } && (selected ?: 0) in 0..80
+    else -> true
 }
 
 /** A [SavedGame] tagged with the board it belongs to, as it is held on disk. */
@@ -448,7 +477,7 @@ class ProgressStore(private val store: KeyValueStore) {
 
     private fun List<StoredGame>.encodeAll(): Set<String> = map(StoredGame::encode).toSet()
 
-    private companion object {
+    internal companion object {
         // DataStore keys on Android; they name what is already on every phone, so never rename.
         const val KEY_COMPLETIONS = "completions"
         const val KEY_SAVED = "saved_games"

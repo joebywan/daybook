@@ -526,7 +526,8 @@ private fun DaybookScreens(
             val puzzle = PuzzleRegistry.byId(current.puzzleId)
             val level = current.level
             // A level board's tier and seed come from its level's plan, read with the pool size it was opened with.
-            val levelBoard = level?.let { n -> loadedLevels?.plan(n)?.firstOrNull { it.puzzleId == current.puzzleId } }
+            // A level not unlocked (a crafted `&level=` link or saved route) has no board, so it goes home.
+            val levelBoard = level?.let { n -> loadedLevels?.board(n, current.puzzleId) }
             if (puzzle == null || (level != null && loadedLevels != null && levelBoard == null)) {
                 // A saved route can name a puzzle that no longer exists. Navigating has to happen
                 // in an effect rather than inline: writing state while composing is what starts a

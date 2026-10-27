@@ -5,7 +5,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.platform.currentDate
@@ -35,7 +37,8 @@ fun DaybookWebApp(params: Map<String, String>) {
         val launch = WebStores.get(KeyValueStore.LAUNCH)
         params["tier"]?.let { key -> launch.write("difficulty", Difficulty.fromKey(key.uppercase()).name) }
         val tier = Difficulty.fromKey(launch.read("difficulty").orEmpty())
-        val level = params["level"]?.toIntOrNull()?.takeIf { it >= 1 }
+        // Out of range is ignored here; a level not yet unlocked is refused by DaybookApp's play route.
+        val level = params["level"]?.toIntOrNull()?.takeIf { it in Levels.LEVELS }
         when {
             params["screen"] == "levels" -> Route.Levels(level)
             params["screen"] == "stats" -> Route.Stats
@@ -43,8 +46,8 @@ fun DaybookWebApp(params: Map<String, String>) {
             params["screen"] == "techniques" -> Route.Techniques
             params["screen"] == "training" -> Route.Training(params["technique"])
             params["screen"] == "archive" && puzzleParam != null ->
-                Route.Archive(puzzleParam, params["day"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() })
-            params["screen"] == "archive" -> Route.Days(params["day"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() })
+                Route.Archive(puzzleParam, DailySeed.fromLink(params["day"]))
+            params["screen"] == "archive" -> Route.Days(DailySeed.fromLink(params["day"]))
             else -> puzzleParam?.let(PuzzleRegistry::byId)?.let {
                 if (level != null) Route.Play(it.id, tier, null, level = level) else Route.Play(it.id, tier, currentDate())
             } ?: Route.Home
@@ -57,3 +60,4 @@ fun DaybookWebApp(params: Map<String, String>) {
         DaybookApp(startAt = start, startMode = mode)
     }
 }
+
