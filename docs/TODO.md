@@ -73,15 +73,11 @@ from a measurement or review, so you can check it is still true.
   compiled by CI only. Check a Play install opens the Play Store app, and a sideloaded or F-Droid install opens GitHub in
   the browser. A one-time nudge on the finish frame (say after the tenth solve) would bring more ratings than a settings
   row, but the finish frame is settled UX, so that is the owner's call. *S.*
-
-- [ ] **Large system font (2x) squeezes the boards from outside.** Glyphs in boards no longer scale (`boardSp`), but
-  at font scale 2 (web renders with a `Density` override, 375x537) the chrome around them still grows: the play
-  header's "Expert · 15 Jun 2026" wraps to two lines and the tagline line grows, so Lexicon's board shrinks to dots
-  and Codeword's and Crossword's grids get small; on Home the date wraps mid-word ("Monda/y"), the selected tier pill
-  breaks "Standar/d" (`SegmentedControl`), tile names ellipsise ("Regio..."); Tally's and Nonogram's pen buttons
-  (`PenRow`) clip "Remove"; Codebreaker's "Submit" wraps; Who's Who's clue list gets two lines of room. All fine at
-  1.3x. Not checked on the emulator (its font scale is shared). Lamps' lamp still has no long press (Tents and
-  Kings have one). *M.*
+- [ ] **Large system font (2x): what is left outside the boards.** The play header, clock, tier pills, pen buttons, home date,
+  streak badge and tile names, Codebreaker's Submit and Who's Who's board now stop at 1.3x (`CappedFontScale`). Still
+  at 2x (web `?fontscale=2`, 375x537): the toolbar (Undo / Restart / Hint) is half again as tall; the walkthrough offer
+  overflows its 40dp slot; Lexicon's and Codebreaker's "guesses left" lines and Crossword's clue bar take board height
+  (Lexicon's board is still small); Codeword's number and letter key strips. Not checked on the emulator (shared). *S.*
 
 ## Rewards
 

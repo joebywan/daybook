@@ -884,7 +884,8 @@ Fredoka (SIL OFL) on both builds, applied by each seam's `platformTypography` vi
 `Palette.kt` names no family. Static instances only; how they were made and cut: `docs/WEB_BUILD.md` (Fonts).
 
 **Glyphs inside a board are sized from their square with `boardSp()` (`ui/BoardText.kt`), never `(cell.value * k).sp`**, so the
-system font size cannot push them out of their square; text outside the grid scales. Rule and the line-height catch:
+system font size cannot push them out of their square; text outside the grid scales, but chrome in a fixed slot (play
+header, tier pills, pen buttons, tile names) stops at 1.3x (`CappedFontScale`; web `?fontscale=2` to check). Rule and the line-height catch:
 `docs/PUZZLE_STANDARDS.md` section 6; `BoardTextSizeTest` fails on the old pattern.
 Digits take a role from the one scale, `BoardGlyph` in the same file (given, entered, clue, corner, note: a share of
 the square and a weight); heavy region walls and frames take `ColorScheme.wall` (`ui/BoardDraw.kt`), never black or `onBackground`.
