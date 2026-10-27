@@ -77,6 +77,7 @@ import com.joebywan.daybook.ui.stats.TechniquesScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import com.joebywan.daybook.ui.theme.Appearance
 import com.joebywan.daybook.ui.theme.DaybookTheme
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -240,9 +241,11 @@ private fun DaybookScreens(
     // Null until the store has answered, so a returning player never sees the walkthrough offer
     // flash up for the instant before their "already offered" loads.
     val tutorialsOffered by store.tutorialsOffered.collectAsState(initial = null)
-    // The puzzles ever solved, null until loaded: a first board's walkthrough must not start for a solver before this arrives.
-    val solvedPuzzles by remember(store) { store.completions.map { all -> all.mapTo(HashSet()) { it.puzzleId } } }
-        .collectAsState(initial = null)
+    // The puzzles ever solved or with a game saved on any board, null until loaded: a first board's walkthrough must not
+    // start for a player who has played the puzzle, including one updating with a game of it in progress.
+    val playedPuzzles by remember(store) {
+        store.completions.combine(store.puzzlesWithSaves) { all, saved -> all.mapTo(HashSet(saved)) { it.puzzleId } }
+    }.collectAsState(initial = null)
 
     // Saveable, so turning the phone keeps the player on their board. Under plain `remember` a
     // rotation dropped them back on Home, which also made every rememberSaveable below Play
@@ -665,7 +668,7 @@ private fun DaybookScreens(
                     },
                     tutorialOffered = tutorialsOffered?.let { puzzle.id in it },
                     onTutorialOffered = { scope.launch { store.markTutorialOffered(puzzle.id) } },
-                    solvedBefore = solvedPuzzles?.let { puzzle.id in it },
+                    playedBefore = playedPuzzles?.let { puzzle.id in it },
                     showTimer = showTimer,
                     level = level,
                     onTaught = { technique -> scope.launch { store.recordTechniqueMet(puzzle.id, technique) } },
