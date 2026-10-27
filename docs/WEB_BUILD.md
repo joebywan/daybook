@@ -70,15 +70,22 @@ Live at https://knowhowit.com.au/daybook/. Needs Safari 18.2+ / iOS 18.2+ for Wa
   applies it to every style through the shared `Typography.withFamily` (`ui/theme/Palette.kt`, which names no
   family itself). Android bundles four static instances in `app/src/main/res/font` (400, 500, 600, 700: the
   styles use Normal, Medium, SemiBold, Bold); the web bundles the same four cut down in
-  `web/src/wasmJsMain/composeResources/font`, ~39 KB each, plus 17 KB of arrows from Noto Sans Symbols that
-  Skia uses as a fallback for glyphs Fredoka lacks. The statics are the variable `Fredoka.ttf` from Google
+  `web/src/wasmJsMain/composeResources/font`, ~39 KB each, plus three Noto cuts that Skia falls back to for
+  glyphs Fredoka lacks (`docs/fonts/LICENSE-NOTO-OFL.txt`): `← ↑ → ↓` from Noto Sans Symbols (17 KB, 5 KB
+  gzipped), `✓ ✕` from Symbols 2 (25 / 5 KB) and `↻ −` from Math (33 / 12 KB). A character no loaded font
+  has is not just a box: Compose's `FallbackFontDownloader` fetches a Noto font from fonts.gstatic.com for it,
+  which the page's CSP (`connect-src 'self'`) blocks and which would break "sends nothing anywhere" if it
+  did not. So `WithSymbolFonts` (the seam) holds the app back until the three are preloaded: text laid out
+  earlier, such as a Word Wheel opened from a link, triggered the fetch even with the fonts bundled.
+  `tools/render/glyphs.py` opens the screens that draw these and fails on any request off the local
+  server. The statics are the variable `Fredoka.ttf` from Google
   Fonts pinned with fontTools' `instancer` (`wdth=100`, `wght=400/500/600/700`, `updateFontNames=True`;
   fontTools is build-time only, not a dependency) rather than relying on variable-font support in
   Compose/Wasm. `tools/subset-font.py` cuts the web copies (see its docstring): Latin-1 plus common
-  punctuation, glyph ids kept so kerning applies, `GSUB` dropped, name table (OFL notice) kept. Fredoka lacks
-  `→ ✓ ⌊ ⌋ ′ ″ ≤ ≥` and the chess/arrow symbols; no shipped string uses them (only comments do), and an
-  arrow would fall back (the system font on Android, the bundled arrows on the web). A new non-Latin-1
-  character in a string needs the web fonts re-cut; check any non-ASCII glyph by rendering it. Board glyphs
+  punctuation and `‹ › −`, glyph ids kept so kerning applies, `GSUB` dropped, name table (OFL notice) kept.
+  Comments, share text (the share preview draws its marks as shapes, so the emoji only reach the OS share
+  sheet) and `≠` (drawn as strokes in Dominoes) need no glyph. A new non-Latin-1 character in a drawn string
+  needs the web fonts re-cut; check it by rendering it with the network logged. Board glyphs
   drawn with their own `TextStyle` (Sudoku, Snap, Nonogram, ...) name no family and are still the default font.
 - The Material icons: JetBrains' `material-icons-extended` (`libs.jb.compose.material.icons.extended`) costs 4.5 KB of wasm (<1 KB gzipped) over the
   core set, because Kotlin/Wasm drops every unreferenced icon.

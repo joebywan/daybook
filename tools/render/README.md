@@ -38,6 +38,7 @@ python tools/render/render.py -p mosaic -t expert -s 390x664 --measure
 python tools/render/render.py --home                         # the home grid
 python tools/render/render.py --home --query "screen=archive&puzzle=kings&day=2026-06-01"   # an archive, a day selected
 python tools/render/render.py --list                         # puzzle ids, from PuzzleRegistry
+python tools/render/glyphs.py                                # symbol screens: fails on any request off 127.0.0.1
 ```
 
 Defaults: all puzzles, tier `standard`, sizes 390x844 390x664 360x640 375x537, both browsers, both
