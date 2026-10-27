@@ -77,17 +77,30 @@ val ACHIEVEMENTS: List<Achievement> = listOf(
     Achievement("allPuzzles", AchievementCategory.COVERAGE, "Clean sweep", "Finish every puzzle's daily within one week.") { h, _, ids ->
         ids.isNotEmpty() && h.mapNotNullTo(HashSet()) { it.day }.any { start -> weekFrom(h, start).containsAll(ids) }
     },
-    // Training (docs/TRAINING_SPEC.md): read off the training record, never the completions.
-    Achievement(
-        "sudokuTrained", AchievementCategory.MILESTONE, "Sudoku trained", "Pass every Sudoku technique in Training.",
-        earned = { _, _, _ -> false },
-        trained = { t -> SudokuTraining.TECHNIQUES.all { TrainingRecord.entry(SudokuTraining.PUZZLE, it) in t } },
-    ),
-    Achievement(
-        "sudokuGraduate", AchievementCategory.MILESTONE, "Sudoku graduate", "Then solve Training's final board.",
-        earned = { _, _, _ -> false },
-        trained = { t -> TrainingRecord.entry(SudokuTraining.PUZZLE, SudokuTraining.EXAM) in t },
-    ),
+    // Training (docs/TRAINING_SPEC.md): read off the training record, never the completions. Appended only.
+    trained(SudokuTraining),
+    graduate(SudokuTraining),
+    trained(CagesTraining),
+    graduate(CagesTraining),
+    trained(InequalityTraining),
+    graduate(InequalityTraining),
+    trained(RegionsTraining),
+    graduate(RegionsTraining),
+)
+
+/** "<Puzzle> trained": every technique of [c] passed in Training. */
+private fun trained(c: Course) = Achievement(
+    "${c.id}Trained", AchievementCategory.MILESTONE, "${c.puzzle.displayName} trained",
+    "Pass every ${c.puzzle.displayName} technique in Training.",
+    earned = { _, _, _ -> false },
+    trained = { t -> c.allPassed(t) },
+)
+
+/** "<Puzzle> graduate": then [c]'s final board solved. */
+private fun graduate(c: Course) = Achievement(
+    "${c.id}Graduate", AchievementCategory.MILESTONE, "${c.puzzle.displayName} graduate", "Then solve Training's final board.",
+    earned = { _, _, _ -> false },
+    trained = { t -> c.passed(t, Training.EXAM) },
 )
 
 /** The puzzles with a daily solved in [h] for one of the seven days from [start]. */

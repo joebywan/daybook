@@ -1,6 +1,7 @@
 package com.joebywan.daybook.ui.stats
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,15 +30,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.PuzzleRegistry
+import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.data.PuzzleTechniques
 import com.joebywan.daybook.platform.BackButton
 
 /**
  * Per puzzle that teaches, its techniques in the teacher's order; the ones a hint has explained carry a tick. The rest
  * are plain, never greyed or locked: this is a record of what hints showed, not a list to work through (no drills).
+ * A technique Training has carries a "Practise" link ([onPractise]: puzzle id, technique), which opens its practice.
  */
 @Composable
-fun TechniquesScreen(techniques: List<PuzzleTechniques>, onBack: () -> Unit) {
+fun TechniquesScreen(
+    techniques: List<PuzzleTechniques>,
+    onBack: () -> Unit,
+    onPractise: (String, String) -> Unit = { _, _ -> },
+) {
     val scheme = MaterialTheme.colorScheme
     Column(
         Modifier.fillMaxSize().background(scheme.background).windowInsetsPadding(WindowInsets.safeDrawing),
@@ -60,6 +67,7 @@ fun TechniquesScreen(techniques: List<PuzzleTechniques>, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(techniques, key = { it.puzzleId }) { p ->
+                val trained = Training.of(p.puzzleId)?.techniques.orEmpty()
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(scheme.surface).padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -79,6 +87,14 @@ fun TechniquesScreen(techniques: List<PuzzleTechniques>, onBack: () -> Unit) {
                                 t.name.replaceFirstChar { it.uppercase() },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = if (t.met) scheme.primary else scheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (t.id in trained) Text(
+                                "Practise",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = scheme.primary,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onPractise(p.puzzleId, t.id) }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
                             )
                         }
                     }
