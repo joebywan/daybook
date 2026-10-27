@@ -380,7 +380,7 @@ to do.
 
 ## Licence
 
-AGPL-3.0-or-later; see [`LICENSE`](LICENSE). The word lists carry their own notice, [`docs/word-lists/LICENSE-SCOWL.txt`](docs/word-lists/LICENSE-SCOWL.txt), and the Fredoka typeface its own, [`docs/fonts/LICENSE-FREDOKA-OFL.txt`](docs/fonts/LICENSE-FREDOKA-OFL.txt).
+AGPL-3.0-or-later; see [`LICENSE`](LICENSE). The word lists carry their own notice, [`docs/word-lists/LICENSE-SCOWL.txt`](docs/word-lists/LICENSE-SCOWL.txt), the Fredoka typeface its own, [`docs/fonts/LICENSE-FREDOKA-OFL.txt`](docs/fonts/LICENSE-FREDOKA-OFL.txt), and the web build's Noto symbol subsets theirs, [`docs/fonts/LICENSE-NOTO-OFL.txt`](docs/fonts/LICENSE-NOTO-OFL.txt).
 
 ## Not done yet
 

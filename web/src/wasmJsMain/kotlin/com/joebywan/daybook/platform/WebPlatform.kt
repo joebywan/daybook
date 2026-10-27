@@ -59,11 +59,15 @@ import com.joebywan.daybook.web.resources.fredoka_bold
 import com.joebywan.daybook.web.resources.fredoka_medium
 import com.joebywan.daybook.web.resources.fredoka_regular
 import com.joebywan.daybook.web.resources.fredoka_semibold
+import com.joebywan.daybook.web.resources.noto_sans_math
+import com.joebywan.daybook.web.resources.noto_sans_symbols2
 import com.joebywan.daybook.web.resources.noto_sans_symbols_arrows
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.LocalDate
+import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.Font
+import org.jetbrains.compose.resources.preloadFont
 import kotlin.coroutines.resume
 
 // The web half of the platform seam: the same functions, in the same package, as
@@ -397,14 +401,15 @@ suspend fun prepareBoards(day: LocalDate, difficulty: Difficulty) {
 
 // ---- Fonts ------------------------------------------------------------------------------------
 //
-// A browser lends wasm none of its fonts, so the only one available is the one Compose ships. Five
+// A browser lends wasm none of its fonts, so the only one available is the one Compose ships. Seven
 // are bundled (web/src/wasmJsMain/composeResources/font): Fredoka at 400/500/600/700, the same
-// family Android bundles, and the arrows from Noto Sans Symbols as a fallback for glyphs Fredoka
-// lacks. All are cut down to the characters in use; see docs/WEB_BUILD.md.
+// family Android bundles, and as fallbacks for glyphs Fredoka lacks the arrows from Noto Sans
+// Symbols, ✓ ✕ from Noto Sans Symbols 2 and ↻ from Noto Sans Math. All are cut down to the
+// characters in use; see docs/WEB_BUILD.md.
 // Fredoka and Noto are under the SIL Open Font License, whose notice each file carries in its
 // name table.
 
-/** [base] in the bundled Fredoka; the arrows are what Skia falls back to for a glyph it lacks. */
+/** [base] in the bundled Fredoka; [WithSymbolFonts] supplies what Skia falls back to for a glyph it lacks. */
 @Composable
 fun platformTypography(base: Typography): Typography {
     val fredoka = FontFamily(
@@ -413,12 +418,39 @@ fun platformTypography(base: Typography): Typography {
         Font(Res.font.fredoka_semibold, FontWeight.SemiBold),
         Font(Res.font.fredoka_bold, FontWeight.Bold),
     )
-    val arrows = FontFamily(Font(Res.font.noto_sans_symbols_arrows))
-    val resolver = LocalFontFamilyResolver.current
-    // Preloaded fonts are what Skia falls back to for a glyph the requested font lacks.
-    LaunchedEffect(resolver, arrows) { resolver.preload(arrows) }
     return remember(base, fredoka) { base.withFamily(fredoka) }
 }
+
+/**
+ * [content] once the symbol fonts are preloaded, which is what makes Skia fall back to them. Text laid out
+ * before then finds a glyph missing and Compose fetches a Noto font from fonts.gstatic.com for it, which the
+ * CSP blocks, so it stays a box: ↻ ✕ on a Word Wheel opened from a link did, until this held the app back.
+ * It holds it back at most [SYMBOL_FONTS_WAIT_MS]: a font that fails to load costs its glyphs, never the app.
+ */
+@OptIn(ExperimentalResourceApi::class)
+@Composable
+fun WithSymbolFonts(content: @Composable () -> Unit) {
+    val fonts = listOf(
+        preloadFont(Res.font.noto_sans_symbols_arrows),
+        preloadFont(Res.font.noto_sans_symbols2),
+        preloadFont(Res.font.noto_sans_math),
+    ).map { it.value }
+    val resolver = LocalFontFamilyResolver.current
+    var ready by remember { mutableStateOf(false) }
+    // Restarts as each font arrives, preloading whichever have (again: the resolver caches them).
+    LaunchedEffect(resolver, fonts) {
+        fonts.filterNotNull().forEach { resolver.preload(FontFamily(it)) }
+        if (fonts.all { it != null }) ready = true
+    }
+    LaunchedEffect(Unit) {
+        delay(SYMBOL_FONTS_WAIT_MS)
+        ready = true
+    }
+    if (ready) content()
+}
+
+/** How long [WithSymbolFonts] waits for a font before showing the app without it. */
+private const val SYMBOL_FONTS_WAIT_MS = 2500L
 
 // --- The solve sound (Web Audio) ---------------------------------------------------------------
 // The samples are the shared SolveTone; JS only holds them and a lazily made AudioContext. Browsers

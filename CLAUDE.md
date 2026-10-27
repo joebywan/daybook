@@ -1023,6 +1023,9 @@ Full detail (seam, storage, fonts, harnesses, parity, lessons): `docs/WEB_BUILD.
   check on pull requests, and again before the deploy.
 - **Check any web layout change in WebKit as well as Chromium**, at 375x537 as well as a tall screen:
   `tools/render/render.py`.
+- **Every drawn character needs a bundled glyph.** One no bundled font has makes Compose fetch a Noto font from
+  fonts.gstatic.com, which the CSP blocks (a box) and the privacy promise forbids. Re-cut with `tools/subset-font.py`
+  (Fonts in `docs/WEB_BUILD.md`); `tools/render/glyphs.py` fails on any request off the local server.
 - Build: `./gradlew :web:wasmJsBrowserDistribution`. Several sessions share the one browser pane: pass a `tabId`.
 
 ## Tests

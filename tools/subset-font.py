@@ -8,13 +8,14 @@ emptied glyph), DSIG and glyph names. The name table, which carries the OFL noti
 
     python3 tools/subset-font.py web/src/wasmJsMain/composeResources/font <fredoka-static-dir>
 
-reads the system's Noto Sans Symbols (Debian/Ubuntu fonts-noto-core path) and the four Fredoka
+reads the system's Noto Sans Symbols, Symbols 2 and Math (Debian/Ubuntu fonts-noto-core path) and the four Fredoka
 statics `fredoka_{regular,medium,semibold,bold}.ttf` in <fredoka-static-dir>, which are the
 Google Fonts variable Fredoka.ttf (wdth,wght) pinned at wdth=100 and wght=400/500/600/700 with
 fontTools (build time only, not a repo dependency): `instancer.instantiateVariableFont(font,
 {'wght': w, 'wdth': 100}, updateFontNames=True)`. The same four files, uncut, are
 app/src/main/res/font. Re-run it if a string gains a character outside Latin-1 and the
-punctuation listed below.
+characters listed below: one no bundled font has makes Compose fetch a Noto font from
+fonts.gstatic.com, which the page's CSP blocks, so it draws as a box.
 """
 import struct
 import sys
@@ -165,9 +166,13 @@ def subset(src, dst, chars):
 
 if __name__ == '__main__':
     latin = (list(range(0x20, 0x7F)) + list(range(0xA0, 0x100)) +
-             [0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2026, 0x2032, 0x2033])
+             [0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2026, 0x2032, 0x2033,
+              0x2039, 0x203A, 0x2212])  # ‹ › −
     out = sys.argv[1]
     noto = '/usr/share/fonts/truetype/noto/'
     for w in ('regular', 'medium', 'semibold', 'bold'):
         subset(sys.argv[2] + '/fredoka_%s.ttf' % w, out + '/fredoka_%s.ttf' % w, latin)
     subset(noto + 'NotoSansSymbols-Regular.ttf', out + '/noto_sans_symbols_arrows.ttf', [0x2190, 0x2191, 0x2192, 0x2193])
+    # What Fredoka lacks and the arrows' font has not: ✓ ✕, then ↻ (and − for text not set in Fredoka).
+    subset(noto + 'NotoSansSymbols2-Regular.ttf', out + '/noto_sans_symbols2.ttf', [0x2713, 0x2715])
+    subset(noto + 'NotoSansMath-Regular.ttf', out + '/noto_sans_math.ttf', [0x21BB, 0x2212])

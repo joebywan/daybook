@@ -10,6 +10,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Levels
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.data.KeyValueStore
+import com.joebywan.daybook.platform.WithSymbolFonts
 import com.joebywan.daybook.platform.currentDate
 import com.joebywan.daybook.ui.DaybookApp
 import com.joebywan.daybook.ui.Route
@@ -57,7 +58,7 @@ fun DaybookWebApp(params: Map<String, String>) {
     val density = LocalDensity.current
     val fontScale = params["fontscale"]?.toFloatOrNull() ?: density.fontScale
     CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
-        DaybookApp(startAt = start, startMode = mode)
+        WithSymbolFonts { DaybookApp(startAt = start, startMode = mode) }
     }
 }
 
