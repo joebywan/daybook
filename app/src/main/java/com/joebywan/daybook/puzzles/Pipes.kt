@@ -407,7 +407,11 @@ object Pipes : PuzzleType {
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as PipesState
-        val step = PipesTeacher.teach(s) ?: return null
+        return deduction(PipesTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(step: PipesTeacher.Step): Deduction {
         val wrong = step.wrong
         return Deduction(
             step,
