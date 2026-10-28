@@ -189,6 +189,27 @@ internal object DominoTeacher {
         }
     }
 
+    /**
+     * Every step of [technique] on this board, not only the first [deduce] would give: Training passes a move that makes
+     * any of them. A placement settled once the technique's level and those below it have struck all they can (nothing
+     * else laid first), named as [deduce] would name it; for [WHAT_IF], every square a what-if settles once steps 1-5
+     * are spent. Takes no answer, as [deduce].
+     */
+    fun instances(layout: DominoLogic.Layout, placed: List<Placement?>, technique: String): List<Step> {
+        val level = when (technique) {
+            ONLY_PARTNER, ONLY_PLACE, ONLY_DOMINO -> LEVEL_RULE_FIT
+            REGION_VALUE -> LEVEL_REGION_VALUE
+            COUNTING -> LEVEL_COUNTING
+            WHAT_IF -> LEVEL_WHAT_IF
+            else -> return emptyList()
+        }
+        val ladder = DominoLadder.build(layout, placed)
+        ladder.strikeAll(minOf(level, LEVEL_COUNTING))
+        if (ladder.broken != DominoLadder.NONE) return emptyList()
+        if (technique == WHAT_IF) return ladder.whatIfs().map { whatIfStep(ladder, it) }.toList()
+        return ladder.allForced().map { placementStep(ladder, it, level) }.filter { it.technique == technique }
+    }
+
     private fun placementStep(ladder: DominoLadder, forced: DominoLadder.Forced, used: Int): Step {
         val layout = ladder.layout
         val words = Words(layout)
@@ -570,6 +591,26 @@ internal class DominoLadder private constructor(
         for (o in bySquare[cT[c]]) if (o != c) kill(o, r)
     }
 
+    /** Levels 1 to [maxLevel] (at most counting), until nothing more is struck or something breaks. Settles nothing. */
+    fun strikeAll(maxLevel: Int) {
+        while (broken == NONE) {
+            forced()
+            if (broken != NONE) return
+            val changed = geometry() ||
+                maxLevel >= DominoTeacher.LEVEL_RULE_FIT && ruleFit() ||
+                maxLevel >= DominoTeacher.LEVEL_REGION_VALUE && regionValue() ||
+                maxLevel >= DominoTeacher.LEVEL_COUNTING && counting()
+            if (!changed) return
+        }
+    }
+
+    /** Every placement now settled, as [forced] finds the first: squares in reading order, then dominoes in tray order. */
+    fun allForced(): List<Forced> = buildList {
+        if (broken != NONE) return@buildList
+        for (q in 0 until n) if (free[q] && known[q] < 0 && aliveSq[q] == 1) add(Forced(lastAlive(bySquare[q]), q))
+        for (d in layout.tray.indices) if (!settled(d) && aliveDom[d] == 1) add(Forced(lastAlive(byDomino[d]), -1))
+    }
+
     private fun lastAlive(list: IntArray): Int {
         for (c in list) if (alive[c]) return c
         return -1
@@ -740,7 +781,10 @@ internal class DominoLadder private constructor(
      * Level 6: the first square (two candidates before three, then reading order) all of whose
      * candidates but one run into a contradiction within [DominoTeacher.WHAT_IF_ROUNDS] rounds.
      */
-    fun whatIf(): WhatIf? {
+    fun whatIf(): WhatIf? = whatIfs().firstOrNull()
+
+    /** Every what-if, smallest squares first: a square with two or three candidates, all but one refuted. */
+    fun whatIfs(): Sequence<WhatIf> = sequence {
         val kinds = refutedKind ?: IntArray(alive.size).also { refutedKind = it }
         val args = refutedArg ?: IntArray(alive.size).also { refutedArg = it }
         for (size in 2..3) {
@@ -760,10 +804,9 @@ internal class DominoLadder private constructor(
                     if (kinds[o] != NONE) refuted.add(Refuted(o, kinds[o], args[o]))
                     else if (survivor < 0) survivor = o else { survivor = -2; break }
                 }
-                if (survivor >= 0 && refuted.size == size - 1) return WhatIf(q, survivor, refuted)
+                if (survivor >= 0 && refuted.size == size - 1) yield(WhatIf(q, survivor, refuted))
             }
         }
-        return null
     }
 
     /**

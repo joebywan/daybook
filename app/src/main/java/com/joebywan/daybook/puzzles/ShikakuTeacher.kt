@@ -211,11 +211,29 @@ internal object ShikakuTeacher {
     fun deduce(w: Int, h: Int, clues: List<Int?>, blocks: List<Block>): Step? {
         val s = Sight(w, h, clues, blocks)
         if (stuck(s) != null) return null
-        return onlyFits(s) ?: onlyReaches(s) ?: commonCells(s) ?: whatIf(s)
+        return onlyFits(s).firstOrNull() ?: onlyReaches(s).firstOrNull() ?: commonCells(s).firstOrNull() ?: whatIf(s).firstOrNull()
     }
 
-    private fun onlyFits(s: Sight): Step? {
-        val clue = s.open.firstOrNull { s.options(it).size == 1 } ?: return null
+    /**
+     * Every step of [technique] on this board, not only the first [deduce] would give: Training passes a move that makes
+     * any of them. Empty on a board where no step can be taken. Takes no answer, as [deduce].
+     */
+    fun instances(w: Int, h: Int, clues: List<Int?>, blocks: List<Block>, technique: String): List<Step> {
+        val s = Sight(w, h, clues, blocks)
+        if (stuck(s) != null) return emptyList()
+        return when (technique) {
+            ONLY_FITS -> onlyFits(s)
+            ONLY_REACHES -> onlyReaches(s)
+            COMMON_CELLS -> commonCells(s)
+            WHAT_IF -> whatIf(s)
+            else -> emptySequence()
+        }.toList()
+    }
+
+    private fun onlyFits(s: Sight): Sequence<Step> =
+        s.open.asSequence().filter { s.options(it).size == 1 }.map { onlyFitsAt(s, it) }
+
+    private fun onlyFitsAt(s: Sight, clue: Int): Step {
         val block = s.options(clue)[0]
         val n = s.clues[clue]!!
         var offGrid = false
@@ -249,7 +267,7 @@ internal object ShikakuTeacher {
         )
     }
 
-    private fun onlyReaches(s: Sight): Step? {
+    private fun onlyReaches(s: Sight): Sequence<Step> = sequence {
         for (cell in 0 until s.w * s.h) {
             if (s.taken[cell] || s.clues[cell] != null) continue
             val reaching = s.open.filter { c -> s.options(c).any { cell in it.cells(s.w) } }
@@ -258,7 +276,7 @@ internal object ShikakuTeacher {
             val covering = s.options(clue).filter { cell in it.cells(s.w) }
             if (covering.size != 1) continue
             val n = s.clues[clue]!!
-            return Step(
+            yield(Step(
                 technique = ONLY_REACHES,
                 place = covering[0],
                 focus = setOf(cell),
@@ -267,12 +285,11 @@ internal object ShikakuTeacher {
                 nudge = "Which number can reach the glowing square?",
                 explanation = "Only the $n can reach the marked square, and every square belongs to " +
                     "some rectangle. Just one of the $n's rectangles covers it, so that is the one.",
-            )
+            ))
         }
-        return null
     }
 
-    private fun commonCells(s: Sight): Step? {
+    private fun commonCells(s: Sight): Sequence<Step> = sequence {
         for (a in s.open) {
             val opts = s.options(a)
             if (opts.size < 2) continue
@@ -289,7 +306,7 @@ internal object ShikakuTeacher {
                 val these = if (common.size == 1) "the marked square" else "the marked squares"
                 // Two 6s on one board would read as one; the second is "the other".
                 val other = if (na == nb) "the other $nb" else "the $nb"
-                return Step(
+                yield(Step(
                     technique = COMMON_CELLS,
                     place = after[0],
                     focus = setOf(a) + common,
@@ -298,13 +315,12 @@ internal object ShikakuTeacher {
                     nudge = "Where must the glowing $na go?",
                     explanation = "Every rectangle this $na can make covers $these, so $other can't use " +
                         "${if (common.size == 1) "it" else "them"}. That leaves $other just one rectangle that fits.",
-                )
+                ))
             }
         }
-        return null
     }
 
-    private fun whatIf(s: Sight): Step? {
+    private fun whatIf(s: Sight): Sequence<Step> = sequence {
         // Fewest rectangles first: the fewer there are to rule out, the easier the step is to check.
         val byChoices = s.open.filter { s.options(it).size >= 2 }.sortedBy { s.options(it).size * s.w * s.h + it }
         for (a in byChoices) {
@@ -332,7 +348,7 @@ internal object ShikakuTeacher {
                     is Uncovered -> d.cell
                 }
             }.toSet()
-            return Step(
+            yield(Step(
                 technique = WHAT_IF,
                 place = keep,
                 focus = setOf(a),
@@ -341,9 +357,8 @@ internal object ShikakuTeacher {
                 nudge = "What if the glowing $n went another way?",
                 explanation = "Suppose the $n took $which. That would ${listed(phrases, "or")}. " +
                     "So the $n takes this rectangle.",
-            )
+            ))
         }
-        return null
     }
 
     // ---- words -----------------------------------------------------------------------------------

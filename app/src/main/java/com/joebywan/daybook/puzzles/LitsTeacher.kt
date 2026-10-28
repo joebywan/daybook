@@ -427,11 +427,29 @@ internal object LitsTeacher {
         val layout = Layout(width, height, region)
         val sight = Sight(layout, shaded.toBooleanArray(), BooleanArray(layout.n))
         if ((0 until layout.count).any { sight.cand(it).isEmpty() }) return null
-        return wholeRegion(sight)
-            ?: overlap(sight)
-            ?: filtered(sight)
-            ?: neighbour(sight)
+        return wholeRegion(sight).firstOrNull()
+            ?: overlap(sight).firstOrNull()
+            ?: filtered(sight).firstOrNull()
+            ?: neighbour(sight).firstOrNull()
             ?: whatIf(sight)
+    }
+
+    /**
+     * Every step of [technique] on this board, not only the one [deduce] would give: Training passes a move that makes
+     * any of them. Empty on a board where no step can be taken. Takes no answer, as [deduce].
+     */
+    fun instances(width: Int, height: Int, region: List<Int>, shaded: List<Boolean>, technique: String): List<Step> {
+        val layout = Layout(width, height, region)
+        val sight = Sight(layout, shaded.toBooleanArray(), BooleanArray(layout.n))
+        if ((0 until layout.count).any { sight.cand(it).isEmpty() }) return emptyList()
+        return when (technique) {
+            WHOLE_REGION -> wholeRegion(sight)
+            OVERLAP -> overlap(sight)
+            AVOID_BLOCK, LETTER_CLASH -> filtered(sight).filter { it.technique == technique }
+            NEIGHBOUR -> neighbour(sight)
+            WHAT_IF -> whatIfs(sight).map { (x, chain) -> whatIfStep(sight, x, chain) }
+            else -> emptySequence()
+        }.toList()
     }
 
     /**
@@ -450,12 +468,12 @@ internal object LitsTeacher {
         return deepest
     }
 
-    private fun wholeRegion(s: Sight): Step? {
+    private fun wholeRegion(s: Sight): Sequence<Step> = sequence {
         for (k in 0 until s.layout.count) {
             val cells = s.layout.cellsOf[k]
             if (cells.size != 4 || s.complete(k)) continue
             val todo = cells.filter { !s.shaded[it] }
-            return Step(
+            yield(Step(
                 technique = WHOLE_REGION,
                 shades = todo,
                 focus = cells.toSet(),
@@ -463,12 +481,11 @@ internal object LitsTeacher {
                 nudge = "Look at the glowing region.",
                 explanation = "This region has exactly four squares, so its tetromino is the whole " +
                     "region. Shade ${if (todo.size == 4) "all four" else "the rest"}.",
-            )
+            ))
         }
-        return null
     }
 
-    private fun overlap(s: Sight): Step? {
+    private fun overlap(s: Sight): Sequence<Step> = sequence {
         for (k in 0 until s.layout.count) {
             if (s.complete(k)) continue
             val shapes = s.geo(k)
@@ -476,7 +493,7 @@ internal object LitsTeacher {
             if (todo.isEmpty()) continue
             val cells = s.layout.cellsOf[k].toSet()
             val around = if (s.shadedIn(k).isEmpty()) "" else " around its shaded squares"
-            return Step(
+            yield(Step(
                 technique = OVERLAP,
                 shades = todo,
                 focus = cells,
@@ -488,13 +505,12 @@ internal object LitsTeacher {
                     "Every L, I, T or S that fits in this region$around covers ${these(todo)}, so " +
                         "${they(todo)} shaded whichever it is."
                 },
-            )
+            ))
         }
-        return null
     }
 
     /** [OVERLAP] after setting aside the shapes the 2x2 rule, the letter rule, or both, forbid. */
-    private fun filtered(s: Sight): Step? {
+    private fun filtered(s: Sight): Sequence<Step> = sequence {
         for (k in 0 until s.layout.count) {
             if (s.complete(k)) continue
             val geo = s.geo(k)
@@ -520,7 +536,7 @@ internal object LitsTeacher {
                 !blockDropped -> "would touch a tetromino of their own letter"
                 else -> "would finish a 2x2 or touch their own letter next door"
             }
-            return Step(
+            yield(Step(
                 technique = technique,
                 shades = todo,
                 focus = cells,
@@ -528,9 +544,8 @@ internal object LitsTeacher {
                 nudge = "Look at the glowing region.",
                 explanation = "Shapes here that $why are out. Every shape left covers ${these(todo)}, " +
                     "so shade ${them(todo)}.",
-            )
+            ))
         }
-        return null
     }
 
     /** The shaded squares outside [t]'s region that condemn it: its 2x2 partners and letter twins. */
@@ -549,7 +564,7 @@ internal object LitsTeacher {
     }
 
     /** [OVERLAP] after setting aside the shapes that would leave a neighbouring region no shape. */
-    private fun neighbour(s: Sight): Step? {
+    private fun neighbour(s: Sight): Sequence<Step> = sequence {
         for (k in 0 until s.layout.count) {
             if (s.complete(k)) continue
             val kept = s.cand1(k)
@@ -567,7 +582,7 @@ internal object LitsTeacher {
             val cells = s.layout.cellsOf[k].toSet()
             val next = victims.flatMap { s.layout.cellsOf[it] }.toSet()
             val whose = if (victims.size == 1) "the marked region" else "a marked region"
-            return Step(
+            yield(Step(
                 technique = NEIGHBOUR,
                 shades = todo,
                 focus = cells,
@@ -575,9 +590,8 @@ internal object LitsTeacher {
                 nudge = "Look at the glowing region, and at what's next to it.",
                 explanation = "Some shapes here would leave $whose $reason. Every shape left " +
                     "covers ${these(todo)}, so shade ${them(todo)}.",
-            )
+            ))
         }
-        return null
     }
 
     /** A supposition followed through: squares it forces, region by region, to a region left empty. */
@@ -619,8 +633,8 @@ internal object LitsTeacher {
         return (0 until layout.count).filter { out[it] }
     }
 
-    private fun whatIf(s: Sight): Step? {
-        var best: Pair<Int, Chain>? = null
+    /** Every square whose staying empty leads to a region with no shape, with the chain that shows it. */
+    private fun whatIfs(s: Sight): Sequence<Pair<Int, Chain>> = sequence {
         for (x in 0 until s.layout.n) {
             if (s.shaded[x]) continue
             val k = s.layout.of[x]
@@ -628,11 +642,21 @@ internal object LitsTeacher {
             // Squares no shape can use are the board's crosses; squares every shape uses were the
             // neighbour step's. Neither is a what-if.
             if (shapes.none { x in it.cells } || shapes.all { x in it.cells }) continue
-            val chain = chainToEmpty(s.with(keepEmpty = listOf(x)), listOf(x)) ?: continue
-            if (best == null || chain.forced.size < best.second.forced.size) best = x to chain
-            if (chain.forced.size <= 1) break
+            yield(x to (chainToEmpty(s.with(keepEmpty = listOf(x)), listOf(x)) ?: continue))
+        }
+    }
+
+    private fun whatIf(s: Sight): Step? {
+        var best: Pair<Int, Chain>? = null
+        for (found in whatIfs(s)) {
+            if (best == null || found.second.forced.size < best.second.forced.size) best = found
+            if (found.second.forced.size <= 1) break
         }
         val (x, chain) = best ?: return null
+        return whatIfStep(s, x, chain)
+    }
+
+    private fun whatIfStep(s: Sight, x: Int, chain: Chain): Step {
         val emptied = s.layout.cellsOf[chain.emptied]
         val home = s.layout.of[x]
         val steps = chain.forced.mapIndexed { i, (k, cells) ->
