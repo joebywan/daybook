@@ -48,7 +48,8 @@ Sudoku, Inequality, Regions and Kings, each technique practised on real position
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 the step's `isReached`, never the stored answer; found practices cached per session; `ui/training/`; its own
-`training_passed` key set, `puzzleId|technique`; two achievements per course, built from `COURSES`'s order), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
+`training_passed` key set, `puzzleId|technique`; two achievements per course, built from `COURSES`'s order; keys through
+`hintKeys`, shared with the play screen), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
 "Practise this" and Settings: `docs/TRAINING_SPEC.md`. What must not be broken:
 
 - A puzzle's first board opens on its walkthrough, once (`autoWalkthrough`: never solved, never opened, not a level
