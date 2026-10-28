@@ -28,7 +28,7 @@ import kotlinx.datetime.LocalDate
  * For the render harness: `?mode=levels` (or `random`) opens home in that mode, `?screen=levels` the levels
  * list, `&level=N` with it that level's boards, and `?puzzle=<id>&level=N` that board of level N;
  * `?screen=archive` the archive by day, `&puzzle=<id>` with it that puzzle's archive, `&day=` that day selected in either; `?screen=stats` the statistics
- * (`&share` with it opens the day's share preview, once a daily is solved); `?screen=techniques` the techniques page; `?screen=training` Training, `&puzzle=<id>` that puzzle's techniques, `&technique=<id>` (or `exam`) one practice (Sudoku's without a puzzle);
+ * (`&share` with it opens the day's share preview, once a daily is solved); `?screen=techniques` the techniques page; `?screen=achievements` the achievements; `?screen=training` Training, `&puzzle=<id>` that puzzle's techniques, `&technique=<id>` (or `exam`) one practice (Sudoku's without a puzzle);
  * `&fontscale=2` renders as at that system font size (what Android's setting does; a browser has none).
  */
 @Composable
@@ -45,6 +45,7 @@ fun DaybookWebApp(params: Map<String, String>) {
             params["screen"] == "stats" -> Route.Stats
             params["screen"] == "settings" -> Route.Settings
             params["screen"] == "techniques" -> Route.Techniques
+            params["screen"] == "achievements" -> Route.Achievements(fromHome = true)
             params["screen"] == "training" -> Route.Training(params["technique"], puzzle = puzzleParam ?: params["technique"]?.let { "sudoku" })
             params["screen"] == "archive" && puzzleParam != null ->
                 Route.Archive(puzzleParam, DailySeed.fromLink(params["day"]))

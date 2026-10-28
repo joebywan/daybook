@@ -7,7 +7,8 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * Training's costs, for docs/TRAINING_SPEC.md (Measured): run with `DAYBOOK_TRAINING_MEASURE=1`. Per course, the time to
+ * Training's costs, for docs/TRAINING_SPEC.md (Measured): run with `DAYBOOK_TRAINING_MEASURE=1` (and optionally
+ * `DAYBOOK_TRAINING_MEASURE_ONLY=<id,id>`). Per course, the time to
  * find the first board through the session cache and each next board given the ones before it, then the first 30
  * practices of each technique; then how many of the first 60 seeds'
  * boards on each tier reach each technique, and which Expert boards need them all (the final board's candidates).
@@ -16,7 +17,8 @@ class TrainingMeasureTest {
     @Test fun measure() {
         assumeTrue(System.getenv("DAYBOOK_TRAINING_MEASURE") != null)
         val only = System.getenv("DAYBOOK_TRAINING_MEASURE_ONLY")?.split(',')?.toSet()
-        for (c in Training.COURSES.filter { only == null || it.id in only }) {
+        for (c in Training.COURSES) {
+            if (only != null && c.id !in only) continue
             for (t in c.techniques) {
                 // Through the session cache: the first board, then each next board with the ones before it cached.
                 fun ms(block: () -> Unit): Double { val a = System.nanoTime(); block(); return (System.nanoTime() - a) / 1e6 }

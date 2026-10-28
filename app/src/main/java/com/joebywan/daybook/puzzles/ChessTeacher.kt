@@ -94,8 +94,15 @@ internal object ChessTeacher {
         val line = replay(s) ?: return null
         if (line.mated) return null
         val step = (if (line.mistakeIndex >= 0) mistake(line) else deduce(line.position, line.remaining)) ?: return null
+        return deduction(s, step, if (step.technique == MISTAKE) line.mistakeIndex else s.played.size)
+    }
+
+    /**
+     * [step] on [s] as the play screen's [Deduction]: a key played as move [index], or the move at [index] taken back
+     * (Training builds its practices' steps with it too).
+     */
+    internal fun deduction(s: ChessState, step: Step, index: Int = s.played.size): Deduction {
         val base = s.played
-        val index = if (step.technique == MISTAKE) line.mistakeIndex else base.size
         return Deduction(
             step,
             mistake = step.technique == MISTAKE,
