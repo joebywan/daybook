@@ -171,11 +171,11 @@ internal fun passLine(course: Course, record: Set<String>, technique: String, ru
     else "Passed! ${Training.RUN} in a row. ${if (course.passed(record, technique)) "" else earnedLine(course, record, technique)}".trim()
 
 /**
- * One technique's practice: a board whose next hint step is [technique]. The player places a digit; a right one (the
- * step's, or any correct digit, since the board has no simpler step anywhere) adds to the run, a wrong one ends it and
- * shows the reasoning. [Training.RUN] in a row calls [onPass] (the first time) and, after the congratulation has
- * shown for a beat, [onBack]: the owner, "send the user back to the list when they achieve the goal". A board where a
- * hint was opened neither counts nor breaks the run.
+ * One technique's practice: a board whose next hint step is [technique]. The player makes a move; [Course.judge] says
+ * whether it is right (adds to the run), wrong (ends it and shows the reasoning) or neither yet (play on: one cross of a
+ * step that crosses three). [Training.RUN] in a row calls [onPass] (the first time) and, after the congratulation has
+ * shown for a beat, [onBack]: the owner, "send the user back to the list when they achieve the goal". The same for every
+ * drill. A board where a hint was opened neither counts nor breaks the run.
  */
 @Composable
 fun TechniquePractice(course: Course, technique: String, record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit) {
@@ -202,15 +202,8 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
     LaunchedEffect(earned) { if (earned != null) { delay(PASS_BEAT_MS); onBack() } }
     val subtitle = if (course.passed(record, technique)) "Passed" else "$run of ${Training.RUN} in a row"
 
-    fun judge(next: PuzzleState) {
-        val now = board ?: return
-        val was = course.cellsOf(now)
-        val cells = course.cellsOf(next)
-        val placed = cells.indices.firstOrNull { cells[it] != 0 && was[it] == 0 }
-        board = next
-        if (placed == null || p == null) return
+    fun settle(right: Boolean) {
         hints.clear()
-        val right = cells[placed] == course.solutionOf(p.board)[placed]
         verdict = when {
             !right -> Verdict.WRONG
             hinted -> Verdict.HINTED
@@ -225,6 +218,17 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
                 if (earned != null && !course.passed(record, technique)) onPass(technique)
             }
             else -> Unit
+        }
+    }
+
+    // Every state the board emits is judged off the main thread (a move drill asks the teacher, which can take a while);
+    // a verdict for a state the player has already moved on from is dropped, and the newer state judged instead.
+    fun judge(next: PuzzleState) {
+        if (board == null || p == null || verdict != null) return
+        board = next
+        scope.launch {
+            val right = withContext(Dispatchers.Default) { course.judge(p, next) } ?: return@launch
+            if (board === next && verdict == null) settle(right)
         }
     }
 
@@ -244,7 +248,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
             if (verdict == null) WatchHint(hints, puzzle, b)
             val highlight = when (verdict) {
                 null -> hints.highlight
-                else -> BoardHighlight(strong = setOf(p.step.cell), soft = p.step.cited - p.step.cell, warning = false)
+                else -> BoardHighlight(strong = p.step.targets, soft = p.step.cited - p.step.targets, warning = false)
             }
             Box(
                 Modifier.weight(1f).fillMaxWidth().hintKeys(verdict == null, hints, if (puzzle.offersHints) ::onHint else null),

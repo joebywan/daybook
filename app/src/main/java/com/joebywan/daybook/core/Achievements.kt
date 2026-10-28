@@ -77,16 +77,10 @@ val ACHIEVEMENTS: List<Achievement> = listOf(
     Achievement("allPuzzles", AchievementCategory.COVERAGE, "Clean sweep", "Finish every puzzle's daily within one week.") { h, _, ids ->
         ids.isNotEmpty() && h.mapNotNullTo(HashSet()) { it.day }.any { start -> weekFrom(h, start).containsAll(ids) }
     },
-    // Training (docs/TRAINING_SPEC.md): read off the training record, never the completions. Appended only.
-    trained(SudokuTraining),
-    graduate(SudokuTraining),
-    trained(CagesTraining),
-    graduate(CagesTraining),
-    trained(InequalityTraining),
-    graduate(InequalityTraining),
-    trained(RegionsTraining),
-    graduate(RegionsTraining),
-)
+) +
+    // Training (docs/TRAINING_SPEC.md): read off the training record, never the completions. Two per course, in
+    // Training.COURSES' order, which only ever grows at the end, so these are appended only.
+    Training.COURSES.flatMap { listOf(trained(it), graduate(it)) }
 
 /** "<Puzzle> trained": every technique of [c] passed in Training. */
 private fun trained(c: Course) = Achievement(
