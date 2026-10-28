@@ -50,6 +50,7 @@ import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.drawWalls
 import com.joebywan.daybook.ui.wall
 import com.joebywan.daybook.ui.drawHintRings
+import com.joebywan.daybook.ui.standOut
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
@@ -1362,6 +1363,14 @@ object Lits : PuzzleType {
                         )
                     }
             ) {
+                fun fillOf(i: Int): Color {
+                    val piece = letters[i]
+                    return when {
+                        !shown.shaded[i] -> scheme.surfaceVariant
+                        piece == null -> inProgress
+                        else -> palette.getValue(piece)
+                    }
+                }
                 for (i in 0 until s.width * s.height) {
                     val r = i / s.width
                     val c = i % s.width
@@ -1369,11 +1378,7 @@ object Lits : PuzzleType {
                     val piece = letters[i]
                     feelSquare(feel, i, at, Size(stepPx, stepPx), accentColour) {
                         drawRect(
-                            color = when {
-                                !shown.shaded[i] -> scheme.surfaceVariant
-                                piece == null -> inProgress
-                                else -> palette.getValue(piece)
-                            },
+                            color = fillOf(i),
                             topLeft = at,
                             size = Size(stepPx, stepPx),
                         )
@@ -1441,7 +1446,11 @@ object Lits : PuzzleType {
 
                 // Outlines last, on top of the walls: a glow that a wall half-covers is a glow the
                 // player has to hunt for.
-                drawHintRings(highlight, s.width, s.height, stepPx, glow, pulse.value, inset = edge / 2f)
+                // Per square, the scheme's ink or page, whichever stands out on its fill: one colour vanished on violet
+                // or rose in one scheme or the other. A mistake keeps the error colour.
+                drawHintRings(highlight, s.width, s.height, stepPx, glow, pulse.value, inset = edge / 2f) { i ->
+                    if (highlight.warning) glow else standOut(fillOf(i), scheme.onBackground, scheme.background)
+                }
             }
         }
     }

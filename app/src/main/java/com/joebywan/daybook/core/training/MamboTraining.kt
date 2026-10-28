@@ -30,6 +30,7 @@ val MamboTraining: Course = Course(
     // A sun is two taps, through a moon that may be wrong: a wrong verdict waits as long as the board's own caption.
     // Any instance of the technique on the position is right, not only the hint's pick.
     drill = MoveDrill(
+        view = { (it as MamboState).cells },
         settleMillis = Mambo.SETTLE_MILLIS,
         next = { s -> (s as MamboState).let { m -> MamboTeacher.deduce(m.size, m.cells, m.links)?.let { Mambo.deduction(m, it) } } },
         every = { s, technique ->

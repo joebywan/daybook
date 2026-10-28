@@ -30,6 +30,7 @@ val TentsTraining: Course = Course(
     tierFor = tierByIndex({ TentsTraining.techniques }, hard = 3, expert = 6),
     // TentsTeacher.deduce is handed the trees, clues and marks as shown: never the answer.
     drill = MoveDrill(
+        view = { (it as TentsState).seen },
         next = { s ->
             (s as TentsState).let { t -> TentsTeacher.deduce(t.size, t.trees, t.rowCounts, t.colCounts, t.seen)?.let(TentsTeacher::deduction) }
         },

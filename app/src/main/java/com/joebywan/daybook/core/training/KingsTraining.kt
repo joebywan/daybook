@@ -31,6 +31,7 @@ val KingsTraining: Course = Course(
     tierFor = tierByIndex({ KingsTraining.techniques }, hard = 3, expert = 4),
     // KingsTeacher.deduce has no parameter through which the answer could reach it.
     drill = MoveDrill(
+        view = { (it as KingsState).marks },
         next = { s -> (s as KingsState).let { k -> KingsTeacher.deduce(k.size, k.region, k.marks)?.let { Kings.deduction(k, it) } } },
         every = { s, t -> (s as KingsState).let { k -> KingsTeacher.steps(k.size, k.region, k.marks, t).map { Kings.deduction(k, it) } } },
     ),

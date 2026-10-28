@@ -90,7 +90,8 @@ fun DrawScope.drawHintDim(highlight: BoardHighlight, cols: Int, rows: Int, step:
 
 /**
  * The outline inside each square a hint names: strong ones 4dp in [glow] at [pulse], soft ones a quiet
- * 1.5dp. [inset] keeps them clear of anything drawn along the square's edge (a wall).
+ * 1.5dp. [inset] keeps them clear of anything drawn along the square's edge (a wall). [colourAt] picks a square's own
+ * colour instead of [glow], for boards whose fills are mid-tones ([standOut]).
  */
 fun DrawScope.drawHintRings(
     highlight: BoardHighlight,
@@ -101,6 +102,7 @@ fun DrawScope.drawHintRings(
     pulse: Float,
     corner: CornerRadius = CornerRadius(4.dp.toPx()),
     inset: Float = 0f,
+    colourAt: (Int) -> Color = { glow },
 ) {
     val strongW = 4.dp.toPx()
     val softW = 1.5.dp.toPx()
@@ -110,7 +112,7 @@ fun DrawScope.drawHintRings(
         val w = if (strong) strongW else softW
         val at = inset + w / 2
         drawRoundRect(
-            color = if (strong) glow.copy(alpha = pulse) else glow.copy(alpha = 0.5f),
+            color = colourAt(i).let { if (strong) it.copy(alpha = pulse) else it.copy(alpha = 0.5f) },
             topLeft = Offset((i % cols) * step + at, (i / cols) * step + at),
             size = Size(step - at * 2f, step - at * 2f),
             cornerRadius = corner,

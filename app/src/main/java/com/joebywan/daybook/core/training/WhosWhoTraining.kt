@@ -26,6 +26,7 @@ val WhosWhoTraining: Course = Course(
     tierFor = tierByIndex({ WhosWhoTraining.techniques }, hard = 2, expert = 4),
     // WhosWhoTeacher.deduce reads the clues, the marks and the words; never the answer.
     drill = MoveDrill(
+        view = { s -> (s as WhosWhoState).let { w -> w.marks.chunked(w.n) } },
         next = { s -> (s as WhosWhoState).let { w -> WhosWhoTeacher.deduce(w, w.marks)?.let { WhosWho.deduction(it) } } },
         every = { s, t -> (s as WhosWhoState).let { w -> WhosWhoTeacher.steps(w, w.marks, t).map { WhosWho.deduction(it) } } },
     ),

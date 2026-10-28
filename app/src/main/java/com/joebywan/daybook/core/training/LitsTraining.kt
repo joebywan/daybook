@@ -31,6 +31,7 @@ val LitsTraining: Course = Course(
     tierFor = tierByIndex({ LitsTraining.techniques }, hard = 4, expert = 5),
     // LitsTeacher.deduce has no parameter through which the answer could reach it.
     drill = MoveDrill(
+        view = { (it as LitsState).shaded },
         next = { s -> (s as LitsState).let { l -> LitsTeacher.deduce(l.width, l.height, l.region, l.shaded)?.let { Lits.deduction(it) } } },
         every = { s, t -> (s as LitsState).let { l -> LitsTeacher.instances(l.width, l.height, l.region, l.shaded, t).map { Lits.deduction(it) } } },
     ),

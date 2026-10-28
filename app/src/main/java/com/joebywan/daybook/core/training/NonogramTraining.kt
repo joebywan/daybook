@@ -26,6 +26,7 @@ val NonogramTraining: Course = Course(
     // NonogramTeacher.deduce reads the clues and the marks only; the clues are printed on the board.
     // Any line's instance of the technique is right, not only the hint's pick.
     drill = MoveDrill(
+        view = { (it as NonogramState).cells.toList() },
         next = { s ->
             (s as NonogramState).let { g ->
                 NonogramTeacher.deduce(g.width, g.height, NonogramLogic.rowClues(g), NonogramLogic.colClues(g), g.cells)

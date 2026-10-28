@@ -32,6 +32,7 @@ val LampsTraining: Course = Course(
     tierFor = tierByIndex({ LampsTraining.techniques }, hard = 4, expert = 6),
     // LampsTeacher.deduce is handed the walls, numbers and marks: never the answer.
     drill = MoveDrill(
+        view = { (it as LampsState).marks.toList() },
         next = { s -> (s as LampsState).let { l -> LampsTeacher.deduce(l.size, l.walls, l.marks)?.let(LampsTeacher::deduction) } },
         every = { s, t -> (s as LampsState).let { l -> LampsTeacher.steps(l.size, l.walls, l.marks, t).map(LampsTeacher::deduction) } },
         wrong = { s -> (s as LampsState).marks.indices.any { s.marks[it] == LampsLogic.CROSS && s.solution[it] == '1' } },
