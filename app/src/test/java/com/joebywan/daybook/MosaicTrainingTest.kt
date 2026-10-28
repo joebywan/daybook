@@ -108,7 +108,7 @@ class MosaicTrainingTest {
         }
     }
 
-    @Test fun `a fill is right when it is the technique and keeps the limit, and wrong otherwise`() {
+    @Test fun `a fill is right when it is any instance of the technique, wrong when it loses, and otherwise plays on`() {
         for ((rung, t) in MosaicTraining.techniques.withIndex()) {
             for (p in MosaicTraining.practices(t).take(4)) {
                 val b = p.board as MosaicState
@@ -125,7 +125,17 @@ class MosaicTrainingTest {
                         1 -> gain(b, cell, colour) == mx
                         else -> ecc.getValue(b.area(cell).min()) == ecc.values.min()
                     }
-                    assertEquals("$t: ${b.cells} fill $cell with $colour", keeps(b, cell, colour) && technique, MosaicTraining.judge(p, after))
+                    val expected = when {
+                        !keeps(b, cell, colour) -> false // it loses the board
+                        technique -> true // another instance of the technique
+                        else -> null // still wins, but not this technique: play on, never "Not quite"
+                    }
+                    assertEquals("$t: ${b.cells} fill $cell with $colour", expected, MosaicTraining.judge(p, after))
+                    // After a fill that is not the step, nothing later is judged: the step is gone.
+                    if (expected == null) {
+                        val (c2, k2) = everyFill(after).first()
+                        assertNull(MosaicTraining.judge(p, after.flood(c2, k2)))
+                    }
                 }
             }
         }

@@ -10,7 +10,7 @@ import com.joebywan.daybook.puzzles.PuzzleState
  * that finishes the board and the fallback "stays within the limit" are not skills (`TechniqueNames`' NOT_PRAISED).
  *
  * The walk is [MoveDrill]'s; the judge is [MosaicDrill]'s own, because every Mosaic move is a fill that cannot be taken
- * back, so a practice cannot "play on" past a fill that is not the step: each fill gets a verdict.
+ * back, so only the first fill after a practice's board is judged.
  */
 val MosaicTraining: Course = Course(
     puzzle = Mosaic,
@@ -40,17 +40,19 @@ val MosaicTraining: Course = Course(
  * question of the same search, "does the board still finish in the fills left?":
  * - the step's own fill is right without a search (its `isReached`);
  * - a fill that loses the board is wrong (what the teacher would call a mistake);
- * - a fill that keeps the board but is not this technique is wrong too: it cannot be undone here, so the practice cannot
- *   wait for the step, and the verdict shows the step that was there to find. A fill that is the technique by its own
- *   test (counting: any fill that keeps the board, since each must wipe out a colour; the biggest swallow: one that
- *   swallows as many; the centre: any fill of a most central area) is right.
+ * - a fill that keeps the board and is any instance of the technique is right, as [MoveDrill]'s `every` would have it:
+ *   counting, any fill that keeps the board (with one fill fewer than colours, each must wipe one out); the biggest
+ *   swallow, any keeping fill that swallows as many; the centre, any keeping fill of a most central area;
+ * - a fill that keeps the board but is no instance of the technique plays on with no verdict (the owner, 2026-10-28: a
+ *   winning fill must never be "Not quite"). The step is gone, so nothing later is judged either: the player plays the
+ *   board out or takes "Another board", which neither counts nor breaks the run.
  * A search that runs out of budget says nothing (play on), as the hint would.
  */
 object MosaicDrill : Drill {
-    private val moves = MoveDrill { s ->
+    private val moves = MoveDrill(next = { s ->
         val m = s as MosaicState
         MosaicTeacher.deduce(m.width, m.height, m.colours, m.cells, m.limit - m.moves)?.let { Mosaic.deduction(m, it) }
-    }
+    })
 
     override fun walk(start: PuzzleState): Sequence<Course.Practice> = moves.walk(start)
 
@@ -58,6 +60,8 @@ object MosaicDrill : Drill {
         val b = p.board as MosaicState
         val m = after as MosaicState
         if ((p.step as Deduction).isReached(m)) return true
+        // Only the first fill after the practice's board is judged: after it, the step no longer exists.
+        if (m.moves != b.moves + 1) return null
         val cell = b.cells.indices.firstOrNull { b.cells[it] != m.cells[it] } ?: return null
         val a = MosaicTeacher.Areas.of(b.width, b.height, b.cells) ?: return null
         val search = MosaicTeacher.Search(b.colours)
@@ -68,7 +72,7 @@ object MosaicDrill : Drill {
         if (search.exhausted) return null
         if (!keeps) return false
         val root = a.root
-        return when (p.step.technique) {
+        val instance = when (p.step.technique) {
             MosaicTeacher.COUNT -> true
             MosaicTeacher.BIGGEST -> {
                 val best = (0 until root.count).maxOf { h ->
@@ -82,5 +86,6 @@ object MosaicDrill : Drill {
             }
             else -> false
         }
+        return if (instance) true else null
     }
 }

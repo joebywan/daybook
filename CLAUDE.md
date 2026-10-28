@@ -47,9 +47,10 @@ never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate 
 Sudoku, Inequality, Regions, Kings and Mosaic, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
-the step's `isReached`, never the stored answer (Mosaic's `MosaicDrill` judges a fill by one search question, since a fill
-cannot be undone); found practices cached per session; `ui/training/`; its own
-`training_passed` key set, `puzzleId|technique`; two achievements per course, built from `COURSES`'s order), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
+any step of the technique being reached (`MoveDrill(next, every)`; Mosaic's `MosaicDrill` applies the same rule to a fill,
+judged by one search question), never the stored answer; found practices cached per session; `ui/training/`; its own
+`training_passed` key set, `puzzleId|technique`; two achievements per course, built from `COURSES`'s order; keys through
+`hintKeys`, shared with the play screen), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
 "Practise this" and Settings: `docs/TRAINING_SPEC.md`. What must not be broken:
 
 - A puzzle's first board opens on its walkthrough, once (`autoWalkthrough`: never solved, never opened, not a level
