@@ -1,2 +1,1 @@
-- New: Training for Who's Who, Cipher and Chess. Practise each technique on real boards, any way the technique allows; 3 in a row to pass, then a final board that needs them all. Two new achievements for each.
-- Training never deals you the same practice board twice.
+- New: Training for Mosaic. Make the move a technique allows, any way it allows: count fills, swallow the most areas or grow from the centre. 3 in a row to pass, then a final board that needs them all. Two new achievements.

@@ -822,7 +822,11 @@ object Mosaic : PuzzleType {
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as MosaicState
-        val step = MosaicTeacher.teach(s) ?: return null
+        return deduction(s, MosaicTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] on [s] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(s: MosaicState, step: MosaicTeacher.Step): Deduction {
         val mistake = step.technique == MosaicTeacher.MISTAKE
         val base = s.cells
         val after = if (mistake) null else s.flood(step.cell, step.colour).cells

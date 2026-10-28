@@ -176,6 +176,7 @@ object Training {
             WhosWhoTraining,
             CipherTraining,
             ChessTraining,
+            MosaicTraining,
         )
     }
 
