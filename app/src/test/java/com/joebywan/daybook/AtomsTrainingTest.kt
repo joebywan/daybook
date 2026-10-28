@@ -8,6 +8,7 @@ import com.joebywan.daybook.puzzles.Atoms
 import com.joebywan.daybook.puzzles.AtomsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -76,6 +77,14 @@ class AtomsTrainingTest {
             }
         }
 
+        /** Every one-neighbour instance: an atom with one line left that has room, and that line given all it needs. */
+        fun oneNeighbour(): List<Pair<Int, Int>> = (0 until n).mapNotNull { a ->
+            val need = need(a)
+            val usable = lines.filter { (s.pairs[it].a == a || s.pairs[it].b == a) && room(it, 0) > 0 }
+            if (need <= 0 || usable.size != 1 || room(usable[0], 0) < need || need > room(usable[0], 2)) null
+            else usable[0] to s.counts[usable[0]] + need
+        }
+
         fun has(rung: Int): Boolean = when (rung) {
             in 0..2 -> rung in forced(0)
             3 -> forced(1).isNotEmpty()
@@ -118,15 +127,40 @@ class AtomsTrainingTest {
                 // A bond on a line the answer leaves as it is: wrong.
                 val over = b.pairs.indices.first { b.counts[it] == b.solution[it] && b.counts[it] < 2 }
                 assertEquals(false, AtomsTraining.judge(p, b.cycle(over)))
-                // A bond of the step's, short of all of it: play on.
+                // A bond of the step's, short of all of it: never wrong, and play on unless it completes another
+                // instance of the technique (an atom it finishes the step of by itself).
                 val short = b.pairs.indices.firstOrNull { after.counts[it] > b.counts[it] }?.let { b.cycle(it) }
                 if (short != null && short.counts != after.counts) {
-                    assertNull(AtomsTraining.judge(p, short))
-                    partial++
+                    val verdict = AtomsTraining.judge(p, short)
+                    assertNotEquals(false, verdict)
+                    if (verdict == null) partial++
                 }
             }
         }
         assertTrue(partial > 0)
+    }
+
+    @Test fun `another atom with one neighbour left is right, and a true bond no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for (p in AtomsTraining.practices("one-neighbour").take(12)) {
+            val b = p.board as AtomsState
+            val r = rungs(b)
+            val instances = r.oneNeighbour()
+            val mine = (p.step as Deduction).targets.map { it - b.atoms.size }.toSet()
+            for ((line, to) in instances) {
+                if (line in mine) continue
+                others++
+                assertEquals("bond on line $line", true, AtomsTraining.judge(p, b.copy(counts = b.counts.toMutableList().also { it[line] = to })))
+            }
+            val used = instances.map { it.first }.toSet() + mine
+            b.pairs.indices.firstOrNull { it !in used && b.solution[it] > b.counts[it] }?.let { line ->
+                unjustified++
+                assertNull("true bond on line $line", AtomsTraining.judge(p, b.cycle(line)))
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true bond ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

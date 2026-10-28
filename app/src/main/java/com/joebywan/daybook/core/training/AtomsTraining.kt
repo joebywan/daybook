@@ -5,7 +5,8 @@ import com.joebywan.daybook.puzzles.AtomsState
 import com.joebywan.daybook.puzzles.AtomsTeacher
 
 /**
- * Atoms' course on the move drill: the player lays the bond (or bonds) the technique forces. A bond past what the answer
+ * Atoms' course on the move drill: the player lays the bond (or bonds) the technique forces, at the hint's atom or any
+ * other atom it forces (`AtomsTeacher.steps`; a what-if is only the hint's). A bond past what the answer
  * has is the teacher's mistake and ends the run; one bond of a step that lays two plays on.
  *
  * "A group's only way out" is left out: no walk ever reaches it (0 of 30 boards on any tier; the simpler rungs always
@@ -31,7 +32,10 @@ val AtomsTraining: Course = Course(
     // the what-if (15 of 60).
     tierFor = tierByIndex({ AtomsTraining.techniques }, hard = 3, expert = 5),
     // AtomsTeacher.deduce has no parameter through which the answer could reach it.
-    drill = MoveDrill { s -> (s as AtomsState).let { a -> AtomsTeacher.deduce(a.atoms, a.pairs, a.counts)?.let(Atoms::deduction) } },
+    drill = MoveDrill(
+        next = { s -> (s as AtomsState).let { a -> AtomsTeacher.deduce(a.atoms, a.pairs, a.counts)?.let(Atoms::deduction) } },
+        every = { s, t -> (s as AtomsState).let { a -> AtomsTeacher.steps(a.atoms, a.pairs, a.counts, t).map(Atoms::deduction) } },
+    ),
     badge = "=",
     examIndex = 1,
 )

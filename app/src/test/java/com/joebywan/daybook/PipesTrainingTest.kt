@@ -105,12 +105,16 @@ class PipesTrainingTest {
                     s = s.rotate(cell)
                     assertEquals(if (s.cells[cell] == answer[cell]) true else null, PipesTraining.judge(p, s))
                 }
-                // Another tile turned off every answer: wrong when it runs full, play on while it is dry.
+                // Another tile turned off every answer: never right. A tile already sitting its way, turned off it, is
+                // wrong when it runs full and plays on while dry; a tile not yet sitting its way may be another instance
+                // of the technique on its way round, so it is not judged here.
                 for (c in b.cells.indices) {
                     if (c == cell) continue
                     val turned = b.rotate(c)
                     if (turned.cells[c] == answer[c]) continue
                     val verdict = PipesTraining.judge(p, turned)
+                    assertNotEquals("tile $c turned off the answer", true, verdict)
+                    if (b.cells[c] != answer[c]) continue
                     if (c in Pipes.filled(turned)) {
                         assertEquals("tile $c turned off the answer, wet", false, verdict)
                         wrongSeen++
@@ -122,6 +126,30 @@ class PipesTrainingTest {
             }
         }
         assertTrue(wrongSeen > 0 && dryPlayOn > 0)
+    }
+
+    @Test fun `another tile the border settles is right, and a true turn no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for (p in PipesTraining.practices("border").take(12)) {
+            val b = p.board as PipesState
+            val mine = (p.step as Deduction).targets.single()
+            val answer = answers.allSolutions(b.width, b.height, b.cells, cap = 2).single()
+            val border = pinned(b, neighbours = false)
+            fun set(c: Int, m: Int) = b.copy(cells = b.cells.toMutableList().also { it[c] = m }, turned = b.turned + c)
+            for ((c, turns) in border.withIndex()) {
+                if (c == mine || turns.size != 1 || b.cells[c] == turns[0]) continue
+                others++
+                assertEquals("tile $c", true, PipesTraining.judge(p, set(c, turns[0])))
+            }
+            // A tile the border leaves open, turned to the answer's way: true, but no border step.
+            b.cells.indices.firstOrNull { border[it].size > 1 && b.cells[it] != answer[it] }?.let { c ->
+                unjustified++
+                assertNull("tile $c", PipesTraining.judge(p, set(c, answer[c])))
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true turn ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

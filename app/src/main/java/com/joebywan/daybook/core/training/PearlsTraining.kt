@@ -5,7 +5,8 @@ import com.joebywan.daybook.puzzles.PearlsState
 import com.joebywan.daybook.puzzles.PearlsTeacher
 
 /**
- * Pearls' course on the move drill: the player draws the lines and crosses the edges the technique settles. A line or a
+ * Pearls' course on the move drill: the player draws the lines and crosses the edges the technique settles, at the hint's
+ * square or any other the technique settles (`PearlsTeacher.steps`; a what-if is only the hint's). A line or a
  * cross the board's one loop disagrees with is the teacher's mistake and ends the run (sound: every board has one loop).
  *
  * "A pearl with two ways in" is left out: no walk ever reaches it (0 of 30 boards on any tier; the pearls' and squares'
@@ -31,7 +32,10 @@ val PearlsTraining: Course = Course(
     // PearlsLogic.specFor: Standard the pearls' and squares' own rules, Hard must need the one loop, Expert a what-if.
     tierFor = tierByIndex({ PearlsTraining.techniques }, hard = 5, expert = 6),
     // PearlsTeacher.deduce is handed the pearls and the edges; the loop never reaches it.
-    drill = MoveDrill { s -> (s as PearlsState).let { p -> PearlsTeacher.deduce(p.size, p.pearls, p.edges)?.let { Pearls.deduction(p, it) } } },
+    drill = MoveDrill(
+        next = { s -> (s as PearlsState).let { p -> PearlsTeacher.deduce(p.size, p.pearls, p.edges)?.let { Pearls.deduction(p, it) } } },
+        every = { s, t -> (s as PearlsState).let { p -> PearlsTeacher.steps(p.size, p.pearls, p.edges, t).map { Pearls.deduction(p, it) } } },
+    ),
     badge = "O",
     examIndex = 0,
 )

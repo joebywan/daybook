@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -103,6 +104,10 @@ class PearlsTrainingTest {
             }
         }
 
+        /** Every one-way instance, as the edge it draws: the one way on from a square with one line. */
+        fun oneWays(): Set<Int> = (0 until n * n).filter { q -> linesAt(q) == 1 && ways(q) == 2 }
+            .map { q -> (0 until 4).map { g.edge(q, it) }.first { !shut(it) && !lineOn(it) } }.toSet()
+
         fun has(rung: Int) = when (rung) {
             0 -> black()
             1 -> white()
@@ -181,6 +186,27 @@ class PearlsTrainingTest {
             }
         }
         assertTrue(partial > 0)
+    }
+
+    @Test fun `another line with one way on is right, and a true cross no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for (p in PearlsTraining.practices("one-way").take(12)) {
+            val b = p.board as PearlsState
+            val mine = (p.step as Deduction).targets.map { it - b.size * b.size }.toSet()
+            val answer = answerEdges(b)
+            for (e in Rungs(b).oneWays() - mine) {
+                others++
+                assertEquals("line $e", true, PearlsTraining.judge(p, b.paint(listOf(e), PearlsLogic.LINE_MARK)))
+            }
+            // One-way steps draw lines, so a true cross completes none of them.
+            b.edges.indices.firstOrNull { b.edges[it] == PearlsLogic.OPEN_MARK && it !in answer }?.let { e ->
+                unjustified++
+                assertNull("true cross $e", PearlsTraining.judge(p, b.tap(e)))
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true cross ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

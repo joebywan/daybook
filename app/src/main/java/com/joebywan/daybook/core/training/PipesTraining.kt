@@ -6,33 +6,36 @@ import com.joebywan.daybook.puzzles.PipesTeacher
 import com.joebywan.daybook.puzzles.PuzzleState
 
 /**
- * Pipes' course on the move drill: the player turns the tile the technique settles until it sits its one way round.
+ * Pipes' course on the move drill: the player turns a tile the technique settles until it sits its one way round. Any
+ * tile of that technique counts (`PipesTeacher.steps`), not only the hint's.
  *
- * Judged its own way, because a tap turns a tile a quarter at a time: turning the step's tile round to its way passes
- * through turns that are wrong, and those are the player getting there, not a mistake. So the step's tile is never
+ * Judged its own way, because a tap turns a tile a quarter at a time: turning such a tile round to its way passes through
+ * turns that are wrong, and those are the player getting there, not a mistake. So a tile the technique settles is never
  * judged wrong (it is right once it reads its turn); any other tile the player turns is wrong when it runs full and no
  * finished network has it that way, the teacher's own mistake ("no legal answer keeps this rotation", never "differs from
  * the stored answer"). A turn elsewhere that some network keeps, or a dry one, plays on.
  */
 private object PipesDrill : Drill {
-    // PipesTeacher.deduce reads only the tiles as they lie: no answer goes in.
-    private val moves = MoveDrill { s -> (s as PipesState).let { p -> PipesTeacher.deduce(p.width, p.height, p.cells)?.let(Pipes::deduction) } }
+    // PipesTeacher.deduce and steps read only the tiles as they lie: no answer goes in.
+    private val moves = MoveDrill(next = { s -> (s as PipesState).let { p -> PipesTeacher.deduce(p.width, p.height, p.cells)?.let(Pipes::deduction) } })
 
     override fun walk(start: PuzzleState) = moves.walk(start)
 
     override fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean? {
-        val step = p.step as Deduction
         val was = p.board as PipesState
         val now = after as PipesState
-        val target = step.targets.single()
+        // ponytail: re-derived per judged state (a Net run, a few ms); memoise on the practice if it ever shows.
+        val instances = listOf(p.step as Deduction) +
+            PipesTeacher.steps(was.width, was.height, was.cells, p.step.technique).map(Pipes::deduction)
+        val settling = instances.flatMapTo(HashSet()) { it.targets } // membership only
         val wet = Pipes.filled(now)
         val wrong = now.cells.indices.any { c ->
-            c != target && now.cells[c] != was.cells[c] && c in wet &&
+            c !in settling && now.cells[c] != was.cells[c] && c in wet &&
                 PipesTeacher.solve(now.width, now.height, now.cells, c to now.cells[c]) == null
         }
         return when {
             wrong -> false
-            step.isReached(now) -> true
+            instances.any { it.isReached(now) } -> true
             else -> null
         }
     }

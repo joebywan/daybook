@@ -112,7 +112,10 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     `every` is the course author's second hook, `(PuzzleState, technique: String) -> List<Deduction>`, built from a teacher
     entry point that lists every step of one rung from visible state (Kings: `KingsTeacher.steps(n, region, marks,
     technique)`, which `deduce`'s pick is always one of; its picking is unchanged, so no daily board moved). Leaving it
-    null keeps to the teacher's one step.
+    null keeps to the teacher's one step. Pearls' `PearlsTeacher.steps` lists each square's local rule of the kind, and
+    each edge that would close a small loop; Atoms' `AtomsTeacher.steps` each atom the technique's level forces; Pipes'
+    `PipesTeacher.steps` each tile of the technique the reasoning pins (for the simpler techniques, only those pinned
+    before the first no-loop, which needed nothing more). A what-if is only ever the teacher's one pick in all three.
   - **Wrong** = the teacher's `teach` calls the new board a mistake, which each teacher defines as "no legal answer keeps
     this" (never "differs from the stored answer": LITS's and Pipes' several answers, PR #15).
   - **Neither** = play on: one cross of three, an erasure, or a mark that is true but that no step of the technique
@@ -134,7 +137,7 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
 - **A course may bring its own `Drill`** when a puzzle's input passes through wrong states on the way to a right one.
   Pipes does (`core/training/PipesTraining.kt`): a tap turns a tile a quarter at a time, so the step's tile reads two or
   three wrong turns on its way round, and the teacher would call a wet one a mistake. Its drill walks as `MoveDrill` but
-  never judges the step's tile wrong (it is right once it reads its turn); another tile the player turned is wrong when
+  never judges a tile of any instance wrong (it is right once one reads its turn); another tile the player turned is wrong when
   it runs full and no finished network has it that way (the teacher's own test, `PipesTeacher.solve` with that turn
   pinned: "no legal answer keeps this rotation", sound on a board with several answers too); a dry turn, or one some
   network keeps, plays on. Pearls (a tap crosses, a drag draws) and Atoms (a tap adds a bond, up to two, and only past
@@ -205,8 +208,8 @@ Nothing had to be excluded: every technique every teacher names is found within 
   no-loop practice turned round three quarter turns to its way: "That's it", never a wrong verdict on the way), their six
   badges on the Achievements page in both schemes, and on the Android emulator from the rules sheet's Train and from
   Settings: a wet Pipes tile turned off every answer fails ("Not quite"), a turn of the step's tile passes, one Atoms bond
-  of a double plays on, and a Pearls black pearl's arms pass once both are drawn. As with Kings, only the step itself
-  passes: a correct move of the same technique elsewhere (another black pearl's arms) plays on silently.
+  of a double plays on, and a Pearls black pearl's arms pass once both are drawn. (Before the `every` hook, another black
+  pearl's correct arms played on silently; they now pass.)
 
 ## Classification of every puzzle
 
