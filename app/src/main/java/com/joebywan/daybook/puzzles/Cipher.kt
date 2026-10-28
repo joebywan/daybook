@@ -138,7 +138,11 @@ object Cipher : PuzzleType {
 
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as CipherState
-        val step = CipherTeacher.teach(s) ?: return null
+        return deduction(s, CipherTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] on [s] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(s: CipherState, step: CipherTeacher.Step): Deduction {
         val l = step.letter
         return placementDeduction(
             s, PlacementStep(step.technique, l, step.digit, step.focus, step.cited, step.nudge, step.explanation),

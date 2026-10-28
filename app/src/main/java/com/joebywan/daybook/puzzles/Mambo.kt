@@ -547,7 +547,11 @@ object Mambo : PuzzleType {
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as MamboState
-        val step = MamboTeacher.teach(s) ?: return null
+        return deduction(s, MamboTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] on [s] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(s: MamboState, step: MamboTeacher.Step): Deduction {
         val base = s.cells
         return Deduction(
             step,
@@ -705,7 +709,7 @@ object Mambo : PuzzleType {
      * a line past half, and flagging it accuses the player of a board they were passing through
      * rather than aiming at. Waiting for the hand to stop lets the transient go unremarked.
      */
-    private const val SETTLE_MILLIS = 1000L
+    internal const val SETTLE_MILLIS = 1000L
 
     /**
      * Lines permanently reserved for the caption under the board.

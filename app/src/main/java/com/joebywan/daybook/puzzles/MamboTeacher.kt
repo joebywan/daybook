@@ -174,7 +174,7 @@ internal object MamboTeacher {
         while (true) {
             if (!Mambo.propagate(n, grid, links)) return null
             if (grid.none { it == Sym.NONE }) return if (Mambo.isSolved(n, grid.toList(), links)) deepest else null
-            val almost = if (max >= RUNG_ALMOST) almost(n, grid.toList(), lines) else null
+            val almost = if (max >= RUNG_ALMOST) almost(n, grid.toList(), lines).firstOrNull() else null
             if (almost != null) {
                 deepest = maxOf(deepest, RUNG_ALMOST)
                 for ((i, sym) in almost.places) grid[i] = sym
@@ -270,17 +270,19 @@ internal object MamboTeacher {
      * Takes no answer on purpose — see the class comment. [cells] is taken as the player's; the
      * caller has already dealt with any that are mistakes.
      */
-    fun deduce(n: Int, cells: List<Sym>, links: List<Link>): Step? {
+    fun deduce(n: Int, cells: List<Sym>, links: List<Link>): Step? = steps(n, cells, links).firstOrNull()
+
+    /**
+     * Every step visible on this board, simplest technique first and each technique's in [deduce]'s order, so the first
+     * is [deduce]'s. Lazy: [deduce] builds no more than it did. Training reads the rest (any instance of a technique counts).
+     */
+    fun steps(n: Int, cells: List<Sym>, links: List<Link>): Sequence<Step> {
         val lines = linesOf(n)
-        return pair(cells, lines)
-            ?: sandwich(cells, lines)
-            ?: link(cells, links)
-            ?: quota(n, cells, lines)
-            ?: almost(n, cells, lines)
-            ?: whatIf(n, cells, links, lines)
+        return pair(cells, lines) + sandwich(cells, lines) + link(cells, links) + quota(n, cells, lines) +
+            almost(n, cells, lines) + whatIf(n, cells, links, lines)
     }
 
-    private fun pair(cells: List<Sym>, lines: List<Line>): Step? {
+    private fun pair(cells: List<Sym>, lines: List<Line>): Sequence<Step> = sequence {
         for (line in lines) {
             val l = line.cells
             for (k in 0 until l.size - 1) {
@@ -290,7 +292,7 @@ internal object MamboTeacher {
                 if (ends.isEmpty()) continue
                 val other = sym.other()
                 val where = if (ends.size == 2) "both ends" else "the open end"
-                return Step(
+                yield(Step(
                     technique = PAIR,
                     places = ends.associateWith { other },
                     focus = setOf(l[k], l[k + 1]),
@@ -299,20 +301,19 @@ internal object MamboTeacher {
                     explanation = "Two ${plural(sym)} sit side by side in ${line.name}, so $where must be " +
                         "${if (ends.size == 2) plural(other) else "a ${other.word()}"}. " +
                         "Another ${sym.word()} there would make three together.",
-                )
+                ))
             }
         }
-        return null
     }
 
-    private fun sandwich(cells: List<Sym>, lines: List<Line>): Step? {
+    private fun sandwich(cells: List<Sym>, lines: List<Line>): Sequence<Step> = sequence {
         for (line in lines) {
             val l = line.cells
             for (k in 0 until l.size - 2) {
                 val sym = cells[l[k]]
                 if (sym == Sym.NONE || cells[l[k + 2]] != sym || cells[l[k + 1]] != Sym.NONE) continue
                 val other = sym.other()
-                return Step(
+                yield(Step(
                     technique = SANDWICH,
                     places = mapOf(l[k + 1] to other),
                     focus = setOf(l[k], l[k + 1], l[k + 2]),
@@ -320,13 +321,12 @@ internal object MamboTeacher {
                     nudge = "Look at the gap between two ${plural(sym)} in ${line.name}.",
                     explanation = "The gap between two ${plural(sym)} must be a ${other.word()}: a ${sym.word()} " +
                         "there would make three ${plural(sym)} together.",
-                )
+                ))
             }
         }
-        return null
     }
 
-    private fun link(cells: List<Sym>, links: List<Link>): Step? {
+    private fun link(cells: List<Sym>, links: List<Link>): Sequence<Step> = sequence {
         for (link in links) {
             val a = cells[link.a]
             val b = cells[link.b]
@@ -337,7 +337,7 @@ internal object MamboTeacher {
             }
             val sym = cells[known]
             val result = if (link.same) sym else sym.other()
-            return Step(
+            yield(Step(
                 technique = LINK,
                 places = mapOf(open to result),
                 focus = setOf(link.a, link.b),
@@ -348,12 +348,11 @@ internal object MamboTeacher {
                 } else {
                     "The x says these two squares differ. One is a ${sym.word()}, so the other is a ${result.word()}."
                 },
-            )
+            ))
         }
-        return null
     }
 
-    private fun quota(n: Int, cells: List<Sym>, lines: List<Line>): Step? {
+    private fun quota(n: Int, cells: List<Sym>, lines: List<Line>): Sequence<Step> = sequence {
         val half = n / 2
         for (line in lines) {
             val open = line.cells.filter { cells[it] == Sym.NONE }
@@ -361,7 +360,7 @@ internal object MamboTeacher {
             for (sym in SYMS) {
                 if (line.cells.count { cells[it] == sym } != half) continue
                 val other = sym.other()
-                return Step(
+                yield(Step(
                     technique = QUOTA,
                     places = open.associateWith { other },
                     focus = line.cells.toSet(),
@@ -369,10 +368,9 @@ internal object MamboTeacher {
                     nudge = "Count the ${plural(sym)} in ${line.name}.",
                     explanation = "${line.name.cap()} already has its ${numberWord(half, upTo = 6)} ${plural(sym)}, " +
                         "so the rest of it must be ${plural(other)}.",
-                )
+                ))
             }
         }
-        return null
     }
 
     /**
@@ -380,7 +378,7 @@ internal object MamboTeacher {
      * and every other open square gets the opposite; if putting it on a particular square leaves
      * three of the opposite together, that square is the opposite.
      */
-    private fun almost(n: Int, cells: List<Sym>, lines: List<Line>): Step? {
+    private fun almost(n: Int, cells: List<Sym>, lines: List<Line>): Sequence<Step> = sequence {
         val half = n / 2
         for (line in lines) {
             val open = line.cells.filter { cells[it] == Sym.NONE }
@@ -399,7 +397,7 @@ internal object MamboTeacher {
                     val run = (0 until n - 2).firstOrNull { k ->
                         trial[k] == other && trial[k + 1] == other && trial[k + 2] == other
                     } ?: continue
-                    return Step(
+                    yield(Step(
                         technique = ALMOST,
                         places = mapOf(e to other),
                         focus = line.cells.toSet(),
@@ -407,11 +405,10 @@ internal object MamboTeacher {
                         nudge = "${line.name.cap()} needs just one more ${sym.word()}.",
                         explanation = "${line.name.cap()} needs one more ${sym.word()}. If it went here, the rest " +
                             "would be ${plural(other)}, and three would sit together. So this is a ${other.word()}.",
-                    )
+                    ))
                 }
             }
         }
-        return null
     }
 
     /** Why a hypothetical board cannot stand, and the squares that show it. */
@@ -422,7 +419,7 @@ internal object MamboTeacher {
      * If what that round forces breaks a rule, the square takes the other symbol. One round only, so
      * the whole argument still fits in a sentence the player can check against the board.
      */
-    private fun whatIf(n: Int, cells: List<Sym>, links: List<Link>, lines: List<Line>): Step? {
+    private fun whatIf(n: Int, cells: List<Sym>, links: List<Link>, lines: List<Line>): Sequence<Step> = sequence {
         for (i in cells.indices) {
             if (cells[i] != Sym.NONE) continue
             for (sym in SYMS) {
@@ -437,7 +434,7 @@ internal object MamboTeacher {
                     brokenRule(n, after, links, lines)
                 } ?: continue
                 val other = sym.other()
-                return Step(
+                yield(Step(
                     technique = WHAT_IF,
                     places = mapOf(i to other),
                     focus = setOf(i),
@@ -445,10 +442,9 @@ internal object MamboTeacher {
                     nudge = "What if the glowing square were a ${sym.word()}?",
                     explanation = "If this were a ${sym.word()}, the rules would force the marked squares, and " +
                         "${contradiction.phrase}. So it's a ${other.word()}.",
-                )
+                ))
             }
         }
-        return null
     }
 
     /** Every open square one round of the four simple techniques fills, with what it would take. */

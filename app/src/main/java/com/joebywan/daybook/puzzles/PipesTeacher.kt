@@ -215,8 +215,26 @@ internal object PipesTeacher {
     fun forcedOrder(width: Int, height: Int, cells: List<Int>): List<Pair<Int, Int>> =
         Net(width, height, cells).also { it.run() }.forced.map { it.cell to it.mask }
 
-    private fun next(net: Net, cells: List<Int>): Step? {
-        val f = net.forced.firstOrNull { cells[it.cell] != it.mask } ?: return null
+    private fun next(net: Net, cells: List<Int>): Step? = instances(net, cells).firstOrNull()
+
+    /**
+     * Every step of [technique] on [cells], from the shapes alone as [deduce] (Training accepts any of them). A tile the
+     * reasoning pins before the first [NO_LOOP] needed only the border and neighbours, so for the simpler techniques the
+     * list stops there; every pinned tile holds for every answer.
+     */
+    fun steps(width: Int, height: Int, cells: List<Int>, technique: String): List<Step> {
+        val net = Net(width, height, cells).also { it.run() }
+        // Cut in the reasoning's own order, tiles already sitting right included.
+        val firstLoop = net.forced.indexOfFirst { f -> f.why.any { it?.rule == NO_LOOP } }
+        val upTo = if (technique == NO_LOOP || firstLoop < 0) net.forced else net.forced.subList(0, firstLoop)
+        return upTo.filter { cells[it.cell] != it.mask }.map { step(net, cells, it) }.filter { it.technique == technique }
+    }
+
+    /** Every pinned tile the board does not already show, in the order the reasoning pinned them. */
+    private fun instances(net: Net, cells: List<Int>): Sequence<Step> =
+        net.forced.asSequence().filter { cells[it.cell] != it.mask }.map { step(net, cells, it) }
+
+    private fun step(net: Net, cells: List<Int>, f: Forced): Step {
         val why = explain(net.w, net.h, cells, f)
         return Step(
             technique = why.technique,

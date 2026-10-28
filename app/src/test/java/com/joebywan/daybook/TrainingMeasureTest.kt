@@ -7,7 +7,8 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * Training's costs, for docs/TRAINING_SPEC.md (Measured): run with `DAYBOOK_TRAINING_MEASURE=1`. Per course, the time to
+ * Training's costs, for docs/TRAINING_SPEC.md (Measured): run with `DAYBOOK_TRAINING_MEASURE=1` (and optionally
+ * `DAYBOOK_TRAINING_MEASURE_ONLY=<id,id>`). Per course, the time to
  * find the first board through the session cache and each next board given the ones before it, then the first 30
  * practices of each technique; then how many of the first 60 seeds'
  * boards on each tier reach each technique, and which Expert boards need them all (the final board's candidates).
@@ -16,7 +17,8 @@ class TrainingMeasureTest {
     @Test fun measure() {
         assumeTrue(System.getenv("DAYBOOK_TRAINING_MEASURE") != null)
         val only = System.getenv("DAYBOOK_TRAINING_MEASURE_ONLY")?.split(',')?.toSet()
-        for (c in Training.COURSES.filter { only == null || it.id in only }) {
+        for (c in Training.COURSES) {
+            if (only != null && c.id !in only) continue
             for (t in c.techniques) {
                 // Through the session cache: the first board, then each next board with the ones before it cached.
                 fun ms(block: () -> Unit): Double { val a = System.nanoTime(); block(); return (System.nanoTime() - a) / 1e6 }
@@ -29,10 +31,13 @@ class TrainingMeasureTest {
                 val found = c.practices(t).take(30).toList()
                 val ms = (System.nanoTime() - t0) / 1e6
                 println("MEASURE ${c.id} $t: ${found.size} practices, ${found.distinctBy { it.board }.size} distinct, ${"%.0f".format(ms)} ms")
+                // A move that is no step (the board as given): judging it asks for every instance of the technique.
+                val none = found.take(10).map { p -> ms { c.judge(p, p.board) } }
+                println("JUDGE ${c.id} $t (no step): mean ${"%.1f".format(none.average())} max ${"%.1f".format(none.max())} ms")
                 // Judging the step made (a move drill asks the teacher, mistake check and all, per emitted state).
                 val judged = found.mapNotNull { p -> (p.step as? com.joebywan.daybook.core.Deduction)?.let { d -> d.apply(p.board) to p } }
                     .map { (after, p) -> ms { c.judge(p, after) } }
-                if (judged.isNotEmpty()) println("JUDGE ${c.id} $t: mean ${"%.1f".format(judged.average())} max ${"%.1f".format(judged.max())} ms")
+                if (judged.isNotEmpty()) println("JUDGE ${c.id} $t (step): mean ${"%.1f".format(judged.average())} max ${"%.1f".format(judged.max())} ms")
             }
             for (tier in Difficulty.entries) {
                 val counts = HashMap<String, Int>()

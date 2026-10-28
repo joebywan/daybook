@@ -232,7 +232,11 @@ object Pearls : PuzzleType {
     /** A mistake to take back or a step to reason out; see [PearlsTeacher]. */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as PearlsState
-        val step = PearlsTeacher.teach(s) ?: return null
+        return deduction(s, PearlsTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] on [s] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(s: PearlsState, step: PearlsTeacher.Step): Deduction {
         val before = s.edges
         return Deduction(
             technique = step.technique,
