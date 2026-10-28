@@ -331,6 +331,13 @@ internal object CipherTeacher {
         }.minByOrNull { it.explanation.length } ?: step(sum, digits, hits[0], null)
     }
 
+    /**
+     * Every placement [technique] makes from the sum and the [digits] alone, when it is the first technique that makes
+     * any ([findSteps]' list; Training counts any of them as finding the technique). Empty otherwise.
+     */
+    fun steps(sum: CipherSum, digits: List<Int>, technique: String): List<Step> =
+        findSteps(sum, digits).filter { it.technique == technique }.map { step(sum, digits, it, null) }
+
     private fun step(sum: CipherSum, digits: List<Int>, hit: Hit, working: CipherWorking.Working?): Step {
         val l = hit.letter
         val d = hit.digit

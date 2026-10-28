@@ -23,11 +23,13 @@ val ChessTraining: Course = Course(
     // Expert finds a board in a mean of 54 ms against Hard's 20 seeds a board, so Expert.
     tierFor = tierByIndex({ ChessTraining.techniques }, hard = 2, expert = 2),
     // The position the player faces and the moves left: ChessState holds no answer, and the prover is the reasoning.
-    drill = MoveDrill { s ->
+    // No `every`: the step's isReached already accepts every key the prover names, which on a walked position is every
+    // move that still mates in time (ChessTrainingTest holds each legal move to an independent minimax).
+    drill = MoveDrill(next = { s ->
         val c = s as ChessState
         ChessTeacher.replay(c)?.takeIf { !it.mated && it.mistakeIndex < 0 }
             ?.let { ChessTeacher.deduce(it.position, it.remaining) }?.let { ChessTeacher.deduction(c, it) }
-    },
+    }),
     badge = "M", // not "#": a glyph starting with # names a drawn shape (AchievementBadge)
     // The first practice seed whose Expert walk needs all three (13 of the first 60). Pinned by ChessTrainingTest.
     examIndex = 6,

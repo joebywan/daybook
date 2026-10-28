@@ -269,13 +269,12 @@ were declined by the owner (2026-10-25): a shipped list runs out and would need 
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
 A practice mode per technique, once declined, is now wanted (2026-10-26): Training, for Sudoku, Cage Sudoku,
 Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played final board when the player leaves it;
-the keyboard
-does not reach a practice board (the play screen's key handling is not shared); Cage Sudoku's "every cage worked
-through together" practice explains itself only as a summary, as its hint does. Kings has the general practice shape
-(`MoveDrill`), and so do Who's Who, Cipher (without "only letter", never reached) and Chess; the other puzzles'
-courses are classified and batched in `docs/TRAINING_SPEC.md`. Open from them: the practice slot does not shrink below 700 dp
-as the play screen's does (Who's Who's clues get one line at 375x537); Chess's lost caption names Undo and Restart on a
-practice board, which has neither.
+Cage Sudoku's "every cage worked through together" practice explains itself only as a summary, as its hint does.
+Kings has the general practice shape (`MoveDrill`), and so do Who's Who, Cipher (without "only letter", never
+reached) and Chess; the other puzzles' courses are classified and batched in
+`docs/TRAINING_SPEC.md`.
+Open from them: the practice slot does not shrink below 700 dp as the play screen's does (Who's Who's clues get one
+line at 375x537); Chess's lost caption names Undo and Restart on a practice board, which has neither.
 
 ## Owner's call
 

@@ -19,11 +19,17 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
 - **A technique** (route `training|<technique>|…|<puzzle>`): a short explanation in the hints' voice, then a practice
   board. The player finds the step and makes it. A right digit adds one to the run; three in a row passes the technique
-  (a tick, the chime, "Passed"). A wrong digit ends the run and shows the reasoning that was there to find. The next board
-  is one tap away. Hints work as in a game (nudge, why, show me); a board where a hint was opened does not count towards
+  (the chime, "Passed! 3 in a row." and any achievement it earns, with the board and Next board locked), and after
+  2.5 s back takes the player to where the practice was opened from: the puzzle's technique list, with the new tick, when
+  opened from it; the game or the Techniques page when opened by "Practise this" or "Practise", as back would. The owner
+  (2026-10-28): "send the user back to the list when they achieve the goal. Otherwise they're likely to get stuck there."
+  Every run that reaches three does this, on a technique already passed too (1.19 said only "That's it." there and kept
+  the player on the board, which read as no pass at all); achievements are announced once. A wrong digit ends the run
+  and shows the reasoning that was there to find. The next board is one tap away. Hints work as in a game (nudge, why, show me); a board where a hint was opened does not count towards
   the run and does not break it.
 - **The final board** opens once every technique of that puzzle is passed: a whole Expert board whose own walk by the hint
-  ladder needs every technique. Solving it without "Show me" earns the second achievement. Hints are allowed (they teach).
+  ladder needs every technique. Solving it without "Show me" earns the second achievement, and
+  like a technique's pass shows "Solved!" for 2.5 s and then goes back to the list (a solve with a Show me stays, to start again). Hints are allowed (they teach).
 - **Ways in:**
   - **"Train: practise the techniques"** on the rules sheet (the play screen's "?") of a puzzle that has Training: opens
     that puzzle's techniques; back from there returns to the game, and back from a technique opened there returns to the list.
@@ -74,6 +80,9 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
 - **Achievements** stay predicates: `Achievement.trained` reads the training set, beside `earned` over completions.
   `earnedAchievements` takes the set (default empty); `newlyTrained(record, puzzleId, technique)` says what a pass earns.
 - The run (right answers in a row) is not stored: leaving a technique starts its run again.
+- **Keys** (a hardware or web keyboard): the board's own, plus H for the hint's next step and Esc to close it, through
+  `hintKeys` (`ui/teach/Hints.kt`), the modifier the play screen wraps its board in too, so a puzzle added to Training
+  needs nothing for them. No Ctrl/Cmd+Z: neither practice nor the final board has an undo.
 
 ## The two shapes, and adding a course
 
@@ -87,19 +96,27 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
   second constructor): the stepper sees only the digits; the walk writes each step's digit in and makes every digit of a
   position a given. A placed digit is judged at once against the stored answer (sound: those generators prove one
   answer); any correct digit counts, because the position has no simpler step anywhere.
-- **`MoveDrill(next)`** (every other teacher): `next(state)` is the teacher's next step as a `Deduction`, built from the
+- **`MoveDrill(next, every)`** (every other teacher): `next(state)` is the teacher's next step as a `Deduction`, built from the
   teacher's visible-state entry point (one with no parameter for the answer, as `KingsTeacher.deduce(n, region, marks)`)
   and the puzzle's own Deduction builder (Kings' was pulled out of `teach` as `Kings.deduction(state, step)`; the
   pattern for the others is the same one-function refactor). The answer cannot reach the step by signature, as before.
   - The walk is the hints' own "Show me" (`Deduction.apply`) from the generated board; a position is simply the walked
     state. Nothing is locked: a walked cross can be rubbed out, and the practice waits until the step is made again.
     There is no undo on a practice board, so there is no floor to set.
-  - **Right** = the step's `isReached` holds (all its crosses made, one at a time or in a sweep, or a correct king that
-    sweeps them, as the hint itself accepts). **Wrong** = the teacher's `teach` calls the new board a mistake, which each
-    teacher defines as "no legal answer keeps this" (never "differs from the stored answer": LITS's and Pipes' several
-    answers, PR #15). **Neither** = play on (one cross of three, a sound mark elsewhere, an erasure). Unlike digits, only
-    the step itself passes: a lone cross is right by chance on most squares of a Kings board, so "another correct mark"
-    would pass guesses.
+  - **Right** = the move completes *any* step of the drilled technique on the position: the teacher's own pick, or any of
+    `every(position, technique)` (the owner, 2026-10-28: "If the move satisfies the move that's asked for without being
+    exactly what the app assumed people would do, it's still right"). Completing means that step's `isReached` holds:
+    all its crosses made, one at a time or in a sweep, or a correct king that sweeps them, as the hint itself accepts.
+    `every` is the course author's second hook, `(PuzzleState, technique: String) -> List<Deduction>`, built from a teacher
+    entry point that lists every step of one rung from visible state (Kings: `KingsTeacher.steps(n, region, marks,
+    technique)`, which `deduce`'s pick is always one of; its picking is unchanged, so no daily board moved). Leaving it
+    null keeps to the teacher's one step.
+  - **Wrong** = the teacher's `teach` calls the new board a mistake, which each teacher defines as "no legal answer keeps
+    this" (never "differs from the stored answer": LITS's and Pipes' several answers, PR #15).
+  - **Neither** = play on: one cross of three, an erasure, or a mark that is true but that no step of the technique
+    justifies. That last is never passed, because a lone cross is right by chance on most squares of a Kings board, and it
+    gets no "true, but not this technique" note either: nothing can tell it from the first cross of a step the player is
+    still making, so a note would fire on honest progress.
   - Judging asks the teacher, so every emitted state is judged on `Dispatchers.Default`; a verdict for a state the player
     has already moved on from is dropped and the newer state judged instead.
 - The practice screen is the same for both: the board in what is left above the fixed 144 dp slot (explanation, hint or
@@ -113,7 +130,9 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
   collide (29 of its first 30 mate-in-one practices were distinct before).
 - Tests for a new course, as `KingsTrainingTest`: the step is the technique (and the hint agrees); the board has one
   answer by the puzzle's independent oracle; the walked marks agree with the answer; no simpler rung is on the board by a
-  check written in the test (plain counting, nothing borrowed from the teacher); right, wrong and play-on moves; the final
+  check written in the test (plain counting, nothing borrowed from the teacher); right, wrong and play-on moves; every other
+  instance of the technique, enumerated by the test's own counting, is right, and a true cross no instance justifies plays
+  on; the final
   board is the first practice seed whose Expert walk needs every technique, and is proved. The achievement ids need no
   listing (`TrainingTest` derives their order from `COURSES`); add the course's id to `TrainingTest`'s list of courses.
 - Watch for a teacher that treats some marks as notes (Tents: "crosses are notes and never read as knowledge"): a wrong

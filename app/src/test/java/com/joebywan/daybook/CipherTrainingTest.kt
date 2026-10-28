@@ -53,7 +53,7 @@ class CipherTrainingTest {
          * others; with ten letters, a digit one letter alone can take is its) until nothing changes: whether some open
          * letter in them is left one digit. One column is a column step; two neighbours, through their carry, a pair.
          */
-        fun forced(from: Int, to: Int): Boolean {
+        fun forced(from: Int, to: Int): Map<Int, Int> {
             val cand = letters.indices.map { l ->
                 if (digits[l] >= 0) mutableSetOf(digits[l]) else unused.filter { it != 0 || l !in firsts }.toMutableSet()
             }
@@ -87,6 +87,7 @@ class CipherTrainingTest {
                     if (carries[c].retainAll(okIn)) changed = true
                     if (carries[c + 1].retainAll(okOut)) changed = true
                 }
+                if (from == to) break // one column is read once, as it stands
                 for (l in letters.indices) if (cand[l].size == 1) for (o in letters.indices) {
                     if (o != l && cand[o].removeAll(cand[l])) changed = true
                 }
@@ -94,13 +95,16 @@ class CipherTrainingTest {
                     val holders = letters.indices.filter { d in cand[it] }
                     if (holders.size == 1 && cand[holders[0]].size > 1) { cand[holders[0]].retainAll(setOf(d)); changed = true }
                 }
-                if (cand.any { it.isEmpty() }) return false
+                if (cand.any { it.isEmpty() }) return emptyMap()
             }
-            return mine.any { it in open && cand[it].size == 1 }
+            return mine.filter { it in open && cand[it].size == 1 }.associateWith { cand[it].single() }
         }
 
-        val column get() = (0 until width).any { forced(it, it) }
-        val pair get() = (0 until width - 1).any { forced(it, it + 1) }
+        /** Every letter one column on its own leaves one digit, with that digit; likewise two neighbouring columns. */
+        val columnSteps get() = (0 until width).fold(emptyMap<Int, Int>()) { m, c -> m + forced(c, c) }
+        val pairSteps get() = (0 until width - 1).fold(emptyMap<Int, Int>()) { m, c -> m + forced(c, c + 1) }
+        val column get() = columnSteps.isNotEmpty()
+        val pair get() = pairSteps.isNotEmpty()
 
         /** By the teacher's whole ladder's order: leading carry, column, only letter, column pair. */
         fun has(rung: Int) = when (rung) {
@@ -154,12 +158,35 @@ class CipherTrainingTest {
                 // Any other digit for it is wrong: the one answer does not keep it.
                 val wrong = (0..9).first { it !in b.digits && it != b.solution[step] }
                 assertEquals(false, CipherTraining.judge(p, b.withDigit(step, wrong)))
-                // The right digit for another open letter is play on: only the step passes.
-                b.digits.indices.firstOrNull { it != step && b.digits[it] < 0 }?.let {
-                    assertNull(CipherTraining.judge(p, b.withDigit(it, b.solution[it])))
+                // Another letter's right digit: right or play on by whether an instance settles it (the test below).
+            }
+        }
+    }
+
+    @Test fun `another instance of the same technique is right, and a true digit no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for (t in listOf("column", "column-pair")) {
+            for (p in CipherTraining.practices(t).take(12)) {
+                val b = p.board as CipherState
+                val sum = Sum(b.words, b.digits)
+                val instances = if (t == "column") sum.columnSteps else sum.pairSteps
+                val step = b.digits.indices.first { ((p.step as Deduction).apply(b) as CipherState).digits[it] != b.digits[it] }
+                for ((l, d) in instances) {
+                    assertEquals("an instance is the answer's digit", b.solution[l], d)
+                    if (l == step) continue
+                    others++
+                    assertEquals("$t: ${sum.letters[l]} = $d", true, CipherTraining.judge(p, b.withDigit(l, d)))
+                }
+                // The answer's digit for a letter no instance settles: no verdict.
+                b.digits.indices.firstOrNull { b.digits[it] < 0 && it != step && it !in instances }?.let { l ->
+                    unjustified++
+                    assertNull("${sum.letters[l]}", CipherTraining.judge(p, b.withDigit(l, b.solution[l])))
                 }
             }
         }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true digit ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

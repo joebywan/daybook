@@ -45,6 +45,25 @@ class KingsTrainingTest {
 
         val last = houses.any { openIn(it).size == 1 }
 
+        /** Every last-square instance: the one open square of a house that has one. */
+        val lastSquares: Set<Int> = houses.mapNotNull { h -> openIn(h).singleOrNull() }.toSet()
+
+        /** Every locked instance, as the squares it crosses out: a colour inside one line, or a line inside one colour. */
+        val locked: Set<Set<Int>> = buildSet {
+            for (lines in listOf(rows, cols)) {
+                for (r in regions) {
+                    val line = lines.singleOrNull { l -> openIn(r).all { it in l } } ?: continue
+                    if (openIn(r).isEmpty()) continue
+                    openIn(line).filter { it !in r }.toSet().takeIf { it.isNotEmpty() }?.let(::add)
+                }
+                for (l in lines) {
+                    val r = regions.singleOrNull { r -> openIn(l).all { it in r } } ?: continue
+                    if (openIn(l).isEmpty()) continue
+                    openIn(r).filter { it !in l }.toSet().takeIf { it.isNotEmpty() }?.let(::add)
+                }
+            }
+        }
+
         /** [k] regions whose open squares fill exactly [k] lines that have other open squares, or [k] lines the other way. */
         fun confined(k: Int): Boolean {
             for (lines in listOf(rows, cols)) {
@@ -123,6 +142,32 @@ class KingsTrainingTest {
                 }
             }
         }
+    }
+
+    @Test fun `another instance of the same technique is right, and a true cross no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for ((rung, t) in KingsTraining.techniques.take(2).withIndex()) {
+            for (p in KingsTraining.practices(t).take(12)) {
+                val b = p.board as KingsState
+                val r = Rungs(b)
+                val mine = (p.step as Deduction).targets
+                fun with(cells: Set<Int>, mark: Mark) = b.copy(marks = b.marks.toMutableList().also { m -> cells.forEach { m[it] = mark } })
+                if (rung == 0) {
+                    for (c in r.lastSquares - mine) { others++; assertEquals("crown $c", true, KingsTraining.judge(p, with(setOf(c), Mark.KING))) }
+                } else {
+                    for (x in r.locked - setOf(mine)) { others++; assertEquals("cross $x", true, KingsTraining.judge(p, with(x, Mark.BLOCKED))) }
+                }
+                // A cross that is true (no answer crowns it) but completes no instance of the technique: no verdict.
+                val instances = if (rung == 0) emptySet() else r.locked
+                r.open.firstOrNull { it !in b.solution && setOf(it) !in instances && it !in mine }?.let { c ->
+                    unjustified++
+                    assertNull("true cross $c", KingsTraining.judge(p, with(setOf(c), Mark.BLOCKED)))
+                }
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true cross ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

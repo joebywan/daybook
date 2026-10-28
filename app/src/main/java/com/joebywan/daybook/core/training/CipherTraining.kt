@@ -25,7 +25,10 @@ val CipherTraining: Course = Course(
     // The generator's tiers: Standard reaches the first three, Hard every column together, Expert the what-if.
     tierFor = tierByIndex({ CipherTraining.techniques }, hard = 3, expert = 4),
     // CipherTeacher.deduce is handed the sum and the placed digits; the answer cannot reach it.
-    drill = MoveDrill { s -> (s as CipherState).let { c -> CipherTeacher.deduce(c.sum, c.digits)?.let { Cipher.deduction(c, it) } } },
+    drill = MoveDrill(
+        next = { s -> (s as CipherState).let { c -> CipherTeacher.deduce(c.sum, c.digits)?.let { Cipher.deduction(c, it) } } },
+        every = { s, t -> (s as CipherState).let { c -> CipherTeacher.steps(c.sum, c.digits, t).map { Cipher.deduction(c, it) } } },
+    ),
     badge = "A+B",
     // The first practice seed whose Expert walk needs all five (16 of the first 60). Pinned by CipherTrainingTest.
     examIndex = 0,

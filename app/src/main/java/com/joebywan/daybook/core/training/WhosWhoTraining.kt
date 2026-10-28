@@ -25,7 +25,10 @@ val WhosWhoTraining: Course = Course(
     // The generator's tiers: Standard takes clues and lone items, Hard links and houses, Expert a what-if.
     tierFor = tierByIndex({ WhosWhoTraining.techniques }, hard = 2, expert = 4),
     // WhosWhoTeacher.deduce reads the clues, the marks and the words; never the answer.
-    drill = MoveDrill { s -> (s as WhosWhoState).let { w -> WhosWhoTeacher.deduce(w, w.marks)?.let { WhosWho.deduction(it) } } },
+    drill = MoveDrill(
+        next = { s -> (s as WhosWhoState).let { w -> WhosWhoTeacher.deduce(w, w.marks)?.let { WhosWho.deduction(it) } } },
+        every = { s, t -> (s as WhosWhoState).let { w -> WhosWhoTeacher.steps(w, w.marks, t).map { WhosWho.deduction(it) } } },
+    ),
     badge = "?",
     // Every Expert board's walk needs all five (60 of the first 60); the first. Pinned by WhosWhoTrainingTest.
     examIndex = 0,

@@ -21,6 +21,9 @@ import org.junit.Test
  */
 class WhosWhoTrainingTest {
 
+    /** One instance of a rung: the ticks and crosses it makes. */
+    private data class Marks(val ticks: Set<Int>, val crosses: Set<Int>)
+
     /** The marks as possibilities, in this test's own words: per person and column, a mask of slots still open. */
     private class Table(val s: WhosWhoState) {
         val n = s.n
@@ -46,34 +49,44 @@ class WhosWhoTrainingTest {
         fun has(p: Int, ref: Int) = if (isName(ref)) p == ref % n else placed[p][ref / n - 1] == ref % n
         private fun category(ref: Int) = (0 until n).map { ref / n * n + it }
 
-        /** A clue naming a person settles a square. */
-        val clue: Boolean get() = s.clues.any { k ->
+        /** The mark index of [p] holding [ref] (not a name). */
+        fun at(p: Int, ref: Int) = s.markIndex(p, ref / n - 1, ref % n)
+
+        /** Every square a clue naming a person settles. */
+        val clues: List<Marks> get() = s.clues.mapNotNull { k ->
             when (k.kind) {
                 0, 1 -> {
                     val (name, other) = when {
                         isName(k.a) -> k.a to k.b
                         isName(k.b) -> k.b to k.a
-                        else -> return@any false
+                        else -> return@mapNotNull null
                     }
                     val who = name % n
-                    if (k.kind == 0) can(who, other) && !has(who, other) else can(who, other)
+                    when {
+                        k.kind == 0 && can(who, other) && !has(who, other) -> Marks(setOf(at(who, other)), emptySet())
+                        k.kind == 1 && can(who, other) -> Marks(emptySet(), setOf(at(who, other)))
+                        else -> null
+                    }
                 }
                 4 -> when {
-                    isName(k.a) -> category(k.b).any { it != k.b && it != k.c && can(k.a % n, it) }
-                    isName(k.b) -> (0 until n).any { it != k.b % n && it != k.c % n && can(it, k.a) }
-                    else -> false
-                }
-                else -> false
+                    isName(k.a) -> category(k.b).filter { it != k.b && it != k.c && can(k.a % n, it) }.map { at(k.a % n, it) }
+                    isName(k.b) -> (0 until n).filter { it != k.b % n && it != k.c % n && can(it, k.a) }.map { at(it, k.a) }
+                    else -> emptyList()
+                }.takeIf { it.isNotEmpty() }?.let { Marks(emptySet(), it.toSet()) }
+                else -> null
             }
         }
+        val clue: Boolean get() = clues.isNotEmpty()
 
-        /** A cell with one slot open and no tick, or a column's slot only one person can still take, untaken. */
-        val only: Boolean get() =
-            (0 until n).any { p -> (0 until cols).any { c -> placed[p][c] < 0 && bits(cand[p][c]).size == 1 } } ||
-                (0 until cols).any { c -> (0 until n).any { slot ->
+        /** Every tick a cell with one slot open and no tick, or a column's slot only one person can still take, makes. */
+        val onlys: List<Marks> get() =
+            (0 until n).flatMap { p -> (0 until cols).filter { c -> placed[p][c] < 0 && bits(cand[p][c]).size == 1 }
+                .map { c -> Marks(setOf(s.markIndex(p, c, bits(cand[p][c])[0])), emptySet()) } } +
+                (0 until cols).flatMap { c -> (0 until n).mapNotNull { slot ->
                     val who = (0 until n).filter { cand[it][c] shr slot and 1 == 1 }
-                    who.size == 1 && placed[who[0]][c] != slot
+                    if (who.size == 1 && placed[who[0]][c] != slot) Marks(setOf(s.markIndex(who[0], c, slot)), emptySet()) else null
                 } }
+        val only: Boolean get() = onlys.isNotEmpty()
 
         /** Same / not / either between two things neither of which is a name, carried through what is known. */
         val link: Boolean get() = s.clues.any { k ->
@@ -158,11 +171,42 @@ class WhosWhoTrainingTest {
                 // A tick off the answer, or a cross on it, is wrong: the one answer does not keep it.
                 assertEquals(false, WhosWhoTraining.judge(p, at(open.first { !isAnswer(b, it) }, tick = true)))
                 open.firstOrNull { isAnswer(b, it) }?.let { assertEquals(false, WhosWhoTraining.judge(p, at(it, tick = false))) }
-                // A true cross the step does not make is play on.
-                val after = d.apply(b) as WhosWhoState
-                open.firstOrNull { !isAnswer(b, it) && after.marks[it] == '.' }?.let { assertNull(WhosWhoTraining.judge(p, at(it, tick = false))) }
+                // Another true mark: right or play on by whether an instance makes it (the test below).
             }
         }
+    }
+
+    @Test fun `another instance of the same technique is right, and a true mark no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for ((rung, t) in WhosWhoTraining.techniques.take(2).withIndex()) {
+            for (p in WhosWhoTraining.practices(t).take(12)) {
+                val b = p.board as WhosWhoState
+                val table = Table(b)
+                val instances = if (rung == 0) table.clues else table.onlys
+                val after = (p.step as Deduction).apply(b) as WhosWhoState
+                val mine = b.marks.indices.filter { after.marks[it] != b.marks[it] }.toSet()
+                fun with(m: Marks): WhosWhoState {
+                    var x = b
+                    for (c in m.crosses) if (x.marks[c] == '.') x = x.mark(c / b.n / b.columns, c / b.n % b.columns, c % b.n, tick = false)
+                    for (c in m.ticks) x = x.mark(c / b.n / b.columns, c / b.n % b.columns, c % b.n, tick = true)
+                    return x
+                }
+                for (m in instances) {
+                    if (m.ticks + m.crosses == mine) continue
+                    others++
+                    assertEquals("$t instance $m", true, WhosWhoTraining.judge(p, with(m)))
+                }
+                // A true cross that is no instance's: no verdict.
+                val justified = instances.flatMap { it.ticks + it.crosses }.toSet() + mine
+                b.marks.indices.firstOrNull { b.marks[it] == '.' && !isAnswer(b, it) && it !in justified && after.marks[it] == '.' }?.let { c ->
+                    unjustified++
+                    assertNull("true cross $c", WhosWhoTraining.judge(p, with(Marks(emptySet(), setOf(c)))))
+                }
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true cross ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

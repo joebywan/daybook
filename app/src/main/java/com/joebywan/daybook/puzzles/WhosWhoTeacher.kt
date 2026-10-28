@@ -111,6 +111,32 @@ internal object WhosWhoTeacher {
         return lesson(s, grid, step)
     }
 
+    /**
+     * Every step of [technique] on the board, reasoned from the clues and the [marks] alone, as [deduce] would say each
+     * (Training counts any of them as finding the technique). A what-if is every open slot whose supposition runs out
+     * within [WhosWhoLogic.LONG_LINKS] simpler steps.
+     */
+    fun steps(s: WhosWhoState, marks: String, technique: String): List<Lesson> {
+        val puzzle = WhosWhoLogic.puzzleOf(s)
+        val grid = WhosWhoLogic.gridOf(s.n, s.columns, marks)
+        if (WhosWhoLogic.broken(puzzle, grid) != null) return emptyList()
+        val found = when (technique) {
+            CLUE -> WhosWhoLogic.clueSteps(puzzle, grid)
+            ONLY -> WhosWhoLogic.onlySteps(puzzle, grid)
+            LINK -> WhosWhoLogic.linkSteps(puzzle, grid)
+            HOUSE -> WhosWhoLogic.houseSteps(puzzle, grid)
+            WHAT_IF -> sequence {
+                for (c in 0 until s.n * s.columns) for (slot in 0 until s.n) {
+                    if (grid.placed[c] < 0 && grid.cand[c] shr slot and 1 == 1) {
+                        WhosWhoLogic.suppose(puzzle, grid, c * s.n + slot, WhosWhoLogic.LONG_LINKS)?.let { yield(it) }
+                    }
+                }
+            }
+            else -> emptySequence()
+        }
+        return found.map { lesson(s, grid, it) }.toList()
+    }
+
     private fun cellsOf(s: WhosWhoState, marks: List<Int>) = marks.map { it / s.n }.toSet()
 
     private fun lesson(s: WhosWhoState, grid: WhosWhoLogic.Grid, step: Step): Lesson {
