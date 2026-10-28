@@ -25,12 +25,13 @@ import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.ACHIEVEMENTS
 import com.joebywan.daybook.core.AchievementCategory
 import com.joebywan.daybook.core.Training
+import com.joebywan.daybook.puzzles.Mines
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * The centre mark of each badge: text, or "#star" / "#crown" for a drawn shape. One entry per achievement id (a
+ * The centre mark of each badge: text, or "#star" / "#crown" / "#mine" for a drawn shape. One entry per achievement id (a
  * Training course brings its own, `Course.badge`);
  * `AchievementsTest` fails when a new achievement has none.
  */
@@ -96,7 +97,12 @@ fun AchievementBadge(id: String, earned: Boolean, modifier: Modifier = Modifier)
                 drawCircle(Color.White.copy(alpha = 0.12f), (r * 0.8f), c)
                 if (glyph.startsWith("#")) {
                     val g = r * 0.5f
-                    if (glyph == "#star") star(c, g, ink) else crown(c, g, ink)
+                    when (glyph) {
+                        "#star" -> star(c, g, ink)
+                        // Mines' own mine, as on its board: a "*" reads as a speck at badge size.
+                        "#mine" -> with(Mines) { drawMine(c.x - g * 1.4f, c.y - g * 1.4f, g * 2.8f, ink) }
+                        else -> crown(c, g, ink)
+                    }
                 }
             } else {
                 drawCircle(sil, r, c)

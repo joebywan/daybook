@@ -61,8 +61,10 @@ internal object LampsTeacher {
     }
 
     /** The [Deduction] for the play screen; `Lamps.teach` is just this. */
-    fun deduction(s: LampsState): Deduction? {
-        val step = teach(s) ?: return null
+    fun deduction(s: LampsState): Deduction? = teach(s)?.let(::deduction)
+
+    /** [step] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    fun deduction(step: Step): Deduction {
         val mistake = step.technique == MISTAKE
         return Deduction(
             step,

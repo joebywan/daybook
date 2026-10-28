@@ -15,7 +15,9 @@ import org.junit.Test
 class TrainingMeasureTest {
     @Test fun measure() {
         assumeTrue(System.getenv("DAYBOOK_TRAINING_MEASURE") != null)
+        val only = System.getenv("DAYBOOK_TRAINING_MEASURE_ONLY")?.split(',')?.toSet()
         for (c in Training.COURSES) {
+            if (only != null && c.id !in only) continue
             for (t in c.techniques) {
                 // Through the session cache: the first board, then each next board with the ones before it cached.
                 fun ms(block: () -> Unit): Double { val a = System.nanoTime(); block(); return (System.nanoTime() - a) / 1e6 }

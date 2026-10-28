@@ -77,8 +77,10 @@ internal object TentsTeacher {
     }
 
     /** The [Deduction] for the play screen; `Tents.teach` is just this. */
-    fun deduction(s: TentsState): Deduction? {
-        val step = teach(s) ?: return null
+    fun deduction(s: TentsState): Deduction? = teach(s)?.let(::deduction)
+
+    /** [step] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    fun deduction(step: Step): Deduction {
         val mistake = step.technique == MISTAKE
         val v = step.value
         return Deduction(
