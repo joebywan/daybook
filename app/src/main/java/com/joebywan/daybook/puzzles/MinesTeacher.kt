@@ -151,6 +151,22 @@ internal object MinesTeacher {
         }
     }
 
+    /**
+     * Every step of [technique] on the board, each explained, from the same visible facts as [deduce] (with [hit] the mines
+     * taken as known): Training passes a move that completes any of them. Facts are found in the ladder's order and the
+     * search stops once past [technique]'s place in it.
+     */
+    fun steps(w: Int, h: Int, num: IntArray, hit: BooleanArray, total: Int, technique: String): List<Step> {
+        val st = IntArray(w * h) { if (num[it] >= 0) MinesLogic.SAFE else if (hit[it]) MinesLogic.MINE else MinesLogic.UNKNOWN }
+        // The ladder tries single numbers together, then pairs of numbers together, then the count, the edge, the what-if.
+        fun rank(t: String) = when (t) { ALL_FOUND, ALL_MINES -> 0; SUBSET, PAIR -> 1; COUNT -> 2; EDGE -> 3; else -> 4 }
+        return MinesLogic.facts(w, h, num, st, total)
+            .takeWhile { rank(it.technique) <= rank(technique) }
+            .filter { it.technique == technique }
+            .map { explain(w, h, num, st, total, it) }
+            .toList()
+    }
+
     private fun explain(w: Int, h: Int, num: IntArray, st: IntArray, total: Int, f: MinesLogic.Fact): Step {
         fun need(i: Int) = num[i] - neighbours8(w, h, i).count { st[it] == MinesLogic.MINE }
         fun found(i: Int) = neighbours8(w, h, i).count { st[it] == MinesLogic.MINE }

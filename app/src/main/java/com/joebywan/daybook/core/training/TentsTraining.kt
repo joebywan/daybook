@@ -33,6 +33,9 @@ val TentsTraining: Course = Course(
         next = { s ->
             (s as TentsState).let { t -> TentsTeacher.deduce(t.size, t.trees, t.rowCounts, t.colCounts, t.seen)?.let(TentsTeacher::deduction) }
         },
+        every = { s, k ->
+            (s as TentsState).let { t -> TentsTeacher.steps(t.size, t.trees, t.rowCounts, t.colCounts, t.seen, k).map(TentsTeacher::deduction) }
+        },
         wrong = { s -> (s as TentsState).marks.indices.any { s.marks[it] == TentsLogic.GRASS && s.solution[it] } },
     ),
     badge = "T",

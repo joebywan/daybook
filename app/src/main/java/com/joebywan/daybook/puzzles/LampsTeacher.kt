@@ -121,6 +121,23 @@ internal object LampsTeacher {
         }
     }
 
+    /**
+     * Every step of [technique] on the board, each explained, taking [marks]' lamps and crosses as known (a practice board's
+     * are its walk's own sound steps): Training passes a move that completes any of them.
+     */
+    fun steps(n: Int, walls: String, marks: String, technique: String): List<Step> {
+        val g = LampsLogic.Geo(n, walls)
+        val k = IntArray(n * n) {
+            when {
+                !g.white[it] -> LampsLogic.OPEN
+                marks[it] == LampsLogic.LAMP_MARK -> LAMP
+                marks[it] == LampsLogic.CROSS -> NO
+                else -> LampsLogic.OPEN
+            }
+        }
+        return LampsLogic.facts(g, k, technique).map { explain(g, it) }
+    }
+
     private fun its(num: Int) = when (num) {
         1 -> "its lamp"
         2 -> "both its lamps"

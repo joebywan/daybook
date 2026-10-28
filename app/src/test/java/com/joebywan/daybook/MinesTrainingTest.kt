@@ -14,6 +14,7 @@ import com.joebywan.daybook.ui.decodeRoute
 import com.joebywan.daybook.ui.encodeRoute
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -148,15 +149,51 @@ class MinesTrainingTest {
                 }
                 // A flag on a safe square is the teacher's mistake.
                 assertEquals(false, MinesTraining.judge(p, b.flag(hidden.first { !b.isMine(it) })!!))
-                // One square of several is on the way: neither.
+                // One square of several is on the way: never wrong, and no pass unless it completes another instance on
+                // its own (a reveal can: another number's last safe square), which the instance test covers.
                 if (safe.size > 1) {
                     val one = b.reveal(safe.first())!!
-                    if (!safe.all { one.isOpen(it) }) assertNull(MinesTraining.judge(p, one))
+                    if (!safe.all { one.isOpen(it) }) assertNotEquals(false, MinesTraining.judge(p, one))
                 } else if (safe.isEmpty() && mines.size > 1) {
-                    assertNull(MinesTraining.judge(p, b.flag(mines.first())!!))
+                    assertNotEquals(false, MinesTraining.judge(p, b.flag(mines.first())!!))
                 }
             }
         }
+    }
+
+    @Test fun `another instance of the same technique is right, and a true reveal no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for (t in listOf(MinesTeacher.ALL_FOUND, MinesTeacher.ALL_MINES)) {
+            for (p in MinesTraining.practices(t).take(12)) {
+                val b = p.board as MinesState
+                val w = b.width
+                val n = b.width * b.height
+                fun around(i: Int) = (0 until n).filter { j -> j != i && kotlin.math.abs(j / w - i / w) <= 1 && kotlin.math.abs(j % w - i % w) <= 1 }
+                fun unk(i: Int) = around(i).filter { !b.isOpen(it) && !b.isFlag(it) }
+                fun need(i: Int) = b.number(i) - around(i).count { b.isFlag(it) }
+                val numbers = (0 until n).filter { b.isOpen(it) && unk(it).isNotEmpty() }
+                // Every instance by counting: a number's hidden squares, all safe or all mines.
+                val safeSets = numbers.filter { need(it) == 0 }.map { unk(it).toSet() }.toSet()
+                val mineSets = numbers.filter { need(it) == unk(it).size }.map { unk(it).toSet() }.toSet()
+                val mine = (p.step as Deduction).targets
+                if (t == MinesTeacher.ALL_FOUND) for (x in safeSets - setOf(mine)) {
+                    others++
+                    assertEquals("reveal $x", true, MinesTraining.judge(p, x.fold(b) { acc, i -> acc.reveal(i) ?: acc }))
+                } else for (x in mineSets - setOf(mine)) {
+                    others++
+                    assertEquals("flag $x", true, MinesTraining.judge(p, x.fold(b) { acc, i -> acc.flag(i) ?: acc }))
+                }
+                // A safe square that is no instance's, revealed without flooding: true, but no verdict.
+                val justified = (if (t == MinesTeacher.ALL_FOUND) safeSets else mineSets).flatten().toSet() + mine
+                (0 until n).firstOrNull { !b.isOpen(it) && !b.isFlag(it) && !b.isMine(it) && b.number(it) > 0 && it !in justified }?.let { c ->
+                    unjustified++
+                    assertNull("true reveal $c", MinesTraining.judge(p, b.reveal(c)!!))
+                }
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true reveal ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

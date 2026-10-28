@@ -167,6 +167,13 @@ Nothing had to be excluded: every technique every teacher names is found within 
   2 ms first, 6 ms a board (max 24 ms); the what-if 15 ms first, 52 ms a board (max 143 ms).
 - **Tents:** no tree and the lines 0-2 ms; one spot 4 ms first, 4 ms a board (max 13 ms); shared 52 ms first, 26 ms a board
   (max 101 ms; 3 of 60 Hard boards); served 4 ms first, 5 ms a board (max 15 ms).
+- **Any instance** (Mines, Lamps, Tents): `every` is `MinesTeacher.steps`, `LampsTeacher.steps` and `TentsTeacher.steps`,
+  every step of the technique on the practice board, taking the walk's own flags, crosses and grass as known.
+  `MinesLogic.facts` and `TentsTeacher.facts` are the ladder's own loops made lazy sequences (`nextFact` is their first, so
+  no daily board moves); `LampsLogic.facts` collects each rule's instances (a what-if: every supposition that breaks within
+  three links, not only the shortest). Judging a move that is no step, which asks for them all, takes under 2 ms on the
+  JVM for every technique (`JUDGE` lines). Tests: another instance is right (Mines' all found and all mines, Lamps' zero
+  and done, Tents' one spot), and a true reveal, cross or grass that no instance justifies gets no verdict.
 - **Left out:** Mines' "counting the mines left" and Tents' "grass around a tent", which no walk reaches. The count rule
   needs the hidden squares to be all mines or all safe, which the count against the numbers (tried after it, and more
   general) always settles first in practice. A tent's surrounding grass is drawn by itself (`TentsState.seen`), so that

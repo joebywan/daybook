@@ -120,6 +120,32 @@ class TentsTrainingTest {
         }
     }
 
+    @Test fun `another instance of the same technique is right, and true grass no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for (p in TentsTraining.practices(TentsTeacher.ONE_SPOT).take(12)) {
+            val b = p.board as TentsState
+            val n = b.size
+            val free = Rungs(b).free
+            fun orth(i: Int) = listOf(-n, n, -1, 1).map { i + it }.filter { j -> j in 0 until n * n && (j / n == i / n || j % n == i % n) }
+            // Every instance by counting: a tree with one square left that is not a tree or grass, and that square free.
+            val spots = b.trees.indices.filter { b.trees[it] }
+                .mapNotNull { t -> orth(t).filter { !b.trees[it] && b.seen[it] != TentsLogic.GRASS }.singleOrNull()?.takeIf { it in free } }.toSet()
+            val mine = (p.step as Deduction).targets
+            for (x in spots - mine) {
+                others++
+                assertEquals("tent $x", true, TentsTraining.judge(p, b.withMark(x, TentsLogic.TENT)))
+            }
+            // Grass is never a step of this technique: true grass gets no verdict.
+            free.firstOrNull { !b.solution[it] }?.let { c ->
+                unjustified++
+                assertNull("true grass $c", TentsTraining.judge(p, b.withMark(c, TentsLogic.GRASS)))
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has unjustified true grass ($unjustified)", unjustified > 0)
+    }
+
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {
         val index = (0 until 60).first { k ->
             TentsTraining.techniquesUsed(Tents.generate(Training.seed(k), Difficulty.EXPERT)) == TentsTraining.techniques.toSet()

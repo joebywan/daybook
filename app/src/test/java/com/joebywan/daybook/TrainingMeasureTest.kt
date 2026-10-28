@@ -30,6 +30,9 @@ class TrainingMeasureTest {
                 val found = c.practices(t).take(30).toList()
                 val ms = (System.nanoTime() - t0) / 1e6
                 println("MEASURE ${c.id} $t: ${found.size} practices, ${found.distinctBy { it.board }.size} distinct, ${"%.0f".format(ms)} ms")
+                // A move that is no step (the board as given): judging it asks for every instance of the technique.
+                val judged = found.take(10).map { p -> ms { c.judge(p, p.board) } }
+                println("JUDGE ${c.id} $t: mean ${"%.1f".format(judged.average())} max ${"%.1f".format(judged.max())} ms")
             }
             for (tier in Difficulty.entries) {
                 val counts = HashMap<String, Int>()

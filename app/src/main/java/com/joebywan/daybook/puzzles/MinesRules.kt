@@ -181,7 +181,13 @@ internal object MinesLogic {
      * revealed, else -1; [st] what is known ([UNKNOWN], [MINE], [SAFE]: revealed squares are [SAFE], mines hit [MINE]);
      * [total] the board's mines. Visible facts only: nothing here can see where a hidden mine is.
      */
-    fun nextFact(w: Int, h: Int, num: IntArray, st: IntArray, total: Int): Fact? {
+    fun nextFact(w: Int, h: Int, num: IntArray, st: IntArray, total: Int): Fact? = facts(w, h, num, st, total).firstOrNull()
+
+    /**
+     * Every step the ladder finds on [st], in the order [nextFact] tries them (so its first is [nextFact]'s), lazily: Training
+     * lists every step of one technique with it. Nothing in [st] changes while it runs.
+     */
+    fun facts(w: Int, h: Int, num: IntArray, st: IntArray, total: Int): Sequence<Fact> = sequence {
         val n = w * h
         val nbs = Array(n) { neighbours8(w, h, it) }
         fun unknownOf(i: Int) = nbs[i].filter { st[it] == UNKNOWN }
@@ -193,8 +199,8 @@ internal object MinesLogic {
             val unk = unknownOf(i)
             if (unk.isEmpty()) continue
             val need = needOf(i)
-            if (need == 0) return Fact(MinesTeacher.ALL_FOUND, 1, unk, emptyList(), listOf(i))
-            if (need == unk.size) return Fact(MinesTeacher.ALL_MINES, 1, emptyList(), unk, listOf(i))
+            if (need == 0) yield(Fact(MinesTeacher.ALL_FOUND, 1, unk, emptyList(), listOf(i)))
+            if (need == unk.size) yield(Fact(MinesTeacher.ALL_MINES, 1, emptyList(), unk, listOf(i)))
         }
 
         // 2. Two numbers: one's squares inside the other's, or overlapping.
@@ -215,10 +221,10 @@ internal object MinesLogic {
                 if (onlyB.isEmpty()) continue
                 val diff = needOf(b) - needA
                 if (onlyA.isEmpty()) {
-                    if (diff == 0) return Fact(MinesTeacher.SUBSET, 2, onlyB, emptyList(), listOf(a, b))
-                    if (diff == onlyB.size) return Fact(MinesTeacher.SUBSET, 2, emptyList(), onlyB, listOf(a, b))
+                    if (diff == 0) yield(Fact(MinesTeacher.SUBSET, 2, onlyB, emptyList(), listOf(a, b)))
+                    if (diff == onlyB.size) yield(Fact(MinesTeacher.SUBSET, 2, emptyList(), onlyB, listOf(a, b)))
                 } else if (diff == onlyB.size) {
-                    return Fact(MinesTeacher.PAIR, 2, onlyA, onlyB, listOf(a, b))
+                    yield(Fact(MinesTeacher.PAIR, 2, onlyA, onlyB, listOf(a, b)))
                 }
             }
         }
@@ -227,8 +233,8 @@ internal object MinesLogic {
         val hidden = (0 until n).filter { st[it] == UNKNOWN }
         if (hidden.isNotEmpty()) {
             val left = total - st.count { it == MINE }
-            if (left == 0) return Fact(MinesTeacher.COUNT, 3, hidden, emptyList(), emptyList(), left = 0)
-            if (left == hidden.size) return Fact(MinesTeacher.COUNT, 3, emptyList(), hidden, emptyList(), left = left)
+            if (left == 0) yield(Fact(MinesTeacher.COUNT, 3, hidden, emptyList(), emptyList(), left = 0))
+            if (left == hidden.size) yield(Fact(MinesTeacher.COUNT, 3, emptyList(), hidden, emptyList(), left = left))
             // Numbers on squares none of them share, needing every mine left between them: the rest is clear.
             val order = (0 until n).filter { num[it] >= 0 && unknownOf(it).isNotEmpty() && needOf(it) > 0 }
                 .sortedWith(compareBy({ -needOf(it) }, { it }))
@@ -244,7 +250,7 @@ internal object MinesLogic {
             }
             if (sum == left) {
                 val rest = hidden.filter { !used[it] }
-                if (rest.isNotEmpty()) return Fact(MinesTeacher.EDGE, 3, rest, emptyList(), chosen.sorted(), left = left)
+                if (rest.isNotEmpty()) yield(Fact(MinesTeacher.EDGE, 3, rest, emptyList(), chosen.sorted(), left = left))
             }
         }
 
@@ -253,11 +259,12 @@ internal object MinesLogic {
             if (nbs[x].none { num[it] >= 0 }) continue
             for (assume in intArrayOf(MINE, SAFE)) {
                 val f = whatIf(n, nbs, num, st, x, assume) ?: continue
-                return if (assume == MINE) Fact(MinesTeacher.WHAT_IF, 3, listOf(x), emptyList(), f.cited, f.chain, f.broke, f.tooMany)
-                else Fact(MinesTeacher.WHAT_IF, 3, emptyList(), listOf(x), f.cited, f.chain, f.broke, f.tooMany)
+                yield(
+                    if (assume == MINE) Fact(MinesTeacher.WHAT_IF, 3, listOf(x), emptyList(), f.cited, f.chain, f.broke, f.tooMany)
+                    else Fact(MinesTeacher.WHAT_IF, 3, emptyList(), listOf(x), f.cited, f.chain, f.broke, f.tooMany),
+                )
             }
         }
-        return null
     }
 
     private class Broken(val cited: List<Int>, val chain: List<Pair<Int, Boolean>>, val broke: Int, val tooMany: Boolean)

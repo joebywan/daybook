@@ -127,6 +127,21 @@ internal object TentsTeacher {
     }
 
     /**
+     * Every step of [technique] on the board, taking [marks]' tents and grass as known (a practice board's are its walk's
+     * own sound steps): Training passes a move that completes any of them. The search stops once past [technique]'s place
+     * in the ladder.
+     */
+    fun steps(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, marks: List<Int>, technique: String): List<Step> {
+        val st = IntArray(n * n) { if (!trees[it] && (marks[it] == TENT || marks[it] == GRASS)) marks[it] else 0 }
+        // The ladder looks at each line for either line rule, so those two share a place.
+        fun rank(t: String) = TECHNIQUES.indexOf(if (t == LINE_FULL) LINE_DONE else t)
+        return facts(n, trees, rowCounts, colCounts, st)
+            .takeWhile { rank(it.technique) <= rank(technique) }
+            .filter { it.technique == technique }
+            .toList()
+    }
+
+    /**
      * The deepest technique (an index into [TECHNIQUES]) a player walking [s] from blank by hints alone needs, or null when
      * the hints get stuck. The generator's tier gate (`TentsLogic.fitsTier`), so it walks exactly as the hints do.
      */
@@ -141,7 +156,11 @@ internal object TentsTeacher {
         return deepest
     }
 
-    private fun nextFact(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, st: IntArray): Step? {
+    private fun nextFact(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, st: IntArray): Step? =
+        facts(n, trees, rowCounts, colCounts, st).firstOrNull()
+
+    /** Every fact on [st], in [nextFact]'s order (its first is [nextFact]'s), lazily; [st] must not change meanwhile. */
+    private fun facts(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, st: IntArray): Sequence<Step> = sequence {
         fun free(i: Int) = !trees[i] && st[i] == 0
         val treeIdx = trees.indices.filter { trees[it] }
         /** The squares beside tree [t] its tent could still go on. */
@@ -151,11 +170,11 @@ internal object TentsTeacher {
 
         // 1. No tree beside it.
         val bare = st.indices.filter { free(it) && TentsLogic.orth(n, it).none { j -> trees[j] } }
-        if (bare.isNotEmpty()) return Step(
+        if (bare.isNotEmpty()) yield(Step(
             NO_TREE, GRASS, bare.toSet(), bare.toSet(), emptySet(),
             "Which squares have no tree beside them?",
             "A tent sits right beside its tree (up, down, left or right). These squares have no tree there, so they are grass: cross them out.",
-        )
+        ))
 
         // 2. A row or column that is full or done.
         for (li in 0 until 2 * n) {
@@ -168,37 +187,37 @@ internal object TentsTeacher {
             if (open.isEmpty() || need < 0 || need > open.size) continue
             val name = lineName(n, li)
             val placed = line.filter { st[it] == TENT }.toSet()
-            if (need == 0) return Step(
+            if (need == 0) yield(Step(
                 LINE_DONE, GRASS, open.toSet(), line.toSet() + clue, placed,
                 "Count the tents in $name.",
                 "${name.cap()} holds $want, and they are all placed, so the rest of it is grass.",
-            )
-            if (need == open.size) return Step(
+            ))
+            if (need == open.size) yield(Step(
                 LINE_FULL, TENT, open.toSet(), line.toSet() + clue, placed,
                 "Count the squares left in $name.",
                 "${name.cap()} still needs ${plural(need, "tent")} and has exactly ${if (need == 1) "1 square" else "$need squares"} left that can hold one, so ${if (need == 1) "it is a tent" else "all of them are tents"}.",
-            )
+            ))
         }
 
         // 3. Around a tent.
         for (t in st.indices) {
             if (trees[t] || st[t] != TENT) continue
             val around = TentsLogic.around(n, t).filter { free(it) }
-            if (around.isNotEmpty()) return Step(
+            if (around.isNotEmpty()) yield(Step(
                 TOUCH, GRASS, around.toSet(), setOf(t) + around, setOf(t),
                 "Look around this tent.",
                 "Tents never touch, not even at a corner, so every free square around this tent is grass.",
-            )
+            ))
         }
 
         // 4. A tree with one square left.
         for (t in treeIdx) {
             val choices = choices(t)
-            if (choices.size == 1 && st[choices[0]] == 0) return Step(
+            if (choices.size == 1 && st[choices[0]] == 0) yield(Step(
                 ONE_SPOT, TENT, choices.toSet(), setOf(t, choices[0]), setOf(t),
                 "Look at this tree.",
                 "This tree needs a tent beside it, and every other square next to it is a tree, off the board or ruled out. Only this one is left.",
-            )
+            ))
         }
 
         // 5. A square that would touch every choice of a tree.
@@ -206,11 +225,11 @@ internal object TentsTeacher {
             val choices = choices(t)
             if (choices.isEmpty()) continue
             val xs = st.indices.filter { x -> free(x) && x !in choices && choices.all { it in TentsLogic.around(n, x) } }
-            if (xs.isNotEmpty()) return Step(
+            if (xs.isNotEmpty()) yield(Step(
                 SHARED, GRASS, xs.toSet(), setOf(t) + choices + xs, setOf(t) + choices,
                 "Where can this tree's tent go?",
                 "This tree's tent has to go on one of the marked squares. A tent in the crossed one would touch every one of them, so it is grass.",
-            )
+            ))
         }
 
         // 6. Every tree beside it already has its tent.
@@ -220,13 +239,12 @@ internal object TentsTeacher {
             val near = TentsLogic.orth(n, x).filter { trees[it] }
             if (near.isNotEmpty() && near.all { it in served }) {
                 val owners = near.flatMap { t -> TentsLogic.orth(n, t).filter { owned(it) } }
-                return Step(
+                yield(Step(
                     SERVED, GRASS, setOf(x), setOf(x) + near, near.toSet() + owners,
                     "Does a tree beside this square still need a tent?",
                     "${if (near.size == 1) "The tree" else "The trees"} beside this square already ${if (near.size == 1) "has its tent" else "have their tents"}, so a tent here would have no tree of its own. It is grass.",
-                )
+                ))
             }
         }
-        return null
     }
 }

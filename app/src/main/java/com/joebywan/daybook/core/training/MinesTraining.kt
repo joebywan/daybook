@@ -37,10 +37,12 @@ val MinesTraining: Course = Course(
     drill = MoveDrill(
         next = { s ->
             (s as MinesState).let { m ->
-                MinesTeacher.deduce(
-                    m.width, m.height, MinesTeacher.visibleNumbers(m), BooleanArray(m.width * m.height) { it in m.bumps || m.isFlag(it) },
-                    BooleanArray(m.width * m.height) { m.isFlag(it) }, m.total,
-                )?.let(MinesTeacher::deduction)
+                MinesTeacher.deduce(m.width, m.height, MinesTeacher.visibleNumbers(m), known(m), known(m), m.total)?.let(MinesTeacher::deduction)
+            }
+        },
+        every = { s, t ->
+            (s as MinesState).let { m ->
+                MinesTeacher.steps(m.width, m.height, MinesTeacher.visibleNumbers(m), known(m), m.total, t).map(MinesTeacher::deduction)
             }
         },
         wrong = { it.failed },
@@ -49,3 +51,6 @@ val MinesTraining: Course = Course(
     // The first practice seed whose Expert board's walk needs all six (1 of the first 60). Pinned by MinesTrainingTest.
     examIndex = 44,
 )
+
+/** The mines a practice board shows: those hit and the walk's flags (its own sound steps, never a guess). */
+private fun known(m: MinesState) = BooleanArray(m.width * m.height) { it in m.bumps || m.isFlag(it) }

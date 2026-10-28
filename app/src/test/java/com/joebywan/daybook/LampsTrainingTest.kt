@@ -119,6 +119,35 @@ class LampsTrainingTest {
         }
     }
 
+    @Test fun `another instance of the same technique is right, and a true cross no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for (t in listOf(LampsLogic.ZERO, LampsLogic.DONE)) {
+            for (p in LampsTraining.practices(t).take(12)) {
+                val b = p.board as LampsState
+                val n = b.size
+                val open = Rungs(b).open
+                fun beside(i: Int) = listOf(-n, n, -1, 1).map { i + it }.filter { j -> j in 0 until n * n && (j / n == i / n || j % n == i % n) }
+                fun num(i: Int) = b.walls[i].let { if (it in '0'..'4') it - '0' else -1 }
+                // Every instance by counting: a number whose lamps are all there (none for a 0), and its open squares.
+                val sets = b.walls.indices.filter { num(it) >= 0 && (t == LampsLogic.ZERO) == (num(it) == 0) }
+                    .filter { w -> beside(w).count { b.marks[it] == LampsLogic.LAMP_MARK } == num(w) }
+                    .map { w -> beside(w).filter { it in open }.toSet() }.filter { it.isNotEmpty() }.toSet()
+                val mine = (p.step as Deduction).targets
+                for (x in sets - setOf(mine)) {
+                    others++
+                    assertEquals("cross $x", true, LampsTraining.judge(p, x.fold(b) { acc, i -> acc.withMark(i, LampsLogic.CROSS) }))
+                }
+                open.firstOrNull { b.solution[it] != '1' && it !in mine && sets.none { s -> it in s } }?.let { c ->
+                    unjustified++
+                    assertNull("true cross $c", LampsTraining.judge(p, b.withMark(c, LampsLogic.CROSS)))
+                }
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true cross ($unjustified)", unjustified > 0)
+    }
+
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {
         val index = (0 until 60).first { k ->
             LampsTraining.techniquesUsed(Lamps.generate(Training.seed(k), Difficulty.EXPERT)) == LampsTraining.techniques.toSet()
