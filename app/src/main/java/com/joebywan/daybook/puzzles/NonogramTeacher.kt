@@ -128,6 +128,10 @@ internal object NonogramTeacher {
         return best
     }
 
+    /** Every line's step, rows then columns: [deduce] picks the simplest. Training reads them all (any instance counts). */
+    fun steps(width: Int, height: Int, rows: List<List<Int>>, cols: List<List<Int>>, cells: String): List<Step> =
+        (0 until height + width).mapNotNull { line -> lineStep(width, height, line, if (line < height) rows[line] else cols[line - height], cells) }
+
     private fun lineStep(width: Int, height: Int, line: Int, clue: List<Int>, cells: String): Step? {
         val at = NonogramLogic.lineCells(width, height, line)
         val n = at.size
