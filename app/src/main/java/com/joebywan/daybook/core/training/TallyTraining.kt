@@ -28,7 +28,14 @@ val TallyTraining: Course = Course(
     // TallyLogic.accepts: Standard needs only the four shortcuts, every Hard board the ways, every Expert a what-if.
     tierFor = tierByIndex({ TallyTraining.techniques }, hard = 4, expert = 5),
     // TallyTeacher.deduce reads the digits, the targets and the marks only; the targets are printed on the board.
-    drill = MoveDrill { s ->
+    // Any line's instance of the technique (or any what-if within the hint's reach) is right, not only the hint's pick.
+    drill = MoveDrill(
+        alternatives = { s ->
+            (s as TallyState).let { t ->
+                TallyTeacher.steps(t.size, TallyLogic.digitArray(t), TallyLogic.targets(t), t.marks).map { Tally.deduction(t, it) }
+            }
+        },
+    ) { s ->
         (s as TallyState).let { t ->
             TallyTeacher.deduce(t.size, TallyLogic.digitArray(t), TallyLogic.targets(t), t.marks)?.let { Tally.deduction(t, it) }
         }

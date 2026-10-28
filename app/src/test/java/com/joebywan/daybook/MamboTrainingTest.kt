@@ -8,6 +8,7 @@ import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.puzzles.Mambo
 import com.joebywan.daybook.puzzles.MamboState
+import com.joebywan.daybook.puzzles.MamboTeacher
 import com.joebywan.daybook.puzzles.Sym
 import com.joebywan.daybook.ui.Route
 import com.joebywan.daybook.ui.decodeRoute
@@ -97,6 +98,8 @@ class MamboTrainingTest {
 
     @Test fun `a move is right when it makes the step, wrong when no answer keeps it, and otherwise plays on`() {
         assertTrue("a sun passes through a moon, so a wrong verdict waits", MamboTraining.drill.settleMillis > 0)
+        var others = 0
+        var lucky = 0
         for (t in MamboTraining.techniques) {
             for (p in MamboTraining.practices(t).take(3)) {
                 val b = p.board as MamboState
@@ -106,13 +109,18 @@ class MamboTrainingTest {
                 val open = b.cells.indices.filter { b.cells[it] == Sym.NONE }
                 // The wrong symbol anywhere open is wrong: the board has one answer.
                 for (i in listOf(open.first(), d.targets.first())) assertEquals(false, MamboTraining.judge(p, with(i, b.solution[i].other())))
-                // The right symbol somewhere else is sound, but not the step: play on.
-                val elsewhere = open.first { it !in d.targets }
-                assertNull(MamboTraining.judge(p, with(elsewhere, b.solution[elsewhere])))
+                // Another instance of the technique is right too; a right symbol no instance justifies plays on.
+                val same = MamboTeacher.steps(b.size, b.cells, b.links).filter { it.technique == t }.map { Mambo.deduction(b, it) }.toList()
+                same.firstOrNull { it.targets != d.targets }?.let { assertEquals(true, MamboTraining.judge(p, it.apply(b))); others++ }
+                val justified = same.flatMap { it.targets }.toSet()
+                open.firstOrNull { it !in justified }?.let { assertNull(MamboTraining.judge(p, with(it, b.solution[it]))); lucky++ }
                 // One of a step that places several is on the way.
-                if (d.targets.size > 1) d.targets.first().let { assertNull(MamboTraining.judge(p, with(it, b.solution[it]))) }
+                d.targets.first().takeIf { f -> d.targets.size > 1 && same.none { it.targets == setOf(f) } }
+                    ?.let { assertNull(MamboTraining.judge(p, with(it, b.solution[it]))) }
             }
         }
+        assertTrue("some practice has another instance to find", others > 0)
+        assertTrue("and a true symbol nothing justifies", lucky > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

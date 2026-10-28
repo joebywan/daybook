@@ -24,7 +24,14 @@ val NonogramTraining: Course = Course(
     // Standard boards reach all four (TRAINING_SPEC.md, Measured).
     tierFor = { Difficulty.STANDARD },
     // NonogramTeacher.deduce reads the clues and the marks only; the clues are printed on the board.
-    drill = MoveDrill { s ->
+    // Any line's instance of the technique is right, not only the hint's pick.
+    drill = MoveDrill(
+        alternatives = { s ->
+            (s as NonogramState).let { g ->
+                NonogramTeacher.steps(g.width, g.height, NonogramLogic.rowClues(g), NonogramLogic.colClues(g), g.cells).map { Nonogram.deduction(g, it) }
+            }
+        },
+    ) { s ->
         (s as NonogramState).let { g ->
             NonogramTeacher.deduce(g.width, g.height, NonogramLogic.rowClues(g), NonogramLogic.colClues(g), g.cells)
                 ?.let { Nonogram.deduction(g, it) }

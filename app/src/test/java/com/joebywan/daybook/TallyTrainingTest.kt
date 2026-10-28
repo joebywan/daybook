@@ -9,6 +9,7 @@ import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
+import com.joebywan.daybook.puzzles.TallyTeacher
 import com.joebywan.daybook.ui.Route
 import com.joebywan.daybook.ui.decodeRoute
 import com.joebywan.daybook.ui.encodeRoute
@@ -79,6 +80,8 @@ class TallyTrainingTest {
     }
 
     @Test fun `a move is right when it makes the step, wrong when the answer disagrees, and otherwise plays on`() {
+        var others = 0
+        var lucky = 0
         for (t in TallyTraining.techniques) {
             for (p in TallyTraining.practices(t).take(3)) {
                 val b = p.board as TallyState
@@ -91,12 +94,17 @@ class TallyTrainingTest {
                 // A wrong removal, or a wrong circle, is wrong wherever it is.
                 for (i in listOf(open.first(), d.targets.first())) assertEquals(false, TallyTraining.judge(p, with(i, wrong(i))))
                 open.firstOrNull { b.keep[it] == '0' }?.let { assertEquals(false, TallyTraining.judge(p, with(it, TallyLogic.KEPT))) }
-                // A right mark somewhere else is sound, but not the step: play on.
-                val elsewhere = open.first { it !in d.targets }
-                assertNull(TallyTraining.judge(p, with(elsewhere, right(elsewhere))))
-                if (d.targets.size > 1) d.targets.first().let { assertNull(TallyTraining.judge(p, with(it, right(it)))) }
+                // Another instance of the technique is right too; a right mark no instance justifies plays on.
+                val same = TallyTeacher.steps(b.size, TallyLogic.digitArray(b), TallyLogic.targets(b), b.marks).map { Tally.deduction(b, it) }.filter { it.technique == t }
+                same.firstOrNull { it.targets != d.targets }?.let { assertEquals(true, TallyTraining.judge(p, it.apply(b))); others++ }
+                val justified = same.flatMap { it.targets }.toSet()
+                open.firstOrNull { it !in justified }?.let { assertNull(TallyTraining.judge(p, with(it, right(it)))); lucky++ }
+                d.targets.first().takeIf { f -> d.targets.size > 1 && same.none { it.targets == setOf(f) } }
+                    ?.let { assertNull(TallyTraining.judge(p, with(it, right(it)))) }
             }
         }
+        assertTrue("some practice has another instance to find", others > 0)
+        assertTrue("and a true mark nothing justifies", lucky > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

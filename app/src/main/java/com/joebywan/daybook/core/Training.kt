@@ -358,11 +358,18 @@ class PlacementDrill(
  * Judged by the teacher, never against the stored answer: wrong when the teacher calls the new board a mistake (a
  * teacher's mistake means "no legal answer keeps this", which is what LITS's and Pipes' several-answer boards need, PR
  * #15); right when the step's [Deduction.isReached] holds; otherwise the player plays on (one cross of a step that crosses
- * three, or a sound mark elsewhere). Only the step itself passes: on these boards a lone cross is cheap to guess, so
- * "another correct mark" would pass a guess, where a placed digit could not be.
+ * three, or a sound mark elsewhere). The step passes, and so does any other instance of the same technique on the
+ * position ([alternatives]: the owner, 2026-10-28, "if the move satisfies the move that's asked for without being exactly
+ * what the app assumed people would do, it's still right"). A true mark no instance justifies plays on: on these boards a
+ * lone cross is cheap to guess, so "another correct mark" would pass a guess, where a placed digit could not be.
  */
 class MoveDrill(
     override val settleMillis: Long = 0,
+    /**
+     * Every step the teacher sees on the state, as [Deduction]s, from the same visible-state entry point; a judged move
+     * that makes any of them with the practice's technique is right. Empty: only [next]'s step passes.
+     */
+    private val alternatives: (PuzzleState) -> List<Deduction> = { emptyList() },
     /**
      * The teacher's next step on the state as a [Deduction], from what the player can see: build it from the teacher's
      * visible-state entry point (one with no parameter for the answer), never from `teach`, which reads the answer.
@@ -383,6 +390,7 @@ class MoveDrill(
     override fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean? = when {
         puzzle.teach(after)?.mistake == true -> false
         (p.step as Deduction).isReached(after) -> true
+        alternatives(p.board).any { it.technique == p.step.technique && it.isReached(after) } -> true
         else -> null
     }
 }

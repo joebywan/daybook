@@ -100,6 +100,13 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     answers, PR #15). **Neither** = play on (one cross of three, a sound mark elsewhere, an erasure). Unlike digits, only
     the step itself passes: a lone cross is right by chance on most squares of a Kings board, so "another correct mark"
     would pass guesses.
+  - The owner (2026-10-28): "If the move satisfies the move that's asked for without being exactly what the app assumed
+    people would do, it's still right." `MoveDrill(alternatives)` lists every step the teacher sees on the position
+    (from the same visible-state entry point); a move that makes any of them with the practice's technique is right. A
+    true mark no instance justifies still plays on. Mambo, Nonogram and Tally pass theirs (`MamboTeacher.steps`,
+    `NonogramTeacher.steps`, `TallyTeacher.steps`: every line's step, every Mambo instance in ladder order, every Tally
+    what-if within the hint's three lines; each teacher's `deduce` is still the first); their tests make a different
+    instance and an unjustified true mark on every practice that has one. Kings leaves it empty for now.
   - Judging asks the teacher, so every emitted state is judged on `Dispatchers.Default`; a verdict for a state the player
     has already moved on from is dropped and the newer state judged instead.
   - `MoveDrill(settleMillis)`: a wrong verdict waits that long before it shows, so a newer move drops it. Mambo needs it

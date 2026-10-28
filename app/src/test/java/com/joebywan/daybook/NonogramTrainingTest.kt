@@ -9,6 +9,7 @@ import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.puzzles.Nonogram
 import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.NonogramState
+import com.joebywan.daybook.puzzles.NonogramTeacher
 import com.joebywan.daybook.ui.Route
 import com.joebywan.daybook.ui.decodeRoute
 import com.joebywan.daybook.ui.encodeRoute
@@ -88,6 +89,8 @@ class NonogramTrainingTest {
     }
 
     @Test fun `a move is right when it makes the step, wrong when no picture keeps it, and otherwise plays on`() {
+        var others = 0
+        var lucky = 0
         for (t in NonogramTraining.techniques) {
             for (p in NonogramTraining.practices(t).take(3)) {
                 val b = p.board as NonogramState
@@ -100,12 +103,17 @@ class NonogramTrainingTest {
                 // A wrong fill, or a wrong cross, is wrong wherever it is.
                 for (i in listOf(open.first(), d.targets.first())) assertEquals(false, NonogramTraining.judge(p, with(i, wrong(i))))
                 open.firstOrNull { b.solution[it] == '1' }?.let { assertEquals(false, NonogramTraining.judge(p, with(it, NonogramLogic.CROSSED))) }
-                // A right mark somewhere else is sound, but not the step: play on.
-                val elsewhere = open.first { it !in d.targets }
-                assertNull(NonogramTraining.judge(p, with(elsewhere, right(elsewhere))))
-                if (d.targets.size > 1) d.targets.first().let { assertNull(NonogramTraining.judge(p, with(it, right(it)))) }
+                // Another instance of the technique is right too; a right mark no instance justifies plays on.
+                val same = NonogramTeacher.steps(b.width, b.height, NonogramLogic.rowClues(b), NonogramLogic.colClues(b), b.cells).map { Nonogram.deduction(b, it) }.filter { it.technique == t }
+                same.firstOrNull { it.targets != d.targets }?.let { assertEquals(true, NonogramTraining.judge(p, it.apply(b))); others++ }
+                val justified = same.flatMap { it.targets }.toSet()
+                open.firstOrNull { it !in justified }?.let { assertNull(NonogramTraining.judge(p, with(it, right(it)))); lucky++ }
+                d.targets.first().takeIf { f -> d.targets.size > 1 && same.none { it.targets == setOf(f) } }
+                    ?.let { assertNull(NonogramTraining.judge(p, with(it, right(it)))) }
             }
         }
+        assertTrue("some practice has another instance to find", others > 0)
+        assertTrue("and a true mark nothing justifies", lucky > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

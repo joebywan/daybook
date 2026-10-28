@@ -28,7 +28,11 @@ val MamboTraining: Course = Course(
     tierFor = tierByIndex({ MamboTraining.techniques }, hard = 4, expert = 5),
     // MamboTeacher.deduce has no parameter through which the answer could reach it.
     // A sun is two taps, through a moon that may be wrong: a wrong verdict waits as long as the board's own caption.
-    drill = MoveDrill(settleMillis = Mambo.SETTLE_MILLIS) { s ->
+    // Any instance of the technique on the position is right, not only the hint's pick.
+    drill = MoveDrill(
+        settleMillis = Mambo.SETTLE_MILLIS,
+        alternatives = { s -> (s as MamboState).let { m -> MamboTeacher.steps(m.size, m.cells, m.links).map { Mambo.deduction(m, it) }.toList() } },
+    ) { s ->
         (s as MamboState).let { m -> MamboTeacher.deduce(m.size, m.cells, m.links)?.let { Mambo.deduction(m, it) } }
     },
     badge = "&",
