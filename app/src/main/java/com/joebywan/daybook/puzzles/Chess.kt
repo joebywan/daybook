@@ -435,7 +435,8 @@ object Chess : PuzzleType {
                 Box(Modifier.width(side).height(CAPTION_HEIGHT)) {
                     val lost = lostShown && !s.solved
                     val text = when {
-                        lost -> LOST_CAPTION
+                        // A Training practice locks the board on a wrong move and has no Undo or Restart; its verdict explains.
+                        lost -> if (interactive) LOST_CAPTION else "No forced mate from here."
                         s.solved -> "Checkmate."
                         else -> "${if (whiteBottom) "White" else "Black"} to move: mate in ${s.remaining}."
                     }

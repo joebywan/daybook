@@ -41,6 +41,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Course
@@ -67,8 +70,16 @@ import kotlinx.serialization.json.Json
 
 /**
  * Height of the slot under the board: the explanation, a hint or a verdict, never moving the board. Five lines of body
- * text, a little under the walkthrough's, so the board keeps more of a short phone; longer text scrolls.
+ * text, a little under the walkthrough's, so the board keeps more of a short phone; longer text scrolls. Below 700 dp of
+ * window it gives way in proportion (110 dp at 537, a phone browser with both toolbars), as the play screen's hint slot
+ * once did; fixed for a given window, so feedback never moves the board.
  */
+@Composable
+private fun slotHeight(): Dp {
+    val window = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
+    return (SlotHeight * (window / 700.dp)).coerceIn(96.dp, SlotHeight)
+}
+
 private val SlotHeight = 144.dp
 
 /** How long a pass's congratulation shows before back takes the player to the list it was opened from. */
@@ -157,7 +168,7 @@ fun CourseScreen(course: Course, record: Set<String>, onOpen: (String) -> Unit, 
     }
 }
 
-internal enum class Verdict { RIGHT, HINTED, WRONG }
+internal enum class Verdict { RIGHT, HINTED, WRONG, ASIDE }
 
 /**
  * The slot's line after a move: a wrong one shows [step], the reasoning there was to find; a right one explains [made],
@@ -165,6 +176,7 @@ internal enum class Verdict { RIGHT, HINTED, WRONG }
  * "That's it" followed by the explanation of a different square as being told they were wrong and should have done that.
  */
 internal fun verdictLine(verdict: Verdict, step: TeachStep, made: TeachStep): String = when (verdict) {
+    Verdict.ASIDE -> "" // its own line, [Course.aside]
     Verdict.WRONG -> "Not quite. ${step.explanation}"
     Verdict.HINTED -> "That's it, with a hint, so it doesn't count. ${made.explanation}"
     Verdict.RIGHT -> "That's it. ${made.explanation}"
@@ -211,6 +223,8 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
     var hinted by remember(p) { mutableStateOf(false) }
     // The step the player's right move made ([Course.made]).
     var made by remember(p) { mutableStateOf<TeachStep?>(null) }
+    // A move that works but that the board can no longer judge ([Course.aside]): its note; it neither counts nor breaks the run.
+    var aside by remember(p) { mutableStateOf<String?>(null) }
     val hints = rememberHintSession("$key|$index")
     // A pass: the line shows with the board locked, then back to where the practice was opened from.
     LaunchedEffect(earned) { if (earned != null) { delay(PASS_BEAT_MS); onBack() } }
@@ -242,9 +256,18 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
         if (board == null || p == null || verdict != null) return
         board = next
         scope.launch {
+            var note: String? = null
             val (right, step) = withContext(Dispatchers.Default) {
                 course.judge(p, next)?.let { it to (if (it) course.made(p, next) else p.step) }
-            } ?: return@launch
+                    ?: run { note = course.aside(p, next); null }
+            } ?: run {
+                if (note != null && board === next && verdict == null) {
+                    hints.clear()
+                    aside = note
+                    verdict = Verdict.ASIDE
+                }
+                return@launch
+            }
             if (!right) delay(course.drill.settleMillis)
             if (board === next && verdict == null) settle(right, step)
         }
@@ -266,6 +289,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
             if (verdict == null) WatchHint(hints, puzzle, b)
             val highlight = when (verdict) {
                 null -> hints.highlight
+                Verdict.ASIDE -> BoardHighlight.None
                 // The step shown: the one to find after a wrong move, the player's own after a right one.
                 else -> (made ?: p.step).let { BoardHighlight(strong = it.targets, soft = it.cited - it.targets, warning = false) }
             }
@@ -277,7 +301,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
                     puzzle.Board(b, { judge(it) }, interactive = verdict == null)
                 }
             }
-            Box(Modifier.fillMaxWidth().height(SlotHeight).padding(horizontal = 18.dp)) {
+            Box(Modifier.fillMaxWidth().height(slotHeight()).padding(horizontal = 18.dp)) {
                 if (verdict == null && hints.active) HintPanel(hints, accent, ::onHint, Modifier.fillMaxSize())
                 else {
                     val step = p.step
@@ -285,6 +309,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
                     val text = when {
                         v == null -> course.explanations.getValue(technique)
                         v == Verdict.RIGHT && earned != null -> earned.orEmpty()
+                        v == Verdict.ASIDE -> aside.orEmpty()
                         else -> verdictLine(v, step, made ?: step)
                     }
                     Text(
@@ -378,7 +403,7 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
                 puzzle.Board(board, { board = it }, interactive = !board.solved)
             }
         }
-        Box(Modifier.fillMaxWidth().height(SlotHeight).padding(horizontal = 18.dp)) {
+        Box(Modifier.fillMaxWidth().height(slotHeight()).padding(horizontal = 18.dp)) {
             if (hints.active) HintPanel(hints, accent, ::onHint, Modifier.fillMaxSize())
             else Text(
                 when {
