@@ -176,7 +176,7 @@ class TrainingTest {
 
     @Test fun `every course lists its teacher's named techniques, each explained, and its final board needs them all`() {
         // Appended only: the achievements follow this order.
-        assertEquals(listOf("sudoku", "cages", "inequality", "regions", "kings"), Training.COURSES.map { it.id })
+        assertEquals(listOf("sudoku", "cages", "inequality", "regions", "kings", "shikaku", "dominoes", "lits"), Training.COURSES.map { it.id })
         for (c in Training.COURSES) assertEquals(techniqueNamesOf(c.id).keys.toList(), c.techniques)
         assertEquals(Training.seed(0), CagesTraining.examSeed)
         assertEquals(Training.seed(4), InequalityTraining.examSeed)

@@ -1,3 +1,3 @@
-- New: Training for Kings. Practise each technique on real boards: crown the king or cross out the squares the step rules out, three right in a row to pass, then a final board that needs them all. Two new achievements.
-- Training finds your next practice board faster.
+- New: Training for Shikaku, Dominoes and LITS. Practise each technique on real boards: draw the rectangle, lay the domino or shade the squares the step needs, three right in a row to pass, then a final board that needs them all. Two new achievements each.
+- New: Training for Kings, and your next practice board is found faster.
 - Training for Sudoku, Cage Sudoku, Inequality and Regions, from a hint's "Practise this", the rules sheet or Statistics.
