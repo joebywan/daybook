@@ -153,8 +153,13 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - **LITS** (move drill, proved boards only): whole region 159 ms first, 70 ms a board after (max 442 ms), since 10 of
   60 Standard boards have a four-square region left for it; overlap, the 2x2 and the letter rule 11 ms first, 13 ms
   after; the neighbour 22 ms first, 24 ms after; the what-if 195 ms first, 198 ms a board after (max 730 ms; 25 of 60
-  Expert boards reach it). Judging a move asks LITS's teacher, whose mistake check searches for an answer that keeps
-  the shading: in the browser see "LITS in the browser" below.
+  Expert boards reach it). In the browser (the web build, 390x844, the page's own load subtracted, on a busy machine)
+  the first board costs about 0.15-0.2 s for the whole region and 0.8-1.1 s for the what-if, in Chromium and WebKit
+  alike: wasm has one thread, so "Finding a board..." stays up that long. Judging a move asks LITS's teacher, whose
+  mistake check searches for an answer that keeps the shading: on the JVM a judged step takes 0.1 ms on average and at
+  most 8 ms (the what-if's), so it is no cost in a browser either, and a wrong square's "Not quite" showed at once.
+- **Judging** (`TrainingMeasureTest`'s JUDGE lines, the step made, per practice): Shikaku and Dominoes under 0.5 ms,
+  Kings at most 2.4 ms, LITS at most 8.3 ms.
 - **Final boards** (Expert, the first practice seed whose walk needs every technique, each pinned by a test):
   Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (32 of the first 60); Inequality index 4 (17 of the first
   60); Regions index 0 (all 60); Kings index 1 (17 of the first 60); Shikaku index 15 (5 of the first 60); Dominoes index 2
@@ -169,6 +174,10 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - Kings' practice checked at 375x537 and 390x844 in Chromium and WebKit (`tools/render/render.py --home --query
   "screen=training&puzzle=kings&technique=would-empty"`, with taps for a wrong cross and for the step), and on the
   Android emulator through a hint's "Practise this" and a Show me: the board stays put through every verdict.
+- Shikaku's, Dominoes' and LITS' practices and final boards checked at 375x537 and 390x844 in Chromium and WebKit
+  (LITS with taps for a right square then a wrong one: the board's box measured the same before and after the
+  verdict), and on the Android emulator: a wrong LITS square, a wrong domino laid from the tray, and a Shikaku Show me.
+  The badges ("2x3", "6|6", "L") rendered at true size on the Achievements page.
 
 ## Classification of every puzzle
 
