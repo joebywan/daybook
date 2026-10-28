@@ -171,6 +171,20 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     justifies. That last is never passed, because a lone cross is right by chance on most squares of a Kings board, and it
     gets no "true, but not this technique" note either: nothing can tell it from the first cross of a step the player is
     still making, so a note would fire on honest progress.
+  - **Progress** (2026-10-28, the owner dislikes a player left without feedback): a play-on move that is a right part of
+    an instance of the technique not yet finished shows "Right so far: 3 of 12. Keep going." in the slot, in place of the
+    explanation (`Course.progress`, `MoveDrill(view)`). It is no verdict: it neither counts, ends the board nor breaks
+    the run, and the board stays interactive. Per instance (the teacher's own first, then `every`'s), "need" is the
+    targets whose mark the instance's own Show me changes and "done" those the board already holds; the line shows when
+    every square the player changed holds what that Show me puts there (a flood or a sprout it makes too counts) and
+    0 < done < need. So it agrees with every answer, names a count and never which squares are left, and a true mark no
+    instance justifies still plays on silently. `view` is the course's marks indexed like its targets: Kings, Tents
+    (`seen`, so grass already sprouted is not a move), Mines, Lamps, Nonogram, LITS, Tally, Mambo, Pearls (edges after
+    the squares, `PearlsTeacher.edgeIndex`), Atoms (gaps after the atoms, `pairCell`) and Who's Who (a table square, n
+    marks wide). Cipher, Shikaku, Dominoes and Chess have none: every step is one move (a letter, a block, a domino, a
+    chess move), as are Pipes' tile and Mosaic's fill. `TrainingProgressTest` makes each several-square step one square
+    at a time from its Show me on two practices per technique of eleven courses, and checks an unjustified true grass
+    (Tents) and cross (Kings) get no line.
   - Mambo, Nonogram and Tally supply `every` too (`MamboTeacher.steps`, `NonogramTeacher.steps`, `TallyTeacher.steps`
     filtered to the technique: every Mambo instance in ladder order, every line's step, every Tally what-if within the
     hint's three lines; each `deduce` is still their first, so no daily board moved). Their tests make a different
@@ -421,9 +435,16 @@ Nothing had to be excluded: every technique every teacher names is found within 
   list with the tick); the rules sheet's Train and a hint's "Practise this" on Pipes and Sudoku; a wrong Chess move
   ("No forced mate from here."); a Mosaic biggest-swallow fill that keeps the limit (the aside note, Next board). A
   practice of every course rendered at 375x537 and 390x844 in Chromium and WebKit, no console error.
-  Behaviours seen and left as designed: a step that marks several squares (Tents' no-tree grass, all twelve) passes only
-  when every one is made, and a single right square plays on with no verdict; the Training list opens at its top again
-  when the player comes back from a course.
+  Behaviours seen then: a step that marks several squares (Tents' no-tree grass, all twelve) passes only when every one
+  is made, and a single right square played on with no verdict; the Training list opened at its top again when the
+  player came back from a course. Both since fixed (below).
+- Polish (2026-10-28): the progress line above; the Training list, a course's techniques and the Techniques page keep
+  their scroll place across a practice and back (`KeepPlace` in `DaybookApp`: a `SaveableStateHolder` per list route,
+  lists only, since a game's state lives in its save; Achievements links nowhere, so it has nothing to come back to);
+  and the verdict outline on Mosaic and LITS, whose palettes are mid-tones (violet, rose, teal) that a fixed rim
+  colour all but vanished on in one scheme, now takes per square whichever of the scheme's ink and page stands out on
+  the fill (`standOut`), Mosaic's band and rim swapping with it. The other boards draw their rims over surface tones,
+  where the fixed ink-on-page rim reads in both schemes.
 
 ## Classification of every puzzle
 

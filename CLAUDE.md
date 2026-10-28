@@ -52,7 +52,7 @@ tap turns a tile a quarter at a time, so the step's tile is never wrong on its w
 the same rule to a fill, judged by one search question, and a fill that keeps the limit outside the technique gets
 `Course.aside`'s note and locks the board, never silence; a right move is explained and outlined as the move the player
 made, `Course.made`, in every course, Chess's other keys and Pipes' other tiles included), plus the course's `wrong` for a lost board or a note the teacher
-never reads that no answer keeps (Mines' mine, Tents' grass, Lamps' cross), a wrong verdict held `settleMillis` where a
+never reads that no answer keeps (Mines' mine, Tents' grass, Lamps' cross), a play-on move that is a right part of an unfinished instance shows "Right so far: k of n" (`Course.progress`, `MoveDrill(view)`; never a verdict, never which squares are left), a wrong verdict held `settleMillis` where a
 move passes through a wrong state (Mambo's sun is a moon first); found practices cached per session; a course whose
 `generate` can ship an unproved board passes its `generateVerified` as `Course.generate`, so practices skip that seed;
 `ui/training/`; its own

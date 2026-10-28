@@ -33,6 +33,8 @@ val PearlsTraining: Course = Course(
     tierFor = tierByIndex({ PearlsTraining.techniques }, hard = 5, expert = 6),
     // PearlsTeacher.deduce is handed the pearls and the edges; the loop never reaches it.
     drill = MoveDrill(
+        // A step names an edge as a square past the board's (PearlsTeacher.edgeIndex).
+        view = { s -> (s as PearlsState).let { p -> List<Any?>(p.size * p.size) { null } + p.edges.toList() } },
         next = { s -> (s as PearlsState).let { p -> PearlsTeacher.deduce(p.size, p.pearls, p.edges)?.let { Pearls.deduction(p, it) } } },
         every = { s, t -> (s as PearlsState).let { p -> PearlsTeacher.steps(p.size, p.pearls, p.edges, t).map { Pearls.deduction(p, it) } } },
     ),

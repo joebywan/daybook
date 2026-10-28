@@ -269,7 +269,9 @@ hand-written clues are one now, see the council list.) Curated themed puzzles (f
 were declined by the owner (2026-10-25): a shipped list runs out and would need revisiting every year.
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
 A practice mode per technique, once declined, is now wanted (2026-10-26): Training, for Sudoku, Cage Sudoku,
-Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played final board when the player leaves it;
+Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played final board when the player leaves it; the
+hint outline's pulse dims to 45% on every board, which on a mid-tone fill is faint at its low point (the verdict breathes
+too; holding a verdict's outline still would be the fix, not decided);
 Kings has the general practice shape (`MoveDrill`), and Pipes, Pearls and Atoms use it too, and so do Who's Who,
 Cipher (without "only letter", never reached), Chess, Mambo, Nonogram, Tally, Mines, Lamps, Tents,
 Shikaku, Dominoes and LITS; Mosaic has its own judge

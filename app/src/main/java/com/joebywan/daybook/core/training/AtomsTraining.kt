@@ -33,6 +33,7 @@ val AtomsTraining: Course = Course(
     tierFor = tierByIndex({ AtomsTraining.techniques }, hard = 3, expert = 5),
     // AtomsTeacher.deduce has no parameter through which the answer could reach it.
     drill = MoveDrill(
+        view = { s -> (s as AtomsState).let { a -> List<Any?>(a.atoms.size) { null } + a.counts } },
         next = { s -> (s as AtomsState).let { a -> AtomsTeacher.deduce(a.atoms, a.pairs, a.counts)?.let(Atoms::deduction) } },
         every = { s, t -> (s as AtomsState).let { a -> AtomsTeacher.steps(a.atoms, a.pairs, a.counts, t).map(Atoms::deduction) } },
     ),

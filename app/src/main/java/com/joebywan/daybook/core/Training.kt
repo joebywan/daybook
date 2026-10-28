@@ -135,6 +135,12 @@ class Course(
      */
     fun aside(p: Practice, after: PuzzleState): String? = drill.aside(p, after)
 
+    /**
+     * For an [after] that [judge] plays on: a progress line when the move is a right part of a step of the technique that
+     * is not finished yet ("Right so far: 3 of 12"), else null. It neither counts, ends the board nor breaks the run.
+     */
+    fun progress(p: Practice, after: PuzzleState): String? = drill.progress(p, after)
+
     internal val examSeed: Long? = examIndex?.let { Training.seed(it) }
 
     val hasExam: Boolean get() = examSeed != null
@@ -359,6 +365,9 @@ interface Drill {
     /** See [Course.aside]. */
     fun aside(p: Course.Practice, after: PuzzleState): String? = null
 
+    /** See [Course.progress]. */
+    fun progress(p: Course.Practice, after: PuzzleState): String? = null
+
     /**
      * How long the practice screen holds a "wrong" before showing it; a newer move in that time drops it. For a board
      * whose single moves pass through a wrong state (Mambo's tap cycle makes every sun a moon first), as the board's
@@ -425,6 +434,12 @@ class PlacementDrill(
  * three, an erasure, or a mark that happens to be true but that no step of the technique justifies). A true but
  * unjustified mark is not passed, because on these boards a lone cross is right by chance on most squares; it gets no
  * verdict, since nothing can tell it from the first cross of a step the player is still making.
+ *
+ * A step that takes several moves (Tents' "no tree" can grass twelve squares) says how far along it is, so the player is
+ * not left without a word ([progress], the owner: no player left without feedback). Only a move that is part of an
+ * instance of the technique counts, judged on [view]: every changed square must hold what that instance's own "Show me"
+ * puts there, so it agrees with every answer; a true move no instance justifies still plays on silently, and the line
+ * names a count, never which squares are left.
  */
 class MoveDrill(
     override val settleMillis: Long = 0,
@@ -443,6 +458,11 @@ class MoveDrill(
      * `KingsTeacher.steps`). Null keeps to [next]'s step alone, for a teacher with no such entry point yet.
      */
     private val every: ((PuzzleState, String) -> List<Deduction>)? = null,
+    /**
+     * The state's marks, one per index of a step's targets, compared with `==`: what [progress] reads to tell a right part
+     * of a step. Null for a course whose every step is one move (a domino, a block, a chess move), which needs no progress.
+     */
+    private val view: ((PuzzleState) -> List<Any?>)? = null,
 ) : Drill {
     override fun walk(start: PuzzleState): Sequence<Course.Practice> = sequence {
         var s = start
@@ -466,7 +486,27 @@ class MoveDrill(
     override fun made(p: Course.Practice, after: PuzzleState): TeachStep =
         if ((p.step as Deduction).isReached(after)) p.step
         else every?.invoke(p.board, p.step.technique)?.firstOrNull { it.isReached(after) } ?: p.step
+
+    // Per instance (the teacher's own first): the targets its Show me changes, how many of those the board already holds,
+    // and whether every change the player made is one that Show me makes too (a flood or a sprout it makes as well counts).
+    override fun progress(p: Course.Practice, after: PuzzleState): String? {
+        val v = view ?: return null
+        val step = p.step as Deduction
+        val was = v(p.board)
+        val now = v(after)
+        val instances = sequenceOf(step) + sequence { yieldAll(every?.invoke(p.board, step.technique).orEmpty()) }
+        return instances.firstNotNullOfOrNull { d ->
+            val full = v(d.apply(p.board))
+            val need = d.targets.filter { it < was.size && was[it] != full[it] }
+            val done = need.count { now[it] == full[it] }
+            val sound = now.indices.all { now[it] == was[it] || now[it] == full[it] }
+            if (sound && done in 1 until need.size) progressLine(done, need.size) else null
+        }
+    }
 }
+
+/** The line for a step part made: how many of its squares, never which are left. */
+internal fun progressLine(done: Int, of: Int) = "Right so far: $done of $of. Keep going."
 
 /**
  * What the player has passed in Training, as `puzzleId|technique` (or `puzzleId|exam`). Its own key set in the
