@@ -32,8 +32,8 @@ import com.joebywan.daybook.puzzles.CageLogic.Sight
  *    45-rule squares of a row it crosses, say), named one by one. Only the reasoning [CAGE_CHAIN] already does, so the
  *    generator's ladder, and every board, are what they were.
  * 8. [CAGE_CHAIN] — what is left once every group is worked through together. This is the generator's own
- *    ladder ([CageLogic.settle]), which is why a board it ships always has a step; it cannot name a single
- *    group, so it says so, and it is counted per tier in `docs/TEACHING.md`.
+ *    ladder ([CageLogic.settle]), which is why a board it ships always has a step; it says the groups it needs one by
+ *    one, as [LINKED_TOTALS] does, however many there are, and it is counted per tier in `docs/TEACHING.md`.
  *
  * Orders never come from a hash: every loop walks squares, units, cages and digits in index order.
  */
@@ -318,10 +318,20 @@ internal object CageTeacher {
     }
 
     /** What a group says, as its sentence's opening; the 45-rule is named the first time only ([named]). */
-    private fun subject(g: Group, named: Boolean): String {
+    private fun subject(g: Group, named: Boolean, twins: List<Group>): String {
         val rule = if (named) "" else "by the 45-rule, "
         return when (g.kind) {
-            Kind.CAGE -> "the cage totalling ${g.sum}"
+            Kind.CAGE -> {
+                // Another cage of the same total in the same line: say where this one starts, by its box when that tells them apart.
+                val first = g.cells.min()
+                val box = CageLogic.unitsOf(first)[0]
+                val others = twins.filter { it !== g && it.kind == Kind.CAGE && it.sum == g.sum && it.cage != g.cage }
+                when {
+                    others.isEmpty() -> "the cage totalling ${g.sum}"
+                    others.none { CageLogic.unitsOf(it.cells.min())[0] == box } -> "the ${CageLogic.BOX_NAMES[box]} cage totalling ${g.sum}"
+                    else -> "the cage totalling ${g.sum} at row ${first / 9 + 1}, column ${first % 9 + 1}"
+                }
+            }
             Kind.INNIE -> "$rule${CageLogic.scopes[g.scope].name}'s marked squares total ${g.sum}"
             Kind.OUTIE -> "${rule}the squares sticking out of ${CageLogic.scopes[g.scope].name} total ${g.sum}"
         }
@@ -365,25 +375,30 @@ internal object CageTeacher {
     }
 
     /** A square with one candidate, else a digit with one place in a unit (with that unit), on [work]'s candidates. */
-    private fun singleIn(work: Sight): Triple<Int, Int, Int?>? {
+    private fun singleIn(work: Sight): Triple<Int, Int, Int?>? = singlesIn(work).firstOrNull()
+
+    /** Every single on [work]'s candidates, in [singleIn]'s order. */
+    private fun singlesIn(work: Sight): Sequence<Triple<Int, Int, Int?>> = sequence {
         for (c in 0 until 81) {
-            if (work.cells[c] == 0 && work.cand[c].countOneBits() == 1) return Triple(c, digitsOf(work.cand[c])[0], null)
+            if (work.cells[c] == 0 && work.cand[c].countOneBits() == 1) yield(Triple(c, digitsOf(work.cand[c])[0], null))
         }
         for (u in 0 until 27) for (d in 1..9) {
             if (work.holds(u, d)) continue
             val places = work.places(u, d)
-            if (places.size == 1) return Triple(places[0], d, u)
+            if (places.size == 1) yield(Triple(places[0], d, u))
         }
-        return null
     }
 
-    /** [single], which [link]'s cuts made, as a step, or null if it does not fit the panel. */
-    private fun linkedStep(board: Board, link: Link, single: Triple<Int, Int, Int?>): PlacementStep? {
+    /** [single], which [link]'s cuts made, as a step, or null if it does not fit [cap]. */
+    private fun linkedStep(
+        board: Board, link: Link, single: Triple<Int, Int, Int?>,
+        technique: String = LINKED_TOTALS, cap: Int = MAX_LINKED_EXPLANATION,
+    ): PlacementStep? {
         val (cell, digit, unit) = single
         val groups = link.path.map { board.groups[it] }
         val parts = groups.indices.map { i ->
             val g = groups[i]
-            val who = subject(g, groups.take(i).any { it.kind != Kind.CAGE })
+            val who = subject(g, groups.take(i).any { it.kind != Kind.CAGE }, groups)
             if (i == groups.lastIndex) {
                 val end = if (unit == null) "only $digit" else "the only place for $digit in ${unitName(unit)}"
                 return@map if (g.kind == Kind.CAGE) "$who leaves the glowing square $end" else "$who, which leaves the glowing square $end"
@@ -391,43 +406,121 @@ internal object CageTeacher {
             // The squares this group hands on: those a later group shares, else all of its open ones.
             val later = groups.drop(i + 1).flatMap { it.cells.toList() }.toSet()
             val open = g.cells.filter { link.cand[it] != 0 }
-            val shared = open.filter { it in later }.ifEmpty { open }
+            val handed = open.filter { it in later }
+            val shared = handed.ifEmpty { open }
             val digits = listed(digitsOf(shared.fold(0) { m, c -> m or link.cuts[i][c] }), "or")
-            val these = if (shared.size == 1) "the shared square" else "the shared squares"
+            // Squares no later group shares (a chain's cuts can narrow a row's places for a digit side by side): its own.
+            val these = when {
+                handed.isEmpty() -> if (g.kind == Kind.CAGE) "its open squares" else "those squares"
+                shared.size == 1 -> "the shared square"
+                else -> "the shared squares"
+            }
             if (g.kind == Kind.CAGE) "$who leaves $these only $digits" else "$who, so $these can only be $digits"
         }
         val text = parts.mapIndexed { i, p -> if (i == 0) p.cap() else "Then $p" }.joinToString(". ") + "."
-        if (text.length > MAX_LINKED_EXPLANATION) return null
+        if (text.length > cap) return null
         val cells = groups.flatMap { it.cells.toList() }.toSet()
         return PlacementStep(
-            LINKED_TOTALS, cell, digit,
+            technique, cell, digit,
             focus = cells + cell,
             cited = cells + (unit?.let { CageLogic.units[it].toSet() } ?: emptySet()),
-            nudge = "These totals share squares. Work them through one after another.",
+            // A chain may be one group cutting again on what its own first cut left.
+            nudge = if (groups.size == 1) "Work this total through, then again on what it leaves."
+            else "These totals share squares. Work them through one after another.",
             explanation = text,
         )
     }
 
     // ---- everything together ----------------------------------------------------------------------
 
-    /** What the generator's ladder places that no single group explains: every group worked through together. */
+    /** How many of the chain's singles are worked out in full, the soonest-reached first, to pick the shortest line. */
+    private const val CHAIN_TRIES = 3
+
+    /**
+     * What the generator's ladder places that no one, two or three linked groups explain: every group worked through
+     * together, as a worked line said like [LINKED_TOTALS]. Each single [CageLogic.settle]'s fixpoint shows is reached by
+     * cutting with every group in turn; the [CHAIN_TRIES] reached soonest are cut down to the groups they need, then to the
+     * cuts they need, and the shortest line wins. Each cut is [Sight.allowed] on the candidates the visible digits and the
+     * earlier cuts leave, so the line reads only what the player can see, and its square is one `settle` places.
+     */
     private fun chain(board: Board, cells: IntArray): PlacementStep? {
-        val (cell, d, u) = singleIn(Sight(board, cells)) ?: return null
-        if (u == null) return PlacementStep(
+        val singles = singlesIn(Sight(board, cells)).distinctBy { it.first to it.second }.toList()
+        if (singles.isEmpty()) return null
+        val work = Sight(board, cells, prune = false)
+        val base = work.cand.copyOf()
+
+        fun reached(single: Triple<Int, Int, Int?>): Boolean {
+            val (cell, d, u) = single
+            return if (u == null) work.cand[cell] == 1 shl d
+            else CageLogic.units[u].none { it != cell && cells[it] == 0 && work.cand[it] and (1 shl d) != 0 }
+        }
+
+        /** [gi]'s cut on [work]'s candidates, in place; false when it changes nothing (or would empty a square). */
+        fun cut(gi: Int): Boolean {
+            val g = board.groups[gi]
+            val open = work.open(g)
+            val allow = work.allowed(g) ?: return false
+            if (open.indices.any { work.cand[open[it]] and allow[it] == 0 }) return false
+            var changed = false
+            for (a in open.indices) {
+                val now = work.cand[open[a]] and allow[a]
+                if (now != work.cand[open[a]]) { work.cand[open[a]] = now; changed = true }
+            }
+            return changed
+        }
+
+        /** [groups] cut in index order, round after round, until [single] shows: the groups in the order they cut; null if never. */
+        fun fixpoint(groups: List<Int>, single: Triple<Int, Int, Int?>): List<Int>? {
+            base.copyInto(work.cand)
+            val order = ArrayList<Int>()
+            var changed = true
+            while (changed) {
+                changed = false
+                for (gi in groups) if (cut(gi)) {
+                    order += gi
+                    changed = true
+                    if (reached(single)) return order
+                }
+            }
+            return null
+        }
+
+        /** [order]'s cuts made one after another (a group cutting twice running said once); the [Link], or null if short of [single]. */
+        fun replay(order: List<Int>, single: Triple<Int, Int, Int?>): Link? {
+            base.copyInto(work.cand)
+            val path = ArrayList<Int>()
+            val cuts = ArrayList<IntArray>()
+            for (gi in order) if (cut(gi)) {
+                if (path.lastOrNull() == gi) cuts[cuts.lastIndex] = work.cand.copyOf()
+                else { path += gi; cuts += work.cand.copyOf() }
+            }
+            return if (path.isNotEmpty() && reached(single)) Link(path, cuts) else null
+        }
+
+        /** [single]'s line: the groups it needs (each dropped if the rest still reach it), then the cuts it needs. */
+        fun line(single: Triple<Int, Int, Int?>, full: List<Int>): PlacementStep? {
+            var groups = full.distinct().sorted()
+            for (gi in groups.toList()) if (groups.size > 1 && fixpoint(groups - gi, single) != null) groups = groups - gi
+            var order = fixpoint(groups, single) ?: return null
+            for (i in order.indices.reversed()) {
+                val fewer = order.filterIndexed { j, _ -> j != i }
+                if (replay(fewer, single) != null) order = fewer
+            }
+            return replay(order, single)?.let { linkedStep(board, it, single, CAGE_CHAIN, Int.MAX_VALUE) }
+        }
+
+        val all = board.groups.indices.toList()
+        val soonest = singles.mapNotNull { s -> fixpoint(all, s)?.let { s to it } }.sortedBy { it.second.size }.take(CHAIN_TRIES)
+        soonest.mapNotNull { (s, full) -> line(s, full) }.minByOrNull { it.explanation.length }?.let { return it }
+        // A consistent board always has a line (the fixpoint is how the single was found); this is only a guard.
+        val (cell, d, _) = singles[0]
+        return PlacementStep(
             CAGE_CHAIN, cell, d,
             focus = board.cages[board.cageOf[cell]].toSet() + cell,
             cited = board.cages[board.cageOf[cell]].toSet(),
             nudge = "What do the cage totals leave for the glowing square?",
             explanation = "Work the cage totals through together with the digits around them, and the glowing " +
-                "square can only be $d.",
-        )
-        return PlacementStep(
-            CAGE_CHAIN, cell, d,
-            focus = CageLogic.units[u].toSet(),
-            cited = board.cages[board.cageOf[cell]].toSet(),
-            nudge = "Look at ${unitName(u)}.",
-            explanation = "Work the cage totals through together with the digits around them, and " +
-                "${unitName(u)} has only one place left for $d: the glowing square.",
+                "square must be $d.",
         )
     }
 }
