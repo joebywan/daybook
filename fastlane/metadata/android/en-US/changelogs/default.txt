@@ -1,4 +1,1 @@
-- New: Training for Mambo, Nonogram and Tally. Practise each technique on real boards, three right in a row to pass, then a final board that needs them all. Two new achievements for each.
-- New: Training for Kings: crown the king or cross out the squares the step rules out.
-- Training finds your next practice board faster.
-- Training for Sudoku, Cage Sudoku, Inequality and Regions, from a hint's "Practise this", the rules sheet or Statistics.
+- New: Training for Sun & Moon, Nonogram and Tally. Practise each technique on real boards: place the symbols, fill and cross the squares, or remove and circle the numbers the step settles. Three right in a row passes it, then a final board needs them all. Two new achievements for each.
