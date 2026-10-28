@@ -12,7 +12,7 @@ import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.TrainingRecord
 import com.joebywan.daybook.core.earnedAchievements
 import com.joebywan.daybook.core.newlyTrained
-import com.joebywan.daybook.core.techniqueNamesOf
+import com.joebywan.daybook.core.praisedTechniquesOf
 import com.joebywan.daybook.puzzles.CageLogic
 import com.joebywan.daybook.puzzles.CageState
 import com.joebywan.daybook.puzzles.Inequality
@@ -176,9 +176,20 @@ class TrainingTest {
 
     @Test fun `every course lists its teacher's named techniques, each explained, and its final board needs them all`() {
         // Appended only: the achievements follow this order.
-        assertEquals(listOf("sudoku", "cages", "inequality", "regions", "kings", "mines", "lamps", "tents"), Training.COURSES.map { it.id })
-        // The teacher's named techniques in ladder order, less any practice search never reaches (TRAINING_SPEC.md).
-        for (c in Training.COURSES) assertEquals(techniqueNamesOf(c.id).keys.filter { it in c.techniques }, c.techniques)
+        assertEquals(
+            listOf(
+                "sudoku", "cages", "inequality", "regions", "kings", "pipes", "pearls", "atoms", "whoswho", "cipher", "chess",
+                "mosaic", "mambo", "nonogram", "tally", "mines", "lamps", "tents",
+            ),
+            Training.COURSES.map { it.id },
+        )
+        // The teacher's praised techniques in its order (Mosaic's finish and fill-within-the-limit are not praised), less
+        // only those no practice search reaches (listed in the spec).
+        val unreached = mapOf(
+            "pearls" to listOf("pearl-ways"), "atoms" to listOf("only-way-out"), "cipher" to listOf("only-letter"),
+            "mines" to listOf("count"), "tents" to listOf("touch"),
+        )
+        for (c in Training.COURSES) assertEquals(c.id, praisedTechniquesOf(c.id).toList() - unreached[c.id].orEmpty().toSet(), c.techniques)
         assertEquals(Training.seed(0), CagesTraining.examSeed)
         assertEquals(Training.seed(4), InequalityTraining.examSeed)
         assertEquals(Training.seed(0), RegionsTraining.examSeed)

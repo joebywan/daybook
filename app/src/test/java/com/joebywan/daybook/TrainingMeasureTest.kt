@@ -7,7 +7,8 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * Training's costs, for docs/TRAINING_SPEC.md (Measured): run with `DAYBOOK_TRAINING_MEASURE=1`. Per course, the time to
+ * Training's costs, for docs/TRAINING_SPEC.md (Measured): run with `DAYBOOK_TRAINING_MEASURE=1` (and optionally
+ * `DAYBOOK_TRAINING_MEASURE_ONLY=<id,id>`). Per course, the time to
  * find the first board through the session cache and each next board given the ones before it, then the first 30
  * practices of each technique; then how many of the first 60 seeds'
  * boards on each tier reach each technique, and which Expert boards need them all (the final board's candidates).
