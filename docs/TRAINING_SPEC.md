@@ -20,18 +20,42 @@ batch) follow it; the rest of the puzzles are classified at the end.
 - **A puzzle's techniques** (route `training||…|<puzzle>`): its techniques in the teacher's ladder order
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
 - **A technique** (route `training|<technique>|…|<puzzle>`): a short explanation in the hints' voice, then a practice
-  board. The player finds the step and makes it. A right digit adds one to the run; three in a row passes the technique
-  (the chime, "Passed! 3 in a row." and any achievement it earns, with the board and Next board locked), and after
-  2.5 s back takes the player to where the practice was opened from: the puzzle's technique list, with the new tick, when
-  opened from it; the game or the Techniques page when opened by "Practise this" or "Practise", as back would. The owner
-  (2026-10-28): "send the user back to the list when they achieve the goal. Otherwise they're likely to get stuck there."
+  board. The player finds the step and makes it. A right digit adds one to the run; three in a row passes the technique.
+  The run shows in the header, after the subtitle on its line (`TitledScreen(beside)`, so the title keeps its width:
+  beside the title it wrapped to four lines at 2x font and squeezed the board out at 375x537), as three boxes
+  (`RunBoxes`): ticked for each right answer in a row, hollow for each to go, read by a screen reader as "n of 3 in a
+  row". A box pops as it ticks (not under reduced motion); a wrong answer empties them; a hinted board leaves them as
+  they were. The boxes are 16 dp, inside the subtitle's line height at any font size, so they never change the
+  header's height. A technique already passed shows its current re-run in the boxes,
+  with "Passed" as the subtitle (not three ticks, which would leave a re-run nothing to show).
+- **A pass is celebrated as a solved game is** (the owner, 1.31: "similar to a game congrats. Popup, graphic, confetti,
+  sound plays"): the game's own finished frame (`FinishedFrame`, `Confetti`, `ResultsBlock`, `AchievementBadge`), over
+  the screen so the board keeps its box. The banner reads "Passed!" between the party poppers, then the technique's
+  title and "3 in a row"; the centre shows the progress to the course's next achievement (the owner: "show their
+  progress to the achievement"; `passCheer`, tested by `TrainingPassLineTest`). Until every technique is passed, the
+  "<Puzzle> trained" badge as a silhouette over one box per technique, the passed ones ticked (the one this pass added
+  ticks in a beat after the popup shows, not under reduced motion or after a recreation), and "<Puzzle> trained: n of m
+  techniques". The pass that passes the last one shows the achievement as the game shows a new one, then "Final board
+  unlocked. Solve it to become a <Puzzle> graduate." A re-pass shows the same progress, nothing announced; once all are
+  passed, the badge in colour and, while the final board is unsolved, "The final board is open: solve it to become a
+  <Puzzle> graduate." The run's own boxes are not repeated in the popup: "3 in a row" says it, and a second row of
+  boxes beside the techniques' read as the same thing. The solve sound (`LocalChime`) and the success buzz play once; confetti
+  once (saved, so a recreation replays nothing); under reduced motion no confetti, no flip, no pop, as in a game. One
+  button: "Back to <Puzzle> training", or "Continue" when the practice was opened by "Practise this" or "Practise"; it,
+  a tap anywhere outside it, or back, all do what back does: to the list with the new tick, or to the game or the
+  Techniques page. The owner (2026-10-28): "send the user back to the list when they achieve the goal. Otherwise
+  they're likely to get stuck there." So there is no Next board from a pass: it stays locked under the popup.
   Every run that reaches three does this, on a technique already passed too (1.19 said only "That's it." there and kept
-  the player on the board, which read as no pass at all); achievements are announced once. A wrong digit ends the run
+  the player on the board, which read as no pass at all); achievements are announced once. The celebration showing is
+  saved (`rememberSaveable`), and the pass is recorded once, as before. A wrong digit ends the run
   and shows the reasoning that was there to find. The next board is one tap away. Hints work as in a game (nudge, why, show me); a board where a hint was opened does not count towards
   the run and does not break it.
 - **The final board** opens once every technique of that puzzle is passed: a whole Expert board whose own walk by the hint
-  ladder needs every technique. Solving it without "Show me" earns the second achievement, and
-  like a technique's pass shows "Solved!" for 2.5 s and then goes back to the list (a solve with a Show me stays, to start again). Hints are allowed (they teach).
+  ladder needs every technique. Solving it without "Show me" earns the second achievement, and is celebrated as a pass
+  is: "Graduated!" (stamped in, as a game's milestone), "<Puzzle> graduate", "The final board, solved", and the
+  "<Puzzle> graduate" achievement the first time, its badge otherwise, then Training's progress as a whole,
+  "Training: n of 21 courses graduated"; "Back to <Puzzle> training" (a solve with a
+  Show me is not celebrated and stays, to start again). The solve is answered once, saved across a recreation. Hints are allowed (they teach).
 - **Ways in:**
   - **Home's Training mode**, the third segment of the mode row (`Daily/Random · Levels · Training`): the tier row gives
     way to one line, "N of 21 graduated · M techniques passed", and the grid shows only the puzzles with a course, in the

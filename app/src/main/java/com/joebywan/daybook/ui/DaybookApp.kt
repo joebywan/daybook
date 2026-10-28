@@ -507,7 +507,11 @@ private fun DaybookScreens(
                 else -> {
                     val pass: (String) -> Unit = { t -> scope.launch { training.pass(course.id, t) } }
                     if (current.technique == Training.EXAM) FinalBoard(course, trained, pass, onBack)
-                    else TechniquePractice(course, current.technique, trained, pass, onBack)
+                    else TechniquePractice(
+                        course, current.technique, trained, pass, onBack,
+                        // Opened by "Practise this" or "Practise", back returns to the game or the Techniques page.
+                        done = if (current.fromHint) "Continue" else "Back to ${course.puzzle.displayName} training",
+                    )
                 }
             }
         }

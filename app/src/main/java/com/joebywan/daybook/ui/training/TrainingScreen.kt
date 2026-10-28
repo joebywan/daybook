@@ -1,7 +1,31 @@
 package com.joebywan.daybook.ui.training
 
 import com.joebywan.daybook.ui.theme.BoardHues
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import com.joebywan.daybook.core.TrainingRecord
+import com.joebywan.daybook.ui.LocalHaptics
+import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.play.Confetti
+import com.joebywan.daybook.ui.play.EarnedAchievement
+import com.joebywan.daybook.ui.play.FinishedFrame
+import com.joebywan.daybook.ui.play.NextKind
+import com.joebywan.daybook.ui.play.NextOption
+import com.joebywan.daybook.ui.play.Praise
+import com.joebywan.daybook.ui.stats.AchievementBadge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +90,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
@@ -82,8 +107,9 @@ private fun slotHeight(): Dp {
 
 private val SlotHeight = 144.dp
 
-/** How long a pass's congratulation shows before back takes the player to the list it was opened from. */
-private const val PASS_BEAT_MS = 2500L
+/** Render-harness hooks (`&run=N`, `&pass` on the web build's training practice): the run a practice opens on, and a pass's celebration showing. */
+var runPreview = 0
+var passPreview = false
 
 /** A card row: the tick's room kept either way so the names line up, then [title] and an optional [note]. */
 @Composable
@@ -182,37 +208,191 @@ internal fun verdictLine(verdict: Verdict, step: TeachStep, made: TeachStep): St
     Verdict.RIGHT -> "That's it. ${made.explanation}"
 }
 
-/** The line a pass earns: its achievements, if any. */
-private fun earnedLine(course: Course, record: Set<String>, technique: String) =
-    newlyTrained(record, course.id, technique).joinToString(" ") { "Achievement: ${it.title}!" }
+/** The achievements passing [technique] earns: only the first time it is passed ([record] is from before the pass). */
+private fun firstTime(course: Course, record: Set<String>, technique: String): List<EarnedAchievement> =
+    if (course.passed(record, technique)) emptyList()
+    else newlyTrained(record, course.id, technique).map { EarnedAchievement(it.id, it.title, it.description) }
 
 /**
- * The congratulation when a run has just reached [Training.RUN], or null: every time it does, not only the first, so
- * practising a technique already passed still ends in "Passed!" ([record] is before this pass; achievements only once).
+ * What a pass's popup shows: [praise] for the game's finished frame ([FinishedFrame]); with nothing earned, its centre
+ * is achievement [badge] ([badgeEarned] or a silhouette) over [passed] of [of] ticks (none when [of] is 0), the last
+ * ticking in when [fresh] (this pass added it), then `praise.toGo`, the progress line. Saved whole, so a recreation
+ * neither drops it nor re-earns it.
  */
-internal fun passLine(course: Course, record: Set<String>, technique: String, run: Int): String? =
-    if (run != Training.RUN) null
-    else "Passed! ${Training.RUN} in a row. ${if (course.passed(record, technique)) "" else earnedLine(course, record, technique)}".trim()
+@Serializable
+internal data class Cheer(
+    val praise: Praise,
+    val badge: String,
+    val badgeEarned: Boolean,
+    val passed: Int = 0,
+    val of: Int = 0,
+    val fresh: Boolean = false,
+)
+
+/**
+ * The celebration when a run has just reached [Training.RUN], or null: every time it does, not only the first, so
+ * practising a technique already passed still ends in "Passed!" ([record] is before this pass; achievements only once).
+ * Always with the progress to the course's next achievement (the owner: "show their progress to the achievement"):
+ * "<Puzzle> trained: n of m techniques" under its badge; the pass that earns it shows it as the game shows a new
+ * achievement, then points on to the final board.
+ */
+internal fun passCheer(course: Course, record: Set<String>, technique: String, run: Int): Cheer? {
+    if (run != Training.RUN) return null
+    val after = record + TrainingRecord.entry(course.id, technique)
+    val name = course.puzzle.displayName
+    val first = !course.passed(record, technique)
+    val done = course.passedCount(after)
+    val all = course.allPassed(after)
+    val progress = "$name trained: $done of ${course.techniques.size} techniques"
+    val examOpen = course.hasExam && !course.passed(after, Training.EXAM)
+    val toGo = when {
+        all && first -> if (examOpen) "Final board unlocked. Solve it to become a $name graduate." else null
+        all && examOpen -> "$progress. The final board is open: solve it to become a $name graduate."
+        else -> progress
+    }
+    return Cheer(
+        Praise(
+            title = "Passed!",
+            lines = listOf(course.titleOf(technique), "${Training.RUN} in a row"),
+            achievements = firstTime(course, record, technique),
+            toGo = toGo,
+        ),
+        badge = "${course.id}Trained", badgeEarned = all, passed = done, of = course.techniques.size, fresh = first,
+    )
+}
+
+/**
+ * The celebration for solving the final board without a Show me, every time; its achievement only the first. The
+ * progress beyond it is Training's as a whole: courses graduated, this one included.
+ */
+internal fun graduateCheer(course: Course, record: Set<String>): Cheer {
+    val tally = Training.tally(record + TrainingRecord.entry(course.id, Training.EXAM))
+    return Cheer(
+        Praise(
+            title = "Graduated!",
+            big = true,
+            lines = listOf("${course.puzzle.displayName} graduate", "The final board, solved"),
+            achievements = firstTime(course, record, Training.EXAM),
+            toGo = "Training: ${tally.graduated} of ${tally.courses} courses graduated",
+        ),
+        badge = "${course.id}Graduate", badgeEarned = true,
+    )
+}
+
+private fun Cheer.json() = StateJson.encodeToString(Cheer.serializer(), this)
+private fun cheerOf(json: String?) = json?.let { runCatching { StateJson.decodeFromString(Cheer.serializer(), it) }.getOrNull() }
+
+/**
+ * A pass's celebration, as a solved game's: the finished frame over the screen (the board keeps its box beneath), the
+ * confetti once ([played], saved by the caller), the badge flipping in, all as reduced motion allows. Tapping outside,
+ * the banner or [done]'s button, or back, all return ([onDone]), as the old timed return did.
+ */
+@Composable
+private fun Celebration(cheer: Cheer, accent: Color, done: String, played: Boolean, onPlayed: () -> Unit, onDone: () -> Unit) {
+    val praise = cheer.praise
+    val celebrate = !played && !LocalReducedMotion.current
+    Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDone))
+        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(vertical = 10.dp)) {
+            FinishedFrame(
+                seconds = null,
+                hints = 0,
+                praise = praise,
+                celebrate = celebrate,
+                accent = accent,
+                options = listOf(NextOption(done, NextKind.DONE, null)),
+                onOption = { onDone() },
+                onHide = onDone,
+            ) { size ->
+                AchievementBadge(cheer.badge, cheer.badgeEarned, Modifier.width(size))
+                if (cheer.of > 0) {
+                    Spacer(Modifier.height(8.dp))
+                    TickBoxes(cheer.passed, cheer.of, accent, "${cheer.passed} of ${cheer.of} techniques passed",
+                        fresh = cheer.fresh && celebrate, box = 16.dp)
+                }
+            }
+        }
+        Confetti(played = played, full = praise.full, onPlayed = onPlayed)
+    }
+}
+
+/** How long a pass's popup waits before the technique it added ticks in. */
+private const val FRESH_MS = 450L
+
+/**
+ * [done] of [of] boxes: ticked for each done, hollow for each still to go, read as [label]. A box pops as it ticks (not
+ * under reduced motion); fixed in dp, so they never move the board. [fresh]: the last one ticks in just after they show.
+ * The run in a practice's header ([Training.RUN] of them) and a course's techniques in a pass's popup.
+ */
+@Composable
+internal fun TickBoxes(done: Int, of: Int, accent: Color, label: String, modifier: Modifier = Modifier, fresh: Boolean = false, box: Dp = 20.dp) {
+    val target = done.coerceIn(0, of)
+    var shown by remember { mutableIntStateOf(if (fresh) target - 1 else target) }
+    LaunchedEffect(target) {
+        if (fresh) delay(FRESH_MS)
+        shown = target
+    }
+    Row(modifier.clearAndSetSemantics { contentDescription = label }, horizontalArrangement = Arrangement.spacedBy(box / 4)) {
+        repeat(of) { TickBox(it < shown, accent, box) }
+    }
+}
+
+/** The run so far, in a practice's header: "n of 3 in a row". */
+@Composable
+internal fun RunBoxes(run: Int, accent: Color, modifier: Modifier = Modifier) =
+    TickBoxes(run, Training.RUN, accent, "${run.coerceIn(0, Training.RUN)} of ${Training.RUN} in a row", modifier, box = 16.dp)
+
+@Composable
+private fun TickBox(ticked: Boolean, accent: Color, box: Dp) {
+    val shape = RoundedCornerShape(box / 4)
+    val still = LocalReducedMotion.current
+    val scale = remember { Animatable(1f) }
+    var was by remember { mutableStateOf(ticked) }
+    LaunchedEffect(ticked) {
+        if (ticked && !was && !still) {
+            scale.snapTo(1.4f)
+            scale.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow))
+        }
+        was = ticked
+    }
+    Box(
+        Modifier.size(box).graphicsLayer { scaleX = scale.value; scaleY = scale.value }.clip(shape)
+            .then(if (ticked) Modifier.background(accent) else Modifier.border(2.dp, MaterialTheme.colorScheme.onSurfaceVariant, shape)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (ticked) Icon(Icons.Default.Check, null, tint = BoardHues.onFill(accent), modifier = Modifier.size(box * 0.8f))
+    }
+}
 
 /**
  * One technique's practice: a board whose next hint step is [technique]. The player makes a move; [Course.judge] says
  * whether it is right (adds to the run), wrong (ends it and shows the reasoning) or neither yet (play on: one cross of a
- * step that crosses three). [Training.RUN] in a row calls [onPass] (the first time) and, after the congratulation has
- * shown for a beat, [onBack]: the owner, "send the user back to the list when they achieve the goal". The same for every
- * drill. A board where a hint was opened neither counts nor breaks the run.
+ * step that crosses three). [Training.RUN] in a row calls [onPass] (the first time) and celebrates, as a solved game is
+ * celebrated ([Celebration]); its button, labelled [done], is [onBack]: the owner, "send the user back to the list when
+ * they achieve the goal". The same for every drill. A board where a hint was opened neither counts nor breaks the run.
  */
 @Composable
-fun TechniquePractice(course: Course, technique: String, record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit) {
+fun TechniquePractice(
+    course: Course,
+    technique: String,
+    record: Set<String>,
+    onPass: (String) -> Unit,
+    onBack: () -> Unit,
+    done: String = "Back to ${course.puzzle.displayName} training",
+) {
     val puzzle = course.puzzle
     val scheme = MaterialTheme.colorScheme
     val accent = Color(puzzle.accent)
     val chime = LocalChime.current
+    val haptics = LocalHaptics.current
     val scope = rememberCoroutineScope()
     val key = "${course.id}|$technique"
     var index by rememberSaveable(key) { mutableIntStateOf(0) }
-    var run by rememberSaveable(key) { mutableIntStateOf(0) }
-    // The pass line ([passLine]) of this board, kept until the next board.
-    var earned by remember(key) { mutableStateOf<String?>(null) }
+    var run by rememberSaveable(key) { mutableIntStateOf(if (passPreview) Training.RUN else runPreview) }
+    // The celebration showing ([passCheer], as JSON) and whether its confetti has played: saved, so a recreation neither
+    // drops it nor plays it again.
+    var earned by rememberSaveable(key) { mutableStateOf(if (passPreview) passCheer(course, record, technique, Training.RUN)?.json() else null) }
+    var confettiPlayed by rememberSaveable(key) { mutableStateOf(false) }
     val practice by produceState<Course.Practice?>(null, key, index) {
         value = null
         value = withContext(Dispatchers.Default) { course.practice(technique, index) }
@@ -228,8 +408,6 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
     // A right part of a step not finished yet ([Course.progress]): how far along, in the slot; never a verdict.
     var progress by remember(p) { mutableStateOf<String?>(null) }
     val hints = rememberHintSession("$key|$index")
-    // A pass: the line shows with the board locked, then back to where the practice was opened from.
-    LaunchedEffect(earned) { if (earned != null) { delay(PASS_BEAT_MS); onBack() } }
     val subtitle = if (course.passed(record, technique)) "Passed" else "$run of ${Training.RUN} in a row"
 
     fun settle(right: Boolean, step: TeachStep) {
@@ -245,8 +423,12 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
             Verdict.RIGHT -> {
                 run++
                 chime()
-                earned = passLine(course, record, technique, run)
-                if (earned != null && !course.passed(record, technique)) onPass(technique)
+                val cheer = passCheer(course, record, technique, run)
+                if (cheer != null) {
+                    earned = cheer.json()
+                    haptics.success()
+                    if (!course.passed(record, technique)) onPass(technique)
+                }
             }
             else -> Unit
         }
@@ -285,7 +467,8 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
         scope.launch { hints.tap(puzzle, now, onOpened = { hinted = true }, onApply = { judge(it) }) }
     }
 
-    TitledScreen(course.titleOf(technique), subtitle, onBack) {
+    Box(Modifier.fillMaxSize()) {
+    TitledScreen(course.titleOf(technique), subtitle, onBack, beside = { RunBoxes(run, accent) }) {
         val b = board
         if (p == null || b == null) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -314,7 +497,6 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
                     val v = verdict
                     val text = when {
                         v == null -> progress ?: course.explanations.getValue(technique)
-                        v == Verdict.RIGHT && earned != null -> earned.orEmpty()
                         v == Verdict.ASIDE -> aside.orEmpty()
                         else -> verdictLine(v, step, made ?: step)
                     }
@@ -347,6 +529,8 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
             ) { Text(if (verdict == null) "Another board" else "Next board") }
         }
     }
+    cheerOf(earned)?.let { Celebration(it, accent, done, confettiPlayed, { confettiPlayed = true }, onBack) }
+    }
 }
 
 private val StateJson = Json { ignoreUnknownKeys = true }
@@ -358,7 +542,7 @@ private val BoardSaver = Saver<PuzzleState, String>(
 
 /**
  * The final board: a whole Expert board whose walk needs every technique ([Course.exam]). Solving it without
- * "Show me" calls [onPass], then [onBack] after a beat; hints are allowed. Kept across a rotation, not across leaving:
+ * "Show me" calls [onPass] (the first time) and celebrates ([graduateCheer]); its button is [onBack]. Hints are allowed. Kept across a rotation, not across leaving:
  * it is one board, not a save.
  */
 @Composable
@@ -382,7 +566,11 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
     val scope = rememberCoroutineScope()
     var board by rememberSaveable(course.id, stateSaver = BoardSaver) { mutableStateOf(start) }
     var shown by rememberSaveable(course.id) { mutableStateOf(false) }
-    var earned by remember { mutableStateOf<String?>(null) }
+    // Saved: the solve is answered once (chime, haptics, pass, celebration), not again after a recreation.
+    var answered by rememberSaveable(course.id) { mutableStateOf(false) }
+    var earned by rememberSaveable(course.id) { mutableStateOf(if (passPreview) graduateCheer(course, record).json() else null) }
+    var confettiPlayed by rememberSaveable(course.id) { mutableStateOf(false) }
+    val haptics = LocalHaptics.current
     val hints = rememberHintSession("${course.id}|exam")
     WatchHint(hints, puzzle, board)
     fun onHint() {
@@ -390,16 +578,18 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
         scope.launch { hints.tap(puzzle, now, onOpened = {}, onApply = { shown = true; board = it }) }
     }
     LaunchedEffect(board.solved) {
-        if (!board.solved) return@LaunchedEffect
+        if (!board.solved || answered) return@LaunchedEffect
+        answered = true
         hints.clear()
         chime()
-        if (!shown && !course.passed(record, Training.EXAM)) {
-            earned = earnedLine(course, record, Training.EXAM)
-            onPass(Training.EXAM)
+        // Passed (again or for the first time): celebrated, as a technique is; a solve with a Show me stays, to start again.
+        if (!shown) {
+            earned = graduateCheer(course, record).json()
+            haptics.success()
+            if (!course.passed(record, Training.EXAM)) onPass(Training.EXAM)
         }
-        // Passed (again or for the first time): the line shows for a beat, then back to the list, as a technique does.
-        if (!shown) { delay(PASS_BEAT_MS); onBack() }
     }
+    Box(Modifier.fillMaxSize()) {
     TitledScreen("Final board", if (course.passed(record, Training.EXAM)) "Passed" else "Every technique, in one board", onBack) {
         Box(
             Modifier.weight(1f).fillMaxWidth().hintKeys(!board.solved, hints, if (puzzle.offersHints) ::onHint else null),
@@ -414,7 +604,7 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
             else Text(
                 when {
                     board.solved && shown -> "Solved, with a Show me along the way. Start again to solve it on your own."
-                    board.solved -> "Solved! ${earned.orEmpty()}".trim()
+                    board.solved -> "Solved!"
                     else -> "This board needs every technique you've practised. Hints are here if you're stuck; " +
                         "solve it without a Show me to pass."
                 },
@@ -436,11 +626,14 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
                     hints.clear()
                     board = start
                     shown = false
+                    answered = false
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = BoardHues.onFill(accent)),
                 modifier = Modifier.weight(1f),
             ) { Text("Start again") }
         }
+    }
+    cheerOf(earned)?.let { Celebration(it, accent, "Back to ${puzzle.displayName} training", confettiPlayed, { confettiPlayed = true }, onBack) }
     }
 }
 

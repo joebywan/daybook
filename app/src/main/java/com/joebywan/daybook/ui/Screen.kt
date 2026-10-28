@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,7 +27,8 @@ import com.joebywan.daybook.platform.BackButton
 /**
  * A screen reached from Home: the page's background inside the safe area, a header of [title] over [subtitle]
  * beside the back control (which draws nothing on Android, where the system back button is the way out), an
- * optional [trailing] action, then [content], centred.
+ * optional [trailing] action, then [content], centred. [beside] sits after the subtitle on its line (a practice's run),
+ * so it takes no width from the title.
  */
 @Composable
 fun TitledScreen(
@@ -33,6 +36,7 @@ fun TitledScreen(
     subtitle: String?,
     onBack: () -> Unit,
     trailing: @Composable RowScope.() -> Unit = {},
+    beside: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -44,8 +48,12 @@ fun TitledScreen(
             BackButton(onBack)
             Column(Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)) {
                 Text(title, style = MaterialTheme.typography.titleLarge, color = scheme.onBackground)
-                if (subtitle != null) {
+                if (subtitle != null) Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(subtitle, style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+                    if (beside != null) {
+                        Spacer(Modifier.width(10.dp))
+                        beside()
+                    }
                 }
             }
             trailing()
