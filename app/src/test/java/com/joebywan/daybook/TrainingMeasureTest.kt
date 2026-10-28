@@ -29,6 +29,10 @@ class TrainingMeasureTest {
                 val found = c.practices(t).take(30).toList()
                 val ms = (System.nanoTime() - t0) / 1e6
                 println("MEASURE ${c.id} $t: ${found.size} practices, ${found.distinctBy { it.board }.size} distinct, ${"%.0f".format(ms)} ms")
+                // Judging the step made (a move drill asks the teacher, mistake check and all, per emitted state).
+                val judged = found.mapNotNull { p -> (p.step as? com.joebywan.daybook.core.Deduction)?.let { d -> d.apply(p.board) to p } }
+                    .map { (after, p) -> ms { c.judge(p, after) } }
+                if (judged.isNotEmpty()) println("JUDGE ${c.id} $t: mean ${"%.1f".format(judged.average())} max ${"%.1f".format(judged.max())} ms")
             }
             for (tier in Difficulty.entries) {
                 val counts = HashMap<String, Int>()
