@@ -40,7 +40,7 @@ class PipesTeachingTest {
     }
 
     /** Every answer, up to [cap]: all openings meet, nothing points off the board, one network. */
-    private fun allSolutions(w: Int, h: Int, shapes: List<Int>, cap: Int = 5000): List<List<Int>> {
+    internal fun allSolutions(w: Int, h: Int, shapes: List<Int>, cap: Int = 5000): List<List<Int>> {
         val n = w * h
         val cur = IntArray(n)
         val out = mutableListOf<List<Int>>()

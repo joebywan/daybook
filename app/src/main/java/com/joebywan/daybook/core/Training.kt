@@ -164,6 +164,9 @@ object Training {
             InequalityTraining,
             RegionsTraining,
             KingsTraining,
+            PipesTraining,
+            PearlsTraining,
+            AtomsTraining,
         )
     }
 

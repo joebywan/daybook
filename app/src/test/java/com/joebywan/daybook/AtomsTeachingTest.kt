@@ -28,7 +28,7 @@ class AtomsTeachingTest {
 
     // ---- independent rules --------------------------------------------------------------------
 
-    private fun linesCross(atoms: List<Atom>, p: Pair2, q: Pair2): Boolean {
+    internal fun linesCross(atoms: List<Atom>, p: Pair2, q: Pair2): Boolean {
         if (p.horizontal == q.horizontal) return false
         val h = if (p.horizontal) p else q
         val v = if (p.horizontal) q else p
@@ -64,7 +64,7 @@ class AtomsTeachingTest {
     }
 
     /** Every legal bonding, atom by atom, up to [cap] of them. */
-    private fun allSolutions(atoms: List<Atom>, pairs: List<Pair2>, cap: Int = 3000): List<List<Int>> {
+    internal fun allSolutions(atoms: List<Atom>, pairs: List<Pair2>, cap: Int = 3000): List<List<Int>> {
         val out = mutableListOf<List<Int>>()
         val counts = IntArray(pairs.size) { -1 }
         val forward = atoms.indices.map { a -> pairs.indices.filter { pairs[it].a == a } } // a < b always
