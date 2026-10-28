@@ -272,6 +272,8 @@ Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played fi
 Kings has the general practice shape (`MoveDrill`), and Pipes, Pearls and Atoms use it too; the other puzzles' courses
 are classified and batched in
 `docs/TRAINING_SPEC.md`.
+Follow-up: a right move's verdict explains the instance the player made (`Course.made`), which `MoveDrill(next, every)`
+courses get for free; courses with their own drill keep the default (the teacher's step): Pipes.
 
 ## Owner's call
 
