@@ -223,7 +223,7 @@ internal object WhosWhoTeacher {
                     val who = s.names[step.person]
                     val houses = listed(step.crosses.map { "house ${it % n + 1}" }, "or")
                     val known = if (step.item / n == 0) "" else "$who ${WhosWhoLogic.has(s, step.item)}, and "
-                    "$line ${known.cap()}nobody who could $partner can live $rel $houses, so ${crossOff(s, step.crosses)}."
+                    "$line " + "${known}nobody who could $partner can live $rel $houses, so ${crossOff(s, step.crosses)}.".cap()
                 } else {
                     val people = step.crosses.map { person(s, it) }
                     val them = if (people.size == 1) people[0] else "any of them"

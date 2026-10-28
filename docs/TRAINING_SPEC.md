@@ -171,6 +171,12 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - Kings' practice checked at 375x537 and 390x844 in Chromium and WebKit (`tools/render/render.py --home --query
   "screen=training&puzzle=kings&technique=would-empty"`, with taps for a wrong cross and for the step), and on the
   Android emulator through a hint's "Practise this" and a Show me: the board stays put through every verdict.
+- Who's Who, Cipher and Chess checked at 375x537 and 390x844 in Chromium and WebKit (a practice of each, a wrong move's
+  verdict for Cipher and Chess, and each final board), the badges in light and dark, and on the Android emulator (Pixel 6):
+  a right Chess key, a wrong Who's Who tick and a right Cipher digit, the board still through each verdict. Two things
+  left as they are: at 375x537 Who's Who's clue list (it scrolls) gets one line beside the fixed 144 dp slot, a few lines
+  less than the daily game, whose hint slot shrinks below 700 dp (the practice slot could shrink the same way); and a wrong
+  Chess move also shows the board's own caption, "No forced mate from here: Undo or Restart", though a practice has neither.
 
 ## Classification of every puzzle
 

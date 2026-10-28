@@ -273,7 +273,9 @@ the keyboard
 does not reach a practice board (the play screen's key handling is not shared); Cage Sudoku's "every cage worked
 through together" practice explains itself only as a summary, as its hint does. Kings has the general practice shape
 (`MoveDrill`), and so do Who's Who, Cipher (without "only letter", never reached) and Chess; the other puzzles'
-courses are classified and batched in `docs/TRAINING_SPEC.md`.
+courses are classified and batched in `docs/TRAINING_SPEC.md`. Open from them: the practice slot does not shrink below 700 dp
+as the play screen's does (Who's Who's clues get one line at 375x537); Chess's lost caption names Undo and Restart on a
+practice board, which has neither.
 
 ## Owner's call
 
