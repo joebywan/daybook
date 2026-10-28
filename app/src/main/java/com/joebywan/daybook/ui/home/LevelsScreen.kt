@@ -4,6 +4,7 @@ import com.joebywan.daybook.data.levelBoardDone
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.CardText
 import com.joebywan.daybook.ui.TitledScreen
+import com.joebywan.daybook.ui.CappedFontScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -142,8 +143,9 @@ internal fun LevelGrid(
 
 /** One line under a tile's name, always laid out (an empty one keeps the tiles of a row level). */
 @Composable
-private fun TileFooter(text: String, color: Color) {
-    Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = color, maxLines = 1, minLines = 1)
+internal fun TileFooter(text: String, color: Color) {
+    // Capped, as the name above it is: at 2x "0 of 4" stood taller than the name.
+    CappedFontScale { Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = color, maxLines = 1, minLines = 1) }
 }
 
 /**

@@ -17,7 +17,7 @@ Defaults chosen in the spec; the owner can change any of them before the build s
 
 | | |
 |---|---|
-| Name | **Levels**, the middle choice of the home toggle: `Daily · Levels · Random`. |
+| Name | **Levels**, the middle choice of the home toggle: `Daily · Levels · Random` (since 2026-10-28 `Daily/Random · Levels · Training`). |
 | Size | **Five boards a level**, five different puzzles. With the "All levels" tile that makes two rows of three on a phone. |
 | Order | **Any order within a level**, as the dailies. A level is done when all five are solved. |
 | Unlocking | Level `n + 1` opens when level `n` is done. Nothing can be skipped. Finished levels can be replayed. |

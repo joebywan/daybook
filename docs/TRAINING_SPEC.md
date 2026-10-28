@@ -33,13 +33,20 @@ batch) follow it; the rest of the puzzles are classified at the end.
   ladder needs every technique. Solving it without "Show me" earns the second achievement, and
   like a technique's pass shows "Solved!" for 2.5 s and then goes back to the list (a solve with a Show me stays, to start again). Hints are allowed (they teach).
 - **Ways in:**
+  - **Home's Training mode**, the third segment of the mode row (`Daily/Random · Levels · Training`): the tier row gives
+    way to one line, "N of 21 graduated · M techniques passed", and the grid shows only the puzzles with a course, in the
+    home grid's order, each tile saying "3 of 8" (techniques passed of its techniques) and ticked once graduated. A tap
+    opens that course, as the rules sheet's Train does (`Route.Training(fromHint = true)`, `practiseFrom` = Home): back
+    from it is Home, still in Training (the mode is saveable state, never stored), and back from a technique opened there
+    is the course. The segment's second line is "N of 21": **graduated** courses (`Course.graduated`: the final board
+    passed, or every technique where a course has none, the list's tick) of `COURSES.size`; `Training.tally` counts both
+    numbers. The mode, like the others, is not stored: the app always opens on Daily.
   - **"Train: practise the techniques"** on the rules sheet (the play screen's "?") of a puzzle that has Training: opens
     that puzzle's techniques; back from there returns to the game, and back from a technique opened there returns to the list.
   - **"Practise"** beside each technique on Statistics → Techniques that has a practice: opens it; back returns to the page.
   - **"Practise this"** in a hint's panel, beside Close, once the hint is explaining (not a mistake, not the fallback):
     opens that technique's practice; back returns to the game, which is saved as on any leave.
-  - **Settings**' Training row stays, opening the list of puzzles: it is the one place a player can find every course
-    without first playing.
+  - **Settings**' Training row stays, opening the list of puzzles (back from it is Settings).
 - **Achievements** (appended, two per puzzle): "<Puzzle> trained" for passing every technique, "<Puzzle> graduate" for
   then solving the final board: Sudoku's two (`sudokuTrained`, `sudokuGraduate`), then `cagesTrained`, `cagesGraduate`,
   `inequalityTrained`, `inequalityGraduate`, `regionsTrained`, `regionsGraduate`, `kingsTrained`, `kingsGraduate`,

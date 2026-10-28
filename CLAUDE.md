@@ -58,7 +58,8 @@ move passes through a wrong state (Mambo's sun is a moon first); found practices
 `ui/training/`; its own
 `training_passed` key set, `puzzleId|technique`; two achievements per course, built from `COURSES`'s order; keys through
 `hintKeys`, shared with the play screen; a technique no practice search reaches is left out, and a board already
-dealt is never dealt again), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
+dealt is never dealt again), opened from Home's Training mode (a course per tile, `ui/home/TrainingTiles.kt`; opened as
+the rules sheet's are, so back is Home), the rules sheet's "Train", the Techniques page's "Practise", a hint's
 "Practise this" and Settings: `docs/TRAINING_SPEC.md`. What must not be broken:
 
 - A puzzle's first board opens on its walkthrough, once (`autoWalkthrough`: never solved, never opened, not a level
@@ -834,7 +835,7 @@ cells (in reading order) and units to it, draws with `moveFeel`/`feelSquare` and
 
 ## Levels
 
-The third home mode, `Daily · Levels · Random`: numbered levels of five boards from five puzzles; finish all five and the next opens.
+A home mode, `Daily/Random · Levels · Training`: numbered levels of five boards from five puzzles; finish all five and the next opens.
 Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `SeedHash.level`, `LevelSolve` / `LevelProgress` and
 `openLevel` / `recordLevelSolve` in `data/ProgressStore.kt`; the screens are `ui/home/LevelsScreen.kt`, `LaunchMode.LEVELS`,
 `Route.Levels` / `Route.Play(level)` in `ui/DaybookApp.kt` and `levelNextOptions` in `ui/play/NextSteps.kt`.
@@ -860,9 +861,16 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 - **The play screen is keyed on its board** (`key(puzzle.id, seed)` in `DaybookApp`): "Next in level" goes straight from one
   puzzle to another, and without the key `PlayScreen`'s produced board was the last puzzle's state for a frame (a crash on the emulator).
 - `RouteSaver` fields are only ever added at the end: a route saved before `level` existed still reads (`LevelsUiTest`).
-- The mode row (Daily · Levels · Random) sits above the tier row. In Levels mode the tier row stays laid out, invisible, under the level strip, so the grid below cannot move when the mode changes.
+- The mode row (`Daily/Random · Levels · Training`, `LaunchOptions`) sits above the tier row. Daily and Random share the first
+  segment, the one in use large over the other small; a tap on it while selected swaps them (150 ms, snapped under reduced
+  motion), and from another mode it returns to the last of the two (`tappedMode`, `dayMode` in `DaybookApp`; Daily on launch,
+  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 21"
+  graduated) so the three share one height; the swap scales the two lines rather than measuring them again, so the row's
+  height never changes mid-swap. In Levels and Training the tier row stays laid out, invisible, under the level strip or the
+  training strip, so the grid below cannot move when the mode changes. The sticky rows sit tight (4dp over, 4dp between,
+  6dp under): at 375x537 the grid starts 12dp higher than with the old one-line row, and no row of tiles was lost.
 - **A sideways swipe on Home changes the tier** (`ui/home/TierSwipe.kt`): left harder, right easier, nothing past the ends or in
-  Levels, nothing from within 28dp of a side. Decided by the pure `swipedTier` (`TierSwipeTest`); the detector watches on the Initial
+  Levels or Training, nothing from within 28dp of a side. Decided by the pure `swipedTier` (`TierSwipeTest`); the detector watches on the Initial
   pass and consumes only once a move is plainly sideways (past slop, twice as far across as down, before the long-press timeout), so
   taps, the long-press tile drag and the list's scroll keep working. It calls the same `onDifficulty` as the tier row, whose pill slides
   (`SegmentedControl`), and the new tier's name shows in a solid pill over the grid, then fades (`TierFlash`). Mouse drags count too (Compose's scroll ignores the mouse).

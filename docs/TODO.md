@@ -28,7 +28,7 @@ from a measurement or review, so you can check it is still true.
   are as large as the box allows: ~44dp at 375x537 and ~41dp on a phone on its side (844x390), where six weeks must fit
   under the title; dropping the "N days, all unlocked" line when the box is short would buy them about 5dp. *S each.*
 - [ ] **Screenshots show the old names.** Snap, Mambo, Tower and Pointers became Trail, Sun & Moon, Codebreaker and Arrows
-  (2026-10-25); `docs/screenshots/home.png` and the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
+  (2026-10-25); the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
   with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
 - [ ] **The walkthrough offer: players from before the re-offer.** The offer now returns on every visit until the walkthrough is
   opened or the puzzle solved, recorded in the same `tutorialsOffered` set the once-only offer wrote on a first visit, so a
@@ -129,9 +129,10 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Infrastructure
 
-- [ ] **Recapture `docs/screenshots/home.png`.** Home now puts the Daily · Levels · Random row above the tier row
-  (2026-10-24), and the README's home shot still shows the old order. Needs a phone emulator capture (clean install, date
-  pinned, 540x1200); no phone AVD was set up when the change was made.
+- [ ] **`tools/screenshots/capture.sh` stops at Sudoku.** A puzzle's first board now opens on its walkthrough, so the script's
+  `tap Hint` finds no Hint ("no 'Hint' on screen") and it exits before the README copies; it also looks for "Snap", shown as
+  Trail. It needs a Skip tap after each `open_puzzle`. `docs/screenshots/home.png` was recaptured by hand (2026-10-28, clean
+  install, 7 Oct 2026, 1080x2400 halved); the store shots and the README's board shots were not. *S.*
 - [ ] **Verify Renovate's CI workaround on the first real Monday run.** Renovate runs daily and
   `tools/dispatch-ci-for-renovate.sh` dispatches `ci.yml` on `renovate/*` branches, where it posts a
   `build` commit status (README, "Dependency updates"). Proven on a throwaway PR with a stand-in

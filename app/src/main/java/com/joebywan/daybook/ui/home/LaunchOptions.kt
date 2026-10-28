@@ -28,6 +28,14 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.Layout
+import kotlin.math.roundToInt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,6 +63,39 @@ enum class LaunchMode(val label: String) {
     /** Numbered levels of five boards (`docs/LEVELS_SPEC.md`); the level sets each board's tier. */
     LEVELS("Levels"),
     RANDOM("Random"),
+
+    /** The puzzles with a Training course (`docs/TRAINING_SPEC.md`); a tap opens the course. No tier. */
+    TRAINING("Training");
+
+    /** Whether the tier row applies: Daily and Random only. */
+    val tiered: Boolean get() = this == DAILY || this == RANDOM
+}
+
+/**
+ * The mode row's three segments. Daily and Random share the first, the one in use drawn large over the other, so the
+ * row has room for Training without a fourth, narrower segment.
+ */
+internal enum class ModeSegment { DAY, LEVELS, TRAINING }
+
+internal val LaunchMode.segment: ModeSegment
+    get() = when (this) {
+        LaunchMode.DAILY, LaunchMode.RANDOM -> ModeSegment.DAY
+        LaunchMode.LEVELS -> ModeSegment.LEVELS
+        LaunchMode.TRAINING -> ModeSegment.TRAINING
+    }
+
+/**
+ * The mode a tap on [segment] picks while in [mode]. The first segment swaps Daily and Random when it is already the one
+ * selected; from another mode it returns to [lastDay], whichever of the two was last in use (Daily on launch).
+ */
+internal fun tappedMode(segment: ModeSegment, mode: LaunchMode, lastDay: LaunchMode): LaunchMode = when (segment) {
+    ModeSegment.LEVELS -> LaunchMode.LEVELS
+    ModeSegment.TRAINING -> LaunchMode.TRAINING
+    ModeSegment.DAY -> when (mode) {
+        LaunchMode.DAILY -> LaunchMode.RANDOM
+        LaunchMode.RANDOM -> LaunchMode.DAILY
+        else -> lastDay
+    }
 }
 
 /**
@@ -66,7 +107,7 @@ enum class LaunchMode(val label: String) {
  * not progress. Losing it costs one tap, so it must never be able to interfere with the file that
  * holds solved days and half-finished boards.
  *
- * [LaunchMode] deliberately is not stored: a player who ends a session in
+ * [LaunchMode] deliberately is not stored: a player who ends a session in Levels, Training or
  * Random would otherwise open the app the next morning to a grid that quietly hides the day's
  * puzzles, and the daily is the whole point of the app.
  */
@@ -201,50 +242,85 @@ internal fun timerShown(stored: String?, hasPlayed: Boolean): Boolean = stored?.
 
 /**
  * The two choices that used to live on every card, hoisted above the grid: what difficulty, and
- * whether the tap opens today's puzzle, a level's board or a freshly seeded random board.
+ * whether the tap opens today's puzzle, a freshly seeded random board, a level's board or a Training course.
  *
- * The mode row comes first and the tier row beneath it. In Levels mode the level sets the tier, so
- * the tier row is hidden and [levelStrip] is drawn in its place. The row is still laid out underneath
- * (invisible, and it takes no taps), so the strip has exactly its height and nothing below it moves
- * when the mode changes.
+ * The mode row comes first and the tier row beneath it. Every segment has a small second line, so the three share one
+ * height: under Daily/Random the other of the two (a tap on the selected segment swaps them), [levelLine] under Levels,
+ * [trainingLine] under Training. [dayMode] is whichever of Daily and Random the first segment shows large.
+ *
+ * In Levels and Training the tier does not apply, so the tier row is hidden and [levelStrip] or [trainingStrip] is drawn
+ * in its place. The row is still laid out underneath (invisible, and it takes no taps), so the strip has exactly its
+ * height and nothing below it moves when the mode changes.
  */
 @Composable
 fun LaunchOptions(
     difficulty: Difficulty,
     onDifficulty: (Difficulty) -> Unit,
     mode: LaunchMode,
+    dayMode: LaunchMode,
     onMode: (LaunchMode) -> Unit,
+    levelLine: String,
+    trainingLine: String,
     levelStrip: @Composable () -> Unit = {},
+    trainingStrip: @Composable () -> Unit = {},
     sideBySide: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val levels = mode == LaunchMode.LEVELS
+    val tiered = mode.tiered
+    val still = LocalReducedMotion.current
+    // 0 with Daily large, 1 with Random large: the two lines trade size and place.
+    val swap by animateFloatAsState(
+        if (dayMode == LaunchMode.RANDOM) 1f else 0f, if (still) snap() else tween(SWAP_MS), label = "day-swap",
+    )
+    val other = if (dayMode == LaunchMode.RANDOM) LaunchMode.DAILY else LaunchMode.RANDOM
     // Side by side on a short wide window (a phone on its side), where a second row costs the grid most of a row of tiles.
     val controls = @Composable { half: Modifier ->
         // A second tone rather than a second green row: two identical-looking controls stacked
         // read as one four-choice thing, and these are different questions.
         SegmentedControl(
             modifier = half,
-            options = LaunchMode.entries,
-            selected = mode,
-            label = { it.label },
+            options = ModeSegment.entries,
+            selected = mode.segment,
+            label = { "" },
             tone = scheme.secondary,
             onTone = scheme.onSecondary,
-            verticalPadding = 7.dp,
-            onSelect = onMode,
+            verticalPadding = 4.dp,
+            onSelect = { onMode(tappedMode(it, mode, dayMode)) },
+            describe = { segment, selected ->
+                when (segment) {
+                    ModeSegment.DAY -> {
+                        contentDescription = dayMode.label
+                        stateDescription = if (selected) "Selected, double-tap for ${other.label}" else "Not selected"
+                    }
+                    ModeSegment.LEVELS -> contentDescription = "Levels, $levelLine"
+                    ModeSegment.TRAINING -> contentDescription = "Training, $trainingLine courses graduated"
+                }
+            },
+            content = { segment, ink, selected ->
+                val weight = if (selected) FontWeight.SemiBold else FontWeight.Medium
+                when (segment) {
+                    ModeSegment.DAY -> DayLabel(swap, ink, weight)
+                    ModeSegment.LEVELS -> TwoLines(LaunchMode.LEVELS.label, levelLine, ink, weight)
+                    ModeSegment.TRAINING -> TwoLines(LaunchMode.TRAINING.label, trainingLine, ink, weight)
+                }
+            },
         )
         Box(half) {
             SegmentedControl(
-                modifier = if (levels) Modifier.alpha(0f).clearAndSetSemantics { } else Modifier,
+                modifier = if (tiered) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
                 options = Difficulty.entries,
                 selected = difficulty,
                 label = { it.label },
                 tone = scheme.primary,
                 onTone = scheme.onPrimary,
                 verticalPadding = 9.dp,
-                onSelect = { if (!levels) onDifficulty(it) },
+                onSelect = { if (tiered) onDifficulty(it) },
             )
-            if (levels) Box(Modifier.matchParentSize()) { levelStrip() }
+            when (mode) {
+                LaunchMode.LEVELS -> Box(Modifier.matchParentSize()) { levelStrip() }
+                LaunchMode.TRAINING -> Box(Modifier.matchParentSize()) { trainingStrip() }
+                else -> Unit
+            }
         }
     }
     if (sideBySide) {
@@ -252,9 +328,55 @@ fun LaunchOptions(
             controls(Modifier.weight(1f))
         }
     } else {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { controls(Modifier) }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { controls(Modifier) }
     }
 }
+
+/** A segment's name over its small second line. */
+@Composable
+private fun TwoLines(name: String, line: String, ink: Color, weight: FontWeight) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(name, style = MaterialTheme.typography.labelLarge, fontWeight = weight, color = ink, maxLines = 1)
+        Text(line, style = MaterialTheme.typography.labelSmall, color = ink.copy(alpha = 0.8f), maxLines = 1)
+    }
+}
+
+/**
+ * "Daily" over "Random", or the other way up: the one in use large, the other small beneath. [swap] runs 0 (Daily large)
+ * to 1 (Random large); the two trade place and size by scaling, never by measuring again, so the box keeps one height
+ * through the swap and nothing under the row moves. That height is [TwoLines]': a large line and a small one.
+ */
+@Composable
+private fun DayLabel(swap: Float, ink: Color, weight: FontWeight) {
+    val large = MaterialTheme.typography.labelLarge
+    val small = MaterialTheme.typography.labelSmall
+    val k = small.fontSize.value / large.fontSize.value
+    fun Modifier.shrunk(t: Float) = graphicsLayer {
+        val s = 1f - (1f - k) * t
+        scaleX = s
+        scaleY = s
+        transformOrigin = TransformOrigin(0.5f, 0f)
+    }
+    Layout(
+        content = {
+            Text(LaunchMode.DAILY.label, Modifier.shrunk(swap), style = large, fontWeight = weight, color = ink.copy(alpha = 1f - 0.2f * swap), maxLines = 1)
+            Text(LaunchMode.RANDOM.label, Modifier.shrunk(1f - swap), style = large, fontWeight = weight, color = ink.copy(alpha = 0.8f + 0.2f * swap), maxLines = 1)
+            // Unseen: the small line's height, for the box.
+            Text(" ", style = small, maxLines = 1)
+        },
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val (daily, random, probe) = measurables.map { it.measure(loose) }
+        val line = daily.height
+        val width = maxOf(daily.width, random.width)
+        layout(width, line + probe.height) {
+            daily.place((width - daily.width) / 2, (swap * line).roundToInt())
+            random.place((width - random.width) / 2, ((1f - swap) * line).roundToInt())
+        }
+    }
+}
+
+private const val SWAP_MS = 150
 
 @Composable
 internal fun <T> SegmentedControl(
@@ -267,6 +389,18 @@ internal fun <T> SegmentedControl(
     verticalPadding: Dp,
     onSelect: (T) -> Unit,
     track: Color = MaterialTheme.colorScheme.surface,
+    /** What a screen reader hears for an option instead of its drawn text; null reads the text. */
+    describe: (SemanticsPropertyReceiver.(option: T, selected: Boolean) -> Unit)? = null,
+    /** An option's face, drawn in `ink`; one line of [label] unless given. */
+    content: @Composable (option: T, ink: Color, selected: Boolean) -> Unit = { option, ink, selected ->
+        Text(
+            label(option),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = ink,
+            maxLines = 1,
+        )
+    },
 ) {
     val scheme = MaterialTheme.colorScheme
     // The selection is one pill that slides to the option taken (or swiped to on Home), the same way for both.
@@ -296,19 +430,16 @@ internal fun <T> SegmentedControl(
                     // selectable rather than clickable so a screen reader announces the row as a
                     // set of choices with one taken, not three unrelated buttons.
                     .selectable(selected = isSelected, role = Role.RadioButton) { onSelect(option) }
+                    .then(if (describe == null) Modifier else Modifier.semantics { describe(option, isSelected) })
                     .padding(vertical = verticalPadding),
                 contentAlignment = Alignment.Center,
             ) {
                 // Capped: at 2x the pill broke "Standar/d".
                 CappedFontScale {
-                    Text(
-                        label(option),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                    Box(if (describe == null) Modifier else Modifier.clearAndSetSemantics { }) {
                         // The ink follows the pill across, so a label is never light on the bare track.
-                        color = lerp(scheme.onSurfaceVariant, onTone, (1f - abs(at - i)).coerceIn(0f, 1f)),
-                        maxLines = 1,
-                    )
+                        content(option, lerp(scheme.onSurfaceVariant, onTone, (1f - abs(at - i)).coerceIn(0f, 1f)), isSelected)
+                    }
                 }
             }
         }

@@ -92,6 +92,7 @@ import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.core.Streak
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.LevelProgress
 import com.joebywan.daybook.data.PuzzleOrder
@@ -167,8 +168,13 @@ fun HomeScreen(
     difficulty: Difficulty,
     onDifficulty: (Difficulty) -> Unit,
     mode: LaunchMode,
+    /** Whichever of Daily and Random was last in use, which the mode row's first segment shows large. */
+    dayMode: LaunchMode,
     onMode: (LaunchMode) -> Unit,
+    /** A tile's tap: a board, or in Training mode that puzzle's course. */
     onLaunch: (String) -> Unit,
+    /** The training record (`TrainingRecord`), for Training mode's tiles and strip. */
+    trained: Set<String>,
     levels: LevelProgress,
     onLevels: () -> Unit,
     onArchive: () -> Unit,
@@ -191,6 +197,7 @@ fun HomeScreen(
             .toSet()
     }
     val streak = remember(completions, today) { Stats.streak(completions, today) }
+    val tally = remember(trained) { Training.tally(trained) }
 
     // What the header and the pinned rows take, so the grid knows the height left for its tiles (homeColumns).
     var headerHeight by remember { mutableStateOf(0) }
@@ -251,25 +258,36 @@ fun HomeScreen(
             }
             stickyHeader {
                 // Opaque, so the tiles scrolling under it do not show through.
+                // Tight round the two rows (the owner wanted the grid's room back): 4dp under the header, 6dp over the three.
                 Column(
-                    Modifier.fillMaxWidth().background(scheme.background).padding(vertical = if (short) 8.dp else 14.dp)
+                    Modifier.fillMaxWidth().background(scheme.background)
+                        .padding(top = 4.dp, bottom = if (short) 4.dp else 6.dp)
                         .onSizeChanged { optionsHeight = it.height }
                         .onGloballyPositioned { window.top = it.boundsInRoot().bottom },
                 ) {
-                    LaunchOptions(difficulty, onDifficulty, mode, onMode, levelStrip = { LevelStrip(levels, onLevels) }, sideBySide = short)
+                    LaunchOptions(
+                        difficulty, onDifficulty, mode, dayMode, onMode,
+                        levelLine = "Level ${levels.current}",
+                        trainingLine = "${tally.graduated} of ${tally.courses}",
+                        levelStrip = { LevelStrip(levels, onLevels) },
+                        trainingStrip = { TrainingStrip(tally) },
+                        sideBySide = short,
+                    )
                 }
             }
-            // Always laid out, so the grid under it never moves; unseen in Levels, whose boards are a set of their own.
+            // Always laid out, so the grid under it never moves; unseen in Levels and Training, whose tiles are sets of their own.
             item {
                 TodaysThreeRow(
-                    three, difficulty, doneToday, threeCard, shown = mode != LaunchMode.LEVELS, compact = short, onPlay = onThree,
+                    three, difficulty, doneToday, threeCard, shown = mode.tiered, compact = short, onPlay = onThree,
                     modifier = Modifier.onSizeChanged { threeHeight = it.height },
                 )
             }
-            resumeShown?.let { (puzzle, tier) -> item { ContinueRow(puzzle, tier, Modifier) { onLaunch(puzzle.id) } } }
+            if (mode != LaunchMode.TRAINING) resumeShown?.let { (puzzle, tier) -> item { ContinueRow(puzzle, tier, Modifier) { onLaunch(puzzle.id) } } }
             if (mode == LaunchMode.LEVELS) item {
                 // The level's draw order, not the arranged one: a level is a set the player is given, in the order dealt.
                 LevelGrid(levels, levels.current, onPlay = onLaunch, onAllLevels = onLevels, height = gridHeight, inProgress = inProgress)
+            } else if (mode == LaunchMode.TRAINING) item {
+                TrainingGrid(puzzles, trained, gridHeight, onLaunch)
             } else item {
                 PuzzleGrid(
                     puzzles = puzzles,
@@ -287,7 +305,7 @@ fun HomeScreen(
             // Under the grid, so it moves nothing above it; gone once the player has an order of their own. Only where
             // the order applies: a level's tiles keep their draw order. Not until three different puzzles are solved: the
             // welcome has said it already, and a first visit has enough to read.
-            if (mode != LaunchMode.LEVELS && !customOrder && completions.distinctBy { it.puzzleId }.size >= 3) item {
+            if (mode.tiered && !customOrder && completions.distinctBy { it.puzzleId }.size >= 3) item {
                 Text(
                     "Press and hold a puzzle to move it.",
                     style = MaterialTheme.typography.labelLarge,
