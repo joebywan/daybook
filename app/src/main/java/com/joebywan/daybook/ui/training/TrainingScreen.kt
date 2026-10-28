@@ -46,6 +46,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Course
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.LocalBoardHighlight
+import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.newlyTrained
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -152,7 +153,22 @@ fun CourseScreen(course: Course, record: Set<String>, onOpen: (String) -> Unit, 
     }
 }
 
-private enum class Verdict { RIGHT, HINTED, WRONG }
+internal enum class Verdict { RIGHT, HINTED, WRONG }
+
+/**
+ * The slot's line after the player placed [digit] in [cell]. A right digit in another square than [step]'s counts (the
+ * position has no simpler step anywhere), and is answered about that square: the owner read "That's it" followed by the
+ * step's explanation of a different square as being told they were wrong and should have done that one instead.
+ */
+internal fun verdictLine(verdict: Verdict, step: PlacementStep, cell: Int, digit: Int): String {
+    val own = cell == step.cell
+    return when (verdict) {
+        Verdict.WRONG -> "Not quite. ${step.explanation}"
+        Verdict.HINTED -> if (own) "That's it, with a hint, so it doesn't count. ${step.explanation}"
+            else "That's right, $digit goes there, but a hint was open, so it doesn't count."
+        Verdict.RIGHT -> if (own) "That's it. ${step.explanation}" else "That's it: $digit goes there."
+    }
+}
 
 /** The line a pass earns: its achievements, if any. */
 private fun earnedLine(course: Course, record: Set<String>, technique: String) =
@@ -184,6 +200,8 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
     var board by remember(p) { mutableStateOf(p?.board) }
     var verdict by remember(p) { mutableStateOf<Verdict?>(null) }
     var hinted by remember(p) { mutableStateOf(false) }
+    // The square the judged digit went in.
+    var placedAt by remember(p) { mutableIntStateOf(-1) }
     val hints = rememberHintSession("$key|$index")
     val subtitle = if (course.passed(record, technique)) "Passed" else "$run of ${Training.RUN} in a row"
 
@@ -195,6 +213,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
         board = next
         if (placed == null || p == null) return
         hints.clear()
+        placedAt = placed
         val right = cells[placed] == course.solutionOf(p.board)[placed]
         verdict = when {
             !right -> Verdict.WRONG
@@ -231,7 +250,10 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
             if (verdict == null) WatchHint(hints, puzzle, b)
             val highlight = when (verdict) {
                 null -> hints.highlight
-                else -> BoardHighlight(strong = setOf(p.step.cell), soft = p.step.cited - p.step.cell, warning = false)
+                Verdict.WRONG -> BoardHighlight(strong = setOf(p.step.cell), soft = p.step.cited - p.step.cell, warning = false)
+                // A right digit is outlined where it went, and the step's square only when that is where.
+                else -> if (placedAt == p.step.cell) BoardHighlight(strong = setOf(p.step.cell), soft = p.step.cited - p.step.cell, warning = false)
+                    else BoardHighlight(strong = setOf(placedAt), soft = emptySet(), warning = false)
             }
             Box(
                 Modifier.weight(1f).fillMaxWidth().hintKeys(verdict == null, hints, if (puzzle.offersHints) ::onHint else null),
@@ -245,15 +267,12 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
                 if (verdict == null && hints.active) HintPanel(hints, accent, ::onHint, Modifier.fillMaxSize())
                 else {
                     val step = p.step
-                    val text = when (verdict) {
-                        null -> course.explanations.getValue(technique)
-                        Verdict.WRONG -> "Not quite. ${step.explanation}"
-                        Verdict.HINTED -> "That's it, with a hint, so it doesn't count. ${step.explanation}"
-                        Verdict.RIGHT -> when {
-                            run >= Training.RUN && earned != null ->
-                                "Passed! ${Training.RUN} in a row. ${earned.orEmpty()}".trim()
-                            else -> "That's it. ${step.explanation}"
-                        }
+                    val v = verdict
+                    val text = when {
+                        v == null -> course.explanations.getValue(technique)
+                        v == Verdict.RIGHT && run >= Training.RUN && earned != null ->
+                            "Passed! ${Training.RUN} in a row. ${earned.orEmpty()}".trim()
+                        else -> verdictLine(v, step, placedAt, course.cellsOf(b)[placedAt])
                     }
                     Text(
                         text,
