@@ -26,17 +26,19 @@ val NonogramTraining: Course = Course(
     // NonogramTeacher.deduce reads the clues and the marks only; the clues are printed on the board.
     // Any line's instance of the technique is right, not only the hint's pick.
     drill = MoveDrill(
-        alternatives = { s ->
+        next = { s ->
             (s as NonogramState).let { g ->
-                NonogramTeacher.steps(g.width, g.height, NonogramLogic.rowClues(g), NonogramLogic.colClues(g), g.cells).map { Nonogram.deduction(g, it) }
+                NonogramTeacher.deduce(g.width, g.height, NonogramLogic.rowClues(g), NonogramLogic.colClues(g), g.cells)
+                    ?.let { Nonogram.deduction(g, it) }
             }
         },
-    ) { s ->
-        (s as NonogramState).let { g ->
-            NonogramTeacher.deduce(g.width, g.height, NonogramLogic.rowClues(g), NonogramLogic.colClues(g), g.cells)
-                ?.let { Nonogram.deduction(g, it) }
-        }
-    },
+        every = { s, technique ->
+            (s as NonogramState).let { g ->
+                NonogramTeacher.steps(g.width, g.height, NonogramLogic.rowClues(g), NonogramLogic.colClues(g), g.cells)
+                    .filter { it.technique == technique }.map { Nonogram.deduction(g, it) }
+            }
+        },
+    ),
     // Not "#": a glyph starting with it names a drawn shape (AchievementBadge).
     badge = "N",
     // The first practice seed whose Expert board's walk needs all four. Pinned by NonogramTrainingTest.

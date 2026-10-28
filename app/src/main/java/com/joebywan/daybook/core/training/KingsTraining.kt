@@ -6,8 +6,9 @@ import com.joebywan.daybook.puzzles.KingsTeacher
 
 /**
  * Kings' course, the first on [MoveDrill]: the teacher crowns and crosses rather than placing digits. A practice is a
- * board walked by the hints' own steps; the player makes the step (crown the square, or cross out every square it names,
- * one at a time or in a sweep), and a cross or crown the teacher calls a mistake ends the run.
+ * board walked by the hints' own steps; the player makes the step, or any other step of the same technique on the board
+ * (crown the square, or cross out every square it names, one at a time or in a sweep), and a cross or crown the teacher
+ * calls a mistake ends the run.
  */
 val KingsTraining: Course = Course(
     puzzle = Kings,
@@ -29,7 +30,10 @@ val KingsTraining: Course = Course(
     // Kings.fitsTier: Standard reaches up to "would empty", Hard needs two colours confined, Expert a what-if (10 of 30).
     tierFor = tierByIndex({ KingsTraining.techniques }, hard = 3, expert = 4),
     // KingsTeacher.deduce has no parameter through which the answer could reach it.
-    drill = MoveDrill { s -> (s as KingsState).let { k -> KingsTeacher.deduce(k.size, k.region, k.marks)?.let { Kings.deduction(k, it) } } },
+    drill = MoveDrill(
+        next = { s -> (s as KingsState).let { k -> KingsTeacher.deduce(k.size, k.region, k.marks)?.let { Kings.deduction(k, it) } } },
+        every = { s, t -> (s as KingsState).let { k -> KingsTeacher.steps(k.size, k.region, k.marks, t).map { Kings.deduction(k, it) } } },
+    ),
     badge = "K",
     // The first practice seed whose Expert board's walk needs all five. Pinned by KingsTrainingTest.
     examIndex = 1,

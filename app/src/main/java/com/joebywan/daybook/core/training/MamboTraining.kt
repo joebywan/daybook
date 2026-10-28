@@ -31,10 +31,13 @@ val MamboTraining: Course = Course(
     // Any instance of the technique on the position is right, not only the hint's pick.
     drill = MoveDrill(
         settleMillis = Mambo.SETTLE_MILLIS,
-        alternatives = { s -> (s as MamboState).let { m -> MamboTeacher.steps(m.size, m.cells, m.links).map { Mambo.deduction(m, it) }.toList() } },
-    ) { s ->
-        (s as MamboState).let { m -> MamboTeacher.deduce(m.size, m.cells, m.links)?.let { Mambo.deduction(m, it) } }
-    },
+        next = { s -> (s as MamboState).let { m -> MamboTeacher.deduce(m.size, m.cells, m.links)?.let { Mambo.deduction(m, it) } } },
+        every = { s, technique ->
+            (s as MamboState).let { m ->
+                MamboTeacher.steps(m.size, m.cells, m.links).filter { it.technique == technique }.map { Mambo.deduction(m, it) }.toList()
+            }
+        },
+    ),
     badge = "&",
     // The first practice seed whose Expert board's walk needs all six. Pinned by MamboTrainingTest.
     examIndex = 0,

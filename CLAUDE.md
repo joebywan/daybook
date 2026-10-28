@@ -47,8 +47,9 @@ never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate 
 Sudoku, Inequality, Regions, Kings, Mambo, Nonogram and Tally, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
-the step's `isReached`, never the stored answer, a wrong verdict held `settleMillis` where a move passes through a wrong
-state (Mambo's sun is a moon first); found practices cached per session; `ui/training/`; its own
+any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer, a wrong verdict held
+`settleMillis` where a move passes through a wrong state (Mambo's sun is a moon first); found practices cached per
+session; `ui/training/`; its own
 `training_passed` key set, `puzzleId|technique`; two achievements per course, built from `COURSES`'s order; keys through
 `hintKeys`, shared with the play screen), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
 "Practise this" and Settings: `docs/TRAINING_SPEC.md`. What must not be broken:

@@ -30,16 +30,18 @@ val TallyTraining: Course = Course(
     // TallyTeacher.deduce reads the digits, the targets and the marks only; the targets are printed on the board.
     // Any line's instance of the technique (or any what-if within the hint's reach) is right, not only the hint's pick.
     drill = MoveDrill(
-        alternatives = { s ->
+        next = { s ->
             (s as TallyState).let { t ->
-                TallyTeacher.steps(t.size, TallyLogic.digitArray(t), TallyLogic.targets(t), t.marks).map { Tally.deduction(t, it) }
+                TallyTeacher.deduce(t.size, TallyLogic.digitArray(t), TallyLogic.targets(t), t.marks)?.let { Tally.deduction(t, it) }
             }
         },
-    ) { s ->
-        (s as TallyState).let { t ->
-            TallyTeacher.deduce(t.size, TallyLogic.digitArray(t), TallyLogic.targets(t), t.marks)?.let { Tally.deduction(t, it) }
-        }
-    },
+        every = { s, technique ->
+            (s as TallyState).let { t ->
+                TallyTeacher.steps(t.size, TallyLogic.digitArray(t), TallyLogic.targets(t), t.marks)
+                    .filter { it.technique == technique }.map { Tally.deduction(t, it) }
+            }
+        },
+    ),
     badge = "T",
     // The first practice seed whose Expert board's walk needs all six. Pinned by TallyTrainingTest.
     examIndex = 0,
