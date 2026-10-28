@@ -322,6 +322,29 @@ internal object AtomsTeacher {
      * forced, then at least one.
      */
     private fun atomRule(s: Sight, level: Int): Forced? {
+        val found = atomFounds(s, level)
+        return listOf(ONE_NEIGHBOUR, ALL_FORCED, AT_LEAST_ONE).firstNotNullOfOrNull { r -> found.firstOrNull { it.rule == r } }
+    }
+
+    /**
+     * Every step of [technique] on the board as the player sees it, as [deduce] (Training accepts any of them): each atom
+     * whose count forces a bond at that technique's level. Only the atom rules are listed; the rest are only ever the one
+     * [deduce] picks.
+     */
+    fun steps(atoms: List<Atom>, pairs: List<Pair2>, counts: List<Int>, technique: String): List<Step> {
+        val s = sightOf(atoms, pairs, counts)
+        if ((0 until s.n).any { s.need(it) < 0 }) return emptyList()
+        val level = when (technique) {
+            ONE_NEIGHBOUR, ALL_FORCED, AT_LEAST_ONE -> BASIC
+            CROSSING -> WITH_CROSSING
+            ISOLATION -> WITH_ISOLATION
+            else -> return emptyList()
+        }
+        return atomFounds(s, level).map { explainAtom(s, it, level) }.filter { it.technique == technique }
+    }
+
+    /** Every atom whose count forces a bond at [level], in atom order. */
+    private fun atomFounds(s: Sight, level: Int): List<Forced> {
         val found = mutableListOf<Forced>()
         for (a in 0 until s.n) {
             val need = s.need(a)
@@ -343,7 +366,7 @@ internal object AtomsTeacher {
             }
             found += Forced(a, rule, raise, need, room)
         }
-        return listOf(ONE_NEIGHBOUR, ALL_FORCED, AT_LEAST_ONE).firstNotNullOfOrNull { r -> found.firstOrNull { it.rule == r } }
+        return found
     }
 
     private fun explainAtom(s: Sight, f: Forced, level: Int): Step {
