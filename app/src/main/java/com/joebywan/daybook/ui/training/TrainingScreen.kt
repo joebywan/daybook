@@ -46,7 +46,7 @@ import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Course
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.LocalBoardHighlight
-import com.joebywan.daybook.core.PlacementStep
+import com.joebywan.daybook.core.TeachStep
 import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.newlyTrained
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -60,6 +60,7 @@ import com.joebywan.daybook.ui.teach.hintKeys
 import com.joebywan.daybook.ui.teach.rememberHintSession
 import com.joebywan.daybook.ui.tutorial.LocalChime
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -69,6 +70,9 @@ import kotlinx.serialization.json.Json
  * text, a little under the walkthrough's, so the board keeps more of a short phone; longer text scrolls.
  */
 private val SlotHeight = 144.dp
+
+/** How long a pass's congratulation shows before back takes the player to the list it was opened from. */
+private const val PASS_BEAT_MS = 2500L
 
 /** A card row: the tick's room kept either way so the names line up, then [title] and an optional [note]. */
 @Composable
@@ -156,18 +160,14 @@ fun CourseScreen(course: Course, record: Set<String>, onOpen: (String) -> Unit, 
 internal enum class Verdict { RIGHT, HINTED, WRONG }
 
 /**
- * The slot's line after the player placed [digit] in [cell]. A right digit in another square than [step]'s counts (the
- * position has no simpler step anywhere), and is answered about that square: the owner read "That's it" followed by the
- * step's explanation of a different square as being told they were wrong and should have done that one instead.
+ * The slot's line after a move: a wrong one shows [step], the reasoning there was to find; a right one explains [made],
+ * the step the player made ([Course.made]), which may be another square or instance than [step]'s. The owner read
+ * "That's it" followed by the explanation of a different square as being told they were wrong and should have done that.
  */
-internal fun verdictLine(verdict: Verdict, step: PlacementStep, cell: Int, digit: Int): String {
-    val own = cell == step.cell
-    return when (verdict) {
-        Verdict.WRONG -> "Not quite. ${step.explanation}"
-        Verdict.HINTED -> if (own) "That's it, with a hint, so it doesn't count. ${step.explanation}"
-            else "That's right, $digit goes there, but a hint was open, so it doesn't count."
-        Verdict.RIGHT -> if (own) "That's it. ${step.explanation}" else "That's it: $digit goes there."
-    }
+internal fun verdictLine(verdict: Verdict, step: TeachStep, made: TeachStep): String = when (verdict) {
+    Verdict.WRONG -> "Not quite. ${step.explanation}"
+    Verdict.HINTED -> "That's it, with a hint, so it doesn't count. ${made.explanation}"
+    Verdict.RIGHT -> "That's it. ${made.explanation}"
 }
 
 /** The line a pass earns: its achievements, if any. */
@@ -175,10 +175,19 @@ private fun earnedLine(course: Course, record: Set<String>, technique: String) =
     newlyTrained(record, course.id, technique).joinToString(" ") { "Achievement: ${it.title}!" }
 
 /**
- * One technique's practice: a board whose next hint step is [technique]. The player places a digit; a right one (the
- * step's, or any correct digit, since the board has no simpler step anywhere) adds to the run, a wrong one ends it and
- * shows the reasoning. [Training.RUN] in a row calls [onPass]. A board where a hint was opened neither counts nor
- * breaks the run.
+ * The congratulation when a run has just reached [Training.RUN], or null: every time it does, not only the first, so
+ * practising a technique already passed still ends in "Passed!" ([record] is before this pass; achievements only once).
+ */
+internal fun passLine(course: Course, record: Set<String>, technique: String, run: Int): String? =
+    if (run != Training.RUN) null
+    else "Passed! ${Training.RUN} in a row. ${if (course.passed(record, technique)) "" else earnedLine(course, record, technique)}".trim()
+
+/**
+ * One technique's practice: a board whose next hint step is [technique]. The player makes a move; [Course.judge] says
+ * whether it is right (adds to the run), wrong (ends it and shows the reasoning) or neither yet (play on: one cross of a
+ * step that crosses three). [Training.RUN] in a row calls [onPass] (the first time) and, after the congratulation has
+ * shown for a beat, [onBack]: the owner, "send the user back to the list when they achieve the goal". The same for every
+ * drill. A board where a hint was opened neither counts nor breaks the run.
  */
 @Composable
 fun TechniquePractice(course: Course, technique: String, record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit) {
@@ -190,7 +199,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
     val key = "${course.id}|$technique"
     var index by rememberSaveable(key) { mutableIntStateOf(0) }
     var run by rememberSaveable(key) { mutableIntStateOf(0) }
-    // The line earned by the pass this session, kept until the next board.
+    // The pass line ([passLine]) of this board, kept until the next board.
     var earned by remember(key) { mutableStateOf<String?>(null) }
     val practice by produceState<Course.Practice?>(null, key, index) {
         value = null
@@ -200,21 +209,16 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
     var board by remember(p) { mutableStateOf(p?.board) }
     var verdict by remember(p) { mutableStateOf<Verdict?>(null) }
     var hinted by remember(p) { mutableStateOf(false) }
-    // The square the judged digit went in.
-    var placedAt by remember(p) { mutableIntStateOf(-1) }
+    // The step the player's right move made ([Course.made]).
+    var made by remember(p) { mutableStateOf<TeachStep?>(null) }
     val hints = rememberHintSession("$key|$index")
+    // A pass: the line shows with the board locked, then back to where the practice was opened from.
+    LaunchedEffect(earned) { if (earned != null) { delay(PASS_BEAT_MS); onBack() } }
     val subtitle = if (course.passed(record, technique)) "Passed" else "$run of ${Training.RUN} in a row"
 
-    fun judge(next: PuzzleState) {
-        val now = board ?: return
-        val was = course.cellsOf(now)
-        val cells = course.cellsOf(next)
-        val placed = cells.indices.firstOrNull { cells[it] != 0 && was[it] == 0 }
-        board = next
-        if (placed == null || p == null) return
+    fun settle(right: Boolean, step: TeachStep) {
         hints.clear()
-        placedAt = placed
-        val right = cells[placed] == course.solutionOf(p.board)[placed]
+        made = step
         verdict = when {
             !right -> Verdict.WRONG
             hinted -> Verdict.HINTED
@@ -225,12 +229,23 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
             Verdict.RIGHT -> {
                 run++
                 chime()
-                if (run >= Training.RUN && !course.passed(record, technique)) {
-                    earned = earnedLine(course, record, technique)
-                    onPass(technique)
-                }
+                earned = passLine(course, record, technique, run)
+                if (earned != null && !course.passed(record, technique)) onPass(technique)
             }
             else -> Unit
+        }
+    }
+
+    // Every state the board emits is judged off the main thread (a move drill asks the teacher, which can take a while);
+    // a verdict for a state the player has already moved on from is dropped, and the newer state judged instead.
+    fun judge(next: PuzzleState) {
+        if (board == null || p == null || verdict != null) return
+        board = next
+        scope.launch {
+            val (right, step) = withContext(Dispatchers.Default) {
+                course.judge(p, next)?.let { it to (if (it) course.made(p, next) else p.step) }
+            } ?: return@launch
+            if (board === next && verdict == null) settle(right, step)
         }
     }
 
@@ -250,10 +265,8 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
             if (verdict == null) WatchHint(hints, puzzle, b)
             val highlight = when (verdict) {
                 null -> hints.highlight
-                Verdict.WRONG -> BoardHighlight(strong = setOf(p.step.cell), soft = p.step.cited - p.step.cell, warning = false)
-                // A right digit is outlined where it went, and the step's square only when that is where.
-                else -> if (placedAt == p.step.cell) BoardHighlight(strong = setOf(p.step.cell), soft = p.step.cited - p.step.cell, warning = false)
-                    else BoardHighlight(strong = setOf(placedAt), soft = emptySet(), warning = false)
+                // The step shown: the one to find after a wrong move, the player's own after a right one.
+                else -> (made ?: p.step).let { BoardHighlight(strong = it.targets, soft = it.cited - it.targets, warning = false) }
             }
             Box(
                 Modifier.weight(1f).fillMaxWidth().hintKeys(verdict == null, hints, if (puzzle.offersHints) ::onHint else null),
@@ -270,9 +283,8 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
                     val v = verdict
                     val text = when {
                         v == null -> course.explanations.getValue(technique)
-                        v == Verdict.RIGHT && run >= Training.RUN && earned != null ->
-                            "Passed! ${Training.RUN} in a row. ${earned.orEmpty()}".trim()
-                        else -> verdictLine(v, step, placedAt, course.cellsOf(b)[placedAt])
+                        v == Verdict.RIGHT && earned != null -> earned.orEmpty()
+                        else -> verdictLine(v, step, made ?: step)
                     }
                     Text(
                         text,
@@ -297,7 +309,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
                     earned = null
                     index++
                 },
-                enabled = p != null,
+                enabled = p != null && earned == null,
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = BoardHues.onFill(accent)),
                 modifier = Modifier.weight(1f),
             ) { Text(if (verdict == null) "Another board" else "Next board") }
@@ -314,7 +326,8 @@ private val BoardSaver = Saver<PuzzleState, String>(
 
 /**
  * The final board: a whole Expert board whose walk needs every technique ([Course.exam]). Solving it without
- * "Show me" calls [onPass]; hints are allowed. Kept across a rotation, not across leaving: it is one board, not a save.
+ * "Show me" calls [onPass], then [onBack] after a beat; hints are allowed. Kept across a rotation, not across leaving:
+ * it is one board, not a save.
  */
 @Composable
 fun FinalBoard(course: Course, record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit) {
@@ -352,6 +365,8 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
             earned = earnedLine(course, record, Training.EXAM)
             onPass(Training.EXAM)
         }
+        // Passed (again or for the first time): the line shows for a beat, then back to the list, as a technique does.
+        if (!shown) { delay(PASS_BEAT_MS); onBack() }
     }
     TitledScreen("Final board", if (course.passed(record, Training.EXAM)) "Passed" else "Every technique, in one board", onBack) {
         Box(

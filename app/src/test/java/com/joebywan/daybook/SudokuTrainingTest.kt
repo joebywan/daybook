@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.SudokuTraining
 import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.techniqueNamesOf
@@ -44,10 +45,11 @@ class SudokuTrainingTest {
             assertEquals("distinct boards for $t", 8, list.map { (it.board as SudokuState).cells }.distinct().size)
             for (p in list) {
                 val b = p.board as SudokuState
+                val step = p.step as PlacementStep
                 assertEquals(t, p.step.technique)
                 assertEquals(t, SudokuTeacher.deduce(b.cells)!!.technique)
-                assertEquals("the step's digit is the answer's", b.solution[p.step.cell], p.step.digit)
-                assertEquals(0, b.cells[p.step.cell])
+                assertEquals("the step's digit is the answer's", b.solution[step.cell], step.digit)
+                assertEquals(0, b.cells[step.cell])
                 assertTrue("every digit shown is a given", b.cells.indices.all { (b.cells[it] != 0) == b.givens[it] })
                 assertTrue("shown digits agree with the answer", b.cells.indices.all { b.cells[it] == 0 || b.cells[it] == b.solution[it] })
                 assertEquals("one answer", 1, Sudoku.countSolutions(b.cells))

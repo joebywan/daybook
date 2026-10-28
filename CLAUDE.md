@@ -44,9 +44,12 @@ section 7. The settled play-screen UX (popover, finish frame, solve sound) and t
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
-Sudoku, Inequality and Regions, each technique practised on real positions found by walking generated boards by hints
-(`core/Training.kt`: one `Course` per puzzle; `ui/training/`; its own `training_passed` key set, `puzzleId|technique`;
-two appended achievements per puzzle; keys through `hintKeys`, shared with the play screen), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
+Sudoku, Inequality, Regions and Kings, each technique practised on real positions found by walking generated boards by
+hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
+`Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
+any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer; found practices cached per session; `ui/training/`; its own
+`training_passed` key set, `puzzleId|technique`; two achievements per course, built from `COURSES`'s order; keys through
+`hintKeys`, shared with the play screen), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
 "Practise this" and Settings: `docs/TRAINING_SPEC.md`. What must not be broken:
 
 - A puzzle's first board opens on its walkthrough, once (`autoWalkthrough`: never solved, never opened, not a level

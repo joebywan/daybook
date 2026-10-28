@@ -23,17 +23,17 @@ import com.joebywan.daybook.puzzles.PuzzleState
  */
 class Deduction(
     /** The named technique, for tests and coverage counts. Not shown to the player. */
-    val technique: String,
+    override val technique: String,
     /** One short line for the first tap: where to look, not what to do. */
-    val nudge: String,
+    override val nudge: String,
     /** The reasoning, in a sentence or two, for the second tap. */
-    val explanation: String,
+    override val explanation: String,
     /** Cells to look at. Glow on the first tap. */
-    val focus: Set<Int>,
+    override val focus: Set<Int>,
     /** Cells the reasoning leans on. Marked, more quietly, on the second tap. */
-    val cited: Set<Int>,
+    override val cited: Set<Int>,
     /** Cells the move changes. Glow on the second tap. */
-    val targets: Set<Int>,
+    override val targets: Set<Int>,
     /** A move of the player's that is wrong, rather than a new step. Drawn in the error colour. */
     val mistake: Boolean = false,
     /**
@@ -44,7 +44,7 @@ class Deduction(
     val fallback: Boolean = false,
     applyTo: (PuzzleState) -> PuzzleState,
     reachedBy: (PuzzleState) -> Boolean,
-) {
+) : TeachStep {
     /** The deduction whose words and cells are [step]'s. */
     constructor(
         step: TeachStep,

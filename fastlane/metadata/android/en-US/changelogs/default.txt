@@ -1,8 +1,4 @@
-- New: a first-time walkthrough; Training for Sudoku, Cage Sudoku, Inequality and Regions.
-- Settings: Accessibility, and a daily reminder.
-- Mines: tap a number to clear around it; bigger Expert squares; a mine ends the board.
-- Levels ramp up over 100 levels.
-- Hints point at the glowing square; Crossword gives a second clue first.
-- The rules explain each tier. Lamps: hold for a lamp.
-- Clearer colours and digits; word games skip grim words.
-- Streaks count dailies solved on the day.
+- New: Training for Kings. Crown the king or cross out what a technique rules out, any way the technique allows; 3 in a row to pass, then a final board that needs them all. Two new achievements.
+- Training: 3 in a row says "Passed!", then back to the list.
+- Training finds your next practice board faster.
+- Training for Sudoku, Cage Sudoku, Inequality and Regions, from a hint's "Practise this", the rules sheet or Statistics.

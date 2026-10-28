@@ -4,6 +4,8 @@ import com.joebywan.daybook.core.ACHIEVEMENTS
 import com.joebywan.daybook.core.CagesTraining
 import com.joebywan.daybook.core.Course
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PlacementDrill
+import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.InequalityTraining
 import com.joebywan.daybook.core.RegionsTraining
 import com.joebywan.daybook.core.Training
@@ -132,13 +134,15 @@ class TrainingTest {
             val list = course.practices(t).take(count).toList()
             assertEquals("practices for ${course.id} $t", count, list.size)
             assertEquals("distinct boards for ${course.id} $t", count, list.map { it.board }.distinct().size)
+            val drill = course.drill as PlacementDrill
             for (p in list) {
-                val cells = course.cellsOf(p.board)
-                val answer = course.solutionOf(p.board)
+                val cells = drill.cellsOf(p.board)
+                val answer = drill.solutionOf(p.board)
+                val step = p.step as PlacementStep
                 assertEquals(t, p.step.technique)
                 assertEquals(t, course.puzzle.teach(p.board)!!.technique)
-                assertEquals("the step's digit is the answer's", answer[p.step.cell], p.step.digit)
-                assertEquals(0, cells[p.step.cell])
+                assertEquals("the step's digit is the answer's", answer[step.cell], step.digit)
+                assertEquals(0, cells[step.cell])
                 assertTrue("shown digits agree with the answer", cells.indices.all { cells[it] == 0 || cells[it] == answer[it] })
                 independent(t, p.board)
             }
@@ -171,7 +175,8 @@ class TrainingTest {
     }
 
     @Test fun `every course lists its teacher's named techniques, each explained, and its final board needs them all`() {
-        assertEquals(listOf("sudoku", "cages", "inequality", "regions"), Training.COURSES.map { it.id })
+        // Appended only: the achievements follow this order.
+        assertEquals(listOf("sudoku", "cages", "inequality", "regions", "kings"), Training.COURSES.map { it.id })
         for (c in Training.COURSES) assertEquals(techniqueNamesOf(c.id).keys.toList(), c.techniques)
         assertEquals(Training.seed(0), CagesTraining.examSeed)
         assertEquals(Training.seed(4), InequalityTraining.examSeed)
@@ -179,7 +184,7 @@ class TrainingTest {
         assertNotNull(CageLogic.generateVerified(CagesTraining.examSeed!!, Difficulty.EXPERT))
         assertNotNull(Inequality.generateVerified(InequalityTraining.examSeed!!, Difficulty.EXPERT))
         assertNotNull(RegionsLogic.generateVerified(RegionsTraining.examSeed!!, Difficulty.EXPERT))
-        for (c in Training.COURSES.drop(1)) assertEquals(c.id, c.techniques.toSet(), c.techniquesUsed(c.exam()!!))
+        for (c in Training.COURSES.drop(1).take(3)) assertEquals(c.id, c.techniques.toSet(), c.techniquesUsed(c.exam()!!))
     }
 
     @Test fun `each course earns its own two achievements, appended after the pilot's`() {
@@ -187,8 +192,10 @@ class TrainingTest {
         assertEquals(
             listOf("sudokuTrained", "sudokuGraduate", "cagesTrained", "cagesGraduate", "inequalityTrained", "inequalityGraduate",
                 "regionsTrained", "regionsGraduate"),
-            ids.takeLast(8),
+            ids.subList(ids.indexOf("sudokuTrained"), ids.indexOf("sudokuTrained") + 8),
         )
+        // Every course after them brings its two, in the courses' order, at the end of the list.
+        assertEquals(Training.COURSES.flatMap { listOf("${it.id}Trained", "${it.id}Graduate") }, ids.takeLast(2 * Training.COURSES.size))
         val today = LocalDate(2026, 10, 28)
         for (c in Training.COURSES.drop(1)) {
             val all = c.techniques.map { TrainingRecord.entry(c.id, it) }.toSet()

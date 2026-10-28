@@ -24,12 +24,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.ACHIEVEMENTS
 import com.joebywan.daybook.core.AchievementCategory
+import com.joebywan.daybook.core.Training
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * The centre mark of each badge: text, or "#star" / "#crown" for a drawn shape. One entry per achievement id;
+ * The centre mark of each badge: text, or "#star" / "#crown" for a drawn shape. One entry per achievement id (a
+ * Training course brings its own, `Course.badge`);
  * `AchievementsTest` fails when a new achievement has none.
  */
 internal val BADGE_GLYPHS: Map<String, String> = mapOf(
@@ -39,11 +41,7 @@ internal val BADGE_GLYPHS: Map<String, String> = mapOf(
     "puzzleStreak7" to "7", "puzzleStreak30" to "30",
     "firstTop" to "#star", "cleanTop" to "#crown",
     "oneOfEach" to "#star", "fullSet" to "3/3", "todaysThree" to "3", "allPuzzles" to "All",
-    "sudokuTrained" to "9", "sudokuGraduate" to "#crown",
-    "cagesTrained" to "45", "cagesGraduate" to "#crown",
-    "inequalityTrained" to "<", "inequalityGraduate" to "#crown",
-    "regionsTrained" to "5", "regionsGraduate" to "#crown",
-)
+) + Training.COURSES.flatMap { listOf("${it.id}Trained" to it.badge, "${it.id}Graduate" to "#crown") }
 
 private fun colourOf(c: AchievementCategory, dark: Boolean) = when (c) {
     AchievementCategory.STREAK -> if (dark) Color(0xFF3F9E7F) else Color(0xFF1F6F5C)
