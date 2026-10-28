@@ -44,15 +44,16 @@ section 7. The settled play-screen UX (popover, finish frame, solve sound) and t
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
-Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps and Tents, each technique practised on real positions found by walking generated boards by
+Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes and LITS, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer (Pipes judges its own way: a
 tap turns a tile a quarter at a time, so the step's tile is never wrong on its way round; Mosaic's `MosaicDrill` applies
 the same rule to a fill, judged by one search question), plus the course's `wrong` for a lost board or a note the teacher
 never reads that no answer keeps (Mines' mine, Tents' grass, Lamps' cross), a wrong verdict held `settleMillis` where a
-move passes through a wrong state (Mambo's sun is a moon first); found practices cached per
-session; `ui/training/`; its own
+move passes through a wrong state (Mambo's sun is a moon first); found practices cached per session; a course whose
+`generate` can ship an unproved board passes its `generateVerified` as `Course.generate`, so practices skip that seed;
+`ui/training/`; its own
 `training_passed` key set, `puzzleId|technique`; two achievements per course, built from `COURSES`'s order; keys through
 `hintKeys`, shared with the play screen; a technique no practice search reaches is left out, and a board already
 dealt is never dealt again), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's

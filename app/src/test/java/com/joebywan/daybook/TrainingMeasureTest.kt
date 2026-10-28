@@ -32,14 +32,18 @@ class TrainingMeasureTest {
                 val ms = (System.nanoTime() - t0) / 1e6
                 println("MEASURE ${c.id} $t: ${found.size} practices, ${found.distinctBy { it.board }.size} distinct, ${"%.0f".format(ms)} ms")
                 // A move that is no step (the board as given): judging it asks for every instance of the technique.
-                val judged = found.take(10).map { p -> ms { c.judge(p, p.board) } }
-                println("JUDGE ${c.id} $t: mean ${"%.1f".format(judged.average())} max ${"%.1f".format(judged.max())} ms")
+                val none = found.take(10).map { p -> ms { c.judge(p, p.board) } }
+                println("JUDGE ${c.id} $t (no step): mean ${"%.1f".format(none.average())} max ${"%.1f".format(none.max())} ms")
+                // Judging the step made (a move drill asks the teacher, mistake check and all, per emitted state).
+                val judged = found.mapNotNull { p -> (p.step as? com.joebywan.daybook.core.Deduction)?.let { d -> d.apply(p.board) to p } }
+                    .map { (after, p) -> ms { c.judge(p, after) } }
+                if (judged.isNotEmpty()) println("JUDGE ${c.id} $t (step): mean ${"%.1f".format(judged.average())} max ${"%.1f".format(judged.max())} ms")
             }
             for (tier in Difficulty.entries) {
                 val counts = HashMap<String, Int>()
                 val all = ArrayList<Int>()
                 for (k in 0 until 60) {
-                    val used = c.techniquesUsed(c.puzzle.generate(Training.seed(k), tier))
+                    val used = c.techniquesUsed(c.board(k, tier) ?: continue)
                     for (t in used) counts.merge(t, 1, Int::plus)
                     if (used.containsAll(c.techniques)) all += k
                 }

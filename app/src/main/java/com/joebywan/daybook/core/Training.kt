@@ -40,6 +40,11 @@ class Course(
     val badge: String,
     /** The index of the practice seed whose Expert board's walk needs every technique; null when none was found. */
     examIndex: Int?,
+    /**
+     * A seed's board on a tier, or null to skip the seed: a course whose `generate` can ship an unproved board passes its
+     * `generateVerified`, so no practice or final board is one the generator has not proved (CLAUDE.md).
+     */
+    private val generate: (Long, Difficulty) -> PuzzleState? = puzzle::generate,
 ) {
     /** A course on a digit-placing teacher: [PlacementDrill]'s four parts, as the first four courses wrote them. */
     constructor(
@@ -72,7 +77,7 @@ class Course(
     fun practices(technique: String): Sequence<Practice> = sequence {
         val tier = tierFor(technique)
         for (k in 0 until Training.SEARCH) {
-            val start = puzzle.generate(Training.seed(k), tier)
+            val start = board(k, tier) ?: continue
             positionOn(start, technique)?.let { yield(it) }
         }
     }.distinctBy { it.board } // a puzzle that picks from a fixed list (Chess) can deal the same board twice
@@ -95,13 +100,16 @@ class Course(
         if (index >= list.size && k < Training.SEARCH) {
             val tier = tierFor(technique)
             while (index >= list.size && k < Training.SEARCH) {
-                positionOn(puzzle.generate(Training.seed(k), tier), technique)?.let { p -> if (list.none { it.board == p.board }) list += p }
+                board(k, tier)?.let { b -> positionOn(b, technique)?.let { p -> if (list.none { it.board == p.board }) list += p } }
                 k++
             }
             searched[technique] = k
         }
         list.getOrNull(index) ?: list.getOrNull(index % list.size.coerceAtLeast(1))
     }
+
+    /** Practice seed [k]'s board on [tier], or null when the generator proved none for it. */
+    fun board(k: Int, tier: Difficulty): PuzzleState? = generate(Training.seed(k), tier)
 
     private fun positionOn(start: PuzzleState, technique: String): Practice? =
         drill.walk(start).firstOrNull { it.step.technique == technique }
@@ -126,7 +134,7 @@ class Course(
     val hasExam: Boolean get() = examSeed != null
 
     /** The final board: a whole Expert board whose walk needs every technique, or null when this course has none. */
-    fun exam(): PuzzleState? = examSeed?.let { puzzle.generate(it, Difficulty.EXPERT) }
+    fun exam(): PuzzleState? = examSeed?.let { generate(it, Difficulty.EXPERT) }
 
     /** The technique's name as a title: "A digit's only place in a box". */
     fun titleOf(technique: String): String =
@@ -183,6 +191,9 @@ object Training {
             MinesTraining,
             LampsTraining,
             TentsTraining,
+            ShikakuTraining,
+            DominoesTraining,
+            LitsTraining,
         )
     }
 

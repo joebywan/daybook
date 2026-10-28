@@ -1090,7 +1090,11 @@ object Lits : PuzzleType {
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as LitsState
-        val step = LitsTeacher.teach(s) ?: return null
+        return deduction(LitsTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(step: LitsTeacher.Step): Deduction {
         return Deduction(
             step,
             mistake = step.technique == LitsTeacher.MISTAKE,

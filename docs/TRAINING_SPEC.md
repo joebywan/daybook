@@ -14,7 +14,8 @@ batch) follow it; the rest of the puzzles are classified at the end.
 ## What the player sees
 
 - **Training** (route `training`): a list of the puzzles that have it (Sudoku, Cage Sudoku, Inequality, Regions, Kings,
-  Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents), each
+  Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes,
+  LITS), each
   with how many of its techniques are passed and a tick once it is finished (its final board passed).
 - **A puzzle's techniques** (route `training||…|<puzzle>`): its techniques in the teacher's ladder order
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
@@ -45,7 +46,8 @@ batch) follow it; the rest of the puzzles are classified at the end.
   `pipesTrained`, `pipesGraduate`, `pearlsTrained`, `pearlsGraduate`, `atomsTrained`, `atomsGraduate`, `whoswhoTrained`,
   `whoswhoGraduate`, `cipherTrained`, `cipherGraduate`, `chessTrained`, `chessGraduate`, `mosaicTrained`,
   `mosaicGraduate`, `mamboTrained`, `mamboGraduate`, `nonogramTrained`, `nonogramGraduate`, `tallyTrained`,
-  `tallyGraduate`, `minesTrained`, `minesGraduate`, `lampsTrained`, `lampsGraduate`, `tentsTrained`, `tentsGraduate`
+  `tallyGraduate`, `minesTrained`, `minesGraduate`, `lampsTrained`, `lampsGraduate`, `tentsTrained`, `tentsGraduate`,
+  `shikakuTrained`, `shikakuGraduate`, `dominoesTrained`, `dominoesGraduate`, `litsTrained`, `litsGraduate`
   (Who's Who's, Cipher's and Chess's badges `?`, `A+B`, `M`; Mines', Lamps' and Tents' a drawn mine, `L`, `T`; a badge
   glyph must not start with `#` unless it names a drawn shape). They
   are built from `Training.COURSES` in its order (so a course appended there appends its two), announced on the training
@@ -90,6 +92,12 @@ batch) follow it; the rest of the puzzles are classified at the end.
     the what-if on Expert (57 and 4 of 60).
   - Lamps: zero, done, room and only light on Standard; starve and dark on Hard (51 and 22 of 60); the what-if on Expert.
   - Tents: no tree and the two line rules on Standard; one spot, shared and served on Hard (52, 3 and 11 of 60).
+  - Shikaku: only fits and only reaches on Standard, common cells and the what-if on Hard (8 and 11 of 60 Hard boards).
+  - Dominoes: the three "only" steps and region values on Standard, counting on Hard, the what-if on Expert (each tier
+    needs exactly its level: `Dominoes.neededTechnique`).
+  - LITS: whole region, overlap, the 2x2 and the letter rule on Standard, the neighbour on Hard, the what-if on Expert.
+    Hard reaches the what-if on only 3 boards in 60 (Expert 25), so its practice is drawn from Expert: on Hard each
+    board would cost some twenty seeds' generation and walk.
 - **What counts as right** (digits; Kings and the general shape below): the step's own digit, which is what the hint's `isReached` checks. Another correct digit
   elsewhere also counts: the position has no simpler step anywhere (each teacher tries every simpler technique on the whole
   board first), so a correct digit there was found with this technique or a harder one. It is answered about its own
@@ -157,6 +165,21 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     filtered to the technique: every Mambo instance in ladder order, every line's step, every Tally what-if within the
     hint's three lines; each `deduce` is still their first, so no daily board moved). Their tests make a different
     instance (right) and an unjustified true mark (play on) on every practice that has one.
+  - Shikaku, Dominoes and LITS supply `every` from `ShikakuTeacher.instances`, `DominoTeacher.instances` and
+    `LitsTeacher.instances`. Shikaku's and LITS's rung functions take an optional list to collect every step into and
+    otherwise return their first, as before, so `deduce` keeps main's direct path; LITS's what-if still takes the
+    shortest chain. Not sequences: `deduce` runs inside those generators' gates, and `sequence { }` made a year of LITS
+    daily boards about 25% slower (Expert mean 111 ms to 141-157 ms on the JVM) and Shikaku Expert 15-30% slower; with
+    the collector the year matches main within noise (LITS Expert 99.6 against 98.3 ms, worst 216 against 216 ms;
+    Shikaku Expert 2.55 against 2.81 ms). Dominoes' what-if list is a sequence, since its ladder's what-if is reached
+    only after steps 1-5 are spent, and a year of Dominoes boards stayed within noise (Expert 20.0 against 20.8 ms).
+    The training tests pin each list's first step to `deduce`'s pick over the first 30 practice seeds' Expert walks. Dominoes' instances of a rung are the placements settled once that rung's level and
+    those below it have struck all they can, named as the hint names them (so an "only place" practice passes another
+    domino with one place left, not a square with one partner); its what-if's, every square a what-if settles.
+  - Only proved boards: `Course`'s last parameter, `generate`, is a seed's board or null to skip the seed. It defaults
+    to `puzzle.generate`; Shikaku, Dominoes and LITS pass their `generateVerified`, so no practice or final board is one
+    the generator did not prove (LITS's `generate` can ship an unproved floor; the other two a fixed last-resort board,
+    which would deal the same practice twice).
   - Judging asks the teacher, so every emitted state is judged on `Dispatchers.Default`; a verdict for a state the player
     has already moved on from is dropped and the newer state judged instead.
   - `MoveDrill(settleMillis)`: a wrong verdict waits that long before it shows, so a newer move drops it. Mambo needs it
@@ -281,13 +304,30 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - **Tally:** line done 9 ms first, the rest 0-5 ms first; next boards a mean of 0-7 ms, at most 17 ms (the what-if).
   Standard reaches the first three on all 60 and all left on 26; every Hard board reaches every way, every Expert board
   the what-if.
+- **Shikaku** (move drill): the first board of each technique 1-20 ms through the cache, each next 1-5 ms (max 35 ms,
+  common cells); 30 practices of common cells or the what-if 120 ms. Standard reaches only fits on 60 of 60 boards and
+  only reaches on 36; Hard adds common cells on 8 and the what-if on 11; Expert 41 and 24.
+- **Dominoes** (move drill): the three "only" steps and region values 1-37 ms first, 1-3 ms a board after; counting 4-7
+  ms first, 5-7 ms after; the what-if 28-37 ms first, 18-20 ms a board after (max 44 ms). Only place is the rarest
+  "only" step (18 of 60 Standard boards).
+- **LITS** (move drill, proved boards only): whole region 159 ms first, 70 ms a board after (max 442 ms), since 10 of
+  60 Standard boards have a four-square region left for it; overlap, the 2x2 and the letter rule 11 ms first, 13 ms
+  after; the neighbour 22 ms first, 24 ms after; the what-if 195 ms first, 198 ms a board after (max 730 ms; 25 of 60
+  Expert boards reach it). In the browser (the web build, 390x844, the page's own load subtracted, on a busy machine)
+  the first board costs about 0.15-0.2 s for the whole region and 0.8-1.1 s for the what-if, in Chromium and WebKit
+  alike: wasm has one thread, so "Finding a board..." stays up that long. Judging a move asks LITS's teacher, whose
+  mistake check searches for an answer that keeps the shading: on the JVM a judged step takes 0.1 ms on average and at
+  most 8 ms (the what-if's), so it is no cost in a browser either, and a wrong square's "Not quite" showed at once.
+- **Judging** (`TrainingMeasureTest`'s JUDGE lines, the step made, per practice): Shikaku and Dominoes under 0.5 ms,
+  Kings at most 2.4 ms, LITS at most 8.3 ms.
 - **Final boards** (Expert, the first practice seed whose walk needs every technique, each pinned by a test):
   Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (33 of the first 60); Inequality index 4 (17 of the
   first 60); Regions index 0 (all 60); Kings index 1 (17 of the first 60); Pipes index 1 (15 of the first 60); Pearls
   index 0 (54 of 60); Atoms index 1 (10 of 60); Who's Who index 0 (all 60); Cipher index 0 (16 of the first 60); Chess
   index 6 (13 of the first 60); Mosaic index 4 (17 of the first 60; Standard 5 of 60, Hard 14); Mambo index 0 (all 60);
-  Nonogram index 0 (54 of the first 60); Tally index 0 (58 of the first 60); Mines index 44 (one of the
-  first 60); Lamps index 4 (31 of 60); Tents index 34 (5 of 60).
+  Nonogram index 0 (54 of the first 60); Tally index 0 (58 of the first 60); Mines index 44 (one of the first 60);
+  Lamps index 4 (31 of 60); Tents index 34 (5 of 60); Shikaku index 15 (5 of the first 60); Dominoes index 2 (3 of the
+  first 60); LITS index 5 (5 of the first 60).
 - **Mines** (move drill; measured on a machine shared with other builds, so on the high side): all found, all mines,
   subset and pair 1-38 ms for the first board, a mean of 1-4 ms a board after (max 16 ms); the count against the numbers
   5 ms first, 10 ms a board (max 35 ms); the what-if 14 ms first, 60 ms a board after (max 218 ms; 30 boards in 2.4 s),
@@ -354,6 +394,10 @@ Nothing had to be excluded: every technique every teacher names is found within 
   --query "screen=training&puzzle=mosaic&technique=count"`, with taps for a losing fill and for the step), its badges on
   `?screen=achievements` (a harness hook added with it), and on the Android emulator: a hinted step, a wrong fill, the
   board still through each verdict. The 375x537 board is small (the slot and buttons take what Kings' take).
+- Shikaku's, Dominoes' and LITS' practices and final boards checked at 375x537 and 390x844 in Chromium and WebKit
+  (LITS with taps for a right square then a wrong one: the board's box measured the same before and after the
+  verdict), and on the Android emulator: a wrong LITS square, a wrong domino laid from the tray, and a Shikaku Show me.
+  The badges ("2x3", "6|6", "L") rendered at true size on the Achievements page.
 
 ## Classification of every puzzle
 
@@ -373,16 +417,16 @@ techniques no walk reached.
 | Kings | 5: last square 30/30/30 … what-if 0/0/10 | move | 1-153 ms | **done (pilot)** |
 | Mambo | 6: pair, sandwich, link, quota met 30/30/30; one short 0/30/30; what-if 0/0/30 | move | 17-41 ms | **done** |
 | Pipes | 4: border, set neighbour, whichever way 25-30 a tier; no loop 5/4/6 | move (own drill) | 3-56 ms | **done** |
-| Shikaku | 4: only fits, only reaches; common cells 0/5/18; what-if 0/6/14 | move | 4-13 ms | include |
+| Shikaku | 4: only fits, only reaches; common cells 0/5/18; what-if 0/6/14 | move | 1-20 ms | **done** |
 | Mosaic | 3: count, biggest swallow, centre 2/5/10 (finish, fill within the limit: not praised) | move (own judge) | 0-13 ms | **done** |
 | Atoms | 6: one neighbour … isolation 0/16/29, what-if 0/0/6 (only way out: never, left out) | move | 4-29 ms | **done** |
-| LITS | 6: whole region 5/13/8, overlap, avoid 2x2, letter clash 30/30/30, neighbour 0/15/27, what-if 0/1/14 | move | 26-173 ms | include |
+| LITS | 6: whole region 5/13/8, overlap, avoid 2x2, letter clash 30/30/30, neighbour 0/15/27, what-if 0/1/14 | move | 11-195 ms | **done** (what-if from Expert) |
 | Nonogram | 4: all 26-30 a tier | move | 4-6 ms | **done** |
 | Chess | 3: mate in one, forcing key 27-30 a tier; quiet key 0/2/9 | move | 1-88 ms | **done** (quiet key from Expert) |
 | Tents | 6: no tree, line done, line full 29-30; one spot 1/25/21; shared 0/1/12; served 1/7/20 (touch: never) | move | 0-52 ms | **done** (grass no answer keeps is wrong in practice) |
 | Cipher | 5: leading carry, column, column pair 29-30; columns together 0/30/9; pair what-if 0/0/30 (only letter: never) | move | 1-10 ms | **done** (only letter dropped) |
 | Tally | 6: all reached; every way 0/30/30, what-if 0/0/30 | move | 2-11 ms | **done** |
-| Dominoes | 6: only place 10 a tier, counting 0/30/10, what-if 0/0/30, the rest 14-30 | move | 6-33 ms | include |
+| Dominoes | 6: only place 10 a tier, counting 0/30/10, what-if 0/0/30, the rest 14-30 | move | 1-37 ms | **done** |
 | Mines | 6: subset 0/28/26, pair 0/17/17, count edge 0/0/29, what-if 0/0/1 (count: never) | move | 1-24 ms | **done** (what-if kept: 42 ms a board through the cache) |
 | Lamps | 7: all reached; dark 0/11/14 | move | 0-15 ms | **done** (a cross where the answer has a lamp is wrong in practice) |
 | Pearls | 7: pearl's arms and lines 26-30, dead end 18/28/29, small loop 0/30/29, what-if 0/0/30 (pearl ways: never, left out) | move | 5-26 ms | **done** |
@@ -411,6 +455,7 @@ id list, the docs and the changelog. Grouped by kind of board, so a batch's agen
 2. **Pipes, Pearls, Atoms**: paths and loops. **Done** (Pipes needed its own drill, above).
 3. **Mines, Lamps, Tents**: marks and counts. **Done** (a course's `wrong` flags Tents' grass and Lamps' crosses no
    answer keeps, and Mines' lost board).
-4. **Shikaku, Dominoes, LITS**: pieces placed by drag or pairs (each placement must stay one emitted state).
+4. **Shikaku, Dominoes, LITS**: pieces placed by drag or pairs (each placement must stay one emitted state). **Done**:
+   every rung kept (none was unreached), each board's drag or tap sequence already emits one state.
 5. **Who's Who, Cipher, Chess**: deduction grids and moves (done).
 6. **Mosaic** alone: done (its own judge, above).

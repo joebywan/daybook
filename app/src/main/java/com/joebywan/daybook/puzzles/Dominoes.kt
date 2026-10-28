@@ -116,7 +116,11 @@ object Dominoes : PuzzleType {
     /** A mistake to lift or a domino to lay; see [DominoTeacher]. */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as DominoState
-        val step = DominoTeacher.teach(s) ?: return null
+        return deduction(DominoTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(step: DominoTeacher.Step): Deduction {
         return Deduction(
             step,
             // A mistake's targets name only its tray slot; the squares it lies on glow too, so the domino to lift is seen.

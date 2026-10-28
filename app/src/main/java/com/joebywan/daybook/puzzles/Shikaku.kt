@@ -455,7 +455,11 @@ object Shikaku : PuzzleType {
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as ShikakuState
-        val step = ShikakuTeacher.teach(s) ?: return null
+        return deduction(ShikakuTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(step: ShikakuTeacher.Step): Deduction {
         return Deduction(
             step,
             mistake = step.technique == ShikakuTeacher.MISTAKE,
