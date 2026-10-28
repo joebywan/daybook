@@ -427,10 +427,10 @@ internal object LitsTeacher {
         val layout = Layout(width, height, region)
         val sight = Sight(layout, shaded.toBooleanArray(), BooleanArray(layout.n))
         if ((0 until layout.count).any { sight.cand(it).isEmpty() }) return null
-        return wholeRegion(sight).firstOrNull()
-            ?: overlap(sight).firstOrNull()
-            ?: filtered(sight).firstOrNull()
-            ?: neighbour(sight).firstOrNull()
+        return wholeRegion(sight)
+            ?: overlap(sight)
+            ?: filtered(sight)
+            ?: neighbour(sight)
             ?: whatIf(sight)
     }
 
@@ -442,14 +442,15 @@ internal object LitsTeacher {
         val layout = Layout(width, height, region)
         val sight = Sight(layout, shaded.toBooleanArray(), BooleanArray(layout.n))
         if ((0 until layout.count).any { sight.cand(it).isEmpty() }) return emptyList()
-        return when (technique) {
-            WHOLE_REGION -> wholeRegion(sight)
-            OVERLAP -> overlap(sight)
-            AVOID_BLOCK, LETTER_CLASH -> filtered(sight).filter { it.technique == technique }
-            NEIGHBOUR -> neighbour(sight)
-            WHAT_IF -> whatIfs(sight).map { (x, chain) -> whatIfStep(sight, x, chain) }
-            else -> emptySequence()
-        }.toList()
+        val out = ArrayList<Step>()
+        when (technique) {
+            WHOLE_REGION -> wholeRegion(sight, out)
+            OVERLAP -> overlap(sight, out)
+            AVOID_BLOCK, LETTER_CLASH -> filtered(sight, out)
+            NEIGHBOUR -> neighbour(sight, out)
+            WHAT_IF -> whatIfs(sight) { x, chain -> out += whatIfStep(sight, x, chain) }
+        }
+        return out.filter { it.technique == technique }
     }
 
     /**
@@ -468,12 +469,17 @@ internal object LitsTeacher {
         return deepest
     }
 
-    private fun wholeRegion(s: Sight): Sequence<Step> = sequence {
+    /**
+     * A rung's steps go to [out] when it is given (every one, for Training's instances); without it the rung returns its
+     * first step, as [deduce] always did. No sequence: [deduce] runs inside the generator's gate, where a coroutine per
+     * rung call cost a quarter of the generation time.
+     */
+    private fun wholeRegion(s: Sight, out: MutableList<Step>? = null): Step? {
         for (k in 0 until s.layout.count) {
             val cells = s.layout.cellsOf[k]
             if (cells.size != 4 || s.complete(k)) continue
             val todo = cells.filter { !s.shaded[it] }
-            yield(Step(
+            Step(
                 technique = WHOLE_REGION,
                 shades = todo,
                 focus = cells.toSet(),
@@ -481,11 +487,12 @@ internal object LitsTeacher {
                 nudge = "Look at the glowing region.",
                 explanation = "This region has exactly four squares, so its tetromino is the whole " +
                     "region. Shade ${if (todo.size == 4) "all four" else "the rest"}.",
-            ))
+            ).let { if (out == null) return it else out += it }
         }
+        return null
     }
 
-    private fun overlap(s: Sight): Sequence<Step> = sequence {
+    private fun overlap(s: Sight, out: MutableList<Step>? = null): Step? {
         for (k in 0 until s.layout.count) {
             if (s.complete(k)) continue
             val shapes = s.geo(k)
@@ -493,7 +500,7 @@ internal object LitsTeacher {
             if (todo.isEmpty()) continue
             val cells = s.layout.cellsOf[k].toSet()
             val around = if (s.shadedIn(k).isEmpty()) "" else " around its shaded squares"
-            yield(Step(
+            Step(
                 technique = OVERLAP,
                 shades = todo,
                 focus = cells,
@@ -505,12 +512,13 @@ internal object LitsTeacher {
                     "Every L, I, T or S that fits in this region$around covers ${these(todo)}, so " +
                         "${they(todo)} shaded whichever it is."
                 },
-            ))
+            ).let { if (out == null) return it else out += it }
         }
+        return null
     }
 
     /** [OVERLAP] after setting aside the shapes the 2x2 rule, the letter rule, or both, forbid. */
-    private fun filtered(s: Sight): Sequence<Step> = sequence {
+    private fun filtered(s: Sight, out: MutableList<Step>? = null): Step? {
         for (k in 0 until s.layout.count) {
             if (s.complete(k)) continue
             val geo = s.geo(k)
@@ -536,7 +544,7 @@ internal object LitsTeacher {
                 !blockDropped -> "would touch a tetromino of their own letter"
                 else -> "would finish a 2x2 or touch their own letter next door"
             }
-            yield(Step(
+            Step(
                 technique = technique,
                 shades = todo,
                 focus = cells,
@@ -544,8 +552,9 @@ internal object LitsTeacher {
                 nudge = "Look at the glowing region.",
                 explanation = "Shapes here that $why are out. Every shape left covers ${these(todo)}, " +
                     "so shade ${them(todo)}.",
-            ))
+            ).let { if (out == null) return it else out += it }
         }
+        return null
     }
 
     /** The shaded squares outside [t]'s region that condemn it: its 2x2 partners and letter twins. */
@@ -564,7 +573,7 @@ internal object LitsTeacher {
     }
 
     /** [OVERLAP] after setting aside the shapes that would leave a neighbouring region no shape. */
-    private fun neighbour(s: Sight): Sequence<Step> = sequence {
+    private fun neighbour(s: Sight, out: MutableList<Step>? = null): Step? {
         for (k in 0 until s.layout.count) {
             if (s.complete(k)) continue
             val kept = s.cand1(k)
@@ -582,7 +591,7 @@ internal object LitsTeacher {
             val cells = s.layout.cellsOf[k].toSet()
             val next = victims.flatMap { s.layout.cellsOf[it] }.toSet()
             val whose = if (victims.size == 1) "the marked region" else "a marked region"
-            yield(Step(
+            Step(
                 technique = NEIGHBOUR,
                 shades = todo,
                 focus = cells,
@@ -590,8 +599,9 @@ internal object LitsTeacher {
                 nudge = "Look at the glowing region, and at what's next to it.",
                 explanation = "Some shapes here would leave $whose $reason. Every shape left " +
                     "covers ${these(todo)}, so shade ${them(todo)}.",
-            ))
+            ).let { if (out == null) return it else out += it }
         }
+        return null
     }
 
     /** A supposition followed through: squares it forces, region by region, to a region left empty. */
@@ -633,8 +643,10 @@ internal object LitsTeacher {
         return (0 until layout.count).filter { out[it] }
     }
 
-    /** Every square whose staying empty leads to a region with no shape, with the chain that shows it. */
-    private fun whatIfs(s: Sight): Sequence<Pair<Int, Chain>> = sequence {
+    /**
+     * Every square whose staying empty leads to a region with no shape, handed to [found] with the chain that shows it.
+     */
+    private inline fun whatIfs(s: Sight, found: (Int, Chain) -> Unit) {
         for (x in 0 until s.layout.n) {
             if (s.shaded[x]) continue
             val k = s.layout.of[x]
@@ -642,15 +654,16 @@ internal object LitsTeacher {
             // Squares no shape can use are the board's crosses; squares every shape uses were the
             // neighbour step's. Neither is a what-if.
             if (shapes.none { x in it.cells } || shapes.all { x in it.cells }) continue
-            yield(x to (chainToEmpty(s.with(keepEmpty = listOf(x)), listOf(x)) ?: continue))
+            found(x, chainToEmpty(s.with(keepEmpty = listOf(x)), listOf(x)) ?: continue)
         }
     }
 
     private fun whatIf(s: Sight): Step? {
         var best: Pair<Int, Chain>? = null
-        for (found in whatIfs(s)) {
-            if (best == null || found.second.forced.size < best.second.forced.size) best = found
-            if (found.second.forced.size <= 1) break
+        whatIfs(s) { x, chain ->
+            // A chain of one or none is as short as any (an earlier one that short would have returned), so take it.
+            if (chain.forced.size <= 1) return whatIfStep(s, x, chain)
+            if (best == null || chain.forced.size < best!!.second.forced.size) best = x to chain
         }
         val (x, chain) = best ?: return null
         return whatIfStep(s, x, chain)

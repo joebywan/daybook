@@ -11,6 +11,7 @@ import com.joebywan.daybook.puzzles.DominoState
 import com.joebywan.daybook.puzzles.Dominoes
 import com.joebywan.daybook.puzzles.Placement
 import com.joebywan.daybook.puzzles.RuleKind
+import com.joebywan.daybook.puzzles.DominoTeacher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -229,6 +230,22 @@ class DominoesTrainingTest {
         }
         assertTrue("some practice has another instance ($others)", others > 0)
         assertTrue("some practice has an unjustified true domino ($unjustified)", unjustified > 0)
+    }
+
+    @Test fun `each technique's list of steps starts with the step deduce picks`() {
+        // deduce keeps its own direct path (it runs in the generator's gate); this pins the two to the same first step.
+        var positions = 0
+        for (k in 0 until 30) {
+            val start = DominoesTraining.board(k, Difficulty.EXPERT) ?: continue
+            for (p in DominoesTraining.drill.walk(start)) {
+                val b = p.board as DominoState
+                val pick = p.step as Deduction
+                val all = DominoTeacher.instances(b.layout, b.placed, pick.technique)
+                positions++
+                assertTrue(all.any { it.targets == pick.targets })
+            }
+        }
+        assertTrue(positions > 100)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

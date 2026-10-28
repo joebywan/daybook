@@ -8,6 +8,7 @@ import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.puzzles.Lits
 import com.joebywan.daybook.puzzles.LitsState
+import com.joebywan.daybook.puzzles.LitsTeacher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -161,6 +162,24 @@ class LitsTrainingTest {
         }
         assertTrue("some practice has another instance ($others)", others > 0)
         assertTrue("some practice has an unjustified true square ($unjustified)", unjustified > 0)
+    }
+
+    @Test fun `each technique's list of steps starts with the step deduce picks`() {
+        // deduce keeps its own direct path (it runs in the generator's gate); this pins the two to the same first step.
+        var positions = 0
+        for (k in 0 until 30) {
+            val start = LitsTraining.board(k, Difficulty.EXPERT) ?: continue
+            for (p in LitsTraining.drill.walk(start)) {
+                val b = p.board as LitsState
+                val pick = p.step as Deduction
+                val all = LitsTeacher.instances(b.width, b.height, b.region, b.shaded, pick.technique)
+                positions++
+                // The what-if picks the shortest chain, not the first square; it is still one of the list.
+                if (pick.technique == LitsTeacher.WHAT_IF) assertTrue(all.any { it.targets == pick.targets })
+                else assertEquals(pick.targets, all.first().targets)
+            }
+        }
+        assertTrue(positions > 100)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

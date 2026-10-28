@@ -9,6 +9,7 @@ import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.puzzles.Block
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.ShikakuState
+import com.joebywan.daybook.puzzles.ShikakuTeacher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -153,6 +154,22 @@ class ShikakuTrainingTest {
         }
         assertTrue("some practice has another instance ($others)", others > 0)
         assertTrue("some practice has an unjustified true rectangle ($unjustified)", unjustified > 0)
+    }
+
+    @Test fun `each technique's list of steps starts with the step deduce picks`() {
+        // deduce keeps its own direct path (it runs in the generator's gate); this pins the two to the same first step.
+        var positions = 0
+        for (k in 0 until 30) {
+            val start = ShikakuTraining.board(k, Difficulty.EXPERT) ?: continue
+            for (p in ShikakuTraining.drill.walk(start)) {
+                val b = p.board as ShikakuState
+                val pick = p.step as Deduction
+                val all = ShikakuTeacher.instances(b.width, b.height, b.clues, b.blocks, pick.technique)
+                positions++
+                assertEquals(pick.targets, all.first().targets)
+            }
+        }
+        assertTrue(positions > 100)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

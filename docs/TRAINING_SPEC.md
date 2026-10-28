@@ -119,8 +119,14 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     gets no "true, but not this technique" note either: nothing can tell it from the first cross of a step the player is
     still making, so a note would fire on honest progress.
   - Shikaku, Dominoes and LITS supply `every` from `ShikakuTeacher.instances`, `DominoTeacher.instances` and
-    `LitsTeacher.instances` (each rung's function now a sequence, `deduce` taking its first as before; LITS's what-if
-    still takes the shortest chain). Dominoes' instances of a rung are the placements settled once that rung's level and
+    `LitsTeacher.instances`. Shikaku's and LITS's rung functions take an optional list to collect every step into and
+    otherwise return their first, as before, so `deduce` keeps main's direct path; LITS's what-if still takes the
+    shortest chain. Not sequences: `deduce` runs inside those generators' gates, and `sequence { }` made a year of LITS
+    daily boards about 25% slower (Expert mean 111 ms to 141-157 ms on the JVM) and Shikaku Expert 15-30% slower; with
+    the collector the year matches main within noise (LITS Expert 99.6 against 98.3 ms, worst 216 against 216 ms;
+    Shikaku Expert 2.55 against 2.81 ms). Dominoes' what-if list is a sequence, since its ladder's what-if is reached
+    only after steps 1-5 are spent, and a year of Dominoes boards stayed within noise (Expert 20.0 against 20.8 ms).
+    The training tests pin each list's first step to `deduce`'s pick over the first 30 practice seeds' Expert walks. Dominoes' instances of a rung are the placements settled once that rung's level and
     those below it have struck all they can, named as the hint names them (so an "only place" practice passes another
     domino with one place left, not a square with one partner); its what-if's, every square a what-if settles.
   - Only proved boards: `Course`'s last parameter, `generate`, is a seed's board or null to skip the seed. It defaults
