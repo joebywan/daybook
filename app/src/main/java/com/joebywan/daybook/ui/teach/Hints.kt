@@ -47,6 +47,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -267,6 +276,26 @@ fun HintSession.buttonLabel(): String = when {
     stage == HintStage.NUDGE -> "Why?"
     else -> "Show me"
 }
+
+/**
+ * The keys a screen around a board answers, for any puzzle (a hardware or web keyboard): Ctrl/Cmd+Z [onUndo], H
+ * [onHint], Esc closes an open hint. A null action leaves its key alone, and nothing is taken unless [enabled].
+ * The focused board sees every key first, so a board that uses H itself (Lexicon) keeps it. The play screen and
+ * Training both put this round their board, so a board takes the same keys wherever it is played.
+ */
+fun Modifier.hintKeys(enabled: Boolean, hints: HintSession, onHint: (() -> Unit)?, onUndo: (() -> Unit)? = null): Modifier =
+    onKeyEvent { event ->
+        if (!enabled || event.type != KeyEventType.KeyDown || event.isAltPressed) return@onKeyEvent false
+        val action = when {
+            event.key == Key.Z && (event.isCtrlPressed || event.isMetaPressed) && !event.isShiftPressed -> onUndo
+            event.isCtrlPressed || event.isMetaPressed || event.isShiftPressed -> null
+            event.key == Key.H -> onHint
+            event.key == Key.Escape && hints.active -> hints::clear
+            else -> null
+        } ?: return@onKeyEvent false
+        action()
+        true
+    }
 
 /**
  * The hint itself: the nudge, then the reasoning, then a brief "that's it". With [fill] it takes
