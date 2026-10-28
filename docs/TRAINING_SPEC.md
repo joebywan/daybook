@@ -18,11 +18,17 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
 - **A technique** (route `training|<technique>|…|<puzzle>`): a short explanation in the hints' voice, then a practice
   board. The player finds the step and makes it. A right digit adds one to the run; three in a row passes the technique
-  (a tick, the chime, "Passed"). A wrong digit ends the run and shows the reasoning that was there to find. The next board
-  is one tap away. Hints work as in a game (nudge, why, show me); a board where a hint was opened does not count towards
+  (the chime, "Passed! 3 in a row." and any achievement it earns, with the board and Next board locked), and after
+  2.5 s back takes the player to where the practice was opened from: the puzzle's technique list, with the new tick, when
+  opened from it; the game or the Techniques page when opened by "Practise this" or "Practise", as back would. The owner
+  (2026-10-28): "send the user back to the list when they achieve the goal. Otherwise they're likely to get stuck there."
+  Every run that reaches three does this, on a technique already passed too (1.19 said only "That's it." there and kept
+  the player on the board, which read as no pass at all); achievements are announced once. A wrong digit ends the run
+  and shows the reasoning that was there to find. The next board is one tap away. Hints work as in a game (nudge, why, show me); a board where a hint was opened does not count towards
   the run and does not break it.
 - **The final board** opens once every technique of that puzzle is passed: a whole Expert board whose own walk by the hint
-  ladder needs every technique. Solving it without "Show me" earns the second achievement. Hints are allowed (they teach).
+  ladder needs every technique. Solving it without "Show me" earns the second achievement, and
+  like a technique's pass shows "Solved!" for 2.5 s and then goes back to the list (a solve with a Show me stays, to start again). Hints are allowed (they teach).
 - **Ways in:**
   - **"Train: practise the techniques"** on the rules sheet (the play screen's "?") of a puzzle that has Training: opens
     that puzzle's techniques; back from there returns to the game, and back from a technique opened there returns to the list.
@@ -137,10 +143,15 @@ Nothing had to be excluded: every technique every teacher names is found within 
 
 - **Sudoku** (unchanged by the generalisation): singles 20-150 ms, locked candidates 280 ms, what-if 300 ms, naked pair
   890 ms, hidden pair 930 ms.
-- **Cage Sudoku:** the five singles and the cage's combinations 50-100 ms; the 45 rule 120 ms; linked totals 280 ms (25 of
-  60 Hard boards reach it, 55 of 60 Expert); every cage worked through together 690 ms (10 of 60 Hard, all 60 Expert). The
-  chain is the teacher's catch-all, so its practice's explanation is the hint's summary ("work the cage totals through
-  together"), not a worked line; it is kept because it is a step the hints really take.
+- **Cage Sudoku:** the five singles and the cage's combinations 50-140 ms; the 45 rule 160 ms; linked totals 330 ms (24 of
+  60 Hard boards reach it, 57 of 60 Expert); every cage worked through together 770 ms (10 of 60 Hard, all 60 Expert). The
+  chain's hint, and so its practice, is a worked line like linked totals' (each group named in turn with the digits it
+  leaves, ending in the square), not a summary: median 247 characters, 65% within 300, the rest scrolling in the slot
+  (`docs/TEACHING.md`). It kept its id: the same step, only explained, so a pass of it stands and no record or achievement
+  moved. Its square is now the one of the chain's first three singles with the shortest line, so walks after the first
+  chain step can differ: a practice stops at the first step of its technique, so only one whose walk passes a chain step
+  first (some linked-totals practices on Hard) may land elsewhere. Index 0 still needs all nine (33 of the first 60 Expert
+  boards do).
 - **Inequality:** the five singles 6-16 ms (4x4 boards; a sign-bound or sign-place position is often the empty board, so
   boards differ by their signs); naked pair 90 ms (all 60 Hard boards); hidden pair 400 ms (all 60 Expert boards; 19 of 60
   reach a naked pair there, against all 60 on Hard).
@@ -155,7 +166,7 @@ Nothing had to be excluded: every technique every teacher names is found within 
   empty and confined 1-5 ms first, 3-6 ms next; the what-if 153 ms first, 91 ms a board after (max 287 ms), since only 18
   of 60 Expert boards reach it. Standard reaches the first three on 56-60 of 60 boards, Hard adds confined on all 60.
 - **Final boards** (Expert, the first practice seed whose walk needs every technique, each pinned by a test):
-  Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (32 of the first 60); Inequality index 4 (17 of the first
+  Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (33 of the first 60); Inequality index 4 (17 of the first
   60); Regions index 0 (all 60); Kings index 1 (17 of the first 60).
 - **Mines** (move drill; measured on a machine shared with other builds, so on the high side): all found, all mines,
   subset and pair 1-38 ms for the first board, a mean of 1-4 ms a board after (max 16 ms); the count against the numbers

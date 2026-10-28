@@ -269,7 +269,6 @@ were declined by the owner (2026-10-25): a shipped list runs out and would need 
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
 A practice mode per technique, once declined, is now wanted (2026-10-26): Training, for Sudoku, Cage Sudoku,
 Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played final board when the player leaves it;
-Cage Sudoku's "every cage worked through together" practice explains itself only as a summary, as its hint does.
 Kings, Mines, Lamps and Tents have the general practice shape (`MoveDrill`); the other puzzles' courses are classified
 and batched in `docs/TRAINING_SPEC.md`.
 
