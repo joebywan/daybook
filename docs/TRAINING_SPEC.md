@@ -168,6 +168,10 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - Kings' practice checked at 375x537 and 390x844 in Chromium and WebKit (`tools/render/render.py --home --query
   "screen=training&puzzle=kings&technique=would-empty"`, with taps for a wrong cross and for the step), and on the
   Android emulator through a hint's "Practise this" and a Show me: the board stays put through every verdict.
+- Mosaic's three practices and its final board checked at 375x537 and 390x844 in Chromium and WebKit (`render.py --home
+  --query "screen=training&puzzle=mosaic&technique=count"`, with taps for a losing fill and for the step), its badges on
+  `?screen=achievements` (a harness hook added with it), and on the Android emulator: a hinted step, a wrong fill, the
+  board still through each verdict. The 375x537 board is small (the slot and buttons take what Kings' take).
 
 ## Classification of every puzzle
 
