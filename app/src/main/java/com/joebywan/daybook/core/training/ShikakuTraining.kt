@@ -5,8 +5,9 @@ import com.joebywan.daybook.puzzles.ShikakuState
 import com.joebywan.daybook.puzzles.ShikakuTeacher
 
 /**
- * Shikaku's course, on [MoveDrill]: every step is one rectangle to draw. The player draws it (drag corner to corner); a
- * rectangle the teacher calls a mistake ends the run, and a correct rectangle elsewhere plays on.
+ * Shikaku's course, on [MoveDrill]: every step is one rectangle to draw. The player draws it, or any other rectangle the
+ * same technique settles (drag corner to corner); a rectangle the teacher calls a mistake ends the run, and a correct
+ * rectangle the technique does not settle plays on.
  */
 val ShikakuTraining: Course = Course(
     puzzle = Shikaku,
@@ -23,9 +24,10 @@ val ShikakuTraining: Course = Course(
     // Standard boards reach the first two; Hard is the easiest tier that reaches the other two.
     tierFor = tierByIndex({ ShikakuTraining.techniques }, hard = 2, expert = 4),
     // ShikakuTeacher.deduce has no parameter through which the answer could reach it.
-    drill = MoveDrill { s ->
-        (s as ShikakuState).let { k -> ShikakuTeacher.deduce(k.width, k.height, k.clues, k.blocks)?.let { Shikaku.deduction(it) } }
-    },
+    drill = MoveDrill(
+        next = { s -> (s as ShikakuState).let { k -> ShikakuTeacher.deduce(k.width, k.height, k.clues, k.blocks)?.let { Shikaku.deduction(it) } } },
+        every = { s, t -> (s as ShikakuState).let { k -> ShikakuTeacher.instances(k.width, k.height, k.clues, k.blocks, t).map { Shikaku.deduction(it) } } },
+    ),
     badge = "2x3",
     // The first practice seed whose Expert board's walk needs all four. Pinned by ShikakuTrainingTest.
     examIndex = 15,

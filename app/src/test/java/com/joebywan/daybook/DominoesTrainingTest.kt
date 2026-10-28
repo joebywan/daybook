@@ -25,7 +25,12 @@ import org.junit.Test
  */
 class DominoesTrainingTest {
 
-    private class Cand(val d: Int, val s: Int, val t: Int, val vs: Int, val vt: Int)
+    private class Cand(val d: Int, val s: Int, val t: Int, val vs: Int, val vt: Int) {
+        /** How it settled: "square" with the settled square's free neighbours, or "domino". Set by [forced]. */
+        var by = ""
+        var freeNeighbours = 0
+        val placement get() = Placement(s, t)
+    }
 
     /**
      * Strikes candidates on [b] with the levels up to [level] (1 a square with one partner, 3 a rule broken whatever goes
@@ -128,8 +133,12 @@ class DominoesTrainingTest {
             if (!changed) break
         }
         val live = cands.indices.filter { alive[it] }.map { cands[it] }
-        return (0 until n).filter { free[it] }.mapNotNull { q -> live.filter { it.s == q || it.t == q }.singleOrNull() } +
-            b.tray.indices.filter { b.placed[it] == null }.mapNotNull { k -> live.filter { it.d == k }.singleOrNull() }
+        fun copy(c: Cand, by: String, q: Int) = Cand(c.d, c.s, c.t, c.vs, c.vt).also {
+            it.by = by
+            it.freeNeighbours = if (q < 0) 0 else (0 until n).count { x -> free[x] && (adjacent(q, x) || adjacent(x, q)) }
+        }
+        return (0 until n).filter { free[it] }.mapNotNull { q -> live.filter { it.s == q || it.t == q }.singleOrNull()?.let { copy(it, "square", q) } } +
+            b.tray.indices.filter { b.placed[it] == null }.mapNotNull { k -> live.filter { it.d == k }.singleOrNull()?.let { copy(it, "domino", -1) } }
     }
 
     /** The level each rung's step needs: the three "only" steps up to the rule fit, then 4, 5 and the what-if. */
@@ -182,13 +191,44 @@ class DominoesTrainingTest {
                 // The same domino turned the wrong way round, when it isn't a double: wrong too.
                 val way = b.answer[laid]
                 if (b.tray[laid].a != b.tray[laid].b) assertEquals(false, DominoesTraining.judge(p, DominoLogic.place(b, laid, Placement(way.second, way.first))))
-                // Another domino laid where the answer has it, away from the step's squares: play on.
-                val other = b.tray.indices.firstOrNull { k ->
-                    k != laid && b.placed[k] == null && setOf(b.answer[k].first, b.answer[k].second).none { it == way.first || it == way.second }
-                }
-                if (other != null) assertNull(DominoesTraining.judge(p, DominoLogic.place(b, other, b.answer[other])))
             }
         }
+    }
+
+    /** The instances of rung [rung] on [b] by the counting above, as placements: the three "only" steps told apart by how they settle. */
+    private fun instances(b: DominoState, rung: Int): Set<Pair<Int, Placement>> = forced(b, levelOf[rung]).filter { c ->
+        when (rung) {
+            0 -> c.by == "square" && c.freeNeighbours == 1
+            1 -> c.by == "domino"
+            2 -> c.by == "square" && c.freeNeighbours != 1
+            else -> true
+        }
+    }.map { it.d to it.placement }.toSet()
+
+    @Test fun `another instance of the same technique is right, and a true domino no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for ((rung, t) in DominoesTraining.techniques.take(5).withIndex()) {
+            for (p in DominoesTraining.practices(t).take(12)) {
+                val b = p.board as DominoState
+                val mine = (p.step as Deduction).apply(b) as DominoState
+                val laid = b.tray.indices.single { b.placed[it] == null && mine.placed[it] != null }
+                val found = instances(b, rung)
+                assertTrue("$t: the step is an instance by counting", found.any { (k, q) -> k == laid && same(b, k, q, mine.placed[k]!!) })
+                for ((k, q) in found) {
+                    if (k == laid) continue
+                    others++
+                    assertEquals("$t: domino $k at $q", true, DominoesTraining.judge(p, DominoLogic.place(b, k, q)))
+                }
+                // A domino laid where the answer has it, that no instance of the technique settles: no verdict.
+                b.tray.indices.firstOrNull { k -> b.placed[k] == null && found.none { it.first == k } }?.let { k ->
+                    unjustified++
+                    assertNull("$t: domino $k", DominoesTraining.judge(p, DominoLogic.place(b, k, b.answer[k])))
+                }
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true domino ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

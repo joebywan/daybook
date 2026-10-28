@@ -5,7 +5,8 @@ import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.LitsTeacher
 
 /**
- * LITS' course, on [MoveDrill]: every step shades squares. The player shades them (tap by tap or in a drag); a square
+ * LITS' course, on [MoveDrill]: every step shades squares. The player shades them, or the squares of any other step of
+ * the same technique (tap by tap or in a drag); a square
  * the teacher calls a mistake ends the run, which for LITS means no answer under the win check's rules keeps it (no
  * connectivity rule, PR #15). Boards come from [Lits.generateVerified] only, never [Lits.generate]'s unproved floor.
  */
@@ -29,7 +30,10 @@ val LitsTraining: Course = Course(
     // is drawn from Expert: Hard reaches it on 3 boards in 60, Expert on 25.
     tierFor = tierByIndex({ LitsTraining.techniques }, hard = 4, expert = 5),
     // LitsTeacher.deduce has no parameter through which the answer could reach it.
-    drill = MoveDrill { s -> (s as LitsState).let { l -> LitsTeacher.deduce(l.width, l.height, l.region, l.shaded)?.let { Lits.deduction(it) } } },
+    drill = MoveDrill(
+        next = { s -> (s as LitsState).let { l -> LitsTeacher.deduce(l.width, l.height, l.region, l.shaded)?.let { Lits.deduction(it) } } },
+        every = { s, t -> (s as LitsState).let { l -> LitsTeacher.instances(l.width, l.height, l.region, l.shaded, t).map { Lits.deduction(it) } } },
+    ),
     badge = "L",
     // The first practice seed whose Expert board's walk needs all six. Pinned by LitsTrainingTest.
     examIndex = 5,

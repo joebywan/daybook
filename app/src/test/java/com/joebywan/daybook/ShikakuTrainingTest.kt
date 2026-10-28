@@ -64,26 +64,29 @@ class ShikakuTrainingTest {
                 }
             }
         }
-        val fits = open.any { options.getValue(it).size == 1 }
-        val reaches = (0 until w * s.height).any { cell ->
-            if (taken[cell] || s.clues[cell] != null) return@any false
+        /** Each rung's instances, as the squares of the rectangle each one settles. */
+        val fitting: Set<Set<Int>> = open.mapNotNull { options.getValue(it).singleOrNull() }.toSet()
+        val reaching: Set<Set<Int>> = (0 until w * s.height).mapNotNull { cell ->
+            if (taken[cell] || s.clues[cell] != null) return@mapNotNull null
             val by = open.filter { c -> options.getValue(c).any { cell in it } }
-            by.size == 1 && options.getValue(by[0]).count { cell in it } == 1
-        }
-        val common = open.any { a ->
+            if (by.size == 1) options.getValue(by[0]).filter { cell in it }.singleOrNull() else null
+        }.toSet()
+        val sharing: Set<Set<Int>> = open.flatMap { a ->
             val opts = options.getValue(a)
             val shared = if (opts.size < 2) emptySet() else opts.reduce { x, y -> x intersect y } - a
-            shared.isNotEmpty() && open.any { b ->
-                b != a && options.getValue(b).size >= 2 && options.getValue(b).count { o -> o.none { it in shared } } == 1
+            if (shared.isEmpty()) emptyList() else open.mapNotNull { b ->
+                if (b == a || options.getValue(b).size < 2) null else options.getValue(b).filter { o -> o.none { it in shared } }.singleOrNull()
             }
+        }.toSet()
+
+        fun instances(rung: Int): Set<Set<Int>>? = when (rung) {
+            0 -> fitting
+            1 -> reaching
+            2 -> sharing
+            else -> null
         }
 
-        fun has(rung: Int) = when (rung) {
-            0 -> fits
-            1 -> reaches
-            2 -> common
-            else -> false
-        }
+        fun has(rung: Int) = instances(rung)?.isNotEmpty() ?: false
     }
 
     private fun cellsOf(s: ShikakuState, b: Block) = b.cells(s.width).toSet()
@@ -119,18 +122,37 @@ class ShikakuTrainingTest {
             for (p in ShikakuTraining.practices(t).take(3)) {
                 val b = p.board as ShikakuState
                 val d = p.step as Deduction
-                val step = (d.apply(b) as ShikakuState).blocks.single { it !in b.blocks }
                 assertEquals(true, ShikakuTraining.judge(p, d.apply(b)))
                 // A rectangle the right size around an open number, but not the answer's: wrong.
                 val r = Rungs(b)
                 val stray = r.options.values.flatten().first { o -> b.solution.none { cellsOf(b, it) == o } }
                 val strayBlock = Block(stray.min() / b.width, stray.min() % b.width, stray.max() / b.width, stray.max() % b.width)
                 assertEquals(false, ShikakuTraining.judge(p, b.place(strayBlock)))
-                // Another rectangle of the answer, drawn first: play on.
-                val other = b.solution.firstOrNull { it != step && it !in b.blocks }
-                if (other != null) assertNull(ShikakuTraining.judge(p, b.place(other)))
             }
         }
+    }
+
+    @Test fun `another instance of the same technique is right, and a true rectangle no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for ((rung, t) in ShikakuTraining.techniques.take(3).withIndex()) {
+            for (p in ShikakuTraining.practices(t).take(12)) {
+                val b = p.board as ShikakuState
+                val instances = Rungs(b).instances(rung)!!
+                fun blockOf(cells: Set<Int>) = Block(cells.min() / b.width, cells.min() % b.width, cells.max() / b.width, cells.max() % b.width)
+                for (x in instances - setOf((p.step as Deduction).targets)) {
+                    others++
+                    assertEquals("$t: rectangle $x", true, ShikakuTraining.judge(p, b.place(blockOf(x))))
+                }
+                // A rectangle of the answer that no instance of the technique settles: no verdict.
+                b.solution.firstOrNull { it !in b.blocks && cellsOf(b, it) !in instances }?.let {
+                    unjustified++
+                    assertNull("$t: rectangle $it", ShikakuTraining.judge(p, b.place(it)))
+                }
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true rectangle ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

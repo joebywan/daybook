@@ -64,24 +64,35 @@ class LitsTrainingTest {
         private fun common(shapes: List<Shape>): Set<Int> =
             if (shapes.isEmpty()) emptySet() else shapes.map { it.cells }.reduce { a, b -> a intersect b }
 
-        private fun forces(k: Int, shapes: List<Shape>) = !complete(k) && common(shapes).any { !shaded[it] }
+        /** The squares [shapes], all a region could hold, force: those every one covers that are not shaded yet. */
+        private fun forced(k: Int, shapes: List<Shape>) = if (complete(k)) emptySet() else common(shapes).filter { !shaded[it] }.toSet()
 
-        val whole = regions.indices.any { regions[it].size == 4 && !complete(it) }
-        val overlap = regions.indices.any { forces(it, geo(it)) }
-        val filtered = regions.indices.any { k ->
-            forces(k, geo(k).filter { !fillsBlock(it) }) || forces(k, geo(k).filter { !clashes(it) }) || forces(k, cand(k))
-        }
-        val neighbour = regions.indices.any { k ->
-            forces(k, cand(k).filter { t -> regions.indices.none { b -> b != k && cand(b).none { u -> !conflict(t, u) } } })
+        /** Each rung's instances, as the squares each one shades, region by region. */
+        val whole = regions.indices.filter { regions[it].size == 4 && !complete(it) }.map { k -> regions[k].filter { !shaded[it] }.toSet() }
+        val overlap = regions.indices.map { forced(it, geo(it)) }.filter { it.isNotEmpty() }
+        private val noBlock = regions.indices.map { k -> forced(k, geo(k).filter { !fillsBlock(it) }) }
+
+        /** The 2x2 rule where it forces something; else the letter rule, alone or with the 2x2 (one per region, so). */
+        val avoid = noBlock.filter { it.isNotEmpty() }
+        val clash = regions.indices.filter { noBlock[it].isEmpty() }
+            .map { k -> forced(k, geo(k).filter { !clashes(it) }).ifEmpty { forced(k, cand(k)) } }.filter { it.isNotEmpty() }
+        val neighbour = regions.indices.map { k ->
+            forced(k, cand(k).filter { t -> regions.indices.none { b -> b != k && cand(b).none { u -> !conflict(t, u) } } })
+        }.filter { it.isNotEmpty() }
+
+        fun instances(rung: Int): List<Set<Int>>? = when (rung) {
+            0 -> whole
+            1 -> overlap
+            2 -> avoid
+            3 -> clash
+            4 -> neighbour
+            else -> null
         }
 
         /** By rung: the 2x2 and the letter rule are one rung (the teacher takes whichever region comes first). */
         fun has(rung: Int) = when (rung) {
-            0 -> whole
-            1 -> overlap
-            2, 3 -> filtered
-            4 -> neighbour
-            else -> false
+            2, 3 -> avoid.isNotEmpty() || clash.isNotEmpty()
+            else -> instances(rung)?.isNotEmpty() ?: false
         }
     }
 
@@ -125,6 +136,31 @@ class LitsTrainingTest {
                 if (d.targets.size > 1) assertNull(LitsTraining.judge(p, b.toggle(d.targets.first())))
             }
         }
+    }
+
+    @Test fun `another instance of the same technique is right, and a true square no instance justifies plays on`() {
+        var others = 0
+        var unjustified = 0
+        for ((rung, t) in LitsTraining.techniques.take(5).withIndex()) {
+            for (p in LitsTraining.practices(t).take(12)) {
+                val b = p.board as LitsState
+                val answer = b.solution.indices.filter { b.solution[it] }.toSet()
+                val found = Rungs(b).instances(rung)!!
+                val mine = (p.step as Deduction).targets
+                assertTrue("$t: the step is an instance by counting", mine in found)
+                for (x in found - setOf(mine)) {
+                    others++
+                    assertEquals("$t: shading $x", true, LitsTraining.judge(p, b.paint(x, true)))
+                }
+                // A square of the answer that no instance of the technique shades by itself: no verdict.
+                b.shaded.indices.firstOrNull { !b.shaded[it] && it in answer && setOf(it) !in found }?.let {
+                    unjustified++
+                    assertNull("$t: square $it", LitsTraining.judge(p, b.toggle(it)))
+                }
+            }
+        }
+        assertTrue("some practice has another instance ($others)", others > 0)
+        assertTrue("some practice has an unjustified true square ($unjustified)", unjustified > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {
