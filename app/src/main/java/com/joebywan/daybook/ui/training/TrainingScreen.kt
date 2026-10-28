@@ -58,6 +58,7 @@ import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
 import com.joebywan.daybook.ui.tutorial.LocalChime
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -214,6 +215,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
         board = next
         scope.launch {
             val right = withContext(Dispatchers.Default) { course.judge(p, next) } ?: return@launch
+            if (!right) delay(course.drill.settleMillis)
             if (board === next && verdict == null) settle(right)
         }
     }

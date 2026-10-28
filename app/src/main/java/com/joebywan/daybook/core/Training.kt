@@ -164,6 +164,9 @@ object Training {
             InequalityTraining,
             RegionsTraining,
             KingsTraining,
+            MamboTraining,
+            NonogramTraining,
+            TallyTraining,
         )
     }
 
@@ -303,6 +306,13 @@ interface Drill {
 
     /** See [Course.judge]. */
     fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean?
+
+    /**
+     * How long the practice screen holds a "wrong" before showing it; a newer move in that time drops it. For a board
+     * whose single moves pass through a wrong state (Mambo's tap cycle makes every sun a moon first), as the board's
+     * own rule-break caption waits.
+     */
+    val settleMillis: Long get() = 0
 }
 
 /**
@@ -352,6 +362,7 @@ class PlacementDrill(
  * "another correct mark" would pass a guess, where a placed digit could not be.
  */
 class MoveDrill(
+    override val settleMillis: Long = 0,
     /**
      * The teacher's next step on the state as a [Deduction], from what the player can see: build it from the teacher's
      * visible-state entry point (one with no parameter for the answer), never from `teach`, which reads the answer.

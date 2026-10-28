@@ -212,7 +212,11 @@ object Nonogram : PuzzleType {
     /** A mistake to take back or a step to reason out; see [NonogramTeacher]. */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as NonogramState
-        val step = NonogramTeacher.teach(s) ?: return null
+        return deduction(s, NonogramTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] on [s] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(s: NonogramState, step: NonogramTeacher.Step): Deduction {
         val before = s.cells
         return Deduction(
             step,

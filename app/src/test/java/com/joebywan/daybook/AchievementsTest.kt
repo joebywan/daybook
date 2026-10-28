@@ -25,7 +25,8 @@ class AchievementsTest {
         newlyEarned(h, s, today, pids).map { it.id }.toSet()
 
     @Test fun sizeAndUniqueIds() {
-        assertTrue(ACHIEVEMENTS.size in 15..30)
+        // Training brings two per course on top of the rest.
+        assertTrue(ACHIEVEMENTS.size - 2 * com.joebywan.daybook.core.Training.COURSES.size in 15..30)
         assertEquals(ACHIEVEMENTS.size, ACHIEVEMENTS.map { it.id }.toSet().size)
     }
 
