@@ -28,7 +28,7 @@ val ChessTraining: Course = Course(
         ChessTeacher.replay(c)?.takeIf { !it.mated && it.mistakeIndex < 0 }
             ?.let { ChessTeacher.deduce(it.position, it.remaining) }?.let { ChessTeacher.deduction(c, it) }
     },
-    badge = "#",
+    badge = "M", // not "#": a glyph starting with # names a drawn shape (AchievementBadge)
     // The first practice seed whose Expert walk needs all three (13 of the first 60). Pinned by ChessTrainingTest.
     examIndex = 6,
 )

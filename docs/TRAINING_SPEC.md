@@ -35,7 +35,7 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
 - **Achievements** (appended, two per puzzle): "<Puzzle> trained" for passing every technique, "<Puzzle> graduate" for
   then solving the final board: Sudoku's two (`sudokuTrained`, `sudokuGraduate`), then `cagesTrained`, `cagesGraduate`,
   `inequalityTrained`, `inequalityGraduate`, `regionsTrained`, `regionsGraduate`, `kingsTrained`, `kingsGraduate`, `whoswhoTrained`, `whoswhoGraduate`,
-  `cipherTrained`, `cipherGraduate`, `chessTrained`, `chessGraduate` (badges `?`, `+`, `#`). They
+  `cipherTrained`, `cipherGraduate`, `chessTrained`, `chessGraduate` (badges `?`, `A+B`, `M`; a badge glyph must not start with `#`, which names a drawn shape). They
   are built from `Training.COURSES` in its order (so a course appended there appends its two), announced on the training
   screen as they are earned and shown on the Achievements page; the trained badge's glyph is the course's `badge`, the
   graduate's the crown.
