@@ -1,4 +1,4 @@
-- Training: a right move is now explained as the move you made, not the one the hint had in mind, for every puzzle, Chess, Pipes and Mosaic included.
-- Training on short screens: the explanation under the board takes less room, so the board gets more.
-- Mosaic training: a fill that works but isn't the technique now says so, instead of leaving you guessing.
-- Chess training: a wrong move no longer mentions Undo and Restart, which practice doesn't have.
+- Training is now on Home: the mode row reads Daily · Levels · Training. Pick Training to see every puzzle with a course, how far you are through each, and open one with a tap.
+- Daily and Random share the first button: tap it again to switch between them.
+- Each mode button shows a little more: your level, and how many courses you've graduated.
+- The rows at the top of Home sit closer together, so the grid gets more of the screen.

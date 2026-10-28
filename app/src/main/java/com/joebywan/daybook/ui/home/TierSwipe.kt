@@ -33,7 +33,7 @@ import kotlin.math.sign
 internal fun swipedTier(
     startX: Float, dx: Float, dy: Float, width: Float, edge: Float, threshold: Float, mode: LaunchMode, tier: Difficulty,
 ): Difficulty? {
-    if (mode == LaunchMode.LEVELS || startX < edge || startX > width - edge) return null
+    if (!mode.tiered || startX < edge || startX > width - edge) return null
     if (abs(dx) < threshold || abs(dx) < 2 * abs(dy)) return null
     return Difficulty.entries.getOrNull(tier.ordinal + if (dx < 0) 1 else -1)
 }

@@ -106,7 +106,7 @@ sealed interface Route {
     /**
      * Training (`docs/TRAINING_SPEC.md`): the list of puzzles; with [puzzle], its techniques; with [technique] too, that
      * technique's practice (`exam` the final board). [fromHint]: opened from outside Training (a hint's "Practise this",
-     * the rules sheet, the Techniques page), so back returns to where that was. [listFromHint]: a practice opened from a
+     * the rules sheet, the Techniques page, a course's tile in Home's Training mode), so back returns to where that was. [listFromHint]: a practice opened from a
      * [fromHint] list, so back is that list. A route saved before [puzzle] existed was Sudoku's.
      */
     data class Training(
@@ -288,6 +288,8 @@ private fun DaybookScreens(
     // Saveable rather than stored: it survives rotation and process death, but a cold start comes
     // back to Daily, because that is what the app is for.
     var mode by rememberSaveable { mutableStateOf(startMode) }
+    // Whichever of Daily and Random was last in use: the mode row's first segment returns to it (tappedMode).
+    var dayMode by rememberSaveable { mutableStateOf(if (startMode == LaunchMode.RANDOM) LaunchMode.RANDOM else LaunchMode.DAILY) }
 
     // Null until the store answers: a level board's seed depends on the pool size its level was opened with,
     // so the play route waits for it rather than deal a board from a guess.
@@ -375,7 +377,8 @@ private fun DaybookScreens(
             val tileKeys by produceState(emptyMap<String, String>(), today, difficulty, mode, levelBoards) {
                 value = if (mode == LaunchMode.LEVELS) {
                     levelBoards.orEmpty().associate { savedGameKey(it.puzzleId, it.difficulty, it.seed) to it.puzzleId }
-                } else PuzzleRegistry.all.mapNotNull { p ->
+                } else if (mode == LaunchMode.TRAINING) emptyMap() // a course's tile opens no saved game
+                else PuzzleRegistry.all.mapNotNull { p ->
                     val seed = when (mode) {
                         LaunchMode.RANDOM -> SeedHash.random(
                             p.id, difficulty, store.currentRandomNonce(p.id, difficulty) ?: return@mapNotNull null,
@@ -406,7 +409,11 @@ private fun DaybookScreens(
                 difficulty = difficulty,
                 onDifficulty = setDifficulty,
                 mode = mode,
-                onMode = { mode = it },
+                dayMode = dayMode,
+                onMode = {
+                    mode = it
+                    if (it.tiered) dayMode = it
+                },
                 onLaunch = { puzzleId ->
                     when (mode) {
                         LaunchMode.DAILY -> route = Route.Play(puzzleId, difficulty, today)
@@ -415,8 +422,14 @@ private fun DaybookScreens(
                         LaunchMode.RANDOM -> scope.launch {
                             route = Route.Play(puzzleId, difficulty, null, store.randomNonce(puzzleId, difficulty))
                         }
+                        // The course, opened as the rules sheet opens it: back from it is Home, still in Training.
+                        LaunchMode.TRAINING -> {
+                            practiseFrom = Route.Home
+                            route = Route.Training(fromHint = true, puzzle = puzzleId)
+                        }
                     }
                 },
+                trained = trained,
                 levels = levels,
                 onLevels = { route = Route.Levels() },
                 onArchive = { route = Route.Days() },

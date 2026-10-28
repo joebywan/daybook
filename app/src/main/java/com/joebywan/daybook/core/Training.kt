@@ -150,7 +150,16 @@ class Course(
 
     /** Whether every technique is passed, which opens the final board. */
     fun allPassed(record: Set<String>) = techniques.all { passed(record, it) }
+
+    /** How many of [techniques] are passed (the final board is not one of them). */
+    fun passedCount(record: Set<String>) = techniques.count { passed(record, it) }
+
+    /** Graduated: the final board passed, or every technique where the course has none. */
+    fun graduated(record: Set<String>) = if (hasExam) passed(record, Training.EXAM) else allPassed(record)
 }
+
+/** Training as a whole, for Home: courses graduated of [courses], and techniques passed across them all. */
+class TrainingTally(val graduated: Int, val courses: Int, val passed: Int)
 
 object Training {
     /** Right answers in a row that pass a technique. A hinted board does not count, nor break the run. */
@@ -204,6 +213,9 @@ object Training {
     }
 
     fun of(puzzleId: String?): Course? = COURSES.firstOrNull { it.id == puzzleId }
+
+    fun tally(record: Set<String>) =
+        TrainingTally(COURSES.count { it.graduated(record) }, COURSES.size, COURSES.sumOf { it.passedCount(record) })
 }
 
 /** The tier for [technique] at its index in [course]: Standard below [hard], Hard below [expert], then Expert. */

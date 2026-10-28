@@ -41,5 +41,6 @@ class TierSwipeTest {
         assertEquals(STANDARD, swipe(80f, x = 372f))
         assertEquals(null, swipe(-80f, mode = LaunchMode.LEVELS))
         assertEquals(null, swipe(80f, mode = LaunchMode.LEVELS))
+        assertEquals(null, swipe(80f, mode = LaunchMode.TRAINING))
     }
 }

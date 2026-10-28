@@ -74,8 +74,9 @@ internal fun Welcome(onStart: () -> Unit) {
                 )
                 Pointer(
                     { Icon(Icons.Default.CalendarToday, null, tint = scheme.secondary, modifier = icon) },
-                    "At the top: Daily for today's board, Levels for sets of five, Random for a fresh one any time. Each " +
-                        "comes in Standard, Hard and Expert.",
+                    "At the top: Daily for today's board (tap it again for Random, a fresh one any time), Levels for " +
+                        "sets of five, and Training to practise each puzzle's techniques. Daily and Random come in " +
+                        "Standard, Hard and Expert.",
                 )
                 Pointer(
                     {
