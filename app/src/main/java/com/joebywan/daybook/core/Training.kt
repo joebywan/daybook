@@ -75,7 +75,7 @@ class Course(
             val start = puzzle.generate(Training.seed(k), tier)
             positionOn(start, technique)?.let { yield(it) }
         }
-    }
+    }.distinctBy { it.board } // a puzzle that picks from a fixed list (Chess) can deal the same board twice
 
     /**
      * Per technique, the practices found this session and the next seed to search: they come from pure generators, so they
@@ -95,7 +95,7 @@ class Course(
         if (index >= list.size && k < Training.SEARCH) {
             val tier = tierFor(technique)
             while (index >= list.size && k < Training.SEARCH) {
-                positionOn(puzzle.generate(Training.seed(k), tier), technique)?.let { list += it }
+                positionOn(puzzle.generate(Training.seed(k), tier), technique)?.let { p -> if (list.none { it.board == p.board }) list += p }
                 k++
             }
             searched[technique] = k
@@ -114,6 +114,12 @@ class Course(
      * play on. It may ask the teacher, which can take a while: call it off the main thread.
      */
     fun judge(p: Practice, after: PuzzleState): Boolean? = drill.judge(puzzle, p, after)
+
+    /**
+     * The step a right [after] made: [p]'s own, or the other instance of its technique the player chose, so the verdict
+     * explains and outlines the player's move, not the teacher's pick. Off the main thread, like [judge].
+     */
+    fun made(p: Practice, after: PuzzleState): TeachStep = drill.made(p, after)
 
     internal val examSeed: Long? = examIndex?.let { Training.seed(it) }
 
@@ -164,6 +170,12 @@ object Training {
             InequalityTraining,
             RegionsTraining,
             KingsTraining,
+            PipesTraining,
+            PearlsTraining,
+            AtomsTraining,
+            WhosWhoTraining,
+            CipherTraining,
+            ChessTraining,
             MosaicTraining,
         )
     }
@@ -305,6 +317,9 @@ interface Drill {
 
     /** See [Course.judge]. */
     fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean?
+
+    /** See [Course.made]. */
+    fun made(p: Course.Practice, after: PuzzleState): TeachStep = p.step
 }
 
 /**
@@ -338,6 +353,16 @@ class PlacementDrill(
         val cells = cellsOf(after)
         val placed = cells.indices.firstOrNull { cells[it] != 0 && was[it] == 0 } ?: return null
         return cells[placed] == solutionOf(p.board)[placed]
+    }
+
+    // The teacher names one step per position, so a right digit elsewhere is told by its own square and digit alone.
+    override fun made(p: Course.Practice, after: PuzzleState): TeachStep {
+        val step = p.step as PlacementStep
+        val was = cellsOf(p.board)
+        val cells = cellsOf(after)
+        val placed = cells.indices.firstOrNull { cells[it] != 0 && was[it] == 0 } ?: return step
+        if (placed == step.cell) return step
+        return PlacementStep(step.technique, placed, cells[placed], setOf(placed), emptySet(), "", "${cells[placed]} goes there.")
     }
 }
 
@@ -386,6 +411,10 @@ class MoveDrill(
         every?.invoke(p.board, p.step.technique)?.any { it.isReached(after) } == true -> true
         else -> null
     }
+
+    override fun made(p: Course.Practice, after: PuzzleState): TeachStep =
+        if ((p.step as Deduction).isReached(after)) p.step
+        else every?.invoke(p.board, p.step.technique)?.firstOrNull { it.isReached(after) } ?: p.step
 }
 
 /**

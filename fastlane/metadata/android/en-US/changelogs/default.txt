@@ -1,3 +1,1 @@
-- New: Training for Kings and Mosaic. Make the move a technique allows, any way it allows: crown a king or cross out squares; in Mosaic count fills, swallow the most areas or grow from the centre. 3 in a row to pass, then a final board that needs them all. Two new achievements each.
-- Training: 3 in a row says "Passed!", then back to the list.
-- Training for Sudoku, Cage Sudoku, Inequality and Regions, from a hint's "Practise this", the rules sheet or Statistics.
+- New: Training for Mosaic. Make the move a technique allows, any way it allows: count fills, swallow the most areas or grow from the centre. 3 in a row to pass, then a final board that needs them all. Two new achievements.

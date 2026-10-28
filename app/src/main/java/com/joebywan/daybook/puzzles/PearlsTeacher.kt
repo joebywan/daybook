@@ -129,19 +129,10 @@ internal object PearlsTeacher {
     fun deduce(n: Int, pearls: String, edges: String): Step? {
         val g = PearlsGrid.of(n)
         val st = view(n, edges)
-        var best: PearlsLogic.Found? = null
-        for (s in 0 until g.squares) {
-            val pearl = when (pearls[s]) {
-                PearlsLogic.BLACK -> PearlsLogic.blackRule(g, pearls, st, s)
-                PearlsLogic.WHITE -> PearlsLogic.whiteRule(g, st, s)
-                else -> null
-            }
-            for (f in listOfNotNull(pearl, PearlsLogic.squareRule(g, pearls, st, s, full = false))) {
-                if (f.contradiction) return null
-                if (best == null || f.kind < best.kind) best = f
-            }
-        }
-        if (best != null) return localStep(g, pearls, st, best)
+        val found = localFounds(g, pearls, st)
+        if (found.any { it.contradiction }) return null
+        // The simplest kind, the first square in reading order among them.
+        found.minByOrNull { it.kind }?.let { return localStep(g, pearls, st, it) }
         PearlsLogic.smallLoop(g, pearls, st, firstOnly = true)?.let { f ->
             return if (f.contradiction) null else loopStep(g, st, f)
         }
@@ -150,6 +141,36 @@ internal object PearlsTeacher {
         // shortest of any length is taken: still sound, still named, and it keeps the hints from running out.
         val w = PearlsLogic.bestWhatIf(g, pearls, st) ?: PearlsLogic.bestWhatIf(g, pearls, st, cap = Int.MAX_VALUE) ?: return null
         return whatIfStep(g, pearls, w)
+    }
+
+    /** Every local rule that settles something, square by square in reading order, pearl's rule first. */
+    private fun localFounds(g: PearlsGrid, pearls: String, st: IntArray): List<PearlsLogic.Found> = buildList {
+        for (s in 0 until g.squares) {
+            when (pearls[s]) {
+                PearlsLogic.BLACK -> PearlsLogic.blackRule(g, pearls, st, s)
+                PearlsLogic.WHITE -> PearlsLogic.whiteRule(g, st, s)
+                else -> null
+            }?.let(::add)
+            PearlsLogic.squareRule(g, pearls, st, s, full = false)?.let(::add)
+        }
+    }
+
+    /**
+     * Every step of [technique] reasoned from the [pearls] and [edges] alone, as [deduce] (Training accepts any of them):
+     * each square's local rule of that kind, or each edge that would close a small loop. A what-if is only ever the one
+     * [deduce] picks. Empty on a board with a contradiction.
+     */
+    fun steps(n: Int, pearls: String, edges: String, technique: String): List<Step> {
+        val g = PearlsGrid.of(n)
+        val st = view(n, edges)
+        val found = localFounds(g, pearls, st)
+        if (found.any { it.contradiction }) return emptyList()
+        if (technique == SMALL_LOOP) {
+            val f = PearlsLogic.smallLoop(g, pearls, st) ?: return emptyList()
+            if (f.contradiction) return emptyList()
+            return f.crosses.map { e -> loopStep(g, st, PearlsLogic.Found(f.kind, f.square, IntArray(0), intArrayOf(e))) }
+        }
+        return found.map { localStep(g, pearls, st, it) }.filter { it.technique == technique }
     }
 
     private fun localStep(g: PearlsGrid, pearls: String, st: IntArray, f: PearlsLogic.Found): Step {
