@@ -7,6 +7,7 @@ import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.WhosWhoTraining
 import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.WhosWhoState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -207,6 +208,30 @@ class WhosWhoTrainingTest {
         }
         assertTrue("some practice has another instance ($others)", others > 0)
         assertTrue("some practice has an unjustified true cross ($unjustified)", unjustified > 0)
+    }
+
+    @Test fun `each rung's list of steps starts with the step the ladder picks`() {
+        var checked = 0
+        for (tier in Difficulty.entries) for (k in 0 until 10) {
+            var b = WhosWho.generate(Training.seed(k), tier) as WhosWhoState
+            while (!b.solved) {
+                val p = WhosWhoLogic.puzzleOf(b)
+                val g = WhosWhoLogic.gridOf(b.n, b.columns, b.marks)
+                for ((one, all) in listOf(
+                    WhosWhoLogic.clueStep(p, g) to WhosWhoLogic.clueSteps(p, g),
+                    WhosWhoLogic.onlyStep(p, g) to WhosWhoLogic.onlySteps(p, g),
+                    WhosWhoLogic.linkStep(p, g) to WhosWhoLogic.linkSteps(p, g),
+                    WhosWhoLogic.houseStep(p, g) to WhosWhoLogic.houseSteps(p, g),
+                )) {
+                    val first = all.firstOrNull()
+                    assertEquals(one?.let { listOf(it.technique, it.clue, it.ticks, it.crosses, it.person, it.item, it.partner) },
+                        first?.let { listOf(it.technique, it.clue, it.ticks, it.crosses, it.person, it.item, it.partner) })
+                    checked++
+                }
+                b = WhosWho.teach(b)!!.apply(b) as WhosWhoState
+            }
+        }
+        assertTrue(checked > 1000)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

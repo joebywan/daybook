@@ -111,7 +111,8 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     entry point that lists every step of one rung from visible state (Kings: `KingsTeacher.steps(n, region, marks,
     technique)`, which `deduce`'s pick is always one of; its picking is unchanged, so no daily board moved). Leaving it
     null keeps to the teacher's one step. Who's Who: `WhosWhoTeacher.steps` over `WhosWhoLogic.clueSteps`/`onlySteps`/
-    `linkSteps`/`houseSteps` (the rung functions as sequences, the old pick their `firstOrNull`) and, for a what-if, every
+    `linkSteps`/`houseSteps` (every step of each rung, in the order the ladder's direct pick takes its first; kept
+    beside the picks rather than replacing them, since `firstOrNull()` over them made Expert generation 23% slower) and, for a what-if, every
     open slot whose supposition runs out within the teacher's long chain. Cipher: `CipherTeacher.steps`, `findSteps`'
     list for the technique (it already listed every placement of the first technique that finds any). Chess has none: its
     step's `isReached` already accepts every key the prover names, which on a walked position is every move that still

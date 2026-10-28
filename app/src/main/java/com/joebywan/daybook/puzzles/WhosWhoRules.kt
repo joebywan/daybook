@@ -351,9 +351,135 @@ internal object WhosWhoLogic {
     private fun mark(p: Puzzle, person: Int, ref: Int) = (person * p.columns + (ref / p.n - 1)) * p.n + ref % p.n
 
     /** [CLUE]: is, is not or either-or naming a person. */
-    fun clueStep(p: Puzzle, g: Grid): Step? = clueSteps(p, g).firstOrNull()
+    fun clueStep(p: Puzzle, g: Grid): Step? {
+        val n = p.n
+        for ((k, clue) in p.clues.withIndex()) {
+            when (clue.kind) {
+                SAME, NOT -> {
+                    val (name, other) = when {
+                        cat(p, clue.a) == 0 -> clue.a to clue.b
+                        cat(p, clue.b) == 0 -> clue.b to clue.a
+                        else -> continue
+                    }
+                    val who = slot(p, name)
+                    if (clue.kind == SAME && !g.has(who, other) && g.can(who, other)) {
+                        return Step(CLUE, k, ticks = listOf(mark(p, who, other)), person = who, item = other)
+                    }
+                    if (clue.kind == NOT && g.can(who, other)) {
+                        return Step(CLUE, k, crosses = listOf(mark(p, who, other)), person = who, item = other)
+                    }
+                }
+                EITHER -> {
+                    if (cat(p, clue.a) == 0) {
+                        val who = slot(p, clue.a)
+                        val base = cat(p, clue.b) * n
+                        val out = (0 until n).map { base + it }
+                            .filter { it != clue.b && it != clue.c && g.can(who, it) }
+                        if (out.isNotEmpty()) return Step(CLUE, k, crosses = out.map { mark(p, who, it) }, person = who)
+                    } else if (cat(p, clue.b) == 0) {
+                        val out = (0 until n).filter { it != slot(p, clue.b) && it != slot(p, clue.c) && g.can(it, clue.a) }
+                        if (out.isNotEmpty()) return Step(CLUE, k, crosses = out.map { mark(p, it, clue.a) }, item = clue.a)
+                    }
+                }
+            }
+        }
+        return null
+    }
 
-    /** Every step of this rung on [g], in the order [clueStep] takes the first. */
+    /** [ONLY]: a cell with one item left, then an item with one person left. */
+    fun onlyStep(p: Puzzle, g: Grid): Step? {
+        val n = p.n
+        for (person in 0 until n) for (column in 0 until p.columns) {
+            val c = g.cell(person, column)
+            if (g.placed[c] < 0 && g.cand[c].countOneBits() == 1) {
+                val s = g.cand[c].countTrailingZeroBits()
+                return Step(ONLY, ticks = listOf(c * n + s), person = person, item = (column + 1) * n + s)
+            }
+        }
+        for (column in 0 until p.columns) for (s in 0 until n) {
+            val who = (0 until n).filter { g.cand[g.cell(it, column)] shr s and 1 == 1 }
+            if (who.size == 1 && g.placed[g.cell(who[0], column)] != s) {
+                return Step(ONLY, ticks = listOf(g.cell(who[0], column) * n + s), item = (column + 1) * n + s)
+            }
+        }
+        return null
+    }
+
+    /** [LINK]: is / is not / either-or between two things that are not names, carried through what is known. */
+    fun linkStep(p: Puzzle, g: Grid): Step? {
+        val n = p.n
+        for ((k, clue) in p.clues.withIndex()) {
+            when (clue.kind) {
+                SAME -> {
+                    if (cat(p, clue.a) == 0 || cat(p, clue.b) == 0) continue
+                    for ((x, y) in listOf(clue.a to clue.b, clue.b to clue.a)) {
+                        for (who in 0 until n) {
+                            if (g.has(who, x) && !g.has(who, y) && g.can(who, y)) {
+                                return Step(LINK, k, ticks = listOf(mark(p, who, y)), person = who, item = y, partner = x)
+                            }
+                        }
+                    }
+                    for ((x, y) in listOf(clue.a to clue.b, clue.b to clue.a)) {
+                        val out = (0 until n).filter { g.can(it, x) && !g.can(it, y) }
+                        if (out.isNotEmpty()) return Step(LINK, k, crosses = out.map { mark(p, it, x) }, item = x, partner = y)
+                    }
+                }
+                NOT -> {
+                    if (cat(p, clue.a) == 0 || cat(p, clue.b) == 0) continue
+                    for ((x, y) in listOf(clue.a to clue.b, clue.b to clue.a)) {
+                        for (who in 0 until n) {
+                            if (g.has(who, x) && g.can(who, y)) {
+                                return Step(LINK, k, crosses = listOf(mark(p, who, y)), person = who, item = y, partner = x)
+                            }
+                        }
+                    }
+                }
+                EITHER -> {
+                    if (cat(p, clue.a) == 0 || cat(p, clue.b) == 0) continue
+                    val base = cat(p, clue.b) * n
+                    for (who in 0 until n) {
+                        if (!g.has(who, clue.a)) continue
+                        val out = (0 until n).map { base + it }.filter { it != clue.b && it != clue.c && g.can(who, it) }
+                        if (out.isNotEmpty()) return Step(LINK, k, crosses = out.map { mark(p, who, it) }, person = who, partner = clue.a)
+                    }
+                    val out = (0 until n).filter { g.can(it, clue.a) && !g.can(it, clue.b) && !g.can(it, clue.c) }
+                    if (out.isNotEmpty()) return Step(LINK, k, crosses = out.map { mark(p, it, clue.a) }, item = clue.a)
+                }
+            }
+        }
+        return null
+    }
+
+    /** [HOUSE]: next to and somewhere left of, read against the houses still possible. */
+    fun houseStep(p: Puzzle, g: Grid): Step? {
+        val n = p.n
+        for ((k, clue) in p.clues.withIndex()) {
+            if (clue.kind != NEXT && clue.kind != LEFT) continue
+            for (aSide in listOf(true, false)) {
+                val x = if (aSide) clue.a else clue.b
+                val y = if (aSide) clue.b else clue.a
+                // A person known to hold x cannot stand where nobody who could hold y would be beside them.
+                for (who in 0 until n) {
+                    if (!g.has(who, x)) continue
+                    val hs = g.houses(who)
+                    val bad = hs and supported(p, g, clue.kind, y, who, hs, aSide).inv()
+                    if (bad != 0 && bad != hs) {
+                        return Step(HOUSE, k, crosses = (0 until n).filter { bad shr it and 1 == 1 }.map { g.cell(who, 0) * n + it }, person = who, item = x, partner = y)
+                    }
+                }
+                // Nobody can hold x where no house of theirs has a partner.
+                if (cat(p, x) == 0) continue
+                val out = (0 until n).filter { g.can(it, x) && supported(p, g, clue.kind, y, it, g.houses(it), aSide) == 0 }
+                if (out.isNotEmpty()) return Step(HOUSE, k, crosses = out.map { mark(p, it, x) }, item = x, partner = y)
+            }
+        }
+        return null
+    }
+
+    // Every step of a rung, for Training (`WhosWhoTeacher.steps`). The single picks above stay direct loops: as
+    // `firstOrNull()` over these, Expert generation ran 23% slower on average (worst board 35%). Each mirrors its pick
+    // exactly, which WhosWhoTrainingTest checks.
+    /** Every step [clueStep] could take on [g], in its order (its pick is the first). */
     fun clueSteps(p: Puzzle, g: Grid): Sequence<Step> = sequence {
         val n = p.n
         for ((k, clue) in p.clues.withIndex()) {
@@ -388,10 +514,7 @@ internal object WhosWhoLogic {
         }
     }
 
-    /** [ONLY]: a cell with one item left, then an item with one person left. */
-    fun onlyStep(p: Puzzle, g: Grid): Step? = onlySteps(p, g).firstOrNull()
-
-    /** Every step of this rung on [g], in the order [onlyStep] takes the first. */
+    /** Every step [onlyStep] could take on [g], in its order (its pick is the first). */
     fun onlySteps(p: Puzzle, g: Grid): Sequence<Step> = sequence {
         val n = p.n
         for (person in 0 until n) for (column in 0 until p.columns) {
@@ -409,10 +532,7 @@ internal object WhosWhoLogic {
         }
     }
 
-    /** [LINK]: is / is not / either-or between two things that are not names, carried through what is known. */
-    fun linkStep(p: Puzzle, g: Grid): Step? = linkSteps(p, g).firstOrNull()
-
-    /** Every step of this rung on [g], in the order [linkStep] takes the first. */
+    /** Every step [linkStep] could take on [g], in its order (its pick is the first). */
     fun linkSteps(p: Puzzle, g: Grid): Sequence<Step> = sequence {
         val n = p.n
         for ((k, clue) in p.clues.withIndex()) {
@@ -456,10 +576,7 @@ internal object WhosWhoLogic {
         }
     }
 
-    /** [HOUSE]: next to and somewhere left of, read against the houses still possible. */
-    fun houseStep(p: Puzzle, g: Grid): Step? = houseSteps(p, g).firstOrNull()
-
-    /** Every step of this rung on [g], in the order [houseStep] takes the first. */
+    /** Every step [houseStep] could take on [g], in its order (its pick is the first). */
     fun houseSteps(p: Puzzle, g: Grid): Sequence<Step> = sequence {
         val n = p.n
         for ((k, clue) in p.clues.withIndex()) {
