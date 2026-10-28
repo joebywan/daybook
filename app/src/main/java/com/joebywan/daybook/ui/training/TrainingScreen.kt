@@ -245,6 +245,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
             val (right, step) = withContext(Dispatchers.Default) {
                 course.judge(p, next)?.let { it to (if (it) course.made(p, next) else p.step) }
             } ?: return@launch
+            if (!right) delay(course.drill.settleMillis)
             if (board === next && verdict == null) settle(right, step)
         }
     }

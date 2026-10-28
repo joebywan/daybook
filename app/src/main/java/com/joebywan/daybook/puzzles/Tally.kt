@@ -190,7 +190,11 @@ object Tally : PuzzleType {
     /** A mistake to take back or a step to reason out; see [TallyTeacher]. */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as TallyState
-        val step = TallyTeacher.teach(s) ?: return null
+        return deduction(s, TallyTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] on [s] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(s: TallyState, step: TallyTeacher.Step): Deduction {
         val before = s.marks
         return Deduction(
             step,

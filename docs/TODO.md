@@ -270,8 +270,8 @@ An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and 
 A practice mode per technique, once declined, is now wanted (2026-10-26): Training, for Sudoku, Cage Sudoku,
 Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played final board when the player leaves it;
 Kings has the general practice shape (`MoveDrill`), and Pipes, Pearls and Atoms use it too, and so do Who's Who,
-Cipher (without "only letter", never reached) and Chess; Mosaic has its own judge (`MosaicDrill`); the other puzzles'
-courses are classified and batched in `docs/TRAINING_SPEC.md`.
+Cipher (without "only letter", never reached), Chess, Mambo, Nonogram and Tally; Mosaic has its own judge
+(`MosaicDrill`); the other puzzles' courses are classified and batched in `docs/TRAINING_SPEC.md`.
 Open from Who's Who, Cipher and Chess: the practice slot does not shrink below 700 dp as the play screen's does (Who's
 Who's clues get one line at 375x537); Chess's lost caption names Undo and Restart on a practice board, which has neither.
 Follow-up: a right move's verdict explains the instance the player made (`Course.made`), which `MoveDrill(next, every)`

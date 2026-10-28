@@ -177,7 +177,10 @@ class TrainingTest {
     @Test fun `every course lists its teacher's named techniques, each explained, and its final board needs them all`() {
         // Appended only: the achievements follow this order.
         assertEquals(
-            listOf("sudoku", "cages", "inequality", "regions", "kings", "pipes", "pearls", "atoms", "whoswho", "cipher", "chess", "mosaic"),
+            listOf(
+                "sudoku", "cages", "inequality", "regions", "kings", "pipes", "pearls", "atoms", "whoswho", "cipher", "chess",
+                "mosaic", "mambo", "nonogram", "tally",
+            ),
             Training.COURSES.map { it.id },
         )
         // The teacher's praised techniques in its order (Mosaic's finish and fill-within-the-limit are not praised), less

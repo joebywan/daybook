@@ -177,6 +177,9 @@ object Training {
             CipherTraining,
             ChessTraining,
             MosaicTraining,
+            MamboTraining,
+            NonogramTraining,
+            TallyTraining,
         )
     }
 
@@ -320,6 +323,13 @@ interface Drill {
 
     /** See [Course.made]. */
     fun made(p: Course.Practice, after: PuzzleState): TeachStep = p.step
+
+    /**
+     * How long the practice screen holds a "wrong" before showing it; a newer move in that time drops it. For a board
+     * whose single moves pass through a wrong state (Mambo's tap cycle makes every sun a moon first), as the board's
+     * own rule-break caption waits.
+     */
+    val settleMillis: Long get() = 0
 }
 
 /**
@@ -382,6 +392,7 @@ class PlacementDrill(
  * verdict, since nothing can tell it from the first cross of a step the player is still making.
  */
 class MoveDrill(
+    override val settleMillis: Long = 0,
     /**
      * The teacher's next step on the state as a [Deduction], from what the player can see: build it from the teacher's
      * visible-state entry point (one with no parameter for the answer), never from `teach`, which reads the answer.

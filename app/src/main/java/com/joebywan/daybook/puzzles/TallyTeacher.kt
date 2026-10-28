@@ -130,6 +130,19 @@ internal object TallyTeacher {
         return whatIfStep(n, digits, targets, w)
     }
 
+    /**
+     * Every line's step, rows then columns, and when no line has one, every what-if within [TallyLogic.MAX_LINKS] (not only
+     * [deduce]'s shortest). Training reads them all: any instance of a technique counts.
+     */
+    fun steps(n: Int, digits: IntArray, targets: List<Int>, marks: String): List<Step> {
+        val grid = TallyLogic.markState(marks)
+        val lines = (0 until 2 * n).mapNotNull { lineStep(n, digits, targets, grid, it) }
+        if (lines.isNotEmpty()) return lines
+        return (0 until n * n).filter { grid[it] == TallyLogic.OPEN }.flatMap { i ->
+            listOf(TallyLogic.STAY, TallyLogic.GO).mapNotNull { a -> TallyLogic.whatIf(n, digits, targets, grid, i, a)?.let { whatIfStep(n, digits, targets, it) } }
+        }
+    }
+
     private fun lineStep(n: Int, digits: IntArray, targets: List<Int>, grid: IntArray, line: Int): Step? {
         val at = TallyLogic.lineCells(n, line)
         val values = IntArray(n) { digits[at[it]] }
