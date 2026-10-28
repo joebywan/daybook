@@ -139,12 +139,16 @@ internal object ChessTeacher {
             "That move gives up the mate. Look at it again.", fit(why))
     }
 
-    /** One step for the side to move, who has [remaining] moves; null when no forced mate is left. */
-    fun deduce(position: ChessPosition, remaining: Int): Step? {
+    /**
+     * One step for the side to move, who has [remaining] moves; null when no forced mate is left. It explains [prefer]
+     * when that is a key (Training's verdict on the key the player chose), else its own pick: a check first.
+     */
+    fun deduce(position: ChessPosition, remaining: Int, prefer: Int? = null): Step? {
         val res = ChessRules.forcedMate(position, remaining, Int.MAX_VALUE) as? ChessRules.Mate.Forced ?: return null
         if (res.keys.isEmpty()) return null
         val white = position.whiteToMove
-        val key = res.keys.firstOrNull { ChessRules.inCheck(ChessRules.play(position, it)) } ?: res.keys.first()
+        val key = prefer?.takeIf { it in res.keys }
+            ?: res.keys.firstOrNull { ChessRules.inCheck(ChessRules.play(position, it)) } ?: res.keys.first()
         val c = ChessRules.play(position, key)
         val king = ChessRules.kingSq(c.sq, !white)
         val piece = "${KIND[abs(position.pieceAt(ChessRules.from(key)))]} on ${ChessRules.name(ChessRules.from(key))}"

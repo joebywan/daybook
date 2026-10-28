@@ -273,11 +273,6 @@ Kings has the general practice shape (`MoveDrill`), and Pipes, Pearls and Atoms 
 Cipher (without "only letter", never reached), Chess, Mambo, Nonogram, Tally, Mines, Lamps, Tents,
 Shikaku, Dominoes and LITS; Mosaic has its own judge
 (`MosaicDrill`); the other puzzles' courses are classified and batched in `docs/TRAINING_SPEC.md`.
-Open from Who's Who, Cipher and Chess: the practice slot does not shrink below 700 dp as the play screen's does (Who's
-Who's clues get one line at 375x537); Chess's lost caption names Undo and Restart on a practice board, which has neither.
-Follow-up: a right move's verdict explains the instance the player made (`Course.made`), which `MoveDrill(next, every)`
-courses get for free; courses with their own drill, or no `every`, keep the default (the teacher's step): Pipes; Chess
-(its step's `isReached` accepts every key, so another key is explained as the teacher's); Mosaic (`MosaicDrill`).
 
 ## Owner's call
 

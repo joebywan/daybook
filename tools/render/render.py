@@ -63,6 +63,11 @@ IGNORED_CONSOLE = [
     re.compile(r"^WebGL: "),
 ]
 
+# Playwright's WebKit injects a stylesheet for every page.screenshot() (even caret="initial"), which the page's CSP
+# refuses: a blank page with only the CSP meta logs it on its first shot and never before. WebKit only, so a refusal
+# Chromium logs (the app's own) still fails the run.
+WEBKIT_SCREENSHOT_CSP = re.compile(r"^Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline'")
+
 
 # ---------------------------------------------------------------------------------------------
 # Puzzle ids, read from the code so a new puzzle is picked up without editing this file.
@@ -427,6 +432,8 @@ def shoot(ctx, base_url, args, puzzle, tier, w, h, tag) -> list[str]:
 
     def on_console(msg):
         text = msg.text
+        if tag.endswith("webkit") and WEBKIT_SCREENSHOT_CSP.search(text):
+            return
         if msg.type == "error" and not any(rx.search(text) for rx in IGNORED_CONSOLE):
             line = f"{tag}: console error: {text}"
             if line not in problems:

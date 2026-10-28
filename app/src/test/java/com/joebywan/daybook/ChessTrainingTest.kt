@@ -3,7 +3,6 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.ChessTraining
 import com.joebywan.daybook.core.Course
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.MoveDrill
 import com.joebywan.daybook.core.Training
 import com.joebywan.daybook.core.techniqueNamesOf
 import com.joebywan.daybook.puzzles.Chess
@@ -33,7 +32,6 @@ class ChessTrainingTest {
     private fun play(s: ChessState, m: Int) = s.copy(played = s.played + ChessRules.uci(m), moves = s.moves + 1)
 
     @Test fun `every practice is a real position whose next step is its technique, with no simpler step on it`() {
-        assertTrue(ChessTraining.drill is MoveDrill)
         assertEquals(techniqueNamesOf("chess").keys.toList(), ChessTraining.techniques)
         var naive = 0
         for ((rung, t) in ChessTraining.techniques.withIndex()) {

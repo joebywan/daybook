@@ -49,7 +49,9 @@ hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `c
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer (Pipes judges its own way: a
 tap turns a tile a quarter at a time, so the step's tile is never wrong on its way round; Mosaic's `MosaicDrill` applies
-the same rule to a fill, judged by one search question), plus the course's `wrong` for a lost board or a note the teacher
+the same rule to a fill, judged by one search question, and a fill that keeps the limit outside the technique gets
+`Course.aside`'s note and locks the board, never silence; a right move is explained and outlined as the move the player
+made, `Course.made`, in every course, Chess's other keys and Pipes' other tiles included), plus the course's `wrong` for a lost board or a note the teacher
 never reads that no answer keeps (Mines' mine, Tents' grass, Lamps' cross), a wrong verdict held `settleMillis` where a
 move passes through a wrong state (Mambo's sun is a moon first); found practices cached per session; a course whose
 `generate` can ship an unproved board passes its `generateVerified` as `Course.generate`, so practices skip that seed;
@@ -1040,6 +1042,8 @@ Full detail (seam, storage, fonts, harnesses, parity, lessons): `docs/WEB_BUILD.
 - **Every drawn character needs a bundled glyph.** One no bundled font has makes Compose fetch a Noto font from
   fonts.gstatic.com, which the CSP blocks (a box) and the privacy promise forbids. Re-cut with `tools/subset-font.py`
   (Fonts in `docs/WEB_BUILD.md`); `tools/render/glyphs.py` fails on any request off the local server.
+- WebKit's "Refused to apply a stylesheet ... style-src" console error, once per screenshot, is Playwright's own injected
+  style, not the app's (a blank page with only the CSP shows it); `render.py` ignores it in WebKit. Don't report it.
 - Build: `./gradlew :web:wasmJsBrowserDistribution`. Several sessions share the one browser pane: pass a `tabId`.
 
 ## Tests

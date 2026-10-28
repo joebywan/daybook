@@ -129,6 +129,12 @@ class Course(
      */
     fun made(p: Practice, after: PuzzleState): TeachStep = drill.made(p, after)
 
+    /**
+     * For an [after] that [judge] plays on: a note when the move works but the practice can no longer be judged (Mosaic's
+     * fill that keeps the limit without being the technique), else null. It neither counts nor breaks the run.
+     */
+    fun aside(p: Practice, after: PuzzleState): String? = drill.aside(p, after)
+
     internal val examSeed: Long? = examIndex?.let { Training.seed(it) }
 
     val hasExam: Boolean get() = examSeed != null
@@ -337,6 +343,9 @@ interface Drill {
 
     /** See [Course.made]. */
     fun made(p: Course.Practice, after: PuzzleState): TeachStep = p.step
+
+    /** See [Course.aside]. */
+    fun aside(p: Course.Practice, after: PuzzleState): String? = null
 
     /**
      * How long the practice screen holds a "wrong" before showing it; a newer move in that time drops it. For a board

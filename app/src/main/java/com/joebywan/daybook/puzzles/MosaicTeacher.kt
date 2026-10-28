@@ -229,6 +229,23 @@ internal object MosaicTeacher {
         return deduce(areas, colours, fillsLeft, search)
     }
 
+    /**
+     * [technique]'s explanation of one particular fill, [colour] into the area holding [cell], or null when that fill is
+     * not an instance of it here. Training's verdict on a right fill that is not the teacher's own pick.
+     */
+    fun explainFill(width: Int, height: Int, colours: Int, cells: List<Int>, fillsLeft: Int, technique: String, cell: Int, colour: Int): Step? {
+        val a = Areas.of(width, height, cells) ?: return null
+        val search = Search(colours)
+        val only = a.label[cell] * 8 + colour
+        val step = when (technique) {
+            COUNT -> count(a, a.root, colours, fillsLeft, search, only)
+            BIGGEST -> biggest(a, a.root, colours, fillsLeft, search, only)
+            CENTRE -> centre(a, a.root, colours, fillsLeft, search, only)
+            else -> null
+        }
+        return if (search.exhausted) null else step
+    }
+
     private fun deduce(a: Areas, colours: Int, r: Int, search: Search): Step? {
         val root = a.root
         val step = finish(a, root)
@@ -295,12 +312,14 @@ internal object MosaicTeacher {
         return null
     }
 
-    private fun count(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search): Step? {
+    /** [only] (`group * 8 + colour`), when set, restricts a technique to that one fill ([explainFill]). */
+    private fun count(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search, only: Int = -1): Step? {
         val k = root.colours()
         if (k < 3 || r != k - 1) return null
         val lone = (0 until a.count).filter { g -> (0 until a.count).count { a.hue[it] == a.hue[g] } == 1 }
         val present = (0 until colours).filter { c -> a.hue.any { it == c } }
         val candidates = lone.flatMap { g -> present.filter { it != a.hue[g] }.map { g * 8 + it } }
+            .filter { only < 0 || it == only }
             .sortedWith(compareByDescending<Int> { search.gain(root, it / 8, it % 8) }.thenBy { it })
         val move = candidates.firstOrNull { search.keeps(root, it / 8, it % 8, r) } ?: return null
         val g = move / 8
@@ -326,12 +345,12 @@ internal object MosaicTeacher {
             (0 until colours).filter { it != root.hue[g] }.maxOfOrNull { search.gain(root, g, it) } ?: 0
         }
 
-    private fun biggest(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search): Step? {
+    private fun biggest(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search, only: Int = -1): Step? {
         val mx = maxGain(search, root, colours)
         if (mx < 2) return null
         for (g in 0 until a.count) {
             for (c in 0 until colours) {
-                if (c == a.hue[g] || search.gain(root, g, c) != mx) continue
+                if (c == a.hue[g] || (only >= 0 && g * 8 + c != only) || search.gain(root, g, c) != mx) continue
                 if (!search.keeps(root, g, c, r)) continue
                 var near = a.cellsOf(g)
                 a.nbr[g].forEachBit { j -> near = near + a.cellsOf(j) }
@@ -358,14 +377,14 @@ internal object MosaicTeacher {
         return true
     }
 
-    private fun centre(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search): Step? {
+    private fun centre(a: Areas, root: Mosaic.Position, colours: Int, r: Int, search: Search, only: Int = -1): Step? {
         if (a.count < 3) return null
         val ecc = IntArray(a.count) { g -> search.eccentricity(root, g) }
         val least = ecc.min()
         if (least == ecc.max()) return null
         for (g in 0 until a.count) {
             if (ecc[g] != least) continue
-            val order = (0 until colours).filter { it != a.hue[g] }
+            val order = (0 until colours).filter { it != a.hue[g] && (only < 0 || g * 8 + it == only) }
                 .sortedWith(compareByDescending<Int> { search.gain(root, g, it) }.thenBy { it })
             val c = order.firstOrNull { search.keeps(root, g, it, r) } ?: continue
             val warn = if (biggestLoses(a, root, colours, r, search)) " The biggest swallow falls short here." else ""

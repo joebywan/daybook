@@ -21,12 +21,19 @@ private object PipesDrill : Drill {
 
     override fun walk(start: PuzzleState) = moves.walk(start)
 
+    // ponytail: re-derived per judged state (a Net run, a few ms); memoise on the practice if it ever shows.
+    private fun instances(p: Course.Practice): List<Deduction> {
+        val was = p.board as PipesState
+        return listOf(p.step as Deduction) + PipesTeacher.steps(was.width, was.height, was.cells, p.step.technique).map(Pipes::deduction)
+    }
+
+    // The tile the player turned to its way: the hint's, or another the technique settles.
+    override fun made(p: Course.Practice, after: PuzzleState): TeachStep = instances(p).firstOrNull { it.isReached(after) } ?: p.step
+
     override fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean? {
         val was = p.board as PipesState
         val now = after as PipesState
-        // ponytail: re-derived per judged state (a Net run, a few ms); memoise on the practice if it ever shows.
-        val instances = listOf(p.step as Deduction) +
-            PipesTeacher.steps(was.width, was.height, was.cells, p.step.technique).map(Pipes::deduction)
+        val instances = instances(p)
         val settling = instances.flatMapTo(HashSet()) { it.targets } // membership only
         val wet = Pipes.filled(now)
         val wrong = now.cells.indices.any { c ->
