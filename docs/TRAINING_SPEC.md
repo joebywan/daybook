@@ -12,7 +12,7 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
 
 ## What the player sees
 
-- **Training** (route `training`): a list of the puzzles that have it (Sudoku, Cage Sudoku, Inequality, Regions, Kings), each
+- **Training** (route `training`): a list of the puzzles that have it (Sudoku, Cage Sudoku, Inequality, Regions, Kings, Mosaic), each
   with how many of its techniques are passed and a tick once it is finished (its final board passed).
 - **A puzzle's techniques** (route `training||…|<puzzle>`): its techniques in the teacher's ladder order
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
@@ -33,7 +33,7 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
     without first playing.
 - **Achievements** (appended, two per puzzle): "<Puzzle> trained" for passing every technique, "<Puzzle> graduate" for
   then solving the final board: Sudoku's two (`sudokuTrained`, `sudokuGraduate`), then `cagesTrained`, `cagesGraduate`,
-  `inequalityTrained`, `inequalityGraduate`, `regionsTrained`, `regionsGraduate`, `kingsTrained`, `kingsGraduate`. They
+  `inequalityTrained`, `inequalityGraduate`, `regionsTrained`, `regionsGraduate`, `kingsTrained`, `kingsGraduate`, `mosaicTrained`, `mosaicGraduate`. They
   are built from `Training.COURSES` in its order (so a course appended there appends its two), announced on the training
   screen as they are earned and shown on the Achievements page; the trained badge's glyph is the course's `badge`, the
   graduate's the crown.
@@ -55,6 +55,9 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
   - Regions: the three singles on Standard, the locked candidate on Hard (`RegionsLogic.specFor`).
   - Kings: last square, locked to a line and would empty on Standard, confined on Hard, the what-if on Expert
     (`Kings.fitsTier`).
+  - Mosaic: all three on Standard. Its tiers are board size, sections and palette, not depth of reasoning, and Standard
+    walks reach every technique (counting and the biggest swallow on 60 of 60 boards, the centre on 5); the smallest
+    boards are the clearest to learn on.
 - **What counts as right** (digits; Kings and the general shape below): the step's own digit, which is what the hint's `isReached` checks. Another correct digit
   elsewhere also counts: the position has no simpler step anywhere (each teacher tries every simpler technique on the whole
   board first), so a correct digit there was found with this technique or a harder one. A wrong digit is judged against
@@ -103,6 +106,19 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
   check written in the test (plain counting, nothing borrowed from the teacher); right, wrong and play-on moves; the final
   board is the first practice seed whose Expert walk needs every technique, and is proved. The achievement ids need no
   listing (`TrainingTest` derives their order from `COURSES`); add the course's id to `TrainingTest`'s list of courses.
+- **Mosaic** (`MosaicDrill`, `core/training/MosaicTraining.kt`) walks as `MoveDrill` does (from
+  `MosaicTeacher.deduce`, which sees the board, the palette and the fills left) but has its own judge, for two reasons.
+  Every move is a fill that cannot be taken back and there is no undo on a practice board, so "play on" after a fill that
+  is not the step would leave the player on a board where the step no longer exists: every fill gets a verdict. And the
+  teacher's whole hint (lost-board check plus a search for the step) took up to 1.2 s on the emulator, which judging per
+  move on the web's one thread could not afford, so a fill is judged by one question of the same search, "does the
+  board still finish in the fills left?": the step's own fill is right with no search (`isReached`); a fill that loses
+  is wrong (what `teach` calls a mistake); a fill that keeps the limit is right when it is the technique by its own test
+  (counting: any, because with one fill fewer than colours each keeping fill must wipe a colour out; the biggest
+  swallow: one swallowing as many; the centre: any fill of a most central area) and otherwise wrong, the verdict then
+  showing the step that was there to find. "Wrong" for a fill that still wins is the owner's call to revisit: the run
+  is for finding this technique, and the only alternative is a board with nothing left to find. Guessing rarely passes:
+  of every fill on 10 practices each, 19% are right on counting, 13% on the biggest swallow, 6% on the centre.
 - Watch for a teacher that treats some marks as notes (Tents: "crosses are notes and never read as knowledge"): a wrong
   note is then never a mistake, so a wrong cross plays on instead of failing. Decide per puzzle whether the teacher should
   flag it.
@@ -132,9 +148,16 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - **Kings** (move drill): last square 8 ms for the first board, then a mean of 4 ms a board; locked to a line, would
   empty and confined 1-5 ms first, 3-6 ms next; the what-if 153 ms first, 91 ms a board after (max 287 ms), since only 18
   of 60 Expert boards reach it. Standard reaches the first three on 56-60 of 60 boards, Hard adds confined on all 60.
+- **Mosaic** (Standard boards): first board through the cache 13 ms counting, under 1 ms the biggest swallow, 1 ms
+  the centre; each next board a mean of 0-2 ms, at most 5 ms (the centre, 5 of 60 Standard boards). Judging a fill,
+  every fill on 10 practices of each technique: at most 0.2 ms on the JVM, 0.6 ms in Chromium and 1 ms in WebKit (wasm,
+  `?trainprobe`-style timing in the page, not kept); the hint on a practice board at most 1 ms. Far under the 300 ms
+  bar, so Mosaic ships: practice boards are small, and the 1.2 s hint was an Expert board mid-game. Walking a whole
+  board costs a mean of 1 / 3 / 38 ms by tier; the final board's generation 1-2 ms in the browser.
 - **Final boards** (Expert, the first practice seed whose walk needs every technique, each pinned by a test):
   Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (32 of the first 60); Inequality index 4 (17 of the first
-  60); Regions index 0 (all 60); Kings index 1 (17 of the first 60).
+  60); Regions index 0 (all 60); Kings index 1 (17 of the first 60); Mosaic index 4 (17 of the first 60; Standard
+  5 of 60, Hard 14).
 - `SudokuTrainingTest` checks 8 Sudoku practices per technique; `TrainingTest` 5 Cage Sudoku practices and 8 Inequality
   and Regions practices per technique: the teacher's next step (and the hint's, through `PuzzleType.teach`) is the
   technique, the step's digit is the answer's, the shown digits agree with the answer, the board has one answer by the
@@ -165,7 +188,7 @@ techniques no walk reached.
 | Mambo | 6: pair, sandwich, link, quota met 30/30/30; one short 0/30/30; what-if 0/0/30 | move | 17-41 ms | include |
 | Pipes | 4: border, set neighbour, whichever way 25-30 a tier; no loop 5/4/6 | move | 3-56 ms | include (several answers: judged by the teacher) |
 | Shikaku | 4: only fits, only reaches; common cells 0/5/18; what-if 0/6/14 | move | 4-13 ms | include |
-| Mosaic | 3: count, biggest swallow, centre 2/5/10 (finish, fill within the limit: not praised) | move | 8-21 ms | include; its teacher can take 1.2 s a hint, and judging asks it per move: measure on the web first |
+| Mosaic | 3: count, biggest swallow, centre 2/5/10 (finish, fill within the limit: not praised) | move (own judge) | 0-13 ms | **done** |
 | Atoms | 6: one neighbour … isolation 0/16/29, what-if 0/0/6 (only way out: never) | move | 4-29 ms | include |
 | LITS | 6: whole region 5/13/8, overlap, avoid 2x2, letter clash 30/30/30, neighbour 0/15/27, what-if 0/1/14 | move | 26-173 ms | include |
 | Nonogram | 4: all 26-30 a tier | move | 4-6 ms | include |
@@ -202,4 +225,4 @@ id list, the docs and the changelog. Grouped by kind of board, so a batch's agen
 3. **Mines, Lamps, Tents**: marks and counts (settle Tents' grass-as-notes first).
 4. **Shikaku, Dominoes, LITS**: pieces placed by drag or pairs (each placement must stay one emitted state).
 5. **Who's Who, Cipher, Chess**: deduction grids and moves.
-6. **Mosaic** alone: its teacher's cost per judged move needs measuring in a browser first.
+6. **Mosaic** alone: done (its own judge, above).

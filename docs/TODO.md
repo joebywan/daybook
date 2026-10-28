@@ -272,7 +272,8 @@ Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played fi
 the keyboard
 does not reach a practice board (the play screen's key handling is not shared); Cage Sudoku's "every cage worked
 through together" practice explains itself only as a summary, as its hint does. Kings has the general practice shape
-(`MoveDrill`); the other puzzles' courses are classified and batched in `docs/TRAINING_SPEC.md`.
+(`MoveDrill`), and Mosaic its own judge (`MosaicDrill`: a fill that keeps the limit but is not the technique ends the
+run, since it cannot be undone; the owner may prefer that it play on); the other puzzles' courses are classified and batched in `docs/TRAINING_SPEC.md`.
 
 ## Owner's call
 
