@@ -72,7 +72,11 @@ batch) follow it; the rest of the puzzles are classified at the end.
     boards reach it, against 57 on Hard), crossing and isolation on Hard, the what-if on Expert.
 - **What counts as right** (digits; Kings and the general shape below): the step's own digit, which is what the hint's `isReached` checks. Another correct digit
   elsewhere also counts: the position has no simpler step anywhere (each teacher tries every simpler technique on the whole
-  board first), so a correct digit there was found with this technique or a harder one. A wrong digit is judged against
+  board first), so a correct digit there was found with this technique or a harder one. It is answered about its own
+  square ("That's it. 7 goes there.", outlined where it went), never with the step's explanation of the other square:
+  1.19 said "That's it." and then explained the step's square, which the owner read as being told they were wrong and
+  should have filled that one. A move drill does the same with the instance the player completed, in that instance's own
+  words and cells (`Course.made`, `verdictLine`, `TrainingVerdictTest`). A wrong digit is judged against
   the stored answer, sound because a generated board has one answer.
 - **Stored:** `training_passed`, its own key set in the progress store (`puzzleId|technique`, `puzzleId|exam`), never on a
   save and never a `Completion`, so training touches no streak, total or best time. The pilot's entries (`sudoku|…`) are
