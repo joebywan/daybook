@@ -17,11 +17,17 @@ Cages, Inequality and Regions." Those three were chosen because their teachers p
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
 - **A technique** (route `training|<technique>|…|<puzzle>`): a short explanation in the hints' voice, then a practice
   board. The player finds the step and makes it. A right digit adds one to the run; three in a row passes the technique
-  (a tick, the chime, "Passed"). A wrong digit ends the run and shows the reasoning that was there to find. The next board
-  is one tap away. Hints work as in a game (nudge, why, show me); a board where a hint was opened does not count towards
+  (the chime, "Passed! 3 in a row." and any achievement it earns, with the board and Next board locked), and after
+  2.5 s back takes the player to where the practice was opened from: the puzzle's technique list, with the new tick, when
+  opened from it; the game or the Techniques page when opened by "Practise this" or "Practise", as back would. The owner
+  (2026-10-28): "send the user back to the list when they achieve the goal. Otherwise they're likely to get stuck there."
+  Every run that reaches three does this, on a technique already passed too (1.19 said only "That's it." there and kept
+  the player on the board, which read as no pass at all); achievements are announced once. A wrong digit ends the run
+  and shows the reasoning that was there to find. The next board is one tap away. Hints work as in a game (nudge, why, show me); a board where a hint was opened does not count towards
   the run and does not break it.
 - **The final board** opens once every technique of that puzzle is passed: a whole Expert board whose own walk by the hint
-  ladder needs every technique. Solving it without "Show me" earns the second achievement. Hints are allowed (they teach).
+  ladder needs every technique. Solving it without "Show me" earns the second achievement, and
+  like a technique's pass shows "Solved!" for 2.5 s and then goes back to the list (a solve with a Show me stays, to start again). Hints are allowed (they teach).
 - **Ways in:**
   - **"Train: practise the techniques"** on the rules sheet (the play screen's "?") of a puzzle that has Training: opens
     that puzzle's techniques; back from there returns to the game, and back from a technique opened there returns to the list.
