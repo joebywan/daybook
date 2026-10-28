@@ -230,3 +230,7 @@ Playwright call, so wait with `page.wait_for_timeout`, never `time.sleep`. `pkil
 8775"` matches the shell running it; write `http[.]server`. When several worktrees build at once,
 one `./gradlew --stop` stops every daemon on the machine and kills the others' builds mid-run — use
 `--no-daemon`, or a private `-Dorg.gradle.daemon.registry.base=<own dir>`.
+WebKit logs "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the
+style-src directive" once per `page.screenshot()`: Playwright's WebKit injects a stylesheet to take the shot (even with
+`caret="initial"`), and the page's CSP refuses it. Not the app's: a blank page carrying only the CSP meta logs it on its
+first screenshot and never before (checked 2026-10-28); Chromium never does. `render.py` ignores it in WebKit only.

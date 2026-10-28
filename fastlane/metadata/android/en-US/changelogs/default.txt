@@ -1,1 +1,4 @@
-- New: Training for Shikaku, Dominoes and LITS. Practise each technique on real boards: draw the rectangle, lay the domino or shade the squares the step needs, three right in a row to pass, then a final board that needs them all. Two new achievements for each.
+- Training: a right move is now explained as the move you made, not the one the hint had in mind, for every puzzle, Chess, Pipes and Mosaic included.
+- Training on short screens: the explanation under the board takes less room, so the board gets more.
+- Mosaic training: a fill that works but isn't the technique now says so, instead of leaving you guessing.
+- Chess training: a wrong move no longer mentions Undo and Restart, which practice doesn't have.

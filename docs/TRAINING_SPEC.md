@@ -104,7 +104,10 @@ batch) follow it; the rest of the puzzles are classified at the end.
   square ("That's it. 7 goes there.", outlined where it went), never with the step's explanation of the other square:
   1.19 said "That's it." and then explained the step's square, which the owner read as being told they were wrong and
   should have filled that one. A move drill does the same with the instance the player completed, in that instance's own
-  words and cells (`Course.made`, `verdictLine`, `TrainingVerdictTest`). A wrong digit is judged against
+  words and cells (`Course.made`, `verdictLine`, `TrainingVerdictTest`), and so do the courses with their own drill:
+  Pipes explains the tile the player turned (any tile the technique settles), Mosaic the fill they made (the
+  technique's reasoning about that fill, `MosaicTeacher.explainFill`), and Chess the key they played (`ChessTeacher.deduce`
+  with `prefer`; most practice positions have one key, a few mates in one have several). A wrong digit is judged against
   the stored answer, sound because a generated board has one answer.
 - **Stored:** `training_passed`, its own key set in the progress store (`puzzleId|technique`, `puzzleId|exam`), never on a
   save and never a `Completion`, so training touches no streak, total or best time. The pilot's entries (`sudoku|…`) are
@@ -152,9 +155,9 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     `linkSteps`/`houseSteps` (every step of each rung, in the order the ladder's direct pick takes its first; kept
     beside the picks rather than replacing them, since `firstOrNull()` over them made Expert generation 23% slower) and, for a what-if, every
     open slot whose supposition runs out within the teacher's long chain. Cipher: `CipherTeacher.steps`, `findSteps`'
-    list for the technique (it already listed every placement of the first technique that finds any). Chess has none: its
+    list for the technique (it already listed every placement of the first technique that finds any). Chess has none (its
     step's `isReached` already accepts every key the prover names, which on a walked position is every move that still
-    mates in time.
+    mates in time; its own drill only re-explains the key played, `ChessDrill`).
   - **Wrong** = the teacher's `teach` calls the new board a mistake, which each teacher defines as "no legal answer keeps
     this" (never "differs from the stored answer": LITS's and Pipes' several answers, PR #15).
   - **Neither** = play on: one cross of three, an erasure, or a mark that is true but that no step of the technique
@@ -186,9 +189,14 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     (1 s, the board's own caption delay): a tap cycles moon, sun, empty, so every sun is a moon first, and that moon is
     a mistake whenever the answer is a sun. Without it a player making a sun step failed on the first tap. Right and
     play-on verdicts are not held. Every other course leaves it at 0.
-- The practice screen is the same for both: the board in what is left above the fixed 144 dp slot (explanation, hint or
-  verdict) and the button row, so feedback never moves it; the verdict outlines the step's targets and marks its cited
-  squares more quietly.
+- The practice screen is the same for both: the board in what is left above the slot (explanation, hint or verdict) and
+  the button row, so feedback never moves it; the verdict outlines the step's targets and marks its cited squares more
+  quietly. The slot is 144 dp, and below 700 dp of window it gives way in proportion, never under 96 dp (110 dp at 537,
+  a phone browser with both toolbars), as the play screen's hint slot did before it became a popover; its height is
+  fixed for a given window, and longer text scrolls. The final board's slot is the same.
+- A practice Chess board that a wrong move has lost reads "No forced mate from here." under it: the daily game's
+  "... Undo or Restart" names buttons a practice does not have (the board takes it from `interactive`, false once a
+  verdict is in; the daily game's board is interactive whenever it is lost, so its caption is unchanged).
 - **A practice board is never dealt twice**: `Course` drops a walked position equal to one already found. Every course
   before Chess found distinct boards anyway, so none of theirs moved; Chess picks from fixed position lists, and seeds
   collide (29 of its first 30 mate-in-one practices were distinct before).
@@ -223,9 +231,11 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
   - a fill that keeps the limit and is any instance of the technique is right: counting, any keeping fill (with one
     fill fewer than colours each must wipe a colour out); the biggest swallow, any keeping fill that swallows as many;
     the centre, any keeping fill of a most central area;
-  - a fill that keeps the limit but is no instance plays on with no verdict (the owner, 2026-10-28: a fill that still
-    wins is never "Not quite"). The step is then gone, so nothing later on that board is judged: the player plays it out
-    or takes "Another board", which neither counts nor breaks the run.
+  - a fill that keeps the limit but is no instance is never "Not quite" (the owner, 2026-10-28: a fill that still wins
+    is never wrong), nor right. The step is then gone and nothing later on that board could be judged, so the slot says
+    so (`Course.aside`: "That fill works, it keeps you in the limit, but it isn't this technique, so it doesn't count.
+    Try another board.") and the board locks with Next board, no outline. It neither counts nor breaks the run. It used to
+    play on silently, which left the player stuck with no feedback (the owner dislikes that).
 
   Guessing rarely passes: of every fill on 10 practices each, 19% are right on counting, 13% on the biggest swallow, 6%
   on the centre.
@@ -373,8 +383,8 @@ Nothing had to be excluded: every technique every teacher names is found within 
   and every layout of a line tried; Tally's sums and every subset of a line's open numbers), so the technique is the
   simplest step on the board; right, wrong (a wrong cross or a wrong circle too, as the hints flag them) and play-on
   moves; and the final board.
-- Layout: at 375x537 a practice board sits in what is left above the 144 dp explanation slot and the button row; the
-  slot's height is fixed, so a verdict or a hint never moves the board.
+- Layout: at 375x537 a practice board sits in what is left above the explanation slot (110 dp there) and the button
+  row; the slot's height is fixed, so a verdict or a hint never moves the board.
 - Kings' practice checked at 375x537 and 390x844 in Chromium and WebKit (`tools/render/render.py --home --query
   "screen=training&puzzle=kings&technique=would-empty"`, with taps for a wrong cross and for the step), and on the
   Android emulator through a hint's "Practise this" and a Show me: the board stays put through every verdict.
@@ -387,9 +397,9 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - Who's Who, Cipher and Chess checked at 375x537 and 390x844 in Chromium and WebKit (a practice of each, a wrong move's
   verdict for Cipher and Chess, and each final board), the badges in light and dark, and on the Android emulator (Pixel 6):
   a right Chess key, a wrong Who's Who tick and a right Cipher digit, the board still through each verdict. Two things
-  left as they are: at 375x537 Who's Who's clue list (it scrolls) gets one line beside the fixed 144 dp slot, a few lines
-  less than the daily game, whose hint slot shrinks below 700 dp (the practice slot could shrink the same way); and a wrong
-  Chess move also shows the board's own caption, "No forced mate from here: Undo or Restart", though a practice has neither.
+  then left (at 375x537 Who's Who's clue list got one line beside a fixed 144 dp slot, and a wrong Chess move showed
+  "... Undo or Restart") are fixed: the slot now gives way below 700 dp (three clues show), and the caption reads
+  "No forced mate from here."
 - Mosaic's three practices and its final board checked at 375x537 and 390x844 in Chromium and WebKit (`render.py --home
   --query "screen=training&puzzle=mosaic&technique=count"`, with taps for a losing fill and for the step), its badges on
   `?screen=achievements` (a harness hook added with it), and on the Android emulator: a hinted step, a wrong fill, the
@@ -398,6 +408,15 @@ Nothing had to be excluded: every technique every teacher names is found within 
   (LITS with taps for a right square then a wrong one: the board's box measured the same before and after the
   verdict), and on the Android emulator: a wrong LITS square, a wrong domino laid from the tray, and a Shikaku Show me.
   The badges ("2x3", "6|6", "L") rendered at true size on the Achievements page.
+- Final check of all 21 courses (2026-10-28), on the Android emulator (Pixel 6, API 36, light and dark): each opened from
+  Settings → Training, its first technique, one right move made by hand, "That's it" and the board's box the same before
+  and after; Sudoku's last square and Kings' last open square passed (three in a row, "Passed! 3 in a row.", back to the
+  list with the tick); the rules sheet's Train and a hint's "Practise this" on Pipes and Sudoku; a wrong Chess move
+  ("No forced mate from here."); a Mosaic biggest-swallow fill that keeps the limit (the aside note, Next board). A
+  practice of every course rendered at 375x537 and 390x844 in Chromium and WebKit, no console error.
+  Behaviours seen and left as designed: a step that marks several squares (Tents' no-tree grass, all twelve) passes only
+  when every one is made, and a single right square plays on with no verdict; the Training list opens at its top again
+  when the player comes back from a course.
 
 ## Classification of every puzzle
 
