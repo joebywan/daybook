@@ -52,7 +52,7 @@ class CageTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
             assertEquals(0, counts.getValue(CageTeacher.FALLBACK))
-            // Measured 2026-10 (200 boards): Expert linked totals 614, cage chain 673 of 16,200 steps (the chain was 1,287).
+            // Measured 2026-10 (200 boards): Expert linked totals 607, cage chain 708 of 16,200 steps (the chain was 1,287).
             if (d == Difficulty.EXPERT) {
                 assertTrue("linked totals too rare: $counts", counts.getValue(CageTeacher.LINKED_TOTALS) >= 2 * boards)
                 assertTrue("cage chain too common: $counts", counts.getValue(CageTeacher.CAGE_CHAIN) * 100 <= steps * 6)
@@ -110,6 +110,7 @@ class CageTeachingTest {
     fun `every nudge and explanation fits the panel`() {
         var longest = 0
         var nudge = 0
+        val chains = ArrayList<Int>()
         for (d in Difficulty.entries) for (day in 0 until 150) {
             val s = board(day, d)
             val at = s.grid.givens.indices.first { !s.grid.givens[it] }
@@ -118,15 +119,72 @@ class CageTeachingTest {
                 hintWalk(state, 90) { cur ->
                     val step = CageTeacher.teach(cur)!!
                     assertTrue("nudge ${step.nudge.length}: ${step.nudge}", step.nudge.length <= 70)
-                    val limit = if (step.technique == CageTeacher.LINKED_TOTALS) CageTeacher.MAX_LINKED_EXPLANATION else CageTeacher.MAX_EXPLANATION
-                    assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= limit)
-                    longest = maxOf(longest, step.explanation.length)
+                    // The cage chain's worked line is as long as the reasoning (it scrolls in the slot); its spread is below.
+                    if (step.technique == CageTeacher.CAGE_CHAIN) chains += step.explanation.length
+                    else {
+                        val limit = if (step.technique == CageTeacher.LINKED_TOTALS) CageTeacher.MAX_LINKED_EXPLANATION else CageTeacher.MAX_EXPLANATION
+                        assertTrue("explanation ${step.explanation.length}: ${step.explanation}", step.explanation.length <= limit)
+                        longest = maxOf(longest, step.explanation.length)
+                    }
                     nudge = maxOf(nudge, step.nudge.length)
                     Cages.teach(cur)!!.apply(cur) as CageState
                 }
             }
         }
-        println("longest explanation: $longest, longest nudge: $nudge")
+        chains.sort()
+        val median = chains[chains.size / 2]
+        println("longest explanation: $longest, longest nudge: $nudge; cage chain ${chains.size} steps, median $median, " +
+            "p90 ${chains[chains.size * 9 / 10]}, max ${chains.last()}, within 300: ${chains.count { it <= 300 }}")
+        // Measured 2026-10 (450 boards): median 247; most chains are two or three totals, as long as a linked-totals step.
+        assertTrue("cage chain lines too long: median $median", median <= CageTeacher.MAX_LINKED_EXPLANATION)
+    }
+
+    /**
+     * The cage chain's worked line, checked from outside: the square's digit holds in every answer [CageOracle] finds
+     * (cage by cage over every filling, no inference); the line is not the old summary; and every cage it names by its
+     * total is a cage of the board lying within the squares the hint marks.
+     */
+    @Test
+    fun `cage chain lines are worked through, name real cages and hold in every answer`() {
+        var checked = 0
+        for (d in listOf(Difficulty.HARD, Difficulty.EXPERT)) for (day in 0 until 30) {
+            var here = 0
+            hintWalk(board(day, d), 90) { now ->
+                if (here == 2) return@hintWalk null
+                val step = CageTeacher.teach(now)!!
+                if (step.technique == CageTeacher.CAGE_CHAIN) {
+                    val text = step.explanation
+                    assertFalse(text, text.startsWith("Work the cage totals"))
+                    assertTrue(text, "glowing square" in text)
+                    val cages = CageLogic.cageCells(now.cageOf)
+                    // "the cage totalling 11", "the top-right cage totalling 11", "the cage totalling 11 at row 2, column 7".
+                    val named = Regex("the (?:([a-z]+(?:-[a-z]+)?) )?cage totalling (\\d+)(?: at row (\\d), column (\\d))?")
+                    val phrases = named.findAll(text).map { it.value }.toSet()
+                    for (m in named.findAll(text)) {
+                        val (where, total, row, col) = m.destructured
+                        val first = { k: Int -> cages[k].min() }
+                        val fits = cages.indices.filter { k ->
+                            now.sums[k] == total.toInt() && cages[k].all { it in step.cited } &&
+                                (where.isEmpty() || CageLogic.BOX_NAMES[first(k) / 27 * 3 + first(k) % 9 / 3] == where) &&
+                                (row.isEmpty() || first(k) == (row.toInt() - 1) * 9 + col.toInt() - 1)
+                        }
+                        assertTrue("${m.value} in: $text", fits.isNotEmpty())
+                        // A bare name is never used beside a qualified one of the same total: two cages, two names.
+                        if (where.isEmpty() && row.isEmpty()) {
+                            assertTrue(text, phrases.none { it != m.value && it.endsWith("cage totalling $total") || it.contains("cage totalling $total at") })
+                        }
+                    }
+                    val answers = CageOracle.all(now.cageOf, now.sums, now.cells, limit = 5)
+                    assertTrue(answers.isNotEmpty())
+                    for (a in answers) assertEquals("${d.name} day $day: $text", a[step.cell], step.digit)
+                    checked++
+                    here++
+                }
+                Cages.teach(now)!!.apply(now) as CageState
+            }
+        }
+        println("cage chain steps checked against the oracle: $checked")
+        assertTrue("only $checked chain steps checked", checked >= 30)
     }
 
     @Test
@@ -169,41 +227,93 @@ class CageTeachingTest {
         assertTrue("only $checked linked steps checked", checked >= 30)
     }
 
-    /** Boards the generator did not make, with several answers: every non-fallback step holds in every answer. */
-    @Test
-    fun `steps hold in every answer of boards that have several`() {
-        val rng = Rng(3)
-        val spec = CageLogic.specFor(Difficulty.STANDARD)
+    /**
+     * Boards the generator did not make, with several answers: every non-fallback step holds in every answer. Cages grown
+     * by [spec]'s mix, [givens] digits of a random grid shown; the steps taken, per technique.
+     */
+    private fun multiAnswer(seed: Long, spec: CageLogic.Spec, givens: IntRange, want: Int): Pair<Int, Map<String, Int>> {
+        val rng = Rng(seed)
         var boards = 0
-        var steps = 0
+        val steps = linkedMapOf<String, Int>()
         var attempts = 0
-        while (boards < 12 && attempts++ < 400) {
+        while (boards < want && attempts++ < 400) {
             val solution = Sudoku.fullGrid(rng)
             val cageOf = CageLogic.partition(rng, solution, spec)
             val sums = CageLogic.sumsOf(cageOf, solution)
-            val givens = rng.shuffled((0 until 81).toList()).take(rng.nextInt(18, 24)).toSet()
-            val cells = List(81) { if (it in givens) solution[it] else 0 }
+            val shown = rng.shuffled((0 until 81).toList()).take(rng.nextInt(givens.first, givens.last + 1)).toSet()
+            val cells = List(81) { if (it in shown) solution[it] else 0 }
             val answers = CageOracle.all(cageOf, sums, cells, limit = 30)
             if (answers.size < 2 || answers.size >= 30) continue
             boards++
             val start = CageState(
-                SudokuState(givens = List(81) { it in givens }, cells = cells, solution = solution),
+                SudokuState(givens = List(81) { it in shown }, cells = cells, solution = solution),
                 cageOf, sums,
             )
-            hintWalk(start, 90) { now ->
+            walkEveryAnswer(start, answers, steps)
+        }
+        return boards to steps
+    }
+
+    /** Hints from [start] until one falls back: each step's digits must be those of every one of [answers]. */
+    private fun walkEveryAnswer(start: CageState, answers: List<List<Int>>, steps: MutableMap<String, Int>) {
+        hintWalk(start, 90) { now ->
+            val step = Cages.teach(now) ?: return@hintWalk null
+            if (step.fallback) return@hintWalk null
+            for (t in step.targets) {
+                val digit = (step.apply(now) as CageState).cells[t]
+                for (a in answers) assertEquals("${step.technique} at $t: ${step.explanation}", a[t], digit)
+            }
+            steps.merge(step.technique, 1, Int::plus)
+            step.apply(now) as CageState
+        }
+    }
+
+    @Test
+    fun `steps hold in every answer of boards that have several`() {
+        val (boards, steps) = multiAnswer(3, CageLogic.specFor(Difficulty.STANDARD), 18 until 24, want = 12)
+        println("multi-answer check: $boards boards, $steps")
+        assertTrue("found $boards boards", boards >= 6)
+        assertTrue(steps.values.sum() > 40)
+    }
+
+    /**
+     * Random boards with several answers finish on singles before any chain, so these are made from Expert boards: walked
+     * by hints to their first cage chain, then two neighbouring cages merged into one (its total theirs together, kept only
+     * if its digits stay different) until [CageOracle] finds several answers. Every step after must hold in all of them.
+     */
+    @Test
+    fun `cage chain lines hold in every answer of boards that have several`() {
+        val steps = linkedMapOf<String, Int>()
+        var boards = 0
+        for (day in 0 until 40) {
+            var at: CageState? = null
+            hintWalk(board(day, Difficulty.EXPERT), 90) { now ->
                 val step = Cages.teach(now) ?: return@hintWalk null
-                if (step.fallback) return@hintWalk null
-                for (t in step.targets) {
-                    val digit = (step.apply(now) as CageState).cells[t]
-                    for (a in answers) assertEquals("${step.technique} at $t", a[t], digit)
-                }
-                steps++
+                if (step.technique == CageTeacher.CAGE_CHAIN) { at = now; return@hintWalk null }
                 step.apply(now) as CageState
             }
+            val p = at ?: continue
+            val solution = p.grid.solution
+            val cages = CageLogic.cageCells(p.cageOf)
+            merged@ for (a in cages.indices) for (b in a + 1 until cages.size) {
+                val both = cages[a] + cages[b]
+                if (cages[a].none { c -> cages[b].any { kotlin.math.abs(c - it) == 9 || (c / 9 == it / 9 && kotlin.math.abs(c - it) == 1) } }) continue
+                if (both.map { solution[it] }.toSet().size != both.size) continue
+                // Renumbered by first square, as cages always are.
+                val raw = p.cageOf.map { if (it == b) a else it }
+                val order = raw.distinct()
+                val cageOf = raw.map { order.indexOf(it) }
+                val sums = CageLogic.sumsOf(cageOf, solution)
+                val answers = CageOracle.all(cageOf, sums, p.cells, limit = 30)
+                if (answers.size < 2 || answers.size >= 30) continue
+                boards++
+                walkEveryAnswer(p.copy(cageOf = cageOf, sums = sums), answers, steps)
+                break@merged
+            }
         }
-        println("multi-answer check: $boards boards, $steps steps")
+        println("multi-answer chain check: $boards boards, $steps")
         assertTrue("found $boards boards", boards >= 6)
-        assertTrue(steps > 40)
+        assertTrue("chain steps: $steps", (steps[CageTeacher.CAGE_CHAIN] ?: 0) >= 10)
     }
 
     // ---- the walkthrough -----------------------------------------------------------------------------

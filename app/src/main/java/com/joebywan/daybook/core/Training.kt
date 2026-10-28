@@ -229,8 +229,9 @@ val CagesTraining: Course = Course(
             "that from 45: the squares left over must make the difference.",
         CageTeacher.LINKED_TOTALS to "Two or three totals that share squares: settle one, and it cuts the others. Work " +
             "them through one after another until a square has one digit left.",
-        CageTeacher.CAGE_CHAIN to "When no one cage settles it, work every cage's ways through together with the digits " +
-            "around them, again and again, until a square has one digit left.",
+        CageTeacher.CAGE_CHAIN to "A longer line of totals: each cage or 45-rule group strikes digits from its squares, " +
+            "which narrows the next. Some lines come back to a total twice, or close in on a digit's places from two " +
+            "sides. Follow them until a square has one digit left.",
     ),
     // The 45 rule and linked totals from Hard (88 and 42% of its boards reach them), the chain from Expert (all of them; 17% on Hard).
     tierFor = tierByIndex({ CagesTraining.techniques }, hard = 6, expert = 8),
