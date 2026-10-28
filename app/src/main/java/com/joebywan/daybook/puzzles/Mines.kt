@@ -327,7 +327,7 @@ object Mines : PuzzleType {
     }
 
     /** A round mine with eight spikes and a glint. */
-    private fun DrawScope.drawMine(x: Float, y: Float, u: Float, ink: Color) {
+    internal fun DrawScope.drawMine(x: Float, y: Float, u: Float, ink: Color) {
         val c = Offset(x + u / 2, y + u / 2)
         for (k in 0 until 8) {
             val a = k * PI.toFloat() / 4
@@ -482,7 +482,8 @@ object Mines : PuzzleType {
         if (s.failed) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Mine hit", style = MaterialTheme.typography.bodyMedium, color = scheme.error, maxLines = 1)
-                FilledTonalButton(onClick = { if (interactive) onState(s.retry()) }) { Text("Try again", maxLines = 1) }
+                // Not on a board that takes no moves: Training's verdict ends a practice board with its own Next board.
+                if (interactive) FilledTonalButton(onClick = { onState(s.retry()) }) { Text("Try again", maxLines = 1) }
             }
         } else {
             val left = s.minesLeft

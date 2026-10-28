@@ -180,6 +180,9 @@ object Training {
             MamboTraining,
             NonogramTraining,
             TallyTraining,
+            MinesTraining,
+            LampsTraining,
+            TentsTraining,
         )
     }
 
@@ -394,6 +397,11 @@ class PlacementDrill(
 class MoveDrill(
     override val settleMillis: Long = 0,
     /**
+     * Wrong besides the teacher's mistakes: a lost board (Mines' mine), or a note the teacher never reads that no answer
+     * keeps (Tents' grass, Lamps' cross where every answer has a lamp). The game's own hints are unchanged.
+     */
+    private val wrong: (PuzzleState) -> Boolean = { false },
+    /**
      * The teacher's next step on the state as a [Deduction], from what the player can see: build it from the teacher's
      * visible-state entry point (one with no parameter for the answer), never from `teach`, which reads the answer.
      */
@@ -417,7 +425,7 @@ class MoveDrill(
 
     // ponytail: [every] is re-derived per judged state; memoise it on the practice if a teacher's list gets slow.
     override fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean? = when {
-        puzzle.teach(after)?.mistake == true -> false
+        wrong(after) || puzzle.teach(after)?.mistake == true -> false
         (p.step as Deduction).isReached(after) -> true
         every?.invoke(p.board, p.step.technique)?.any { it.isReached(after) } == true -> true
         else -> null

@@ -14,7 +14,7 @@ batch) follow it; the rest of the puzzles are classified at the end.
 ## What the player sees
 
 - **Training** (route `training`): a list of the puzzles that have it (Sudoku, Cage Sudoku, Inequality, Regions, Kings,
-  Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally), each
+  Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents), each
   with how many of its techniques are passed and a tick once it is finished (its final board passed).
 - **A puzzle's techniques** (route `training||…|<puzzle>`): its techniques in the teacher's ladder order
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
@@ -45,8 +45,9 @@ batch) follow it; the rest of the puzzles are classified at the end.
   `pipesTrained`, `pipesGraduate`, `pearlsTrained`, `pearlsGraduate`, `atomsTrained`, `atomsGraduate`, `whoswhoTrained`,
   `whoswhoGraduate`, `cipherTrained`, `cipherGraduate`, `chessTrained`, `chessGraduate`, `mosaicTrained`,
   `mosaicGraduate`, `mamboTrained`, `mamboGraduate`, `nonogramTrained`, `nonogramGraduate`, `tallyTrained`,
-  `tallyGraduate` (Who's Who's, Cipher's and Chess's badges `?`, `A+B`, `M`; a badge glyph must not start with `#`,
-  which names a drawn shape). They
+  `tallyGraduate`, `minesTrained`, `minesGraduate`, `lampsTrained`, `lampsGraduate`, `tentsTrained`, `tentsGraduate`
+  (Who's Who's, Cipher's and Chess's badges `?`, `A+B`, `M`; Mines', Lamps' and Tents' a drawn mine, `L`, `T`; a badge
+  glyph must not start with `#` unless it names a drawn shape). They
   are built from `Training.COURSES` in its order (so a course appended there appends its two), announced on the training
   screen as they are earned and shown on the Achievements page; the trained badge's glyph is the course's `badge`, the
   graduate's the crown.
@@ -85,6 +86,10 @@ batch) follow it; the rest of the puzzles are classified at the end.
   - Mambo: pair, sandwich, link and quota met on Standard, one short on Hard, the what-if on Expert (`MamboTeacher.depth`).
   - Nonogram: all four on Standard (58-60 of 60 Standard boards reach each).
   - Tally: the four shortcuts on Standard, every way on Hard, the what-if on Expert (`TallyLogic.accepts`).
+  - Mines: single numbers on Standard, subset and pair on Hard (57 and 33 of 60 boards), the count against the numbers and
+    the what-if on Expert (57 and 4 of 60).
+  - Lamps: zero, done, room and only light on Standard; starve and dark on Hard (51 and 22 of 60); the what-if on Expert.
+  - Tents: no tree and the two line rules on Standard; one spot, shared and served on Hard (52, 3 and 11 of 60).
 - **What counts as right** (digits; Kings and the general shape below): the step's own digit, which is what the hint's `isReached` checks. Another correct digit
   elsewhere also counts: the position has no simpler step anywhere (each teacher tries every simpler technique on the whole
   board first), so a correct digit there was found with this technique or a harder one. It is answered about its own
@@ -202,8 +207,12 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
   Guessing rarely passes: of every fill on 10 practices each, 19% are right on counting, 13% on the biggest swallow, 6%
   on the centre.
 - Watch for a teacher that treats some marks as notes (Tents: "crosses are notes and never read as knowledge"): a wrong
-  note is then never a mistake, so a wrong cross plays on instead of failing. Decide per puzzle whether the teacher should
-  flag it.
+  note is then never a mistake, so a wrong cross plays on instead of failing. Decided (2026-10-28): a practice judges such
+  a note wrong when no legal answer keeps it, through `MoveDrill`'s `wrong`, leaving the game's hints alone. Tents: grass
+  where the one answer has a tent; Lamps (the same shape): a cross where the answer has a lamp. Both generators prove one
+  answer, so "the stored answer's" is "every legal answer's". Mines' `wrong` is a lost board: a mine revealed is wrong,
+  the verdict makes the board non-interactive, and the board offers its Try again only while it takes moves, so no
+  game-over flow runs inside Training.
 
 ## Measured
 
@@ -277,7 +286,36 @@ Nothing had to be excluded: every technique every teacher names is found within 
   first 60); Regions index 0 (all 60); Kings index 1 (17 of the first 60); Pipes index 1 (15 of the first 60); Pearls
   index 0 (54 of 60); Atoms index 1 (10 of 60); Who's Who index 0 (all 60); Cipher index 0 (16 of the first 60); Chess
   index 6 (13 of the first 60); Mosaic index 4 (17 of the first 60; Standard 5 of 60, Hard 14); Mambo index 0 (all 60);
-  Nonogram index 0 (54 of the first 60); Tally index 0 (58 of the first 60).
+  Nonogram index 0 (54 of the first 60); Tally index 0 (58 of the first 60); Mines index 44 (one of the
+  first 60); Lamps index 4 (31 of 60); Tents index 34 (5 of 60).
+- **Mines** (move drill; measured on a machine shared with other builds, so on the high side): all found, all mines,
+  subset and pair 1-38 ms for the first board, a mean of 1-4 ms a board after (max 16 ms); the count against the numbers
+  5 ms first, 10 ms a board (max 35 ms); the what-if 14 ms first, 60 ms a board after (max 218 ms; 30 boards in 2.4 s),
+  since only 4 of 60 Expert boards reach it. Kept. The walk counts its own flags as found mines (they are its sound
+  steps); the game's teacher never trusts a flag, and without this it offered a subset on a board whose flags already
+  showed a single number's step.
+- **Lamps:** the four direct facts 0-5 ms first and about 1 ms a board; starve 5 ms first, 4 ms a board (max 16 ms); dark
+  2 ms first, 6 ms a board (max 24 ms); the what-if 15 ms first, 52 ms a board (max 143 ms).
+- **Tents:** no tree and the lines 0-2 ms; one spot 4 ms first, 4 ms a board (max 13 ms); shared 52 ms first, 26 ms a board
+  (max 101 ms; 3 of 60 Hard boards); served 4 ms first, 5 ms a board (max 15 ms).
+- **Any instance** (Mines, Lamps, Tents): `every` is `MinesTeacher.steps`, `LampsTeacher.steps` and `TentsTeacher.steps`,
+  every step of the technique on the practice board, taking the walk's own flags, crosses and grass as known.
+  `MinesLogic.facts` and `TentsTeacher.facts` are the ladder's own loops as lazy sequences, kept beside the untouched
+  `nextFact`, which the generators' walks still call: walking a year of Tents boards through the sequence's first took
+  1.5-3x as long as through `nextFact` (8-58 ms against 31-97 ms a tier, warm). Tests hold each sequence's first step to
+  `nextFact`'s along whole walks, so the lists cannot drift from the ladder; `LampsLogic.facts` collects each rule's instances (a what-if: every supposition that breaks within
+  three links, not only the shortest). Judging a move that is no step, which asks for them all, takes under 2 ms on the
+  JVM for every technique (`JUDGE` lines). Tests: another instance is right (Mines' all found and all mines, Lamps' zero
+  and done, Tents' one spot), and a true reveal, cross or grass that no instance justifies gets no verdict.
+- **Left out:** Mines' "counting the mines left" and Tents' "grass around a tent", which no walk reaches. The count rule
+  needs the hidden squares to be all mines or all safe, which the count against the numbers (tried after it, and more
+  general) always settles first in practice. A tent's surrounding grass is drawn by itself (`TentsState.seen`), so that
+  step is always already shown and the teacher skips it.
+- Mines', Lamps' and Tents' final boards: Mines index 44 (the only one of the first 60 whose walk needs all six: the what-if is rare), Lamps index 4
+  (31 of 60), Tents index 34 (5 of 60). `MinesTrainingTest`, `LampsTrainingTest` and `TentsTrainingTest` pin them, and
+  check 6 practices per technique against `MinesOracle`, `LampsOracle` and `TentsOracle` and lower rungs counted in the
+  test (Mines' two numbers brute-forced over the mines their shared squares hold; Lamps' starve and dark by placing the
+  lamp and walking its rays); right, wrong (a mine, a wrong flag; a wrong lamp or cross; a wrong tent or grass) and play-on.
 - `SudokuTrainingTest` checks 8 Sudoku practices per technique; `TrainingTest` 5 Cage Sudoku practices and 8 Inequality
   and Regions practices per technique: the teacher's next step (and the hint's, through `PuzzleType.teach`) is the
   technique, the step's digit is the answer's, the shown digits agree with the answer, the board has one answer by the
@@ -341,12 +379,12 @@ techniques no walk reached.
 | LITS | 6: whole region 5/13/8, overlap, avoid 2x2, letter clash 30/30/30, neighbour 0/15/27, what-if 0/1/14 | move | 26-173 ms | include |
 | Nonogram | 4: all 26-30 a tier | move | 4-6 ms | **done** |
 | Chess | 3: mate in one, forcing key 27-30 a tier; quiet key 0/2/9 | move | 1-88 ms | **done** (quiet key from Expert) |
-| Tents | 6: no tree, line done, line full 29-30; one spot 1/25/21; shared 0/1/12; served 1/7/20 (touch: never) | move | 2-74 ms | include; its teacher reads grass as notes (see above) |
+| Tents | 6: no tree, line done, line full 29-30; one spot 1/25/21; shared 0/1/12; served 1/7/20 (touch: never) | move | 0-52 ms | **done** (grass no answer keeps is wrong in practice) |
 | Cipher | 5: leading carry, column, column pair 29-30; columns together 0/30/9; pair what-if 0/0/30 (only letter: never) | move | 1-10 ms | **done** (only letter dropped) |
 | Tally | 6: all reached; every way 0/30/30, what-if 0/0/30 | move | 2-11 ms | **done** |
 | Dominoes | 6: only place 10 a tier, counting 0/30/10, what-if 0/0/30, the rest 14-30 | move | 6-33 ms | include |
-| Mines | 6: subset 0/28/26, pair 0/17/17, count edge 0/0/29, what-if 0/0/1 (count: never) | move | 4-22 ms | include (what-if is one board in 30: ~0.2 s a board) |
-| Lamps | 7: all reached; dark 0/11/14 | move | 3-21 ms | include |
+| Mines | 6: subset 0/28/26, pair 0/17/17, count edge 0/0/29, what-if 0/0/1 (count: never) | move | 1-24 ms | **done** (what-if kept: 42 ms a board through the cache) |
+| Lamps | 7: all reached; dark 0/11/14 | move | 0-15 ms | **done** (a cross where the answer has a lamp is wrong in practice) |
 | Pearls | 7: pearl's arms and lines 26-30, dead end 18/28/29, small loop 0/30/29, what-if 0/0/30 (pearl ways: never, left out) | move | 5-26 ms | **done** |
 | Who's Who | 5: clue, only 29-30; link, house 0/29-30/30; what-if 0/0/30 | move | 1-77 ms | **done**: the steps are logic, the words only labels |
 | Sets | 1: reuse (continue never reached; fresh not praised) | — | — | excluded: one rung |
@@ -371,7 +409,8 @@ id list, the docs and the changelog. Grouped by kind of board, so a batch's agen
 1. **Mambo, Nonogram, Tally**: line rules on a grid, cheap, every rung reached. **Done**: no technique dropped (every
    rung is reached within milliseconds); Mambo's tap cycle needed `settleMillis` (above).
 2. **Pipes, Pearls, Atoms**: paths and loops. **Done** (Pipes needed its own drill, above).
-3. **Mines, Lamps, Tents**: marks and counts (settle Tents' grass-as-notes first).
+3. **Mines, Lamps, Tents**: marks and counts. **Done** (a course's `wrong` flags Tents' grass and Lamps' crosses no
+   answer keeps, and Mines' lost board).
 4. **Shikaku, Dominoes, LITS**: pieces placed by drag or pairs (each placement must stay one emitted state).
 5. **Who's Who, Cipher, Chess**: deduction grids and moves (done).
 6. **Mosaic** alone: done (its own judge, above).

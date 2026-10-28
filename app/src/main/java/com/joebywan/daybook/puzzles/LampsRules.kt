@@ -305,6 +305,54 @@ internal object LampsLogic {
         return Fact(WHAT_IF, if (w.assume == LAMP) NO else LAMP, listOf(w.square), whatIf = w)
     }
 
+    /**
+     * Every fact of [technique] on [k]: [nextFact]'s rules, each instance collected instead of the first (for a what-if,
+     * every supposition that breaks within [MAX_LINKS], not only the shortest). Training passes a move that completes any.
+     * Meant for a position with no simpler fact, as a practice is (a what-if's search assumes no direct fact is left).
+     */
+    fun facts(g: Geo, k: IntArray, technique: String): List<Fact> {
+        val lit = litBy(g, k)
+        fun cands(w: Int) = g.beside[w].filter { candidate(g, k, lit, it) }
+        val open = k.indices.filter { candidate(g, k, lit, it) }
+        fun sees(x: Int) = g.sight[x].toSet() + x
+        return when (technique) {
+            ZERO -> g.numbered.filter { g.number[it] == 0 && cands(it).isNotEmpty() }.map { Fact(ZERO, NO, cands(it), wall = it) }
+            DONE -> g.numbered.filter { g.number[it] > 0 && on(g, k, it) == g.number[it] && cands(it).isNotEmpty() }
+                .map { Fact(DONE, NO, cands(it), wall = it) }
+            ROOM -> g.numbered.filter { (g.number[it] - on(g, k, it)).let { need -> need > 0 && cands(it).size == need } }
+                .map { Fact(ROOM, LAMP, cands(it), wall = it) }
+            ONLY_LIGHT -> g.whites.filter { !lit[it] }
+                .mapNotNull { y -> onlySource(g, k, lit, y).takeIf { it >= 0 }?.let { Fact(ONLY_LIGHT, LAMP, listOf(it), seen = y) } }
+            STARVE -> open.flatMap { x ->
+                val s = sees(x)
+                g.numbered.asList().mapNotNull { w ->
+                    val c = cands(w)
+                    val gone = c.filter { it != x && it in s }
+                    val gain = if (x in g.beside[w]) 1 else 0
+                    if (c.none { it in s } || on(g, k, w) + gain + c.count { it !in s } >= g.number[w]) null
+                    else Fact(STARVE, NO, listOf(x), wall = w, lit = gone)
+                }
+            }
+            DARK -> open.flatMap { x ->
+                val s = sees(x)
+                g.whites.filter { !lit[it] && it !in s }.mapNotNull { y ->
+                    val src = sources(g, k, lit, y)
+                    if (src.all { it in s }) Fact(DARK, NO, listOf(x), seen = y, lit = src.filter { it != x }) else null
+                }
+            }
+            WHAT_IF -> {
+                if (broken(g, k, lit) != null) return emptyList()
+                val z = Scratch(k, lit)
+                open.flatMap { x ->
+                    listOf(LAMP, NO).mapNotNull { assume ->
+                        whatIf(g, z, x, assume, MAX_LINKS)?.let { Fact(WHAT_IF, if (assume == LAMP) NO else LAMP, listOf(x), whatIf = it) }
+                    }
+                }
+            }
+            else -> emptyList()
+        }
+    }
+
     fun apply(k: IntArray, f: Fact) {
         for (i in f.targets) k[i] = f.value
     }

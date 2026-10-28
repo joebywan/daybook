@@ -61,8 +61,10 @@ internal object LampsTeacher {
     }
 
     /** The [Deduction] for the play screen; `Lamps.teach` is just this. */
-    fun deduction(s: LampsState): Deduction? {
-        val step = teach(s) ?: return null
+    fun deduction(s: LampsState): Deduction? = teach(s)?.let(::deduction)
+
+    /** [step] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    fun deduction(step: Step): Deduction {
         val mistake = step.technique == MISTAKE
         return Deduction(
             step,
@@ -117,6 +119,23 @@ internal object LampsTeacher {
             val shown = f.value == NO && f.targets.all { marks[it] == LampsLogic.CROSS }
             if (!shown) return explain(g, f)
         }
+    }
+
+    /**
+     * Every step of [technique] on the board, each explained, taking [marks]' lamps and crosses as known (a practice board's
+     * are its walk's own sound steps): Training passes a move that completes any of them.
+     */
+    fun steps(n: Int, walls: String, marks: String, technique: String): List<Step> {
+        val g = LampsLogic.Geo(n, walls)
+        val k = IntArray(n * n) {
+            when {
+                !g.white[it] -> LampsLogic.OPEN
+                marks[it] == LampsLogic.LAMP_MARK -> LAMP
+                marks[it] == LampsLogic.CROSS -> NO
+                else -> LampsLogic.OPEN
+            }
+        }
+        return LampsLogic.facts(g, k, technique).map { explain(g, it) }
     }
 
     private fun its(num: Int) = when (num) {
