@@ -33,7 +33,7 @@ val TallyTraining: Course = Course(
             TallyTeacher.deduce(t.size, TallyLogic.digitArray(t), TallyLogic.targets(t), t.marks)?.let { Tally.deduction(t, it) }
         }
     },
-    badge = "+",
+    badge = "T",
     // The first practice seed whose Expert board's walk needs all six. Pinned by TallyTrainingTest.
     examIndex = 0,
 )

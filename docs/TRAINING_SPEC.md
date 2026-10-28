@@ -12,7 +12,7 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
 
 ## What the player sees
 
-- **Training** (route `training`): a list of the puzzles that have it (Sudoku, Cage Sudoku, Inequality, Regions, Kings), each
+- **Training** (route `training`): a list of the puzzles that have it (Sudoku, Cage Sudoku, Inequality, Regions, Kings, Mambo, Nonogram, Tally), each
   with how many of its techniques are passed and a tick once it is finished (its final board passed).
 - **A puzzle's techniques** (route `training||…|<puzzle>`): its techniques in the teacher's ladder order
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
@@ -33,7 +33,8 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
     without first playing.
 - **Achievements** (appended, two per puzzle): "<Puzzle> trained" for passing every technique, "<Puzzle> graduate" for
   then solving the final board: Sudoku's two (`sudokuTrained`, `sudokuGraduate`), then `cagesTrained`, `cagesGraduate`,
-  `inequalityTrained`, `inequalityGraduate`, `regionsTrained`, `regionsGraduate`, `kingsTrained`, `kingsGraduate`. They
+  `inequalityTrained`, `inequalityGraduate`, `regionsTrained`, `regionsGraduate`, `kingsTrained`, `kingsGraduate`,
+  `mamboTrained`, `mamboGraduate`, `nonogramTrained`, `nonogramGraduate`, `tallyTrained`, `tallyGraduate`. They
   are built from `Training.COURSES` in its order (so a course appended there appends its two), announced on the training
   screen as they are earned and shown on the Achievements page; the trained badge's glyph is the course's `badge`, the
   graduate's the crown.
@@ -55,6 +56,9 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
   - Regions: the three singles on Standard, the locked candidate on Hard (`RegionsLogic.specFor`).
   - Kings: last square, locked to a line and would empty on Standard, confined on Hard, the what-if on Expert
     (`Kings.fitsTier`).
+  - Mambo: pair, sandwich, link and quota met on Standard, one short on Hard, the what-if on Expert (`MamboTeacher.depth`).
+  - Nonogram: all four on Standard (58-60 of 60 Standard boards reach each).
+  - Tally: the four shortcuts on Standard, every way on Hard, the what-if on Expert (`TallyLogic.accepts`).
 - **What counts as right** (digits; Kings and the general shape below): the step's own digit, which is what the hint's `isReached` checks. Another correct digit
   elsewhere also counts: the position has no simpler step anywhere (each teacher tries every simpler technique on the whole
   board first), so a correct digit there was found with this technique or a harder one. A wrong digit is judged against
@@ -95,6 +99,10 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     would pass guesses.
   - Judging asks the teacher, so every emitted state is judged on `Dispatchers.Default`; a verdict for a state the player
     has already moved on from is dropped and the newer state judged instead.
+  - `MoveDrill(settleMillis)`: a wrong verdict waits that long before it shows, so a newer move drops it. Mambo needs it
+    (1 s, the board's own caption delay): a tap cycles moon, sun, empty, so every sun is a moon first, and that moon is
+    a mistake whenever the answer is a sun. Without it a player making a sun step failed on the first tap. Right and
+    play-on verdicts are not held. Every other course leaves it at 0.
 - The practice screen is the same for both: the board in what is left above the fixed 144 dp slot (explanation, hint or
   verdict) and the button row, so feedback never moves it; the verdict outlines the step's targets and marks its cited
   squares more quietly.
@@ -132,14 +140,30 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - **Kings** (move drill): last square 8 ms for the first board, then a mean of 4 ms a board; locked to a line, would
   empty and confined 1-5 ms first, 3-6 ms next; the what-if 153 ms first, 91 ms a board after (max 287 ms), since only 18
   of 60 Expert boards reach it. Standard reaches the first three on 56-60 of 60 boards, Hard adds confined on all 60.
+- **Mambo** (move drill, through the cache): pair 32 ms first, then a mean of 3 ms a board (max 7); sandwich, link and
+  quota met 1-9 ms first, 1-4 ms next; one short 13 ms first, 7 ms next (max 22); the what-if 22 ms first, 20 ms next
+  (max 56). Standard reaches pair, link and quota met on all 60 boards and sandwich on 51; every Hard board reaches one
+  short, every Expert board the what-if.
+- **Nonogram:** every technique 0-4 ms first and 0-2 ms a board after. Standard boards reach the full line on 58 of 60,
+  the other three on all 60.
+- **Tally:** line done 9 ms first, the rest 0-5 ms first; next boards a mean of 0-7 ms, at most 17 ms (the what-if).
+  Standard reaches the first three on all 60 and all left on 26; every Hard board reaches every way, every Expert board
+  the what-if.
 - **Final boards** (Expert, the first practice seed whose walk needs every technique, each pinned by a test):
   Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (32 of the first 60); Inequality index 4 (17 of the first
-  60); Regions index 0 (all 60); Kings index 1 (17 of the first 60).
+  60); Regions index 0 (all 60); Kings index 1 (17 of the first 60); Mambo index 0 (all 60); Nonogram index 0 (54 of the
+  first 60); Tally index 0 (58 of the first 60).
 - `SudokuTrainingTest` checks 8 Sudoku practices per technique; `TrainingTest` 5 Cage Sudoku practices and 8 Inequality
   and Regions practices per technique: the teacher's next step (and the hint's, through `PuzzleType.teach`) is the
   technique, the step's digit is the answer's, the shown digits agree with the answer, the board has one answer by the
   puzzle's own oracle (`CageOracle`, `InequalityOracle`, `RegionsOracle`), and, by singles counted here with no candidate
   logic of the teacher's (for Inequality, sign bounds worked to a fixpoint as well), no simpler single is anywhere on it.
+- `MamboTrainingTest`, `NonogramTrainingTest` and `TallyTrainingTest` check 6 practices per technique as `KingsTrainingTest`
+  does: one answer by `MamboOracle`, `NonogramOracle` and `TallyOracle`; the walked marks agree with it; each line's rung
+  classified in the test by plain counting (Mambo's runs, gaps, links and halves; Nonogram's runs packed left and right
+  and every layout of a line tried; Tally's sums and every subset of a line's open numbers), so the technique is the
+  simplest step on the board; right, wrong (a wrong cross or a wrong circle too, as the hints flag them) and play-on
+  moves; and the final board.
 - Layout: at 375x537 a practice board sits in what is left above the 144 dp explanation slot and the button row; the
   slot's height is fixed, so a verdict or a hint never moves the board.
 - Kings' practice checked at 375x537 and 390x844 in Chromium and WebKit (`tools/render/render.py --home --query
@@ -162,17 +186,17 @@ techniques no walk reached.
 | Inequality | 7 | placement | 0-5 ms | **done** |
 | Regions | 4 | placement | 2-14 ms | **done** |
 | Kings | 5: last square 30/30/30 … what-if 0/0/10 | move | 1-153 ms | **done (pilot)** |
-| Mambo | 6: pair, sandwich, link, quota met 30/30/30; one short 0/30/30; what-if 0/0/30 | move | 17-41 ms | include |
+| Mambo | 6: pair, sandwich, link, quota met 30/30/30; one short 0/30/30; what-if 0/0/30 | move | 17-41 ms | **done** |
 | Pipes | 4: border, set neighbour, whichever way 25-30 a tier; no loop 5/4/6 | move | 3-56 ms | include (several answers: judged by the teacher) |
 | Shikaku | 4: only fits, only reaches; common cells 0/5/18; what-if 0/6/14 | move | 4-13 ms | include |
 | Mosaic | 3: count, biggest swallow, centre 2/5/10 (finish, fill within the limit: not praised) | move | 8-21 ms | include; its teacher can take 1.2 s a hint, and judging asks it per move: measure on the web first |
 | Atoms | 6: one neighbour … isolation 0/16/29, what-if 0/0/6 (only way out: never) | move | 4-29 ms | include |
 | LITS | 6: whole region 5/13/8, overlap, avoid 2x2, letter clash 30/30/30, neighbour 0/15/27, what-if 0/1/14 | move | 26-173 ms | include |
-| Nonogram | 4: all 26-30 a tier | move | 4-6 ms | include |
+| Nonogram | 4: all 26-30 a tier | move | 4-6 ms | **done** |
 | Chess | 3: mate in one, forcing key 27-30 a tier; quiet key 0/2/9 | move | 8-47 ms | include: a key move is a real technique, and its walkthrough teaches the rules, not these |
 | Tents | 6: no tree, line done, line full 29-30; one spot 1/25/21; shared 0/1/12; served 1/7/20 (touch: never) | move | 2-74 ms | include; its teacher reads grass as notes (see above) |
 | Cipher | 5: leading carry, column, column pair 29-30; columns together 0/30/9; pair what-if 0/0/30 (only letter: never) | move | 2-11 ms | include |
-| Tally | 6: all reached; every way 0/30/30, what-if 0/0/30 | move | 2-11 ms | include |
+| Tally | 6: all reached; every way 0/30/30, what-if 0/0/30 | move | 2-11 ms | **done** |
 | Dominoes | 6: only place 10 a tier, counting 0/30/10, what-if 0/0/30, the rest 14-30 | move | 6-33 ms | include |
 | Mines | 6: subset 0/28/26, pair 0/17/17, count edge 0/0/29, what-if 0/0/1 (count: never) | move | 4-22 ms | include (what-if is one board in 30: ~0.2 s a board) |
 | Lamps | 7: all reached; dark 0/11/14 | move | 3-21 ms | include |
@@ -197,7 +221,8 @@ Each course is its own file, a one-function refactor in its puzzle's file (the D
 as Kings'), its own test, and one line at the end of `COURSES`, so batches conflict only on that line, `TrainingTest`'s
 id list, the docs and the changelog. Grouped by kind of board, so a batch's agent learns one board idiom:
 
-1. **Mambo, Nonogram, Tally**: line rules on a grid, cheap, every rung reached.
+1. **Mambo, Nonogram, Tally**: line rules on a grid, cheap, every rung reached. **Done**: no technique dropped (every
+   rung is reached within milliseconds); Mambo's tap cycle needed `settleMillis` (above).
 2. **Pipes, Pearls, Atoms**: paths and loops (Pipes' several answers already judged by its teacher).
 3. **Mines, Lamps, Tents**: marks and counts (settle Tents' grass-as-notes first).
 4. **Shikaku, Dominoes, LITS**: pieces placed by drag or pairs (each placement must stay one emitted state).

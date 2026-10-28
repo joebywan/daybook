@@ -30,7 +30,8 @@ val NonogramTraining: Course = Course(
                 ?.let { Nonogram.deduction(g, it) }
         }
     },
-    badge = "#",
+    // Not "#": a glyph starting with it names a drawn shape (AchievementBadge).
+    badge = "N",
     // The first practice seed whose Expert board's walk needs all four. Pinned by NonogramTrainingTest.
     examIndex = 0,
 )

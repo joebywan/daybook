@@ -31,7 +31,7 @@ val MamboTraining: Course = Course(
     drill = MoveDrill(settleMillis = Mambo.SETTLE_MILLIS) { s ->
         (s as MamboState).let { m -> MamboTeacher.deduce(m.size, m.cells, m.links)?.let { Mambo.deduction(m, it) } }
     },
-    badge = "=",
+    badge = "&",
     // The first practice seed whose Expert board's walk needs all six. Pinned by MamboTrainingTest.
     examIndex = 0,
 )
