@@ -12,7 +12,8 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
 
 ## What the player sees
 
-- **Training** (route `training`): a list of the puzzles that have it (Sudoku, Cage Sudoku, Inequality, Regions, Kings), each
+- **Training** (route `training`): a list of the puzzles that have it (Sudoku, Cage Sudoku, Inequality, Regions, Kings, Who's Who,
+  Cipher, Chess), each
   with how many of its techniques are passed and a tick once it is finished (its final board passed).
 - **A puzzle's techniques** (route `training||…|<puzzle>`): its techniques in the teacher's ladder order
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
@@ -33,7 +34,8 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
     without first playing.
 - **Achievements** (appended, two per puzzle): "<Puzzle> trained" for passing every technique, "<Puzzle> graduate" for
   then solving the final board: Sudoku's two (`sudokuTrained`, `sudokuGraduate`), then `cagesTrained`, `cagesGraduate`,
-  `inequalityTrained`, `inequalityGraduate`, `regionsTrained`, `regionsGraduate`, `kingsTrained`, `kingsGraduate`. They
+  `inequalityTrained`, `inequalityGraduate`, `regionsTrained`, `regionsGraduate`, `kingsTrained`, `kingsGraduate`, `whoswhoTrained`, `whoswhoGraduate`,
+  `cipherTrained`, `cipherGraduate`, `chessTrained`, `chessGraduate` (badges `?`, `+`, `#`). They
   are built from `Training.COURSES` in its order (so a course appended there appends its two), announced on the training
   screen as they are earned and shown on the Achievements page; the trained badge's glyph is the course's `badge`, the
   graduate's the crown.
@@ -55,6 +57,11 @@ crown, cross, shade, turn or place pieces instead (`MoveDrill`, below); the rest
   - Regions: the three singles on Standard, the locked candidate on Hard (`RegionsLogic.specFor`).
   - Kings: last square, locked to a line and would empty on Standard, confined on Hard, the what-if on Expert
     (`Kings.fitsTier`).
+  - Who's Who: a clue and the one item left on Standard, links and houses on Hard, the what-if on Expert.
+  - Cipher: the leading carry, a column and a column pair on Standard, every column together on Hard, the pair what-if on
+    Expert.
+  - Chess: mate in one and a forcing key on Standard (mate in two). A quiet key is reached on 3 of 60 Hard boards and 18 of
+    60 Expert; Expert, since Hard would walk 20 seeds a board.
 - **What counts as right** (digits; Kings and the general shape below): the step's own digit, which is what the hint's `isReached` checks. Another correct digit
   elsewhere also counts: the position has no simpler step anywhere (each teacher tries every simpler technique on the whole
   board first), so a correct digit there was found with this technique or a harder one. A wrong digit is judged against
@@ -98,6 +105,12 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
 - The practice screen is the same for both: the board in what is left above the fixed 144 dp slot (explanation, hint or
   verdict) and the button row, so feedback never moves it; the verdict outlines the step's targets and marks its cited
   squares more quietly.
+- **A technique no practice search reaches is left out of the course** (its keys are then a subsequence of the teacher's
+  names, which `TrainingTest` checks); a hint's "Practise this" is not offered for it. Cipher's "only letter" is the first
+  (never reached on any tier's walk: with ten letters, a column or the leading carry always settles the last letter first).
+- **A practice board is never dealt twice**: `Course` drops a walked position equal to one already found. Every course
+  before Chess found distinct boards anyway, so none of theirs moved; Chess picks from fixed position lists, and seeds
+  collide (29 of its first 30 mate-in-one practices were distinct before).
 - Tests for a new course, as `KingsTrainingTest`: the step is the technique (and the hint agrees); the board has one
   answer by the puzzle's independent oracle; the walked marks agree with the answer; no simpler rung is on the board by a
   check written in the test (plain counting, nothing borrowed from the teacher); right, wrong and play-on moves; the final
@@ -132,9 +145,22 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - **Kings** (move drill): last square 8 ms for the first board, then a mean of 4 ms a board; locked to a line, would
   empty and confined 1-5 ms first, 3-6 ms next; the what-if 153 ms first, 91 ms a board after (max 287 ms), since only 18
   of 60 Expert boards reach it. Standard reaches the first three on 56-60 of 60 boards, Hard adds confined on all 60.
+- **Who's Who** (move drill): clue, only, link, house 1-21 ms first, a mean of 0-1 ms a board after (max 4 ms); the what-if
+  77 ms first, 25 ms a board after (max 99 ms). Standard reaches clue and only on all 60, Hard link on 57 and house on all
+  60, Expert everything on all 60. Every step reads clue kinds (same, not, next to, left of, either) and the marks; the
+  words are only labels, so no board leans on knowing anything (`WhosWhoTrainingTest` re-derives the rungs from indices).
+- **Cipher** (move drill): every technique 1-10 ms first, a mean of 1-2 ms a board after (max 5 ms). Standard reaches the
+  first three on 59-60 of 60; Hard every column together on all 60 (Expert only 18); Expert the pair what-if on all 60.
+  Only letter: never, on any tier (dropped).
+- **Chess** (move drill): mate in one 18 ms first, forcing key 1 ms, then about 1 ms a board; the quiet key 88 ms first, a
+  mean of 54 ms a board after (max 208 ms). A move is right when the prover names it a key (`isReached` accepts any of
+  them) and wrong when the defence escapes (proved): no move plays on. On every walked position the keys are every move
+  that still mates in time, since each puzzle's length is its shortest mate and the defence picks the slowest reply;
+  `ChessTrainingTest` holds every legal move on the practices with two moves left to an independent full-width minimax.
 - **Final boards** (Expert, the first practice seed whose walk needs every technique, each pinned by a test):
   Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (32 of the first 60); Inequality index 4 (17 of the first
-  60); Regions index 0 (all 60); Kings index 1 (17 of the first 60).
+  60); Regions index 0 (all 60); Kings index 1 (17 of the first 60); Who's Who index 0 (all 60); Cipher index 0 (16 of
+  the first 60); Chess index 6 (13 of the first 60).
 - `SudokuTrainingTest` checks 8 Sudoku practices per technique; `TrainingTest` 5 Cage Sudoku practices and 8 Inequality
   and Regions practices per technique: the teacher's next step (and the hint's, through `PuzzleType.teach`) is the
   technique, the step's digit is the answer's, the shown digits agree with the answer, the board has one answer by the
@@ -169,15 +195,15 @@ techniques no walk reached.
 | Atoms | 6: one neighbour … isolation 0/16/29, what-if 0/0/6 (only way out: never) | move | 4-29 ms | include |
 | LITS | 6: whole region 5/13/8, overlap, avoid 2x2, letter clash 30/30/30, neighbour 0/15/27, what-if 0/1/14 | move | 26-173 ms | include |
 | Nonogram | 4: all 26-30 a tier | move | 4-6 ms | include |
-| Chess | 3: mate in one, forcing key 27-30 a tier; quiet key 0/2/9 | move | 8-47 ms | include: a key move is a real technique, and its walkthrough teaches the rules, not these |
+| Chess | 3: mate in one, forcing key 27-30 a tier; quiet key 0/2/9 | move | 1-88 ms | **done** (quiet key from Expert) |
 | Tents | 6: no tree, line done, line full 29-30; one spot 1/25/21; shared 0/1/12; served 1/7/20 (touch: never) | move | 2-74 ms | include; its teacher reads grass as notes (see above) |
-| Cipher | 5: leading carry, column, column pair 29-30; columns together 0/30/9; pair what-if 0/0/30 (only letter: never) | move | 2-11 ms | include |
+| Cipher | 5: leading carry, column, column pair 29-30; columns together 0/30/9; pair what-if 0/0/30 (only letter: never) | move | 1-10 ms | **done** (only letter dropped) |
 | Tally | 6: all reached; every way 0/30/30, what-if 0/0/30 | move | 2-11 ms | include |
 | Dominoes | 6: only place 10 a tier, counting 0/30/10, what-if 0/0/30, the rest 14-30 | move | 6-33 ms | include |
 | Mines | 6: subset 0/28/26, pair 0/17/17, count edge 0/0/29, what-if 0/0/1 (count: never) | move | 4-22 ms | include (what-if is one board in 30: ~0.2 s a board) |
 | Lamps | 7: all reached; dark 0/11/14 | move | 3-21 ms | include |
 | Pearls | 7: pearl's arms and lines 26-30, dead end 18/28/29, small loop 0/30/29, what-if 0/0/30 (pearl ways: never) | move | 5-26 ms | include |
-| Who's Who | 5: clue, only 29-30; link, house 0/29-30/30; what-if 0/0/30 | move | 3-94 ms | include: the steps are logic, the words only labels |
+| Who's Who | 5: clue, only 29-30; link, house 0/29-30/30; what-if 0/0/30 | move | 1-77 ms | **done**: the steps are logic, the words only labels |
 | Sets | 1: reuse (continue never reached; fresh not praised) | — | — | excluded: one rung |
 | Target | 0: step, finish point at an arithmetic move | — | — | excluded: no technique |
 | Sand | 2: gather, spare (finish not praised; plan never reached) | — | — | excluded: two thin rungs, and a pour is reversible, so a practice could hardly ever be wrong |
@@ -201,5 +227,5 @@ id list, the docs and the changelog. Grouped by kind of board, so a batch's agen
 2. **Pipes, Pearls, Atoms**: paths and loops (Pipes' several answers already judged by its teacher).
 3. **Mines, Lamps, Tents**: marks and counts (settle Tents' grass-as-notes first).
 4. **Shikaku, Dominoes, LITS**: pieces placed by drag or pairs (each placement must stay one emitted state).
-5. **Who's Who, Cipher, Chess**: deduction grids and moves.
+5. **Who's Who, Cipher, Chess**: deduction grids and moves (done).
 6. **Mosaic** alone: its teacher's cost per judged move needs measuring in a browser first.
