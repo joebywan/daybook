@@ -83,19 +83,27 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
   second constructor): the stepper sees only the digits; the walk writes each step's digit in and makes every digit of a
   position a given. A placed digit is judged at once against the stored answer (sound: those generators prove one
   answer); any correct digit counts, because the position has no simpler step anywhere.
-- **`MoveDrill(next)`** (every other teacher): `next(state)` is the teacher's next step as a `Deduction`, built from the
+- **`MoveDrill(next, every)`** (every other teacher): `next(state)` is the teacher's next step as a `Deduction`, built from the
   teacher's visible-state entry point (one with no parameter for the answer, as `KingsTeacher.deduce(n, region, marks)`)
   and the puzzle's own Deduction builder (Kings' was pulled out of `teach` as `Kings.deduction(state, step)`; the
   pattern for the others is the same one-function refactor). The answer cannot reach the step by signature, as before.
   - The walk is the hints' own "Show me" (`Deduction.apply`) from the generated board; a position is simply the walked
     state. Nothing is locked: a walked cross can be rubbed out, and the practice waits until the step is made again.
     There is no undo on a practice board, so there is no floor to set.
-  - **Right** = the step's `isReached` holds (all its crosses made, one at a time or in a sweep, or a correct king that
-    sweeps them, as the hint itself accepts). **Wrong** = the teacher's `teach` calls the new board a mistake, which each
-    teacher defines as "no legal answer keeps this" (never "differs from the stored answer": LITS's and Pipes' several
-    answers, PR #15). **Neither** = play on (one cross of three, a sound mark elsewhere, an erasure). Unlike digits, only
-    the step itself passes: a lone cross is right by chance on most squares of a Kings board, so "another correct mark"
-    would pass guesses.
+  - **Right** = the move completes *any* step of the drilled technique on the position: the teacher's own pick, or any of
+    `every(position, technique)` (the owner, 2026-10-28: "If the move satisfies the move that's asked for without being
+    exactly what the app assumed people would do, it's still right"). Completing means that step's `isReached` holds:
+    all its crosses made, one at a time or in a sweep, or a correct king that sweeps them, as the hint itself accepts.
+    `every` is the course author's second hook, `(PuzzleState, technique: String) -> List<Deduction>`, built from a teacher
+    entry point that lists every step of one rung from visible state (Kings: `KingsTeacher.steps(n, region, marks,
+    technique)`, which `deduce`'s pick is always one of; its picking is unchanged, so no daily board moved). Leaving it
+    null keeps to the teacher's one step.
+  - **Wrong** = the teacher's `teach` calls the new board a mistake, which each teacher defines as "no legal answer keeps
+    this" (never "differs from the stored answer": LITS's and Pipes' several answers, PR #15).
+  - **Neither** = play on: one cross of three, an erasure, or a mark that is true but that no step of the technique
+    justifies. That last is never passed, because a lone cross is right by chance on most squares of a Kings board, and it
+    gets no "true, but not this technique" note either: nothing can tell it from the first cross of a step the player is
+    still making, so a note would fire on honest progress.
   - Judging asks the teacher, so every emitted state is judged on `Dispatchers.Default`; a verdict for a state the player
     has already moved on from is dropped and the newer state judged instead.
 - The practice screen is the same for both: the board in what is left above the fixed 144 dp slot (explanation, hint or
@@ -103,7 +111,9 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
   squares more quietly.
 - Tests for a new course, as `KingsTrainingTest`: the step is the technique (and the hint agrees); the board has one
   answer by the puzzle's independent oracle; the walked marks agree with the answer; no simpler rung is on the board by a
-  check written in the test (plain counting, nothing borrowed from the teacher); right, wrong and play-on moves; the final
+  check written in the test (plain counting, nothing borrowed from the teacher); right, wrong and play-on moves; every other
+  instance of the technique, enumerated by the test's own counting, is right, and a true cross no instance justifies plays
+  on; the final
   board is the first practice seed whose Expert walk needs every technique, and is proved. The achievement ids need no
   listing (`TrainingTest` derives their order from `COURSES`); add the course's id to `TrainingTest`'s list of courses.
 - Watch for a teacher that treats some marks as notes (Tents: "crosses are notes and never read as knowledge"): a wrong
