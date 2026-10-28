@@ -87,8 +87,12 @@ Nothing had to be excluded: every technique every teacher names is found within 
   boards differ by their signs); naked pair 90 ms (all 60 Hard boards); hidden pair 400 ms (all 60 Expert boards; 19 of 60
   reach a naked pair there, against all 60 on Hard).
 - **Regions:** the three singles 40-80 ms; the locked candidate 220 ms (every Hard and Expert board needs it).
-- The practice for index n re-walks the seeds before it (a `ponytail:` note in `Training.kt`); cache it if players run
-  past a few dozen boards.
+- **Cached per session:** `Course.practice` keeps the practices it has found per technique and the next seed to search,
+  so board n costs only the seeds after board n-1's (they come from pure generators, so they never go stale). A coroutine
+  `Mutex` per course guards it: on Android a second search (a quick second "Another board") waits for the first on
+  `Dispatchers.Default` and then finds its work cached; wasm has one thread. Through the cache, the first board of a technique takes 0-70 ms (Sudoku's hidden
+  pair the dearest) and each next board a mean of 0-30 ms, at most 151 ms (Sudoku's naked pair); a board already found
+  takes under 0.01 ms. Before it, board 29 alone re-walked up to 940 ms of seeds.
 - **Final boards** (Expert, the first practice seed whose walk needs every technique, each pinned by a test):
   Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (33 of the first 60); Inequality index 4 (17 of the first
   60); Regions index 0 (all 60).

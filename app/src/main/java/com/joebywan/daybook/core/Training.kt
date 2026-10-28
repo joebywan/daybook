@@ -17,6 +17,8 @@ import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.SudokuState
 import com.joebywan.daybook.puzzles.SudokuTeacher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Training (`docs/TRAINING_SPEC.md`): per puzzle whose teacher places digits, each technique it names, a short
@@ -64,12 +66,28 @@ class Course(
     }
 
     /**
-     * The [index]th practice for [technique], wrapping round if the search ran out. Null only if it found none.
-     * ponytail: re-walks every board before [index]; cache the walk if players run past a few dozen boards.
+     * Per technique, the practices found this session and the next seed to search: they come from pure generators, so they
+     * never go stale, and board n costs only the seeds after board n-1's. Read and written under [lock] only: on Android
+     * two searches can be under way at once on `Dispatchers.Default` (a quick second "Another board"); the second waits and
+     * then finds the first's work cached. Wasm has one thread, where the lock never waits.
      */
-    fun practice(technique: String, index: Int): Practice? {
-        val found = practices(technique).take(index + 1).toList()
-        return found.getOrNull(index) ?: found.getOrNull(index % found.size.coerceAtLeast(1))
+    private val found = HashMap<String, MutableList<Practice>>()
+    private val searched = HashMap<String, Int>()
+    private val lock = Mutex()
+
+    /** The [index]th practice for [technique], wrapping round if the search ran out. Null only if it found none. */
+    suspend fun practice(technique: String, index: Int): Practice? = lock.withLock {
+        val list = found.getOrPut(technique) { ArrayList() }
+        var k = searched[technique] ?: 0
+        if (index >= list.size && k < Training.SEARCH) {
+            val tier = tierFor(technique)
+            while (index >= list.size && k < Training.SEARCH) {
+                positionOn(puzzle.generate(Training.seed(k), tier), technique)?.let { list += it }
+                k++
+            }
+            searched[technique] = k
+        }
+        list.getOrNull(index) ?: list.getOrNull(index % list.size.coerceAtLeast(1))
     }
 
     private fun positionOn(start: PuzzleState, technique: String): Practice? {
@@ -131,7 +149,7 @@ object Training {
 
     internal fun seed(k: Int): Long = SEED_BASE + k * STRIDE
 
-    /** Seeds tried before giving up on a technique. Each index re-walks the seeds before it. */
+    /** Seeds tried before giving up on a technique. */
     internal const val SEARCH = 4000
 
     /** Every course, in the order the list shows them. */

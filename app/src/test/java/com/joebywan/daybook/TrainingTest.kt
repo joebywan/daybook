@@ -18,6 +18,7 @@ import com.joebywan.daybook.puzzles.InequalityState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.RegionsLogic
 import com.joebywan.daybook.puzzles.RegionsState
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -160,6 +161,14 @@ class TrainingTest {
             assertTrue("every digit shown is a given", s.cells.indices.all { (s.cells[it] != 0) == s.givens[it] })
             checkRegions(t, s)
         }
+
+    @Test fun `the session cache hands out the same boards as a fresh search, in any order of asking`() = runBlocking {
+        val c = RegionsTraining
+        val t = c.techniques.last()
+        val fresh = c.practices(t).take(5).map { it.board }.toList()
+        assertEquals(fresh[3], c.practice(t, 3)!!.board)
+        assertEquals(fresh, (0 until 5).map { c.practice(t, it)!!.board })
+    }
 
     @Test fun `every course lists its teacher's named techniques, each explained, and its final board needs them all`() {
         assertEquals(listOf("sudoku", "cages", "inequality", "regions"), Training.COURSES.map { it.id })

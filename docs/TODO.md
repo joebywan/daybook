@@ -269,8 +269,7 @@ were declined by the owner (2026-10-25): a shipped list runs out and would need 
 An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and declined (2026-10-22).
 A practice mode per technique, once declined, is now wanted (2026-10-26): Training, for Sudoku, Cage Sudoku,
 Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played final board when the player leaves it;
-the practice search re-walks every earlier seed per board (cache it if players run past a few dozen); puzzles whose teachers do not place
-digits (Kings, Tents, Mambo and the rest) would need their own practice shape.
+puzzles whose teachers do not place digits (Kings, Tents, Mambo and the rest) would need their own practice shape.
 
 ## Owner's call
 

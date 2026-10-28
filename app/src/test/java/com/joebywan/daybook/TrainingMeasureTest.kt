@@ -2,12 +2,14 @@ package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Training
+import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
  * Training's costs, for docs/TRAINING_SPEC.md (Measured): run with `DAYBOOK_TRAINING_MEASURE=1`. Per course, the time to
- * find the first 30 practices of each technique and how many seeds that took; then how many of the first 60 seeds'
+ * find the first board through the session cache and each next board given the ones before it, then the first 30
+ * practices of each technique; then how many of the first 60 seeds'
  * boards on each tier reach each technique, and which Expert boards need them all (the final board's candidates).
  */
 class TrainingMeasureTest {
@@ -15,6 +17,13 @@ class TrainingMeasureTest {
         assumeTrue(System.getenv("DAYBOOK_TRAINING_MEASURE") != null)
         for (c in Training.COURSES) {
             for (t in c.techniques) {
+                // Through the session cache: the first board, then each next board with the ones before it cached.
+                fun ms(block: () -> Unit): Double { val a = System.nanoTime(); block(); return (System.nanoTime() - a) / 1e6 }
+                val first = ms { runBlocking { c.practice(t, 0) } }
+                val next = (1 until 30).map { n -> ms { runBlocking { c.practice(t, n) } } }
+                val again = ms { runBlocking { c.practice(t, 29) } }
+                println("CACHE ${c.id} $t: first ${"%.0f".format(first)} ms; next board mean ${"%.0f".format(next.average())} " +
+                    "max ${"%.0f".format(next.max())} ms; board 29 again ${"%.2f".format(again)} ms")
                 val t0 = System.nanoTime()
                 val found = c.practices(t).take(30).toList()
                 val ms = (System.nanoTime() - t0) / 1e6
