@@ -318,10 +318,20 @@ internal object CageTeacher {
     }
 
     /** What a group says, as its sentence's opening; the 45-rule is named the first time only ([named]). */
-    private fun subject(g: Group, named: Boolean): String {
+    private fun subject(g: Group, named: Boolean, twins: List<Group>): String {
         val rule = if (named) "" else "by the 45-rule, "
         return when (g.kind) {
-            Kind.CAGE -> "the cage totalling ${g.sum}"
+            Kind.CAGE -> {
+                // Another cage of the same total in the same line: say where this one starts, by its box when that tells them apart.
+                val first = g.cells.min()
+                val box = CageLogic.unitsOf(first)[0]
+                val others = twins.filter { it !== g && it.kind == Kind.CAGE && it.sum == g.sum && it.cage != g.cage }
+                when {
+                    others.isEmpty() -> "the cage totalling ${g.sum}"
+                    others.none { CageLogic.unitsOf(it.cells.min())[0] == box } -> "the ${CageLogic.BOX_NAMES[box]} cage totalling ${g.sum}"
+                    else -> "the cage totalling ${g.sum} at row ${first / 9 + 1}, column ${first % 9 + 1}"
+                }
+            }
             Kind.INNIE -> "$rule${CageLogic.scopes[g.scope].name}'s marked squares total ${g.sum}"
             Kind.OUTIE -> "${rule}the squares sticking out of ${CageLogic.scopes[g.scope].name} total ${g.sum}"
         }
@@ -388,7 +398,7 @@ internal object CageTeacher {
         val groups = link.path.map { board.groups[it] }
         val parts = groups.indices.map { i ->
             val g = groups[i]
-            val who = subject(g, groups.take(i).any { it.kind != Kind.CAGE })
+            val who = subject(g, groups.take(i).any { it.kind != Kind.CAGE }, groups)
             if (i == groups.lastIndex) {
                 val end = if (unit == null) "only $digit" else "the only place for $digit in ${unitName(unit)}"
                 return@map if (g.kind == Kind.CAGE) "$who leaves the glowing square $end" else "$who, which leaves the glowing square $end"

@@ -71,10 +71,10 @@ Nothing had to be excluded: every technique every teacher names is found within 
 
 - **Sudoku** (unchanged by the generalisation): singles 20-150 ms, locked candidates 280 ms, what-if 300 ms, naked pair
   890 ms, hidden pair 930 ms.
-- **Cage Sudoku:** the five singles and the cage's combinations 60-140 ms; the 45 rule 170 ms; linked totals 300 ms (24 of
+- **Cage Sudoku:** the five singles and the cage's combinations 50-140 ms; the 45 rule 160 ms; linked totals 330 ms (24 of
   60 Hard boards reach it, 57 of 60 Expert); every cage worked through together 770 ms (10 of 60 Hard, all 60 Expert). The
   chain's hint, and so its practice, is a worked line like linked totals' (each group named in turn with the digits it
-  leaves, ending in the square), not a summary: median 246 characters, 65% within 300, the rest scrolling in the slot
+  leaves, ending in the square), not a summary: median 247 characters, 65% within 300, the rest scrolling in the slot
   (`docs/TEACHING.md`). It kept its id: the same step, only explained, so a pass of it stands and no record or achievement
   moved. Its square is now the one of the chain's first three singles with the shortest line, so walks after the first
   chain step can differ: a practice stops at the first step of its technique, so only one whose walk passes a chain step

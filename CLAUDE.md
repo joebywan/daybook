@@ -362,7 +362,7 @@ shares with Sudoku). `id = "cages"` is hashed into every seed: never rename it.
   unexplained; the fix is a named technique, not a fallback. `LINKED_TOTALS` (two or three groups sharing squares, each cut in
   turn, before `CAGE_CHAIN`) is such a slice of `settle`, so it moved no board; Expert's cage chain fell from 6.3 to 3.4 steps a board.
   `CAGE_CHAIN` itself explains with a worked line in linked totals' voice: the fixpoint's cuts toward a single, cut down to the
-  groups and then the cuts it needs (the shortest of the first three singles' lines; median 246 characters, long ones scroll).
+  groups and then the cuts it needs (the shortest of the first three singles' lines; median 247 characters, long ones scroll).
   The teacher's square choice is not the generator's, so this changes walks, never boards. `CageTeachingTest` walks 200 boards a tier and a year of daily boards and
   asserts no fallback; `FallbackTest` `cages proves every daily board of a year` asserts `generateVerified` never gives up.
 - **`solved` checks the rules** (`CageLogic.isSolved`: a finished Sudoku grid, every cage's digits different and totalling its sum). A

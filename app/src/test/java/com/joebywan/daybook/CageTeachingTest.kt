@@ -52,7 +52,7 @@ class CageTeachingTest {
             report.appendLine(line)
             assertEquals("${d.name} fell back", 0, fellBack)
             assertEquals(0, counts.getValue(CageTeacher.FALLBACK))
-            // Measured 2026-10 (200 boards): Expert linked totals 614, cage chain 673 of 16,200 steps (the chain was 1,287).
+            // Measured 2026-10 (200 boards): Expert linked totals 607, cage chain 708 of 16,200 steps (the chain was 1,287).
             if (d == Difficulty.EXPERT) {
                 assertTrue("linked totals too rare: $counts", counts.getValue(CageTeacher.LINKED_TOTALS) >= 2 * boards)
                 assertTrue("cage chain too common: $counts", counts.getValue(CageTeacher.CAGE_CHAIN) * 100 <= steps * 6)
@@ -135,7 +135,7 @@ class CageTeachingTest {
         val median = chains[chains.size / 2]
         println("longest explanation: $longest, longest nudge: $nudge; cage chain ${chains.size} steps, median $median, " +
             "p90 ${chains[chains.size * 9 / 10]}, max ${chains.last()}, within 300: ${chains.count { it <= 300 }}")
-        // Measured 2026-10 (450 boards): median 236; most chains are two or three totals, as long as a linked-totals step.
+        // Measured 2026-10 (450 boards): median 247; most chains are two or three totals, as long as a linked-totals step.
         assertTrue("cage chain lines too long: median $median", median <= CageTeacher.MAX_LINKED_EXPLANATION)
     }
 
@@ -157,11 +157,22 @@ class CageTeachingTest {
                     assertFalse(text, text.startsWith("Work the cage totals"))
                     assertTrue(text, "glowing square" in text)
                     val cages = CageLogic.cageCells(now.cageOf)
-                    for (m in Regex("cage totalling (\\d+)").findAll(text)) {
-                        val total = m.groupValues[1].toInt()
-                        assertTrue("$total in: $text", cages.indices.any { k ->
-                            now.sums[k] == total && cages[k].all { it in step.cited }
-                        })
+                    // "the cage totalling 11", "the top-right cage totalling 11", "the cage totalling 11 at row 2, column 7".
+                    val named = Regex("the (?:([a-z]+(?:-[a-z]+)?) )?cage totalling (\\d+)(?: at row (\\d), column (\\d))?")
+                    val phrases = named.findAll(text).map { it.value }.toSet()
+                    for (m in named.findAll(text)) {
+                        val (where, total, row, col) = m.destructured
+                        val first = { k: Int -> cages[k].min() }
+                        val fits = cages.indices.filter { k ->
+                            now.sums[k] == total.toInt() && cages[k].all { it in step.cited } &&
+                                (where.isEmpty() || CageLogic.BOX_NAMES[first(k) / 27 * 3 + first(k) % 9 / 3] == where) &&
+                                (row.isEmpty() || first(k) == (row.toInt() - 1) * 9 + col.toInt() - 1)
+                        }
+                        assertTrue("${m.value} in: $text", fits.isNotEmpty())
+                        // A bare name is never used beside a qualified one of the same total: two cages, two names.
+                        if (where.isEmpty() && row.isEmpty()) {
+                            assertTrue(text, phrases.none { it != m.value && it.endsWith("cage totalling $total") || it.contains("cage totalling $total at") })
+                        }
                     }
                     val answers = CageOracle.all(now.cageOf, now.sums, now.cells, limit = 5)
                     assertTrue(answers.isNotEmpty())
