@@ -350,9 +350,12 @@ class PlacementDrill(
  *
  * Judged by the teacher, never against the stored answer: wrong when the teacher calls the new board a mistake (a
  * teacher's mistake means "no legal answer keeps this", which is what LITS's and Pipes' several-answer boards need, PR
- * #15); right when the step's [Deduction.isReached] holds; otherwise the player plays on (one cross of a step that crosses
- * three, or a sound mark elsewhere). Only the step itself passes: on these boards a lone cross is cheap to guess, so
- * "another correct mark" would pass a guess, where a placed digit could not be.
+ * #15); right when the move completes *any* step of the drilled technique on the position, the teacher's own pick or
+ * another ([every]; the owner, 2026-10-28: "If the move satisfies the move that's asked for without being exactly what
+ * the app assumed people would do, it's still right"); otherwise the player plays on (one cross of a step that crosses
+ * three, an erasure, or a mark that happens to be true but that no step of the technique justifies). A true but
+ * unjustified mark is not passed, because on these boards a lone cross is right by chance on most squares; it gets no
+ * verdict, since nothing can tell it from the first cross of a step the player is still making.
  */
 class MoveDrill(
     /**
@@ -360,6 +363,11 @@ class MoveDrill(
      * visible-state entry point (one with no parameter for the answer), never from `teach`, which reads the answer.
      */
     private val next: (PuzzleState) -> Deduction?,
+    /**
+     * Every step of the technique visible on the state, as [Deduction]s, from the same visible state (Kings:
+     * `KingsTeacher.steps`). Null keeps to [next]'s step alone, for a teacher with no such entry point yet.
+     */
+    private val every: ((PuzzleState, String) -> List<Deduction>)? = null,
 ) : Drill {
     override fun walk(start: PuzzleState): Sequence<Course.Practice> = sequence {
         var s = start
@@ -372,9 +380,11 @@ class MoveDrill(
         }
     }
 
+    // ponytail: [every] is re-derived per judged state; memoise it on the practice if a teacher's list gets slow.
     override fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean? = when {
         puzzle.teach(after)?.mistake == true -> false
         (p.step as Deduction).isReached(after) -> true
+        every?.invoke(p.board, p.step.technique)?.any { it.isReached(after) } == true -> true
         else -> null
     }
 }

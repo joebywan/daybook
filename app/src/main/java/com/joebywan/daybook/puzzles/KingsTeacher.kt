@@ -262,6 +262,28 @@ internal object KingsTeacher {
     }
 
     /**
+     * Every step of [technique] visible on this board, not only the one [deduce] would pick: each house with one open
+     * square, each locked or confined group, each house some squares would empty, each square a what-if crosses out.
+     * Training passes a move that completes any of them (the owner, 2026-10-28: a move that satisfies what is asked for
+     * is right, even if it is not the one the app expected). Takes no answer, as [deduce].
+     */
+    fun steps(n: Int, region: List<Int>, marks: List<Mark>, technique: String): List<Step> {
+        val sight = Sight(
+            n, region,
+            marks.indices.filter { marks[it] == Mark.KING },
+            BooleanArray(n * n) { marks[it] == Mark.BLOCKED },
+        )
+        return when (technique) {
+            LAST_SQUARE -> lastSquares(sight)
+            LOCKED -> confinements(sight, 1)
+            WOULD_EMPTY -> wouldEmpties(sight)
+            CONFINED -> (2 until n).asSequence().flatMap { confinements(sight, it) }
+            WHAT_IF -> whatIfs(sight)
+            else -> emptySequence()
+        }.toList()
+    }
+
+    /**
      * How deep the ladder goes on this board: [deepest] the hardest technique it needs (an index into [TECHNIQUES]),
      * [widest] the most colours one [CONFINED] step ties together (0 when none does).
      */
@@ -285,22 +307,25 @@ internal object KingsTeacher {
         return Depth(deepest, widest)
     }
 
-    private fun lastSquare(s: Sight): Step? {
+    private fun lastSquare(s: Sight): Step? = lastSquares(s).firstOrNull()
+
+    private fun lastSquares(s: Sight): Sequence<Step> = sequence {
         for (h in s.houses) {
             if (s.satisfied(h)) continue
             val open = s.openIn(h)
             if (open.size != 1) continue
-            return Step(
-                technique = LAST_SQUARE,
-                kings = open,
-                focus = h.cells.toSet(),
-                cited = h.cells.toSet(),
-                nudge = "Look at ${h.name}.",
-                explanation = "${h.name.cap()} has only one square left that could hold a king, " +
-                    "so its king goes there.",
+            yield(
+                Step(
+                    technique = LAST_SQUARE,
+                    kings = open,
+                    focus = h.cells.toSet(),
+                    cited = h.cells.toSet(),
+                    nudge = "Look at ${h.name}.",
+                    explanation = "${h.name.cap()} has only one square left that could hold a king, " +
+                        "so its king goes there.",
+                ),
             )
         }
-        return null
     }
 
     /**
@@ -308,7 +333,10 @@ internal object KingsTeacher {
      * colours. Either way those lines and colours are spoken for by each other, so anything else in
      * them is out. [k] = 1 is [LOCKED]; the rest is [CONFINED].
      */
-    private fun confinement(s: Sight, k: Int): Step? {
+    private fun confinement(s: Sight, k: Int): Step? = confinements(s, k).firstOrNull()
+
+    /** Every [confinement] step, in the order [confinement] tries them (it takes the first). */
+    private fun confinements(s: Sight, k: Int): Sequence<Step> = sequence {
         val technique = if (k == 1) LOCKED else CONFINED
         val regions = s.unsatisfied(Kind.REGION)
         val rows = s.unsatisfied(Kind.ROW)
@@ -329,7 +357,7 @@ internal object KingsTeacher {
                     .distinct().sorted()
                 if (crosses.isEmpty()) continue
                 val lineHouses = s.houses.filter { it.kind == lineKind && it.id in lines }
-                return Step(
+                yield(Step(
                     technique = technique,
                     crosses = crosses,
                     focus = group.flatMap { it.cells }.toSet(),
@@ -347,7 +375,7 @@ internal object KingsTeacher {
                             "Nothing else in those ${if (lineKind == Kind.ROW) "rows" else "columns"} can hold a king."
                     },
                     width = if (k == 1) 0 else k,
-                )
+                ))
             }
         }
 
@@ -366,7 +394,7 @@ internal object KingsTeacher {
                     .distinct().sorted()
                 if (crosses.isEmpty()) continue
                 val colours = ids.map { s.names[it] }
-                return Step(
+                yield(Step(
                     technique = technique,
                     crosses = crosses,
                     focus = group.flatMap { it.cells }.toSet(),
@@ -382,10 +410,9 @@ internal object KingsTeacher {
                             "are in them. The rest of ${listed(colours)} can be crossed out."
                     },
                     width = if (k == 1) 0 else k,
-                )
+                ))
             }
         }
-        return null
     }
 
     /**
@@ -407,6 +434,20 @@ internal object KingsTeacher {
             bestSize = open.size
         }
         val (house, attackers) = best ?: return null
+        return wouldEmptyStep(s, house, attackers)
+    }
+
+    /** Every house some open squares would empty, each its own [WOULD_EMPTY] step ([wouldEmpty] takes the smallest). */
+    private fun wouldEmpties(s: Sight): Sequence<Step> = sequence {
+        for (h in s.houses) {
+            if (s.satisfied(h)) continue
+            val open = s.openIn(h)
+            val attackers = s.region.indices.filter { x -> s.isOpen(x) && x !in h.cells && open.all { s.reach[x][it] } }
+            if (attackers.isNotEmpty()) yield(wouldEmptyStep(s, h, attackers))
+        }
+    }
+
+    private fun wouldEmptyStep(s: Sight, house: House, attackers: List<Int>): Step {
         val open = s.openIn(house)
         val squares = if (attackers.size == 1) "a king here" else "a king on any glowing square"
         return Step(
@@ -457,6 +498,18 @@ internal object KingsTeacher {
             if (best == null || chain.forced.size < best.second.forced.size) best = x to chain
         }
         val (x, chain) = best ?: return null
+        return whatIfStep(x, chain)
+    }
+
+    /** Every open square a what-if crosses out, each its own [WHAT_IF] step ([whatIf] takes the shortest chain). */
+    private fun whatIfs(s: Sight): Sequence<Step> = sequence {
+        for (x in s.region.indices) {
+            if (!s.isOpen(x)) continue
+            chainToEmpty(s.withKing(x))?.let { yield(whatIfStep(x, it)) }
+        }
+    }
+
+    private fun whatIfStep(x: Int, chain: Chain): Step {
         val tail = if (chain.forced.isEmpty()) {
             "${chain.emptied.name} would have nowhere left"
         } else {
