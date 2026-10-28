@@ -270,8 +270,7 @@ An island-and-sea puzzle (Nurikabe) was shown to the owner as a 6x6 example and 
 A practice mode per technique, once declined, is now wanted (2026-10-26): Training, for Sudoku, Cage Sudoku,
 Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played final board when the player leaves it;
 the practice search re-walks every earlier seed per board (cache it if players run past a few dozen); the keyboard
-does not reach a practice board (the play screen's key handling is not shared); Cage Sudoku's "every cage worked
-through together" practice explains itself only as a summary, as its hint does; puzzles whose teachers do not place
+does not reach a practice board (the play screen's key handling is not shared); puzzles whose teachers do not place
 digits (Kings, Tents, Mambo and the rest) would need their own practice shape.
 
 ## Owner's call

@@ -71,10 +71,15 @@ Nothing had to be excluded: every technique every teacher names is found within 
 
 - **Sudoku** (unchanged by the generalisation): singles 20-150 ms, locked candidates 280 ms, what-if 300 ms, naked pair
   890 ms, hidden pair 930 ms.
-- **Cage Sudoku:** the five singles and the cage's combinations 50-100 ms; the 45 rule 120 ms; linked totals 280 ms (25 of
-  60 Hard boards reach it, 55 of 60 Expert); every cage worked through together 690 ms (10 of 60 Hard, all 60 Expert). The
-  chain is the teacher's catch-all, so its practice's explanation is the hint's summary ("work the cage totals through
-  together"), not a worked line; it is kept because it is a step the hints really take.
+- **Cage Sudoku:** the five singles and the cage's combinations 60-140 ms; the 45 rule 170 ms; linked totals 300 ms (24 of
+  60 Hard boards reach it, 57 of 60 Expert); every cage worked through together 770 ms (10 of 60 Hard, all 60 Expert). The
+  chain's hint, and so its practice, is a worked line like linked totals' (each group named in turn with the digits it
+  leaves, ending in the square), not a summary: median 246 characters, 65% within 300, the rest scrolling in the slot
+  (`docs/TEACHING.md`). It kept its id: the same step, only explained, so a pass of it stands and no record or achievement
+  moved. Its square is now the one of the chain's first three singles with the shortest line, so walks after the first
+  chain step can differ: a practice stops at the first step of its technique, so only one whose walk passes a chain step
+  first (some linked-totals practices on Hard) may land elsewhere. Index 0 still needs all nine (33 of the first 60 Expert
+  boards do).
 - **Inequality:** the five singles 6-16 ms (4x4 boards; a sign-bound or sign-place position is often the empty board, so
   boards differ by their signs); naked pair 90 ms (all 60 Hard boards); hidden pair 400 ms (all 60 Expert boards; 19 of 60
   reach a naked pair there, against all 60 on Hard).
@@ -82,7 +87,7 @@ Nothing had to be excluded: every technique every teacher names is found within 
 - The practice for index n re-walks the seeds before it (a `ponytail:` note in `Training.kt`); cache it if players run
   past a few dozen boards.
 - **Final boards** (Expert, the first practice seed whose walk needs every technique, each pinned by a test):
-  Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (32 of the first 60); Inequality index 4 (17 of the first
+  Sudoku index 219 (one in the first 400); Cage Sudoku index 0 (33 of the first 60); Inequality index 4 (17 of the first
   60); Regions index 0 (all 60).
 - `SudokuTrainingTest` checks 8 Sudoku practices per technique; `TrainingTest` 5 Cage Sudoku practices and 8 Inequality
   and Regions practices per technique: the teacher's next step (and the hint's, through `PuzzleType.teach`) is the
