@@ -30,6 +30,7 @@ val TallyTraining: Course = Course(
     // TallyTeacher.deduce reads the digits, the targets and the marks only; the targets are printed on the board.
     // Any line's instance of the technique (or any what-if within the hint's reach) is right, not only the hint's pick.
     drill = MoveDrill(
+        view = { (it as TallyState).marks.toList() },
         next = { s ->
             (s as TallyState).let { t ->
                 TallyTeacher.deduce(t.size, TallyLogic.digitArray(t), TallyLogic.targets(t), t.marks)?.let { Tally.deduction(t, it) }

@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import com.joebywan.daybook.core.BoardHighlight
+import com.joebywan.daybook.ui.theme.BoardHues
 
 /** What a board draws for the hint: what it names, the glow's colour, and its breath (1 when still). */
 class HintGlow(
@@ -15,14 +16,30 @@ class HintGlow(
 
 /**
  * The hint's rims, as every board draws them ([u] a square): a thin one round what the hint only
- * cites, then round what it names a band of [background] under a strong one that breathes. [rim]
+ * cites ([soft], the glow unless a board picks per fill), then round what it names a band of [background] under a
+ * strong one that breathes. [rim]
  * draws one set at a stroke width in a colour, in the board's own shape.
  */
-inline fun hintRims(highlight: BoardHighlight, u: Float, glow: Color, pulse: Float, background: Color, rim: (Set<Int>, Float, Color) -> Unit) {
-    rim(highlight.soft - highlight.strong, u * 0.07f, glow.copy(alpha = 0.5f))
+inline fun hintRims(
+    highlight: BoardHighlight,
+    u: Float,
+    glow: Color,
+    pulse: Float,
+    background: Color,
+    soft: Color = glow,
+    rim: (Set<Int>, Float, Color) -> Unit,
+) {
+    rim(highlight.soft - highlight.strong, u * 0.07f, soft.copy(alpha = 0.5f))
     rim(highlight.strong, u * 0.2f, background.copy(alpha = 0.9f * pulse))
     rim(highlight.strong, u * 0.11f, glow.copy(alpha = pulse))
 }
+
+/**
+ * Of [ink] and [page] (a scheme's onBackground and background), the one that stands out more on [fill]: a rim drawn over
+ * a mid-tone fill (Mosaic's and LITS's violet, rose and teal) in a fixed colour can all but vanish in one scheme.
+ */
+fun standOut(fill: Color, ink: Color, page: Color): Color =
+    if (BoardHues.contrast(ink, fill) >= BoardHues.contrast(page, fill)) ink else page
 
 /**
  * A rim just inside the outline of [set]'s squares on a [cols] x [rows] grid, one stroke per square

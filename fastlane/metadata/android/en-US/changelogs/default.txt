@@ -1,4 +1,3 @@
-- Training: a right move is now explained as the move you made, not the one the hint had in mind, for every puzzle, Chess, Pipes and Mosaic included.
-- Training on short screens: the explanation under the board takes less room, so the board gets more.
-- Mosaic training: a fill that works but isn't the technique now says so, instead of leaving you guessing.
-- Chess training: a wrong move no longer mentions Undo and Restart, which practice doesn't have.
+- Training: a step that takes several moves now says how far along you are ("Right so far: 3 of 12"), so a right square never goes unanswered.
+- Training: the lists keep your place when you come back from a course or a practice, and so does Techniques.
+- Mosaic and LITS training: the outline on a right or wrong move now stands out on every colour, light and dark.

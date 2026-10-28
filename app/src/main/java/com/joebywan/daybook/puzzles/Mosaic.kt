@@ -65,6 +65,7 @@ import com.joebywan.daybook.ui.boardStyle
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
+import com.joebywan.daybook.ui.standOut
 import com.joebywan.daybook.ui.gridCellAt
 
 /** One fill: the cell tapped, and the colour poured into the area it belongs to. */
@@ -1140,12 +1141,20 @@ object Mosaic : PuzzleType {
                         // something other than one more of the seams between areas. Widths
                         // checked in a rendered mock, light and dark: much wider and the band eats
                         // a one-cell arm's colour.
-                        hintRims(highlight, stepPx, glow, pulse.value, scheme.background) { set, width, colour ->
-                            squareRim(set, width, colour, s.width, s.height, { i ->
-                                val x0 = i % s.width * stepPx
-                                val y0 = i / s.width * stepPx
-                                Rect(x0, y0, x0 + stepPx, y0 + stepPx)
-                            })
+                        // Per square, the band is whichever of ink and page stands out on its fill and the rim the
+                        // other: a page band under an ink rim all but vanished on violet and rose in dark (the rim
+                        // merged with the light seams, the band with the fill). Checked at true size, every fill,
+                        // both schemes. A mistake keeps its error rim.
+                        val ink = scheme.onBackground
+                        val page = scheme.background
+                        for (band in listOf(page, ink)) {
+                            hintRims(highlight, stepPx, if (highlight.warning) glow else if (band == ink) page else ink, pulse.value, band, soft = if (highlight.warning) glow else band) { set, width, colour ->
+                                squareRim(set, width, colour, s.width, s.height, { i ->
+                                    val x0 = i % s.width * stepPx
+                                    val y0 = i / s.width * stepPx
+                                    Rect(x0, y0, x0 + stepPx, y0 + stepPx)
+                                }, shows = { i -> standOut(palette[s.cells[i]], ink, page) == band })
+                            }
                         }
                     }
                 }

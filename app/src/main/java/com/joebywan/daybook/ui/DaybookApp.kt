@@ -25,7 +25,9 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.SaveableStateHolder
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
@@ -160,6 +162,16 @@ internal fun backFrom(r: Route): Route = when {
     r is Route.Levels && r.level != null -> Route.Levels()
     else -> Route.Home
 }
+
+/**
+ * The lists a player leaves and comes back to (Training's, a course's techniques, Techniques with its "Practise this")
+ * keep their scroll place: their saveable state is held per route while another screen shows. Only lists: a game's
+ * state lives in its save, and restoring an old copy of it would be wrong.
+ */
+@Composable
+private fun KeepPlace(holder: SaveableStateHolder, r: Route, content: @Composable () -> Unit) =
+    if (r == Route.Techniques || (r is Route.Training && r.technique == null)) holder.SaveableStateProvider(encodeRoute(r), content)
+    else content()
 
 /** A route as one string, for rotation and process death. */
 private val RouteSaver = Saver<Route, String>(save = { encodeRoute(it) }, restore = { decodeRoute(it) })
@@ -353,11 +365,13 @@ private fun DaybookScreens(
     // On the web the same handler is the browser's back button; see platform/WebPlatform.kt.
     PlatformBackHandler(enabled = route != Route.Home) { route = back(route) }
 
+    val keptLists = rememberSaveableStateHolder()
     CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics) {
     // A short fade between screens (none under reduced motion). Each route is its own keyed content, so a screen's
     // rememberSaveable state is kept across a rotation as before; the screen going out stays composed for the fade.
     // On the page colour: fading two screens over the bare window would dim the middle of the fade.
     Crossfade(route, Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), animationSpec = if (reducedMotion) snap() else tween(ROUTE_FADE_MS), label = "route") { current ->
+    KeepPlace(keptLists, current) {
     when (current) {
         Route.Home -> when (welcome) {
             null -> Unit
@@ -709,6 +723,7 @@ private fun DaybookScreens(
             }
             // Otherwise a level board waits the moment it takes the store to say how its level was opened.
         }
+    }
     }
     }
     }

@@ -225,6 +225,8 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
     var made by remember(p) { mutableStateOf<TeachStep?>(null) }
     // A move that works but that the board can no longer judge ([Course.aside]): its note; it neither counts nor breaks the run.
     var aside by remember(p) { mutableStateOf<String?>(null) }
+    // A right part of a step not finished yet ([Course.progress]): how far along, in the slot; never a verdict.
+    var progress by remember(p) { mutableStateOf<String?>(null) }
     val hints = rememberHintSession("$key|$index")
     // A pass: the line shows with the board locked, then back to where the practice was opened from.
     LaunchedEffect(earned) { if (earned != null) { delay(PASS_BEAT_MS); onBack() } }
@@ -257,14 +259,18 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
         board = next
         scope.launch {
             var note: String? = null
+            var along: String? = null
             val (right, step) = withContext(Dispatchers.Default) {
                 course.judge(p, next)?.let { it to (if (it) course.made(p, next) else p.step) }
-                    ?: run { note = course.aside(p, next); null }
+                    ?: run { note = course.aside(p, next); if (note == null) along = course.progress(p, next); null }
             } ?: run {
-                if (note != null && board === next && verdict == null) {
-                    hints.clear()
-                    aside = note
-                    verdict = Verdict.ASIDE
+                if (board === next && verdict == null) {
+                    progress = along
+                    if (note != null) {
+                        hints.clear()
+                        aside = note
+                        verdict = Verdict.ASIDE
+                    }
                 }
                 return@launch
             }
@@ -307,7 +313,7 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
                     val step = p.step
                     val v = verdict
                     val text = when {
-                        v == null -> course.explanations.getValue(technique)
+                        v == null -> progress ?: course.explanations.getValue(technique)
                         v == Verdict.RIGHT && earned != null -> earned.orEmpty()
                         v == Verdict.ASIDE -> aside.orEmpty()
                         else -> verdictLine(v, step, made ?: step)

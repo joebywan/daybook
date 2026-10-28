@@ -35,6 +35,7 @@ val MinesTraining: Course = Course(
     // walk's flags are its own sound steps, so they count as found mines here: otherwise the teacher (which never trusts a
     // player's flag) can offer a subset on a board where the flags already show a single number's step.
     drill = MoveDrill(
+        view = { (it as MinesState).marks.toList() },
         next = { s ->
             (s as MinesState).let { m ->
                 MinesTeacher.deduce(m.width, m.height, MinesTeacher.visibleNumbers(m), known(m), known(m), m.total)?.let(MinesTeacher::deduction)
