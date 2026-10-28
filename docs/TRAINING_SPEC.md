@@ -180,8 +180,10 @@ Nothing had to be excluded: every technique every teacher names is found within 
   (max 101 ms; 3 of 60 Hard boards); served 4 ms first, 5 ms a board (max 15 ms).
 - **Any instance** (Mines, Lamps, Tents): `every` is `MinesTeacher.steps`, `LampsTeacher.steps` and `TentsTeacher.steps`,
   every step of the technique on the practice board, taking the walk's own flags, crosses and grass as known.
-  `MinesLogic.facts` and `TentsTeacher.facts` are the ladder's own loops made lazy sequences (`nextFact` is their first, so
-  no daily board moves); `LampsLogic.facts` collects each rule's instances (a what-if: every supposition that breaks within
+  `MinesLogic.facts` and `TentsTeacher.facts` are the ladder's own loops as lazy sequences, kept beside the untouched
+  `nextFact`, which the generators' walks still call: walking a year of Tents boards through the sequence's first took
+  1.5-3x as long as through `nextFact` (8-58 ms against 31-97 ms a tier, warm). Tests hold each sequence's first step to
+  `nextFact`'s along whole walks, so the lists cannot drift from the ladder; `LampsLogic.facts` collects each rule's instances (a what-if: every supposition that breaks within
   three links, not only the shortest). Judging a move that is no step, which asks for them all, takes under 2 ms on the
   JVM for every technique (`JUDGE` lines). Tests: another instance is right (Mines' all found and all mines, Lamps' zero
   and done, Tents' one spot), and a true reveal, cross or grass that no instance justifies gets no verdict.

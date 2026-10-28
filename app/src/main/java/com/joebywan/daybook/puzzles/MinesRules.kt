@@ -181,11 +181,90 @@ internal object MinesLogic {
      * revealed, else -1; [st] what is known ([UNKNOWN], [MINE], [SAFE]: revealed squares are [SAFE], mines hit [MINE]);
      * [total] the board's mines. Visible facts only: nothing here can see where a hidden mine is.
      */
-    fun nextFact(w: Int, h: Int, num: IntArray, st: IntArray, total: Int): Fact? = facts(w, h, num, st, total).firstOrNull()
+    fun nextFact(w: Int, h: Int, num: IntArray, st: IntArray, total: Int): Fact? {
+        val n = w * h
+        val nbs = Array(n) { neighbours8(w, h, it) }
+        fun unknownOf(i: Int) = nbs[i].filter { st[it] == UNKNOWN }
+        fun needOf(i: Int) = num[i] - nbs[i].count { st[it] == MINE }
+
+        // 1. Single numbers.
+        for (i in 0 until n) {
+            if (num[i] < 0) continue
+            val unk = unknownOf(i)
+            if (unk.isEmpty()) continue
+            val need = needOf(i)
+            if (need == 0) return Fact(MinesTeacher.ALL_FOUND, 1, unk, emptyList(), listOf(i))
+            if (need == unk.size) return Fact(MinesTeacher.ALL_MINES, 1, emptyList(), unk, listOf(i))
+        }
+
+        // 2. Two numbers: one's squares inside the other's, or overlapping.
+        for (a in 0 until n) {
+            if (num[a] < 0) continue
+            val ua = unknownOf(a)
+            if (ua.isEmpty()) continue
+            val needA = needOf(a)
+            val ar = a / w
+            val ac = a % w
+            for (b in 0 until n) {
+                if (b == a || num[b] < 0) continue
+                if (kotlin.math.abs(b / w - ar) > 2 || kotlin.math.abs(b % w - ac) > 2) continue
+                val ub = unknownOf(b)
+                if (ub.none { it in ua }) continue
+                val onlyA = ua.filter { it !in ub }
+                val onlyB = ub.filter { it !in ua }
+                if (onlyB.isEmpty()) continue
+                val diff = needOf(b) - needA
+                if (onlyA.isEmpty()) {
+                    if (diff == 0) return Fact(MinesTeacher.SUBSET, 2, onlyB, emptyList(), listOf(a, b))
+                    if (diff == onlyB.size) return Fact(MinesTeacher.SUBSET, 2, emptyList(), onlyB, listOf(a, b))
+                } else if (diff == onlyB.size) {
+                    return Fact(MinesTeacher.PAIR, 2, onlyA, onlyB, listOf(a, b))
+                }
+            }
+        }
+
+        // 3a. The mine count.
+        val hidden = (0 until n).filter { st[it] == UNKNOWN }
+        if (hidden.isNotEmpty()) {
+            val left = total - st.count { it == MINE }
+            if (left == 0) return Fact(MinesTeacher.COUNT, 3, hidden, emptyList(), emptyList(), left = 0)
+            if (left == hidden.size) return Fact(MinesTeacher.COUNT, 3, emptyList(), hidden, emptyList(), left = left)
+            // Numbers on squares none of them share, needing every mine left between them: the rest is clear.
+            val order = (0 until n).filter { num[it] >= 0 && unknownOf(it).isNotEmpty() && needOf(it) > 0 }
+                .sortedWith(compareBy({ -needOf(it) }, { it }))
+            val used = BooleanArray(n)
+            val chosen = ArrayList<Int>()
+            var sum = 0
+            for (i in order) {
+                val unk = unknownOf(i)
+                if (unk.any { used[it] }) continue
+                unk.forEach { used[it] = true }
+                chosen += i
+                sum += needOf(i)
+            }
+            if (sum == left) {
+                val rest = hidden.filter { !used[it] }
+                if (rest.isNotEmpty()) return Fact(MinesTeacher.EDGE, 3, rest, emptyList(), chosen.sorted(), left = left)
+            }
+        }
+
+        // 3b. What if: suppose a square beside a number, follow single numbers, and one breaks.
+        for (x in hidden) {
+            if (nbs[x].none { num[it] >= 0 }) continue
+            for (assume in intArrayOf(MINE, SAFE)) {
+                val f = whatIf(n, nbs, num, st, x, assume) ?: continue
+                return if (assume == MINE) Fact(MinesTeacher.WHAT_IF, 3, listOf(x), emptyList(), f.cited, f.chain, f.broke, f.tooMany)
+                else Fact(MinesTeacher.WHAT_IF, 3, emptyList(), listOf(x), f.cited, f.chain, f.broke, f.tooMany)
+            }
+        }
+        return null
+    }
 
     /**
      * Every step the ladder finds on [st], in the order [nextFact] tries them (so its first is [nextFact]'s), lazily: Training
-     * lists every step of one technique with it. Nothing in [st] changes while it runs.
+     * lists every step of one technique with it. Nothing in [st] changes while it runs. The same rules as [nextFact], kept
+     * apart because the generator's walk calls [nextFact] and a sequence there costs time; `MinesTrainingTest` holds the
+     * two to the same first step.
      */
     fun facts(w: Int, h: Int, num: IntArray, st: IntArray, total: Int): Sequence<Fact> = sequence {
         val n = w * h

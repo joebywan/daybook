@@ -206,6 +206,22 @@ class MinesTrainingTest {
         assertEquals(MinesTraining.techniques.toSet(), MinesTraining.techniquesUsed(MinesTraining.exam()!!))
     }
 
+    @Test fun `the listed facts start with the generator's own pick, all along a walk`() {
+        for (tier in Difficulty.entries) for (k in 0 until 10) {
+            val b = Mines.generate(Training.seed(k), tier) as MinesState
+            val n = b.width * b.height
+            var s = b
+            while (!s.solved) {
+                val num = IntArray(n) { if (s.isOpen(it)) s.number(it) else -1 }
+                val st = IntArray(n) { if (num[it] >= 0) MinesLogic.SAFE else if (s.isFlag(it)) MinesLogic.MINE else MinesLogic.UNKNOWN }
+                val f = MinesLogic.nextFact(b.width, b.height, num, st, b.total) ?: break
+                val g = MinesLogic.facts(b.width, b.height, num, st, b.total).first()
+                assertEquals(listOf(f.technique, f.safe, f.mines, f.cited), listOf(g.technique, g.safe, g.mines, g.cited))
+                s = f.mines.fold(f.safe.fold(s) { acc, i -> acc.reveal(i) ?: acc }) { acc, i -> acc.flag(i) ?: acc }
+            }
+        }
+    }
+
     @Test fun `mines routes round-trip`() {
         listOf(Route.Training(puzzle = "mines"), Route.Training("what-if", puzzle = "mines"), Route.Training("exam", puzzle = "mines"))
             .forEach { assertEquals(it, decodeRoute(encodeRoute(it))) }

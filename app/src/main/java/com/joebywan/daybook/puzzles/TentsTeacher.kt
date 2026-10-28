@@ -156,11 +156,101 @@ internal object TentsTeacher {
         return deepest
     }
 
-    private fun nextFact(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, st: IntArray): Step? =
-        facts(n, trees, rowCounts, colCounts, st).firstOrNull()
+    internal fun nextFact(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, st: IntArray): Step? {
+        fun free(i: Int) = !trees[i] && st[i] == 0
+        val treeIdx = trees.indices.filter { trees[it] }
+        /** The squares beside tree [t] its tent could still go on. */
+        fun choices(t: Int) = TentsLogic.orth(n, t).filter { !trees[it] && st[it] != GRASS }
+        /** A tent on [c] beside only one tree, so that tree's. */
+        fun owned(c: Int) = !trees[c] && st[c] == TENT && TentsLogic.orth(n, c).count { trees[it] } == 1
 
-    /** Every fact on [st], in [nextFact]'s order (its first is [nextFact]'s), lazily; [st] must not change meanwhile. */
-    private fun facts(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, st: IntArray): Sequence<Step> = sequence {
+        // 1. No tree beside it.
+        val bare = st.indices.filter { free(it) && TentsLogic.orth(n, it).none { j -> trees[j] } }
+        if (bare.isNotEmpty()) return Step(
+            NO_TREE, GRASS, bare.toSet(), bare.toSet(), emptySet(),
+            "Which squares have no tree beside them?",
+            "A tent sits right beside its tree (up, down, left or right). These squares have no tree there, so they are grass: cross them out.",
+        )
+
+        // 2. A row or column that is full or done.
+        for (li in 0 until 2 * n) {
+            val k = li % n
+            val line = if (li < n) List(n) { k * n + it } else List(n) { it * n + k }
+            val want = if (li < n) rowCounts[k] else colCounts[k]
+            val clue = if (li < n) n * n + k else n * n + n + k
+            val need = want - line.count { st[it] == TENT }
+            val open = line.filter { free(it) }
+            if (open.isEmpty() || need < 0 || need > open.size) continue
+            val name = lineName(n, li)
+            val placed = line.filter { st[it] == TENT }.toSet()
+            if (need == 0) return Step(
+                LINE_DONE, GRASS, open.toSet(), line.toSet() + clue, placed,
+                "Count the tents in $name.",
+                "${name.cap()} holds $want, and they are all placed, so the rest of it is grass.",
+            )
+            if (need == open.size) return Step(
+                LINE_FULL, TENT, open.toSet(), line.toSet() + clue, placed,
+                "Count the squares left in $name.",
+                "${name.cap()} still needs ${plural(need, "tent")} and has exactly ${if (need == 1) "1 square" else "$need squares"} left that can hold one, so ${if (need == 1) "it is a tent" else "all of them are tents"}.",
+            )
+        }
+
+        // 3. Around a tent.
+        for (t in st.indices) {
+            if (trees[t] || st[t] != TENT) continue
+            val around = TentsLogic.around(n, t).filter { free(it) }
+            if (around.isNotEmpty()) return Step(
+                TOUCH, GRASS, around.toSet(), setOf(t) + around, setOf(t),
+                "Look around this tent.",
+                "Tents never touch, not even at a corner, so every free square around this tent is grass.",
+            )
+        }
+
+        // 4. A tree with one square left.
+        for (t in treeIdx) {
+            val choices = choices(t)
+            if (choices.size == 1 && st[choices[0]] == 0) return Step(
+                ONE_SPOT, TENT, choices.toSet(), setOf(t, choices[0]), setOf(t),
+                "Look at this tree.",
+                "This tree needs a tent beside it, and every other square next to it is a tree, off the board or ruled out. Only this one is left.",
+            )
+        }
+
+        // 5. A square that would touch every choice of a tree.
+        for (t in treeIdx) {
+            val choices = choices(t)
+            if (choices.isEmpty()) continue
+            val xs = st.indices.filter { x -> free(x) && x !in choices && choices.all { it in TentsLogic.around(n, x) } }
+            if (xs.isNotEmpty()) return Step(
+                SHARED, GRASS, xs.toSet(), setOf(t) + choices + xs, setOf(t) + choices,
+                "Where can this tree's tent go?",
+                "This tree's tent has to go on one of the marked squares. A tent in the crossed one would touch every one of them, so it is grass.",
+            )
+        }
+
+        // 6. Every tree beside it already has its tent.
+        val served = treeIdx.filter { t -> TentsLogic.orth(n, t).any { owned(it) } }.toSet()
+        for (x in st.indices) {
+            if (!free(x)) continue
+            val near = TentsLogic.orth(n, x).filter { trees[it] }
+            if (near.isNotEmpty() && near.all { it in served }) {
+                val owners = near.flatMap { t -> TentsLogic.orth(n, t).filter { owned(it) } }
+                return Step(
+                    SERVED, GRASS, setOf(x), setOf(x) + near, near.toSet() + owners,
+                    "Does a tree beside this square still need a tent?",
+                    "${if (near.size == 1) "The tree" else "The trees"} beside this square already ${if (near.size == 1) "has its tent" else "have their tents"}, so a tent here would have no tree of its own. It is grass.",
+                )
+            }
+        }
+        return null
+    }
+
+    /**
+     * Every fact on [st], in [nextFact]'s order (its first is [nextFact]'s), lazily; [st] must not change meanwhile. The same
+     * rules as [nextFact], kept apart because the generator's tier gate walks [nextFact] and a sequence there costs time;
+     * `TentsTrainingTest` holds the two to the same first step.
+     */
+    internal fun facts(n: Int, trees: List<Boolean>, rowCounts: List<Int>, colCounts: List<Int>, st: IntArray): Sequence<Step> = sequence {
         fun free(i: Int) = !trees[i] && st[i] == 0
         val treeIdx = trees.indices.filter { trees[it] }
         /** The squares beside tree [t] its tent could still go on. */

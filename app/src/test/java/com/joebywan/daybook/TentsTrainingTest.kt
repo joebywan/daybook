@@ -155,6 +155,19 @@ class TentsTrainingTest {
         assertEquals(TentsTraining.techniques.toSet(), TentsTraining.techniquesUsed(TentsTraining.exam()!!))
     }
 
+    @Test fun `the listed facts start with the generator's own pick, all along a walk`() {
+        for (tier in Difficulty.entries) for (k in 0 until 10) {
+            val b = Tents.generate(Training.seed(k), tier) as TentsState
+            val st = IntArray(b.size * b.size)
+            while (true) {
+                val f = TentsTeacher.nextFact(b.size, b.trees, b.rowCounts, b.colCounts, st) ?: break
+                val g = TentsTeacher.facts(b.size, b.trees, b.rowCounts, b.colCounts, st).first()
+                assertEquals(listOf(f.technique, f.targets, f.value, f.cited), listOf(g.technique, g.targets, g.value, g.cited))
+                for (i in f.targets) st[i] = f.value
+            }
+        }
+    }
+
     @Test fun `tents routes round-trip`() {
         listOf(Route.Training(puzzle = "tents"), Route.Training("served", puzzle = "tents"), Route.Training("exam", puzzle = "tents"))
             .forEach { assertEquals(it, decodeRoute(encodeRoute(it))) }
