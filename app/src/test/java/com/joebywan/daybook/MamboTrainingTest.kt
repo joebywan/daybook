@@ -60,6 +60,28 @@ class MamboTrainingTest {
             }
         }
 
+        /** Each instance of a rung below the what-if, as the squares it settles, counted the same way as [has]. */
+        fun instances(rung: Int): List<Set<Int>> = when (rung) {
+            0 -> lines.flatMap { l ->
+                (0 until n - 1).filter { k -> c[l[k]] != Sym.NONE && c[l[k]] == c[l[k + 1]] }
+                    .map { k -> listOfNotNull(l.getOrNull(k - 1), l.getOrNull(k + 2)).filter { c[it] == Sym.NONE }.toSet() }
+            }
+            1 -> lines.flatMap { l -> (0 until n - 2).filter { k -> c[l[k]] != Sym.NONE && c[l[k]] == c[l[k + 2]] && c[l[k + 1]] == Sym.NONE }.map { setOf(l[it + 1]) } }
+            2 -> links.filter { (c[it.a] == Sym.NONE) != (c[it.b] == Sym.NONE) }.map { setOf(if (c[it.a] == Sym.NONE) it.a else it.b) }
+            3 -> lines.filter { l -> listOf(Sym.SUN, Sym.MOON).any { y -> l.count { c[it] == y } == n / 2 } }.map { l -> l.filter { c[it] == Sym.NONE }.toSet() }
+            4 -> lines.flatMap { l ->
+                val open = l.filter { c[it] == Sym.NONE }
+                listOf(Sym.SUN, Sym.MOON).filter { y -> open.size >= 2 && l.count { c[it] == y } == n / 2 - 1 }.flatMap { y ->
+                    val other = if (y == Sym.SUN) Sym.MOON else Sym.SUN
+                    open.filter { e ->
+                        val trial = l.map { if (c[it] != Sym.NONE) c[it] else if (it == e) y else other }
+                        (0 until n - 2).any { k -> trial[k] == other && trial[k + 1] == other && trial[k + 2] == other }
+                    }.map { setOf(it) }
+                }
+            }
+            else -> emptyList()
+        }.filter { it.isNotEmpty() }
+
         fun has(rung: Int) = when (rung) {
             0 -> pair()
             1 -> sandwich()
@@ -100,6 +122,7 @@ class MamboTrainingTest {
         assertTrue("a sun passes through a moon, so a wrong verdict waits", MamboTraining.drill.settleMillis > 0)
         var others = 0
         var lucky = 0
+        var counted = 0
         for (t in MamboTraining.techniques) {
             for (p in MamboTraining.practices(t).take(3)) {
                 val b = p.board as MamboState
@@ -109,7 +132,14 @@ class MamboTrainingTest {
                 val open = b.cells.indices.filter { b.cells[it] == Sym.NONE }
                 // The wrong symbol anywhere open is wrong: the board has one answer.
                 for (i in listOf(open.first(), d.targets.first())) assertEquals(false, MamboTraining.judge(p, with(i, b.solution[i].other())))
-                // Another instance of the technique is right too; a right symbol no instance justifies plays on.
+                // Every other instance of the technique, counted here: making it is right.
+                val rung = MamboTraining.techniques.indexOf(t)
+                for (set in Rungs(b).instances(rung)) if (set != d.targets) {
+                    val made = b.copy(cells = b.cells.toMutableList().also { cells -> set.forEach { cells[it] = b.solution[it] } })
+                    assertEquals("another $t", true, MamboTraining.judge(p, made))
+                    counted++
+                }
+                // The teacher's own list agrees; a right symbol no instance justifies plays on.
                 val same = MamboTeacher.steps(b.size, b.cells, b.links).filter { it.technique == t }.map { Mambo.deduction(b, it) }.toList()
                 same.firstOrNull { it.targets != d.targets }?.let { assertEquals(true, MamboTraining.judge(p, it.apply(b))); others++ }
                 val justified = same.flatMap { it.targets }.toSet()
@@ -121,6 +151,7 @@ class MamboTrainingTest {
         }
         assertTrue("some practice has another instance to find", others > 0)
         assertTrue("and a true symbol nothing justifies", lucky > 0)
+        assertTrue("and another instance by counting", counted > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

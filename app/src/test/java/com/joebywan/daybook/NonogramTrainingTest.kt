@@ -60,6 +60,19 @@ class NonogramTrainingTest {
         return if (NonogramOracle.bruteForced(clue, marks)!!.any { it != NonogramLogic.UNKNOWN }) 3 else null
     }
 
+    /** The squares of [line] every layout of its clue still possible agrees on, by [NonogramOracle]'s brute force. */
+    private fun forcedIn(s: NonogramState, line: List<Int>): List<Int> {
+        val marks = IntArray(line.size) {
+            when (s.cells[line[it]]) {
+                NonogramLogic.FILLED -> NonogramLogic.FILL
+                NonogramLogic.CROSSED -> NonogramLogic.CROSS
+                else -> NonogramLogic.UNKNOWN
+            }
+        }
+        val f = NonogramOracle.bruteForced(clueOf(s, line), marks)!!
+        return line.filterIndexed { x, _ -> f[x] != NonogramLogic.UNKNOWN }
+    }
+
     @Test fun `every practice is a real position whose next step is its technique, with no simpler step on it`() {
         assertTrue(NonogramTraining.drill is MoveDrill)
         for ((rung, t) in NonogramTraining.techniques.withIndex()) {
@@ -91,6 +104,7 @@ class NonogramTrainingTest {
     @Test fun `a move is right when it makes the step, wrong when no picture keeps it, and otherwise plays on`() {
         var others = 0
         var lucky = 0
+        var counted = 0
         for (t in NonogramTraining.techniques) {
             for (p in NonogramTraining.practices(t).take(3)) {
                 val b = p.board as NonogramState
@@ -103,7 +117,14 @@ class NonogramTrainingTest {
                 // A wrong fill, or a wrong cross, is wrong wherever it is.
                 for (i in listOf(open.first(), d.targets.first())) assertEquals(false, NonogramTraining.judge(p, with(i, wrong(i))))
                 open.firstOrNull { b.solution[it] == '1' }?.let { assertEquals(false, NonogramTraining.judge(p, with(it, NonogramLogic.CROSSED))) }
-                // Another instance of the technique is right too; a right mark no instance justifies plays on.
+                // Every other line whose rung, counted here, is this technique: making what it settles is right.
+                val rung = NonogramTraining.techniques.indexOf(t)
+                for (line in lines(b)) if (rungOf(b, line) == rung && line.none { it in d.targets }) {
+                    val made = forcedIn(b, line).fold(b) { s, i -> s.copy(cells = s.cells.substring(0, i) + right(i) + s.cells.substring(i + 1)) }
+                    assertEquals("another line's $t", true, NonogramTraining.judge(p, made))
+                    counted++
+                }
+                // The teacher's own list agrees; a right mark no instance justifies plays on.
                 val same = NonogramTeacher.steps(b.width, b.height, NonogramLogic.rowClues(b), NonogramLogic.colClues(b), b.cells).map { Nonogram.deduction(b, it) }.filter { it.technique == t }
                 same.firstOrNull { it.targets != d.targets }?.let { assertEquals(true, NonogramTraining.judge(p, it.apply(b))); others++ }
                 val justified = same.flatMap { it.targets }.toSet()
@@ -114,6 +135,7 @@ class NonogramTrainingTest {
         }
         assertTrue("some practice has another instance to find", others > 0)
         assertTrue("and a true mark nothing justifies", lucky > 0)
+        assertTrue("and another instance by counting", counted > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {

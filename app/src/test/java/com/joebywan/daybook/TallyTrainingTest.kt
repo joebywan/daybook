@@ -51,6 +51,14 @@ class TallyTrainingTest {
         }
     }
 
+    /** The open squares of [line] that every subset making [target] keeps, or none does. */
+    private fun settledIn(s: TallyState, line: List<Int>, target: Int): List<Int> {
+        val open = line.filter { s.marks[it] == TallyLogic.UNMARKED }
+        val kept = line.filter { s.marks[it] == TallyLogic.KEPT }.sumOf { s.digitAt(it) }
+        val ways = (0 until (1 shl open.size)).filter { m -> kept + open.indices.filter { m shr it and 1 == 1 }.sumOf { s.digitAt(open[it]) } == target }
+        return open.filterIndexed { x, _ -> ways.all { it shr x and 1 == 1 } || ways.none { it shr x and 1 == 1 } }
+    }
+
     @Test fun `every practice is a real position whose next step is its technique, with no simpler step on it`() {
         assertTrue(TallyTraining.drill is MoveDrill)
         for ((rung, t) in TallyTraining.techniques.withIndex()) {
@@ -82,6 +90,7 @@ class TallyTrainingTest {
     @Test fun `a move is right when it makes the step, wrong when the answer disagrees, and otherwise plays on`() {
         var others = 0
         var lucky = 0
+        var counted = 0
         for (t in TallyTraining.techniques) {
             for (p in TallyTraining.practices(t).take(3)) {
                 val b = p.board as TallyState
@@ -94,7 +103,15 @@ class TallyTrainingTest {
                 // A wrong removal, or a wrong circle, is wrong wherever it is.
                 for (i in listOf(open.first(), d.targets.first())) assertEquals(false, TallyTraining.judge(p, with(i, wrong(i))))
                 open.firstOrNull { b.keep[it] == '0' }?.let { assertEquals(false, TallyTraining.judge(p, with(it, TallyLogic.KEPT))) }
-                // Another instance of the technique is right too; a right mark no instance justifies plays on.
+                // Every other line whose rung, counted here, is this technique: making what its ways settle is right.
+                val rung = TallyTraining.techniques.indexOf(t)
+                val goals = targets(b)
+                for ((k, line) in lines(b.size).withIndex()) if (rungOf(b, line, goals[k]) == rung && line.none { it in d.targets }) {
+                    val made = settledIn(b, line, goals[k]).fold(b) { s, i -> s.copy(marks = s.marks.substring(0, i) + right(i) + s.marks.substring(i + 1)) }
+                    assertEquals("another line's $t", true, TallyTraining.judge(p, made))
+                    counted++
+                }
+                // The teacher's own list agrees; a right mark no instance justifies plays on.
                 val same = TallyTeacher.steps(b.size, TallyLogic.digitArray(b), TallyLogic.targets(b), b.marks).map { Tally.deduction(b, it) }.filter { it.technique == t }
                 same.firstOrNull { it.targets != d.targets }?.let { assertEquals(true, TallyTraining.judge(p, it.apply(b))); others++ }
                 val justified = same.flatMap { it.targets }.toSet()
@@ -105,6 +122,7 @@ class TallyTrainingTest {
         }
         assertTrue("some practice has another instance to find", others > 0)
         assertTrue("and a true mark nothing justifies", lucky > 0)
+        assertTrue("and another instance by counting", counted > 0)
     }
 
     @Test fun `the final board is a proved Expert board, the first whose walk needs every technique`() {
