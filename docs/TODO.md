@@ -271,8 +271,8 @@ A practice mode per technique, once declined, is now wanted (2026-10-26): Traini
 Inequality and Regions (`docs/TRAINING_SPEC.md`). Open: keeping a half-played final board when the player leaves it;
 the keyboard
 does not reach a practice board (the play screen's key handling is not shared); Cage Sudoku's "every cage worked
-through together" practice explains itself only as a summary, as its hint does; puzzles whose teachers do not place
-digits (Kings, Tents, Mambo and the rest) would need their own practice shape.
+through together" practice explains itself only as a summary, as its hint does. Kings has the general practice shape
+(`MoveDrill`); the other puzzles' courses are classified and batched in `docs/TRAINING_SPEC.md`.
 
 ## Owner's call
 

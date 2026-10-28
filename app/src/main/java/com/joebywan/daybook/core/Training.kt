@@ -21,13 +21,13 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Training (`docs/TRAINING_SPEC.md`): per puzzle whose teacher places digits, each technique it names, a short
- * explanation in the hints' voice, and practice boards on which the next hint step is exactly that technique. Pass a
- * technique with [Training.RUN] right in a row; pass them all, then solve the [Course.exam], a board whose own walk needs
- * every one.
+ * Training (`docs/TRAINING_SPEC.md`): per puzzle with a teacher, each technique it names, a short explanation in the hints'
+ * voice, and practice boards on which the next hint step is exactly that technique. Pass a technique with [Training.RUN]
+ * right in a row; pass them all, then solve the [Course.exam], a board whose own walk needs every one.
  *
  * Pure and platform-free (the web compiles it). Practice boards are found, not stored: real generated boards walked by
- * the teacher's ladder from their givens, in seed order, so the same index is the same board everywhere.
+ * the teacher's ladder, in seed order, so the same index is the same board everywhere. How a walk steps and how a move is
+ * judged is the course's [Drill]: [PlacementDrill] for teachers that place digits, [MoveDrill] for every other.
  */
 class Course(
     val puzzle: PuzzleType,
@@ -35,27 +35,39 @@ class Course(
     val explanations: Map<String, String>,
     /** The tier a technique's practice is drawn from: the easiest whose walks reach it (the generator gates depth). */
     private val tierFor: (String) -> Difficulty,
-    /** The teacher's next step on a board shaped like the state, from [cells] alone (the answer is never read). */
-    private val stepper: (PuzzleState) -> (List<Int>) -> PlacementStep?,
-    /** The state's digits and its stored answer. */
-    val cellsOf: (PuzzleState) -> List<Int>,
-    val solutionOf: (PuzzleState) -> List<Int>,
-    /** The state with [cells] in place, every digit a given (so the player cannot erase the walk's digits). */
-    private val withGivens: (PuzzleState, List<Int>) -> PuzzleState,
+    val drill: Drill,
+    /** The "<Puzzle> trained" badge's glyph (`ui/stats/AchievementBadge.kt`); the graduate's is the crown. */
+    val badge: String,
     /** The index of the practice seed whose Expert board's walk needs every technique; null when none was found. */
     examIndex: Int?,
 ) {
+    /** A course on a digit-placing teacher: [PlacementDrill]'s four parts, as the first four courses wrote them. */
+    constructor(
+        puzzle: PuzzleType,
+        explanations: Map<String, String>,
+        tierFor: (String) -> Difficulty,
+        stepper: (PuzzleState) -> (List<Int>) -> PlacementStep?,
+        cellsOf: (PuzzleState) -> List<Int>,
+        solutionOf: (PuzzleState) -> List<Int>,
+        withGivens: (PuzzleState, List<Int>) -> PuzzleState,
+        badge: String,
+        examIndex: Int?,
+    ) : this(puzzle, explanations, tierFor, PlacementDrill(stepper, cellsOf, solutionOf, withGivens), badge, examIndex)
+
     val id: String get() = puzzle.id
 
     /** The ladder's techniques, simplest first: the order the teacher tries them and the list shows them. */
     val techniques: List<String> = explanations.keys.toList()
 
-    /** One practice: [board], whose next hint step is [step] (that technique, from what is visible). */
-    class Practice(val board: PuzzleState, val step: PlacementStep)
+    /**
+     * One practice: [board], whose next hint step is [step] (that technique, from what is visible). For a [PlacementDrill]
+     * the step is a [PlacementStep]; for a [MoveDrill] it is the [Deduction] whose `isReached` passes the practice.
+     */
+    class Practice(val board: PuzzleState, val step: TeachStep)
 
     /**
      * The practices for [technique], in order: per seed, the first position on that board's walk where the teacher's next
-     * step is [technique]. Positions are the walk's own digits written in as givens.
+     * step is [technique].
      */
     fun practices(technique: String): Sequence<Practice> = sequence {
         val tier = tierFor(technique)
@@ -69,7 +81,8 @@ class Course(
      * Per technique, the practices found this session and the next seed to search: they come from pure generators, so they
      * never go stale, and board n costs only the seeds after board n-1's. Read and written under [lock] only: on Android
      * two searches can be under way at once on `Dispatchers.Default` (a quick second "Another board"); the second waits and
-     * then finds the first's work cached. Wasm has one thread, where the lock never waits.
+     * then finds the first's work cached. Wasm has one thread, where the lock never waits. Keyed lookups only, never
+     * iterated, so no hash order reaches a board.
      */
     private val found = HashMap<String, MutableList<Practice>>()
     private val searched = HashMap<String, Int>()
@@ -90,29 +103,17 @@ class Course(
         list.getOrNull(index) ?: list.getOrNull(index % list.size.coerceAtLeast(1))
     }
 
-    private fun positionOn(start: PuzzleState, technique: String): Practice? {
-        val next = stepper(start)
-        val grid = cellsOf(start).toMutableList()
-        while (0 in grid) {
-            val step = next(grid) ?: return null
-            if (step.technique == technique) return Practice(withGivens(start, grid.toList()), step)
-            grid[step.cell] = step.digit
-        }
-        return null
-    }
+    private fun positionOn(start: PuzzleState, technique: String): Practice? =
+        drill.walk(start).firstOrNull { it.step.technique == technique }
 
-    /** The techniques a walk by the teacher's ladder from [start]'s digits uses. */
-    fun techniquesUsed(start: PuzzleState): Set<String> {
-        val next = stepper(start)
-        val grid = cellsOf(start).toMutableList()
-        val used = LinkedHashSet<String>()
-        while (0 in grid) {
-            val step = next(grid) ?: return used
-            used += step.technique
-            grid[step.cell] = step.digit
-        }
-        return used
-    }
+    /** The techniques a walk by the teacher's ladder from [start] uses. */
+    fun techniquesUsed(start: PuzzleState): Set<String> = drill.walk(start).mapTo(LinkedHashSet()) { it.step.technique }
+
+    /**
+     * What the practice board's [after] (a state it emitted from [p]'s board) makes of [p]: true right, false wrong, null
+     * play on. It may ask the teacher, which can take a while: call it off the main thread.
+     */
+    fun judge(p: Practice, after: PuzzleState): Boolean? = drill.judge(puzzle, p, after)
 
     internal val examSeed: Long? = examIndex?.let { Training.seed(it) }
 
@@ -152,14 +153,25 @@ object Training {
     /** Seeds tried before giving up on a technique. */
     internal const val SEARCH = 4000
 
-    /** Every course, in the order the list shows them. */
-    val COURSES: List<Course> by lazy { listOf(SudokuTraining, CagesTraining, InequalityTraining, RegionsTraining) }
+    /**
+     * Every course, in the order the list shows them. A new course is its own file (`core/training/<Name>Training.kt`)
+     * and one line here, at the end: achievements and their badges follow this order, so append only.
+     */
+    val COURSES: List<Course> by lazy {
+        listOf(
+            SudokuTraining,
+            CagesTraining,
+            InequalityTraining,
+            RegionsTraining,
+            KingsTraining,
+        )
+    }
 
     fun of(puzzleId: String?): Course? = COURSES.firstOrNull { it.id == puzzleId }
 }
 
 /** The tier for [technique] at its index in [course]: Standard below [hard], Hard below [expert], then Expert. */
-private fun tierByIndex(techniques: () -> List<String>, hard: Int, expert: Int): (String) -> Difficulty = { t ->
+internal fun tierByIndex(techniques: () -> List<String>, hard: Int, expert: Int): (String) -> Difficulty = { t ->
     val i = techniques().indexOf(t)
     when {
         i < hard -> Difficulty.STANDARD
@@ -195,6 +207,7 @@ val SudokuTraining: Course = Course(
     solutionOf = { (it as SudokuState).solution },
     withGivens = { s, cells -> SudokuState(givens = cells.map { it != 0 }, cells = cells, solution = (s as SudokuState).solution) },
     // One board in the first 400 practice seeds' Expert boards needs all eight. Pinned by SudokuTrainingTest.
+    badge = "9",
     examIndex = 219,
 )
 
@@ -228,6 +241,7 @@ val CagesTraining: Course = Course(
         c.copy(grid = SudokuState(givens = cells.map { it != 0 }, cells = cells, solution = c.grid.solution))
     },
     // The first practice seed whose Expert board needs all nine. Pinned by TrainingTest.
+    badge = "45",
     examIndex = 0,
 )
 
@@ -256,6 +270,7 @@ val InequalityTraining: Course = Course(
     solutionOf = { (it as InequalityState).solution },
     withGivens = { s, cells -> (s as InequalityState).copy(givens = cells.map { it != 0 }, cells = cells) },
     // The first practice seed whose Expert board needs all seven (17 of the first 60 do). Pinned by TrainingTest.
+    badge = "<",
     examIndex = 4,
 )
 
@@ -277,8 +292,89 @@ val RegionsTraining: Course = Course(
     solutionOf = { (it as RegionsState).solution },
     withGivens = { s, cells -> (s as RegionsState).copy(givens = cells.map { it != 0 }, cells = cells) },
     // Every Hard and Expert board needs all four; the first practice seed's Expert board. Pinned by TrainingTest.
+    badge = "5",
     examIndex = 0,
 )
+
+/** How a course walks a board by its teacher's steps, and judges a move on a practice board. */
+interface Drill {
+    /** The positions on a walk by the teacher's ladder from [start], each with its next step, until the ladder stops. */
+    fun walk(start: PuzzleState): Sequence<Course.Practice>
+
+    /** See [Course.judge]. */
+    fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean?
+}
+
+/**
+ * For a teacher that places digits (Sudoku, Cages, Inequality, Regions): the walk writes each step's digit in, and a
+ * position's digits are all givens, so the walk's cannot be erased. A placed digit is judged at once: right when it is the
+ * answer's, whether it is the step's or another square's, since the position has no simpler step anywhere (the teacher
+ * tries every simpler technique on the whole board first), so a correct digit elsewhere took this technique or a harder
+ * one. Judged against the stored answer, which is sound because these generators prove one answer.
+ */
+class PlacementDrill(
+    /** The teacher's next step on a board shaped like the state, from [cells] alone (the answer is never read). */
+    private val stepper: (PuzzleState) -> (List<Int>) -> PlacementStep?,
+    /** The state's digits and its stored answer. */
+    val cellsOf: (PuzzleState) -> List<Int>,
+    val solutionOf: (PuzzleState) -> List<Int>,
+    /** The state with [cells] in place, every digit a given (so the player cannot erase the walk's digits). */
+    private val withGivens: (PuzzleState, List<Int>) -> PuzzleState,
+) : Drill {
+    override fun walk(start: PuzzleState): Sequence<Course.Practice> = sequence {
+        val next = stepper(start)
+        val grid = cellsOf(start).toMutableList()
+        while (0 in grid) {
+            val step = next(grid) ?: break
+            yield(Course.Practice(withGivens(start, grid.toList()), step))
+            grid[step.cell] = step.digit
+        }
+    }
+
+    override fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean? {
+        val was = cellsOf(p.board)
+        val cells = cellsOf(after)
+        val placed = cells.indices.firstOrNull { cells[it] != 0 && was[it] == 0 } ?: return null
+        return cells[placed] == solutionOf(p.board)[placed]
+    }
+}
+
+/**
+ * For every other teacher (kings, crosses, tents, shading, turns...): a step is the [Deduction] the teacher's next step
+ * makes, so the walk is the hints' own "Show me" ([Deduction.apply]) from the generated board, and a position is simply the
+ * walked state. Nothing is locked: a mark the walk made can be rubbed out, and the practice then waits until the step is
+ * made again.
+ *
+ * Judged by the teacher, never against the stored answer: wrong when the teacher calls the new board a mistake (a
+ * teacher's mistake means "no legal answer keeps this", which is what LITS's and Pipes' several-answer boards need, PR
+ * #15); right when the step's [Deduction.isReached] holds; otherwise the player plays on (one cross of a step that crosses
+ * three, or a sound mark elsewhere). Only the step itself passes: on these boards a lone cross is cheap to guess, so
+ * "another correct mark" would pass a guess, where a placed digit could not be.
+ */
+class MoveDrill(
+    /**
+     * The teacher's next step on the state as a [Deduction], from what the player can see: build it from the teacher's
+     * visible-state entry point (one with no parameter for the answer), never from `teach`, which reads the answer.
+     */
+    private val next: (PuzzleState) -> Deduction?,
+) : Drill {
+    override fun walk(start: PuzzleState): Sequence<Course.Practice> = sequence {
+        var s = start
+        while (!s.solved) {
+            val d = next(s) ?: break
+            yield(Course.Practice(s, d))
+            val moved = d.apply(s)
+            if (moved == s) break
+            s = moved
+        }
+    }
+
+    override fun judge(puzzle: PuzzleType, p: Course.Practice, after: PuzzleState): Boolean? = when {
+        puzzle.teach(after)?.mistake == true -> false
+        (p.step as Deduction).isReached(after) -> true
+        else -> null
+    }
+}
 
 /**
  * What the player has passed in Training, as `puzzleId|technique` (or `puzzleId|exam`). Its own key set in the
