@@ -60,7 +60,10 @@ move passes through a wrong state (Mambo's sun is a moon first); found practices
 `hintKeys`, shared with the play screen; a technique no practice search reaches is left out, and a board already
 dealt is never dealt again), opened from Home's Training mode (a course per tile, `ui/home/TrainingTiles.kt`; opened as
 the rules sheet's are, so back is Home), the rules sheet's "Train", the Techniques page's "Practise", a hint's
-"Practise this" and Settings: `docs/TRAINING_SPEC.md`. What must not be broken:
+"Practise this" and Settings: `docs/TRAINING_SPEC.md`. A pass and a graduation are celebrated with the game's own
+finished frame (`FinishedFrame` with no clock and a `centre` badge, `Confetti`, `ResultsBlock`, the chime and
+`haptics.success`), shared, never copied, showing the progress to the course's next achievement (`passCheer`,
+`graduateCheer`); the run shows as `RunBoxes` beside the subtitle. What must not be broken:
 
 - A puzzle's first board opens on its walkthrough, once (`autoWalkthrough`: never solved, never opened, not a level
   board, no saved moves; Skip one tap). The offer line and the "?" sheet are the way back. `tools/render/render.py` marks

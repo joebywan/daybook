@@ -22,6 +22,8 @@ import com.joebywan.daybook.ui.play.Praise
 import com.joebywan.daybook.ui.play.finishPreview
 import com.joebywan.daybook.ui.play.shareCard
 import com.joebywan.daybook.ui.play.sharePreviewOpen
+import com.joebywan.daybook.ui.training.passPreview
+import com.joebywan.daybook.ui.training.runPreview
 import com.joebywan.daybook.ui.play.techniqueLine
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.WordWheelState
@@ -180,6 +182,11 @@ fun main() {
         )
         // `&share` opens the share preview over the frame.
         sharePreviewOpen = "share" in params
+    }
+    // `?screen=training&technique=<id>&run=N` opens the practice on a run of N; `&pass` with its celebration showing.
+    if (params["screen"] == "training") {
+        runPreview = params["run"]?.toIntOrNull() ?: 0
+        passPreview = "pass" in params
     }
     // `?screen=stats&share` opens the day's share preview.
     if (params["screen"] == "stats") sharePreviewOpen = "share" in params

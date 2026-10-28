@@ -831,10 +831,12 @@ private fun PlayLayout(wide: Boolean, modifier: Modifier, content: @Composable (
  * one line, and the to-go line when nothing was earned), next-step buttons at the bottom (two columns; an odd last
  * tile takes the full row), and the centre left open so the solved board shows. Only when the solve earned
  * achievements does the centre hold a badge card. On a short screen the badge shrinks; the buttons never do.
+ * Training's pass shares it (`ui/training`): no clock ([seconds] null), and its [centre] (the course's badge, given its
+ * size) holds the middle when nothing was earned, with the to-go line under it.
  */
 @Composable
-private fun FinishedFrame(
-    seconds: Int,
+internal fun FinishedFrame(
+    seconds: Int?,
     hints: Int,
     praise: Praise,
     celebrate: Boolean,
@@ -842,6 +844,7 @@ private fun FinishedFrame(
     options: List<NextOption>,
     onOption: (NextOption) -> Unit,
     onHide: () -> Unit,
+    centre: (@Composable (Dp) -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     // [celebrate]: an extended streak counts up to its new length, a milestone's title stamps in (from 130%, settling with
@@ -875,7 +878,7 @@ private fun FinishedFrame(
                 }
                 PartyPopper(Modifier.size(36.dp).graphicsLayer(scaleX = -1f))
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (seconds != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     buildString {
                         append(formatClock(seconds))
@@ -890,7 +893,7 @@ private fun FinishedFrame(
             praise.lines.forEach {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
-            if (praise.achievements.isEmpty()) praise.toGo?.let {
+            if (praise.achievements.isEmpty() && centre == null) praise.toGo?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurface, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
             }
         }
@@ -899,6 +902,18 @@ private fun FinishedFrame(
                 Modifier.align(Alignment.Center).padding(horizontal = 32.dp).widthIn(max = 340.dp).fillMaxWidth()
                     .frameCard(scheme.surface).padding(horizontal = 12.dp, vertical = 10.dp),
             ) { ResultsBlock(praise, accent, badge, celebrate) }
+        } else if (centre != null) {
+            Column(
+                Modifier.align(Alignment.Center).padding(horizontal = 32.dp).widthIn(max = 340.dp).fillMaxWidth()
+                    .frameCard(scheme.surface).padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                centre(badge)
+                praise.toGo?.let {
+                    Spacer(Modifier.height(6.dp))
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurface, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
+                }
+            }
         }
         Column(
             Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp).widthIn(max = 380.dp).fillMaxWidth()

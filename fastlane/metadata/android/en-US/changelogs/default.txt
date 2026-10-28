@@ -1,4 +1,3 @@
-- Training is now on Home: the mode row reads Daily · Levels · Training. Pick Training to see every puzzle with a course, how far you are through each, and open one with a tap.
-- Daily and Random share the first button: tap it again to switch between them.
-- Each mode button shows a little more: your level, and how many courses you've graduated.
-- The rows at the top of Home sit closer together, so the grid gets more of the screen.
+- Passing a Training technique is now celebrated like a solved puzzle: a popup with the course's badge, confetti, the solve sound and a buzz. It shows how far you are toward the course's achievement, and any achievement it earns, the first time.
+- Solving a course's final board gets the same, as you graduate.
+- Each practice shows your run as three boxes beside its title, ticking as you get them right.
