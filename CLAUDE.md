@@ -46,7 +46,7 @@ praised techniques, ticked once a hint explained one; stored as the `techniques_
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
 Sudoku, Inequality and Regions, each technique practised on real positions found by walking generated boards by hints
 (`core/Training.kt`: one `Course` per puzzle; `ui/training/`; its own `training_passed` key set, `puzzleId|technique`;
-two appended achievements per puzzle), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
+two appended achievements per puzzle; keys through `hintKeys`, shared with the play screen), opened from the rules sheet's "Train", the Techniques page's "Practise", a hint's
 "Practise this" and Settings: `docs/TRAINING_SPEC.md`. What must not be broken:
 
 - A puzzle's first board opens on its walkthrough, once (`autoWalkthrough`: never solved, never opened, not a level
