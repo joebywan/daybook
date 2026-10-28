@@ -25,8 +25,7 @@ class AchievementsTest {
         newlyEarned(h, s, today, pids).map { it.id }.toSet()
 
     @Test fun sizeAndUniqueIds() {
-        // Training brings two per course (up to 22 courses, docs/TRAINING_SPEC.md).
-        assertTrue(ACHIEVEMENTS.size in 15..64)
+        assertTrue(ACHIEVEMENTS.size in 15..80) // two more per Training course
         assertEquals(ACHIEVEMENTS.size, ACHIEVEMENTS.map { it.id }.toSet().size)
     }
 

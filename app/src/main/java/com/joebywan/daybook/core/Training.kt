@@ -75,7 +75,7 @@ class Course(
             val start = puzzle.generate(Training.seed(k), tier)
             positionOn(start, technique)?.let { yield(it) }
         }
-    }
+    }.distinctBy { it.board } // a puzzle that picks from a fixed list (Chess) can deal the same board twice
 
     /**
      * Per technique, the practices found this session and the next seed to search: they come from pure generators, so they
@@ -95,7 +95,7 @@ class Course(
         if (index >= list.size && k < Training.SEARCH) {
             val tier = tierFor(technique)
             while (index >= list.size && k < Training.SEARCH) {
-                positionOn(puzzle.generate(Training.seed(k), tier), technique)?.let { list += it }
+                positionOn(puzzle.generate(Training.seed(k), tier), technique)?.let { p -> if (list.none { it.board == p.board }) list += p }
                 k++
             }
             searched[technique] = k
@@ -173,6 +173,9 @@ object Training {
             PipesTraining,
             PearlsTraining,
             AtomsTraining,
+            WhosWhoTraining,
+            CipherTraining,
+            ChessTraining,
         )
     }
 
