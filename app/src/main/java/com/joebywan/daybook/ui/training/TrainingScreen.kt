@@ -55,6 +55,7 @@ import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.HintStage
 import com.joebywan.daybook.ui.teach.WatchHint
 import com.joebywan.daybook.ui.teach.buttonLabel
+import com.joebywan.daybook.ui.teach.hintKeys
 import com.joebywan.daybook.ui.teach.rememberHintSession
 import com.joebywan.daybook.ui.tutorial.LocalChime
 import kotlinx.coroutines.Dispatchers
@@ -232,7 +233,10 @@ fun TechniquePractice(course: Course, technique: String, record: Set<String>, on
                 null -> hints.highlight
                 else -> BoardHighlight(strong = setOf(p.step.cell), soft = p.step.cited - p.step.cell, warning = false)
             }
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.weight(1f).fillMaxWidth().hintKeys(verdict == null, hints, if (puzzle.offersHints) ::onHint else null),
+                contentAlignment = Alignment.Center,
+            ) {
                 CompositionLocalProvider(LocalBoardHighlight provides highlight) {
                     puzzle.Board(b, { judge(it) }, interactive = verdict == null)
                 }
@@ -331,7 +335,10 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
         }
     }
     TitledScreen("Final board", if (course.passed(record, Training.EXAM)) "Passed" else "Every technique, in one board", onBack) {
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.weight(1f).fillMaxWidth().hintKeys(!board.solved, hints, if (puzzle.offersHints) ::onHint else null),
+            contentAlignment = Alignment.Center,
+        ) {
             CompositionLocalProvider(LocalBoardHighlight provides hints.highlight) {
                 puzzle.Board(board, { board = it }, interactive = !board.solved)
             }

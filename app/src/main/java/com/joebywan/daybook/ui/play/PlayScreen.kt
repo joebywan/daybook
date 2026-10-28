@@ -79,15 +79,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -129,6 +120,7 @@ import com.joebywan.daybook.ui.SOLVE_WAVE_MS
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
+import com.joebywan.daybook.ui.teach.hintKeys
 import com.joebywan.daybook.ui.teach.buttonLabel
 import com.joebywan.daybook.ui.teach.rememberHintSession
 import com.joebywan.daybook.ui.tutorial.LocalChime
@@ -457,20 +449,8 @@ fun PlayScreen(
         Modifier
             .fillMaxSize()
             .background(scheme.background)
-            // Keyboard shortcuts, for keys a board left unused (the focused board sees them first, so
-            // Lexicon keeps its H): Ctrl/Cmd+Z undoes, H asks for a hint, Esc closes one. None once solved.
-            .onKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown || state.solved || event.isAltPressed) return@onKeyEvent false
-                when {
-                    event.key == Key.Z && (event.isCtrlPressed || event.isMetaPressed) && !event.isShiftPressed ->
-                        if (puzzle.offersUndo) undo() else return@onKeyEvent false
-                    event.isCtrlPressed || event.isMetaPressed || event.isShiftPressed -> return@onKeyEvent false
-                    event.key == Key.H && puzzle.offersHints -> onHint()
-                    event.key == Key.Escape && hintSession.active -> hintSession.clear()
-                    else -> return@onKeyEvent false
-                }
-                true
-            }
+            // Ctrl/Cmd+Z, H and Esc, as wherever a board is played. None once solved.
+            .hintKeys(!state.solved, hintSession, if (puzzle.offersHints) ::onHint else null, if (puzzle.offersUndo) ::undo else null)
             .onGloballyPositioned { overlayOrigin = it.positionInWindow() },
     ) {
     // A wide window (a phone on its side, a tablet, a desktop browser) puts the board beside the title, clock and
