@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -113,7 +114,7 @@ var passPreview = false
 
 /** A card row: the tick's room kept either way so the names line up, then [title] and an optional [note]. */
 @Composable
-private fun TrainingRow(title: String, note: String?, ticked: Boolean, onClick: (() -> Unit)?) {
+private fun TrainingRow(title: String, note: String?, ticked: Boolean, done: Int = 0, of: Int = 0, onClick: (() -> Unit)?) {
     val scheme = MaterialTheme.colorScheme
     Row(
         Modifier.fillMaxWidth().card(scheme.surface)
@@ -127,9 +128,19 @@ private fun TrainingRow(title: String, note: String?, ticked: Boolean, onClick: 
         Column {
             Text(title, style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
             if (note != null) Text(note, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+            if (of > 0) PassedBar(done, of, Modifier.padding(top = 6.dp))
         }
     }
 }
+
+/** How much of a course is passed, as a bar: the owner asked for progress that reads at a glance. */
+@Composable
+private fun PassedBar(done: Int, of: Int, modifier: Modifier = Modifier) = LinearProgressIndicator(
+    progress = { done.toFloat() / of },
+    modifier = modifier.fillMaxWidth().height(6.dp),
+    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+    drawStopIndicator = {},
+)
 
 @Composable
 private fun TrainingList(title: String, subtitle: String, intro: String, onBack: () -> Unit, rows: @Composable () -> Unit) {
@@ -165,6 +176,7 @@ fun TrainingScreen(record: Set<String>, onOpen: (String) -> Unit, onBack: () -> 
             TrainingRow(
                 c.puzzle.displayName, "$done of ${c.techniques.size} passed",
                 ticked = if (c.hasExam) c.passed(record, Training.EXAM) else c.allPassed(record),
+                done = done, of = c.techniques.size,
             ) { onOpen(c.id) }
         }
     }
@@ -177,9 +189,10 @@ fun CourseScreen(course: Course, record: Set<String>, onOpen: (String) -> Unit, 
     TrainingList(
         "${course.puzzle.displayName} training", "$done of ${course.techniques.size} passed",
         "Each technique the hints use, with real boards to practise on. Get ${Training.RUN} right " +
-            "in a row to pass it. Hints are there if you need one, but a hinted board doesn't count.",
+            "in a row to pass it. Hints are always there to help, and using one never breaks your run.",
         onBack,
     ) {
+        PassedBar(done, course.techniques.size, Modifier.padding(bottom = 6.dp))
         course.techniques.forEach { t -> TrainingRow(course.titleOf(t), null, course.passed(record, t)) { onOpen(t) } }
         if (course.hasExam) {
             val open = course.allPassed(record)
@@ -188,7 +201,7 @@ fun CourseScreen(course: Course, record: Set<String>, onOpen: (String) -> Unit, 
                 if (open) "A whole ${course.puzzle.displayName} board that needs every technique above."
                 else "Opens when every technique above is passed.",
                 course.passed(record, Training.EXAM),
-                if (open) ({ onOpen(Training.EXAM) }) else null,
+                onClick = if (open) ({ onOpen(Training.EXAM) }) else null,
             )
         }
     }
@@ -204,7 +217,7 @@ internal enum class Verdict { RIGHT, HINTED, WRONG, ASIDE }
 internal fun verdictLine(verdict: Verdict, step: TeachStep, made: TeachStep): String = when (verdict) {
     Verdict.ASIDE -> "" // its own line, [Course.aside]
     Verdict.WRONG -> "Not quite. ${step.explanation}"
-    Verdict.HINTED -> "That's it, with a hint, so it doesn't count. ${made.explanation}"
+    Verdict.HINTED -> "That's it. ${made.explanation} Your run is kept for the next one you solve on your own."
     Verdict.RIGHT -> "That's it. ${made.explanation}"
 }
 
