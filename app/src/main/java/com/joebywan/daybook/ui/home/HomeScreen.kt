@@ -2,6 +2,13 @@ package com.joebywan.daybook.ui.home
 
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.border
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.keyframes
@@ -275,19 +282,28 @@ fun HomeScreen(
                     )
                 }
             }
-            // Always laid out, so the grid under it never moves; unseen in Levels and Training, whose tiles are sets of their own.
+            // Laid out but unseen in Levels, so its grid never moves. Training folds it away and its grid slides up into the
+            // room (the owner: the gap it left "irks me"), and back down as it returns. threeHeight keeps the row's last
+            // laid-out height, so gridHeight, and with it every grid's columns, holds still while the row folds.
             item {
-                TodaysThreeRow(
-                    three, difficulty, doneToday, threeCard, shown = mode.tiered, compact = short, onPlay = onThree,
-                    modifier = Modifier.onSizeChanged { threeHeight = it.height },
-                )
+                val still = LocalReducedMotion.current
+                AnimatedVisibility(
+                    mode != LaunchMode.TRAINING,
+                    enter = if (still) EnterTransition.None else expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                    exit = if (still) ExitTransition.None else shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+                ) {
+                    TodaysThreeRow(
+                        three, difficulty, doneToday, threeCard, shown = mode.tiered, compact = short, onPlay = onThree,
+                        modifier = Modifier.onSizeChanged { if (it.height > 0) threeHeight = it.height },
+                    )
+                }
             }
             if (mode != LaunchMode.TRAINING) resumeShown?.let { (puzzle, tier) -> item { ContinueRow(puzzle, tier, Modifier) { onLaunch(puzzle.id) } } }
             if (mode == LaunchMode.LEVELS) item {
                 // The level's draw order, not the arranged one: a level is a set the player is given, in the order dealt.
                 LevelGrid(levels, levels.current, onPlay = onLaunch, onAllLevels = onLevels, height = gridHeight, inProgress = inProgress)
             } else if (mode == LaunchMode.TRAINING) item {
-                TrainingGrid(puzzles, trained, gridHeight, onLaunch)
+                TrainingGrid(puzzles, trained, gridHeight + with(density) { threeHeight.toDp() }, onLaunch)
             } else item {
                 PuzzleGrid(
                     puzzles = puzzles,

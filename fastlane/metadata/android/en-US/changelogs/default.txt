@@ -1,2 +1,1 @@
-- Training shows a progress bar on each course and on its list of techniques.
-- Kinder wording when you use a hint in practice: it never breaks your run, and the next board you solve on your own adds to it.
+- Switching Home to Training folds Today's three away and slides the puzzles up into its place, and back down as you switch out, instead of leaving a gap.
