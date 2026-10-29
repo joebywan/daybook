@@ -67,7 +67,9 @@ batch) follow it; the rest of the puzzles are classified at the end.
     from it is Home, still in Training (the mode is saveable state, never stored), and back from a technique opened there
     is the course. The segment's second line is "N of 21": **graduated** courses (`Course.graduated`: the final board
     passed, or every technique where a course has none, the list's tick) of `COURSES.size`; `Training.tally` counts both
-    numbers. The mode, like the others, is not stored: the app always opens on Daily.
+    numbers. The mode, like the others, is not stored: the app always opens on Daily. Today's three folds away in
+    Training and the grid slides up into its room, and back down as it returns (the owner, 1.33: the gap it left
+    "irks me"); the grid keeps its height through the fold, so its columns never change mid-slide.
   - **"Train: practise the techniques"** on the rules sheet (the play screen's "?") of a puzzle that has Training: opens
     that puzzle's techniques; back from there returns to the game, and back from a technique opened there returns to the list.
   - **"Practise"** beside each technique on Statistics → Techniques that has a practice: opens it; back returns to the page.
