@@ -67,8 +67,8 @@ object MosaicDrill : Drill {
 
     // ponytail: asked only after judge played on, so a keeping fill outside the technique is searched twice (one keeps).
     override fun aside(p: Course.Practice, after: PuzzleState): String? =
-        if (outcome(p, after) == Outcome.ASIDE) "That fill works, it keeps you in the limit, but it isn't this " +
-            "technique, so it doesn't count. Try another board." else null
+        if (outcome(p, after) == Outcome.ASIDE) "That fill works, it keeps you in the limit. This practice is " +
+            "after a different technique, so try it on another board." else null
 
     // The fill the player made, explained as an instance of the technique: the step's own, or the same reasoning about theirs.
     override fun made(p: Course.Practice, after: PuzzleState): TeachStep {

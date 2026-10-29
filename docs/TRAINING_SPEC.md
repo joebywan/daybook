@@ -19,6 +19,9 @@ batch) follow it; the rest of the puzzles are classified at the end.
   with how many of its techniques are passed and a tick once it is finished (its final board passed).
 - **A puzzle's techniques** (route `training||…|<puzzle>`): its techniques in the teacher's ladder order
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
+- Both lists show how much is passed as a bar (`PassedBar`) as well as "n of m" (the owner, 1.32: progress that reads
+  at a glance), and word hints kindly: the owner read "with a hint, so it doesn't count" as a reproach. A hinted board
+  says the run is kept for the next one solved alone; the intro says a hint never breaks the run.
 - **A technique** (route `training|<technique>|…|<puzzle>`): a short explanation in the hints' voice, then a practice
   board. The player finds the step and makes it. A right digit adds one to the run; three in a row passes the technique.
   The run shows in the header, after the subtitle on its line (`TitledScreen(beside)`, so the title keeps its width:
@@ -278,8 +281,8 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     the centre, any keeping fill of a most central area;
   - a fill that keeps the limit but is no instance is never "Not quite" (the owner, 2026-10-28: a fill that still wins
     is never wrong), nor right. The step is then gone and nothing later on that board could be judged, so the slot says
-    so (`Course.aside`: "That fill works, it keeps you in the limit, but it isn't this technique, so it doesn't count.
-    Try another board.") and the board locks with Next board, no outline. It neither counts nor breaks the run. It used to
+    so (`Course.aside`: "That fill works, it keeps you in the limit. This practice is after a different technique, so
+    try it on another board.") and the board locks with Next board, no outline. It neither counts nor breaks the run. It used to
     play on silently, which left the player stuck with no feedback (the owner dislikes that).
 
   Guessing rarely passes: of every fill on 10 practices each, 19% are right on counting, 13% on the biggest swallow, 6%

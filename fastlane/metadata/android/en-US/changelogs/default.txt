@@ -1,3 +1,2 @@
-- Passing a Training technique is now celebrated like a solved puzzle: a popup with the course's badge, confetti, the solve sound and a buzz. It shows how far you are toward the course's achievement, and any achievement it earns, the first time.
-- Solving a course's final board gets the same, as you graduate.
-- Each practice shows your run as three boxes beside its title, ticking as you get them right.
+- Training shows a progress bar on each course and on its list of techniques.
+- Kinder wording when you use a hint in practice: it never breaks your run, and the next board you solve on your own adds to it.

@@ -45,7 +45,7 @@ class TrainingVerdictTest {
         val made = SudokuTraining.made(p, filled)
         assertEquals(setOf(other), made.targets)
         assertEquals("That's it. 7 goes there.", verdictLine(Verdict.RIGHT, p.step, made))
-        assertEquals("That's it, with a hint, so it doesn't count. 7 goes there.", verdictLine(Verdict.HINTED, p.step, made))
+        assertEquals("That's it. 7 goes there. Your run is kept for the next one you solve on your own.", verdictLine(Verdict.HINTED, p.step, made))
 
         // The step's own square keeps the step's explanation, and a wrong digit still shows what was there to find.
         val own = s.copy(cells = s.cells.toMutableList().also { it[p.targetCell()] = 4 })
