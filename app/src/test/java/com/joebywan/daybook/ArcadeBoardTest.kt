@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import com.joebywan.daybook.core.PuzzleRegistry
+import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import org.junit.Assert.assertTrue
@@ -31,6 +32,21 @@ class ArcadeBoardTest {
             val tile = ArcadeBoard.tile(Color(p.accent), dark)
             readsOn(tile, "${p.id} dark=$dark")
             assertTrue("${p.id} dark=$dark has one colour", tile.from != tile.to)
+        }
+    }
+
+    @Test fun `Lexicon's marks read and stay apart, in both schemes`() {
+        for ((b, m) in listOf(ArcadeBoard.Light to Lexicon.LightMarks, ArcadeBoard.Dark to Lexicon.DarkMarks)) {
+            readsOn(m.correct, "right")
+            readsOn(m.present, "present")
+            atLeast(4.5f, m.absentInk, m.absent, "absent ink")
+            atLeast(3f, m.absent, b.square, "absent beside a plain square")
+            atLeast(3f, m.absent, m.present.from, "absent beside present")
+            for (c in listOf(m.correct.from, m.correct.to)) {
+                atLeast(3f, c, b.square, "right beside a plain square")
+                val apart = ColourDistance.apart(c, m.present.to)
+                assertTrue("right and present are $apart apart in the worst vision", apart > 10.0)
+            }
         }
     }
 
