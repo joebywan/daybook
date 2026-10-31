@@ -1,6 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -10,14 +9,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -35,7 +35,7 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.placementDeduction
-import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.BoardGlyph
 import com.joebywan.daybook.ui.style
@@ -293,16 +293,18 @@ object Cages : PuzzleType {
     }
 
     /** Dashed outlines for the cages of an [n] x [n] grid of [cell]-pixel squares (see [cageOutline]). */
-    internal fun DrawScope.drawCages(cageOf: List<Int>, n: Int, cell: Float, ink: Color, stroke: Float) {
+    internal fun DrawScope.drawCages(cageOf: List<Int>, n: Int, cell: Float, ink: Color, halo: Color, stroke: Float) {
         val dash = PathEffect.dashPathEffect(floatArrayOf(cell * 0.13f, cell * 0.09f))
+        // The squares under a line run from white to violet to amber: a dash on its halo parts from every one of them.
         for (g in cageOutline(cageOf, n)) {
+            drawLine(halo, Offset(g.x0 * cell, g.y0 * cell), Offset(g.x1 * cell, g.y1 * cell), strokeWidth = stroke * 2.4f, pathEffect = dash)
             drawLine(ink, Offset(g.x0 * cell, g.y0 * cell), Offset(g.x1 * cell, g.y1 * cell), strokeWidth = stroke, pathEffect = dash)
         }
     }
 
-    /** Each cage's total in the top-left corner of its first square. */
+    /** Each cage's total in the top-left corner of its first square, on a chip of [chip] where [filled]: an empty square's pale fill, and its notes, need none. */
     private fun DrawScope.drawTotals(
-        cageOf: List<Int>, sums: List<Int>, n: Int, cell: Float, measurer: TextMeasurer, style: TextStyle,
+        cageOf: List<Int>, sums: List<Int>, n: Int, cell: Float, measurer: TextMeasurer, style: TextStyle, chip: Color, filled: (Int) -> Boolean,
     ) {
         val seen = BooleanArray(sums.size)
         for (i in cageOf.indices) {
@@ -310,7 +312,9 @@ object Cages : PuzzleType {
             if (seen[k]) continue
             seen[k] = true
             val laid = measurer.measure(sums[k].toString(), style, maxLines = 1)
-            drawText(laid, topLeft = Offset(i % n * cell + cell * 0.09f, i / n * cell + cell * 0.04f))
+            val at = Offset(i % n * cell + cell * 0.09f, i / n * cell + cell * 0.04f)
+            if (filled(i)) drawRoundRect(chip, at, Size(laid.size.width.toFloat(), laid.size.height.toFloat()), CornerRadius(cell * 0.06f))
+            drawText(laid, topLeft = at)
         }
     }
 
@@ -326,9 +330,7 @@ object Cages : PuzzleType {
 
     @Composable
     override fun Preview(modifier: Modifier) {
-        val scheme = MaterialTheme.colorScheme
-        val dark = BoardHues.isDark(scheme)
-        val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
+        val a = ArcadeBoard.current
         val measurer = rememberTextMeasurer()
         BoxWithConstraints(modifier) {
             val cell = minOf(maxWidth, maxHeight) / 3
@@ -340,25 +342,24 @@ object Cages : PuzzleType {
                         .size(cell)
                         .padding(1.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(scheme.surfaceVariant),
+                        .background(a.square),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             text = PREVIEW_DIGITS[i].toString(),
                             style = BoardGlyph.ENTERED.style(cell),
-                            color = BoardHues.ink(hueB, dark),
+                            color = a.squareInk,
                             textAlign = TextAlign.Center,
                         )
                     }
                 }
             }
-            val ink = BoardHues.ink(hueA, dark)
-            val label = BoardGlyph.CORNER.style(cell).copy(color = scheme.onSurface)
+            val label = BoardGlyph.CORNER.style(cell).copy(color = a.squareInk)
             Canvas(Modifier.fillMaxSize()) {
                 val px = size.width.coerceAtMost(size.height) / 3f
-                drawCages(PREVIEW_CAGES, 3, px, ink, stroke = px * 0.045f)
-                drawTotals(PREVIEW_CAGES, PREVIEW_SUMS, 3, px, measurer, label)
+                drawCages(PREVIEW_CAGES, 3, px, a.givenInk, a.square, stroke = px * 0.045f)
+                drawTotals(PREVIEW_CAGES, PREVIEW_SUMS, 3, px, measurer, label, a.square) { false }
             }
         }
     }
@@ -369,10 +370,6 @@ object Cages : PuzzleType {
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as CageState
-        val scheme = MaterialTheme.colorScheme
-        val dark = BoardHues.isDark(scheme)
-        val seed = s.grid.solution.hashCode()
-        val (hueA, _) = BoardHues.pair(seed)
         val measurer = rememberTextMeasurer()
         // The square a cage's total sits in: the first of each, in reading order.
         val labelled = remember(s.cageOf) {
@@ -383,9 +380,7 @@ object Cages : PuzzleType {
         SudokuGridBoard(
             s = s.grid,
             conflicts = s.conflicts(),
-            hueSeed = seed,
             interactive = interactive,
-            accent = vivid(accent),
             onSelect = { onState(s.select(it)) },
             onEnter = { cell, digit, notesMode ->
                 val next = s.enter(cell, digit, notesMode)
@@ -404,18 +399,18 @@ object Cages : PuzzleType {
                         cage.sumOf { s.cells[it] } == s.sums[u - SUDOKU_UNITS.size]
                 }
             },
-            overlay = { cell -> CageOverlay(s, cell, BoardHues.ink(hueA, dark), scheme.onSurface.copy(alpha = 0.85f), measurer) },
+            overlay = { cell -> CageOverlay(s, cell, ArcadeBoard.current, measurer) },
         )
     }
 
     @Composable
-    private fun BoxScope.CageOverlay(s: CageState, cell: Dp, ink: Color, labelInk: Color, measurer: TextMeasurer) {
-        val label = BoardGlyph.CORNER.style(cell).copy(color = labelInk)
+    private fun BoxScope.CageOverlay(s: CageState, cell: Dp, a: ArcadeBoard, measurer: TextMeasurer) {
+        val label = BoardGlyph.CORNER.style(cell).copy(color = a.squareInk)
         // Not a pointer target: taps fall through to the squares underneath.
         Canvas(Modifier.fillMaxSize()) {
             val px = size.width / 9f
-            drawCages(s.cageOf, 9, px, ink, stroke = 1.5.dp.toPx())
-            drawTotals(s.cageOf, s.sums, 9, px, measurer, label)
+            drawCages(s.cageOf, 9, px, a.squareInk, a.square, stroke = 1.5.dp.toPx())
+            drawTotals(s.cageOf, s.sums, 9, px, measurer, label, a.square) { s.grid.cells[it] != 0 || s.grid.selected == it }
         }
     }
 }
