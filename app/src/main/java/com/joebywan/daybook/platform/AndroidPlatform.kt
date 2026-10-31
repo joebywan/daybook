@@ -32,7 +32,6 @@ import androidx.core.view.WindowCompat
 import com.joebywan.daybook.R
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
-import com.joebywan.daybook.core.SolveTone
 import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.data.DataStoreKeyValueStore
 import com.joebywan.daybook.data.KeyValueStore
@@ -215,7 +214,7 @@ private fun loadTones(context: Context) {
 /** A mono 16-bit WAV file of [pcm]. */
 private fun wav(pcm: ShortArray): ByteArray {
     val bytes = pcm.size * 2
-    val rate = SolveTone.SAMPLE_RATE
+    val rate = Tones.SAMPLE_RATE
     return ByteBuffer.allocate(44 + bytes).order(ByteOrder.LITTLE_ENDIAN).apply {
         put("RIFF".encodeToByteArray()); putInt(36 + bytes); put("WAVEfmt ".encodeToByteArray())
         putInt(16); putShort(1); putShort(1); putInt(rate); putInt(rate * 2); putShort(2); putShort(16)

@@ -324,18 +324,22 @@ kept is the best until beaten, and Best can be slower than the best time beside 
 
 ## Sounds (`core/Tones.kt`, `rememberTonePlayer` in the platform seam)
 
-All synthesised from the owner's marimba pluck, rendered once, no audio files. The Sound switch silences all of them, and on
-Android so does the ringer on silent or vibrate; reduced motion stills nothing here, since sound is not motion. Each kind but
-the wheel has three small variants (a different pitch, or for a win the chime a hair flat or sharp with a different brightness;
-the first win variant is the owner's chime, sample for sample), one drawn per play from `kotlin.random.Random`, never a generator's `Rng`.
+Chiptune, as the owner asked when the marimba beeps wore thin (2026-10-31): pulse waves at 12.5, 25 and 50% duty, a stepped
+triangle bass, 15-bit LFSR noise, volume in sixteen hard steps, fast arpeggios and small pitch sweeps, all synthesised and rendered
+once, no audio files. A voice's level is its RMS, because a square wave is much louder than a plucked sine of the same peak;
+pulses carry no DC, so a note starting or a volume step is no thump; a millisecond's fade at each end of a tone stops a click.
+The Sound switch silences all of them, and on Android so does the ringer on silent or vibrate; reduced motion stills nothing here,
+since sound is not motion. Each kind but the wheel has three variants (a different pitch, or for a win the same tune on a different
+pulse width with the landing chord broken a different way), one drawn per play from `kotlin.random.Random`, never a generator's `Rng`.
 
-- **Tick:** 30 ms, at most 0.05 of full scale, beside the haptic tick in `PlayScreen.push`: a move that lands, not a selection or a typed letter.
+- **Tick:** 28 ms, a speck of noise and a falling pulse blip, peak 0.05 of full scale, beside the haptic tick in `PlayScreen.push`: a move that lands, not a selection or a typed letter.
 - **Unit finished** (a row, a box, a cage, a found word): `rememberMoveFeel`, the one hook, so every board with units has it.
   Never on load, undo, restart, or the solving move (the win has that), and it plays under reduced motion, unlike the glow and the pop.
 - **Word Wheel:** each letter added rises a step of C major pentatonic (`Tones.wheel`), each taken back falls one; the state is the
   board's own `remember`. A word tried or cleared is silent.
-- **Win** (`Praise.winKind`): the chime on a light flourish; on a full show the chime carries on up the arpeggio to G6 (1.06 s); on
-  all three tiers on to C7, landing on a chord (1.36 s). The Training pass and a hint's "reached" keep the plain chime (`LocalChime`).
+- **Win** (`Praise.winKind`): every win opens G5 C6 E6. On a light flourish it lands on an arpeggiated C major (0.7 s); on a full show it
+  runs on up G6 E6 G6 A6 first (1.1 s); on all three tiers on through B6 to C7, with a pulse harmony, landing on a noise crash, the
+  bass ringing on last (1.5 s). The Training pass and a hint's "reached" play the plain win (`LocalChime`).
 
 The board's sounds come through `LocalBoardTones`, provided only around the play screen's board, so a walkthrough, a Training
 board and a home motif are silent however they are drawn. Mistakes have no sound; nobody asked, and a bump already shakes.

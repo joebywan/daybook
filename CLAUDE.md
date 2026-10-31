@@ -836,7 +836,7 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
 The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
-Sound is a bank of pre-rendered tones (`core/Tones.kt`, from the owner's pluck in `SolveTone.kt`), played by `rememberTonePlayer` in
+Sound is a bank of pre-rendered chiptune tones (`core/Tones.kt`: pulse, triangle and noise voices, synthesised, no audio files), played by `rememberTonePlayer` in
 the seam (Android `SoundPool`, web Web Audio): a very quiet tick beside the haptic in `push`, a unit's tone from `rememberMoveFeel`, Word
 Wheel's rising scale, a win by the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones`, so a walkthrough or
 a practice is silent; a variant is drawn from `kotlin.random`, never `Rng`. `docs/REWARDS.md` (Sounds). A win never shakes: Pointers and

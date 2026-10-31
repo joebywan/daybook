@@ -45,7 +45,6 @@ import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
-import com.joebywan.daybook.core.SolveTone
 import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -526,7 +525,7 @@ fun rememberTonePlayer(enabled: Boolean): (Int) -> Unit {
                     val tone = Tones.samples(t)
                     val array = newFloatArray(tone.size)
                     for (i in tone.indices) setFloat(array, i, tone[i])
-                    keepTone(t, array, SolveTone.SAMPLE_RATE)
+                    keepTone(t, array, Tones.SAMPLE_RATE)
                     delay(1)
                 }
             } catch (_: Throwable) {

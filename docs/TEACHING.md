@@ -74,9 +74,8 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
   (`tiersDoneOn(completions, puzzle, day)`; random games never count) and counting the tier just played
   as done, because `onSolved` records it asynchronously. A Daily tile keeps the route's `day`, so on an
   archive day it is that past date's board.
-- The solve sound is the owner's pick of five candidates: a two-note marimba pluck, G5 then C6, ~0.8 s,
-  synthesised (no audio file) by the pure `core/SolveTone.kt` (`SolveToneTest`). Every other sound is built from the same
-  pluck by `core/Tones.kt` (`TonesTest`), a bank of 22 pre-rendered tones, so both builds play identical samples.
+- The solve sound is a short chiptune fanfare, ~0.7 s, synthesised (no audio file) by the pure `core/Tones.kt` (`TonesTest`) with
+  every other sound, a bank of 22 pre-rendered tones, so both builds play identical samples (`docs/REWARDS.md`, Sounds).
   `rememberTonePlayer(enabled)` is the platform seam: Android a `SoundPool` (USAGE_GAME, so media volume; skipped when the
   ringer is silent/vibrate; loaded off the main thread through throwaway WAVs in the cache, since it only loads from a file),
   the web Web Audio buffers whose context the first taps wake (Safari only allows it inside a gesture). `PlayScreen` plays the
