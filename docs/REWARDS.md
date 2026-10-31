@@ -114,7 +114,7 @@ Owner's design (Figma "Daybook-achieve-draft"): a full-screen overlay on the sol
 and one personal line), the next-step BUTTONS in a box at the bottom, and the CENTRE left open so the board shows through.
 - **Full show or light flourish** (`Praise.full`, decided in `finishPraise`, tested in `FinishPraiseTest`): the full
   confetti for the first daily solve of today, an Expert solve, a personal record, a streak milestone (7, 30, 100) or an
-  earned achievement; any other solve gets a light flourish, 14 pieces for 1.2 s. A frame with no verdict (the render
+  earned achievement; any other solve gets a light flourish, 14 pieces for 1.2 s. Every solve gets the rainbow band (the owner, 2026-10-31). A frame with no verdict (the render
   hook) is full. The banner and poppers are the same either way. Above full is `Praise.allTiers`, the top show.
 - **The solving move** runs one wave of the board's accent across every square in reading order (350 ms, `SOLVE_WAVE_MS` in
   `ui/MoveFeel.kt`), and the frame and the confetti wait that long before they show. Not when the board was already solved
@@ -124,7 +124,7 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
   banner does not change width; at 7/30/100 the title stamps in from 130% with a small spring settle; an earned badge flips in
   about its vertical axis (as does each next badge tapped to). Under reduced motion: the final values at once.
 - **Confetti** (`Confetti`): 140 pieces (the top show 220, 3 s) on a Canvas over the whole screen, ~2 s, with a rainbow band in
-  the confetti's colours turning round the screen's edge on a full show (wider on the top show), once per finish (`confettiPlayed` is
+  the confetti's colours turning round the screen's edge on every show, however light (wider on the top show), once per finish (`confettiPlayed` is
   `rememberSaveable`, so a rotation does not replay it), takes no input. Not drawn at all under the system's reduced motion
   (`LocalReducedMotion`, below); the Sound switch governs sound only. No emoji: the web build has no emoji font.
 - **Centre** (`ResultsBlock`), only when the solve earned achievements; otherwise empty (no silhouette, no block). One
