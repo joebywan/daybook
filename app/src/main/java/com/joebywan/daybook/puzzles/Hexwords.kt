@@ -56,6 +56,7 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.delay
 import kotlin.math.sqrt
@@ -374,7 +375,7 @@ object Hexwords : PuzzleType {
                             }
                         },
                 ) {
-                    drawBlock(s, free, picked, finger, highlight, glow, pulse.value, hueA, hueB, dark, measurer, feel, Color(accent))
+                    drawBlock(s, free, picked, finger, highlight, glow, pulse.value, hueA, hueB, dark, measurer, feel, vivid(accent))
                 }
                 Text(
                     takenLine(s),

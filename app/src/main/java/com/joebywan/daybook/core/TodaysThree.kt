@@ -26,7 +26,7 @@ object TodaysThree {
     val QUICK = listOf("pointers", "pipes", "snap", "sand", "sets", "mosaic", "kings", "tents", "shikaku", "atoms", "lamps")
 
     /** Words and numbers. */
-    val WORDS = listOf("words", "wordwheel", "mini", "target", "cipher", "codeword", "tally", "hexwords")
+    val WORDS = listOf("words", "wordwheel", "mini", "target", "cipher", "codeword", "tally", "hexwords", "dwindle")
 
     /** Below this many solves in all, a player is new and gets [starter]. */
     const val NEWCOMER_SOLVES = 5

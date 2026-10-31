@@ -813,6 +813,20 @@ Display name "Crossword" (one line on a home tile), never a newspaper's.
   clears. The clue bar (fixed height, room for two lines) shows the cursor's clue, turns on a tap, and ‹ › walk the words. Keys:
   letters, Backspace, arrows (one across the word's way turns first), Space turns.
 
+## Dwindle (working name; the owner has not approved the name or id)
+
+A grid of letter tiles and a dashed list of goal words. Each tile shows how many goals still run through it and vanishes at zero. Spec and decisions:
+`docs/DWINDLE_SPEC.md`. `puzzles/DwindleRules.kt` (state, `DwindleLogic`: rules, `ways`, generator), `DwindleTeacher.kt`, `Dwindle.kt` (board, walkthrough, motif; keys are
+Word Wheel's `wordWheelKeyAction`). `id = "dwindle"` is hashed into every seed: never rename it once shipped.
+
+- **Tiles do not fall and every goal has exactly one way on the full grid (`DwindleLogic.proved`), so no order can get stuck:** removal only takes ways away, and a tile on a
+  goal's way counts that goal until it is found. Falling would make this an exhaustive search over positions. `DwindleOracle` checks all 2^n subsets on its own reading.
+- **Diagonals count**; while swiping a tile answers only within 0.42 of its middle, so a diagonal passes between its side tiles.
+- **Goals are `WheelWords.grid`, read only.** Do not regenerate lists for this game. Bonus words are `WheelWords.isWord` and use nothing up.
+- **Tiers: 4x4, 6-7 words / 5x5, 10-12 / 6x6, 15-18**, longest word 5 / 6 / 7, tiles used twice or more at least 55 / 65 / 75% (measured 66 / 78 / 86).
+- **Hints give the clue, and glow no more than one tile:** the word's own tiles would spell it. `all-tiles` is a capped search whose `Truncated` proves nothing; the fallback is 15-20% of steps.
+- The path being spelled is `remember`; one word is one state and one undo. Counts are derived from the goals not found, never stored.
+
 ## Pipes
 
 Rotate tiles until every opening meets another and the pipework is one network. `puzzles/Pipes.kt` (state, generator, board,

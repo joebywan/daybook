@@ -60,6 +60,11 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
         "Six-letter wheel, 6 to 8 words",
         "Seven-letter wheel, 8 to 11 words",
     ),
+    "dwindle" to listOf(
+        "4x4 tiles, 6 or 7 words, words up to 5 letters",
+        "5x5 tiles, 10 to 12 words, words up to 6 letters",
+        "6x6 tiles, 15 to 18 words, words up to 7 letters",
+    ),
     "tally" to listOf("5x5 grid", "6x6 grid", "7x7 grid"),
     "sand" to listOf("5 colours, 7 tubes", "7 colours, 9 tubes", "8 colours, 10 tubes"),
     "pointers" to listOf("6x7 grid, short arrows", "12x12 grid, longer arrows", "14x17 grid, the longest arrows"),

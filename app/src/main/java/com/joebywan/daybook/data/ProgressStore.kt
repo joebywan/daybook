@@ -539,7 +539,7 @@ object PuzzleOrder {
     val GENTLEST: List<String> = listOf(
         "pointers", "pipes", "snap", // See it, do it: one gesture, and the rules are visible on the board.
         "sudoku", "words", "sand", // Familiar, or (Sand) see it, do it.
-        "wordwheel", "mini", "target", "nonogram", "mines", // Familiar: most players know them from elsewhere.
+        "wordwheel", "mini", "target", "dwindle", "nonogram", "mines", // Familiar: most players know them from elsewhere.
         "kings", "mambo", "mosaic", "sets", "inequality", "tents", "lamps", "regions", "tally", // Quick to learn: few rules, instant feedback.
         "shikaku", "atoms", "lits", "chess", "cages", "cipher", "dominoes", "codeword", "pearls", "whoswho", "hexwords", // Takes a bit: more rules, or a longer chain of reasoning.
         "tower", // Last: a colour-code guesser, much the same game as Lexicon, which a new player has met by now.

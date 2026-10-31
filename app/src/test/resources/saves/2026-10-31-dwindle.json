@@ -1,0 +1,767 @@
+[
+    {
+        "key": "dwindle|STANDARD|1208268084936881718",
+        "savedAt": 1792000000000,
+        "game": {
+            "state": {
+                "type": "com.joebywan.daybook.puzzles.DwindleState",
+                "width": 4,
+                "height": 4,
+                "letters": "taeilnmlodkejhvy",
+                "goals": [
+                    {
+                        "word": "amend",
+                        "cells": [
+                            1,
+                            6,
+                            2,
+                            5,
+                            9
+                        ]
+                    },
+                    {
+                        "word": "meant",
+                        "cells": [
+                            6,
+                            2,
+                            1,
+                            5,
+                            0
+                        ]
+                    },
+                    {
+                        "word": "hold",
+                        "cells": [
+                            13,
+                            8,
+                            4,
+                            9
+                        ]
+                    },
+                    {
+                        "word": "jolt",
+                        "cells": [
+                            12,
+                            8,
+                            4,
+                            0
+                        ]
+                    },
+                    {
+                        "word": "levy",
+                        "cells": [
+                            7,
+                            11,
+                            14,
+                            15
+                        ]
+                    },
+                    {
+                        "word": "milk",
+                        "cells": [
+                            6,
+                            3,
+                            7,
+                            10
+                        ]
+                    }
+                ],
+                "found": [
+                    "meant"
+                ],
+                "moves": 1
+            },
+            "history": [
+                {
+                    "type": "com.joebywan.daybook.puzzles.DwindleState",
+                    "width": 4,
+                    "height": 4,
+                    "letters": "taeilnmlodkejhvy",
+                    "goals": [
+                        {
+                            "word": "amend",
+                            "cells": [
+                                1,
+                                6,
+                                2,
+                                5,
+                                9
+                            ]
+                        },
+                        {
+                            "word": "meant",
+                            "cells": [
+                                6,
+                                2,
+                                1,
+                                5,
+                                0
+                            ]
+                        },
+                        {
+                            "word": "hold",
+                            "cells": [
+                                13,
+                                8,
+                                4,
+                                9
+                            ]
+                        },
+                        {
+                            "word": "jolt",
+                            "cells": [
+                                12,
+                                8,
+                                4,
+                                0
+                            ]
+                        },
+                        {
+                            "word": "levy",
+                            "cells": [
+                                7,
+                                11,
+                                14,
+                                15
+                            ]
+                        },
+                        {
+                            "word": "milk",
+                            "cells": [
+                                6,
+                                3,
+                                7,
+                                10
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "hints": 1,
+            "seconds": 75,
+            "log": "hm"
+        }
+    },
+    {
+        "key": "dwindle|HARD|-4974169152301292123",
+        "savedAt": 1792000000000,
+        "game": {
+            "state": {
+                "type": "com.joebywan.daybook.puzzles.DwindleState",
+                "width": 5,
+                "height": 5,
+                "letters": "epoutnshmrotuonarinlwfeam",
+                "goals": [
+                    {
+                        "word": "union",
+                        "cells": [
+                            12,
+                            18,
+                            17,
+                            13,
+                            14
+                        ]
+                    },
+                    {
+                        "word": "mouse",
+                        "cells": [
+                            8,
+                            13,
+                            12,
+                            6,
+                            0
+                        ]
+                    },
+                    {
+                        "word": "realm",
+                        "cells": [
+                            16,
+                            22,
+                            23,
+                            19,
+                            24
+                        ]
+                    },
+                    {
+                        "word": "north",
+                        "cells": [
+                            5,
+                            10,
+                            16,
+                            11,
+                            7
+                        ]
+                    },
+                    {
+                        "word": "wafer",
+                        "cells": [
+                            20,
+                            15,
+                            21,
+                            22,
+                            16
+                        ]
+                    },
+                    {
+                        "word": "spout",
+                        "cells": [
+                            6,
+                            1,
+                            2,
+                            3,
+                            4
+                        ]
+                    },
+                    {
+                        "word": "stone",
+                        "cells": [
+                            6,
+                            11,
+                            10,
+                            5,
+                            0
+                        ]
+                    },
+                    {
+                        "word": "short",
+                        "cells": [
+                            6,
+                            7,
+                            13,
+                            9,
+                            4
+                        ]
+                    },
+                    {
+                        "word": "final",
+                        "cells": [
+                            21,
+                            17,
+                            18,
+                            23,
+                            19
+                        ]
+                    },
+                    {
+                        "word": "pour",
+                        "cells": [
+                            1,
+                            2,
+                            3,
+                            9
+                        ]
+                    }
+                ],
+                "found": [
+                    "mouse"
+                ],
+                "moves": 1
+            },
+            "history": [
+                {
+                    "type": "com.joebywan.daybook.puzzles.DwindleState",
+                    "width": 5,
+                    "height": 5,
+                    "letters": "epoutnshmrotuonarinlwfeam",
+                    "goals": [
+                        {
+                            "word": "union",
+                            "cells": [
+                                12,
+                                18,
+                                17,
+                                13,
+                                14
+                            ]
+                        },
+                        {
+                            "word": "mouse",
+                            "cells": [
+                                8,
+                                13,
+                                12,
+                                6,
+                                0
+                            ]
+                        },
+                        {
+                            "word": "realm",
+                            "cells": [
+                                16,
+                                22,
+                                23,
+                                19,
+                                24
+                            ]
+                        },
+                        {
+                            "word": "north",
+                            "cells": [
+                                5,
+                                10,
+                                16,
+                                11,
+                                7
+                            ]
+                        },
+                        {
+                            "word": "wafer",
+                            "cells": [
+                                20,
+                                15,
+                                21,
+                                22,
+                                16
+                            ]
+                        },
+                        {
+                            "word": "spout",
+                            "cells": [
+                                6,
+                                1,
+                                2,
+                                3,
+                                4
+                            ]
+                        },
+                        {
+                            "word": "stone",
+                            "cells": [
+                                6,
+                                11,
+                                10,
+                                5,
+                                0
+                            ]
+                        },
+                        {
+                            "word": "short",
+                            "cells": [
+                                6,
+                                7,
+                                13,
+                                9,
+                                4
+                            ]
+                        },
+                        {
+                            "word": "final",
+                            "cells": [
+                                21,
+                                17,
+                                18,
+                                23,
+                                19
+                            ]
+                        },
+                        {
+                            "word": "pour",
+                            "cells": [
+                                1,
+                                2,
+                                3,
+                                9
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "hints": 1,
+            "seconds": 75,
+            "log": "hm"
+        }
+    },
+    {
+        "key": "dwindle|EXPERT|-6374251988543540398",
+        "savedAt": 1792000000000,
+        "game": {
+            "state": {
+                "type": "com.joebywan.daybook.puzzles.DwindleState",
+                "width": 6,
+                "height": 6,
+                "letters": "eslaenrtuapewaturtoeblsarnyibeohsdpl",
+                "goals": [
+                    {
+                        "word": "stature",
+                        "cells": [
+                            1,
+                            7,
+                            13,
+                            14,
+                            15,
+                            16,
+                            11
+                        ]
+                    },
+                    {
+                        "word": "parable",
+                        "cells": [
+                            10,
+                            9,
+                            16,
+                            23,
+                            28,
+                            35,
+                            29
+                        ]
+                    },
+                    {
+                        "word": "result",
+                        "cells": [
+                            6,
+                            0,
+                            1,
+                            8,
+                            2,
+                            7
+                        ]
+                    },
+                    {
+                        "word": "sister",
+                        "cells": [
+                            32,
+                            27,
+                            22,
+                            17,
+                            11,
+                            16
+                        ]
+                    },
+                    {
+                        "word": "nearly",
+                        "cells": [
+                            5,
+                            4,
+                            9,
+                            16,
+                            21,
+                            26
+                        ]
+                    },
+                    {
+                        "word": "tureen",
+                        "cells": [
+                            14,
+                            15,
+                            16,
+                            11,
+                            4,
+                            5
+                        ]
+                    },
+                    {
+                        "word": "rebate",
+                        "cells": [
+                            24,
+                            19,
+                            20,
+                            13,
+                            7,
+                            0
+                        ]
+                    },
+                    {
+                        "word": "palate",
+                        "cells": [
+                            10,
+                            3,
+                            2,
+                            9,
+                            14,
+                            19
+                        ]
+                    },
+                    {
+                        "word": "honey",
+                        "cells": [
+                            31,
+                            30,
+                            25,
+                            19,
+                            26
+                        ]
+                    },
+                    {
+                        "word": "shrew",
+                        "cells": [
+                            32,
+                            31,
+                            24,
+                            19,
+                            12
+                        ]
+                    },
+                    {
+                        "word": "least",
+                        "cells": [
+                            35,
+                            29,
+                            23,
+                            22,
+                            17
+                        ]
+                    },
+                    {
+                        "word": "ultra",
+                        "cells": [
+                            8,
+                            2,
+                            7,
+                            6,
+                            13
+                        ]
+                    },
+                    {
+                        "word": "bulb",
+                        "cells": [
+                            20,
+                            15,
+                            21,
+                            28
+                        ]
+                    },
+                    {
+                        "word": "worn",
+                        "cells": [
+                            12,
+                            18,
+                            24,
+                            25
+                        ]
+                    },
+                    {
+                        "word": "dish",
+                        "cells": [
+                            33,
+                            27,
+                            32,
+                            31
+                        ]
+                    },
+                    {
+                        "word": "dip",
+                        "cells": [
+                            33,
+                            27,
+                            34
+                        ]
+                    },
+                    {
+                        "word": "now",
+                        "cells": [
+                            25,
+                            18,
+                            12
+                        ]
+                    },
+                    {
+                        "word": "sea",
+                        "cells": [
+                            22,
+                            29,
+                            23
+                        ]
+                    }
+                ],
+                "found": [
+                    "parable"
+                ],
+                "moves": 1
+            },
+            "history": [
+                {
+                    "type": "com.joebywan.daybook.puzzles.DwindleState",
+                    "width": 6,
+                    "height": 6,
+                    "letters": "eslaenrtuapewaturtoeblsarnyibeohsdpl",
+                    "goals": [
+                        {
+                            "word": "stature",
+                            "cells": [
+                                1,
+                                7,
+                                13,
+                                14,
+                                15,
+                                16,
+                                11
+                            ]
+                        },
+                        {
+                            "word": "parable",
+                            "cells": [
+                                10,
+                                9,
+                                16,
+                                23,
+                                28,
+                                35,
+                                29
+                            ]
+                        },
+                        {
+                            "word": "result",
+                            "cells": [
+                                6,
+                                0,
+                                1,
+                                8,
+                                2,
+                                7
+                            ]
+                        },
+                        {
+                            "word": "sister",
+                            "cells": [
+                                32,
+                                27,
+                                22,
+                                17,
+                                11,
+                                16
+                            ]
+                        },
+                        {
+                            "word": "nearly",
+                            "cells": [
+                                5,
+                                4,
+                                9,
+                                16,
+                                21,
+                                26
+                            ]
+                        },
+                        {
+                            "word": "tureen",
+                            "cells": [
+                                14,
+                                15,
+                                16,
+                                11,
+                                4,
+                                5
+                            ]
+                        },
+                        {
+                            "word": "rebate",
+                            "cells": [
+                                24,
+                                19,
+                                20,
+                                13,
+                                7,
+                                0
+                            ]
+                        },
+                        {
+                            "word": "palate",
+                            "cells": [
+                                10,
+                                3,
+                                2,
+                                9,
+                                14,
+                                19
+                            ]
+                        },
+                        {
+                            "word": "honey",
+                            "cells": [
+                                31,
+                                30,
+                                25,
+                                19,
+                                26
+                            ]
+                        },
+                        {
+                            "word": "shrew",
+                            "cells": [
+                                32,
+                                31,
+                                24,
+                                19,
+                                12
+                            ]
+                        },
+                        {
+                            "word": "least",
+                            "cells": [
+                                35,
+                                29,
+                                23,
+                                22,
+                                17
+                            ]
+                        },
+                        {
+                            "word": "ultra",
+                            "cells": [
+                                8,
+                                2,
+                                7,
+                                6,
+                                13
+                            ]
+                        },
+                        {
+                            "word": "bulb",
+                            "cells": [
+                                20,
+                                15,
+                                21,
+                                28
+                            ]
+                        },
+                        {
+                            "word": "worn",
+                            "cells": [
+                                12,
+                                18,
+                                24,
+                                25
+                            ]
+                        },
+                        {
+                            "word": "dish",
+                            "cells": [
+                                33,
+                                27,
+                                32,
+                                31
+                            ]
+                        },
+                        {
+                            "word": "dip",
+                            "cells": [
+                                33,
+                                27,
+                                34
+                            ]
+                        },
+                        {
+                            "word": "now",
+                            "cells": [
+                                25,
+                                18,
+                                12
+                            ]
+                        },
+                        {
+                            "word": "sea",
+                            "cells": [
+                                22,
+                                29,
+                                23
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "hints": 1,
+            "seconds": 75,
+            "log": "hm"
+        }
+    }
+]

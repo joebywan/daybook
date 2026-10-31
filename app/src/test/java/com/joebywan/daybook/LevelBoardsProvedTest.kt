@@ -31,6 +31,7 @@ import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.TargetLogic
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.TentsLogic
+import com.joebywan.daybook.puzzles.DwindleLogic
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.WordWheelLogic
 import org.junit.Assert.assertEquals
@@ -68,6 +69,7 @@ class LevelBoardsProvedTest {
         "pearls" to PearlsLogic::generateVerified,
         "mini" to MiniLogic::generateVerified,
         "hexwords" to com.joebywan.daybook.puzzles.HexLogic::generateVerified,
+        "dwindle" to DwindleLogic::generateVerified,
     )
 
     @Test

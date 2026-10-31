@@ -38,8 +38,8 @@ class TodaysThreeTest {
             val gap = on.zipWithNext { a, b -> b - a }.max()
             assertTrue("$id waits $gap days", gap <= 13)
         }
-        // A new puzzle joining the mid-weight list makes it 14, sharing 7 with the words: the slot then skips at each
-        // 77-day turn, and still no set repeats within a year.
+        // A new puzzle joining the mid-weight list makes it 14, sharing 2 with the words: the slot then skips, and still
+        // no set repeats within a year.
         val more = ids + "new"
         assertEquals(365, (0 until 365).map { TodaysThree.of(LocalDate.fromEpochDays(day.toEpochDays() + it), more) }.toSet().size)
     }
