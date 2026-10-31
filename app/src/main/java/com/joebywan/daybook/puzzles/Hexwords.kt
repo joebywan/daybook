@@ -418,11 +418,6 @@ object Hexwords : PuzzleType {
                 val box = Size(g.apothem * 2f, g.radius * 2f)
                 feelSquare(feel, i, Offset(c.x - g.apothem, c.y - g.radius), box, accent) {
                     drawPath(hexPath(c, body), tone.copy(alpha = alpha))
-                    val layout = measurer.measure(
-                        s.letters[i].uppercase(),
-                        TextStyle(color = BoardHues.onFill(tone).copy(alpha = alpha), fontSize = (g.radius * 0.95f).toSp(), lineHeight = (g.radius * 1.14f).toSp(), fontWeight = FontWeight.Bold),
-                    )
-                    drawText(layout, topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
                 }
             } else {
                 drawPath(hexPath(c, body), fill.copy(alpha = 0.25f * alpha), style = Stroke(g.radius * 0.05f))
@@ -442,6 +437,20 @@ object Hexwords : PuzzleType {
                 drawLine(line, Offset(g.xs[picked[k - 1]], g.ys[picked[k - 1]]), Offset(g.xs[picked[k]], g.ys[picked[k]]), w, StrokeCap.Round)
             }
             if (finger != null) drawLine(line, Offset(g.xs[picked.last()], g.ys[picked.last()]), finger, w, StrokeCap.Round)
+        }
+        // Letters last, so the trail never strikes one through.
+        for (i in g.xs.indices) {
+            if (free shr i and 1L == 0L) continue
+            val c = Offset(g.xs[i], g.ys[i])
+            val alpha = if (highlight.look(i).dim) 0.3f else 1f
+            val tone = if (i in picked) mark else fill
+            feelSquare(feel, i, Offset(c.x - g.apothem, c.y - g.radius), Size(g.apothem * 2f, g.radius * 2f), accent) {
+                val layout = measurer.measure(
+                    s.letters[i].uppercase(),
+                    TextStyle(color = BoardHues.onFill(tone).copy(alpha = alpha), fontSize = (g.radius * 0.95f).toSp(), lineHeight = (g.radius * 1.14f).toSp(), fontWeight = FontWeight.Bold),
+                )
+                drawText(layout, topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
+            }
         }
     }
 }

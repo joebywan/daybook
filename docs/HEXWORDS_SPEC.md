@@ -28,13 +28,14 @@ letters.
   | Expert | 44 hexes (5-6-7-8-7-6-5) | up to 7 | one more than those and a player who looks one word ahead |
 
   The target is not set to the board's proved best: that would make every board one exact tiling, a test of vocabulary more than
-  of planning. It sits as low as beating the player allows, so several roads usually reach it. (Measured below: 14 / 23 / 27% of
+  of planning. It sits as low as beating the player allows, so several roads usually reach it. (Measured below: 18 / 17 / 31% of
   targets happen to be the best anyway.)
 - **Lists.** Proof and hints use `WheelWords.grid` (common, screened, clued). Any word `WheelWords.isWord` takes is accepted and
   scores, as Word Wheel's bonus rule has it; so a wide vocabulary helps, and that is measured too. No list was regenerated; no other
   game's board moved.
 - **Generation** is pure: words planted end to end over every hex (`HexLogic.plant`: the most boxed-in free hex starts, the walk keeps
-  to boxed-in neighbours, a walk that boxes itself in under three letters redraws), so a board is made of words rather than noise.
+  to boxed-in neighbours, a walk that boxes itself in under three letters redraws; half run backwards, or a top row reads straight
+  off as a word), so a board is made of words rather than noise.
   `HexLogic.roads` then finds every way any common word traces (exhaustive, in list order, no hash order). The planted words are thrown
   away: they are not stored and nothing reads them.
 - **Proof:** `HexSearch.reach` is an exact search over the hexes left (the first free hex is on some road or wasted, with a bound
@@ -58,20 +59,21 @@ letters.
 
 | | Standard | Hard | Expert |
 |---|---|---|---|
-| Mean target | 21 | 42 | 72 |
-| Biggest word first reaches it | 73% | 3% | 1% |
-| ... knowing every accepted word | 76% | 28% | 10% |
-| One word of lookahead reaches it | 100% | 89% | 0% |
-| ... knowing every accepted word | 100% | 98% | 75% |
-| Any word at random | 10% | 0% | 0% |
-| Target is the board's proved best | 14% | 23% | 27% |
-| Hint walk: biggest / hold back | 1246 / 8 | 1832 / 352 | 2738 / 521 |
+| Mean target | 21 | 41 | 71 |
+| Biggest word first reaches it | 78% | 3% | 1% |
+| ... knowing every accepted word | 77% | 37% | 14% |
+| One word of lookahead reaches it | 100% | 86% | 0% |
+| ... knowing every accepted word | 100% | 97% | 81% |
+| Any word at random | 9% | 0% | 0% |
+| Target is the board's proved best | 18% | 17% | 31% |
+| Hint walk: biggest / hold back | 1265 / 7 | 1843 / 376 | 2745 / 499 |
 | Hint fallback | 0 | 0 | 0 |
-| Generation, JVM median / p95 / max ms | 0.5 / 4 / 25 | 0.6 / 1.8 / 5 | 14 / 50 / 115 |
-| A hint, JVM median / p95 / max ms | 0.4 / 0.7 / 25 | 0.5 / 0.9 / 6 | 1.1 / 2.8 / 21 |
+| Generation, JVM median / p95 / max ms | 0.3 / 0.6 / 1.5 | 0.6 / 1.9 / 2.9 | 13 / 67 / 127 |
+| A hint, JVM median / p95 / max ms | 0.5 / 0.7 / 1 | 0.6 / 1 / 3.5 | 1.4 / 3.6 / 49 |
 
 A year per tier never reaches `lastResort` (`FallbackTest`). The lookahead player tries every road on the board, which no person
-does; its 89% on Hard is the top of what thought gets you, not what a person will see.
+does; its 86% on Hard is the top of what thought gets you, not what a person will see. Knowing every accepted word and trying every
+road beats Expert's target 81% of the time: the gate is on common words, on purpose, since those are what the proof uses.
 
 The search's own numbers: a few hundred positions on Standard and Hard, 2,000 to 14,000 on Expert (100,000 at worst with every accepted
 word), against budgets of 2,000,000 (generator) and 300,000 (a hint).
