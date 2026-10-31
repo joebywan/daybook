@@ -30,7 +30,7 @@ each puzzle has a `<Name>Teacher.kt` except Snap and Pointers, whose teaching is
   (Why?, then Show me), where the reader's eye already is, and so does the toolbar's Hint button; both run the one
   `HintSession.tap`, so they cannot count or step differently (#287 had taken it out of the panel; the owner wanted it back).
 - **Working it out rings the chime** (owner's request): when the player makes a hint's move themselves, the confirm plays
-  the solve chime (`WatchHint`'s `onReached`, the play screen's and free play's `LocalChime`), muted by the Sound switch.
+  the small unit blip, never the win (`WatchHint`'s `onReached`, the play screen's and free play's `LocalChime`), muted by the Sound switch.
   "Show me" clears without confirming, so it never rings, and a move that solves the board has only the solve's own chime.
 - The panel is a **popover over the play screen** (`HintPopover`), not a slot in its column, so the
   board's box is the whole of the space between header and toolbar and never changes size: not when

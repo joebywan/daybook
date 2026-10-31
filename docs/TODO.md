@@ -120,8 +120,7 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 - [ ] **Kings dark mode glare.** The new opaque palette is bright tiles on a near-black page. Ask whether it
   is too much; the alternative (dimmer dark-mode tiles) costs crown/cross contrast.
 - [ ] **Do the sounds work, and are they pleasant?** The chiptune bank in `core/Tones.kt` was built and tested by numbers alone until someone listens
-  (the env-gated `TonesTest.writeTheBankForListening` writes it to WAVs). On a phone, listen to the tick over a long Sudoku (is it too much? its level
-  is one number in `Tones.samples`), a unit, Word Wheel's scale at speed, and all three wins, and judge the latency by ear. The web
+  (the env-gated `TonesTest.writeTheBankForListening` writes it to WAVs). On a phone, listen to a board's phrase of units over a long Sudoku (a note repeats about three times there; is that fine?), the kick under the win against the thump, Word Wheel's scale at speed, and all three wins, and judge the latency by ear. The web
   build wakes its `AudioContext` on the first tap (`rememberTonePlayer` in `web/.../WebPlatform.kt`).
   Headless Chromium has no audio output, so nobody has heard it on the web. Check on the iPhone that it is audible after a solve, that the Settings
   "Sound" switch silences it, and that the Settings note ("a browser cannot see your phone's silent switch") reads right.
