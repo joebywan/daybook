@@ -1,5 +1,9 @@
 package com.joebywan.daybook.ui.home
 
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.arcadeGlow
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -282,8 +286,7 @@ fun LaunchOptions(
             options = ModeSegment.entries,
             selected = mode.segment,
             label = { "" },
-            tone = scheme.secondary,
-            onTone = scheme.onSecondary,
+            pill = ArcadeBoard.current.selected,
             verticalPadding = 4.dp,
             onSelect = { onMode(tappedMode(it, mode, dayMode)) },
             describe = { segment, selected ->
@@ -311,8 +314,6 @@ fun LaunchOptions(
                 options = Difficulty.entries,
                 selected = difficulty,
                 label = { it.label },
-                tone = scheme.primary,
-                onTone = scheme.onPrimary,
                 verticalPadding = 9.dp,
                 onSelect = { if (tiered) onDifficulty(it) },
             )
@@ -384,11 +385,10 @@ internal fun <T> SegmentedControl(
     options: List<T>,
     selected: T,
     label: (T) -> String,
-    tone: Color,
-    onTone: Color,
     verticalPadding: Dp,
     onSelect: (T) -> Unit,
     track: Color = MaterialTheme.colorScheme.surface,
+    pill: ArcadeFill = ArcadeBoard.current.control,
     /** What a screen reader hears for an option instead of its drawn text; null reads the text. */
     describe: (SemanticsPropertyReceiver.(option: T, selected: Boolean) -> Unit)? = null,
     /** An option's face, drawn in `ink`; one line of [label] unless given. */
@@ -417,7 +417,11 @@ internal fun <T> SegmentedControl(
             .drawBehind {
                 val gap = 4.dp.toPx()
                 val w = (size.width - gap * (options.size - 1)) / options.size
-                drawRoundRect(tone, Offset(at * (w + gap), 0f), Size(w, size.height), CornerRadius(10.dp.toPx()))
+                val topLeft = Offset(at * (w + gap), 0f)
+                val box = Size(w, size.height)
+                // Under the track's padding, so the reach fits and the track's clip does not cut it.
+                pill.glow?.let { arcadeGlow(it, topLeft, box, 10.dp.toPx(), reach = 3.dp) }
+                drawRoundRect(pill.brush(topLeft, box), topLeft, box, CornerRadius(10.dp.toPx()))
             },
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -438,7 +442,7 @@ internal fun <T> SegmentedControl(
                 CappedFontScale {
                     Box(if (describe == null) Modifier else Modifier.clearAndSetSemantics { }) {
                         // The ink follows the pill across, so a label is never light on the bare track.
-                        content(option, lerp(scheme.onSurfaceVariant, onTone, (1f - abs(at - i)).coerceIn(0f, 1f)), isSelected)
+                        content(option, lerp(scheme.onSurfaceVariant, pill.ink, (1f - abs(at - i)).coerceIn(0f, 1f)), isSelected)
                     }
                 }
             }

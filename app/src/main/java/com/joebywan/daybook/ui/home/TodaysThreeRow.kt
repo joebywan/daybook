@@ -1,6 +1,8 @@
 package com.joebywan.daybook.ui.home
 
-import com.joebywan.daybook.ui.theme.vivid
+import androidx.compose.foundation.border
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.arcadeLift
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -104,16 +105,20 @@ private fun ThreeChip(
     puzzle: PuzzleType, solved: Boolean, next: Boolean, enabled: Boolean, compact: Boolean, onClick: () -> Unit, modifier: Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val accent = vivid(puzzle.accent)
+    val accent = Color(puzzle.accent)
+    val tile = ArcadeBoard.tile(accent, BoardHues.isDark(scheme))
+    val shape = RoundedCornerShape(14.dp)
     val chip = modifier
-        .clip(RoundedCornerShape(14.dp))
-        .background(if (solved) accent.copy(alpha = 0.2f).compositeOver(scheme.surface) else scheme.surface)
+        .then(if (enabled) Modifier.arcadeLift(tile, 14.dp) else Modifier)
+        .clip(shape)
+        .background(tile.brush)
+        .then(if (solved) Modifier.border(SOLVED_RING, tile.ink, shape) else Modifier)
         .then(if (next) Modifier.sparkleFrame(14.dp) else Modifier)
         .clickable(enabled = enabled, onClick = onClick)
         .padding(6.dp)
     val motif = @Composable {
         Box(contentAlignment = Alignment.TopEnd) {
-            puzzle.Preview(Modifier.size(if (compact) 24.dp else 30.dp).clip(RoundedCornerShape(8.dp)))
+            puzzle.Preview(Modifier.size(if (compact) 24.dp else 30.dp).clip(RoundedCornerShape(8.dp)).background(scheme.surface))
             if (solved) Box(Modifier.size(14.dp).clip(CircleShape).background(scheme.surface), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Check, "Solved", tint = BoardHues.textOn(accent, scheme.surface, 3f), modifier = Modifier.size(10.dp))
             }
@@ -123,7 +128,7 @@ private fun ThreeChip(
         Text(
             puzzle.displayName,
             style = MaterialTheme.typography.labelLarge,
-            color = if (solved) BoardHues.onTint(accent, scheme.surface, alpha = 0.2f) else scheme.onSurface,
+            color = tile.ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

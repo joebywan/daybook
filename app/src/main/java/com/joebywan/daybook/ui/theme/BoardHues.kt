@@ -66,12 +66,6 @@ private fun hueOf(c: Color): Float {
     return (h * 60f + 360f) % 360f
 }
 
-/** Home's and the play screen's page: flat where the opaque sticky rows sit, deepening towards the foot. */
-fun pageGradient(scheme: ColorScheme): Brush {
-    val foot = if (BoardHues.isDark(scheme)) Color(0xFF1B1450) else scheme.surfaceVariant
-    return Brush.verticalGradient(0f to scheme.background, .5f to scheme.background, 1f to foot)
-}
-
 // The board content hues of docs/COLOUR.md: one HSL recipe, so any two hues sit at the same weight.
 // Web-safe (no android.*, java.*). Derive colours from these; never store them.
 object BoardHues {

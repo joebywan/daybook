@@ -1,5 +1,7 @@
 package com.joebywan.daybook.ui.play
 
+import com.joebywan.daybook.ui.theme.arcadePage
+
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.unit.Dp
@@ -458,7 +460,7 @@ fun PlayScreen(
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .background(com.joebywan.daybook.ui.theme.pageGradient(scheme))
+            .arcadePage(com.joebywan.daybook.ui.theme.BoardHues.isDark(scheme))
             // Ctrl/Cmd+Z, H and Esc, as wherever a board is played. None once solved.
             .hintKeys(!state.solved, hintSession, if (puzzle.offersHints) ::onHint else null, if (puzzle.offersUndo) ::undo else null)
             .onGloballyPositioned { overlayOrigin = it.positionInWindow() },
