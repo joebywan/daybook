@@ -62,7 +62,6 @@ import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.home.LevelsScreen
 import com.joebywan.daybook.ui.home.Welcome
 import com.joebywan.daybook.ui.play.NextKind
-import com.joebywan.daybook.puzzles.WordWheelState
 import com.joebywan.daybook.ui.play.PlayLog
 import com.joebywan.daybook.ui.play.PlayScreen
 import com.joebywan.daybook.ui.play.finishPraise
@@ -680,7 +679,7 @@ private fun DaybookScreens(
                             val kept = KeptCard(
                                 puzzle.id, difficulty, best = true, seconds, hints, card,
                                 undos = PlayLog.played(log).count { it.undone },
-                                bonus = (state as? WordWheelState)?.bonus?.size ?: 0,
+                                bonus = com.joebywan.daybook.ui.play.bonusCount(state),
                             )
                             store.keepCard(kept)
                             if (current.day == null && level == null) store.keepCard(kept.copy(best = false))
