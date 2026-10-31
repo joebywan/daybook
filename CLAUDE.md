@@ -784,6 +784,11 @@ Display name "Crossword" (one line on a home tile), never a newspaper's.
   clue is knowledge, not logic. 44 / 54 / 62% of steps on a hints-only walk; that share is the tier measure. Word steps are typed
   by the player; only "Show me" types the word. Highlight indices: squares, letter key `MiniLogic.letterKey(l)` = 2000 + l, the
   clue bar `MiniLogic.CLUE_BAR` = 3000.
+- **Clue text is a tier too** (`tools/words/hard-clues.txt`, `MiniHardClues.kt`, `MiniLogic.takesHardClue`): hand-written, less
+  direct main clues for the most used words. Standard none, Hard its across slots, Expert every slot; on such a slot the plain
+  clue is the fallback's "Another way in". `isSolved` takes either clue; rewording one strands a board in progress with the old
+  text, as for first clues. The second clues were read and are not reliably harder, so they were not used for this. No grid
+  moved; Hard and Expert's `BoardPinTest` lines did, because the fingerprint holds clue text. `MiniHardCluesTest`.
 - **Cursor and direction are in the state** (Codeword's precedent; `withoutSelection` drops both). A tap selects a square, the same
   square again turns between Across and Down; typing moves on to the next empty square of the word; Del clears, or steps back and
   clears. The clue bar (fixed height, room for two lines) shows the cursor's clue, turns on a tap, and ‹ › walk the words. Keys:
