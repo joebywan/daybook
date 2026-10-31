@@ -302,9 +302,9 @@ object Cages : PuzzleType {
         }
     }
 
-    /** Each cage's total in the top-left corner of its first square, on a chip of [chip], since the square may have any fill. */
+    /** Each cage's total in the top-left corner of its first square, on a chip of [chip] where [filled]: an empty square's pale fill, and its notes, need none. */
     private fun DrawScope.drawTotals(
-        cageOf: List<Int>, sums: List<Int>, n: Int, cell: Float, measurer: TextMeasurer, style: TextStyle, chip: Color,
+        cageOf: List<Int>, sums: List<Int>, n: Int, cell: Float, measurer: TextMeasurer, style: TextStyle, chip: Color, filled: (Int) -> Boolean,
     ) {
         val seen = BooleanArray(sums.size)
         for (i in cageOf.indices) {
@@ -313,7 +313,7 @@ object Cages : PuzzleType {
             seen[k] = true
             val laid = measurer.measure(sums[k].toString(), style, maxLines = 1)
             val at = Offset(i % n * cell + cell * 0.09f, i / n * cell + cell * 0.04f)
-            drawRoundRect(chip, at, Size(laid.size.width.toFloat(), laid.size.height.toFloat()), CornerRadius(cell * 0.06f))
+            if (filled(i)) drawRoundRect(chip, at, Size(laid.size.width.toFloat(), laid.size.height.toFloat()), CornerRadius(cell * 0.06f))
             drawText(laid, topLeft = at)
         }
     }
@@ -359,7 +359,7 @@ object Cages : PuzzleType {
             Canvas(Modifier.fillMaxSize()) {
                 val px = size.width.coerceAtMost(size.height) / 3f
                 drawCages(PREVIEW_CAGES, 3, px, a.givenInk, a.square, stroke = px * 0.045f)
-                drawTotals(PREVIEW_CAGES, PREVIEW_SUMS, 3, px, measurer, label, a.square)
+                drawTotals(PREVIEW_CAGES, PREVIEW_SUMS, 3, px, measurer, label, a.square) { false }
             }
         }
     }
@@ -410,7 +410,7 @@ object Cages : PuzzleType {
         Canvas(Modifier.fillMaxSize()) {
             val px = size.width / 9f
             drawCages(s.cageOf, 9, px, a.squareInk, a.square, stroke = 1.5.dp.toPx())
-            drawTotals(s.cageOf, s.sums, 9, px, measurer, label, a.square)
+            drawTotals(s.cageOf, s.sums, 9, px, measurer, label, a.square) { s.grid.cells[it] != 0 || s.grid.selected == it }
         }
     }
 }

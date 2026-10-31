@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
@@ -151,7 +152,16 @@ internal fun SudokuGridBoard(
         val cell = side / 9
         val padWidth = maxWidth
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(side).highlightGrid(9, 9).background(a.frame, RoundedCornerShape(8.dp))) {
+            Box(
+                Modifier.size(side).highlightGrid(9, 9).background(a.frame, RoundedCornerShape(8.dp)).drawBehind {
+                    // The frame again over a box's edge: dark's is translucent, and one layer of it hardly parts the boxes.
+                    for (k in 1..2) {
+                        val at = size.width * k / 3f
+                        drawLine(a.frame, Offset(at, 0f), Offset(at, size.height), 3.dp.toPx())
+                        drawLine(a.frame, Offset(0f, at), Offset(size.width, at), 3.dp.toPx())
+                    }
+                },
+            ) {
                 for (r in 0 until 9) {
                     for (c in 0 until 9) {
                         val i = r * 9 + c
@@ -271,6 +281,8 @@ internal fun SudokuGridBoard(
                             when {
                                 pencilled -> Modifier.arcadeLift(a.selected, 10.dp).background(a.selected.brush, keyShape).border(2.dp, a.selectedEdge, keyShape)
                                 remaining == 0 -> Modifier.background(a.given, keyShape)
+                                // The alpha's layer clips to the key, which would square off a lift.
+                                inert -> Modifier.background(a.control.brush, keyShape)
                                 else -> Modifier.arcadeLift(a.control, 10.dp).background(a.control.brush, keyShape)
                             }
                         ),
