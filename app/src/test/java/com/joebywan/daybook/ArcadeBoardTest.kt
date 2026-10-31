@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import com.joebywan.daybook.core.PuzzleRegistry
+import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import org.junit.Assert.assertTrue
@@ -31,6 +32,16 @@ class ArcadeBoardTest {
             val tile = ArcadeBoard.tile(Color(p.accent), dark)
             readsOn(tile, "${p.id} dark=$dark")
             assertTrue("${p.id} dark=$dark has one colour", tile.from != tile.to)
+        }
+    }
+
+    @Test fun `word wheel's swipe path stands on its well`() {
+        for ((name, b) in listOf("light" to ArcadeBoard.Light, "dark" to ArcadeBoard.Dark)) {
+            val well = WordWheel.wheelWell(b)
+            for (stop in listOf(b.selected.from, b.selected.to)) {
+                atLeast(3f, stop, well, "$name swipe path")
+                atLeast(3f, stop.copy(alpha = .7f).compositeOver(well), well, "$name swipe to the finger")
+            }
         }
     }
 

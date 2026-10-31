@@ -1,8 +1,8 @@
 package com.joebywan.daybook.puzzles
 
-import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,6 +43,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -67,7 +69,11 @@ import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeGlow
+import com.joebywan.daybook.ui.theme.arcadeLift
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
@@ -247,10 +253,9 @@ object WordWheel : PuzzleType {
         // The gesture below outlives every state (it is keyed on the wheel, not the board): it reads the board through
         // this, never a captured `s` (CLAUDE.md, Snap's lesson).
         val latest by rememberUpdatedState(s)
-        val scheme = MaterialTheme.colorScheme
-        val dark = BoardHues.isDark(scheme)
-        val (hueA, hueB) = remember(s.wheel) { BoardHues.pair(s.slots.sumOf { it.word.length * 31 + it.row * 7 + it.col }) }
-        val (highlight, glow, pulse) = rememberHintPaint()
+        val a = ArcadeBoard.current
+        // Hint rings sit on the frame and the wheel, both dark, so they are amber rather than the page's ink.
+        val (highlight, glow, pulse) = rememberHintPaint(ink = a.selected.from)
         val playable = interactive && !s.solved
         val measurer = rememberTextMeasurer()
 
@@ -330,20 +335,32 @@ object WordWheel : PuzzleType {
             val wheelSize = minOf(maxWidth * 0.64f, (tall - fixed) * 0.46f, MAX_WHEEL).coerceAtLeast(0.dp)
 
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    headerOf(s, notice),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (notice != null && noticeIsError) scheme.error else scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth().height(LINE),
-                )
+                // A notice is a chip, so a refusal differs by shape as well as colour; the line's room never changes.
+                Box(Modifier.fillMaxWidth().height(LINE), contentAlignment = Alignment.Center) {
+                    val chip = if (notice != null) (if (noticeIsError) ArcadeFill(a.error, a.error, a.errorInk) else a.control) else null
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(50))
+                            .then(if (chip != null) Modifier.background(chip.brush).padding(horizontal = 10.dp) else Modifier),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            headerOf(s, notice),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = chip?.ink ?: a.squareInk,
+                            fontWeight = if (chip != null) FontWeight.Bold else null,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
 
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.width, maxHeight / s.height, MAX_CELL).coerceAtLeast(0.dp)
                     Canvas(Modifier.size(cell * s.width, cell * s.height).highlightGrid(s.width, s.height)) {
-                        drawGrid(s, cell.toPx(), highlight, glow, pulse.value, hueB, dark, measurer, feel, vivid(accent))
+                        drawGrid(s, cell.toPx(), highlight, glow, pulse.value, a, measurer, feel)
                     }
                 }
 
@@ -352,15 +369,17 @@ object WordWheel : PuzzleType {
                     if (picked.isNotEmpty()) {
                         Box(
                             Modifier
+                                .arcadeLift(a.letter, 16.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(BoardHues.mark(hueA))
+                                .background(a.letter.brush)
+                                .border(2.dp, a.selectedEdge, RoundedCornerShape(50))
                                 .clickable(enabled = playable) { submit(picked) }
                                 .padding(horizontal = 18.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 picked.map { s.wheel[it].uppercaseChar() }.joinToString(""),
-                                color = BoardHues.onFill(BoardHues.mark(hueA)),
+                                color = a.letter.ink,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -423,7 +442,7 @@ object WordWheel : PuzzleType {
                                 }
                             },
                     ) {
-                        drawWheel(s, order, picked, finger, highlight, glow, pulse.value, hueA, dark, scheme.surface, measurer)
+                        drawWheel(s, order, picked, finger, highlight, glow, pulse.value, a, measurer)
                     }
                     SideButton("✕", playable && picked.isNotEmpty()) { picked = emptyList() }
                 }
@@ -437,15 +456,21 @@ object WordWheel : PuzzleType {
                         .padding(top = 4.dp),
                     horizontalArrangement = Arrangement.Center,
                 ) {
-                    Text(
-                        bonusLine(s),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = scheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (s.bonus.isNotEmpty()) Text(" ›", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                    if (s.bonus.isNotEmpty()) Row(
+                        Modifier.fillMaxHeight().clip(RoundedCornerShape(50)).background(a.control.brush).padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            bonusLine(s),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = a.control.ink,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Text(" ›", style = MaterialTheme.typography.bodySmall, color = a.control.ink)
+                    }
                 }
             }
         }
@@ -467,16 +492,17 @@ object WordWheel : PuzzleType {
     /** A round button beside the wheel, showing a glyph. */
     @Composable
     private fun SideButton(glyph: String, enabled: Boolean, onClick: () -> Unit) {
-        val scheme = MaterialTheme.colorScheme
+        val a = ArcadeBoard.current
         Box(
             Modifier
                 .size(44.dp)
+                .then(if (enabled) Modifier.arcadeLift(a.control, 22.dp) else Modifier)
                 .clip(CircleShape)
-                .background(scheme.surfaceVariant)
+                .then(if (enabled) Modifier.background(a.control.brush) else Modifier.background(a.given))
                 .clickable(enabled = enabled, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text(glyph, color = scheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.35f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(glyph, color = if (enabled) a.control.ink else a.givenInk.copy(alpha = 0.45f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
     }
 
@@ -511,18 +537,18 @@ object WordWheel : PuzzleType {
         highlight: BoardHighlight,
         glow: Color,
         pulse: Float,
-        hueB: Float,
-        dark: Boolean,
+        a: ArcadeBoard,
         measurer: TextMeasurer,
         feel: MoveFeel = MoveFeel.Still,
-        accent: Color = Color.Unspecified,
     ) {
         val used = s.used()
         val shown = s.shown()
-        val fill = BoardHues.fill(hueB, dark)
-        val ink = BoardHues.onFill(fill)
         val inset = cell * 0.06f
         val corner = CornerRadius(cell * 0.14f)
+        // One path, so the translucent dark frame does not double up or seam where squares meet.
+        val frame = Path()
+        for (i in used.indices) if (used[i]) frame.addRect(Rect(Offset((i % s.width) * cell, (i / s.width) * cell), Size(cell, cell)))
+        drawPath(frame, a.frame)
         for (i in used.indices) {
             if (!used[i]) continue
             val topLeft = Offset((i % s.width) * cell + inset, (i / s.width) * cell + inset)
@@ -530,13 +556,14 @@ object WordWheel : PuzzleType {
             val look = highlight.look(i)
             val alpha = if (look.dim) 0.3f else 1f
             val letter = shown[i]
-            feelSquare(feel, i, topLeft, box, accent) {
+            feelSquare(feel, i, topLeft, box, Color.White) {
                 if (letter != null) {
-                    drawRoundRect(fill.copy(alpha = alpha), topLeft, box, corner)
-                    val layout = measurer.measure(letter.uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (cell * 0.5f).toSp(), fontWeight = FontWeight.Bold))
+                    a.letter.glow?.let { arcadeGlow(it.copy(alpha = 0.35f * alpha), topLeft, box, corner.x, (inset / density).dp) }
+                    drawRoundRect(a.letter.brush(topLeft, box), topLeft, box, corner, alpha = alpha)
+                    val layout = measurer.measure(letter.uppercase(), TextStyle(color = a.letter.ink.copy(alpha = alpha), fontSize = (cell * 0.5f).toSp(), fontWeight = FontWeight.Bold))
                     drawText(layout, topLeft = Offset(topLeft.x + (box.width - layout.size.width) / 2f, topLeft.y + (box.height - layout.size.height) / 2f))
                 } else {
-                    drawRoundRect(BoardHues.ink(hueB, dark).copy(alpha = 0.55f * alpha), topLeft, box, corner, style = Stroke(cell * 0.05f))
+                    drawRoundRect(a.square, topLeft, box, corner, alpha = alpha)
                 }
             }
             if (look.strong || look.soft) {
@@ -560,36 +587,44 @@ object WordWheel : PuzzleType {
         highlight: BoardHighlight,
         glow: Color,
         pulse: Float,
-        hueA: Float,
-        dark: Boolean,
-        surface: Color,
+        a: ArcadeBoard,
         measurer: TextMeasurer,
     ) {
         val g = WheelGeometry(size.width, order.size)
-        val mark = BoardHues.mark(hueA)
-        drawCircle(BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.6f else 0.45f), radius = size.width / 2f, center = g.centre)
+        // A gradient rim round a dark well, in both schemes, so the amber path and tiles have something to stand on.
+        drawCircle(a.control.brush(Offset.Zero, size), radius = size.width / 2f, center = g.centre)
+        drawCircle(wheelWell(a), radius = size.width * 0.488f, center = g.centre)
         // Where each wheel letter is on screen.
         val at = IntArray(order.size)
         order.forEachIndexed { p, i -> at[i] = p }
         if (picked.isNotEmpty()) {
             val stroke = g.disc * 0.32f
-            for (k in 1 until picked.size) drawLine(mark, g.spot(at[picked[k - 1]]), g.spot(at[picked[k]]), stroke, StrokeCap.Round)
-            if (finger != null) drawLine(mark.copy(alpha = 0.6f), g.spot(at[picked.last()]), finger, stroke, StrokeCap.Round)
+            val path = a.selected.brush(Offset.Zero, size)
+            for (k in 1 until picked.size) drawLine(path, g.spot(at[picked[k - 1]]), g.spot(at[picked[k]]), stroke, StrokeCap.Round)
+            if (finger != null) drawLine(path, g.spot(at[picked.last()]), finger, stroke, StrokeCap.Round, alpha = 0.7f)
         }
         for (p in order.indices) {
             val i = order[p]
             val c = g.spot(p)
             val chosen = i in picked
-            val disc = if (chosen) mark else surface
-            drawCircle(disc, radius = g.disc, center = c)
+            // Chosen differs by size and a white ring as well as by colour. Only drawn larger: the hit circle stays.
+            val radius = if (chosen) g.disc * 1.08f else g.disc
+            val corner = Offset(c.x - radius, c.y - radius)
+            val box = Size(radius * 2, radius * 2)
+            val fill = if (chosen) a.selected else a.control
+            if (chosen) fill.glow?.let { arcadeGlow(it, corner, box, radius, (g.disc * 0.22f / density).dp) }
+            drawCircle(fill.brush(corner, box), radius = radius, center = c)
+            if (chosen) drawCircle(Color.White, radius = radius, center = c, style = Stroke(g.disc * 0.09f))
             val look = highlight.look(WordWheelTeacher.WHEEL + i)
             if (look.strong || look.soft) {
                 val w = g.disc * if (look.strong) 0.16f else 0.1f
-                drawCircle(if (look.strong) glow.copy(alpha = pulse) else glow.copy(alpha = 0.5f), radius = g.disc + w, center = c, style = Stroke(w))
+                drawCircle(if (look.strong) glow.copy(alpha = pulse) else glow.copy(alpha = 0.5f), radius = radius + w, center = c, style = Stroke(w))
             }
-            val text = if (chosen) BoardHues.onFill(mark) else BoardHues.ink(hueA, dark)
-            val layout = measurer.measure(s.wheel[i].uppercase(), TextStyle(color = text, fontSize = (g.disc * 1.05f).toSp(), fontWeight = FontWeight.Bold))
+            val layout = measurer.measure(s.wheel[i].uppercase(), TextStyle(color = fill.ink, fontSize = (g.disc * 1.05f).toSp(), fontWeight = FontWeight.Bold))
             drawText(layout, topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
         }
     }
+
+    /** The wheel's dark middle: the frame's indigo in light, the given square's in dark (whose frame is translucent). */
+    internal fun wheelWell(a: ArcadeBoard): Color = if (a.frame.alpha == 1f) a.frame else a.given
 }
