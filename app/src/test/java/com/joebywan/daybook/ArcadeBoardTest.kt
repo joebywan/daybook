@@ -4,6 +4,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import com.joebywan.daybook.core.PuzzleRegistry
+import com.joebywan.daybook.puzzles.SudokuHintLight
+import com.joebywan.daybook.puzzles.SudokuTwin
+import com.joebywan.daybook.puzzles.boxShade
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import org.junit.Assert.assertTrue
@@ -51,5 +54,21 @@ class ArcadeBoardTest {
             atLeast(3f, b.error, b.square, "$name error square beside a plain one")
             atLeast(1.3f, b.frame.compositeOver(b.square), b.square, "$name grid line") // decorative: the squares' shape holds the grid
         }
+    }
+
+    @Test fun `Sudoku's own colours read, in both schemes`() {
+        for ((name, b) in listOf("light" to ArcadeBoard.Light, "dark" to ArcadeBoard.Dark)) {
+            readsOn(SudokuTwin, "$name twin")
+            atLeast(4.5f, b.squareInk, b.boxShade(), "$name ink on a shaded box")
+            atLeast(4.5f, b.givenInk, b.square, "$name note")
+            atLeast(4.5f, b.givenInk, b.boxShade(), "$name note on a shaded box")
+            // A cage's dash on its halo: the one or the other parts from any fill a square can have.
+            for (fill in listOf(b.control.from, b.control.to, b.selected.from, b.selected.to, b.error, b.given, b.square, SudokuTwin.from, SudokuTwin.to)) {
+                assertTrue("$name dash and halo both lost on $fill", max(ratio(b.squareInk, fill), ratio(b.square, fill)) >= 3f)
+            }
+        }
+        atLeast(3f, SudokuHintLight, ArcadeBoard.Light.square, "hint ring on a square")
+        atLeast(3f, SudokuHintLight, ArcadeBoard.Light.frame, "hint ring on the frame")
+        atLeast(3f, ArcadeBoard.Dark.selected.from, ArcadeBoard.Dark.square, "dark hint ring on a square")
     }
 }
