@@ -293,7 +293,7 @@ object Hexwords : PuzzleType {
                 Text(
                     notice ?: headerOf(s, stuck),
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (notice != null || stuck) scheme.error else scheme.onSurfaceVariant,
+                    color = if (notice != null || (stuck && !s.solved)) scheme.error else scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
