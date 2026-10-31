@@ -124,5 +124,6 @@ letters, never clue text, so only the stored clues change and no grid moved.
   the time, else another fallback. The one letter of the next tap would have settled the same word through the crossings
   52.5 / 54.1 / 56.6% of the time. Words fitting the slot the clue names: median 22 / 8 / 6, p90 434 / 434 / 35. The
   fallback share of steps is unchanged (44 / 54 / 62%): the second clue and the letter are one step's two taps.
+- **Hard clues** (`MiniHardCluesTest`, `build/reports/mini-hard-clues.txt`, a year of daily boards): 72% of Hard's across slots and 61% of Expert's slots show one; floors 65 / 55%. How much harder they play is not measured: they were judged by reading, by their author.
 - **Layout:** at 375x537 Expert's squares are about 25 dp, with the clue bar (44 dp) and three rows of 40 dp keys under
   the grid; checked in Chromium and WebKit, light and dark, and on the emulator (1080x2400).
