@@ -38,7 +38,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,9 +57,7 @@ import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.launch
-import kotlin.math.PI
 import kotlin.math.floor
-import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -316,15 +317,42 @@ object Pointers : PuzzleType {
     }
 
     @Composable
-    internal fun Hearts(lives: Int, modifier: Modifier) {
+    internal fun Hearts(lives: Int, modifier: Modifier, breaking: () -> Float = { -1f }) {
         val scheme = MaterialTheme.colorScheme
         Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             repeat(PointersLogic.LIVES) { k ->
                 Canvas(Modifier.size(22.dp)) {
                     val p = heartPath(size.minDimension)
-                    if (k < lives) drawPath(p, scheme.error)
-                    else drawPath(p, scheme.onSurfaceVariant.copy(alpha = 0.6f), style = Stroke(1.6.dp.toPx(), join = StrokeJoin.Round))
+                    // The heart just lost, read in the draw phase: whole until the arrow lands, then in two pieces.
+                    val b = if (k == lives) breaking() else -1f
+                    if (k < lives || b == 0f) drawPath(p, scheme.error)
+                    else {
+                        drawPath(p, scheme.onSurfaceVariant.copy(alpha = 0.6f), style = Stroke(1.6.dp.toPx(), join = StrokeJoin.Round))
+                        if (b > 0f) drawBrokenHeart(p, b, scheme.error)
+                    }
                 }
+            }
+        }
+    }
+
+    /** Heart [p] [b] of the way through breaking: two halves along a jagged line, falling apart as they fade. */
+    private fun DrawScope.drawBrokenHeart(p: Path, b: Float, colour: Color) {
+        val s = size.minDimension
+        val crack = listOf(0.5f to 0f, 0.42f to 0.3f, 0.58f to 0.5f, 0.46f to 0.7f, 0.5f to 1f)
+        for (side in listOf(-1f, 1f)) {
+            val half = Path().apply {
+                moveTo(if (side < 0) -s else 2 * s, -s)
+                lineTo(0.5f * s, -s)
+                for ((x, y) in crack) lineTo(x * s, y * s)
+                lineTo(0.5f * s, 2 * s)
+                lineTo(if (side < 0) -s else 2 * s, 2 * s)
+                close()
+            }
+            withTransform({
+                translate(side * 0.22f * s * b, 0.25f * s * b * b)
+                rotate(side * 22f * b, Offset(0.5f * s, s))
+            }) {
+                clipPath(half) { drawPath(p, colour.copy(alpha = 1f - b)) }
             }
         }
     }
@@ -352,7 +380,8 @@ object Pointers : PuzzleType {
     private const val BUMP_MS = 600
 
     private class Slide(val arrow: Int, val progress: Animatable<Float, *>)
-    private class Bump(val arrow: Int, val blocker: Int, val progress: Animatable<Float, *>)
+    /** [reach]: squares along its line from where the arrow sits to touching the blocker. */
+    private class Bump(val arrow: Int, val blocker: Int, val reach: Float, val progress: Animatable<Float, *>)
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
@@ -369,7 +398,7 @@ object Pointers : PuzzleType {
         // The arrow under a finger that is down: tinted at once, taken on release over the same arrow; sliding off it clears
         // the tint and cancels. Transient, never state.
         var pressed by remember(s.arrows) { mutableStateOf(-1) }
-        // Reduced motion: a cleared arrow simply goes and a bump flashes without the shake.
+        // Reduced motion: a cleared arrow simply goes and a bump flashes, nothing lunging or knocked; the lost heart is just out.
         val still = LocalReducedMotion.current
         val live = interactive && !s.solved && !s.failed
 
@@ -377,7 +406,9 @@ object Pointers : PuzzleType {
             val i = s.arrowAt(cell)
             val next = s.tap(cell) ?: return
             if (next.lives < s.lives) {
-                val b = Bump(i, s.blocker(i), Animatable(0f))
+                val blocker = s.blocker(i)
+                val gap = PointersLogic.ray(s.arrows[i], s.width, s.height).indexOfFirst { s.arrowAt(it) == blocker }
+                val b = Bump(i, blocker, PointersLogic.reachOf(gap), Animatable(0f))
                 bump = b
                 scope.launch {
                     b.progress.animateTo(1f, tween(BUMP_MS, easing = LinearEasing))
@@ -409,7 +440,7 @@ object Pointers : PuzzleType {
         ) {
             // Lives and the one line of news, always this height, so a bump or a loss never moves the board.
             Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-                Hearts(s.lives, Modifier)
+                Hearts(s.lives, Modifier, breaking = { if (still) -1f else bump?.let { PointersLogic.heartBreak(it.progress.value) } ?: -1f })
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                     if (s.failed) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -485,11 +516,13 @@ object Pointers : PuzzleType {
                         if (look.strong) drawArrow(s.arrows[i], s.width, unit, scheme.onBackground.copy(alpha = pulse.value * 0.5f), width = 0.6f, head = false)
                         var shift = 0f
                         if (b != null && (i == b.arrow || i == b.blocker)) colour = lerp(colour, scheme.error, flash)
-                        if (b != null && i == b.arrow && !still) {
-                            val t = b.progress.value
-                            shift = 0.3f * sin(PI.toFloat() * t) + 0.06f * sin(6 * PI.toFloat() * t) * (1 - t)
-                        }
-                        drawArrow(s.arrows[i], s.width, unit, colour, shift)
+                        if (b != null && i == b.arrow && !still) shift = PointersLogic.lunge(b.progress.value, b.reach)
+                        if (b != null && i == b.blocker && !still) {
+                            // Knocked the way the arrow was going, whichever way the blocker itself points.
+                            val d = PointersLogic.dirOf(s.arrows[b.arrow], s.width)
+                            val knock = PointersLogic.knock(b.progress.value) * unit
+                            translate(PointersLogic.DC[d] * knock, PointersLogic.DR[d] * knock) { drawArrow(s.arrows[i], s.width, unit, colour) }
+                        } else drawArrow(s.arrows[i], s.width, unit, colour, shift)
                     }
                     clipRect {
                         for (slide in slides) {

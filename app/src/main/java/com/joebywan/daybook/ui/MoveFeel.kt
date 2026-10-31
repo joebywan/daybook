@@ -21,7 +21,11 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.isSpecified
 import com.joebywan.daybook.core.Tones
+import kotlinx.coroutines.delay
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -62,13 +66,32 @@ private const val SWEEP_WIDTH = 0.35f
 /** The share of the arrival one square's own fade takes; the rest staggers the squares in reading order. */
 private const val ARRIVE_EACH = 0.4f
 
-/** The solve wave's length; the play screen holds the finished frame back by as much. */
+/** The solve wave's length; the play screen holds the finished frame back by as much, after [SOLVE_WAVE_DELAY_MS]. */
 const val SOLVE_WAVE_MS = 350
+
+/** The hit stop before a win's thump: the move's own settle and glow hold still for it. State is not held, only drawing. */
+const val WIN_FREEZE_MS = 50
+const val WIN_THUMP_MS = 220
+/** The wave starts on the thump's rebound. */
+const val SOLVE_WAVE_DELAY_MS = WIN_FREEZE_MS + 80
+
+/**
+ * How far down the whole board is at [t] (0..1) through a win's thump, as a share of its depth: a fast drop, a rise a quarter
+ * of the way past rest, and back. Vertical by the caller's use: small sideways motion means a mistake.
+ */
+fun winThump(t: Float): Float {
+    if (t <= 0f || t >= 1f) return 0f
+    if (t < THUMP_DROP) return sin(t / THUMP_DROP * PI.toFloat() / 2)
+    val u = (t - THUMP_DROP) / (1f - THUMP_DROP)
+    return cos(2 * PI.toFloat() * u) * (1f - u) * (1f - u)
+}
+
+private const val THUMP_DROP = 0.18f
 
 /**
  * The feel of a move: the squares it changed settle (drawn 8% large, easing back over 120 ms; an undo dips them 8%
  * small instead), a unit it finished (a row, a box, a cage, a line, a tube) has a soft glow run along it once
- * (400 ms) with a small pop travelling along with it and one tone, the move that solves the board runs one wave of the same glow across every square in reading order
+ * (400 ms) with a small pop travelling along with it and one note of the board's phrase, the move that solves the board runs one wave of the same glow across every square in reading order
  * (350 ms), and a board arriving fades its squares in, in reading order (250 ms). Read [scale], [glow] and [alpha]
  * in the draw phase only, so a running animation repaints the board without recomposing it. Nothing here is state
  * of the game; nothing changes size or position.
@@ -83,8 +106,10 @@ class MoveFeel internal constructor() {
     internal var sweepRun = 0
     internal var waveRun = 0
     internal var arriveRun = 0
-    /** Moves that finished a unit but not the board, reduced motion or not: each plays the unit tone. */
+    /** Moves that finished a unit but not the board, reduced motion or not: each plays [unitStep]'s note. */
     internal var unitRun = 0
+    /** How far up its phrase the board stood after the last of them (`Tones.phraseStep`). */
+    internal var unitStep = 0
     private var tick = -1
     private var undos = 0
     private var solves = 0
@@ -150,7 +175,10 @@ class MoveFeel internal constructor() {
                 }
             }
             // The chime has it when this move solved the board.
-            if (fresh.isNotEmpty() && solves == this.solves) unitRun++
+            if (fresh.isNotEmpty() && solves == this.solves) {
+                unitStep = Tones.phraseStep(done.count { it }, done.size)
+                unitRun++
+            }
             if (fresh.isNotEmpty() && !still) {
                 swept = fresh
                 sweep = 0f
@@ -202,18 +230,25 @@ fun rememberMoveFeel(
         LocalUndoCount.current, LocalSolveCount.current, LocalBoardArrives.current,
     )
     val tones = LocalBoardTones.current
-    LaunchedEffect(feel.unitRun) { if (feel.unitRun > 0) tones(Tones.pick(Tones.Kind.UNIT)) }
-    Play(feel.settleRun, tween(SETTLE_MS)) { feel.settle = it }
-    Play(feel.sweepRun, tween(SWEEP_MS)) { feel.sweep = it }
-    Play(feel.waveRun, tween(SOLVE_WAVE_MS, easing = LinearEasing)) { feel.wave = it }
+    LaunchedEffect(feel.unitRun) { if (feel.unitRun > 0) tones(Tones.step(feel.unitStep)) }
+    // The move that solved stays on its first frame through the win's freeze. No move follows it.
+    val hold = if (LocalSolveCount.current > 0) WIN_FREEZE_MS else 0
+    Play(feel.settleRun, tween(SETTLE_MS), hold) { feel.settle = it }
+    Play(feel.sweepRun, tween(SWEEP_MS), hold) { feel.sweep = it }
+    Play(feel.waveRun, tween(SOLVE_WAVE_MS, easing = LinearEasing), SOLVE_WAVE_DELAY_MS) { feel.wave = it }
     Play(feel.arriveRun, tween(ARRIVE_MS, easing = LinearEasing)) { feel.arrive = it }
     return feel
 }
 
-/** Runs [set] from 0 to 1 over [spec] each time [run] goes up (never for 0, the run before any). */
+/** Runs [set] from 0 to 1 over [spec], after [holdMs], each time [run] goes up (never for 0, the run before any). */
 @Composable
-private fun Play(run: Int, spec: AnimationSpec<Float>, set: (Float) -> Unit) {
-    LaunchedEffect(run) { if (run > 0) animate(0f, 1f, animationSpec = spec) { v, _ -> set(v) } }
+private fun Play(run: Int, spec: AnimationSpec<Float>, holdMs: Int = 0, set: (Float) -> Unit) {
+    LaunchedEffect(run) {
+        if (run > 0) {
+            delay(holdMs.toLong())
+            animate(0f, 1f, animationSpec = spec) { v, _ -> set(v) }
+        }
+    }
 }
 
 /** For a board built of one composable per square: square [i] arrives, settles, and glows in [glow] (at most 35%). */
