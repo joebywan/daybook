@@ -14,6 +14,15 @@ fun SudokuState.enter(cell: Int, digit: Int, notesMode: Boolean): SudokuState = 
     else -> withCell(cell, if (cells[cell] == digit) 0 else digit)
 }
 
+internal enum class SquareTap { ENTER, DESELECT, SELECT }
+
+/** What a tap on [cell] does: an armed digit enters only with no square selected, and the selected square again lets go, the way into digit-first play. */
+internal fun squareTap(cell: Int, selected: Int?, armed: Int?): SquareTap = when {
+    armed != null && selected == null -> SquareTap.ENTER
+    selected == cell -> SquareTap.DESELECT
+    else -> SquareTap.SELECT
+}
+
 /** Empties [cell] and its marks, as the clear key does; `this` if there was nothing to empty. */
 fun SudokuState.clearCell(cell: Int): SudokuState =
     if (givens[cell] || (cells[cell] == 0 && notes[cell] == 0)) this else withCell(cell, 0)

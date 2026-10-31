@@ -107,6 +107,7 @@ object Cages : PuzzleType {
         "The dashed outlines are cages. The digits in a cage add up to the small number in its corner, " +
             "and a cage never repeats a digit.",
         "Tap a square, then tap a digit. Tap the digit again to clear it.",
+        "Or pick the digit first: with no square selected, tap a digit, then every square it goes in. Tap the selected square to let go of it, and the digit again to finish.",
         "Tap the pencil to take notes: while it is lit, a digit is pencilled small in the square " +
             "instead of placed.",
         "Clashing digits, and cages that are over their total or finished wrong, are shown in red.",
@@ -382,6 +383,7 @@ object Cages : PuzzleType {
             conflicts = s.conflicts(),
             interactive = interactive,
             onSelect = { onState(s.select(it)) },
+            onDeselect = { onState(withoutSelection(s)) },
             onEnter = { cell, digit, notesMode ->
                 val next = s.enter(cell, digit, notesMode)
                 if (next !== s) onState(next)

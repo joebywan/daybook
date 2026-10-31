@@ -2,3 +2,4 @@
 - A brighter Arcade look in light and dark; six boards redrawn, the rest to follow.
 - New chiptune sounds, and a win lands with a thump.
 - Mines goes off with a blast; in Arrows a blocked arrow lunges and recoils.
+- Sudoku and Cage Sudoku: pick the digit first, then tap every square it goes in.

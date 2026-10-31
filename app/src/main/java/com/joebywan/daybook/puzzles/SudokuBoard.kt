@@ -114,6 +114,7 @@ internal fun SudokuGridBoard(
     conflicts: Set<Int>,
     interactive: Boolean,
     onSelect: (Int) -> Unit,
+    onDeselect: () -> Unit,
     onEnter: (cell: Int, digit: Int, notesMode: Boolean) -> Unit,
     onKey: (DigitKeyAction, notesMode: Boolean) -> Unit,
     topBand: (Int) -> Float = { 0f },
@@ -126,11 +127,14 @@ internal fun SudokuGridBoard(
     val dark = BoardHues.isDark(MaterialTheme.colorScheme)
     val boxShade = a.boxShade()
     val keyShape = RoundedCornerShape(10.dp)
-    val selectedValue = s.selected?.let { s.cells[it] } ?: 0
     val (highlight, glow, pulse) = rememberHintPaint(if (dark) a.selected.from else SudokuHintLight)
     // Which way the digit keys act. Transient UI state, so it lives here and not in the state:
     // PlayScreen would otherwise make every flip of it an undo step.
     var notesMode by rememberSaveable { mutableStateOf(false) }
+    // The digit picked first (issue #384): with no square selected, a key arms and each tap on a square enters it. Not a state, as notesMode.
+    var armed by rememberSaveable { mutableStateOf<Int?>(null) }
+    val armedDigit = armed.takeIf { s.selected == null }
+    val selectedValue = armedDigit ?: s.selected?.let { s.cells[it] } ?: 0
     val measurer = rememberTextMeasurer()
     // The keyboard (web, or a hardware keyboard on Android): digits, clear and arrows, mapped by
     // digitKeyAction and applied through the same state functions the pad and a tap use. See boardKeys.
@@ -207,7 +211,13 @@ internal fun SudokuGridBoard(
                                         else -> Modifier
                                     }
                                 )
-                                .clickable(enabled = interactive) { onSelect(i) },
+                                .clickable(enabled = interactive) {
+                                    when (squareTap(i, s.selected, armedDigit)) {
+                                        SquareTap.ENTER -> onEnter(i, armedDigit ?: 0, notesMode)
+                                        SquareTap.DESELECT -> onDeselect()
+                                        SquareTap.SELECT -> onSelect(i)
+                                    }
+                                },
                             contentAlignment = Alignment.Center,
                         ) {
                             val noted = s.visibleNotes(i)
@@ -264,17 +274,18 @@ internal fun SudokuGridBoard(
                     val remaining = 9 - s.cells.count { it == digit }
                     val at = s.selected
                     // In notes mode a key that is already pencilled on the selected cell is tinted.
-                    val pencilled = notesMode && at != null && s.hasNote(at, digit)
+                    val pencilled = armedDigit == digit || notesMode && at != null && s.hasNote(at, digit)
                     // Notes cannot go on a filled or given cell: the keys show it rather than do nothing.
                     val inert = notesMode && at != null && !s.canNote(at)
                     PadKey(
                         SudokuTeacher.pad(digit), highlight, glow, pulse,
                         fill = Color.Transparent,
-                        enabled = interactive && at != null && !inert,
+                        enabled = interactive && !inert,
                         onClick = {
                             // In notes mode the keys are dimmed and inert on a filled or given cell
                             // (above), so a refusal here is never silent.
                             if (at != null) onEnter(at, digit, notesMode)
+                            else armed = digit.takeIf { it != armedDigit }
                         },
                         // Through modifier, not fill: a key's fill is one colour. A used-up digit lies flat and thin, a pencilled one has an edge.
                         modifier = Modifier.alpha(if (inert) 0.35f else 1f).then(

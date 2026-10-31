@@ -1063,6 +1063,7 @@ the owner wants bad judgements allowed, and conflict display catches them). Plac
 from its peers' notes in the same state, so one undo restores both; erasing does not resurrect them.
 The notes mode is `rememberSaveable` in the board, not state. Storing them means owning which to retract when a
 piece is lifted, which is where the feature rots.
+Digit-first entry (#384): with no square selected a pad key arms its digit (`armed`, `rememberSaveable` in `SudokuGridBoard`, never state) and a square tap enters it, one state each; a selection beats it, and a tap on the selected square lets go (`squareTap`). The keyboard ignores it.
 Keyboard (web, or a hardware one): `puzzles/SudokuKeys.kt` maps a key to a `SudokuKeyAction` (digits, clear, arrows; pure, tested) and applies it through the pad's own `enter`/`withCell`/`toggleNote`, so notes, undo and peer-striking cannot differ; chords are ignored and a held digit is not repeated. The board's box takes focus (clicking a cell, or a hint opening, hands it back; on the web `focusCanvas` in `web/Main.kt` gives Compose's canvas DOM focus on load, so a link or a refresh takes keys without a click).
 
 **Verify by rendering, not reasoning.** Icons, motifs, crescents, pipe joints and crosses have

@@ -128,6 +128,7 @@ object Sudoku : PuzzleType {
         "Fill every square with a digit from 1 to 9.",
         "No digit may repeat within a row, a column or a 3x3 box.",
         "Tap a square, then tap a digit. Tap the digit again to clear it.",
+        "Or pick the digit first: with no square selected, tap a digit, then every square it goes in. Tap the selected square to let go of it, and the digit again to finish.",
         "Tap the pencil to take notes: while it is lit, a digit is pencilled small in the square " +
             "instead of placed. Placing a digit clears it from the notes of the squares it sees.",
         "Clashing digits are shown in red as you go.",
@@ -573,6 +574,7 @@ object Sudoku : PuzzleType {
             conflicts = s.conflicts(),
             interactive = interactive,
             onSelect = { onState(s.select(it)) },
+            onDeselect = { onState(withoutSelection(s)) },
             onEnter = { cell, digit, notesMode ->
                 // The keys are dimmed and inert where a note cannot go, so a refusal here is never silent.
                 val next = s.enter(cell, digit, notesMode)
