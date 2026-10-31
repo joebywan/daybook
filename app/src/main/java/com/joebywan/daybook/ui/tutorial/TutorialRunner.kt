@@ -58,7 +58,7 @@ import com.joebywan.daybook.ui.teach.rememberHintSession
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** The solve chime (a no-op when sound is off), so a finished step in a tutorial announces its new caption. */
+/** A confirmation (a no-op when sound is off): the unit blip for a hint or a walkthrough step reached, the win for Training's right answer and pass. */
 val LocalChime = staticCompositionLocalOf<() -> Unit> { {} }
 
 /**

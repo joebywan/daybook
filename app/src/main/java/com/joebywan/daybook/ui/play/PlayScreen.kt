@@ -9,6 +9,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.layout.heightIn
@@ -119,7 +120,11 @@ import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.LocalSolveCount
 import com.joebywan.daybook.ui.LocalUndoCount
+import com.joebywan.daybook.ui.SOLVE_WAVE_DELAY_MS
 import com.joebywan.daybook.ui.SOLVE_WAVE_MS
+import com.joebywan.daybook.ui.WIN_FREEZE_MS
+import com.joebywan.daybook.ui.WIN_THUMP_MS
+import com.joebywan.daybook.ui.winThump
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.teach.HintPanel
 import com.joebywan.daybook.ui.teach.WatchHint
@@ -317,6 +322,13 @@ fun PlayScreen(
         }
     }
 
+    // Counts moves, undos and solving moves for the boards' move feel (LocalMoveCount and its neighbours); not saved, so a
+    // rotation or a reopened board plays nothing.
+    var pushes by remember { mutableIntStateOf(0) }
+    var undos by remember { mutableIntStateOf(0) }
+    var solves by remember { mutableIntStateOf(0) }
+    val still = LocalReducedMotion.current
+
     LaunchedEffect(state.solved) {
         if (!state.solved) return@LaunchedEffect
         if (tutorialOffered == false) onTutorialOffered()
@@ -325,18 +337,45 @@ fun PlayScreen(
             // Asked before onSolved: the history must not yet contain this solve.
             praise = praiseFor(seconds, game.hints, game.state, game.log, game.taught)
             onSolved(seconds, game.hints)
-            // Once per solve (`recorded` survives recreation), so it cannot repeat on a rotation.
-            tones(Tones.pick(praise.winKind()))
-            haptics.success()
+            // Once per solve (`recorded` survives recreation), so it cannot repeat on a rotation. A move made here has the
+            // impact below; this is a solve whose screen was recreated before it was recorded.
+            if (solves == 0) {
+                tones(Tones.pick(praise.winKind()))
+                haptics.success()
+            }
         }
         hintSession.clear()
     }
 
-    // Counts moves, undos and solving moves for the boards' move feel (LocalMoveCount and its neighbours); not saved, so a
-    // rotation or a reopened board plays nothing.
-    var pushes by remember { mutableIntStateOf(0) }
-    var undos by remember { mutableIntStateOf(0) }
-    var solves by remember { mutableIntStateOf(0) }
+    // The win's impact, only on a move that solved here: a hit stop (the board already shows the move, state is not held),
+    // then the fanfare, the haptic and the first frame of the thump together. Read in the layer phase, so nothing recomposes
+    // or moves in layout. Under reduced motion the sound and the haptic still come, at once, with nothing moving.
+    var thump by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(solves) {
+        if (solves == 0) return@LaunchedEffect
+        fun impact() {
+            tones(Tones.pick(praise.winKind()))
+            haptics.thump()
+        }
+        if (still) {
+            impact()
+            return@LaunchedEffect
+        }
+        delay(WIN_FREEZE_MS.toLong())
+        var start = -1L
+        var t = 0f
+        while (t < 1f) {
+            withFrameNanos { now ->
+                // Started a frame ago, so the frame that carries the sound is already on its way down.
+                if (start < 0) {
+                    start = now - 16_000_000L
+                    impact()
+                }
+                t = (now - start) / (WIN_THUMP_MS * 1_000_000f)
+                thump = winThump(t)
+            }
+        }
+    }
     // Saved: the board's squares fade in when it first shows, not again on a rotation.
     var arrived by rememberSaveable(initial) { mutableStateOf(false) }
     LaunchedEffect(initial) {
@@ -345,11 +384,10 @@ fun PlayScreen(
     }
     // The finished frame waits for the solve wave to cross the board, when a move solved it here; saved, so a rotation
     // shows it at once.
-    val still = LocalReducedMotion.current
     var revealed by rememberSaveable(initial) { mutableStateOf(false) }
     LaunchedEffect(finished) {
         if (finished && !revealed) {
-            if (solves > 0 && !still) delay(SOLVE_WAVE_MS.toLong())
+            if (solves > 0 && !still) delay((SOLVE_WAVE_DELAY_MS + SOLVE_WAVE_MS).toLong())
             revealed = true
         }
     }
@@ -369,10 +407,7 @@ fun PlayScreen(
             step == PlayLog.WRONG.toString() ||
                 (next is PointersState && prev is PointersState && next.bumps.size > prev.bumps.size) ||
                 (next is MinesState && prev is MinesState && next.bumps.size > prev.bumps.size) -> haptics.bump()
-            step.isNotEmpty() -> {
-                haptics.tick()
-                tones(Tones.pick(Tones.Kind.TICK))
-            }
+            step.isNotEmpty() -> haptics.tick()
         }
     }
 
@@ -549,7 +584,9 @@ fun PlayScreen(
         }
 
         Box(
-            Modifier.onGloballyPositioned { boardTop = it.positionInWindow().y },
+            Modifier
+                .onGloballyPositioned { boardTop = it.positionInWindow().y }
+                .graphicsLayer { translationY = thump * WIN_THUMP_DEPTH.toPx() },
             contentAlignment = Alignment.Center,
         ) {
             CompositionLocalProvider(
@@ -788,6 +825,7 @@ private const val COUNT_MS = 600
 private const val STAMP_FROM = 1.3f
 
 /** The side panel's width in a wide window: the title, clock, hint and three tool buttons, with the walkthrough offer on one line. */
+private val WIN_THUMP_DEPTH = 10.dp
 private val SidePanel = 360.dp
 
 /** About what the title, clock and toolbar take from a stacked layout's height; only used to choose between the two. */

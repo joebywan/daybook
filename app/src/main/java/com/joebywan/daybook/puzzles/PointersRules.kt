@@ -3,6 +3,8 @@ package com.joebywan.daybook.puzzles
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import kotlinx.serialization.Serializable
+import kotlin.math.PI
+import kotlin.math.sin
 
 /**
  * A Pointers board: [arrows] are paths of orthogonally adjacent squares on a [width] x [height] grid, each listed
@@ -105,6 +107,30 @@ internal object PointersLogic {
 
     /** The squares from just past the head to the edge, nearest first. */
     fun ray(arrow: List<Int>, width: Int, height: Int): List<Int> = ray(arrow.last(), dirOf(arrow, width), width, height)
+
+    /** The share of a bump's run at which the arrow lands on its blocker: everything that answers the hit waits for it. */
+    const val BUMP_CONTACT = 0.13f
+
+    /** Squares an arrow travels to touch a blocker [gap] bare squares past its head (its tip and the blocker's half width). */
+    fun reachOf(gap: Int): Float = gap + 0.54f
+
+    /** How far along its line an arrow is at [t] (0..1) through a bump: speeding up to [reach], then snapped back in half the rest. */
+    fun lunge(t: Float, reach: Float): Float {
+        if (t <= 0f || t >= 1f) return 0f
+        if (t < BUMP_CONTACT) return reach * (t / BUMP_CONTACT) * (t / BUMP_CONTACT)
+        val back = (1f - (t - BUMP_CONTACT) / ((1f - BUMP_CONTACT) / 2)).coerceAtLeast(0f)
+        return reach * back * back
+    }
+
+    /** How far, in squares, the blocker is knocked at [t]: nothing before contact, then a small damped swing. */
+    fun knock(t: Float): Float {
+        if (t <= BUMP_CONTACT || t >= 1f) return 0f
+        val u = (t - BUMP_CONTACT) / (1f - BUMP_CONTACT)
+        return 0.2f * sin(4 * PI.toFloat() * u) * (1f - u) * (1f - u)
+    }
+
+    /** How far through breaking the lost heart is at [t]: 0, still whole, until contact. */
+    fun heartBreak(t: Float): Float = ((t - BUMP_CONTACT) / (1f - BUMP_CONTACT)).coerceIn(0f, 1f)
 
     /** The squares from just past [head] to the edge going [d], nearest first. */
     fun ray(head: Int, d: Int, width: Int, height: Int): List<Int> {

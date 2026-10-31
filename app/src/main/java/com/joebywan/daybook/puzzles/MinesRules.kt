@@ -4,6 +4,8 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.neighbours8
 import kotlinx.serialization.Serializable
+import kotlin.math.PI
+import kotlin.math.sin
 
 /**
  * A Mines board (`docs/MINES_SPEC.md`). Squares are numbered in reading order. [mines] is the board: '1' a mine, '0'
@@ -94,6 +96,22 @@ data class MinesState(
  * is over a list.
  */
 internal object MinesLogic {
+    /** Squares from a mine hit beyond which its blast moves nothing. */
+    const val BLAST_REACH = 3.5f
+
+    /**
+     * How far, in squares, a square [distance] from the mine is pushed away from it at [t] (0..1) through the blast: reached later
+     * further out, weaker with the square of the distance, sprung back by the end. Geometry alone: it cannot tell a mine from a safe square.
+     */
+    fun blastPush(t: Float, distance: Float): Float {
+        if (distance >= BLAST_REACH || t <= 0f || t >= 1f) return 0f
+        val near = 1f - distance / BLAST_REACH
+        val arrive = 0.3f * (1f - near)
+        if (t <= arrive) return 0f
+        val u = (t - arrive) / (1f - arrive)
+        return 0.6f * near * near * sin(3 * PI.toFloat() * u) * (1f - u) * (1f - u)
+    }
+
 
     const val HIDDEN = '.'
     const val OPEN = 'o'

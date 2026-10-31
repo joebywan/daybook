@@ -14,14 +14,15 @@ import kotlin.random.Random
  * default one: never a generator's `Rng`, so sound cannot move a board. Android and the web play identical samples.
  */
 object Tones {
-    /** Each kind's size is its variants, except [WHEEL], whose are the steps of the scale. */
-    enum class Kind(val count: Int) { TICK(3), UNIT(3), WHEEL(7), WIN(3), BIG_WIN(3), ALL_TIERS(3) }
+    /** Each kind's size is its variants, except [WHEEL] and [STEP], whose are the steps of their scales. */
+    enum class Kind(val count: Int) { UNIT(3), STEP(8), WHEEL(7), WIN(3), BIG_WIN(3), ALL_TIERS(3) }
 
     const val SAMPLE_RATE = 44_100
 
     val COUNT: Int = Kind.entries.sumOf { it.count }
 
     // Notes are MIDI numbers: 60 is C4, each one a semitone.
+    private const val D3 = 50
     private const val G3 = 55
     private const val A3 = 57
     private const val C4 = 60
@@ -41,6 +42,9 @@ object Tones {
     // C major pentatonic: a letter added on the Word Wheel, one step each. Seven letters is the biggest wheel.
     private val SCALE = intArrayOf(C5, C5 + 2, E5, G5, A5, C6, D6)
 
+    // The phrase a board's finished units climb: C major pentatonic below the win, whose first note (G5) is this scale's next.
+    private val PHRASE = intArrayOf(C4, C4 + 2, C4 + 4, C4 + 7, C4 + 9, C5, C5 + 2, E5)
+
     // A win's variants: one tune, its lead a different pulse width and the landing chord broken a different way.
     private val LEAD = doubleArrayOf(0.25, 0.125, 0.5)
     private val BROKEN = arrayOf(intArrayOf(0, 1, 2), intArrayOf(0, 2, 1), intArrayOf(2, 1, 0))
@@ -56,26 +60,39 @@ object Tones {
     /** The Word Wheel's tone for the [step]th letter of a word (0 the first); a word cannot pass the top of the scale. */
     fun wheel(step: Int): Int = index(Kind.WHEEL, step.coerceIn(0, Kind.WHEEL.count - 1))
 
+    /**
+     * Where a board stands in its phrase, from what the rules show alone: [done] of its [total] units finished. The bottom note
+     * for the first unit and the top for the last one that does not also solve the board (the win has that one), whatever the
+     * count, so it never leaves the scale; a big board repeats notes, an undo steps back down.
+     */
+    fun phraseStep(done: Int, total: Int): Int {
+        val top = Kind.STEP.count - 1
+        return if (total <= 2) 0 else ((done - 1).coerceAtLeast(0) * top / (total - 2)).coerceAtMost(top)
+    }
+
+    /** The phrase's tone for a [phraseStep]. */
+    fun step(step: Int): Int = index(Kind.STEP, step.coerceIn(0, Kind.STEP.count - 1))
+
     /** Bank entry [i], in -1..1 at [SAMPLE_RATE]. */
     fun samples(i: Int): FloatArray {
         var n = i
         val kind = Kind.entries.first { k -> (n < k.count).also { if (!it) n -= k.count } }
         return when (kind) {
-            Kind.TICK -> Chip(0.028).apply {
-                // A speck of noise then a falling blip, soft enough for hundreds of moves. Pitch is the whole variant.
-                noise(0.0, 0.004, clock = 22_000.0, rms = 0.012)
-                pulse(0.004, 0.024, intArrayOf(intArrayOf(C6, D6, E6)[n]), 0.25, rms = 0.03, every = 0.006, sweep = -40.0)
-            }
             Kind.UNIT -> Chip(0.17).apply {
                 // Up a fourth or fifth, the second note sliding up a little: the coin in the box.
                 val (low, high) = arrayOf(G5 to C6, A5 to D6, C6 to G6)[n]
                 pulse(0.0, 0.05, intArrayOf(low), 0.5, rms = 0.09, every = 0.02)
                 pulse(0.05, 0.12, intArrayOf(high), 0.25, rms = 0.1, every = 0.008, sweep = 10.0)
             }
+            Kind.STEP -> Chip(0.15).apply {
+                // One pitch, wide then thin, sliding up a hair: the coin's shape, on a note of the phrase.
+                pulse(0.0, 0.04, intArrayOf(PHRASE[n]), 0.5, rms = 0.09, every = 0.02)
+                pulse(0.04, 0.11, intArrayOf(PHRASE[n]), 0.25, rms = 0.1, every = 0.008, sweep = 6.0)
+            }
             Kind.WHEEL -> Chip(0.12).apply { pulse(0.0, 0.12, intArrayOf(SCALE[n]), 0.25, rms = 0.075, every = 0.01) }
             Kind.WIN -> Chip(0.7).apply {
                 rise(n)
-                triangle(0.0, 0.2, G3)
+                triangle(0.05, 0.15, G3)
                 drum(0.21)
                 land(0.21, 0.49, chord(n, C6, E6, G6), n, every = 0.035)
                 triangle(0.21, 0.42, C4)
@@ -83,7 +100,7 @@ object Tones {
             Kind.BIG_WIN -> Chip(1.1).apply {
                 rise(n)
                 run(n, intArrayOf(G6, E6, G6, A6), 0.21)
-                triangle(0.0, 0.2, C4)
+                triangle(0.05, 0.15, C4)
                 triangle(0.21, 0.13, G3)
                 triangle(0.35, 0.13, A3)
                 drum(0.21)
@@ -98,7 +115,7 @@ object Tones {
                 for ((k, note) in intArrayOf(E5, G5, C6, E6, C6, E6, F6, G6, A6).withIndex()) {
                     pulse(k * 0.07, 0.065, intArrayOf(note), 0.5, rms = 0.05, every = 0.02)
                 }
-                triangle(0.0, 0.2, C4)
+                triangle(0.05, 0.15, C4)
                 triangle(0.21, 0.14, G3)
                 triangle(0.35, 0.14, A3)
                 triangle(0.49, 0.13, G3)
@@ -124,8 +141,12 @@ object Tones {
 
     private fun hz(note: Double): Double = 440.0 * 2.0.pow((note - 69) / 12)
 
-    /** The tune every win opens with. */
-    private fun Chip.rise(variant: Int) = run(variant, intArrayOf(G5, C6, E6), 0.0)
+    /** The tune every win opens with, on a kick: a bass note falling fast under a click of noise, the board's thump heard. */
+    private fun Chip.rise(variant: Int) {
+        triangle(0.0, 0.09, D3, every = 0.006, peak = 0.16, sweep = -220.0)
+        noise(0.0, 0.012, clock = 6_000.0, rms = 0.03, every = 0.001)
+        run(variant, intArrayOf(G5, C6, E6), 0.0)
+    }
 
     private fun Chip.run(variant: Int, notes: IntArray, from: Double) {
         for ((k, note) in notes.withIndex()) pulse(from + k * 0.07, 0.065, intArrayOf(note), LEAD[variant], rms = 0.11, every = 0.02)
@@ -169,14 +190,13 @@ object Tones {
         }
 
         /** The chips' triangle: 32 steps a cycle through sixteen levels, its volume fixed on the real ones; here it decays as a bass. */
-        fun triangle(at: Double, seconds: Double, note: Int, every: Double = 0.05) {
-            val step = hz(note.toDouble()) / SAMPLE_RATE
+        fun triangle(at: Double, seconds: Double, note: Int, every: Double = 0.05, peak: Double = 0.08, sweep: Double = 0.0) {
             var phase = 0.0
             voice(at, seconds) { u, _ ->
-                phase = (phase + step) % 1.0
+                phase = (phase + hz(note + sweep * u) / SAMPLE_RATE) % 1.0
                 val k = (phase * 32).toInt()
-                val level = if (k < 16) 15 - k else k - 16
-                0.08 * volume(u, every) * (level / 7.5 - 1)
+                val step = if (k < 16) 15 - k else k - 16
+                peak * volume(u, every) * (step / 7.5 - 1)
             }
         }
 

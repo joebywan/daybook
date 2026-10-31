@@ -583,7 +583,7 @@ private fun vibratePattern(): Unit = js("navigator.vibrate && navigator.vibrate(
 /** The game's buzzes, if [enabled], through `navigator.vibrate`: short, since a phone's motor is loud. */
 @Composable
 fun rememberHaptics(enabled: Boolean): Haptics = remember(enabled) {
-    if (!enabled) Haptics.None else Haptics(tick = { vibrate(8) }, bump = { vibrate(50) }, success = { vibratePattern() })
+    if (!enabled) Haptics.None else Haptics(tick = { vibrate(8) }, bump = { vibrate(50) }, success = { vibratePattern() }, thump = { vibrate(70) })
 }
 
 /** The web has no store to rate in, so the link is a star on GitHub. */

@@ -278,6 +278,8 @@ fun rememberHaptics(enabled: Boolean): Haptics {
                 tick = { view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK) },
                 bump = { view.performHapticFeedback(if (modern) HapticFeedbackConstants.REJECT else HapticFeedbackConstants.LONG_PRESS) },
                 success = { view.performHapticFeedback(if (modern) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY) },
+                // The heaviest constant every version has; a win's impact.
+                thump = { view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS) },
             )
         }
     }
