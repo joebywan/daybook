@@ -76,17 +76,17 @@ internal class TentsInks private constructor(
     val met: ArcadeFill,
     val tent: Color,
     val tentDoor: Color,
+    /** How much of [grass] shows on a square a tent sprouted, over the plain square. */
+    val sprouted: Float,
 ) {
     companion object {
-        /** How much of [grass] shows on a square a tent sprouted, over the plain square. */
-        const val SPROUTED = 0.42f
-
         val Light = TentsInks(
             tree = ArcadeFill(Color(0xFF0E9F6E), Color(0xFF046C4E), Color(0xFFF0FFC2)),
             grass = ArcadeFill(Color(0xFFC6F24E), Color(0xFF7EDB3A), Color(0xFF0B4F2E)),
             met = ArcadeFill(Color(0xFF087F5B), Color(0xFF046C4E), Color.White),
             tent = Color(0xFF21145F),
             tentDoor = Color(0xFFFFF4C2),
+            sprouted = 0.42f,
         )
         val Dark = TentsInks(
             tree = ArcadeFill(Color(0xFF00E6A0), Color(0xFF00A67E), Color(0xFF05281F)),
@@ -94,6 +94,7 @@ internal class TentsInks private constructor(
             met = ArcadeFill(Color(0xFF00E6A0), Color(0xFF00A67E), Color(0xFF05281F)),
             tent = Color(0xFF21145F),
             tentDoor = Color(0xFFFFF4C2),
+            sprouted = 0.72f, // dark's deep square swallows the green at less
         )
 
         fun of(scheme: ColorScheme) = if (BoardHues.isDark(scheme)) Dark else Light
@@ -295,7 +296,7 @@ object Tents : PuzzleType {
                         drawRoundRect(a.error, at, tile, corner)
                         val ring = u * 0.07f
                         drawRoundRect(
-                            a.errorInk, at + Offset(ring / 2, ring / 2), Size(tile.width - ring, tile.height - ring), corner, style = Stroke(ring),
+                            a.errorInk, at + Offset(ring / 2, ring / 2), Size(tile.width - ring, tile.height - ring), CornerRadius(corner.x - ring / 2), style = Stroke(ring),
                         )
                         drawTent(x, y, u, a.errorInk, a.error)
                     }
@@ -310,7 +311,7 @@ object Tents : PuzzleType {
                     seen[i] == TentsLogic.GRASS -> {
                         // Sprouted round a tent, not the player's own note: the same grass, paler and finer.
                         drawRoundRect(a.square, at, tile, corner)
-                        drawRoundRect(inks.grass.brush(at, tile), at, tile, corner, alpha = TentsInks.SPROUTED)
+                        drawRoundRect(inks.grass.brush(at, tile), at, tile, corner, alpha = inks.sprouted)
                         drawGrass(x, y, u, inks.grass.ink, 0.05f)
                     }
                     i == overlay.cursor -> drawRoundRect(a.selected.brush(at, tile), at, tile, corner)
@@ -334,7 +335,7 @@ object Tents : PuzzleType {
             val ink = (if (bad) a.errorInk else if (met) inks.met.ink else a.givenInk).copy(alpha = alpha)
             if (bad) {
                 val ring = u * 0.06f
-                drawRoundRect(ink, chipAt + Offset(ring / 2, ring / 2), Size(chip.width - ring, chip.height - ring), corner, style = Stroke(ring))
+                drawRoundRect(ink, chipAt + Offset(ring / 2, ring / 2), Size(chip.width - ring, chip.height - ring), CornerRadius(corner.x - ring / 2), style = Stroke(ring))
             }
             if (met) {
                 val w = maxOf(1.5f, u * 0.05f)
@@ -355,7 +356,7 @@ object Tents : PuzzleType {
         overlay.cursor?.let { i ->
             val at = tileAt(i)
             val w = u * 0.1f
-            drawRoundRect(a.selectedEdge, at + Offset(w / 2, w / 2), Size(tile.width - w, tile.height - w), corner, style = Stroke(w))
+            drawRoundRect(a.selectedEdge, at + Offset(w / 2, w / 2), Size(tile.width - w, tile.height - w), CornerRadius(corner.x - w / 2), style = Stroke(w))
         }
 
         if (lit) {

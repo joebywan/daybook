@@ -27,7 +27,7 @@ class TentsInksTest {
             atLeast(3f, inks.tent, a.selected.to, "$name tent, second stop")
             atLeast(3f, inks.tentDoor, inks.tent, "$name door")
             for (stop in listOf(inks.grass.from, inks.grass.to)) {
-                atLeast(3f, inks.grass.ink, stop.copy(alpha = TentsInks.SPROUTED).compositeOver(a.square), "$name sprouted grass")
+                atLeast(3f, inks.grass.ink, stop.copy(alpha = inks.sprouted).compositeOver(a.square), "$name sprouted grass")
             }
         }
     }
