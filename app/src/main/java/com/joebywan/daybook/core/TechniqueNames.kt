@@ -158,6 +158,7 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "clue" to "a word from its clue",
         "through" to "a tile only so many words reach",
         "length" to "a length only so many words fit",
+        "all-tiles" to "every tile's number taken together",
     ),
     "wordwheel" to linkedMapOf(
         "clue" to "a word from its clue",

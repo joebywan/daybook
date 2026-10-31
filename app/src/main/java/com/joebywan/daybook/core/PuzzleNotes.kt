@@ -144,8 +144,8 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Stuck on a clue? Fill its crossings first.",
     ),
     "dwindle" to listOf(
-        "A tile with one use left has one word still to come through it.",
-        "Corners have the fewest neighbours, so few words can pass through them.",
+        "One use left means one word still to come through that tile.",
+        "Corners have few neighbours, so few words pass through them.",
         "Tiles never fall, so a letter's neighbours stay its neighbours.",
         "Each goal word can be spelled only one way on the full board.",
         "Bonus words use nothing up, so try them freely.",

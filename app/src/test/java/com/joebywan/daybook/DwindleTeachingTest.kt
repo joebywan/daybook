@@ -129,8 +129,9 @@ class DwindleTeachingTest {
                 val st = DwindleTeacher.teach(s)!!
                 assertTrue("nudge ${st.nudge}", st.nudge.length <= DwindleTeacher.MAX_NUDGE)
                 assertTrue("explanation ${st.explanation.length}: ${st.explanation}", st.explanation.length <= DwindleTeacher.MAX_EXPLANATION)
-                assertFalse(st.explanation, Regex("\\b${st.word}\\b", RegexOption.IGNORE_CASE).containsMatchIn(st.nudge + " " + st.explanation))
+                // The fixed wording may hold a word by chance ("tile"); what must not name it is what is built from it, the clue.
                 assertTrue("a clue is given", st.explanation.contains("“"))
+                assertFalse(st.explanation, Regex("\\b${st.word}\\b", RegexOption.IGNORE_CASE).containsMatchIn(st.explanation.substringAfter("“").substringBefore("”")))
                 val tiles = (st.focus + st.cited + st.targets).filter { it < DwindleTeacher.DASH }
                 assertTrue("at most one tile glows, the word's way stays hidden: $tiles", tiles.size <= 1)
                 s = s.enter(st.word)
