@@ -209,10 +209,9 @@ class WordWheelTeachingTest {
         assertFalse(frames[2].accepts!!(spell(s1, "rain")))
         assertFalse(frames[2].accepts!!(spell(s1, "bar")))
         assertEquals(s2, frames[3].state)
-        val s3 = spell(s2, "ban")
+        val s3 = spell(s2, "bran")
         assertTrue(frames[3].accepts!!(s3))
         assertFalse(frames[3].accepts!!(spell(s2, "rain")))
-        assertFalse(frames[3].accepts!!(spell(s2, "bin")))
         assertEquals(s3, frames[4].state)
         assertTrue(frames[4].freePlay)
         frames.forEach { assertTrue(it.caption, it.caption.length <= 170) }
@@ -225,9 +224,9 @@ class WordWheelTeachingTest {
         assertEquals("only BRAIN uses every letter", listOf("brain"), fitting(s0, 0))
         val s1 = s0.enter("brain")
         assertEquals("only BARN has R third", listOf("barn"), fitting(s1, 1))
-        assertTrue("BAN is a bonus word", WheelWords.isWord("ban") && s0.slots.none { it.word == "ban" })
-        val s3 = s1.enter("barn").enter("ban")
-        assertEquals(listOf("ban"), s3.bonus)
+        assertTrue("BRAN is a bonus word", WheelWords.isWord("bran") && s0.slots.none { it.word == "bran" })
+        val s3 = s1.enter("barn").enter("bran")
+        assertEquals(listOf("bran"), s3.bonus)
         assertEquals("only RAIN has I third", listOf("rain"), fitting(s3, 2))
     }
 

@@ -63,6 +63,9 @@ data class WordWheelState(
         return out
     }
 
+    /** The shortest word this board takes: its shortest slot, so a board with no three-letter slot refuses three letters. */
+    val shortestWord: Int get() = slots.minOf { it.word.length }
+
     /** The board once [word] is entered: a grid word fills its slot, a new real word joins the bonus words, anything else changes nothing. */
     fun enter(word: String): WordWheelState = when (WordWheelLogic.judge(this, word)) {
         is WheelEntry.Fills -> copy(found = found + word, moves = moves + 1)
@@ -84,7 +87,7 @@ sealed interface WheelEntry {
 
     data object NotAWord : WheelEntry
 
-    /** Fewer than three letters. */
+    /** Shorter than the board's shortest slot ([WordWheelState.shortestWord]). */
     data object TooShort : WheelEntry
 
     /** Needs a letter the wheel has not got (or more copies of one); a swipe never makes this, a keyboard can. */
@@ -191,9 +194,10 @@ internal object WordWheelLogic {
     }
 
     fun judge(s: WordWheelState, word: String): WheelEntry {
-        if (word.length < 3) return WheelEntry.TooShort
-        if (!WheelWords.spellable(word, s.wheel)) return WheelEntry.NotOnWheel
+        // First: a saved game can hold a bonus word shorter than the board now takes.
         if (word in s.found || word in s.bonus) return WheelEntry.Found
+        if (word.length < s.shortestWord) return WheelEntry.TooShort
+        if (!WheelWords.spellable(word, s.wheel)) return WheelEntry.NotOnWheel
         val slot = s.slots.indexOfFirst { it.word == word }
         if (slot >= 0) return WheelEntry.Fills(slot)
         return if (WheelWords.isWord(word)) WheelEntry.Bonus else WheelEntry.NotAWord

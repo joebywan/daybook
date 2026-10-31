@@ -68,7 +68,9 @@ class MiniTeachingTest {
             val slot = MiniLogic.slots(s.size, s.answer)[step.slot]
             val word = MiniLogic.spelled(s.answer, slot)
             // Tap 1: the slot and its word's second clue; nothing read off the answer but which clue to quote.
-            assertEquals("Another way in: ${slot.name}, \"${MiniLogic.secondClueOf(word)}\".", step.nudge)
+            // A word showing its hard clue offers the plain one instead.
+            val other = if (s.clues[step.slot] == MiniLogic.clueOf(word)) MiniLogic.secondClueOf(word) else MiniLogic.clueOf(word)
+            assertEquals("Another way in: ${slot.name}, \"$other\".", step.nudge)
             // Tap 2: the letter, saying openly that it read the answer.
             assertTrue(step.explanation, "reads the answer" in step.explanation && step.letter.uppercase() in step.explanation)
             // The slot is chosen from the board alone: a different stored answer names the same slot.

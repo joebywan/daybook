@@ -68,7 +68,7 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
         "4 people, 2 things each, clues link things",
         "5 people, 2 things each, either-or clues",
     ),
-    "mini" to listOf("5x5 grid", "6x6 grid", "7x7 grid"),
+    "mini" to listOf("5x5 grid, plain clues", "6x6 grid, many across clues indirect", "7x7 grid, most clues indirect"),
 )
 
 /** The three lines for [puzzleId], Standard first; empty for an unknown id. */
