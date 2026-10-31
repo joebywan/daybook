@@ -37,6 +37,8 @@ import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.MinesLogic
 import com.joebywan.daybook.puzzles.Mines
+import com.joebywan.daybook.puzzles.Dwindle
+import com.joebywan.daybook.puzzles.DwindleLogic
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.WordWheelLogic
 import com.joebywan.daybook.puzzles.Tents
@@ -175,6 +177,10 @@ class FallbackTest {
     /** [WordWheelLogic.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
     @Test
     fun `wordwheel proves every daily board of a year on every tier`() = assertYearProved(WordWheel) { seed, d -> WordWheelLogic.generateVerified(seed, d) }
+
+    /** [DwindleLogic.generateVerified] returns a board only when it has its tier's words and sharing and every goal has exactly one way, so no order can get stuck. */
+    @Test
+    fun `dwindle proves every daily board of a year on every tier`() = assertYearProved(Dwindle) { seed, d -> DwindleLogic.generateVerified(seed, d) }
 
     /** [SandLogic.generateVerified] returns a board only when the search found a sorting road and the naive player does not always sort it. */
     @Test

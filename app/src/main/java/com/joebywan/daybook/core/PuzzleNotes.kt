@@ -143,6 +143,13 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Tap a square twice to read the clue going the other way.",
         "Stuck on a clue? Fill its crossings first.",
     ),
+    "dwindle" to listOf(
+        "One use left means one word still to come through that tile.",
+        "Corners have few neighbours, so few words pass through them.",
+        "Tiles never fall, so a letter's neighbours stay its neighbours.",
+        "Each goal word can be spelled only one way on the full board.",
+        "Bonus words use nothing up, so try them freely.",
+    ),
     "wordwheel" to listOf(
         "The longest slot always uses every letter on the wheel.",
         "A crossing letter cuts a slot down to a handful of words.",
