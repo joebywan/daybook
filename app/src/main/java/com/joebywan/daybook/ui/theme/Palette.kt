@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.sp
 
 // Colours and type; [DaybookTheme] picks the scheme, and both builds compile this file as it stands.
 
-// Arcade trial (docs/arcade-trial/): indigo page, one vivid accent per scheme. Each value measured in ArcadeReportTest.
+// Arcade: indigo page, one vivid accent per scheme. Each value measured in ArcadeReportTest.
 internal val DarkScheme = darkColorScheme(
     primary = Color(0xFF00E5FF),
     onPrimary = Color(0xFF120D33),

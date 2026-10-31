@@ -20,7 +20,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * The Arcade trial's measured table, written to docs/arcade-trial/REPORT.txt (and stdout). It reports and never fails: the
+ * The Arcade trial's measured table, written to build/reports/arcade-trial/REPORT.txt (and stdout). It reports and never fails: the
  * trial wants the numbers, failures included. A "FAIL" line is a real failure of the threshold named on it.
  */
 class ArcadeReportTest {
@@ -122,8 +122,8 @@ class ArcadeReportTest {
         print(out)
         File(System.getProperty("user.dir")).let { d ->
             val root = if (File(d, "docs").exists()) d else d.parentFile
-            File(root, "docs/arcade-trial").mkdirs()
-            File(root, "docs/arcade-trial/REPORT.txt").writeText(out.toString())
+            File(root, "build/reports/arcade-trial").mkdirs()
+            File(root, "build/reports/arcade-trial/REPORT.txt").writeText(out.toString())
         }
     }
 }
