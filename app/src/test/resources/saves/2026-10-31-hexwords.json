@@ -1,0 +1,144 @@
+[
+  {
+    "key": "hexwords|STANDARD|3691842536428275113",
+    "savedAt": 1792000000000,
+    "game": {
+      "state": {
+        "type": "com.joebywan.daybook.puzzles.HexwordsState",
+        "rows": [
+          3,
+          4,
+          5,
+          4,
+          3
+        ],
+        "letters": "jaysjsecotepatpintw",
+        "target": 19,
+        "taken": [
+          {
+            "word": "jay",
+            "path": [
+              0,
+              1,
+              2
+            ]
+          }
+        ],
+        "moves": 1
+      },
+      "history": [
+        {
+          "type": "com.joebywan.daybook.puzzles.HexwordsState",
+          "rows": [
+            3,
+            4,
+            5,
+            4,
+            3
+          ],
+          "letters": "jaysjsecotepatpintw",
+          "target": 19
+        }
+      ],
+      "hints": 1,
+      "seconds": 75,
+      "log": "hm"
+    }
+  },
+  {
+    "key": "hexwords|HARD|9196428854543339911",
+    "savedAt": 1792000000000,
+    "game": {
+      "state": {
+        "type": "com.joebywan.daybook.puzzles.HexwordsState",
+        "rows": [
+          5,
+          6,
+          7,
+          6,
+          5
+        ],
+        "letters": "bcdzoaiuscotnduanmcdeegeherni",
+        "target": 42,
+        "taken": [
+          {
+            "word": "bcd",
+            "path": [
+              0,
+              1,
+              2
+            ]
+          }
+        ],
+        "moves": 1
+      },
+      "history": [
+        {
+          "type": "com.joebywan.daybook.puzzles.HexwordsState",
+          "rows": [
+            5,
+            6,
+            7,
+            6,
+            5
+          ],
+          "letters": "bcdzoaiuscotnduanmcdeegeherni",
+          "target": 42
+        }
+      ],
+      "hints": 1,
+      "seconds": 75,
+      "log": "hm"
+    }
+  },
+  {
+    "key": "hexwords|EXPERT|7605240730397343679",
+    "savedAt": 1792000000000,
+    "game": {
+      "state": {
+        "type": "com.joebywan.daybook.puzzles.HexwordsState",
+        "rows": [
+          5,
+          6,
+          7,
+          8,
+          7,
+          6,
+          5
+        ],
+        "letters": "bszatulamyolylaridklpcovmgyykhieupnrameecilr",
+        "target": 66,
+        "taken": [
+          {
+            "word": "bsz",
+            "path": [
+              0,
+              1,
+              2
+            ]
+          }
+        ],
+        "moves": 1
+      },
+      "history": [
+        {
+          "type": "com.joebywan.daybook.puzzles.HexwordsState",
+          "rows": [
+            5,
+            6,
+            7,
+            8,
+            7,
+            6,
+            5
+          ],
+          "letters": "bszatulamyolylaridklpcovmgyykhieupnrameecilr",
+          "target": 66
+        }
+      ],
+      "hints": 1,
+      "seconds": 75,
+      "log": "hm"
+    }
+  }
+]

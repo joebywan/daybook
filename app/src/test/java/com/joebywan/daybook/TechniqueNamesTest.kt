@@ -63,6 +63,7 @@ class TechniqueNamesTest {
         "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
         "whoswho" to WhosWhoTeacher.TECHNIQUES,
         "mini" to MiniTeacher.TECHNIQUES,
+        "hexwords" to com.joebywan.daybook.puzzles.HexwordsTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 
