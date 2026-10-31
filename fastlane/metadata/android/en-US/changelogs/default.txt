@@ -1,6 +1,2 @@
-- New sounds as you play, with rising tones in Word Wheel.
-- Bigger wins: a rainbow on every solve, and a special show for finishing all three tiers of a puzzle.
-- Crossword: less direct clues on Hard and Expert; red boxes wait until the grid is full.
-- Word Wheel: words shorter than the board's shortest slot aren't taken; tap the bonus line for the full A-Z list.
-- Lexicon: Enter is now on the right.
-- Nonogram: clearer help wording.
+- A brighter new look: Arcade colours in light and dark, with vivid tiles on Home.
+- Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents and Word Wheel are redrawn to match; the other boards pick up the new colours and will follow.

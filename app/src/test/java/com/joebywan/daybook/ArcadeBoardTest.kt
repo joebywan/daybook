@@ -57,6 +57,8 @@ class ArcadeBoardTest {
                 assertTrue("right and present are $apart apart in the worst vision", apart > 10.0)
             }
         }
+    }
+
     @Test fun `Nonogram's filled squares stand off an empty one at every step of the blend, and finished clues read`() {
         for ((b, fills) in listOf(ArcadeBoard.Light to NONOGRAM_FILLS_LIGHT, ArcadeBoard.Dark to NONOGRAM_FILLS_DARK)) {
             for ((from, to) in fills) for (i in 0..10) {
@@ -65,6 +67,8 @@ class ArcadeBoardTest {
         }
         readsOn(NONOGRAM_DONE_LIGHT, "finished clue, light")
         readsOn(NONOGRAM_DONE_DARK, "finished clue, dark")
+    }
+
     @Test fun `word wheel's swipe path stands on its well`() {
         for ((name, b) in listOf("light" to ArcadeBoard.Light, "dark" to ArcadeBoard.Dark)) {
             val well = WordWheel.wheelWell(b)

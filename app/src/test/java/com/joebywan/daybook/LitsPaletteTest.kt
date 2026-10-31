@@ -47,7 +47,7 @@ class LitsPaletteTest {
     fun `pieces are clear of the surface, the unshaded square and the in-progress tan in both schemes`() {
         val inProgress = Color(Lits.accent)
         for (s in listOf(LightScheme, DarkScheme)) {
-            for (other in listOf(s.background, s.surface, s.surfaceVariant, inProgress)) {
+            for (other in listOf(s.background, s.surface, Lits.unshaded(s), inProgress)) {
                 for (c in colours) assertTrue("a piece sits on $other: ${apart(c, other)}", apart(c, other) >= MIN_CLEAR)
             }
         }

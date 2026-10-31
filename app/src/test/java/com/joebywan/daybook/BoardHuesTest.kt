@@ -75,7 +75,7 @@ class BoardHuesTest {
     }
 
     @Test fun onFillPicksReadableText() {
-        assertEquals(Color(0xFF1B2F29), BoardHues.onFill(Color.White)) // light fill: the theme ink
+        assertEquals(Color(0xFF21145F), BoardHues.onFill(Color.White)) // light fill: the theme ink
         assertEquals(Color.White, BoardHues.onFill(Color.Black))
         // Lexicon's green fails ink (4.3) and white (3.2): only black reaches 4.5.
         val green = Color(0xFF4E9F6C)

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -1063,6 +1064,9 @@ object Lits : PuzzleType {
      * Hue is only half of it: the letter is *also* written on the square, in [BoardHues.onFill] for its fill, so a
      * player who cannot separate two of these hues reads the glyph instead.
      */
+    /** An unshaded square. Light's surfaceVariant sits too near the pieces (`LitsPaletteTest`), so it has its own paler lavender. */
+    internal fun unshaded(scheme: ColorScheme) = if (BoardHues.isDark(scheme)) scheme.surfaceVariant else Color(0xFFF1EDFF)
+
     val palette: Map<Piece, Color> = mapOf(
         Piece.I to BoardHues.pinnedFill(215f, false),
         Piece.L to BoardHues.deep(175f, false),
@@ -1255,7 +1259,7 @@ object Lits : PuzzleType {
                     // otherwise the home grid would advertise a board that no longer exists. The
                     // letter itself is left off: at a 20dp cell the glyph is a smudge, and the tile
                     // has to read as LITS from across a grid, not be read word by word.
-                    color = if (previewShaded[i]) palette.getValue(Piece.L) else scheme.surfaceVariant,
+                    color = if (previewShaded[i]) palette.getValue(Piece.L) else unshaded(scheme),
                     topLeft = at,
                     size = Size(step, step),
                 )
@@ -1367,7 +1371,7 @@ object Lits : PuzzleType {
                 fun fillOf(i: Int): Color {
                     val piece = letters[i]
                     return when {
-                        !shown.shaded[i] -> scheme.surfaceVariant
+                        !shown.shaded[i] -> unshaded(scheme)
                         piece == null -> inProgress
                         else -> palette.getValue(piece)
                     }
@@ -1415,7 +1419,7 @@ object Lits : PuzzleType {
                         // Kings' cross, at Kings' proportions, so the two boards agree that a cross
                         // means "not here". Drawn in the ink rather than the page, which is the one
                         // departure: Kings crosses saturated region tiles, while an unshaded LITS
-                        // square is surfaceVariant — a pale tint of the page — and a
+                        // square is [unshaded] — a pale tint of the page — and a
                         // background-coloured cross on it would be all but invisible.
                         val inset = stepPx * CROSS_INSET
                         val span = stepPx - inset * 2f

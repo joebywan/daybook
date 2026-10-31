@@ -1,5 +1,12 @@
 # Daybook TODO
 
+
+## Arcade: the rest of the boards
+
+Six boards are fully converted (`docs/COLOUR.md`, top). The other 25 are on the lighter look, so the app is uneven until they are done. Also owed:
+- Drawn accent spacing: `vivid()` measured 2.34 light / 1.94 dark on the closest pair against 5.79 for the raw accents, and `AccentSpacingTest` reads only the raw ones. The real form is an accent pair per puzzle, solved as a set per scheme, replacing `vivid()`'s global flag.
+- The hint popover, finish popup and solved pills are not on the Arcade tokens; `hintRims` stays muted in light.
+- Word Wheel's home motif uses its old colours.
 The one list of outstanding work. Small enough to read in a minute; maintained as part of normal work.
 
 **How to keep it current**
