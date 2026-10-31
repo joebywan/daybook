@@ -108,15 +108,15 @@ whoswho      8954E3   3.25   3.93     4.51        4.56       4.62      4.73
 mini         00FBDB  11.57  13.99    11.57        6.82       4.52     11.90
 worst: marks 3.07 (kings), text 4.50 (snap), onTint 4.50 (tower), tile ink 4.50 (mines), button 4.58 (cipher)
 -- structure
-error on surface    5.17
+error on surface    6.86
 onSurfaceVariant on surface    10.84
 primary on surface    9.99
 secondary on surface    8.56
-error on background 6.25
+error on background 8.29
 onSurfaceVariant on background 13.10
 primary on background 12.07
 secondary on background 10.34
-onError on error 6.25
+onError on error 8.29
 onPrimary on primary 12.07
 onSecondary on secondary 10.34
 outline on surface 2.48 (decorative: no threshold)
@@ -129,18 +129,13 @@ hue   175 fill 1C7870 ink 5AEDE0 mark 35E9DA: ink 10.70, onFill 5.29, onSurface-
 hue   215 fill 214E8C ink 5A97ED mark 3580E9: ink 5.18, onFill 8.29, onSurface-on-fill 7.36, mark 3.96 (old recipe 4.09), fill/surface 1.85
 hue   268 fill 53218C ink AC71EF mark 8935E9: ink 4.65, onFill 10.69, onSurface-on-fill 9.49, mark 2.74 (old recipe 3.04), fill/surface 1.44
 hue   330 fill 8C2157 ink ED5AA3 mark E9358F: ink 4.82, onFill 8.50, onSurface-on-fill 7.54, mark 3.93 (old recipe 3.78), fill/surface 1.81
-selected FABD2E: digit 9.31, error digit 4.52, ring on surface 15.36
-  FAIL error digit on box tint 215.0                  4.10 < 4.5 (FF5C7A on 213070)
-error digit on Sudoku box tint, hue 215: 4.10
-  FAIL error digit on box tint 175.0                  3.53 < 4.5 (FF5C7A on 1F4164)
-error digit on Sudoku box tint, hue 175: 3.53
-error digit on Sudoku box tint, hue 268: 4.51
-  FAIL error digit on box tint 34.0                   3.62 < 4.5 (FF5C7A on 4E3743)
-error digit on Sudoku box tint, hue 34: 3.62
-  FAIL error digit on box tint 330.0                  4.29 < 4.5 (FF5C7A on 4E1D5A)
-error digit on Sudoku box tint, hue 330: 4.29
-  FAIL error digit on box tint 46.0                   3.55 < 4.5 (FF5C7A on 493B42)
-error digit on Sudoku box tint, hue 46: 3.55
+selected FABD2E: digit 9.31, error digit 4.57, ring on surface 15.36
+error digit on Sudoku box tint, hue 215: 5.45
+error digit on Sudoku box tint, hue 175: 4.69
+error digit on Sudoku box tint, hue 268: 5.99
+error digit on Sudoku box tint, hue 34: 4.81
+error digit on Sudoku box tint, hue 330: 5.69
+error digit on Sudoku box tint, hue 46: 4.72
 -- spacing, CIEDE2000, closest pair (shipped: normal 5.79, colour-blind 2.90)
 as built             normal        1.94 codeword/mini, 1.95 mosaic/atoms, 2.82 dominoes/whoswho  under-floor pairs 10
 as built             deuteranopia  0.30 inequality/dominoes, 0.45 shikaku/lamps, 0.55 nonogram/whoswho  under-floor pairs 26
@@ -150,7 +145,7 @@ the brief's flat .85 normal        0.00 codeword/mini, 0.20 kings/pointers, 0.46
 the brief's flat .85 deuteranopia  0.00 codeword/mini, 0.03 dominoes/whoswho, 0.14 sudoku/regions  under-floor pairs 44
 the brief's flat .85 protanopia    0.00 codeword/mini, 0.09 kings/pointers, 0.36 sets/dominoes  under-floor pairs 33
 the brief's flat .85 tritanopia    0.00 codeword/mini, 0.27 kings/pointers, 0.30 snap/tally  under-floor pairs 13
-accent nearest the error red: mines 10.99
+accent nearest the error red: mines 16.58
 accent nearest the Green mark: lits 15.01
 
-threshold failures: 5
+threshold failures: 0
