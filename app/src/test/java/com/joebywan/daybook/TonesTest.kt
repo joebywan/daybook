@@ -197,6 +197,14 @@ class TonesTest {
             everything.write(pcm(gap))
         }
         File(dir, "all-sounds.wav").writeBytes(wav(everything.toByteArray()))
+        // A twelve-unit board's whole phrase, a unit every 0.6 s, then the win on the solving move.
+        val phrase = ByteArrayOutputStream()
+        for (done in 1..11) {
+            val note = Tones.pcm16(Tones.step(Tones.phraseStep(done, 12)))
+            phrase.write(pcm(note + ShortArray((0.6 * rate).toInt() - note.size)))
+        }
+        phrase.write(pcm(Tones.pcm16(of(Tones.Kind.WIN).first())))
+        File(dir, "phrase.wav").writeBytes(wav(phrase.toByteArray()))
     }
 
     private fun pcm(s: ShortArray): ByteArray =
