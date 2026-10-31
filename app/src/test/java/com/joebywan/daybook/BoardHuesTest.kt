@@ -77,8 +77,8 @@ class BoardHuesTest {
     @Test fun onFillPicksReadableText() {
         assertEquals(Color(0xFF21145F), BoardHues.onFill(Color.White)) // light fill: the theme ink
         assertEquals(Color.White, BoardHues.onFill(Color.Black))
-        // A mid grey fails the ink (4.0) and white (3.5): only black reaches 4.5.
-        val grey = Color(0xFF8A8A8A)
+        // A mid grey fails the ink (4.1) and white (3.9): only black reaches 4.5.
+        val grey = Color(0xFF808080)
         assertEquals(Color.Black, BoardHues.onFill(grey))
         assertTrue(BoardHues.contrast(BoardHues.onFill(grey), grey) >= 4.5f)
     }
