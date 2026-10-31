@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.tutorial
 
+import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -58,7 +59,7 @@ import com.joebywan.daybook.ui.teach.rememberHintSession
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** The solve chime (a no-op when sound is off), so a finished step in a tutorial announces its new caption. */
+/** A confirmation (a no-op when sound is off): the unit blip for a hint or a walkthrough step reached, the win for Training's right answer and pass. */
 val LocalChime = staticCompositionLocalOf<() -> Unit> { {} }
 
 /**
@@ -112,7 +113,7 @@ fun TutorialRunner(
     // Never empty: the play screen offers a walkthrough only to a puzzle that has one.
     val frames = puzzle.tutorial
     val scheme = MaterialTheme.colorScheme
-    val accent = Color(puzzle.accent)
+    val accent = vivid(puzzle.accent)
 
     var index by rememberSaveable { mutableIntStateOf(0) }
     val frame = frames[index]

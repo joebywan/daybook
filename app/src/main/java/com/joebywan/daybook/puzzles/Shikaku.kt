@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -598,7 +599,7 @@ object Shikaku : PuzzleType {
                     for (c in 0 until s.width) {
                         val i = r * s.width + c
                         val fill = s.blockAt(r, c)?.fill(dark) ?: scheme.surfaceVariant
-                        Square(cell, r, c, fill, s.clues[i], Modifier.moveFeel(feel, i, Color(accent)))
+                        Square(cell, r, c, fill, s.clues[i], Modifier.moveFeel(feel, i, vivid(accent)))
                     }
                 }
 

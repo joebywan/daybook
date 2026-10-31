@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -238,7 +239,7 @@ object Mini : PuzzleType {
     ) {
         val numbers = remember(size, letters.map { it == BLACK }) { MiniLogic.numbers(size, letters) }
         CrosswordGrid(
-            size, square, TEXT, Color(accent),
+            size, square, TEXT, vivid(accent),
             black = { letters[it] == BLACK },
             number = { numbers[it] },
             letter = { i -> letters[i].takeIf { it != OPEN }?.uppercase() },

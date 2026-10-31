@@ -45,7 +45,6 @@ import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
-import com.joebywan.daybook.core.SolveTone
 import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -194,7 +193,7 @@ fun BackButton(onBack: () -> Unit) {
  */
 private fun setPageTheme(dark: Boolean): Unit = js("""(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = dark ? '#11201C' : '#F6F1E7');
+    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = dark ? '#120D33' : '#F4EFFF');
 })()""")
 
 @Composable
@@ -526,7 +525,7 @@ fun rememberTonePlayer(enabled: Boolean): (Int) -> Unit {
                     val tone = Tones.samples(t)
                     val array = newFloatArray(tone.size)
                     for (i in tone.indices) setFloat(array, i, tone[i])
-                    keepTone(t, array, SolveTone.SAMPLE_RATE)
+                    keepTone(t, array, Tones.SAMPLE_RATE)
                     delay(1)
                 }
             } catch (_: Throwable) {
@@ -584,7 +583,7 @@ private fun vibratePattern(): Unit = js("navigator.vibrate && navigator.vibrate(
 /** The game's buzzes, if [enabled], through `navigator.vibrate`: short, since a phone's motor is loud. */
 @Composable
 fun rememberHaptics(enabled: Boolean): Haptics = remember(enabled) {
-    if (!enabled) Haptics.None else Haptics(tick = { vibrate(8) }, bump = { vibrate(50) }, success = { vibratePattern() })
+    if (!enabled) Haptics.None else Haptics(tick = { vibrate(8) }, bump = { vibrate(50) }, success = { vibratePattern() }, thump = { vibrate(70) })
 }
 
 /** The web has no store to rate in, so the link is a star on GitHub. */

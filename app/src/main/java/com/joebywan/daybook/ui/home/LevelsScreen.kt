@@ -1,5 +1,8 @@
 package com.joebywan.daybook.ui.home
 
+import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.data.levelBoardDone
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.CardText
@@ -120,16 +123,16 @@ internal fun LevelGrid(
             if (board == null) {
                 val tone = scheme.secondary
                 HomeTile(
-                    name = "All levels", accent = tone, solved = false, onClick = { onAllLevels?.invoke() }, modifier = modifier,
+                    name = "All levels", accent = tone, tile = ArcadeBoard.tile(tone, BoardHues.isDark(scheme)), solved = false, onClick = { onAllLevels?.invoke() }, modifier = modifier,
                     motif = {
                         Box(
-                            Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)).background(tone.copy(alpha = 0.14f)),
+                            Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)).background(scheme.surface),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Default.FormatListNumbered, null, tint = tone, modifier = Modifier.size(previewSize * 0.42f))
+                            Icon(Icons.Default.FormatListNumbered, null, tint = BoardHues.textOn(tone, scheme.surface, 3f), modifier = Modifier.size(previewSize * 0.42f))
                         }
                     },
-                    footer = { TileFooter(if (progress.done.isEmpty()) "" else "${progress.done.size} done", scheme.onSurfaceVariant) },
+                    footer = { TileFooter(if (progress.done.isEmpty()) "" else "${progress.done.size} done", ArcadeBoard.tile(tone, BoardHues.isDark(scheme)).ink) },
                 )
             } else {
                 val (puzzle, tier) = board
@@ -226,7 +229,7 @@ private fun LevelRow(progress: LevelProgress, level: Int, onClick: () -> Unit, t
             // A dot per board in its puzzle's colour: filled once solved.
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 progress.plan(level).forEach { b ->
-                    val accent = PuzzleRegistry.byId(b.puzzleId)?.let { Color(it.accent) } ?: scheme.outline
+                    val accent = PuzzleRegistry.byId(b.puzzleId)?.let { vivid(it.accent) } ?: scheme.outline
                     val done = levelBoardDone(b.puzzleId, solved)
                     Box(Modifier.size(10.dp).clip(CircleShape).background(if (done) accent else scheme.outline.copy(alpha = 0.3f)))
                 }

@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,13 +31,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.arcadeGlow
+import com.joebywan.daybook.ui.theme.arcadeHardShadow
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
@@ -91,16 +104,45 @@ object Lexicon : PuzzleType {
 
     // ---- colours ---------------------------------------------------------------------------------
 
-    internal val correctColour = Color(0xFF4E9F6C)
-    internal val presentColour = Color(0xFFD1A32F)
+    /**
+     * The marks, on [ArcadeBoard]'s squares. Present is the board's own amber letter tile. Colour is never alone: right has an
+     * inset ring, present a corner dot ([markCue]), and absent is flat and lighter in weight. Right runs towards teal, so it
+     * keeps some blue a red-green eye can part from the amber. Measured in ArcadeBoardTest.
+     */
+    internal class Marks(val correct: ArcadeFill, val present: ArcadeFill, val absent: Color, val absentInk: Color)
 
-    /** The letter on a green or gold tile: white was 3.2:1 on green and 2.3:1 on gold, so it is picked per fill. */
-    internal fun onMark(mark: Int): Color = BoardHues.onFill(if (mark == LexiconMark.CORRECT) correctColour else presentColour)
+    internal val LightMarks = Marks(
+        ArcadeFill(Color(0xFF08854A), Color(0xFF00806E), Color.White),
+        ArcadeBoard.Light.letter,
+        Color(0xFF736D9A),
+        Color.White,
+    )
+    internal val DarkMarks = Marks(
+        ArcadeFill(Color(0xFF2BF08F), Color(0xFF00C2A8), Color(0xFF04231C), Color(0xFF00E5A0)),
+        ArcadeBoard.Dark.letter,
+        Color(0xFF6E68A0),
+        Color.White,
+    )
 
-    private fun markColour(mark: Int, absent: Color): Color = when (mark) {
-        LexiconMark.CORRECT -> correctColour
-        LexiconMark.PRESENT -> presentColour
-        else -> absent
+    @Composable
+    @ReadOnlyComposable
+    private fun isDark() = ArcadeBoard.current === ArcadeBoard.Dark
+
+    @Composable
+    @ReadOnlyComposable
+    private fun marks() = if (isDark()) DarkMarks else LightMarks
+
+    /** Right's ring or present's dot, in the fill's ink; [unit] is the ring's stroke. Drawn, so it takes no room. */
+    private fun Modifier.markCue(mark: Int?, ink: Color, unit: Dp) = when (mark) {
+        LexiconMark.CORRECT -> drawBehind {
+            val w = unit.toPx()
+            drawRoundRect(ink, Offset(w * 1.5f, w * 1.5f), Size(size.width - w * 3, size.height - w * 3), CornerRadius(w * 2), style = Stroke(w))
+        }
+        LexiconMark.PRESENT -> drawBehind {
+            val r = unit.toPx() * 1.3f
+            drawCircle(ink, r, Offset(size.width - r * 2, r * 2))
+        }
+        else -> this
     }
 
     // ---- the home tile ----------------------------------------------------------------------------
@@ -114,7 +156,7 @@ object Lexicon : PuzzleType {
 
     @Composable
     override fun Preview(modifier: Modifier) {
-        val absent = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+        val m = marks()
         // Sized from both axes, like every board: the tile is square-ish and its box is not.
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             val gap = 3.dp
@@ -127,7 +169,13 @@ object Lexicon : PuzzleType {
                                 Modifier
                                     .size(cell)
                                     .clip(RoundedCornerShape(3.dp))
-                                    .background(markColour(mark, absent))
+                                    .then(
+                                        when (mark) {
+                                            LexiconMark.CORRECT -> Modifier.background(m.correct.brush)
+                                            LexiconMark.PRESENT -> Modifier.background(m.present.brush)
+                                            else -> Modifier.background(m.absent)
+                                        }
+                                    )
                             )
                         }
                     }
@@ -299,7 +347,8 @@ object Lexicon : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val (highlight, glow, pulse) = rememberHintPaint()
         val tilesNamed = highlight.strong.any { it < LexiconTeacher.KEY } || highlight.soft.any { it < LexiconTeacher.KEY }
-        val absent = scheme.outline.copy(alpha = 0.45f)
+        val a = ArcadeBoard.current
+        val m = marks()
         val playable = interactive && s.open
 
         // Why Enter was refused. Transient UI state, so it lives here and not in the state:
@@ -352,7 +401,7 @@ object Lexicon : PuzzleType {
                 Text(
                     line,
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (notice != null || s.failed) scheme.error else scheme.onSurfaceVariant,
+                    color = if (notice != null || s.failed) a.error else scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     minLines = 1,
@@ -366,7 +415,7 @@ object Lexicon : PuzzleType {
                 val feel = rememberMoveFeel(List(s.maxGuesses * s.length) { s.guesses.getOrNull(it / s.length)?.get(it % s.length) })
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.length, maxHeight / s.maxGuesses, MAX_CELL * scale).coerceAtLeast(0.dp)
-                    Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses)) {
+                    Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses).clip(RoundedCornerShape(8.dp)).background(a.frame)) {
                         repeat(s.maxGuesses) { row ->
                             Row {
                                 repeat(s.length) { slot ->
@@ -375,7 +424,13 @@ object Lexicon : PuzzleType {
                                     val letter = guess?.get(slot) ?: if (typing) s.current.getOrNull(slot) else null
                                     val mark = guess?.let { s.marks(it)[slot] }
                                     val look = highlight.look(LexiconTeacher.tile(s.length, row, slot), dims = tilesNamed)
-                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent, Modifier.moveFeel(feel, row * s.length + slot, Color(accent)))
+                                    val place = when {
+                                        !typing -> TilePlace.PLAIN
+                                        letter != null -> if (notice != null) TilePlace.REFUSED else TilePlace.TYPED
+                                        slot == s.current.length -> TilePlace.NEXT
+                                        else -> TilePlace.ROW
+                                    }
+                                    Tile(letter, mark, place, cell, look, glow, pulse, Modifier.moveFeel(feel, row * s.length + slot, vivid(accent)))
                                 }
                             }
                         }
@@ -395,32 +450,38 @@ object Lexicon : PuzzleType {
                             if (r == 1) Spacer(Modifier.weight(0.5f))
                             if (r == 2) {
                                 KeyButton("Del", Modifier.weight(1.5f), playable, LexiconTeacher.DELETE, highlight, glow, pulse,
-                                    scheme.surfaceVariant, scheme.onSurfaceVariant, small = true, scale) {
+                                    a.control.brush, a.control.ink, a.control.glow, null, small = true, scale) {
                                     press(LexiconKeyAction.Backspace)
                                 }
                             }
                             letters.forEach { c ->
                                 val mark = known[c - 'a']
                                 val fill = when (mark) {
-                                    -1 -> scheme.surfaceVariant
-                                    // Faded, not recoloured: outline at 30% was the same beige as an untried key in light.
-                                    LexiconMark.ABSENT -> scheme.surfaceVariant.copy(alpha = 0.3f)
-                                    else -> markColour(mark, absent)
+                                    -1 -> SolidColor(a.given)
+                                    LexiconMark.ABSENT -> SolidColor(m.absent)
+                                    LexiconMark.CORRECT -> m.correct.brush
+                                    else -> m.present.brush
                                 }
-                                val text = when {
-                                    mark > LexiconMark.ABSENT -> onMark(mark)
-                                    mark == LexiconMark.ABSENT -> scheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                    else -> scheme.onSurfaceVariant
+                                val text = when (mark) {
+                                    -1 -> a.givenInk
+                                    LexiconMark.ABSENT -> m.absentInk
+                                    LexiconMark.CORRECT -> m.correct.ink
+                                    else -> m.present.ink
+                                }
+                                val lift = when (mark) {
+                                    LexiconMark.CORRECT -> m.correct.glow
+                                    LexiconMark.PRESENT -> m.present.glow
+                                    else -> null
                                 }
                                 KeyButton(c.uppercase(), Modifier.weight(1f), playable, LexiconTeacher.key(c), highlight, glow, pulse,
-                                    fill, text, small = false, scale) {
+                                    fill, text, lift, mark, small = false, scale) {
                                     press(LexiconKeyAction.Letter(c))
                                 }
                             }
                             if (r == 1) Spacer(Modifier.weight(0.5f))
                             if (r == 2) {
                                 KeyButton("Enter", Modifier.weight(1.5f), playable, LexiconTeacher.ENTER, highlight, glow, pulse,
-                                    scheme.surfaceVariant, scheme.onSurfaceVariant, small = true, scale) {
+                                    a.control.brush, a.control.ink, a.control.glow, null, small = true, scale) {
                                     press(LexiconKeyAction.Enter)
                                 }
                             }
@@ -438,47 +499,75 @@ object Lexicon : PuzzleType {
     private val KEY_GAP = 5.dp
     private val KEY_HEIGHT = 42.dp
 
-    /** One square of the grid: a typed letter, a marked one, or an empty outline. */
+    /** Where an unmarked square stands: the row being typed is one strip, its next square amber, a refused word red. */
+    private enum class TilePlace { PLAIN, ROW, NEXT, TYPED, REFUSED }
+
+    /** One square of the grid: a typed letter, a marked one, or an empty square. */
     @Composable
     private fun Tile(
         letter: Char?,
         mark: Int?,
-        typed: Boolean,
+        place: TilePlace,
         cell: Dp,
         look: HintLook,
         glow: Color,
         pulse: State<Float>,
-        absent: Color,
         modifier: Modifier = Modifier,
     ) {
-        val scheme = MaterialTheme.colorScheme
+        val a = ArcadeBoard.current
+        val m = marks()
         val shape = RoundedCornerShape(6.dp)
+        val corner = 6.dp
+        val fill: ArcadeFill? = when {
+            mark == LexiconMark.CORRECT -> m.correct
+            mark == LexiconMark.PRESENT -> m.present
+            mark != null -> null
+            place == TilePlace.TYPED -> a.control
+            place == TilePlace.NEXT -> a.selected
+            else -> null
+        }
+        val ink = fill?.ink ?: when {
+            mark != null -> m.absentInk
+            place == TilePlace.REFUSED -> a.errorInk
+            else -> a.squareInk
+        }
         Box(
             Modifier
                 .size(cell)
                 .then(modifier)
                 .padding(2.dp)
-                .ring(look, glow, pulse, 6.dp, outside = true)
+                .ring(look, glow, pulse, corner, outside = true)
+                // A dimmed tile fades to a square, not to the dark frame behind it.
+                .background(a.square, shape)
                 .dimmed(look)
+                .then(fill?.glow?.let { Modifier.arcadeGlow(it, corner, reach = 2.dp) } ?: Modifier)
                 .clip(shape)
                 .then(
-                    if (mark != null) Modifier.background(markColour(mark, absent))
-                    else Modifier.border(if (typed) 2.dp else 1.dp, if (typed) scheme.onSurfaceVariant else scheme.outline, shape)
-                ),
+                    when {
+                        fill != null -> Modifier.background(fill.brush)
+                        mark != null -> Modifier.background(m.absent)
+                        place == TilePlace.REFUSED -> Modifier.background(a.error)
+                        place == TilePlace.ROW -> Modifier.background(a.given)
+                        else -> Modifier.background(a.square)
+                    }
+                )
+                .then(if (place == TilePlace.NEXT) Modifier.border(2.dp, a.selectedEdge, shape) else Modifier)
+                // A refused word has right's kind of ring in red's own ink, so it is more than a change of hue.
+                .markCue(if (place == TilePlace.REFUSED) LexiconMark.CORRECT else mark, ink, 2.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (letter != null) {
                 Text(
                     letter.uppercase(),
                     fontSize = (cell * 0.46f).boardSp(), lineHeight = (cell * 0.46f).boardSp() * 1.2f,
-                    fontWeight = FontWeight.Bold,
-                    color = if (mark != null && mark > LexiconMark.ABSENT) onMark(mark) else scheme.onSurface,
+                    fontWeight = if (mark == LexiconMark.ABSENT) FontWeight.Medium else FontWeight.Bold,
+                    color = ink,
                 )
             }
         }
     }
 
-    /** One key of the on-screen keyboard. [index] is what a hint names it by. */
+    /** One key of the on-screen keyboard. [index] is what a hint names it by; [mark] its best clue, or null for Del and Enter. */
     @Composable
     private fun KeyButton(
         label: String,
@@ -488,8 +577,10 @@ object Lexicon : PuzzleType {
         highlight: BoardHighlight,
         glow: Color,
         pulse: State<Float>,
-        fill: Color,
+        fill: Brush,
         text: Color,
+        lift: Color?,
+        mark: Int?,
         small: Boolean,
         scale: Float,
         onClick: () -> Unit,
@@ -500,8 +591,11 @@ object Lexicon : PuzzleType {
                 .height(KEY_HEIGHT * scale)
                 .highlightAnchor(index)
                 .ring(highlight.look(index, dims = false), glow, pulse, 6.dp, outside = true)
+                // Inside the keys' gap: a glow where dark gives one, else light's sticker edge.
+                .then(if (lift != null) Modifier.arcadeGlow(lift, 6.dp, reach = 2.dp) else if (!isDark()) Modifier.arcadeHardShadow(6.dp, drop = 2.dp) else Modifier)
                 .clip(shape)
                 .background(fill)
+                .markCue(mark, text, 1.25.dp)
                 .clickable(enabled = enabled, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
@@ -509,7 +603,8 @@ object Lexicon : PuzzleType {
                 label,
                 fontSize = (if (small) 12.dp else 16.dp).times(scale).boardSp(),
                 lineHeight = (if (small) 14.dp else 19.dp).times(scale).boardSp(),
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = if (mark == LexiconMark.ABSENT) FontWeight.Normal else FontWeight.SemiBold,
+                textDecoration = if (mark == LexiconMark.ABSENT) TextDecoration.LineThrough else null,
                 color = text,
                 maxLines = 1,
             )

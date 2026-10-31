@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -527,7 +528,7 @@ object Pearls : PuzzleType {
                     },
             ) {
                 Canvas(Modifier.fillMaxSize()) {
-                    drawBoard(shown, unitPx, scheme, red, HintGlow(highlight, glow, pulse.value), feel, Color(accent))
+                    drawBoard(shown, unitPx, scheme, red, HintGlow(highlight, glow, pulse.value), feel, vivid(accent))
                 }
             }
         }

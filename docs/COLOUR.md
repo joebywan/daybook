@@ -1,6 +1,12 @@
 # Colour: the board palette
 
-Why this exists: the app theme (`ui/theme/Palette.kt`) is deliberately quiet, ink and parchment with moss. A board that
+**Arcade (2026-10-31).** The app is indigo and vivid now (`ui/theme/Palette.kt`; players asked for more juice). Home and the converted
+boards draw from `ui/theme/ArcadeBoard.kt`: deep frame, plain squares, gradient fills that carry their own ink, measured by `ArcadeBoardTest`.
+Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel. The other boards still use the layers below on the Arcade scheme, with the
+`vivid()` accents and the retuned hue table, so they are lighter than those six until converted (`docs/TODO.md`). Convert a board by reading Tents' or
+Sudoku's; a colour of its own goes in its file with a test beside the tokens'.
+
+Why this exists: the old theme was deliberately quiet, ink and parchment with moss. A board that
 draws only with `colorScheme` plus its one `accent` comes out beige and one-note (one board shipped that way: surface
 grey, one teal). The boards that read well (Shikaku's hue-per-region, Nonogram's blended pairs, Kings' regions) all
 bring several hues. This is the shared set to bring them from, derived from the colours already shipped.
@@ -117,14 +123,14 @@ uses), so any two hues sit at the same weight and can share a board. Light/dark 
 
 | Hue | h | Fill, light | Fill, dark | Ink, light | Ink, dark | Mark (either) |
 |---|---|---|---|---|---|---|
-| Coral | 8 | `E8A69C` | `6B362E` | `963A2C` | `D67E71` | `CD6251` |
-| Amber | 34 | `E8C79C` | `6B512E` | `92652A` | `D6AA71` | `CD9751` |
-| Gold | 46 | `E8D69C` | `6B5D2E` | `7E6A25` | `D6BE71` | `CDB051` |
-| Green | 145 | `9CE8BB` | `2E6B47` | `247B48` | `71D69B` | `51CD85` |
-| Teal | 175 | `9CE8E1` | `2E6B66` | `227770` | `71D6CD` | `51CDC2` |
-| Blue | 215 | `9CBBE8` | `2E476B` | `2C5896` | `719BD6` | `5185CD` |
-| Violet | 268 | `BF9CE8` | `4A2E6B` | `5D2C96` | `AA81DA` | `8B51CD` |
-| Rose | 330 | `E89CC2` | `6B2E4D` | `962C61` | `D671A3` | `CD518F` |
+| Coral | 8 | `F69C8E` | `8C2F21` | `AE2813` | `ED6D5A` | `E94D35` |
+| Amber | 34 | `F6C98E` | `8C5E21` | `9C6011` | `EDAD5A` | `E99B35` |
+| Gold | 46 | `F6DE8E` | `80691E` | `856A0F` | `EDCA5A` | `E9BF35` |
+| Green | 145 | `9AEABB` | `1D7C45` | `0E7C3C` | `5AED97` | `35E980` |
+| Teal | 175 | `9AEAE3` | `1C7870` | `0D776F` | `5AEDE0` | `35E9DA` |
+| Blue | 215 | `8EB9F6` | `214E8C` | `1354AE` | `5A97ED` | `3580E9` |
+| Violet | 268 | `BE8EF6` | `53218C` | `5C13AE` | `AC71EF` | `8935E9` |
+| Rose | 330 | `F68EC2` | `8C2157` | `AE1361` | `ED5AA3` | `E9358F` |
 
 Recipe: fill = hsl(h, .62, .76) light / hsl(h, .40, .30) dark; ink = hsl(h, .55, .38) light / hsl(h, .55, .64) dark,
 stepped a hundredth darker (light) or lighter (dark) until it reaches 4.5:1 on both the surface and the background

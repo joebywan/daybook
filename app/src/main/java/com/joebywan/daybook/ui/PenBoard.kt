@@ -1,6 +1,8 @@
 package com.joebywan.daybook.ui
 
+import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeLift
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -128,7 +130,10 @@ fun <S : PenMarks<S>> Modifier.penGrid(
         }
 }
 
-/** [pens] under the board, or stacked ([vertical]) beside it. Kept clear of the hint popover: the player reaches for it to make a hinted move. */
+/**
+ * [pens] under the board, or stacked ([vertical]) beside it. Kept clear of the hint popover: the player reaches for it to make a hinted move.
+ * With [arcade] the chosen pen is its control fill and [icon] must read on that; without, its accent tint.
+ */
 @Composable
 fun PenRow(
     pens: String,
@@ -138,6 +143,7 @@ fun PenRow(
     label: (Char) -> String,
     onPen: (Char) -> Unit,
     vertical: Boolean = false,
+    arcade: ArcadeBoard? = null,
     icon: DrawScope.(Char) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -155,11 +161,22 @@ fun PenRow(
                 Modifier
                     .width(124.dp)
                     .height(46.dp)
+                    .then(if (chosen && arcade != null) Modifier.arcadeLift(arcade.control, 14.dp) else Modifier)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(if (chosen) accent.copy(alpha = 0.22f) else scheme.surface)
+                    .then(
+                        when {
+                            arcade == null -> Modifier.background(if (chosen) accent.copy(alpha = 0.22f) else scheme.surface)
+                            chosen -> Modifier.background(arcade.control.brush)
+                            else -> Modifier.background(arcade.square)
+                        },
+                    )
                     .border(
                         if (chosen) 2.dp else 1.dp,
-                        if (chosen) BoardHues.onTint(accent, scheme.surface, 3f) else scheme.outline,
+                        when {
+                            arcade != null -> if (chosen) arcade.control.ink else arcade.frame
+                            chosen -> BoardHues.onTint(accent, scheme.surface, 3f)
+                            else -> scheme.outline
+                        },
                         RoundedCornerShape(14.dp),
                     )
                     .clickable(enabled = enabled) { onPen(option) },
@@ -168,7 +185,7 @@ fun PenRow(
             ) {
                 Canvas(Modifier.size(20.dp)) { icon(option) }
                 // A fixed 124 x 46 button: "Remove" clipped at 2x.
-                CappedFontScale { Text(label(option), style = MaterialTheme.typography.labelLarge, color = scheme.onSurface, maxLines = 1) }
+                CappedFontScale { Text(label(option), style = MaterialTheme.typography.labelLarge, color = arcade?.let { if (chosen) it.control.ink else it.squareInk } ?: scheme.onSurface, maxLines = 1) }
             }
         }
     }

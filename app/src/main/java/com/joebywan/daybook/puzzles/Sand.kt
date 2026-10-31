@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -141,8 +142,8 @@ object Sand : PuzzleType {
      * layer also carries its colour's symbol, so colour is never the only signal.
      */
     val palette: List<Color> = listOf(
-        BoardHues.deep(34f, false), BoardHues.fill(46f, false), BoardHues.fill(268f, false), BoardHues.mark(268f),
-        BoardHues.deep(330f, false), BoardHues.fill(175f, false), BoardHues.deep(175f, false), BoardHues.mark(34f),
+        BoardHues.deep(34f, false), BoardHues.pinnedFill(46f, false), BoardHues.pinnedFill(268f, false), BoardHues.pinnedMark(268f),
+        BoardHues.deep(330f, false), BoardHues.pinnedFill(175f, false), BoardHues.deep(175f, false), BoardHues.pinnedMark(34f),
     )
 
     /** What the hints call each colour. */
@@ -333,7 +334,7 @@ object Sand : PuzzleType {
         val s = state as SandState
         val scheme = MaterialTheme.colorScheme
         val (highlight, glowColour, pulse) = rememberHintPaint()
-        val accentColour = Color(accent)
+        val accentColour = vivid(accent)
 
         // Transient: the lifted tube starts over whenever the board changes (a pour, undo, a hint).
         var lifted by remember(s.tubes) { mutableStateOf<Int?>(null) }

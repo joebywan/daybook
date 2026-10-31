@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.training
 
+import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -395,7 +396,7 @@ fun TechniquePractice(
 ) {
     val puzzle = course.puzzle
     val scheme = MaterialTheme.colorScheme
-    val accent = Color(puzzle.accent)
+    val accent = vivid(puzzle.accent)
     val chime = LocalChime.current
     val haptics = LocalHaptics.current
     val scope = rememberCoroutineScope()
@@ -574,7 +575,7 @@ fun FinalBoard(course: Course, record: Set<String>, onPass: (String) -> Unit, on
 private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>, onPass: (String) -> Unit, onBack: () -> Unit) {
     val puzzle = course.puzzle
     val scheme = MaterialTheme.colorScheme
-    val accent = Color(puzzle.accent)
+    val accent = vivid(puzzle.accent)
     val chime = LocalChime.current
     val scope = rememberCoroutineScope()
     var board by rememberSaveable(course.id, stateSaver = BoardSaver) { mutableStateOf(start) }

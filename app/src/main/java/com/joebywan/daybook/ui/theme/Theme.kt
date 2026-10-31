@@ -24,6 +24,7 @@ fun DaybookTheme(
         Appearance.DARK -> true
     }
     val scheme = if (darkTheme) DarkScheme else LightScheme
+    useVividScheme(darkTheme)
     // The system-bar icon tint on Android, the page behind the canvas on the web; see the platform seam.
     SystemBarsAppearance(darkTheme)
     // The same styles everywhere; the web swaps in bundled fonts, having no system ones.

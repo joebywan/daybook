@@ -1,5 +1,17 @@
 package com.joebywan.daybook.ui.home
 
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.toSize
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.arcadePageBrush
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.border
 import androidx.compose.animation.AnimatedVisibility
@@ -226,10 +238,14 @@ fun HomeScreen(
     var flash by remember { mutableStateOf<Pair<Difficulty, Int>?>(null) }
     val swipeMode by rememberUpdatedState(mode)
     val swipeTier by rememberUpdatedState(difficulty)
+    val dark = BoardHues.isDark(scheme)
+    var pageSize by remember { mutableStateOf(Size.Zero) }
+    val page = remember(dark, pageSize) { arcadePageBrush(dark, pageSize) }
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .background(scheme.background)
+            .onSizeChanged { pageSize = it.toSize() }
+            .background(page)
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
         // A phone on its side. A tablet in landscape is taller than this and keeps the stacked rows.
@@ -264,10 +280,13 @@ fun HomeScreen(
                 )
             }
             stickyHeader {
-                // Opaque, so the tiles scrolling under it do not show through.
+                // Opaque, so the tiles scrolling under it do not show through: the page's own gradient, lined up with the page.
+                var at by remember { mutableStateOf(Offset.Zero) }
                 // Tight round the two rows (the owner wanted the grid's room back): 4dp under the header, 6dp over the three.
                 Column(
-                    Modifier.fillMaxWidth().background(scheme.background)
+                    Modifier.fillMaxWidth()
+                        .onGloballyPositioned { at = it.positionInRoot() }
+                        .drawBehind { translate(-at.x, -at.y) { drawRect(page, at, size) } }
                         .padding(top = 4.dp, bottom = if (short) 4.dp else 6.dp)
                         .onSizeChanged { optionsHeight = it.height }
                         .onGloballyPositioned { window.top = it.boundsInRoot().bottom },
@@ -343,27 +362,29 @@ private val TopPadding = 14.dp
 @Composable
 private fun ContinueRow(puzzle: PuzzleType, tier: Difficulty, modifier: Modifier, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
+    val tile = ArcadeBoard.tile(Color(puzzle.accent), BoardHues.isDark(scheme))
     Row(
         modifier
             .fillMaxWidth()
             .padding(bottom = TileGap)
+            .arcadeLift(tile, 14.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(scheme.surface)
+            .background(tile.brush)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        puzzle.Preview(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
+        puzzle.Preview(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(scheme.surface))
         Spacer(Modifier.width(12.dp))
         Text(
             "Continue ${puzzle.displayName} · ${tier.label}",
             style = MaterialTheme.typography.titleMedium,
-            color = scheme.onSurface,
+            color = tile.ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color(puzzle.accent), modifier = Modifier.size(20.dp))
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = tile.ink, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -626,9 +647,10 @@ private fun PuzzleGrid(
                                         } else null,
                                     )
                                 },
-                        ) { accent ->
+                        ) { ink ->
                             TierDots(
-                                accent = accent,
+                                accent = ink,
+                                onTile = ink,
                                 selected = difficulty,
                                 cleared = { tier -> (id to tier) in doneToday },
                                 popped = justSolved?.takeIf { it.first == id }?.second,
@@ -720,8 +742,7 @@ internal fun TileGrid(count: Int, height: Dp, tile: @Composable (index: Int, pre
 }
 
 /**
- * A puzzle's motif and name, ticked when [solved]; [footer] is the line under the name, handed the puzzle's accent as
- * text ink ([tileInk]).
+ * A puzzle's motif and name, ticked when [solved]; [footer] is the line under the name, handed the ink that reads on the tile.
  * [inProgress] is read here, in the tile, so a save that lands during the first frames is never shown stale.
  */
 @Composable
@@ -736,20 +757,22 @@ internal fun PuzzleTile(
     footer: @Composable (accent: Color) -> Unit,
 ) {
     val accent = Color(puzzle.accent)
+    val tile = ArcadeBoard.tile(accent, BoardHues.isDark(MaterialTheme.colorScheme))
     val started = puzzle.id in inProgress()
     HomeTile(
         name = puzzle.displayName,
         accent = accent,
+        tile = tile,
         solved = solved,
         justSolved = solved && LocalJustSolved.current?.first == puzzle.id,
         cornerTick = cornerTick,
         onClick = onClick,
         modifier = modifier,
         motif = {
-            puzzle.Preview(Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)))
+            puzzle.Preview(Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surface))
             if (started) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
         },
-        footer = { footer(tileInk(accent, MaterialTheme.colorScheme.surface)) },
+        footer = { footer(tile.ink) },
     )
 }
 
@@ -782,13 +805,15 @@ private fun rememberPop(play: Boolean, solved: Boolean, peak: Float): Animatable
 }
 
 /**
- * The shape every home tile shares: a motif with the solved tick in its corner, a name, a footer line. [justSolved]
- * (the solve just made) pops the tick in and fills the tint; under reduced motion they are simply there.
+ * The shape every home tile shares: a motif with the solved tick in its corner, a name, a footer line, on [tile]'s solid
+ * gradient. Solved adds a heavy ring in the tile's ink, so it is a change of shape as well as colour. [justSolved] (the solve
+ * just made) pops the tick in and draws the ring; under reduced motion they are simply there.
  */
 @Composable
 internal fun HomeTile(
     name: String,
     accent: Color,
+    tile: ArcadeFill,
     solved: Boolean,
     onClick: () -> Unit,
     modifier: Modifier,
@@ -801,14 +826,22 @@ internal fun HomeTile(
 ) {
     val scheme = MaterialTheme.colorScheme
     val pop = rememberPop(justSolved, solved, 1.15f)
-    val ink = tileInk(accent, scheme.surface)
+    val tick = tileInk(accent, scheme.surface)
     Column(
         modifier
+            .arcadeLift(tile, 18.dp)
             .clip(RoundedCornerShape(18.dp))
-            .drawBehind {
+            .background(tile.brush)
+            .drawWithContent {
+                drawContent()
                 val t = if (solved) pop.value.coerceAtMost(1f) else 0f
-                if (t < 1f) drawRect(scheme.surface.copy(alpha = 1f - t))
-                if (t > 0f) drawRect(accent.copy(alpha = 0.20f * t))
+                if (t > 0f) {
+                    val w = SOLVED_RING.toPx()
+                    drawRoundRect(
+                        tile.ink.copy(alpha = t), Offset(w / 2, w / 2), Size(size.width - w, size.height - w),
+                        CornerRadius(18.dp.toPx() - w / 2), style = Stroke(w),
+                    )
+                }
             }
             .then(frame)
             .clickable(onClick = onClick)
@@ -822,7 +855,7 @@ internal fun HomeTile(
                     Modifier.size(16.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value }.clip(CircleShape).background(scheme.surface),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Default.Check, "Solved", tint = ink, modifier = Modifier.size(11.dp))
+                    Icon(Icons.Default.Check, "Solved", tint = tick, modifier = Modifier.size(11.dp))
                 }
             }
         }
@@ -835,7 +868,7 @@ internal fun HomeTile(
             Text(
                 name,
                 style = style,
-                color = if (solved) ink else scheme.onSurface,
+                color = tile.ink,
                 textAlign = TextAlign.Center,
                 maxLines = if (oneWord) 1 else 2,
                 softWrap = !oneWord,
@@ -853,7 +886,19 @@ internal fun HomeTile(
  * [accent] as text on a tile, solved (tinted with it) or not: the tinted tile is the harder background in both schemes,
  * so one ink reads on either.
  */
-internal fun tileInk(accent: Color, surface: Color) = BoardHues.onTint(accent, surface, alpha = 0.20f)
+internal fun tileInk(accent: Color, surface: Color): Color {
+    // Mixed by the surface, not the wash: a dark accent's heavy wash is dark enough that onTint would turn white on a white tile.
+    val toward = if (surface.luminance() < .5f) Color.White else Color.Black
+    val heavy = accent.copy(alpha = SOLVED_WASH_FROM).compositeOver(surface)
+    return (0..50).map { androidx.compose.ui.graphics.lerp(accent, toward, it / 50f) }
+        .firstOrNull { BoardHues.contrast(it, heavy) >= 4.5f && BoardHues.contrast(it, surface) >= 4.5f } ?: toward
+}
+
+/** A solved tile's ring, and a solved chip's in Today's three. */
+internal val SOLVED_RING = 3.dp
+
+/** The heaviest tint [tileInk] must read on. */
+internal const val SOLVED_WASH_FROM = 0.42f
 
 /**
  * Three dots for the three tiers, so a tile can say "you did the Standard one" while the grid is
@@ -861,9 +906,9 @@ internal fun tileInk(accent: Color, surface: Color) = BoardHues.onTint(accent, s
  * labelled pills is exactly the weight that made the old cards unscannable.
  */
 @Composable
-internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty) -> Boolean, popped: Difficulty? = null) {
+internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty) -> Boolean, popped: Difficulty? = null, onTile: Color? = null) {
     val scheme = MaterialTheme.colorScheme
-    val fill = BoardHues.textOn(accent, scheme.surface, 3f)
+    val fill = onTile ?: BoardHues.textOn(accent, scheme.surface, 3f)
     Row(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -872,8 +917,8 @@ internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty
             val isSelected = tier == selected
             // The tier just solved pops in big, to say where the solve went ([LocalJustSolved]).
             val pop = rememberPop(tier == popped && cleared(tier), cleared(tier), 2.2f)
-            // Solved: filled in the accent, darkened or lightened to 3:1 on the surface if it needs it (on Home the
-            // caller already hands over the tile's text ink). Not solved: a ring, so the two differ by shape as well as colour,
+            // Solved: filled in the accent, darkened or lightened to 3:1 on the surface if it needs it (on a tile,
+            // [onTile], the tile's ink at full strength). Not solved: a ring, so the two differ by shape as well as colour,
             // darker for the tier the grid is set to.
             val dot = Modifier
                 .size(if (isSelected) 7.dp else 5.dp)
@@ -881,7 +926,7 @@ internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty
                 .clip(CircleShape)
             Box(
                 if (cleared(tier)) dot.background(fill)
-                else dot.border(1.dp, scheme.onSurfaceVariant.copy(alpha = if (isSelected) 1f else 0.6f), CircleShape)
+                else dot.border(1.dp, onTile ?: scheme.onSurfaceVariant.copy(alpha = if (isSelected) 1f else 0.6f), CircleShape)
             )
         }
     }

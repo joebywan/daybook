@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -1017,7 +1018,7 @@ object Kings : PuzzleType {
                             Color(regionColours[palette[s.region[i]]]).let {
                                 if (look.dim) it.copy(alpha = 0.4f).compositeOver(scheme.background) else it
                             },
-                            feel = Modifier.moveFeel(feel, i, Color(accent)),
+                            feel = Modifier.moveFeel(feel, i, vivid(accent)),
                             outline = Modifier.hintOutline(look.strong, look.soft, glow, { pulse.value }, 4.dp, RoundedCornerShape(4.dp)),
                         ) {
                             when (mark) {

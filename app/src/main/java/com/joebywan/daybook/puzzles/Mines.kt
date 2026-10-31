@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -53,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
@@ -81,6 +83,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Mines (`docs/MINES_SPEC.md`): numbers say how many mines touch a square; reveal every square without one. Every board
@@ -240,10 +243,10 @@ object Mines : PuzzleType {
         val highlight: BoardHighlight = BoardHighlight.None,
         val glow: Color = Color.Unspecified,
         val pulse: Float = 1f,
-        /** The square a mine was just revealed on, and how far its flash has run (0 to 1); -1 for none. */
+        /** The square a mine was just revealed on, and how far its blast has run (0 to 1); -1 for none. */
         val bumpAt: Int = -1,
         val bump: Float = 0f,
-        val shake: Boolean = true,
+        val blast: Boolean = true,
     )
 
     private fun digitLayouts(measurer: TextMeasurer, fontPx: Float, density: Density): List<TextLayoutResult> {
@@ -278,11 +281,16 @@ object Mines : PuzzleType {
 
         for (i in 0 until w * h) {
             var x = (i % w) * u
-            val y = (i / w) * u
+            var y = (i / w) * u
             val alpha = if (dim(i)) 0.35f else 1f
-            if (i == overlay.bumpAt && overlay.shake) {
-                val t = overlay.bump
-                x += 0.12f * u * sin(6 * PI.toFloat() * t) * (1 - t)
+            // Every square near the blast alike, hidden or open, mine or not: geometry alone, so it gives nothing away.
+            if (overlay.bumpAt >= 0 && overlay.blast && i != overlay.bumpAt) {
+                val dc = (i % w - overlay.bumpAt % w).toFloat()
+                val dr = (i / w - overlay.bumpAt / w).toFloat()
+                val d = sqrt(dc * dc + dr * dr)
+                val push = MinesLogic.blastPush(overlay.bump, d) * u / d
+                x += dc * push
+                y += dr * push
             }
             feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
                 when {
@@ -308,12 +316,15 @@ object Mines : PuzzleType {
             }
         }
 
-        // A mine just found: a ring that flashes out from its square.
+        // A mine just found: a ring from its square, across the squares it pushes; under reduced motion it stays close.
         if (overlay.bumpAt >= 0) {
             val t = overlay.bump
             val cx = (overlay.bumpAt % w + 0.5f) * u
             val cy = (overlay.bumpAt / w + 0.5f) * u
-            drawCircle(scheme.error.copy(alpha = (1f - t) * 0.8f), u * (0.5f + 0.6f * t), Offset(cx, cy), style = Stroke(u * 0.08f))
+            val spread = if (overlay.blast) MinesLogic.BLAST_REACH else 0.6f
+            clipRect(0f, 0f, w * u, h * u) {
+                drawCircle(scheme.error.copy(alpha = (1f - t) * 0.8f), u * (0.5f + spread * t), Offset(cx, cy), style = Stroke(u * 0.08f))
+            }
         }
 
         if (lit) hintRims(hl, u, overlay.glow, overlay.pulse, scheme.background) { set, width, colour ->
@@ -393,7 +404,7 @@ object Mines : PuzzleType {
         var cursor by remember(s.mines) { mutableStateOf<Int?>(null) }
         val scope = rememberCoroutineScope()
         var bump by remember(s.mines) { mutableStateOf<Bump?>(null) }
-        // Reduced motion: a mine found flashes without the shake.
+        // Reduced motion: a mine found rings in place; no square is pushed.
         val still = LocalReducedMotion.current
         val live = interactive && !s.solved && !s.failed
         val feel = rememberMoveFeel(List(n) { if (it in s.bumps) 'x' else s.marks[it] })
@@ -444,7 +455,7 @@ object Mines : PuzzleType {
                 drawBoard(
                     s, size.width / s.width, digits, scheme, hues,
                     Overlay(highlight, glow, pulse.value, b?.cell ?: -1, b?.progress?.value ?: 0f, !still),
-                    feel, Color(accent),
+                    feel, vivid(accent),
                 )
             }
         }
@@ -506,7 +517,7 @@ object Mines : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         PenRow(
-            "$REVEAL_PEN$FLAG_PEN", if (flagPen) FLAG_PEN else REVEAL_PEN, enabled, Color(accent),
+            "$REVEAL_PEN$FLAG_PEN", if (flagPen) FLAG_PEN else REVEAL_PEN, enabled, vivid(accent),
             { if (it == FLAG_PEN) "Flag" else "Reveal" }, { onPen(it == FLAG_PEN) }, vertical,
         ) { option ->
             val u = size.minDimension

@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -47,14 +48,16 @@ import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
-import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.union
 import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeGlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,6 +68,38 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.rememberSettled
+
+/** Tents' own colours, beyond [ArcadeBoard]'s: a tent wears its amber, the trees and grass these greens. Measured in TentsInksTest. */
+internal class TentsInks private constructor(
+    val tree: ArcadeFill,
+    val grass: ArcadeFill,
+    val met: ArcadeFill,
+    val tent: Color,
+    val tentDoor: Color,
+    /** How much of [grass] shows on a square a tent sprouted, over the plain square. */
+    val sprouted: Float,
+) {
+    companion object {
+        val Light = TentsInks(
+            tree = ArcadeFill(Color(0xFF0E9F6E), Color(0xFF046C4E), Color(0xFFF0FFC2)),
+            grass = ArcadeFill(Color(0xFFC6F24E), Color(0xFF7EDB3A), Color(0xFF0B4F2E)),
+            met = ArcadeFill(Color(0xFF087F5B), Color(0xFF046C4E), Color.White),
+            tent = Color(0xFF21145F),
+            tentDoor = Color(0xFFFFF4C2),
+            sprouted = 0.42f,
+        )
+        val Dark = TentsInks(
+            tree = ArcadeFill(Color(0xFF00E6A0), Color(0xFF00A67E), Color(0xFF05281F)),
+            grass = ArcadeFill(Color(0xFF17903F), Color(0xFF0B5F3A), Color(0xFFD6FF8A)),
+            met = ArcadeFill(Color(0xFF00E6A0), Color(0xFF00A67E), Color(0xFF05281F)),
+            tent = Color(0xFF21145F),
+            tentDoor = Color(0xFFFFF4C2),
+            sprouted = 0.72f, // dark's deep square swallows the green at less
+        )
+
+        fun of(scheme: ColorScheme) = if (BoardHues.isDark(scheme)) Dark else Light
+    }
+}
 
 /**
  * Tents. The board is one canvas: a row of column counts across the top, a column of row counts down the
@@ -202,6 +237,7 @@ object Tents : PuzzleType {
         val badTents: Set<Int> = emptySet(),
         val badRows: Set<Int> = emptySet(),
         val badCols: Set<Int> = emptySet(),
+        val cursor: Int? = null,
     )
 
     /** The square a highlight index names, in the canvas of [n] + 1 units across (clues take the first). */
@@ -216,59 +252,112 @@ object Tents : PuzzleType {
         u: Float,
         digits: List<TextLayoutResult>,
         scheme: ColorScheme,
-        hues: Pair<Float, Float>,
         overlay: Overlay,
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
     ) {
         val n = s.size
-        val dark = BoardHues.isDark(scheme)
-        val (hueTree, hueTent) = hues
-        val treeInk = BoardHues.ink(hueTree, dark)
-        val tentInk = BoardHues.ink(hueTent, dark)
-        val grassFill = BoardHues.fill(hueTree, dark).copy(alpha = if (dark) 0.5f else 0.4f)
+        val a = ArcadeBoard.of(scheme)
+        val inks = TentsInks.of(scheme)
         val gx = u
         val gy = u
         val hl = overlay.highlight
         val lit = !hl.isEmpty
         fun named(i: Int) = i in hl.strong || i in hl.soft
 
-        drawRoundRect(scheme.surface, Offset(gx, gy), Size(n * u, n * u), CornerRadius(u * 0.12f))
+        // The frame shows between the squares as the grid lines, and a little past them all round.
+        val gap = maxOf(2f, u * 0.07f)
+        val corner = CornerRadius(u * 0.14f)
+        drawRoundRect(a.frame, Offset(gx - gap / 2, gy - gap / 2), Size(n * u + gap, n * u + gap), CornerRadius(u * 0.18f))
+        val tile = Size(u - gap, u - gap)
+        fun tileAt(i: Int) = Offset(gx + i % n * u + gap / 2, gy + i / n * u + gap / 2)
+
+        // Before any square, so the next square along cannot cover a tent's glow.
+        a.selected.glow?.let { glow ->
+            for (i in s.marks.indices) if (s.marks[i] == TentsLogic.TENT && i !in overlay.badTents) {
+                arcadeGlow(glow.copy(alpha = 0.7f), tileAt(i), tile, corner.x, (gap / 2).toDp())
+            }
+        }
 
         val seen = s.seen
         for (r in 0 until n) for (c in 0 until n) {
             val i = r * n + c
             val x = gx + c * u
             val y = gy + r * u
+            val at = tileAt(i)
             feelSquare(feel, i, Offset(x, y), Size(u, u), accent) {
                 when {
-                    s.trees[i] -> drawTree(x, y, u, treeInk, scheme.onSurface)
-                    s.marks[i] == TentsLogic.TENT -> drawTent(x, y, u, if (i in overlay.badTents) scheme.error else tentInk, scheme.surface)
-                    seen[i] == TentsLogic.GRASS -> {
-                        drawRect(grassFill, Offset(x, y), Size(u, u))
-                        drawGrass(x, y, u, treeInk)
+                    s.trees[i] -> {
+                        drawRoundRect(inks.tree.brush(at, tile), at, tile, corner)
+                        drawTree(x, y, u, inks.tree.ink)
                     }
+                    s.marks[i] == TentsLogic.TENT && i in overlay.badTents -> {
+                        // Red, and a ring, so it is not the colour alone.
+                        drawRoundRect(a.error, at, tile, corner)
+                        val ring = u * 0.07f
+                        drawRoundRect(
+                            a.errorInk, at + Offset(ring / 2, ring / 2), Size(tile.width - ring, tile.height - ring), CornerRadius(corner.x - ring / 2), style = Stroke(ring),
+                        )
+                        drawTent(x, y, u, a.errorInk, a.error)
+                    }
+                    s.marks[i] == TentsLogic.TENT -> {
+                        drawRoundRect(a.selected.brush(at, tile), at, tile, corner)
+                        drawTent(x, y, u, inks.tent, inks.tentDoor)
+                    }
+                    s.marks[i] == TentsLogic.GRASS -> {
+                        drawRoundRect(inks.grass.brush(at, tile), at, tile, corner)
+                        drawGrass(x, y, u, inks.grass.ink, 0.085f)
+                    }
+                    seen[i] == TentsLogic.GRASS -> {
+                        // Sprouted round a tent, not the player's own note: the same grass, paler and finer.
+                        drawRoundRect(a.square, at, tile, corner)
+                        drawRoundRect(inks.grass.brush(at, tile), at, tile, corner, alpha = inks.sprouted)
+                        drawGrass(x, y, u, inks.grass.ink, 0.05f)
+                    }
+                    i == overlay.cursor -> drawRoundRect(a.selected.brush(at, tile), at, tile, corner)
+                    else -> drawRoundRect(a.square, at, tile, corner)
                 }
             }
         }
-        val thin = maxOf(1f, u * 0.025f)
-        for (i in 0..n) {
-            drawLine(scheme.outline, Offset(gx + i * u, gy), Offset(gx + i * u, gy + n * u), thin)
-            drawLine(scheme.outline, Offset(gx, gy + i * u), Offset(gx + n * u, gy + i * u), thin)
-        }
 
-        // Counts: green when met, red when over (once the debounce lets it show).
+        // Counts: pale to do, a solid fill and a tick when met, red and ringed when over (once the debounce lets it show).
         fun clue(want: Int, have: Int, bad: Boolean, idx: Int, rect: Rect) {
-            val tint = if (bad) scheme.error else if (have == want) scheme.primary else Color.Unspecified
-            if (idx in hl.strong) drawRoundRect(overlay.glow.copy(alpha = 0.16f * overlay.pulse), rect.topLeft, rect.size, CornerRadius(u * 0.2f))
-            if (tint != Color.Unspecified) drawRoundRect(tint.copy(alpha = 0.16f), rect.topLeft, rect.size, CornerRadius(u * 0.2f))
-            val layout = digits[want]
             val alpha = if (lit && !named(idx)) 0.35f else 1f
-            val color = (if (tint != Color.Unspecified) tint else scheme.onSurface).copy(alpha = alpha)
-            drawText(layout, color, Offset(rect.center.x - layout.size.width / 2f, rect.center.y - layout.size.height / 2f))
+            val chipAt = rect.topLeft + Offset(gap / 2, gap / 2)
+            val chip = Size(rect.width - gap, rect.height - gap)
+            val met = !bad && have == want
+            if (idx in hl.strong) drawRoundRect(overlay.glow.copy(alpha = 0.16f * overlay.pulse), rect.topLeft, rect.size, CornerRadius(u * 0.2f))
+            when {
+                bad -> drawRoundRect(a.error.copy(alpha = alpha), chipAt, chip, corner)
+                met -> drawRoundRect(inks.met.brush(chipAt, chip), chipAt, chip, corner, alpha = alpha)
+                else -> drawRoundRect(a.given.copy(alpha = alpha), chipAt, chip, corner)
+            }
+            val ink = (if (bad) a.errorInk else if (met) inks.met.ink else a.givenInk).copy(alpha = alpha)
+            if (bad) {
+                val ring = u * 0.06f
+                drawRoundRect(ink, chipAt + Offset(ring / 2, ring / 2), Size(chip.width - ring, chip.height - ring), CornerRadius(corner.x - ring / 2), style = Stroke(ring))
+            }
+            if (met) {
+                val w = maxOf(1.5f, u * 0.05f)
+                val tick = Path().apply {
+                    moveTo(rect.left + u * 0.66f, rect.top + u * 0.24f)
+                    lineTo(rect.left + u * 0.73f, rect.top + u * 0.31f)
+                    lineTo(rect.left + u * 0.85f, rect.top + u * 0.17f)
+                }
+                drawPath(tick, ink, style = Stroke(w, cap = StrokeCap.Round))
+            }
+            val layout = digits[want]
+            drawText(layout, ink, Offset(rect.center.x - layout.size.width / 2f, rect.center.y - layout.size.height / 2f))
         }
         for (r in 0 until n) clue(s.rowCounts[r], s.rowTents(r), r in overlay.badRows, n * n + r, rectOf(n * n + r, n, u))
         for (c in 0 until n) clue(s.colCounts[c], s.colTents(c), c in overlay.badCols, n * n + n + c, rectOf(n * n + n + c, n, u))
+
+        // The keyboard cursor: an edge that parts from whatever the square holds, amber tent included.
+        overlay.cursor?.let { i ->
+            val at = tileAt(i)
+            val w = u * 0.1f
+            drawRoundRect(a.selectedEdge, at + Offset(w / 2, w / 2), Size(tile.width - w, tile.height - w), CornerRadius(corner.x - w / 2), style = Stroke(w))
+        }
 
         if (lit) {
             hintRims(hl, u, overlay.glow, overlay.pulse, scheme.background) { indices, width, color ->
@@ -281,35 +370,35 @@ object Tents : PuzzleType {
     }
 
     /** A round tree on a trunk. */
-    private fun DrawScope.drawTree(x: Float, y: Float, u: Float, canopy: Color, trunk: Color) {
-        drawRoundRect(trunk.copy(alpha = 0.65f), Offset(x + u * 0.43f, y + u * 0.55f), Size(u * 0.14f, u * 0.32f), CornerRadius(u * 0.04f))
-        drawCircle(canopy, u * 0.3f, Offset(x + u * 0.5f, y + u * 0.4f))
-        drawCircle(canopy, u * 0.19f, Offset(x + u * 0.3f, y + u * 0.54f))
-        drawCircle(canopy, u * 0.19f, Offset(x + u * 0.7f, y + u * 0.54f))
+    private fun DrawScope.drawTree(x: Float, y: Float, u: Float, ink: Color) {
+        drawRoundRect(ink, Offset(x + u * 0.43f, y + u * 0.55f), Size(u * 0.14f, u * 0.32f), CornerRadius(u * 0.04f))
+        drawCircle(ink, u * 0.3f, Offset(x + u * 0.5f, y + u * 0.4f))
+        drawCircle(ink, u * 0.19f, Offset(x + u * 0.3f, y + u * 0.54f))
+        drawCircle(ink, u * 0.19f, Offset(x + u * 0.7f, y + u * 0.54f))
     }
 
     /** A tent: a filled triangle with a doorway cut into it. */
     private fun DrawScope.drawTent(x: Float, y: Float, u: Float, body: Color, door: Color) {
         drawPath(Path().apply {
             moveTo(x + u * 0.5f, y + u * 0.16f)
-            lineTo(x + u * 0.92f, y + u * 0.84f)
-            lineTo(x + u * 0.08f, y + u * 0.84f)
+            lineTo(x + u * 0.86f, y + u * 0.82f)
+            lineTo(x + u * 0.14f, y + u * 0.82f)
             close()
         }, body)
         drawPath(Path().apply {
             moveTo(x + u * 0.5f, y + u * 0.46f)
-            lineTo(x + u * 0.65f, y + u * 0.84f)
-            lineTo(x + u * 0.35f, y + u * 0.84f)
+            lineTo(x + u * 0.63f, y + u * 0.82f)
+            lineTo(x + u * 0.37f, y + u * 0.82f)
             close()
-        }, door.copy(alpha = 0.85f))
+        }, door)
     }
 
-    /** Three blades of grass. */
-    private fun DrawScope.drawGrass(x: Float, y: Float, u: Float, ink: Color) {
-        val w = maxOf(2f, u * 0.07f)
+    /** Three blades of grass, [weight] a share of the square thick. */
+    private fun DrawScope.drawGrass(x: Float, y: Float, u: Float, ink: Color, weight: Float) {
+        val w = maxOf(2f, u * weight)
         for ((dx, lean) in listOf(0.3f to -0.07f, 0.5f to 0f, 0.7f to 0.07f)) {
             val top = if (dx == 0.5f) 0.34f else 0.44f
-            drawLine(ink.copy(alpha = 0.85f), Offset(x + u * dx, y + u * 0.78f), Offset(x + u * (dx + lean), y + u * top), w, StrokeCap.Round)
+            drawLine(ink, Offset(x + u * dx, y + u * 0.78f), Offset(x + u * (dx + lean), y + u * top), w, StrokeCap.Round)
         }
     }
 
@@ -340,7 +429,7 @@ object Tents : PuzzleType {
             val unitPx = with(density) { unit.toPx() }
             val digits = remember(unitPx) { digitLayouts(measurer, motif.size, unitPx * 0.55f, density) }
             Canvas(Modifier.size(unit * (motif.size + 1))) {
-                drawBoard(motif, unitPx, digits, scheme, BoardHues.HUE_PAIRS[0], Overlay())
+                drawBoard(motif, unitPx, digits, scheme, Overlay())
             }
         }
     }
@@ -378,7 +467,6 @@ object Tents : PuzzleType {
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
         val (highlight, glow, pulse) = rememberHintPaint()
-        val hues = remember(s.solution) { BoardHues.pair(s.solution.hashCode()) }
 
         // Wrong now, and still wrong a second on: touching tents, a row or column with too many.
         // The next change cancels the wait and starts it over. Derived, never stored.
@@ -418,6 +506,7 @@ object Tents : PuzzleType {
             val overlay = Overlay(
                 highlight, glow, pulse.value,
                 bad.first.intersect(settled.first), bad.second.intersect(settled.second), bad.third.intersect(settled.third),
+                cursor.takeIf { interactive },
             )
 
             Box(
@@ -428,13 +517,12 @@ object Tents : PuzzleType {
                             .reduceOrNull(Rect::union)
                     },
             ) {
-                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, hues, overlay, feel, Color(accent)) }
+                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, overlay, feel, vivid(accent)) }
                 // Taps are read over the grid alone; the counts beside it are not part of the play area.
                 Box(
                     Modifier
                         .padding(start = unit, top = unit)
                         .size(unit * n)
-                        .gridCursor(cursor.takeIf { interactive }, n, n, scheme.primary)
                         .pointerInput(interactive) {
                             if (!interactive) return@pointerInput
                             fun cellAt(o: Offset) = gridCellAt(o, unitPx, n, n)

@@ -89,7 +89,7 @@ fun SettingsScreen(
             item {
                 SettingSwitch(
                     title = "Sound",
-                    detail = "Soft sounds as you play, and a chime when you solve a puzzle. $SOLVE_SOUND_NOTE",
+                    detail = "Soft sounds as you play, and a short tune when you solve a puzzle. $SOLVE_SOUND_NOTE",
                     checked = playSound,
                     onChecked = onPlaySound,
                 )
@@ -149,8 +149,6 @@ private fun ReminderSetting() {
                 options = REMINDER_HOURS,
                 selected = hour,
                 label = ::hourLabel,
-                tone = scheme.primary,
-                onTone = scheme.onPrimary,
                 verticalPadding = 7.dp,
                 onSelect = { h ->
                     scope.launch {
@@ -205,8 +203,6 @@ private fun MotionSetting(choice: MotionChoice, onChoice: (MotionChoice) -> Unit
             options = MotionChoice.entries,
             selected = choice,
             label = { it.label },
-            tone = scheme.primary,
-            onTone = scheme.onPrimary,
             verticalPadding = 7.dp,
             onSelect = onChoice,
             track = scheme.background,
@@ -231,8 +227,6 @@ private fun AppearanceChoice(appearance: Appearance, onAppearance: (Appearance) 
             options = Appearance.entries,
             selected = appearance,
             label = { it.label },
-            tone = scheme.primary,
-            onTone = scheme.onPrimary,
             verticalPadding = 7.dp,
             onSelect = onAppearance,
             // The card is already surface-coloured, so the track takes the page's colour to show.
