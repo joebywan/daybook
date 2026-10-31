@@ -290,7 +290,6 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
 
 ## Owner's call
 
-- **Dwindle's name and id** (`docs/DWINDLE_SPEC.md`, draft PR): the id is hashed into every seed, so it must be settled before the first merge.
 
 - **Web address.** The web version is served at `knowhowit.com.au/daybook/`, a path on the owner's
   existing domain. That works, and nothing needs doing unless it matters. The one thing to know: a

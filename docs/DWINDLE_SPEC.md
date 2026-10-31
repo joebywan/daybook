@@ -1,7 +1,6 @@
 # Dwindle: spec and decisions
 
-Working name, `id = "dwindle"`. **Neither is approved: the owner chooses before it ships, because the id is hashed into every seed and can
-never change.** Inspired by a game a player likes; its name, "Word Tiles" and its art are never used.
+`id = "dwindle"` is hashed into every seed: never rename it. Inspired by a game a player likes; its name, "Word Tiles" and its art are never used.
 
 ## The game
 

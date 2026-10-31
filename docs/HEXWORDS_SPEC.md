@@ -1,7 +1,6 @@
-# Hexwords (working name)
+# Hexwords
 
-**Name and id wait for the owner.** `id = "hexwords"` is hashed into every seed and keys every save, so the PR stays a draft until
-the owner approves both. Inspired by a game a player likes; that game's name and art appear nowhere.
+`id = "hexwords"` is hashed into every seed and keys every save: never rename it. Inspired by a game a player likes; that game's name and art appear nowhere.
 
 ## The game
 
@@ -80,7 +79,7 @@ word), against budgets of 2,000,000 (generator) and 300,000 (a hint).
 
 ## Not done
 
-- **Whether a person enjoys Expert's target** is unmeasured: the numbers say what simple players reach, not how it feels. The owner should
-  play Hard and Expert before approving; the knobs are `HexLogic.targetFor` and `specFor`.
+- **Whether a person enjoys Expert's target** is unmeasured: the numbers say what simple players reach, not how it feels. The owner will judge it from prod;
+  the knobs are `HexLogic.targetFor` and `specFor`.
 - A themed daily was declined by the owner (2026-10-25: no curated lists).
 - No Training course.

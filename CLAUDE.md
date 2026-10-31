@@ -532,12 +532,12 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   stronger teacher never moves a board. No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
   `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.
 
-## Hexwords (working name: spend a block of letters)
+## Hexwords (spend a block of letters)
 
 Drag through touching hexes to spell words; a word scores 3 / 5 / 8 / 12 / 17 for 3-7 letters and its letters go; reach the target.
 Spec, decisions and measurements: `docs/HEXWORDS_SPEC.md`. `puzzles/HexwordsRules.kt` (state, `HexSearch`, `HexLogic`: finder,
 players, generator), `HexwordsTeacher.kt`, `HexwordsKeys.kt` (keys, the pure swipe and tap, `HexGeometry`), `Hexwords.kt` (board,
-walkthrough, motif). `id = "hexwords"` is hashed into every seed; the owner has yet to approve it, so the PR stays a draft.
+walkthrough, motif). `id = "hexwords"` is hashed into every seed: never rename it.
 
 - **Letters vanish on every tier and holes stay holes.** So a position is a bitmask and reaching a score is an exact question:
   `HexSearch.reach` says `Yes(road)`, `No` or `Truncated` (a budget counted in positions). Only `Yes` ships; only `No` is a mistake.
@@ -813,11 +813,11 @@ Display name "Crossword" (one line on a home tile), never a newspaper's.
   clears. The clue bar (fixed height, room for two lines) shows the cursor's clue, turns on a tap, and ‹ › walk the words. Keys:
   letters, Backspace, arrows (one across the word's way turns first), Space turns.
 
-## Dwindle (working name; the owner has not approved the name or id)
+## Dwindle
 
 A grid of letter tiles and a dashed list of goal words. Each tile shows how many goals still run through it and vanishes at zero. Spec and decisions:
 `docs/DWINDLE_SPEC.md`. `puzzles/DwindleRules.kt` (state, `DwindleLogic`: rules, `ways`, generator), `DwindleTeacher.kt`, `Dwindle.kt` (board, walkthrough, motif; keys are
-Word Wheel's `wordWheelKeyAction`). `id = "dwindle"` is hashed into every seed: never rename it once shipped.
+Word Wheel's `wordWheelKeyAction`). `id = "dwindle"` is hashed into every seed: never rename it.
 
 - **Tiles do not fall and every goal has exactly one way on the full grid (`DwindleLogic.proved`), so no order can get stuck:** removal only takes ways away, and a tile on a
   goal's way counts that goal until it is found. Falling would make this an exhaustive search over positions. `DwindleOracle` checks all 2^n subsets on its own reading.
@@ -927,7 +927,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list; the lengths, 11 / 13 / 8, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths, 11 / 13 / 9, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
   **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
   once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,
@@ -988,7 +988,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword and Mini (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords and Dwindle (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

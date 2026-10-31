@@ -76,7 +76,7 @@ object Dwindle : PuzzleType {
     override val id = "dwindle"
     override val displayName = "Dwindle"
     override val tagline = "Find every word, and watch the letters go"
-    override val accent = 0xFF96754A
+    override val accent = 0xFFA55C09
     override val rules = listOf(
         "Spell words by swiping through touching tiles, diagonals included, or tap them in turn and tap the word.",
         "A word has three letters or more and uses a tile at most once. Tiles never fall or move.",
