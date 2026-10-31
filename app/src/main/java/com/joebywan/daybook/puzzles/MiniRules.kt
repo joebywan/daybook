@@ -99,6 +99,9 @@ internal object MiniLogic {
         }.toSet()
     }
 
+    /** The slots shown red: [deadSlots], but only once no square is open, so the red never checks a word mid-grid. */
+    fun shownDead(size: Int, letters: String): Set<Int> = if (OPEN in letters) emptySet() else deadSlots(size, letters)
+
     // ---- proof -------------------------------------------------------------------------------------
 
 

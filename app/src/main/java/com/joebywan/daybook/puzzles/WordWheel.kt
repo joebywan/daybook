@@ -18,7 +18,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -91,7 +95,7 @@ object WordWheel : PuzzleType {
     override val accent = 0xFF2891AC
     override val rules = listOf(
         "Spell words from the wheel by swiping across its letters, or tap them in turn and tap the word to try it.",
-        "Each letter on the wheel is used at most once in a word, and a word has three letters or more.",
+        "Each letter on the wheel is used at most once in a word, and no word is shorter than the grid's shortest.",
         "A word the grid holds fills its slot. Fill every slot to finish.",
         "Other real words count as bonus words. They are never needed.",
         "Shuffle moves the letters round the wheel and changes nothing else.",
@@ -142,7 +146,7 @@ object WordWheel : PuzzleType {
         val s0 = tutorialBoard()
         val s1 = s0.enter("brain")
         val s2 = s1.enter("barn")
-        val s3 = s2.enter("ban")
+        val s3 = s2.enter("bran")
         fun wheelOf(word: String) = WordWheelTeacher.letters(s0.wheel, word)
         fun slot(k: Int) = s0.slots[k].cells(s0.width).toSet()
         listOf(
@@ -171,11 +175,11 @@ object WordWheel : PuzzleType {
             ),
             TutorialFrame(
                 state = s2,
-                caption = "A real word the grid does not hold is a bonus word: counted, never needed. Spell BAN.",
-                highlight = BoardHighlight(strong = wheelOf("ban")),
-                accepts = only(listOf("brain", "barn"), listOf("ban")),
-                retry = "Spell the glowing letters: B, A, N.",
-                done = "BAN is a bonus word.",
+                caption = "A real word the grid does not hold is a bonus word: counted, never needed. Spell BRAN.",
+                highlight = BoardHighlight(strong = wheelOf("bran")),
+                accepts = only(listOf("brain", "barn"), listOf("bran")),
+                retry = "Spell the glowing letters: B, R, A, N.",
+                done = "BRAN is a bonus word.",
             ),
             TutorialFrame(
                 state = s3,
@@ -262,6 +266,7 @@ object WordWheel : PuzzleType {
                 notice = null
             }
         }
+        var showBonus by remember(s.wheel) { mutableStateOf(false) }
         // Shuffle only reorders the display; the count is all it needs to remember.
         var shuffles by rememberSaveable(s.wheel) { mutableIntStateOf(0) }
         val order = remember(s.wheel, shuffles) {
@@ -289,7 +294,7 @@ object WordWheel : PuzzleType {
                 }
                 WheelEntry.Found -> say("${word.uppercase()} is already found", true)
                 WheelEntry.NotAWord -> say("${word.uppercase()} is not in the word list", true)
-                WheelEntry.TooShort -> say("Words have three letters or more", true)
+                WheelEntry.TooShort -> say("Words here have ${now.shortestWord} letters or more", true)
                 WheelEntry.NotOnWheel -> say("The wheel cannot spell ${word.uppercase()}", true)
             }
         }
@@ -413,16 +418,39 @@ object WordWheel : PuzzleType {
                     SideButton("✕", playable && picked.isNotEmpty()) { picked = emptyList() }
                 }
 
-                Text(
-                    bonusLine(s),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth().height(LINE).padding(top = 4.dp),
-                )
+                // A tap opens the whole list; the line's room is always kept, so nothing moves when it fills.
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(LINE)
+                        .clickable(enabled = s.bonus.isNotEmpty()) { showBonus = true }
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        bonusLine(s),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (s.bonus.isNotEmpty()) Text(" ›", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                }
             }
+        }
+
+        if (showBonus) {
+            AlertDialog(
+                onDismissRequest = { showBonus = false },
+                title = { Text("Bonus words: ${s.bonus.size}") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        s.bonus.sorted().forEach { Text(it.uppercase(), Modifier.padding(vertical = 2.dp)) }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showBonus = false }) { Text("Close") } },
+            )
         }
     }
 
