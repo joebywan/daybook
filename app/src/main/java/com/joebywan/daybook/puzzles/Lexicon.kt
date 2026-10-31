@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -375,7 +376,7 @@ object Lexicon : PuzzleType {
                                     val letter = guess?.get(slot) ?: if (typing) s.current.getOrNull(slot) else null
                                     val mark = guess?.let { s.marks(it)[slot] }
                                     val look = highlight.look(LexiconTeacher.tile(s.length, row, slot), dims = tilesNamed)
-                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent, Modifier.moveFeel(feel, row * s.length + slot, Color(accent)))
+                                    Tile(letter, mark, typing && letter != null, cell, look, glow, pulse, absent, Modifier.moveFeel(feel, row * s.length + slot, vivid(accent)))
                                 }
                             }
                         }

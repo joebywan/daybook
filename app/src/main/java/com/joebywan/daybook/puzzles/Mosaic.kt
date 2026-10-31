@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -202,11 +203,11 @@ object Mosaic : PuzzleType {
      * Digits go on each fill in [BoardHues.onFill].
      */
     val palette: List<Color> = listOf(
-        BoardHues.fill(34f, false),
+        BoardHues.pinnedFill(34f, false),
         BoardHues.deep(175f, false),
-        BoardHues.mark(268f),
+        BoardHues.pinnedMark(268f),
         BoardHues.deep(330f, false),
-        BoardHues.fill(215f, false),
+        BoardHues.pinnedFill(215f, false),
     )
 
 
@@ -1099,7 +1100,7 @@ object Mosaic : PuzzleType {
                     for (cell in s.cells.indices) {
                         val r = cell / s.width
                         val c = cell % s.width
-                        feelSquare(feel, cell, Offset(c * stepPx, r * stepPx), Size(stepPx, stepPx), Color(accent)) {
+                        feelSquare(feel, cell, Offset(c * stepPx, r * stepPx), Size(stepPx, stepPx), vivid(accent)) {
                             drawRect(
                                 color = palette[s.cells[cell]],
                                 topLeft = Offset(c * stepPx, r * stepPx),

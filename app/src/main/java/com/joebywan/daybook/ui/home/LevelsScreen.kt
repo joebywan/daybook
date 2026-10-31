@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.home
 
+import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.data.levelBoardDone
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.CardText
@@ -226,7 +227,7 @@ private fun LevelRow(progress: LevelProgress, level: Int, onClick: () -> Unit, t
             // A dot per board in its puzzle's colour: filled once solved.
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 progress.plan(level).forEach { b ->
-                    val accent = PuzzleRegistry.byId(b.puzzleId)?.let { Color(it.accent) } ?: scheme.outline
+                    val accent = PuzzleRegistry.byId(b.puzzleId)?.let { vivid(it.accent) } ?: scheme.outline
                     val done = levelBoardDone(b.puzzleId, solved)
                     Box(Modifier.size(10.dp).clip(CircleShape).background(if (done) accent else scheme.outline.copy(alpha = 0.3f)))
                 }

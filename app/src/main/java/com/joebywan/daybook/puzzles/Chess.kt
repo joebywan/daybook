@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -305,7 +306,7 @@ object Chess : PuzzleType {
         }
 
         val (light, dark) = squareColours(scheme)
-        val note = Color(accent)
+        val note = vivid(accent)
 
         BoxWithConstraints(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp),

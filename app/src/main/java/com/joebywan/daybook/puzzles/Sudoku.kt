@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -572,7 +573,7 @@ object Sudoku : PuzzleType {
             conflicts = s.conflicts(),
             hueSeed = s.solution.hashCode(),
             interactive = interactive,
-            accent = Color(accent),
+            accent = vivid(accent),
             onSelect = { onState(s.select(it)) },
             onEnter = { cell, digit, notesMode ->
                 // The keys are dimmed and inert where a note cannot go, so a refusal here is never silent.

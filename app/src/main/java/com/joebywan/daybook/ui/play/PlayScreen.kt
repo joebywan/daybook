@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.play
 
+import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.AnimatedVisibility
@@ -448,7 +449,7 @@ fun PlayScreen(
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .background(scheme.background)
+            .background(com.joebywan.daybook.ui.theme.pageGradient(scheme))
             // Ctrl/Cmd+Z, H and Esc, as wherever a board is played. None once solved.
             .hintKeys(!state.solved, hintSession, if (puzzle.offersHints) ::onHint else null, if (puzzle.offersUndo) ::undo else null)
             .onGloballyPositioned { overlayOrigin = it.positionInWindow() },
@@ -525,7 +526,7 @@ fun PlayScreen(
                     Text(
                         "${puzzle.tagline}\nOne-minute walkthrough",
                         style = MaterialTheme.typography.bodySmall,
-                        color = com.joebywan.daybook.ui.theme.BoardHues.textOn(Color(puzzle.accent), scheme.background),
+                        color = com.joebywan.daybook.ui.theme.BoardHues.textOn(vivid(puzzle.accent), scheme.background),
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         modifier = Modifier
@@ -597,7 +598,7 @@ fun PlayScreen(
         Box {
             if (wide && hintSession.active && !state.solved) {
                 HintPanel(
-                    hintSession, Color(puzzle.accent), ::onHint,
+                    hintSession, vivid(puzzle.accent), ::onHint,
                     modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth(),
                     fill = false,
                 )
@@ -621,7 +622,7 @@ fun PlayScreen(
     // The finish: a compact frame docked over the play screen. An overlay, so the board keeps
     // exactly the box it had; the toolbar above stays laid out (hidden) for the same reason.
     if (finished && revealed) {
-        val accent = Color(puzzle.accent)
+        val accent = vivid(puzzle.accent)
         // Tapping anywhere but a button hides the frame so the solved board can be looked at; the pill
         // brings it back. The scrim only exists while the frame is up, and a hidden frame covers nothing.
         if (!resultsHidden) {
@@ -670,7 +671,7 @@ fun PlayScreen(
     if (hintSession.active && !state.solved && !wide) {
         HintPopover(
             session = hintSession,
-            accent = Color(puzzle.accent),
+            accent = vivid(puzzle.accent),
             onNext = ::onHint,
             highlight = highlightBounds.rect,
             keepClear = highlightBounds.keepClear,

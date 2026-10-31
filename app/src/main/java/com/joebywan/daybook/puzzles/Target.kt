@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -258,7 +259,7 @@ object Target : PuzzleType {
                             Box(
                                 Modifier
                                     .size(u * 1.1f, u * 0.95f)
-                                    .moveFeel(feel, slot, Color(accent))
+                                    .moveFeel(feel, slot, vivid(accent))
                                     .highlightAnchor(slot)
                                     .ring(l, glow, pulse, corner, outside = true)
                                     .dimmed(l)

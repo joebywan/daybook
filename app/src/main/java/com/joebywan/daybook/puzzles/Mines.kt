@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -444,7 +445,7 @@ object Mines : PuzzleType {
                 drawBoard(
                     s, size.width / s.width, digits, scheme, hues,
                     Overlay(highlight, glow, pulse.value, b?.cell ?: -1, b?.progress?.value ?: 0f, !still),
-                    feel, Color(accent),
+                    feel, vivid(accent),
                 )
             }
         }
@@ -506,7 +507,7 @@ object Mines : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         PenRow(
-            "$REVEAL_PEN$FLAG_PEN", if (flagPen) FLAG_PEN else REVEAL_PEN, enabled, Color(accent),
+            "$REVEAL_PEN$FLAG_PEN", if (flagPen) FLAG_PEN else REVEAL_PEN, enabled, vivid(accent),
             { if (it == FLAG_PEN) "Flag" else "Reveal" }, { onPen(it == FLAG_PEN) }, vertical,
         ) { option ->
             val u = size.minDimension

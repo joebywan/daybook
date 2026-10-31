@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.foundation.Canvas
@@ -488,7 +489,7 @@ object Nonogram : PuzzleType {
                                     translationY = view.value.offset.y
                                 }
                                 .penGrid(s, interactive, pen, g.u, sweep, cursor, scheme.primary, onState, sweeps = !view.value.zoomed)
-                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, Color(accent), view.value.scale) },
+                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, vivid(accent), view.value.scale) },
                         )
                     }
                     if (view.value.zoomed) {
@@ -501,9 +502,9 @@ object Nonogram : PuzzleType {
                 }
             }
 
-            PenRow(s.pens, pen, interactive, Color(accent), { if (it == NonogramLogic.FILLED) "Fill" else "Cross" }, { pen = it }) { option ->
+            PenRow(s.pens, pen, interactive, vivid(accent), { if (it == NonogramLogic.FILLED) "Fill" else "Cross" }, { pen = it }) { option ->
                 if (option == NonogramLogic.FILLED) {
-                    drawRoundRect(Color(accent), Offset(2f, 2f), Size(size.width - 4f, size.height - 4f), CornerRadius(size.width * 0.18f))
+                    drawRoundRect(vivid(accent), Offset(2f, 2f), Size(size.width - 4f, size.height - 4f), CornerRadius(size.width * 0.18f))
                 } else {
                     val a = size.width * 0.2f
                     val ink = scheme.onSurface.copy(alpha = 0.85f)

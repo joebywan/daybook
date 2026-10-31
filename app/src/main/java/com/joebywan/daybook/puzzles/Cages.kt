@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -384,7 +385,7 @@ object Cages : PuzzleType {
             conflicts = s.conflicts(),
             hueSeed = seed,
             interactive = interactive,
-            accent = Color(accent),
+            accent = vivid(accent),
             onSelect = { onState(s.select(it)) },
             onEnter = { cell, digit, notesMode ->
                 val next = s.enter(cell, digit, notesMode)

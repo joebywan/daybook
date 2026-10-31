@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -328,7 +329,7 @@ object WordWheel : PuzzleType {
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.width, maxHeight / s.height, MAX_CELL).coerceAtLeast(0.dp)
                     Canvas(Modifier.size(cell * s.width, cell * s.height).highlightGrid(s.width, s.height)) {
-                        drawGrid(s, cell.toPx(), highlight, glow, pulse.value, hueB, dark, measurer, feel, Color(accent))
+                        drawGrid(s, cell.toPx(), highlight, glow, pulse.value, hueB, dark, measurer, feel, vivid(accent))
                     }
                 }
 

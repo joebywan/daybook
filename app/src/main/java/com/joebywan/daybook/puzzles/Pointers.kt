@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -467,12 +468,12 @@ object Pointers : PuzzleType {
                     val flash = if (b == null) 0f else minOf(1f, 2f * (1f - b.progress.value)) // full warning for the first half, then fading
                     // A finger down on an arrow: the same band as the keyboard cursor's, under it.
                     if (pressed >= 0 && pressed !in s.removed) {
-                        drawArrow(s.arrows[pressed], s.width, unit, Color(accent).copy(alpha = 0.45f), width = 0.75f, head = false)
+                        drawArrow(s.arrows[pressed], s.width, unit, vivid(accent).copy(alpha = 0.45f), width = 0.75f, head = false)
                     }
                     // The keyboard cursor: a soft band under the arrow it is on, or a ring on a bare square.
                     cursor?.let { at ->
                         val a = s.arrowAt(at)
-                        val band = Color(accent).copy(alpha = 0.45f)
+                        val band = vivid(accent).copy(alpha = 0.45f)
                         if (a >= 0) drawArrow(s.arrows[a], s.width, unit, band, width = 0.75f, head = false)
                         else drawCircle(band, 0.35f * unit, Offset((at % s.width + 0.5f) * unit, (at / s.width + 0.5f) * unit), style = Stroke(0.08f * unit))
                     }

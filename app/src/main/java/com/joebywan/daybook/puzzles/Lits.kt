@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -1063,9 +1064,9 @@ object Lits : PuzzleType {
      * player who cannot separate two of these hues reads the glyph instead.
      */
     val palette: Map<Piece, Color> = mapOf(
-        Piece.I to BoardHues.fill(215f, false),
+        Piece.I to BoardHues.pinnedFill(215f, false),
         Piece.L to BoardHues.deep(175f, false),
-        Piece.T to BoardHues.mark(268f),
+        Piece.T to BoardHues.pinnedMark(268f),
         Piece.S to BoardHues.deep(330f, false),
     )
 
@@ -1078,7 +1079,7 @@ object Lits : PuzzleType {
      * makes no claim about which letter it will become. It is a warm neutral against four
      * saturated hues, so "still working on it" and "settled into an L" are never each other.
      */
-    private val inProgress = Color(accent)
+    private val inProgress get() = vivid(accent)
 
     /** The share of a cell a crossed-off square keeps clear, matching Kings' crosses. */
     private const val CROSS_INSET = 0.28f
@@ -1292,7 +1293,7 @@ object Lits : PuzzleType {
         val units = remember(s.region) { s.region.indices.groupBy { s.region[it] }.values.map { it.toIntArray() } }
         val handed = remember(s.shaded) { s.letters() }
         val feel = rememberMoveFeel(s.shaded, units) { u -> units[u].count { s.shaded[it] } == 4 && units[u].all { !s.shaded[it] || handed[it] != null } }
-        val accentColour = Color(accent)
+        val accentColour = vivid(accent)
 
         // What a hint or the walkthrough is pointing at. Everything it does not name is dimmed, so
         // the named squares can be found at a glance; [BoardHighlight.strong] squares get a

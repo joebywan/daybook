@@ -1,5 +1,11 @@
 package com.joebywan.daybook.ui.home
 
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
+import com.joebywan.daybook.ui.theme.pageGradient
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.border
 import androidx.compose.animation.AnimatedVisibility
@@ -229,7 +235,7 @@ fun HomeScreen(
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .background(scheme.background)
+            .background(pageGradient(scheme))
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
         // A phone on its side. A tablet in landscape is taller than this and keeps the stacked rows.
@@ -363,7 +369,7 @@ private fun ContinueRow(puzzle: PuzzleType, tier: Difficulty, modifier: Modifier
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color(puzzle.accent), modifier = Modifier.size(20.dp))
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = vivid(puzzle.accent), modifier = Modifier.size(20.dp))
     }
 }
 
@@ -735,7 +741,7 @@ internal fun PuzzleTile(
     cornerTick: Boolean = true,
     footer: @Composable (accent: Color) -> Unit,
 ) {
-    val accent = Color(puzzle.accent)
+    val accent = vivid(puzzle.accent)
     val started = puzzle.id in inProgress()
     HomeTile(
         name = puzzle.displayName,
@@ -802,14 +808,30 @@ internal fun HomeTile(
     val scheme = MaterialTheme.colorScheme
     val pop = rememberPop(justSolved, solved, 1.15f)
     val ink = tileInk(accent, scheme.surface)
+    val dark = BoardHues.isDark(scheme)
     Column(
         modifier
+            // Before the clip, and no blur: a hard offset "sticker" in light, stacked rings as a glow in dark.
+            .drawBehind {
+                val r = 18.dp.toPx()
+                if (dark) {
+                    for ((grow, alpha) in listOf(5.dp to .08f, 3.dp to .12f, 1.5.dp to .2f)) {
+                        val g = grow.toPx()
+                        drawRoundRect(accent.copy(alpha = alpha), Offset(-g, -g), Size(size.width + 2 * g, size.height + 2 * g), CornerRadius(r + g))
+                    }
+                } else {
+                    drawRoundRect(accent, Offset(3.dp.toPx(), 3.dp.toPx()), size, CornerRadius(r))
+                }
+            }
             .clip(RoundedCornerShape(18.dp))
             .drawBehind {
                 val t = if (solved) pop.value.coerceAtMost(1f) else 0f
-                if (t < 1f) drawRect(scheme.surface.copy(alpha = 1f - t))
-                if (t > 0f) drawRect(accent.copy(alpha = 0.20f * t))
+                drawRect(scheme.surface)
+                val from = TILE_WASH_FROM + (SOLVED_WASH_FROM - TILE_WASH_FROM) * t
+                val to = TILE_WASH_TO + (SOLVED_WASH_TO - TILE_WASH_TO) * t
+                drawRect(Brush.linearGradient(listOf(accent.copy(alpha = from), accent.copy(alpha = to)), Offset.Zero, Offset(size.width, size.height)))
             }
+            .border(1.5.dp, accent, RoundedCornerShape(18.dp))
             .then(frame)
             .clickable(onClick = onClick)
             .padding(TilePadding),
@@ -853,7 +875,19 @@ internal fun HomeTile(
  * [accent] as text on a tile, solved (tinted with it) or not: the tinted tile is the harder background in both schemes,
  * so one ink reads on either.
  */
-internal fun tileInk(accent: Color, surface: Color) = BoardHues.onTint(accent, surface, alpha = 0.20f)
+internal fun tileInk(accent: Color, surface: Color): Color {
+    // Mixed by the surface, not the wash: a dark accent's heavy wash is dark enough that onTint would turn white on a white tile.
+    val toward = if (surface.luminance() < .5f) Color.White else Color.Black
+    val heavy = accent.copy(alpha = SOLVED_WASH_FROM).compositeOver(surface)
+    return (0..50).map { androidx.compose.ui.graphics.lerp(accent, toward, it / 50f) }
+        .firstOrNull { BoardHues.contrast(it, heavy) >= 4.5f && BoardHues.contrast(it, surface) >= 4.5f } ?: toward
+}
+
+/** The diagonal wash on a tile, top left to bottom right; a solved tile's is stronger, and [tileInk] reads on its heaviest. */
+private const val TILE_WASH_FROM = 0.03f
+private const val TILE_WASH_TO = 0.20f
+internal const val SOLVED_WASH_FROM = 0.42f
+private const val SOLVED_WASH_TO = 0.30f
 
 /**
  * Three dots for the three tiers, so a tile can say "you did the Standard one" while the grid is

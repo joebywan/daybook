@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -428,7 +429,7 @@ object Tents : PuzzleType {
                             .reduceOrNull(Rect::union)
                     },
             ) {
-                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, hues, overlay, feel, Color(accent)) }
+                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, hues, overlay, feel, vivid(accent)) }
                 // Taps are read over the grid alone; the counts beside it are not part of the play area.
                 Box(
                     Modifier

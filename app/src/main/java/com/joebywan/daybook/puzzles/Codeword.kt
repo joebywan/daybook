@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -161,7 +162,7 @@ object Codeword : PuzzleType {
         feel: MoveFeel = MoveFeel.Still,
         squareModifier: @Composable (index: Int, number: Int) -> Modifier = { _, _ -> Modifier },
     ) = CrosswordGrid(
-        s.size, square, TEXT, Color(accent),
+        s.size, square, TEXT, vivid(accent),
         black = { s.numbers[it] == 0 },
         number = { s.numbers[it] },
         letter = { i -> s.letters[s.numbers[i] - 1].takeIf { it != EMPTY }?.let(::up) },

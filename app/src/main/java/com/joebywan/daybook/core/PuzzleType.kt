@@ -1,5 +1,6 @@
 package com.joebywan.daybook.core
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -74,7 +75,7 @@ interface PuzzleType {
      */
     @Composable
     fun Preview(modifier: Modifier) {
-        Box(modifier.background(Color(accent).copy(alpha = 0.55f)))
+        Box(modifier.background(vivid(accent).copy(alpha = 0.55f)))
     }
 
     /**

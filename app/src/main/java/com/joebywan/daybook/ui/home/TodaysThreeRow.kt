@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.home
 
+import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -103,7 +104,7 @@ private fun ThreeChip(
     puzzle: PuzzleType, solved: Boolean, next: Boolean, enabled: Boolean, compact: Boolean, onClick: () -> Unit, modifier: Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val accent = Color(puzzle.accent)
+    val accent = vivid(puzzle.accent)
     val chip = modifier
         .clip(RoundedCornerShape(14.dp))
         .background(if (solved) accent.copy(alpha = 0.2f).compositeOver(scheme.surface) else scheme.surface)

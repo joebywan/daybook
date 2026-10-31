@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.key.key
@@ -158,12 +159,13 @@ internal fun SudokuGridBoard(
                                 // holding the same digit react.
                                 .background(
                                     when {
-                                        isSelected -> BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.40f).compositeOver(scheme.surface)
+                                        isSelected -> BoardHues.selected(dark)
                                         sameValue -> BoardHues.fill(hueB, dark).copy(alpha = 0.8f).compositeOver(scheme.surface)
                                         (r / 3 + c / 3) % 2 == 0 -> boxTint
                                         else -> scheme.surface
                                     }
                                 )
+                                .then(if (isSelected) Modifier.border(2.dp, BoardHues.selectedRing(dark), RoundedCornerShape(4.dp)) else Modifier)
                                 .clickable(enabled = interactive) { onSelect(i) },
                             contentAlignment = Alignment.Center,
                         ) {
@@ -200,6 +202,8 @@ internal fun SudokuGridBoard(
                                     modifier = Modifier.padding(top = cell * topBand(i) * 0.7f),
                                     style = (if (s.givens[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(cell),
                                     color = when {
+                                        isSelected && i in conflicts -> BoardHues.textOn(scheme.error, BoardHues.selected(dark))
+                                        isSelected -> BoardHues.onFill(BoardHues.selected(dark))
                                         i in conflicts -> scheme.error
                                         s.givens[i] -> scheme.onSurface
                                         else -> BoardHues.ink(hueB, dark)

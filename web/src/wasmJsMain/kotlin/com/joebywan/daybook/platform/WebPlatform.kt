@@ -193,7 +193,7 @@ fun BackButton(onBack: () -> Unit) {
  */
 private fun setPageTheme(dark: Boolean): Unit = js("""(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = dark ? '#11201C' : '#F6F1E7');
+    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = dark ? '#120D33' : '#F4EFFF');
 })()""")
 
 @Composable
