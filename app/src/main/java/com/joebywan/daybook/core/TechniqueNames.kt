@@ -154,6 +154,11 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "columns-together" to "every column worked through together",
         "pair-what-if" to "a what-if on two columns",
     ),
+    "hexwords" to linkedMapOf(
+        "biggest" to "the biggest word that keeps the target",
+        "hold-back" to "holding back a word that costs the target",
+        "rare" to "a less common word that keeps the target",
+    ),
     "wordwheel" to linkedMapOf(
         "clue" to "a word from its clue",
         "pinned" to "a slot only one word fits",

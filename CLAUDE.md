@@ -531,6 +531,25 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   stronger teacher never moves a board. No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
   `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.
 
+## Hexwords (working name: spend a block of letters)
+
+Drag through touching hexes to spell words; a word scores 3 / 5 / 8 / 12 / 17 for 3-7 letters and its letters go; reach the target.
+Spec, decisions and measurements: `docs/HEXWORDS_SPEC.md`. `puzzles/HexwordsRules.kt` (state, `HexSearch`, `HexLogic`: finder,
+players, generator), `HexwordsTeacher.kt`, `HexwordsKeys.kt` (keys, the pure swipe and tap, `HexGeometry`), `Hexwords.kt` (board,
+walkthrough, motif). `id = "hexwords"` is hashed into every seed; the owner has yet to approve it, so the PR stays a draft.
+
+- **Letters vanish on every tier and holes stay holes.** So a position is a bitmask and reaching a score is an exact question:
+  `HexSearch.reach` says `Yes(road)`, `No` or `Truncated` (a budget counted in positions). Only `Yes` ships; only `No` is a mistake.
+- **Tiers: 19 / 29 / 44 hexes, and the player the target beats** (`HexLogic.targetFor`): the middle of 12 biggest-word-first tries /
+  one more than their best / one more than those and a one-word-lookahead player. Measured in `HexwordsRulesTest`.
+- **The words planted seed the letters and are thrown away.** The proof searches the board from `WheelWords.grid` alone. No answer
+  is stored, so **`solved` is the score** and no hint can read an answer. Any `WheelWords.isWord` word scores.
+- **Hints:** the biggest common word that keeps the target, by its clue, naming the trap when the biggest word loses it. Fallback only
+  when the search runs out of budget (none in a year). Only "Show me" spells a word.
+- **The word being traced is `remember`; one word is one state.** Saves hold `taken` (word and hexes), so undo needs nothing else.
+- Highlight indices are hexes. `HexGeometry` is the one source of where a hex is; `hit` tests the six sides, `hitCore` (a moving
+  finger) only the middle, so sliding past a corner takes neither hex.
+
 ## Tally (keep the numbers that make every sum)
 
 A square of digits 1-9 with a target beside every row and under every column; remove numbers until what is left in every line adds
@@ -882,7 +901,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list; the lengths, 11 / 13 / 7, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths, 11 / 13 / 8, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
   **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
   once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,

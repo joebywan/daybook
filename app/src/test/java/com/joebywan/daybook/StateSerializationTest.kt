@@ -119,6 +119,7 @@ class StateSerializationTest {
      * [PuzzleState] is sealed, so a new puzzle cannot be added without landing here.
      */
     internal fun mutate(state: PuzzleState): PuzzleState = when (state) {
+        is com.joebywan.daybook.puzzles.HexwordsState -> state.take(state.letters.take(3), listOf(0, 1, 2))
         is AtomsState -> state.pairs.indices.take(2).fold(state) { acc, i -> acc.cycle(i) }
         is CageState -> {
             val cell = state.grid.givens.indexOfFirst { !it }
