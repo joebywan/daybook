@@ -1,2 +1,4 @@
 - A brighter new look: Arcade colours in light and dark, with vivid tiles on Home.
-- Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents and Word Wheel are redrawn to match; the other boards pick up the new colours and will follow.
+- Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents and Word Wheel are redrawn to match; the other boards will follow.
+- New chiptune sounds. Ordinary moves are quiet now, finishing a row or box climbs a scale, and a win lands with a thump.
+- Mines goes off with a blast; in Arrows a blocked arrow lunges and recoils.
