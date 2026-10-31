@@ -100,9 +100,9 @@ internal val NONOGRAM_FILLS_LIGHT = listOf(
     0xFF2A3BFF to 0xFFB400E6,
 )
 internal val NONOGRAM_FILLS_DARK = listOf(
-    0xFFB48CFF to 0xFFFF5CB8, 0xFF00C8FF to 0xFF00E5B0, 0xFFFF8A3D to 0xFFFF4FB0,
-    0xFFA070FF to 0xFF35B8FF, 0xFF2EE58A to 0xFF22B8FF, 0xFFFF5CA8 to 0xFFFFA020,
-    0xFF6C8CFF to 0xFFD060FF,
+    0xFFB14DFF to 0xFFFF2D9B, 0xFF00C2FF to 0xFF00E08A, 0xFFFF7A00 to 0xFFFF2D9B,
+    0xFF9B5CFF to 0xFF00AEFF, 0xFF00E070 to 0xFF00A8FF, 0xFFFF2D87 to 0xFFFF8A00,
+    0xFF4D7CFF to 0xFFC84DFF,
 )
 
 /** A line that shows its numbers. There is no green among the board tokens, and only this board bands a finished line. */
@@ -363,11 +363,12 @@ object Nonogram : PuzzleType {
 
         // The last square touched: an amber ring (light edges it, since amber on white is under 3:1), so a mark under it still shows.
         if (cursor != null) {
-            val w = u * 0.13f
+            val w = u * 0.13f / zoom // the same on screen when zoomed, as the grid lines are
             val at = Offset((cursor % s.width) * u + w / 2f, (cursor / s.width) * u + w / 2f)
             val side = Size(u - w, u - w)
-            arcade.selected.glow?.let { arcadeGlow(it.copy(alpha = 0.5f), at, side, u * 0.1f, (u * 0.07f).toDp()) }
-            if (!dark) drawRoundRect(arcade.selectedEdge, at, side, CornerRadius(u * 0.1f), style = Stroke(w + u * 0.07f))
+            // A ring, not arcadeGlow's filled rects, which would wash over the mark.
+            arcade.selected.glow?.let { drawRoundRect(it.copy(alpha = 0.5f), at, side, CornerRadius(u * 0.1f), style = Stroke(w * 1.8f)) }
+            if (!dark) drawRoundRect(arcade.selectedEdge, at, side, CornerRadius(u * 0.1f), style = Stroke(w * 1.5f))
             drawRoundRect(arcade.selected.brush(at, side), at, side, CornerRadius(u * 0.1f), style = Stroke(w))
         }
 
@@ -415,7 +416,7 @@ object Nonogram : PuzzleType {
         fun clues(line: Int, band: Offset, bandSize: Size, centre: (after: Int) -> Offset) {
             val lit1 = lit && (n + line in highlight.strong || n + line in highlight.soft)
             // Three states that differ by more than hue. Inset, so each line's band stands apart from the next.
-            val m = u * 0.05f
+            val m = u * 0.03f
             val at = band + Offset(m, m)
             val side = Size(bandSize.width - 2 * m, bandSize.height - 2 * m)
             val finished = done[line] && !bad[line]
@@ -431,9 +432,10 @@ object Nonogram : PuzzleType {
             )
             // An impossible line is solid error, its numbers full weight, in a dashed outline.
             if (bad[line]) {
-                val w = maxOf(u * 0.06f, 1.5f)
+                // On the rim, clear of the numbers: a tall column's top number reaches the band's edge.
+                val w = maxOf(u * 0.05f, 1.2f)
                 drawRoundRect(
-                    arcade.errorInk, at + Offset(w * 1.5f, w * 1.5f), Size(side.width - 3 * w, side.height - 3 * w), CornerRadius(corner),
+                    arcade.errorInk, at + Offset(w / 2f, w / 2f), Size(side.width - w, side.height - w), CornerRadius(corner),
                     style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(w * 2f, w * 1.5f))),
                 )
             }
