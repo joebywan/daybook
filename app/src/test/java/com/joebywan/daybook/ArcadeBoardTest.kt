@@ -13,6 +13,7 @@ import com.joebywan.daybook.puzzles.NONOGRAM_DONE_DARK
 import com.joebywan.daybook.puzzles.NONOGRAM_DONE_LIGHT
 import com.joebywan.daybook.puzzles.NONOGRAM_FILLS_DARK
 import com.joebywan.daybook.puzzles.NONOGRAM_FILLS_LIGHT
+import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import org.junit.Assert.assertTrue
@@ -64,6 +65,14 @@ class ArcadeBoardTest {
         }
         readsOn(NONOGRAM_DONE_LIGHT, "finished clue, light")
         readsOn(NONOGRAM_DONE_DARK, "finished clue, dark")
+    @Test fun `word wheel's swipe path stands on its well`() {
+        for ((name, b) in listOf("light" to ArcadeBoard.Light, "dark" to ArcadeBoard.Dark)) {
+            val well = WordWheel.wheelWell(b)
+            for (stop in listOf(b.selected.from, b.selected.to)) {
+                atLeast(3f, stop, well, "$name swipe path")
+                atLeast(3f, stop.copy(alpha = .7f).compositeOver(well), well, "$name swipe to the finger")
+            }
+        }
     }
 
     @Test fun `board tokens read, in both schemes`() {
