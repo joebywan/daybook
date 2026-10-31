@@ -519,6 +519,7 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   `lastResort` is the board of seed 1, proved by a test; a year per tier never reaches it (`FallbackTest`). `WordWheelOracle` (test)
   re-reads every board's squares run by run, shares nothing with the placer. JVM: median 0.3 / 0.5 / 0.7 ms a board, max 3.5 ms;
   Chromium Expert median / p95 / max 1.7 / 4.4 / 10.6 ms, WebKit 4 / 12 / 19 ms.
+- **No word shorter than the board's shortest slot is taken** (`shortestWord`), so a board with no three-letter slot refuses three letters; a save already holding a shorter bonus word keeps it. The bonus line opens the full list, A-Z, on a tap (`remember`).
 - **A word goes to the slot it was laid for**; every slot holds a different word, so two same-length slots never compete for one.
   `solved` checks the rule: every slot's word is found. The word being spelled, the finger and the notice are `remember`; Shuffle is a
   `rememberSaveable` count that reorders the display only; one accepted word is one state. The gesture is keyed on the wheel and reads
@@ -770,8 +771,9 @@ Display name "Crossword" (one line on a home tile), never a newspaper's.
   the clues: the crossings settle everything else. `MiniOracle` (test: square by square over the alphabet, prefix sets) is the
   independent check. `lastResort` is each list's first entry, proved by a test; a year per tier never reaches it (`FallbackTest`).
 - **`solved` checks the rules** (every slot spells the word its clue is the clue of); a mistake is a letter off the stored answer,
-  sound because the clues name one fill. Red, after a 1 s settle: a full slot that is no word of the list, never a real word under
+  sound because the clues name one fill. Red, after a 1 s settle and only once no square is open (`shownDead`): a full slot that is no word of the list, never a real word under
   another clue (that would be reading the answer). A word the list holds glows once, for the same reason not only the right one.
+  A full grid not `solved` (`fullButWrong`) says "Something's not right yet" in a line always laid out under the grid, without saying where.
 - **Teacher:** `ONE_WORD` (the letters in a slot leave one word), `CROSSING` (one word leaves every crossing slot a fit, the slots
   named), `ALL_WORDS` (arc consistency to a fixpoint, said as such), then `CLUE`, the fallback: its first tap names the open slot
   the fewest words fit (from the board alone) with that word's **second clue** ("Another way in: ..."; the owner: "I'd rather a
@@ -782,6 +784,11 @@ Display name "Crossword" (one line on a home tile), never a newspaper's.
   clue is knowledge, not logic. 44 / 54 / 62% of steps on a hints-only walk; that share is the tier measure. Word steps are typed
   by the player; only "Show me" types the word. Highlight indices: squares, letter key `MiniLogic.letterKey(l)` = 2000 + l, the
   clue bar `MiniLogic.CLUE_BAR` = 3000.
+- **Clue text is a tier too** (`tools/words/hard-clues.txt`, `MiniHardClues.kt`, `MiniLogic.takesHardClue`): hand-written, less
+  direct main clues for the most used words. Standard none, Hard its across slots, Expert every slot; on such a slot the plain
+  clue is the fallback's "Another way in". `isSolved` takes either clue; rewording one strands a board in progress with the old
+  text, as for first clues. The second clues were read and are not reliably harder, so they were not used for this. No grid
+  moved; Hard and Expert's `BoardPinTest` lines did, because the fingerprint holds clue text. `MiniHardCluesTest`.
 - **Cursor and direction are in the state** (Codeword's precedent; `withoutSelection` drops both). A tap selects a square, the same
   square again turns between Across and Down; typing moves on to the next empty square of the word; Del clears, or steps back and
   clears. The clue bar (fixed height, room for two lines) shows the cursor's clue, turns on a tap, and ‹ › walk the words. Keys:
@@ -829,7 +836,12 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
 The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
-A move's feel (the changed squares settle, a unit finished by the rules glows once) is `ui/MoveFeel.kt`'s
+Sound is a bank of pre-rendered tones (`core/Tones.kt`, from the owner's pluck in `SolveTone.kt`), played by `rememberTonePlayer` in
+the seam (Android `SoundPool`, web Web Audio): a very quiet tick beside the haptic in `push`, a unit's tone from `rememberMoveFeel`, Word
+Wheel's rising scale, a win by the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones`, so a walkthrough or
+a practice is silent; a variant is drawn from `kotlin.random`, never `Rng`. `docs/REWARDS.md` (Sounds). A win never shakes: Pointers and
+Mines use a shake for a mistake. The top show (`Praise.allTiers`, all three tiers of a puzzle on a date) is derived from completions.
+A move's feel (the changed squares settle, a unit finished by the rules glows and pops once) is `ui/MoveFeel.kt`'s
 `rememberMoveFeel`, read in the draw phase; it fires only on `LocalMoveCount` (raised by `push`, so never on load,
 undo, restart or the walkthrough). The same helper dips what an Undo took back (`LocalUndoCount`), runs one wave across
 every square when a move solves the board (`LocalSolveCount`; the finished frame waits `SOLVE_WAVE_MS` for it) and fades a

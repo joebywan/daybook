@@ -30,7 +30,8 @@ contain its answer, and no two answers share a clue (LexiconCluesTest checks bot
 
 tools/words/second-clues.txt holds Crossword's second clue per grid word (a different angle from the first), written
 into MiniSecondClues.kt on every run; `python3 tools/words/build.py --second-clues` writes that file alone, needing no
-inputs. It is linted with the other clue files.
+inputs. It is linted with the other clue files. tools/words/hard-clues.txt holds the less direct main clue for the grid
+words most used on Hard and Expert, written into MiniHardClues.kt the same way (MiniHardCluesTest).
 
 Every list is written sorted and unique. The answer is picked by index, so the order is part of the
 contract: re-running this must not reorder anything unless a word is added or removed on purpose.
@@ -184,7 +185,7 @@ LINT = {
 
 def lint_clues():
     allowed = {line.rstrip("\n") for line in open(os.path.join(HERE, "clue-lint-allow.txt")) if line.strip()}
-    bad = [f"  {name}: {w}: {c}   ({why})" for name in ("clues.txt", "wheel-clues.txt", "second-clues.txt")
+    bad = [f"  {name}: {w}: {c}   ({why})" for name in ("clues.txt", "wheel-clues.txt", "second-clues.txt", "hard-clues.txt")
            for w, c in read_clues(name).items() if f"{w}: {c}" not in allowed
            for why, rx in LINT.items() if rx.search(c)]
     if bad:
@@ -335,6 +336,8 @@ if __name__ == "__main__":
         sys.exit(0)
     with open(SECOND_OUT, "w") as f:
         f.write(second_clues_kotlin())
+    with open(os.path.join(PUZZLES, "MiniHardClues.kt"), "w") as f:
+        f.write(clue_text("MiniHardClueText", "hard-clues.txt", read_clues("hard-clues.txt")))
     if sys.argv[1:] == ["--second-clues"]:
         sys.exit(0)
     result =main(sys.argv[1], sys.argv[2], sys.argv[3])

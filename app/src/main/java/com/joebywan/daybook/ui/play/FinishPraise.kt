@@ -1,6 +1,7 @@
 package com.joebywan.daybook.ui.play
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.core.nearestToGo
 import com.joebywan.daybook.core.newlyEarned
 import com.joebywan.daybook.core.puzzleNote
@@ -36,7 +37,16 @@ data class Praise(
     val full: Boolean = true,
     /** The streak this solve extended, when [title] is "N day streak": the frame counts up to it. 0 otherwise. */
     val streak: Int = 0,
-)
+    /** This solve finished all three tiers of one puzzle on one date: the top show, above [full]. */
+    val allTiers: Boolean = false,
+) {
+    /** The sound of this win: the chime, carried on further the bigger the show. */
+    fun winKind(): Tones.Kind = when {
+        allTiers -> Tones.Kind.ALL_TIERS
+        full -> Tones.Kind.BIG_WIN
+        else -> Tones.Kind.WIN
+    }
+}
 
 /** What the frame shows for one achievement. */
 @Serializable
@@ -116,10 +126,24 @@ fun finishPraise(
     // One line beneath the title (or beneath "Congratulations!"): praise is loud, not long.
     val earned = newlyEarned(history, solve, today).map { EarnedAchievement(it.id, it.title, it.description) }
     val near = nearestToGo(history, solve, today)
-    val full = firstToday || solve.difficulty == Difficulty.EXPERT || record || big || earned.isNotEmpty()
+    val allTiers = finishedAllTiers(history, solve)
+    val full = allTiers || firstToday || solve.difficulty == Difficulty.EXPERT || record || big || earned.isNotEmpty()
     val firstOfPuzzle = history.none { it.puzzleId == solve.puzzleId }
+    if (allTiers) return Praise(
+        TITLE_ALL_TIERS, big = true, listOf("Standard, Hard and Expert, all on one day's boards."), earned, near?.text, allTiers = true,
+    )
     val heading = title ?: finishTitle(solve, today, firstOfPuzzle, record)
     return Praise(heading, big, (lines + personal).take(1), earned, near?.text, full = full, streak = streak)
+}
+
+/**
+ * Whether [solve] is the one that finishes every tier of its puzzle's boards for one date, today's or an archive day's. Derived,
+ * nothing stored; a replay of a tier already done there is not it, and practice and level boards have no date.
+ */
+internal fun finishedAllTiers(history: List<Completion>, solve: Completion): Boolean {
+    val day = solve.day ?: return false
+    val done = history.filter { it.puzzleId == solve.puzzleId && it.day == day }.map { it.difficulty }
+    return solve.difficulty !in done && (Difficulty.entries - solve.difficulty).all { it in done }
 }
 
 /** The longest title, in characters: what fits the banner between its two poppers at 360dp in headlineSmall. */
@@ -131,6 +155,7 @@ internal val TITLES_PLAIN = listOf("Nicely done.", "Well solved.", "Lovely work.
 internal const val TITLE_FIRST = "First one done."
 internal const val TITLE_RECORD = "A new best."
 internal const val TITLE_EXPERT = "Expert, cracked."
+internal const val TITLE_ALL_TIERS = "All three tiers!"
 
 /**
  * The title when there is no streak to tell, rarest first: the first solve of this puzzle ever, a personal record at the

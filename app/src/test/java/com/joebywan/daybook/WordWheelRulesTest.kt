@@ -27,7 +27,8 @@ class WordWheelRulesTest {
     fun `a word fills its own slot, a real word is a bonus, and nothing else changes the board`() {
         val s = WordWheel.tutorialBoard() // BRAIN, BARN, RAIN on the wheel "irnba"
         assertEquals(WheelEntry.Fills(1), WordWheelLogic.judge(s, "barn"))
-        assertEquals(WheelEntry.Bonus, WordWheelLogic.judge(s, "ban"))
+        assertEquals(4, s.shortestWord)
+        assertEquals("no three-letter slot, no three-letter word", WheelEntry.TooShort, WordWheelLogic.judge(s, "ban"))
         assertEquals(WheelEntry.Bonus, WordWheelLogic.judge(s, "bran")) // accepted, not a grid word
         assertEquals(WheelEntry.NotAWord, WordWheelLogic.judge(s, "nabr"))
         assertEquals(WheelEntry.TooShort, WordWheelLogic.judge(s, "an"))
@@ -39,10 +40,16 @@ class WordWheelRulesTest {
         assertEquals(WheelEntry.Found, WordWheelLogic.judge(one, "barn"))
         assertEquals(one, one.enter("barn"))
         assertEquals(one, one.enter("nabr"))
-        val bonus = one.enter("ban")
-        assertEquals(listOf("ban"), bonus.bonus)
-        assertEquals(WheelEntry.Found, WordWheelLogic.judge(bonus, "ban"))
+        val bonus = one.enter("bran")
+        assertEquals(listOf("bran"), bonus.bonus)
+        assertEquals(WheelEntry.Found, WordWheelLogic.judge(bonus, "bran"))
         assertFalse(bonus.solved)
+        // A saved game can hold a word shorter than the board now takes: still there, still "found".
+        val saved = s.copy(bonus = listOf("ban"))
+        assertEquals(WheelEntry.Found, WordWheelLogic.judge(saved, "ban"))
+        // A board with a three-letter slot still takes three-letter bonus words.
+        val withThree = s.copy(slots = s.slots + com.joebywan.daybook.puzzles.WheelSlot("bar", 0, 0, true))
+        assertEquals(WheelEntry.Bonus, WordWheelLogic.judge(withThree, "ban"))
     }
 
     @Test
@@ -56,7 +63,7 @@ class WordWheelRulesTest {
             assertTrue(t.enter(order.last()).solved)
         }
         // Bonus words never count towards it.
-        var t = s.enter("ban").enter("bin").enter("bar")
+        var t = s.enter("bran")
         assertFalse(t.solved)
         words.forEach { t = t.enter(it) }
         assertTrue(t.solved)

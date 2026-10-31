@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.isSpecified
+import com.joebywan.daybook.core.Tones
 import kotlin.math.abs
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -30,6 +32,12 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
  * tells a move the player made from a board arriving any other way.
  */
 val LocalMoveCount = compositionLocalOf { 0 }
+
+/**
+ * The sounds of a board being played. The play screen provides [LocalTones] around its board alone, so a walkthrough, a
+ * practice or a motif drawn with the same code stays silent.
+ */
+val LocalBoardTones = staticCompositionLocalOf<(Int) -> Unit> { {} }
 
 /** How many times Undo has taken something back this visit (`PlayScreen.undo`): the squares it changed dip and return. */
 val LocalUndoCount = compositionLocalOf { 0 }
@@ -47,6 +55,8 @@ private const val SETTLE_MS = 120
 private const val SWEEP_MS = 400
 private const val ARRIVE_MS = 250
 private const val SETTLE_SCALE = 0.08f
+/** A finished unit's pop, travelling with its glow. Drawn only: nothing changes size or position. */
+private const val POP_SCALE = 0.07f
 /** The sweep's half width, as a share of the unit it runs along. */
 private const val SWEEP_WIDTH = 0.35f
 /** The share of the arrival one square's own fade takes; the rest staggers the squares in reading order. */
@@ -58,7 +68,7 @@ const val SOLVE_WAVE_MS = 350
 /**
  * The feel of a move: the squares it changed settle (drawn 8% large, easing back over 120 ms; an undo dips them 8%
  * small instead), a unit it finished (a row, a box, a cage, a line, a tube) has a soft glow run along it once
- * (400 ms), the move that solves the board runs one wave of the same glow across every square in reading order
+ * (400 ms) with a small pop travelling along with it and one tone, the move that solves the board runs one wave of the same glow across every square in reading order
  * (350 ms), and a board arriving fades its squares in, in reading order (250 ms). Read [scale], [glow] and [alpha]
  * in the draw phase only, so a running animation repaints the board without recomposing it. Nothing here is state
  * of the game; nothing changes size or position.
@@ -73,6 +83,8 @@ class MoveFeel internal constructor() {
     internal var sweepRun = 0
     internal var waveRun = 0
     internal var arriveRun = 0
+    /** Moves that finished a unit but not the board, reduced motion or not: each plays the unit tone. */
+    internal var unitRun = 0
     private var tick = -1
     private var undos = 0
     private var solves = 0
@@ -84,8 +96,11 @@ class MoveFeel internal constructor() {
     private var swept: Map<Int, Float> = emptyMap()
 
     /** The scale to draw square [i] at: 1 unless the last move or undo changed it. */
-    fun scale(i: Int): Float =
-        if (settle < 1f && i in changed) 1f + (if (shrink) -SETTLE_SCALE else SETTLE_SCALE) * (1f - settle) else 1f
+    fun scale(i: Int): Float {
+        var s = if (settle < 1f && i in changed) 1f + (if (shrink) -SETTLE_SCALE else SETTLE_SCALE) * (1f - settle) else 1f
+        if (sweep < 1f) swept[i]?.let { s += POP_SCALE * sweepGlow(sweep, it) }
+        return s
+    }
 
     /** How strongly square [i] glows, 0 to 1: 0 unless a unit holding it has just been finished, or the board solved. */
     fun glow(i: Int): Float {
@@ -111,7 +126,8 @@ class MoveFeel internal constructor() {
             arrive = 0f
             arriveRun++
         }
-        val moved = !first && tick != this.tick && !still
+        val played = !first && tick != this.tick
+        val moved = played && !still
         val undone = !first && undos != this.undos && !still
         if ((moved || undone) && this.cells.size == cells.size) {
             val diff = cells.indices.filterTo(HashSet()) { cells[it] != this.cells[it] }
@@ -122,7 +138,7 @@ class MoveFeel internal constructor() {
                 settleRun++
             }
         }
-        if (moved && this.done.size == done.size) {
+        if (played && this.done.size == done.size) {
             val fresh = HashMap<Int, Float>()
             for (u in done.indices) {
                 if (!done[u] || this.done[u]) continue
@@ -133,7 +149,9 @@ class MoveFeel internal constructor() {
                     fresh[sq] = minOf(fresh[sq] ?: at, at)
                 }
             }
-            if (fresh.isNotEmpty()) {
+            // The chime has it when this move solved the board.
+            if (fresh.isNotEmpty() && solves == this.solves) unitRun++
+            if (fresh.isNotEmpty() && !still) {
                 swept = fresh
                 sweep = 0f
                 sweepRun++
@@ -170,7 +188,7 @@ internal fun sweepGlow(t: Float, at: Float): Float {
  * stores: compared with `==` to find what a move changed) and whose units are [units] (each the squares of one, in the
  * order the glow should run), [complete] saying whether a unit is finished **by the rules**, never by the stored answer.
  * Only a move fires the settle and the glow: a board loaded, restarted or undone into a finished unit stays quiet. Under
- * reduced motion nothing plays.
+ * reduced motion nothing moves; the unit's tone still plays (sound has its own switch).
  */
 @Composable
 fun rememberMoveFeel(
@@ -183,6 +201,8 @@ fun rememberMoveFeel(
         LocalMoveCount.current, cells, units, BooleanArray(units.size) { complete(it) }, LocalReducedMotion.current,
         LocalUndoCount.current, LocalSolveCount.current, LocalBoardArrives.current,
     )
+    val tones = LocalBoardTones.current
+    LaunchedEffect(feel.unitRun) { if (feel.unitRun > 0) tones(Tones.pick(Tones.Kind.UNIT)) }
     Play(feel.settleRun, tween(SETTLE_MS)) { feel.settle = it }
     Play(feel.sweepRun, tween(SWEEP_MS)) { feel.sweep = it }
     Play(feel.waveRun, tween(SOLVE_WAVE_MS, easing = LinearEasing)) { feel.wave = it }

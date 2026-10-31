@@ -113,7 +113,10 @@ import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.LocalHaptics
 import com.joebywan.daybook.ui.LocalBoardArrives
+import com.joebywan.daybook.ui.LocalBoardTones
 import com.joebywan.daybook.ui.LocalMoveCount
+import com.joebywan.daybook.ui.LocalTones
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.LocalSolveCount
 import com.joebywan.daybook.ui.LocalUndoCount
@@ -203,6 +206,7 @@ fun PlayScreen(
     // Saved alongside the game: without it, rotating a finished board would record the win twice.
     var recorded by rememberSaveable(initial) { mutableStateOf(false) }
     val haptics = LocalHaptics.current
+    val tones = LocalTones.current
     // Saved too: rotating right after a solve would otherwise leave a bare frame. A reopened solved board shows the plain frame, with its Share card.
     var praise by rememberSaveable(initial, stateSaver = PraiseSaver) { mutableStateOf(finishPreview ?: Praise()) }
     // Finished-frame state: hidden to inspect the board, and confetti played once. Never PuzzleState.
@@ -322,6 +326,8 @@ fun PlayScreen(
             // Asked before onSolved: the history must not yet contain this solve.
             praise = praiseFor(seconds, game.hints, game.state, game.log, game.taught)
             onSolved(seconds, game.hints)
+            // Once per solve (`recorded` survives recreation), so it cannot repeat on a rotation.
+            tones(Tones.pick(praise.winKind()))
             haptics.success()
         }
         hintSession.clear()
@@ -364,7 +370,10 @@ fun PlayScreen(
             step == PlayLog.WRONG.toString() ||
                 (next is PointersState && prev is PointersState && next.bumps.size > prev.bumps.size) ||
                 (next is MinesState && prev is MinesState && next.bumps.size > prev.bumps.size) -> haptics.bump()
-            step.isNotEmpty() -> haptics.tick()
+            step.isNotEmpty() -> {
+                haptics.tick()
+                tones(Tones.pick(Tones.Kind.TICK))
+            }
         }
     }
 
@@ -551,6 +560,7 @@ fun PlayScreen(
                 LocalUndoCount provides undos,
                 LocalSolveCount provides solves,
                 LocalBoardArrives provides !arrived,
+                LocalBoardTones provides tones,
             ) {
                 puzzle.Board(
                     state = state,
@@ -665,7 +675,7 @@ fun PlayScreen(
                     .padding(bottom = 10.dp),
             )
         }
-        Confetti(played = confettiPlayed, full = praise.full, onPlayed = { confettiPlayed = true })
+        Confetti(played = confettiPlayed, full = praise.full, allTiers = praise.allTiers, onPlayed = { confettiPlayed = true })
     }
 
     if (hintSession.active && !state.solved && !wide) {

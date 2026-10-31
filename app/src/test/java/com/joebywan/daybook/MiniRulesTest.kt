@@ -153,6 +153,27 @@ class MiniRulesTest {
     }
 
     @Test
+    fun `red waits for a full grid, and the note is the rule check, never the place`() {
+        val s = board(0, Difficulty.STANDARD)
+        val slot = MiniLogic.slots(s.size, s.answer).first()
+        // One slot spelling no word, the rest open: a dead slot, not shown yet.
+        val open = s.letters.toCharArray().also { a -> slot.squares.forEach { a[it] = 'q' } }.concatToString()
+        assertTrue(MiniLogic.deadSlots(s.size, open).isNotEmpty())
+        assertEquals(emptySet<Int>(), MiniLogic.shownDead(s.size, open))
+        assertFalse(s.copy(letters = open).fullButWrong)
+        // The same word in a full grid: shown, and the note is on.
+        val full = s.answer.toCharArray().also { a -> slot.squares.forEach { a[it] = 'q' } }.concatToString()
+        assertTrue(MiniLogic.shownDead(s.size, full).isNotEmpty())
+        assertTrue(s.copy(letters = full).fullButWrong)
+        // Every slot a real word under the wrong clues: nothing red, and still the note.
+        val swapped = s.copy(letters = s.answer, clues = s.clues.drop(1) + s.clues.first())
+        assertEquals(emptySet<Int>(), MiniLogic.shownDead(s.size, swapped.letters))
+        assertTrue(swapped.fullButWrong)
+        // Solved: no note.
+        assertFalse(solved(s).fullButWrong)
+    }
+
+    @Test
     fun `typing walks the word, a second tap turns, Backspace steps back, and each is one state`() {
         val s = board(1, Difficulty.HARD)
         val slots = MiniLogic.slots(s.size, s.answer)

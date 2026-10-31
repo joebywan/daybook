@@ -12,6 +12,7 @@ this puzzle. Where the two disagree on a point not listed here, the standards wi
 | Words | Word Wheel's grid lists `WordWheelWords.GRID_3..7` (Lexicon's answer screening at every length; 4 and 5 letters are exactly Lexicon's answers), which the app-wide breakfast-table screen `tools/words/grim.txt` has already cleared of death, murder, vomit and the like (it replaced the Crossword's own list, 2026-10-26). |
 | Clues | `WheelWords.clue`: `tools/words/clues.txt` for four and five letters (Lexicon's), `tools/words/wheel-clues.txt` for three, six and seven. Hand-written, neutral English, linted by `build.py`. **No two answers share a clue** (`LexiconCluesTest`, `WordWheelRulesTest`), so a clue names exactly one word. The board stores its clue texts, so a saved game keeps its clues if a clue is reworded later. |
 | Second clues | `tools/words/second-clues.txt`, compiled into `MiniSecondClues.kt` by `build.py` (`--second-clues` alone needs no inputs): one per word the grids use, hand-written from a different angle than the first (another sense, a fill-in-the-blank, a category), never containing the word, never any grid word's first clue, no two alike (`MiniSecondCluesTest`). Stored on the board as `secondClues`, as the clues are. The owner: "I'd rather a 2nd clue before giving the answer." |
+| Hard clues | `tools/words/hard-clues.txt`, compiled into `MiniHardClues.kt` by `build.py`: a hand-written, less direct main clue for the 638 grid words most used on Hard's across slots and Expert (a misleading sense, an example, a sideways definition; fair, no old slang, no blanks to fill). Standard shows only plain clues; Hard shows a word's hard clue in its across slots and leaves the downs plain, so a stuck across player has a straighter way in by turning; Expert shows it in every slot. A word without one shows its plain clue. On a slot showing one, the plain clue becomes the fallback's "Another way in", so hints get easier as they go; other slots keep the second clue. No two share one, none is any word's first clue or another word's second (`MiniHardCluesTest`). The second clues were read for this job and are not this list: of a sample of 140, about 41% read harder than the first clue, 42% the same, 16% easier (10% of the file is a fill-in-the-blank like "Organ ___"), and much of the harder share leans on old slang. |
 | Grids | **Fully checked**: every white square is in an across word *and* a down word, every word 3 letters or more. Black squares symmetric under a half-turn, white squares connected, no word twice in a grid. |
 | Built offline | `MiniGridsBuildTest` (env-gated, fixed seed, reproducible) writes `puzzles/MiniGrids.kt` with Codeword's pattern maker and filler (`test/CrosswordFill.kt`): per tier, a sorted list of filled grids. The list's order is a contract: adding or removing an entry moves every daily board after it, and `BoardPinTest` goes red on purpose. Offline because a dense fill is a backtracking search per pattern whose cost varies (two 7x7 patterns in five give up within the budget), and because the tier test walks the hints over every candidate. |
 | Answer | Unique by the clues (each clue names one word). `solved` checks the rules: every slot spells the word whose clue the slot shows (`MiniLogic.isSolved`), never the stored answer. |
@@ -25,7 +26,7 @@ this puzzle. Where the two disagree on a point not listed here, the standards wi
 - Every row and column of white squares is a word, and each word has a clue: 1 Across, 2 Down and so on.
 - Tap a square, then type. Tap it again to turn between Across and Down, or tap the clue.
 - Letters cross: a letter in one word is a letter of the word across it.
-- A word that is no word in the list turns red. Each clue has exactly one answer.
+- Once every square is filled, a word that is no word in the list turns red, and a note says if anything is still wrong. Each clue has exactly one answer.
 
 ## State (`puzzles/Mini.kt`)
 
@@ -48,8 +49,8 @@ Squares are `row * size + col`. Keep the names and meanings fixed once shipped (
 
 - `slots(size, grid)`: every across slot then every down slot, in reading order of their first squares, numbered as a
   printed crossword is (a square starting a word either way takes the next number).
-- `isSolved`: every slot spells a grid word whose clue is the slot's clue.
-- `deadSlots`: a slot full and spelling no word of the list. Shown red after a 1 s settle. A real word under another
+- `isSolved`: every slot spells a grid word whose plain or hard clue is the slot's clue.
+- `deadSlots`: a slot full and spelling no word of the list. Shown red after a 1 s settle, and only once no square is open (`shownDead`). A full grid that is not solved (`fullButWrong`, the rule check) shows "Something's not right yet" in the reserved line under the grid, after the same settle, never saying where. A real word under another
   clue is not flagged: that would be reading the answer.
 - `solve(size, letters)`: every fill of the open squares in which every slot is a grid word, counted to two, branching
   on the open slot fewest words fit. No budget. Only `Verdict.ExactlyOne` carries a grid.
@@ -96,6 +97,10 @@ had a median share of 25%, below 5x5's 33%): Expert would be bigger and easier. 
 | Hard | 6x6 | about 9 | over 30%, at most 40% |
 | Expert | 7x7 | about 15 | over 40% |
 
+Clue text is the tiers' second cut (Hard clues, above). Fully checked grids mean the across words alone cover every white
+square on every tier; that is structural and left alone. Hard clues do not touch the grids or the walk: the walk reads
+letters, never clue text, so only the stored clues change and no grid moved.
+
 ## Measured
 
 - **The build:** 1,000 grids a tier, from 6,480 / 144,240 / 23,040 draws (fills that give up within a 20,000-node budget,
@@ -119,5 +124,6 @@ had a median share of 25%, below 5x5's 33%): Expert would be bigger and easier. 
   the time, else another fallback. The one letter of the next tap would have settled the same word through the crossings
   52.5 / 54.1 / 56.6% of the time. Words fitting the slot the clue names: median 22 / 8 / 6, p90 434 / 434 / 35. The
   fallback share of steps is unchanged (44 / 54 / 62%): the second clue and the letter are one step's two taps.
+- **Hard clues** (`MiniHardCluesTest`, `build/reports/mini-hard-clues.txt`, a year of daily boards): 72% of Hard's across slots and 61% of Expert's slots show one; floors 65 / 55%. How much harder they play is not measured: they were judged by reading, by their author.
 - **Layout:** at 375x537 Expert's squares are about 25 dp, with the clue bar (44 dp) and three rows of 40 dp keys under
   the grid; checked in Chromium and WebKit, light and dark, and on the emulator (1080x2400).

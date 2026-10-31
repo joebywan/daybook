@@ -80,6 +80,9 @@ data class MiniState(
     /** The rules, not a comparison with [answer]: see [MiniLogic.isSolved]. */
     override val solved: Boolean get() = MiniLogic.isSolved(size, letters, clues)
 
+    /** No open square left and the rules not met: the note under the grid, which never says where. */
+    val fullButWrong: Boolean get() = OPEN !in letters && !solved
+
     private fun white(r: Int, c: Int) = r in 0 until size && c in 0 until size && letters[r * size + c] != BLACK
 
     /** Whether a word runs through [square] across ([acrossWay]) or down. */
@@ -153,6 +156,7 @@ private val KEY_HEIGHT = 40.dp
 private val KEY_GAP = 4.dp
 private val CLUE_HEIGHT = 44.dp
 private val GAP = 6.dp
+private val NOTE_HEIGHT = 20.dp
 private val MAX_SQUARE = 64.dp
 private val MAX_KEYBOARD = 520.dp
 
@@ -167,7 +171,7 @@ object Mini : PuzzleType {
         "Every row and column of white squares is a word, and each word has a clue: 1 Across, 2 Down and so on.",
         "Tap a square, then type. Tap it again to turn between Across and Down, or tap the clue.",
         "Letters cross: a letter in one word is a letter of the word across it.",
-        "A word that is no word in the list turns red. Each clue has exactly one answer.",
+        "Once every square is filled, a word that is no word in the list turns red, and a note says if anything is still wrong. Each clue has exactly one answer.",
     )
 
     override val keyboardHelp = listOf("Type letters; Backspace clears. Arrows move (one the other way turns first), Space turns.")
@@ -284,10 +288,11 @@ object Mini : PuzzleType {
 
         val slots = remember(s.size, s.answer) { MiniLogic.slots(s.size, s.answer) }
         val units = remember(slots) { slots.map { it.squares } }
-        // A word no word of the list can be shows after a pause and goes at once when mended (held here, not in the state).
-        val live = remember(s.letters) { MiniLogic.deadSlots(s.size, s.letters) }
+        // Once the grid is full, a word no word of the list can be shows after a pause and goes at once when mended (held here, not in the state).
+        val live = remember(s.letters) { MiniLogic.shownDead(s.size, s.letters) }
         val settled = rememberSettled(live, reset = s.answer, change = s.letters)
         val red = (live intersect settled).flatMap { slots[it].squares.toList() }.toSet()
+        val noteSettled = rememberSettled(s.fullButWrong, reset = s.answer, change = s.letters)
         // A letter settles; a word the list holds glows once (a word, not the answer: that would be a check).
         val feel = rememberMoveFeel(s.letters.map { it }, units) { r -> WheelWords.isGridWord(MiniLogic.spelled(s.letters, slots[r])) }
         val current = s.slotIndex()
@@ -312,7 +317,7 @@ object Mini : PuzzleType {
             contentAlignment = Alignment.Center,
         ) {
             val keyboard = KEY_HEIGHT * keyRows.size + KEY_GAP * (keyRows.size - 1)
-            val controls = CLUE_HEIGHT + keyboard + GAP * 2
+            val controls = NOTE_HEIGHT + CLUE_HEIGHT + keyboard + GAP
             // Sized from both axes (CLAUDE.md): the grid leaves room for the clue and the keys.
             val room = if (constraints.hasBoundedHeight) (maxHeight - controls).coerceAtLeast(0.dp) else maxWidth
             val square = minOf(maxWidth / s.size, room / s.size, MAX_SQUARE)
@@ -339,7 +344,15 @@ object Mini : PuzzleType {
                     },
                 )
 
-                Spacer(Modifier.height(GAP))
+                // Always laid out, so the note never moves the board.
+                Text(
+                    if (s.fullButWrong && noteSettled) "Something's not right yet" else "",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.fillMaxWidth().height(NOTE_HEIGHT),
+                )
 
                 // The clue the cursor is in, at a fixed height so a longer clue never moves the board. Tap to turn.
                 val clueLook = highlight.look(MiniLogic.CLUE_BAR, dims = false)

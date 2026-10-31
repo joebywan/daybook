@@ -81,10 +81,28 @@ internal object MiniLogic {
     /** [word]'s second clue (`tools/words/second-clues.txt`), a different angle from its first, or "" for none. */
     fun secondClueOf(word: String): String = secondClues[word] ?: ""
 
-    /** The rules and nothing else: every slot spells the word its clue is the clue of. [clues] is one per slot, in slot order. */
+    // Probed by word, as secondClues.
+    private val hardClues: Map<String, String> by lazy {
+        MiniHardClueText.ALL.split("\n").associate { it.substringBefore(": ") to it.substringAfter(": ") }
+    }
+
+    /** [word]'s less direct main clue (`tools/words/hard-clues.txt`), or "" for a word without one. */
+    fun hardClueOf(word: String): String = hardClues[word] ?: ""
+
+    /** Whether a tier shows a word's hard clue in [slot]: never on Standard, the across words on Hard, every word on Expert. */
+    fun takesHardClue(difficulty: Difficulty, slot: Slot): Boolean = when (difficulty) {
+        Difficulty.STANDARD -> false
+        Difficulty.HARD -> slot.across
+        Difficulty.EXPERT -> true
+    }
+
+    /** The rules and nothing else: every slot spells a word its clue is a clue of. [clues] is one per slot, in slot order. */
     fun isSolved(size: Int, letters: String, clues: List<String>): Boolean {
         val slots = slots(size, letters)
-        return slots.size == clues.size && slots.indices.all { clueOf(spelled(letters, slots[it])) == clues[it] }
+        return slots.size == clues.size && slots.indices.all {
+            val word = spelled(letters, slots[it])
+            clueOf(word) == clues[it] || (WheelWords.isGridWord(word) && hardClueOf(word) == clues[it])
+        }
     }
 
     /**
@@ -98,6 +116,9 @@ internal object MiniLogic {
             OPEN !in w && !WheelWords.isGridWord(w)
         }.toSet()
     }
+
+    /** The slots shown red: [deadSlots], but only once no square is open, so the red never checks a word mid-grid. */
+    fun shownDead(size: Int, letters: String): Set<Int> = if (OPEN in letters) emptySet() else deadSlots(size, letters)
 
     // ---- proof -------------------------------------------------------------------------------------
 
@@ -195,7 +216,15 @@ internal object MiniLogic {
         for (hit in walk) if (hit.technique == MiniTeacher.CLUE) read[hit.square] = hit.letter
         val proof = solve(size, read.concatToString()) as? Verdict.ExactlyOne ?: return null
         if (proof.value != entry) return null
-        return MiniState(size = size, answer = entry, clues = clues, secondClues = words.map(::secondClueOf), letters = read.map { if (it == BLACK) BLACK else OPEN }.joinToString(""))
+        // A word showing its hard clue keeps the plain one for the fallback's "Another way in", so the hints get easier as they go.
+        val hard = words.indices.map { if (takesHardClue(difficulty, slots[it])) hardClueOf(words[it]) else "" }
+        return MiniState(
+            size = size,
+            answer = entry,
+            clues = words.indices.map { hard[it].ifEmpty { clues[it] } },
+            secondClues = words.indices.map { if (hard[it].isEmpty()) secondClueOf(words[it]) else clues[it] },
+            letters = read.map { if (it == BLACK) BLACK else OPEN }.joinToString(""),
+        )
     }
 
     fun generate(seed: Long, difficulty: Difficulty): MiniState = generateVerified(seed, difficulty) ?: lastResort(difficulty)

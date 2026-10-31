@@ -21,7 +21,7 @@ import com.joebywan.daybook.core.listed
  * 1. [FULL] — the clues and their gaps take exactly the width of the line, so there is nowhere to
  *    slide and every square is settled.
  * 2. [FINISHED] — the squares already filled give the line every clue it has; the rest is empty.
- * 3. [OVERLAP] — slide the clues as far one way and then as far the other: squares covered both
+ * 3. [OVERLAP] — imagine the clues as blocks, pushed as far one way and then as far the other: squares covered both
  *    times are filled.
  * 4. [LINE] — everything else: with the marks already in the line, every way the clues can still be
  *    laid out agrees about these squares. The general case, which the three above are the common
@@ -169,7 +169,7 @@ internal object NonogramTeacher {
                 "$cap's clue $clueText is as wide as the line, so every square of it is filled."
             } else {
                 "$cap has $n squares and its $clues take ${clue.joinToString(" + ")} + ${clue.size - 1} " +
-                    "${if (clue.size == 2) "gap" else "gaps"} = $n exactly. With no room to slide, every square is settled."
+                    "${if (clue.size == 2) "gap" else "gaps"} = $n exactly. With no room to spare, every square is settled."
             }
             return step(FULL, fills, crosses, "Look at $name: its clues leave no spare room.", why)
         }
@@ -190,8 +190,8 @@ internal object NonogramTeacher {
         if (overlap.isNotEmpty()) {
             val (start, end) = if (row) "left" to "right" else "top" to "bottom"
             return step(
-                OVERLAP, overlap.map { at[it] }, emptyList(), "Slide the clues along $name.",
-                "In $name, push the $clues as far $start as they go, then as far $end. " +
+                OVERLAP, overlap.map { at[it] }, emptyList(), "Imagine the clues as blocks in $name.",
+                "In $name, imagine the $clues as blocks, pushed as far $start as they go, then as far $end. " +
                     "${if (overlap.size == 1) "The glowing square is" else "The glowing squares are"} covered both times, so filled.",
             )
         }

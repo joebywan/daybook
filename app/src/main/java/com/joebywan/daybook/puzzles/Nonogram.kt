@@ -183,12 +183,12 @@ object Nonogram : PuzzleType {
             ),
             TutorialFrame(
                 state = afterRow3,
-                caption = "Row 4 reads 3 in five squares. Slide the 3 to the far left, then the far right: " +
+                caption = "Row 4 reads 3 in five squares. Imagine a block of 3 pushed to the far left, then the far right: " +
                     "the middle square is covered both times, so it is filled. Tap it.",
                 highlight = BoardHighlight(strong = setOf(17, rowIndex(3)), soft = (15..19).toSet() - 17),
                 accepts = afterRow3.only(mapOf(17 to NonogramLogic.FILLED)),
                 retry = "Tap the glowing square once.",
-                done = "Filled. Sliding a run both ways shows which squares it cannot avoid.",
+                done = "Filled. A block pushed both ways shows which squares it cannot avoid.",
             ),
             TutorialFrame(
                 state = afterMiddle,

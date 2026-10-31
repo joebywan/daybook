@@ -31,7 +31,8 @@ object SolveTone {
     private const val ATTACK = 0.002
     private const val RELEASE = 0.002
 
-    private class Note(val freq: Double, val start: Double, val length: Double, val gain: Double)
+    /** One pluck: seconds from the start, seconds long, its share of full scale. */
+    internal class Note(val freq: Double, val start: Double, val length: Double, val gain: Double)
 
     // The peak lands near 0.32 of full scale: quiet enough not to startle, audible on a phone speaker.
     private val notes = listOf(
@@ -39,16 +40,22 @@ object SolveTone {
         Note(C6, start = 0.11, length = 0.61, gain = 0.184),
     )
 
+    /** The chime's two notes, each frequency times [pitch], for the variants in [Tones]. */
+    internal fun chime(pitch: Double = 1.0): List<Note> = notes.map { Note(it.freq * pitch, it.start, it.length, it.gain) }
+
     /** Mono samples in -1..1 at [SAMPLE_RATE], [LENGTH] of them. */
-    fun samples(): FloatArray {
-        val out = FloatArray(LENGTH)
+    fun samples(): FloatArray = render(notes, LENGTH)
+
+    /** [notes] as marimba plucks in [length] samples; [upper] is the 4x partial's level, the timbre. */
+    internal fun render(notes: List<Note>, length: Int, upper: Double = UPPER_LEVEL): FloatArray {
+        val out = FloatArray(length)
         for (n in notes) {
             val first = (n.start * SAMPLE_RATE).toInt()
-            val last = min(LENGTH, ((n.start + n.length) * SAMPLE_RATE).toInt())
+            val last = min(length, ((n.start + n.length) * SAMPLE_RATE).toInt())
             for (i in first until last) {
                 val u = i.toDouble() / SAMPLE_RATE - n.start
                 val body = exp(-DECAY * u) * sin(2 * PI * n.freq * u) +
-                    UPPER_LEVEL * exp(-UPPER_DECAY * u) * sin(2 * PI * n.freq * 4 * u)
+                    upper * exp(-UPPER_DECAY * u) * sin(2 * PI * n.freq * 4 * u)
                 val fadeIn = min(u / ATTACK, 1.0)
                 val fadeOut = min((n.length - u) / RELEASE, 1.0)
                 out[i] += (n.gain * fadeIn * fadeOut * body).toFloat()

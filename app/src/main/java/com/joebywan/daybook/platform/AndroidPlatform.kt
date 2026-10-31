@@ -6,9 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
 import android.media.AudioAttributes
-import android.media.AudioFormat
 import android.media.AudioManager
-import android.media.AudioTrack
+import android.media.SoundPool
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -34,6 +33,7 @@ import com.joebywan.daybook.R
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.SolveTone
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.data.DataStoreKeyValueStore
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.data.preferencesFile
@@ -45,13 +45,16 @@ import com.joebywan.daybook.ui.theme.withFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toKotlinLocalDate
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.atomic.AtomicInteger
 
 // The Android half of the platform seam. The shared screens, store and navigation call these
 // functions by name; the web build has a file of the same functions, in the same package, at
@@ -155,60 +158,70 @@ private val fredoka = FontFamily(
 
 private val soundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-private val solveTonePcm by lazy { SolveTone.pcm16() }
+private var tonePool: SoundPool? = null
+private val toneIds = IntArray(Tones.COUNT)
+private var tonesLoading = false
 
 /**
- * Plays the solve sound when called, if [enabled]. The tone is synthesised ([SolveTone]) and played
- * through a static `AudioTrack` tagged as game audio, so it follows the media volume. It is skipped
- * when the ringer is on silent or vibrate, built and released off the main thread, and any audio
- * failure (no output, a busy device) is swallowed: a missing chime must never cost a solved puzzle.
+ * Plays a tone of the bank ([Tones]) when called, if [enabled]. `SoundPool` is the platform's low-latency path for
+ * short samples: it mixes them, reuses its tracks and costs the caller almost nothing. It only loads from a file, so the
+ * bank goes through a throwaway WAV in the cache, deleted once decoded. Tagged as game audio, so it follows the media
+ * volume; skipped when the ringer is on silent or vibrate. A failure (no output, a busy device) is silence: a missing
+ * sound must never cost a solved puzzle. A tone not loaded yet is silent too.
  */
 @Composable
-fun rememberSolveSoundPlayer(enabled: Boolean): () -> Unit {
+fun rememberTonePlayer(enabled: Boolean): (Int) -> Unit {
     val context = LocalContext.current.applicationContext
     return remember(enabled, context) {
-        if (!enabled) ({}) else ({ playSolveSound(context) })
+        if (!enabled) ({}) else {
+            loadTones(context)
+            val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            val play: (Int) -> Unit = { tone ->
+                if (audio?.ringerMode == AudioManager.RINGER_MODE_NORMAL) tonePool?.play(toneIds[tone], 1f, 1f, 1, 0, 1f)
+            }
+            play
+        }
     }
 }
 
-private fun playSolveSound(context: Context) {
-    val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
-    if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) return
+private fun loadTones(context: Context) {
+    if (tonesLoading) return
+    tonesLoading = true
     soundScope.launch {
-        var track: AudioTrack? = null
         try {
-            val pcm = solveTonePcm
-            track = AudioTrack.Builder()
+            val dir = File(context.cacheDir, "tones").apply { mkdirs() }
+            val pool = SoundPool.Builder()
+                .setMaxStreams(8)
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_GAME)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .build()
                 )
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(SolveTone.SAMPLE_RATE)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build()
-                )
-                .setTransferMode(AudioTrack.MODE_STATIC)
-                .setBufferSizeInBytes(pcm.size * 2)
                 .build()
-            track.write(pcm, 0, pcm.size)
-            track.play()
-            // A static track has no completion callback worth a Looper; the tone's length is known.
-            delay(SolveTone.LENGTH * 1000L / SolveTone.SAMPLE_RATE + 150L)
-        } catch (_: Exception) {
-            // No audio output, or the device refused the track: silence is the right fallback.
-        } finally {
-            try {
-                track?.stop()
-            } catch (_: Exception) {
+            val left = AtomicInteger(Tones.COUNT)
+            pool.setOnLoadCompleteListener { _, _, _ -> if (left.decrementAndGet() == 0) dir.deleteRecursively() }
+            tonePool = pool
+            for (i in 0 until Tones.COUNT) {
+                val file = File(dir, "$i.wav").apply { writeBytes(wav(Tones.pcm16(i))) }
+                toneIds[i] = pool.load(file.path, 1)
             }
-            track?.release()
+        } catch (_: Exception) {
+            // Silence is the right fallback.
         }
     }
+}
+
+/** A mono 16-bit WAV file of [pcm]. */
+private fun wav(pcm: ShortArray): ByteArray {
+    val bytes = pcm.size * 2
+    val rate = SolveTone.SAMPLE_RATE
+    return ByteBuffer.allocate(44 + bytes).order(ByteOrder.LITTLE_ENDIAN).apply {
+        put("RIFF".encodeToByteArray()); putInt(36 + bytes); put("WAVEfmt ".encodeToByteArray())
+        putInt(16); putShort(1); putShort(1); putInt(rate); putInt(rate * 2); putShort(2); putShort(16)
+        put("data".encodeToByteArray()); putInt(bytes)
+        pcm.forEach { putShort(it) }
+    }.array()
 }
 
 /**

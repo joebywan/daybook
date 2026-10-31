@@ -48,6 +48,9 @@ class Haptics(val tick: () -> Unit, val bump: () -> Unit, val success: () -> Uni
 
 val LocalHaptics = staticCompositionLocalOf { Haptics.None }
 
+/** Plays a tone of the bank (`core/Tones.kt`), from `rememberTonePlayer` in the platform seam: silent when Sound is off. */
+val LocalTones = staticCompositionLocalOf<(Int) -> Unit> { {} }
+
 /**
  * The hint glow's alpha: breathing between [low] and [high] while [glowing], steady at 1 otherwise. Under
  * reduced motion it holds at [high], so the glow still shows. Read it in the draw phase, so the board is not

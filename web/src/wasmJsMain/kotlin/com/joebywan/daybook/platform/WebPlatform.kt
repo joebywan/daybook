@@ -46,6 +46,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.SolveTone
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.data.KeyValueStore
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.ui.Haptics
@@ -452,20 +453,21 @@ fun WithSymbolFonts(content: @Composable () -> Unit) {
 /** How long [WithSymbolFonts] waits for a font before showing the app without it. */
 private const val SYMBOL_FONTS_WAIT_MS = 2500L
 
-// --- The solve sound (Web Audio) ---------------------------------------------------------------
-// The samples are the shared SolveTone; JS only holds them and a lazily made AudioContext. Browsers
+// --- The game's sounds (Web Audio) -------------------------------------------------------------
+// The samples are the shared Tones; JS only holds them and a lazily made AudioContext. Browsers
 // start audio only from a gesture, and Safari wants the context woken inside the handler itself, so
-// the first taps wake it (a silent one-sample buffer) and the solve, which always follows taps,
-// finds it running. Everything is guarded: no Web Audio, or a refusal, is silence and nothing else.
+// the first taps wake it (a silent one-sample buffer) and every sound, which follows a tap, finds it
+// running. A buffer source is cheap and made per play, as Web Audio intends. Everything is guarded:
+// no Web Audio, or a refusal, is silence and nothing else.
 
 private fun newFloatArray(n: Int): JsAny = js("new Float32Array(n)")
 
 private fun setFloat(array: JsAny, i: Int, v: Float): Unit = js("array[i] = v")
 
-private fun keepTone(tone: JsAny, rate: Int): Unit = js(
+private fun keepTone(i: Int, tone: JsAny, rate: Int): Unit = js(
     """(() => {
-        const S = globalThis.__daybookAudio || (globalThis.__daybookAudio = { tone: null, rate: 0, ctx: null, buf: null, wired: false });
-        S.tone = tone; S.rate = rate;
+        const S = globalThis.__daybookAudio || (globalThis.__daybookAudio = { tones: [], bufs: [], rate: 0, ctx: null, wired: false });
+        S.tones[i] = tone; S.rate = rate;
         if (S.wired) return;
         S.wired = true;
         const events = ['pointerup', 'touchend', 'click', 'keydown'];
@@ -489,22 +491,22 @@ private fun keepTone(tone: JsAny, rate: Int): Unit = js(
     })()"""
 )
 
-private fun startTone(): Unit = js(
+private fun startTone(i: Int): Unit = js(
     """(() => {
         const S = globalThis.__daybookAudio;
-        if (!S || !S.tone) return;
+        if (!S || !S.tones[i]) return;
         try {
             const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
             if (!AC) return;
             if (!S.ctx) S.ctx = new AC();
             const ctx = S.ctx;
             if (ctx.state !== 'running') ctx.resume();
-            if (!S.buf) {
-                S.buf = ctx.createBuffer(1, S.tone.length, S.rate);
-                S.buf.getChannelData(0).set(S.tone);
+            if (!S.bufs[i]) {
+                S.bufs[i] = ctx.createBuffer(1, S.tones[i].length, S.rate);
+                S.bufs[i].getChannelData(0).set(S.tones[i]);
             }
             const src = ctx.createBufferSource();
-            src.buffer = S.buf;
+            src.buffer = S.bufs[i];
             src.connect(ctx.destination);
             src.start();
         } catch (e) { }
@@ -512,24 +514,27 @@ private fun startTone(): Unit = js(
 )
 
 /**
- * Plays the solve sound when called, if [enabled]. While enabled it hands the shared samples to the
- * page once and arms the first-tap wake-up; off, it does nothing at all.
+ * Plays a tone of the bank ([Tones]) when called, if [enabled]. While enabled it renders the bank once, a tone a turn so
+ * a frame never waits on all of it, hands it to the page and arms the first-tap wake-up; off, it does nothing at all.
  */
 @Composable
-fun rememberSolveSoundPlayer(enabled: Boolean): () -> Unit {
+fun rememberTonePlayer(enabled: Boolean): (Int) -> Unit {
     LaunchedEffect(enabled) {
         if (enabled) {
             try {
-                val tone = SolveTone.samples()
-                val array = newFloatArray(tone.size)
-                for (i in tone.indices) setFloat(array, i, tone[i])
-                keepTone(array, SolveTone.SAMPLE_RATE)
+                for (t in 0 until Tones.COUNT) {
+                    val tone = Tones.samples(t)
+                    val array = newFloatArray(tone.size)
+                    for (i in tone.indices) setFloat(array, i, tone[i])
+                    keepTone(t, array, SolveTone.SAMPLE_RATE)
+                    delay(1)
+                }
             } catch (_: Throwable) {
             }
         }
     }
     return remember(enabled) {
-        if (!enabled) ({}) else ({ try { startTone() } catch (_: Throwable) { } })
+        if (!enabled) ({}) else ({ t -> try { startTone(t) } catch (_: Throwable) { } })
     }
 }
 

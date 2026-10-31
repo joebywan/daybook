@@ -395,9 +395,9 @@ object Lexicon : PuzzleType {
                             // The nine-key row is centred under the ten above it.
                             if (r == 1) Spacer(Modifier.weight(0.5f))
                             if (r == 2) {
-                                KeyButton("Enter", Modifier.weight(1.5f), playable, LexiconTeacher.ENTER, highlight, glow, pulse,
+                                KeyButton("Del", Modifier.weight(1.5f), playable, LexiconTeacher.DELETE, highlight, glow, pulse,
                                     scheme.surfaceVariant, scheme.onSurfaceVariant, small = true, scale) {
-                                    press(LexiconKeyAction.Enter)
+                                    press(LexiconKeyAction.Backspace)
                                 }
                             }
                             letters.forEach { c ->
@@ -420,9 +420,9 @@ object Lexicon : PuzzleType {
                             }
                             if (r == 1) Spacer(Modifier.weight(0.5f))
                             if (r == 2) {
-                                KeyButton("Del", Modifier.weight(1.5f), playable, LexiconTeacher.DELETE, highlight, glow, pulse,
+                                KeyButton("Enter", Modifier.weight(1.5f), playable, LexiconTeacher.ENTER, highlight, glow, pulse,
                                     scheme.surfaceVariant, scheme.onSurfaceVariant, small = true, scale) {
-                                    press(LexiconKeyAction.Backspace)
+                                    press(LexiconKeyAction.Enter)
                                 }
                             }
                         }

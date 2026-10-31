@@ -56,3 +56,6 @@ fun swipeWheelLetter(path: List<Int>, index: Int): List<Int> = when {
     index in path -> path
     else -> path + index
 }
+
+/** Which step of the scale a word going from [before] to [after] letters sounds: the new length's; nothing if it did not change or emptied. */
+fun wheelToneStep(before: Int, after: Int): Int? = if (after == before || after == 0) null else after - 1
