@@ -74,9 +74,9 @@ private class Piece(val x: Float, val delay: Float, val speed: Float, val sway: 
 /**
  * About two seconds of confetti falling over the whole screen, drawn on a Canvas. It takes no input, so taps
  * pass through to what is beneath. Plays once: [played] (the caller's saved flag) stops a rotation replaying it.
- * Not [full] (an ordinary solve, [Praise.full]): a light flourish instead, 14 pieces for a little over a second. A full
- * show has twice the pieces and a rainbow running round the edge of the screen; [allTiers] ([Praise.allTiers]) has the most
- * and runs longest. Reduced motion: none of it. Drawn over everything and never laid out, so the board cannot move.
+ * Every show has a rainbow running round the edge of the screen. Not [full] (an ordinary solve, [Praise.full]): a light
+ * flourish, 14 pieces for a little over a second. A full show has 140 pieces; [allTiers] ([Praise.allTiers]) has the most, the
+ * widest rainbow and runs longest. Reduced motion: none of it. Drawn over everything and never laid out, so the board cannot move.
  */
 @Composable
 fun Confetti(played: Boolean, full: Boolean, allTiers: Boolean = false, onPlayed: () -> Unit) {
@@ -110,7 +110,7 @@ fun Confetti(played: Boolean, full: Boolean, allTiers: Boolean = false, onPlayed
                 drawRect(p.color.copy(alpha = 1f - life * life * life), Offset(x, y), Size(p.w * d, p.h * d))
             }
         }
-        if (full) rainbowBorder(t.value, (if (allTiers) 9f else 6f) * d)
+        rainbowBorder(t.value, (if (allTiers) 9f else 6f) * d)
     }
 }
 
