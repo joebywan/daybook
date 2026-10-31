@@ -37,6 +37,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -267,6 +268,7 @@ object Dwindle : PuzzleType {
         val playable = interactive && !s.solved
         val measurer = rememberTextMeasurer()
         val counts = s.counts()
+        val family = MaterialTheme.typography.bodyLarge.fontFamily
 
         // A found word's tiles settle, and the glow runs along it.
         val units = remember(s.letters) { s.goals.map { it.cells.toIntArray() } }
@@ -345,7 +347,7 @@ object Dwindle : PuzzleType {
                 )
 
                 Canvas(Modifier.fillMaxWidth().height(fit.listHeight.dp)) {
-                    drawList(s, fit, highlight, glow, pulse.value, hueA, dark, scheme.onSurfaceVariant, measurer)
+                    drawList(s, fit, highlight, glow, pulse.value, hueA, dark, scheme.onSurfaceVariant, measurer, family)
                 }
 
                 // The word being spelled. Tapping it tries it; its room is always kept, so nothing moves when it fills.
@@ -404,7 +406,7 @@ object Dwindle : PuzzleType {
                                 }
                             },
                     ) {
-                        drawTiles(s, counts, picked, fit.tile.dp.toPx(), highlight, glow, pulse.value, hueA, hueB, dark, measurer, feel, Color(accent))
+                        drawTiles(s, counts, picked, fit.tile.dp.toPx(), highlight, glow, pulse.value, hueA, hueB, dark, measurer, feel, Color(accent), family)
                     }
                 }
 
@@ -431,6 +433,7 @@ object Dwindle : PuzzleType {
         dark: Boolean,
         dash: Color,
         measurer: TextMeasurer,
+        family: FontFamily?,
     ) {
         val u = fit.unit.dp.toPx()
         val ink = BoardHues.ink(hueA, dark)
@@ -455,7 +458,7 @@ object Dwindle : PuzzleType {
                 for (i in word.indices) {
                     val cx = x + (i + 0.5f) * u
                     if (found) {
-                        val layout = measurer.measure(word[i].uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (u * 0.85f).toSp(), fontWeight = FontWeight.Bold))
+                        val layout = measurer.measure(word[i].uppercase(), TextStyle(color = ink.copy(alpha = alpha), fontSize = (u * 0.85f).toSp(), fontWeight = FontWeight.Bold, fontFamily = family))
                         drawText(layout, topLeft = Offset(cx - layout.size.width / 2f, top + (u * ROW - layout.size.height) / 2f))
                     } else {
                         val y = top + u * (ROW - 0.3f)
@@ -481,6 +484,7 @@ object Dwindle : PuzzleType {
         measurer: TextMeasurer,
         feel: MoveFeel,
         accent: Color,
+        family: FontFamily?,
     ) {
         val fill = BoardHues.fill(hueB, dark)
         val ink = BoardHues.onFill(fill)
@@ -489,6 +493,8 @@ object Dwindle : PuzzleType {
         val corner = CornerRadius(cell * 0.14f)
         val box = Size(cell - 2 * inset, cell - 2 * inset)
         fun centre(i: Int) = Offset((i % s.width + 0.5f) * cell, (i / s.width + 0.5f) * cell)
+        // Under the tiles, so the trail never crosses a letter.
+        for (k in 1 until picked.size) drawLine(mark, centre(picked[k - 1]), centre(picked[k]), cell * 0.14f, StrokeCap.Round)
         for (i in counts.indices) {
             val topLeft = Offset((i % s.width) * cell + inset, (i / s.width) * cell + inset)
             val look = highlight.look(i)
@@ -502,9 +508,9 @@ object Dwindle : PuzzleType {
                     val bg = if (chosen) mark else fill
                     val text = if (chosen) BoardHues.onFill(mark) else ink
                     drawRoundRect(bg.copy(alpha = alpha), topLeft, box, corner)
-                    val letter = measurer.measure(s.letters[i].uppercase(), TextStyle(color = text.copy(alpha = alpha), fontSize = (cell * 0.52f).toSp(), fontWeight = FontWeight.Bold))
+                    val letter = measurer.measure(s.letters[i].uppercase(), TextStyle(color = text.copy(alpha = alpha), fontSize = (cell * 0.52f).toSp(), fontWeight = FontWeight.Bold, fontFamily = family))
                     drawText(letter, topLeft = Offset(topLeft.x + (box.width - letter.size.width) / 2f, topLeft.y + (box.height - letter.size.height) / 2f))
-                    val count = measurer.measure(counts[i].toString(), boardStyle(BoardGlyph.CORNER, cell * 0.8f).copy(color = text.copy(alpha = alpha)))
+                    val count = measurer.measure(counts[i].toString(), boardStyle(BoardGlyph.CORNER, cell * 0.8f).copy(color = text.copy(alpha = alpha), fontFamily = family))
                     drawText(count, topLeft = Offset(topLeft.x + box.width - count.size.width - cell * 0.07f, topLeft.y + cell * 0.03f))
                 }
             }
@@ -519,6 +525,5 @@ object Dwindle : PuzzleType {
                 )
             }
         }
-        for (k in 1 until picked.size) drawLine(mark.copy(alpha = 0.75f), centre(picked[k - 1]), centre(picked[k]), cell * 0.1f, StrokeCap.Round)
     }
 }
