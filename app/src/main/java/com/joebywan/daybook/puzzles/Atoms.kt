@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -550,7 +551,7 @@ object Atoms : PuzzleType {
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
-        val ink = Color(accent)
+        val ink = vivid(accent)
 
         Canvas(modifier) {
             val side = minOf(size.width, size.height)
@@ -724,7 +725,7 @@ object Atoms : PuzzleType {
                     val count = s.counts[index]
                     if (count == 0) return@forEachIndexed
                     // Everything a highlight does not name steps back.
-                    val ink = Color(accent).copy(alpha = if (named(AtomsTeacher.pairCell(s.atoms.size, index))) 1f else 0.28f)
+                    val ink = vivid(accent).copy(alpha = if (named(AtomsTeacher.pairCell(s.atoms.size, index))) 1f else 0.28f)
                     drawBond(centre(s.atoms[pair.a]), centre(s.atoms[pair.b]), pair.horizontal, count, stepPx * 0.09f, stepPx * 0.055f, ink)
                 }
 
@@ -739,7 +740,7 @@ object Atoms : PuzzleType {
                         centre(s.atoms[if (pair.a == from) pair.b else pair.a])
                     }
                     drawLine(
-                        color = Color(accent).copy(alpha = if (target == null) 0.25f else 0.55f),
+                        color = vivid(accent).copy(alpha = if (target == null) 0.25f else 0.55f),
                         start = centre(s.atoms[from]),
                         end = end,
                         strokeWidth = stepPx * 0.055f,
@@ -754,11 +755,11 @@ object Atoms : PuzzleType {
                         drawCircle(color = scheme.background, radius = radius, center = c)
                         // An atom that has just got its last bond glows once, inside its ring.
                         val lit = feel.glow(index)
-                        if (lit > 0f) drawCircle(Color(accent).copy(alpha = GLOW_ALPHA * lit), radius, c)
+                        if (lit > 0f) drawCircle(vivid(accent).copy(alpha = GLOW_ALPHA * lit), radius, c)
                         drawCircle(
                             color = when {
                                 index in overloaded -> scheme.error
-                                complete -> Color(accent)
+                                complete -> vivid(accent)
                                 else -> scheme.onBackground
                             }.copy(alpha = fade),
                             radius = radius,
@@ -784,7 +785,7 @@ object Atoms : PuzzleType {
                         val layout = measurer.measure(
                             atom.bonds.toString(),
                             TextStyle(
-                                color = (if (complete) Color(accent) else scheme.onBackground).copy(alpha = fade),
+                                color = (if (complete) vivid(accent) else scheme.onBackground).copy(alpha = fade),
                                 fontSize = (step * 0.34f).toSp(),
                                 fontWeight = FontWeight.Bold,
                             ),

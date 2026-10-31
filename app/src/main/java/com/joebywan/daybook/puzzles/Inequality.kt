@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -342,7 +343,7 @@ object Inequality : PuzzleType {
                             Modifier
                                 .padding(start = slot * (i % n) + (slot - cell) / 2, top = slot * (i / n) + (slot - cell) / 2)
                                 .size(cell)
-                                .moveFeel(feel, i, Color(accent))
+                                .moveFeel(feel, i, vivid(accent))
                                 .dimmed(look)
                                 .ring(look, glow, pulse, corner = 8.dp)
                                 .clip(RoundedCornerShape(8.dp))

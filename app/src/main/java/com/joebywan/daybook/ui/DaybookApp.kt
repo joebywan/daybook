@@ -295,6 +295,7 @@ private fun DaybookScreens(
     // Armed while the switch is on (the web wakes its audio on the first taps); a no-op when off.
     val tones = rememberTonePlayer(playSound)
     val playSolveSound = remember(tones) { { tones(Tones.pick(Tones.Kind.WIN)) } }
+    val playBlip = remember(tones) { { tones(Tones.pick(Tones.Kind.UNIT)) } }
     val (vibrate, setVibrate) = rememberPref(launchPrefs.vibrate, true, launchPrefs::setVibrate)
     val haptics = rememberHaptics(vibrate)
     // The player's choice in Settings, or the device's (the default): Accessibility in SettingsScreen.
@@ -620,7 +621,7 @@ private fun DaybookScreens(
                         route = Route.Training(t, fromHint = true, puzzle = c.id)
                     } }
                 }
-                CompositionLocalProvider(LocalChime provides playSolveSound, LocalHintAction provides practise) { key(puzzle.id, seed) {
+                CompositionLocalProvider(LocalChime provides playBlip, LocalHintAction provides practise) { key(puzzle.id, seed) {
                 PlayScreen(
                     puzzle = puzzle,
                     difficulty = difficulty,

@@ -75,11 +75,11 @@ class BoardHuesTest {
     }
 
     @Test fun onFillPicksReadableText() {
-        assertEquals(Color(0xFF1B2F29), BoardHues.onFill(Color.White)) // light fill: the theme ink
+        assertEquals(Color(0xFF21145F), BoardHues.onFill(Color.White)) // light fill: the theme ink
         assertEquals(Color.White, BoardHues.onFill(Color.Black))
-        // Lexicon's green fails ink (4.3) and white (3.2): only black reaches 4.5.
-        val green = Color(0xFF4E9F6C)
-        assertEquals(Color.Black, BoardHues.onFill(green))
-        assertTrue(BoardHues.contrast(BoardHues.onFill(green), green) >= 4.5f)
+        // A mid grey fails the ink (4.1) and white (3.9): only black reaches 4.5.
+        val grey = Color(0xFF808080)
+        assertEquals(Color.Black, BoardHues.onFill(grey))
+        assertTrue(BoardHues.contrast(BoardHues.onFill(grey), grey) >= 4.5f)
     }
 }

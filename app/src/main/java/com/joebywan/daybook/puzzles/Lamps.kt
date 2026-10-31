@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -481,7 +482,7 @@ object Lamps : PuzzleType {
                         }
                     },
             ) {
-                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, overlay, feel, Color(accent)) }
+                Canvas(Modifier.fillMaxSize()) { drawBoard(s, unitPx, digits, scheme, overlay, feel, vivid(accent)) }
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -682,7 +683,7 @@ object Snap : PuzzleType {
                 val at = centre(cell)
                 if (i == 0) line.moveTo(at.x, at.y) else line.lineTo(at.x, at.y)
             }
-            drawPath(line, Color(accent), style = Stroke(width = step * 0.26f, cap = StrokeCap.Round, join = join))
+            drawPath(line, vivid(accent), style = Stroke(width = step * 0.26f, cap = StrokeCap.Round, join = join))
         }
 
         waypoints.forEachIndexed { cell, number ->

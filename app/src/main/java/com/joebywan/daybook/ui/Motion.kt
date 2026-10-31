@@ -39,10 +39,10 @@ enum class MotionChoice(val label: String) {
     }
 }
 
-/** The three buzzes a game gives, from `rememberHaptics` in the platform seam. Each does nothing when vibration is off. */
-class Haptics(val tick: () -> Unit, val bump: () -> Unit, val success: () -> Unit) {
+/** The buzzes a game gives, from `rememberHaptics` in the platform seam. Each does nothing when vibration is off. */
+class Haptics(val tick: () -> Unit, val bump: () -> Unit, val success: () -> Unit, val thump: () -> Unit) {
     companion object {
-        val None = Haptics({}, {}, {})
+        val None = Haptics({}, {}, {}, {})
     }
 }
 

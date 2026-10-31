@@ -836,11 +836,11 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
 The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
-Sound is a bank of pre-rendered tones (`core/Tones.kt`, from the owner's pluck in `SolveTone.kt`), played by `rememberTonePlayer` in
-the seam (Android `SoundPool`, web Web Audio): a very quiet tick beside the haptic in `push`, a unit's tone from `rememberMoveFeel`, Word
+Sound is a bank of pre-rendered chiptune tones (`core/Tones.kt`: pulse, triangle and noise voices, synthesised, no audio files), played by `rememberTonePlayer` in
+the seam (Android `SoundPool`, web Web Audio): ordinary moves are silent (the haptic stays), a unit's note climbs the board's phrase from `rememberMoveFeel` (`Tones.phraseStep`, derived from the units done), Word
 Wheel's rising scale, a win by the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones`, so a walkthrough or
-a practice is silent; a variant is drawn from `kotlin.random`, never `Rng`. `docs/REWARDS.md` (Sounds). A win never shakes: Pointers and
-Mines use a shake for a mistake. The top show (`Praise.allTiers`, all three tiers of a puzzle on a date) is derived from completions.
+a practice is silent; a variant is drawn from `kotlin.random`, never `Rng`. `docs/REWARDS.md` (Sounds). A win thumps, it never wobbles (a 50 ms freeze, then the whole board drops and rebounds with the fanfare and a heavy haptic on one
+frame, `PlayScreen`, from a solving move only); mistakes are small and sideways or a piece's own recoil (Mines' blast, Arrows' lunge). The top show (`Praise.allTiers`, all three tiers of a puzzle on a date) is derived from completions.
 A move's feel (the changed squares settle, a unit finished by the rules glows and pops once) is `ui/MoveFeel.kt`'s
 `rememberMoveFeel`, read in the draw phase; it fires only on `LocalMoveCount` (raised by `push`, so never on load,
 undo, restart or the walkthrough). The same helper dips what an Undo took back (`LocalUndoCount`), runs one wave across

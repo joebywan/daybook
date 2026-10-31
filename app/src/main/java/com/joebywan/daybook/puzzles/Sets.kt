@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -520,7 +521,7 @@ object Sets : PuzzleType {
                         .aspectRatio(0.64f)
                         .clip(corner)
                         .background(scheme.surface)
-                        .border(1.dp, Color(accent).copy(alpha = 0.55f), corner),
+                        .border(1.dp, vivid(accent).copy(alpha = 0.55f), corner),
                     contentAlignment = Alignment.Center,
                 ) {
                     CardFace(card, inset = 4.dp)
@@ -650,8 +651,8 @@ object Sets : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val corner = RoundedCornerShape(12.dp)
         val fill = when {
-            peeked -> Color(accent).copy(alpha = 0.34f).compositeOver(scheme.surface)
-            used -> Color(accent).copy(alpha = 0.14f).compositeOver(scheme.surface)
+            peeked -> vivid(accent).copy(alpha = 0.34f).compositeOver(scheme.surface)
+            used -> vivid(accent).copy(alpha = 0.14f).compositeOver(scheme.surface)
             else -> scheme.surface
         }
         Box(
@@ -670,7 +671,7 @@ object Sets : PuzzleType {
                         used -> 1.dp
                         else -> 0.dp
                     },
-                    Color(accent).copy(alpha = if (selected || peeked) 1f else 0.45f),
+                    vivid(accent).copy(alpha = if (selected || peeked) 1f else 0.45f),
                     corner,
                 )
                 .then(
@@ -752,7 +753,7 @@ object Sets : PuzzleType {
                 .background(if (cards == null) Color.Transparent else scheme.surface)
                 .border(
                     if (peeked) 2.dp else 1.dp,
-                    Color(accent).copy(
+                    vivid(accent).copy(
                         alpha = when {
                             cards == null -> 0.20f
                             peeked -> 1f

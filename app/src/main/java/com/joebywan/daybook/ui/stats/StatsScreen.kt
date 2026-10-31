@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.stats
 
+import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.card
 import com.joebywan.daybook.ui.TitledScreen
@@ -173,7 +174,7 @@ private fun PuzzleStats(
     onOpen: (KeptCard) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val accent = Color(puzzle.accent)
+    val accent = vivid(puzzle.accent)
     Column(modifier.card(scheme.surface).padding(14.dp)) {
         Text(puzzle.displayName, style = MaterialTheme.typography.titleMedium, color = BoardHues.textOn(accent, scheme.surface), maxLines = 1)
         // Never played: one line, not three tiers of dashes and zeroes.

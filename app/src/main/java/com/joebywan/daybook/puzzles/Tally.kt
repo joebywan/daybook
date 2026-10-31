@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -399,7 +400,7 @@ object Tally : PuzzleType {
 
                 Box(Modifier.size(unit * unitsAcross(n), unit * unitsDown(n))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawBoard(shown, unitPx, texts, done, bad, scheme, HintGlow(highlight, glow, pulse.value), feel, Color(accent))
+                        drawBoard(shown, unitPx, texts, done, bad, scheme, HintGlow(highlight, glow, pulse.value), feel, vivid(accent))
                     }
                     // Taps and sweeps are read over the grid alone; the targets are not part of the play area.
                     Box(
@@ -410,12 +411,12 @@ object Tally : PuzzleType {
                 }
             }
 
-            PenRow(s.pens, pen, interactive, Color(accent), { if (it == TallyLogic.REMOVED) "Remove" else "Keep" }, { pen = it }) { option ->
+            PenRow(s.pens, pen, interactive, vivid(accent), { if (it == TallyLogic.REMOVED) "Remove" else "Keep" }, { pen = it }) { option ->
                 if (option == TallyLogic.REMOVED) {
                     val a = size.width * 0.2f
                     drawLine(scheme.onSurface.copy(alpha = 0.85f), Offset(a, size.height - a), Offset(size.width - a, a), 3f, StrokeCap.Round)
                 } else {
-                    drawCircle(Color(accent), size.width * 0.4f, style = Stroke(3f))
+                    drawCircle(vivid(accent), size.width * 0.4f, style = Stroke(3f))
                 }
             }
         }

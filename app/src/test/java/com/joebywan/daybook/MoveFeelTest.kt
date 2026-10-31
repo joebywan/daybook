@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui
 
+import com.joebywan.daybook.core.Tones
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,6 +27,36 @@ class MoveFeelTest {
             observe(0, a, row, d(false), false)
             observe(1, b, row, d(true), false, solves = 1)
         }.unitRun)
+    }
+
+    @Test fun theNoteFollowsTheUnitsDoneAndAnUndoStepsBack() {
+        val units = List(10) { intArrayOf(it) }
+        fun done(n: Int) = BooleanArray(10) { it < n }
+        val cells = listOf(0)
+        val f = MoveFeel()
+        f.observe(0, cells, units, done(0), false)
+        val heard = ArrayList<Int>()
+        fun move(tick: Int, n: Int) { f.observe(tick, cells, units, done(n), false); heard += f.unitStep }
+        move(1, 1); move(2, 3); move(3, 5)
+        assertEquals(listOf(0, 1, 3), heard)
+        // Undone back to one unit: no note for the undo, and the unit found again is the note it was.
+        f.observe(3, cells, units, done(1), false, undos = 1)
+        assertEquals(3, f.unitRun)
+        move(4, 2)
+        assertEquals(Tones.phraseStep(2, 10), f.unitStep)
+        assertTrue(f.unitStep < heard[2])
+    }
+
+    @Test fun aWinsThumpIsOneDropAndOneRiseAndEndsAtRest() {
+        val path = (0..200).map { winThump(it / 200f) }
+        assertEquals(0f, path.first())
+        assertEquals(0f, path.last())
+        assertEquals(1f, path.max(), 0.02f)
+        // The drop is fast, and the rise above rest is small.
+        assertTrue(path.indexOf(path.max()) < 50)
+        assertTrue(path.min() < -0.1f && path.min() > -0.4f)
+        // Down, up through rest, back to rest: one crossing to above rest, none but a settle after it.
+        assertTrue((1..200).count { path[it - 1] > 0.02f && path[it] <= 0.02f } == 1)
     }
 
     private val row = listOf(intArrayOf(0, 1, 2))

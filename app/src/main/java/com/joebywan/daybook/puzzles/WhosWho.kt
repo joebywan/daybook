@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -435,7 +436,7 @@ object WhosWho : PuzzleType {
         val placed = grid.placed[c]
         val open = (0 until s.n).filter { grid.cand[c] shr it and 1 == 1 }
         val hint = look.highlight.look(c)
-        val accent = Color(accent)
+        val accent = vivid(accent)
         Box(
             modifier
                 .highlightAnchor(c)
@@ -537,7 +538,7 @@ object WhosWho : PuzzleType {
         onSlot: (Int) -> Unit,
     ) {
         val scheme = look.scheme
-        val accent = Color(accent)
+        val accent = vivid(accent)
         Row(
             Modifier.fillMaxWidth().height(PAD).keepClear(),
             horizontalArrangement = Arrangement.spacedBy(5.dp),

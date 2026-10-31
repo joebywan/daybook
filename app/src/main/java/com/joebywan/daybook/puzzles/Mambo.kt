@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -1086,7 +1087,7 @@ object Mambo : PuzzleType {
                                 modifier = Modifier
                                     .padding(start = cell * c, top = cell * r)
                                     .size(cell)
-                                    .moveFeel(feel, i, Color(accent))
+                                    .moveFeel(feel, i, vivid(accent))
                                     .padding(cell * 0.06f),
                             )
                         }
@@ -1162,7 +1163,7 @@ object Mambo : PuzzleType {
             // a fixed daylight orange the page has to sit around.
             Sym.SUN -> scheme.secondary
             // Mambo's accent: the pale blue the puzzle is already known by on the home grid.
-            Sym.MOON -> Color(accent)
+            Sym.MOON -> vivid(accent)
             Sym.NONE -> scheme.surfaceVariant
         }.let {
             // Stepping back means fading toward the page, not going see-through: the violation halo

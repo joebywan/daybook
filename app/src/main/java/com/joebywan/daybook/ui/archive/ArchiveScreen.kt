@@ -1,5 +1,6 @@
 package com.joebywan.daybook.ui.archive
 
+import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.TitledScreen
 import androidx.compose.foundation.BorderStroke
@@ -116,7 +117,7 @@ fun ArchiveScreen(
     openAt: LocalDate? = null,
 ) {
     val puzzle = PuzzleRegistry.byId(puzzleId) ?: return
-    val accent = Color(puzzle.accent)
+    val accent = vivid(puzzle.accent)
     val done = completions.filter { it.puzzleId == puzzleId }
         .map { it.day to it.difficulty }
         .toSet()
@@ -448,7 +449,7 @@ private fun DayPuzzles(
         }
         LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
             items(puzzles, key = { it.id }) { puzzle ->
-                val accent = Color(puzzle.accent)
+                val accent = vivid(puzzle.accent)
                 Row(Modifier.fillMaxWidth().height(PUZZLE_ROW), verticalAlignment = Alignment.CenterVertically) {
                     Row(
                         Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(10.dp))

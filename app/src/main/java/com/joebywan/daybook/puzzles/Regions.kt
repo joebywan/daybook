@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -341,7 +342,7 @@ object Regions : PuzzleType {
                             Modifier
                                 .padding(start = slot * (i % n), top = slot * (i / n))
                                 .size(slot)
-                                .moveFeel(feel, i, Color(accent))
+                                .moveFeel(feel, i, vivid(accent))
                                 .dimmed(look)
                                 .ring(look, glow, pulse, corner = 2.dp)
                                 .background(fill)

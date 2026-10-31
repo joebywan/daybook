@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,7 +24,8 @@ import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.placementDeduction
-import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.BoardGlyph
 import com.joebywan.daybook.ui.style
@@ -524,9 +524,7 @@ object Sudoku : PuzzleType {
      */
     @Composable
     override fun Preview(modifier: Modifier) {
-        val scheme = MaterialTheme.colorScheme
-        val dark = BoardHues.isDark(scheme)
-        val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
+        val a = ArcadeBoard.current
         BoxWithConstraints(modifier) {
             // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
             // shorter box than it is wide should shrink rather than draw its bottom row outside.
@@ -535,23 +533,26 @@ object Sudoku : PuzzleType {
                 for (c in 0 until 3) {
                     val i = r * 3 + c
                     val given = PREVIEW_GIVENS[i]
+                    val fill = when {
+                        i == PREVIEW_SELECTED -> a.selected
+                        given -> ArcadeFill(a.given, a.given, a.givenInk)
+                        PREVIEW_DIGITS[i] != 0 -> a.control
+                        else -> ArcadeFill(a.square, a.square, a.squareInk)
+                    }
                     Box(
                         Modifier
                             .padding(start = cell * c, top = cell * r)
                             .size(cell)
                             .padding(1.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(
-                                if (i == PREVIEW_SELECTED) BoardHues.mark(hueA).copy(alpha = 0.55f)
-                                else scheme.surfaceVariant
-                            ),
+                            .background(fill.brush),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (PREVIEW_DIGITS[i] != 0) {
                             Text(
                                 text = PREVIEW_DIGITS[i].toString(),
                                 style = (if (given) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(cell),
-                                color = if (given) scheme.onSurface else BoardHues.ink(hueB, dark),
+                                color = fill.ink,
                                 textAlign = TextAlign.Center,
                             )
                         }
@@ -570,9 +571,7 @@ object Sudoku : PuzzleType {
         SudokuGridBoard(
             s = s,
             conflicts = s.conflicts(),
-            hueSeed = s.solution.hashCode(),
             interactive = interactive,
-            accent = Color(accent),
             onSelect = { onState(s.select(it)) },
             onEnter = { cell, digit, notesMode ->
                 // The keys are dimmed and inert where a note cannot go, so a refusal here is never silent.

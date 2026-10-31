@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -478,7 +479,7 @@ object Pipes : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
-        val wet = Color(accent)
+        val wet = vivid(accent)
         val dry = scheme.onSurfaceVariant.copy(alpha = DRY_TINT).compositeOver(scheme.surface)
 
         Canvas(modifier) {
@@ -570,7 +571,7 @@ object Pipes : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as PipesState
         val scheme = MaterialTheme.colorScheme
-        val wet = Color(accent)
+        val wet = vivid(accent)
         // Flattened against the tile background it will be drawn on, so it lands on the same tone
         // the translucent version used to show while being opaque everywhere it overlaps itself.
         val dry = scheme.onSurfaceVariant.copy(alpha = DRY_TINT).compositeOver(scheme.surface)

@@ -1,5 +1,11 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeGlow
+import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.foundation.Canvas
@@ -15,6 +21,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,12 +35,14 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
@@ -80,12 +89,25 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 
-/** Each board draws its filled squares as a diagonal blend of two colours; the pair is the board's own. */
-private val PALETTES = listOf(
-    0xFF2E9E8F to 0xFFE0A030, 0xFF3E7CB1 to 0xFFD0507F, 0xFFE0703F to 0xFF7A52C8,
-    0xFF3FA55A to 0xFF2F9CC8, 0xFFD6A026 to 0xFFC0453F, 0xFF8A55C8 to 0xFF30B0A0,
-    0xFFCF4F7A to 0xFF3E7CB1,
+/**
+ * Each board's filled squares run diagonally through a pair of its own; the same index in both schemes. Neighbouring hues,
+ * since a complement goes to mud halfway. Light's are deep enough for 3:1 on a white square, dark's bright enough for 3:1 on
+ * its indigo one (`ArcadeBoardTest`).
+ */
+internal val NONOGRAM_FILLS_LIGHT = listOf(
+    0xFF5B2BFF to 0xFFFF1F8F, 0xFF0066FF to 0xFF00A3A3, 0xFFFF3D00 to 0xFFD6009A,
+    0xFF7A00FF to 0xFF0091FF, 0xFF00A35B to 0xFF0077E6, 0xFFE6007A to 0xFFFF5C00,
+    0xFF2A3BFF to 0xFFB400E6,
 )
+internal val NONOGRAM_FILLS_DARK = listOf(
+    0xFFB14DFF to 0xFFFF2D9B, 0xFF00C2FF to 0xFF00E08A, 0xFFFF7A00 to 0xFFFF2D9B,
+    0xFF9B5CFF to 0xFF00AEFF, 0xFF00E070 to 0xFF00A8FF, 0xFFFF2D87 to 0xFFFF8A00,
+    0xFF4D7CFF to 0xFFC84DFF,
+)
+
+/** A line that shows its numbers. There is no green among the board tokens, and only this board bands a finished line. */
+internal val NONOGRAM_DONE_LIGHT = ArcadeFill(Color(0xFF00875A), Color(0xFF007C91), Color.White)
+internal val NONOGRAM_DONE_DARK = ArcadeFill(Color(0xFF3DF5A6), Color(0xFF2BD9E6), Color(0xFF04231A))
 
 /** F fills, X crosses; the other keys are every pen board's ([penKeyAction]). */
 private val NONOGRAM_KEYS = mapOf(Key.F to NonogramLogic.FILLED, Key.X to NonogramLogic.CROSSED)
@@ -272,9 +294,9 @@ object Nonogram : PuzzleType {
         val corner = Modifier.size(unit * left, unit * top)
     }
 
-    /** The clue numbers of every row, then column, as measured text, one layout per number. */
-    private fun measureClues(measurer: TextMeasurer, clues: List<List<Int>>, u: Float, density: Density): List<List<TextLayoutResult>> {
-        val style = density.boardStyle(BoardGlyph.CLUE, u)
+    /** The clue numbers of every row, then column, as measured text, one layout per number, at [weight]. */
+    private fun measureClues(measurer: TextMeasurer, clues: List<List<Int>>, u: Float, density: Density, weight: FontWeight): List<List<TextLayoutResult>> {
+        val style = density.boardStyle(BoardGlyph.CLUE, u).copy(fontWeight = weight)
         return clues.map { line -> (if (line.isEmpty()) listOf(0) else line).map { measurer.measure(it.toString(), style) } }
     }
 
@@ -292,27 +314,37 @@ object Nonogram : PuzzleType {
         feel: MoveFeel = MoveFeel.Still,
         accent: Color = Color.Unspecified,
         zoom: Float = 1f,
+        cursor: Int? = null,
     ) {
         val highlight = overlay.highlight
         val n = s.width * s.height
+        val arcade = ArcadeBoard.of(scheme)
+        val dark = BoardHues.isDark(scheme)
 
         // Squares.
         for (r in 0 until s.height) {
             for (c in 0 until s.width) {
                 val x = c * u
                 val y = r * u
-                drawRect(scheme.surface, Offset(x, y), Size(u, u))
+                val mark = s.cells[r * s.width + c]
+                drawRect(if (mark == NonogramLogic.CROSSED) arcade.given else arcade.square, Offset(x, y), Size(u, u))
                 feelSquare(feel, r * s.width + c, Offset(x, y), Size(u, u), accent) {
-                    when (s.cells[r * s.width + c]) {
-                        NonogramLogic.FILLED -> drawRoundRect(
-                            lerp(palette.first, palette.second, (r + c).toFloat() / (s.width + s.height - 2).coerceAtLeast(1)), Offset(x + u * 0.07f, y + u * 0.07f), Size(u * 0.86f, u * 0.86f), CornerRadius(u * 0.14f),
-                        )
+                    when (mark) {
+                        NonogramLogic.FILLED -> {
+                            val t = (r + c).toFloat() / (s.width + s.height - 2).coerceAtLeast(1)
+                            val at = Offset(x + u * 0.07f, y + u * 0.07f)
+                            val side = Size(u * 0.86f, u * 0.86f)
+                            val to = lerp(palette.first, palette.second, t * 0.55f + 0.45f)
+                            // The glow stays in the square's 7% margin, under the fill.
+                            if (dark) arcadeGlow(to.copy(alpha = 0.6f), at, side, u * 0.14f, (u * 0.07f).toDp())
+                            drawRoundRect(ArcadeFill(lerp(palette.first, palette.second, t * 0.55f), to, arcade.squareInk).brush(at, side), at, side, CornerRadius(u * 0.14f))
+                            drawRoundRect(Color.White.copy(alpha = 0.24f), Offset(at.x + u * 0.1f, at.y + u * 0.07f), Size(side.width - u * 0.2f, u * 0.17f), CornerRadius(u * 0.085f))
+                        }
                         NonogramLogic.CROSSED -> {
-                            val a = u * 0.30f
-                            val stroke = maxOf(u * 0.09f, 1.2f)
-                            val ink = scheme.onSurfaceVariant.copy(alpha = 0.8f)
-                            drawLine(ink, Offset(x + a, y + a), Offset(x + u - a, y + u - a), stroke, StrokeCap.Round)
-                            drawLine(ink, Offset(x + u - a, y + a), Offset(x + a, y + u - a), stroke, StrokeCap.Round)
+                            val a = u * 0.27f
+                            val stroke = maxOf(u * 0.13f, 1.6f)
+                            drawLine(arcade.givenInk, Offset(x + a, y + a), Offset(x + u - a, y + u - a), stroke, StrokeCap.Round)
+                            drawLine(arcade.givenInk, Offset(x + u - a, y + a), Offset(x + a, y + u - a), stroke, StrokeCap.Round)
                         }
                     }
                 }
@@ -323,10 +355,22 @@ object Nonogram : PuzzleType {
         val thin = maxOf(u * 0.03f, 1f) / zoom
         fun gridLine(i: Int, from: Offset, to: Offset) {
             val heavy = i % 5 == 0
-            drawLine(if (heavy) scheme.onSurfaceVariant.copy(alpha = 0.7f) else scheme.outline, from, to, if (heavy) thin * 2f else thin)
+            // Dark's translucent frame needs doubling to tell the heavy lines from the thin by more than width.
+            drawLine(if (heavy && dark) arcade.frame.copy(alpha = arcade.frame.alpha * 2.5f) else arcade.frame, from, to, if (heavy) thin * 2.5f else thin)
         }
         for (i in 0..s.width) gridLine(i, Offset(i * u, 0f), Offset(i * u, s.height * u))
         for (i in 0..s.height) gridLine(i, Offset(0f, i * u), Offset(s.width * u, i * u))
+
+        // The last square touched: an amber ring (light edges it, since amber on white is under 3:1), so a mark under it still shows.
+        if (cursor != null) {
+            val w = u * 0.13f / zoom // the same on screen when zoomed, as the grid lines are
+            val at = Offset((cursor % s.width) * u + w / 2f, (cursor / s.width) * u + w / 2f)
+            val side = Size(u - w, u - w)
+            // A ring, not arcadeGlow's filled rects, which would wash over the mark.
+            arcade.selected.glow?.let { drawRoundRect(it.copy(alpha = 0.5f), at, side, CornerRadius(u * 0.1f), style = Stroke(w * 1.8f)) }
+            if (!dark) drawRoundRect(arcade.selectedEdge, at, side, CornerRadius(u * 0.1f), style = Stroke(w * 1.5f))
+            drawRoundRect(arcade.selected.brush(at, side), at, side, CornerRadius(u * 0.1f), style = Stroke(w))
+        }
 
         if (highlight.isEmpty) return
 
@@ -345,12 +389,13 @@ object Nonogram : PuzzleType {
      * The clues, pinned to the grid's left and top edges: a row's numbers follow its row up and
      * down as the grid is zoomed ([view]) and panned, but never leave the left; a column's follow it
      * sideways along the top. They keep their unzoomed size. A line that already shows its numbers
-     * fades, the way a ticked-off list does. [text], [done] and [bad] are per line, rows then columns.
+     * thins on a green pill, the way a ticked-off list does. [text], [thin], [done] and [bad] are per line, rows then columns.
      */
     private fun DrawScope.drawClues(
         s: NonogramState,
         g: Geometry,
         text: List<List<TextLayoutResult>>,
+        thin: List<List<TextLayoutResult>>,
         done: BooleanArray,
         scheme: androidx.compose.material3.ColorScheme,
         bad: BooleanArray = BooleanArray(s.height + s.width),
@@ -364,28 +409,43 @@ object Nonogram : PuzzleType {
         val highlight = overlay.highlight
         val lit = !highlight.isEmpty
         val n = s.width * s.height
+        val arcade = ArcadeBoard.of(scheme)
+        val doneFill = if (BoardHues.isDark(scheme)) NONOGRAM_DONE_DARK else NONOGRAM_DONE_LIGHT
 
         // [centre] places a number by how many numbers come after it in the line.
         fun clues(line: Int, band: Offset, bandSize: Size, centre: (after: Int) -> Offset) {
             val lit1 = lit && (n + line in highlight.strong || n + line in highlight.soft)
-            if (lit1) drawRoundRect(overlay.glow.copy(alpha = 0.16f * overlay.pulse), band, bandSize, CornerRadius(u * 0.2f))
-            // Three states that differ by more than hue: a finished line's numbers fade on a green band; an impossible
-            // line's stay full strength in the error ink (no band under them, which would cut its contrast), boxed in a
-            // dashed outline.
-            if (done[line] && !bad[line]) drawRoundRect(scheme.primary.copy(alpha = 0.16f), band, bandSize, CornerRadius(u * 0.2f))
+            // Three states that differ by more than hue. Inset, so each line's band stands apart from the next.
+            val m = u * 0.03f
+            val at = band + Offset(m, m)
+            val side = Size(bandSize.width - 2 * m, bandSize.height - 2 * m)
+            val finished = done[line] && !bad[line]
+            // A finished line is a pill, and its numbers go thin.
+            val corner = if (finished) minOf(side.width, side.height) / 2f else u * 0.16f
+            drawRoundRect(
+                when {
+                    bad[line] -> SolidColor(arcade.error)
+                    finished -> doneFill.brush(at, side)
+                    else -> SolidColor(arcade.given)
+                },
+                at, side, CornerRadius(corner),
+            )
+            // An impossible line is solid error, its numbers full weight, in a dashed outline.
             if (bad[line]) {
-                val w = maxOf(u * 0.06f, 1.5f)
+                // On the rim, clear of the numbers: a tall column's top number reaches the band's edge.
+                val w = maxOf(u * 0.05f, 1.2f)
                 drawRoundRect(
-                    scheme.error, band + Offset(w, w) / 2f, Size(bandSize.width - w, bandSize.height - w), CornerRadius(u * 0.2f),
+                    arcade.errorInk, at + Offset(w / 2f, w / 2f), Size(side.width - w, side.height - w), CornerRadius(corner),
                     style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(w * 2f, w * 1.5f))),
                 )
             }
+            if (lit1) drawRoundRect(overlay.glow.copy(alpha = 0.3f * overlay.pulse), at, side, CornerRadius(corner))
             val ink = when {
-                bad[line] -> scheme.error
-                done[line] -> scheme.onSurface.copy(alpha = 0.4f)
-                else -> scheme.onSurface
+                bad[line] -> arcade.errorInk
+                finished -> doneFill.ink
+                else -> arcade.givenInk
             }
-            val numbers = text[line]
+            val numbers = (if (finished) thin else text)[line]
             for ((k, layout) in numbers.withIndex()) {
                 val (cx, cy) = centre(numbers.size - 1 - k)
                 val alpha = if (lit && !lit1) 0.35f else 1f
@@ -415,13 +475,15 @@ object Nonogram : PuzzleType {
     private fun linesImpossible(s: NonogramState, clues: List<List<Int>>) =
         BooleanArray(clues.size) { NonogramLogic.lineImpossible(clues[it], s.cells, NonogramLogic.lineCells(s.width, s.height, it)) }
 
-    private fun paletteFor(s: NonogramState): Pair<Color, Color> =
-        PALETTES[(s.solution.hashCode() and Int.MAX_VALUE) % PALETTES.size].let { Color(it.first) to Color(it.second) }
+    private fun paletteFor(s: NonogramState, dark: Boolean): Pair<Color, Color> =
+        (if (dark) NONOGRAM_FILLS_DARK else NONOGRAM_FILLS_LIGHT).let { it[(s.solution.hashCode() and Int.MAX_VALUE) % it.size] }
+            .let { Color(it.first) to Color(it.second) }
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as NonogramState
         val scheme = MaterialTheme.colorScheme
+        val arcade = ArcadeBoard.current
         val measurer = rememberTextMeasurer()
         val density = LocalDensity.current
 
@@ -446,10 +508,11 @@ object Nonogram : PuzzleType {
                 contentAlignment = Alignment.Center,
             ) {
                 val g = Geometry(s, clues, maxWidth, maxHeight, density)
-                val text = remember(s.solution, g.u) { measureClues(measurer, clues, g.u, density) }
+                val text = remember(s.solution, g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Bold) }
+                val thin = remember(s.solution, g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Normal) }
 
                 val shown = s.swept(sweep.value)
-                val palette = remember(s.solution) { paletteFor(s) }
+                val palette = remember(s.solution, arcade) { paletteFor(s, arcade === ArcadeBoard.Dark) }
                 // Lines finished by their clues, on the board as handed (not the sweep still under the finger).
                 val units = remember(s.solution) { lineUnits(s.width, s.height) }
                 val done = linesDone(s, clues)
@@ -472,7 +535,7 @@ object Nonogram : PuzzleType {
 
                 Box(g.box.gridZoom(view, g.gridAt, g.gridSize, zooms)) {
                     Canvas(Modifier.fillMaxSize()) {
-                        drawClues(shown, g, text, linesDone(shown, clues), scheme, bad, HintGlow(highlight, glow, pulse.value), view.value)
+                        drawClues(shown, g, text, thin, linesDone(shown, clues), scheme, bad, HintGlow(highlight, glow, pulse.value), view.value)
                     }
                     // Taps and sweeps are read over the grid alone, in its own coordinates (the zoom
                     // layer maps the finger back to them); the clues beside it are not part of the play area.
@@ -487,28 +550,41 @@ object Nonogram : PuzzleType {
                                     translationX = view.value.offset.x
                                     translationY = view.value.offset.y
                                 }
-                                .penGrid(s, interactive, pen, g.u, sweep, cursor, scheme.primary, onState, sweeps = !view.value.zoomed)
-                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, Color(accent), view.value.scale) },
+                                // The cursor is drawn with the grid, as a ring of two colours, so the shared one stays clear.
+                                .penGrid(s, interactive, pen, g.u, sweep, cursor, Color.Transparent, onState, sweeps = !view.value.zoomed)
+                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, vivid(accent), view.value.scale, cursor.value.takeIf { interactive }) },
                         )
                     }
                     if (view.value.zoomed) {
                         Box(g.corner, contentAlignment = Alignment.Center) {
                             IconButton(onClick = { view.value = GridView() }) {
-                                Icon(Icons.Filled.ZoomOutMap, contentDescription = "Show the whole board", tint = scheme.onSurfaceVariant)
+                                // Inside the button's own box, so it keeps its size and only its face changes.
+                                Icon(
+                                    Icons.Filled.ZoomOutMap,
+                                    contentDescription = "Show the whole board",
+                                    tint = arcade.control.ink,
+                                    modifier = Modifier.size(30.dp).arcadeLift(arcade.control, 15.dp).background(arcade.control.brush, CircleShape).padding(5.dp),
+                                )
                             }
                         }
                     }
                 }
             }
 
-            PenRow(s.pens, pen, interactive, Color(accent), { if (it == NonogramLogic.FILLED) "Fill" else "Cross" }, { pen = it }) { option ->
+            PenRow(s.pens, pen, interactive, vivid(accent), { if (it == NonogramLogic.FILLED) "Fill" else "Cross" }, { pen = it }, arcade = arcade) { option ->
+                val chosen = option == pen
                 if (option == NonogramLogic.FILLED) {
-                    drawRoundRect(Color(accent), Offset(2f, 2f), Size(size.width - 4f, size.height - 4f), CornerRadius(size.width * 0.18f))
+                    val at = Offset(2f, 2f)
+                    val side = Size(size.width - 4f, size.height - 4f)
+                    val corner = CornerRadius(size.width * 0.18f)
+                    if (chosen) drawRoundRect(arcade.control.ink, at, side, corner)
+                    else drawRoundRect(arcade.control.brush(at, side), at, side, corner)
                 } else {
                     val a = size.width * 0.2f
-                    val ink = scheme.onSurface.copy(alpha = 0.85f)
-                    drawLine(ink, Offset(a, a), Offset(size.width - a, size.height - a), 3f, StrokeCap.Round)
-                    drawLine(ink, Offset(size.width - a, a), Offset(a, size.height - a), 3f, StrokeCap.Round)
+                    val ink = if (chosen) arcade.control.ink else arcade.givenInk
+                    val stroke = size.width * 0.16f
+                    drawLine(ink, Offset(a, a), Offset(size.width - a, size.height - a), stroke, StrokeCap.Round)
+                    drawLine(ink, Offset(size.width - a, a), Offset(a, size.height - a), stroke, StrokeCap.Round)
                 }
             }
         }
@@ -535,10 +611,11 @@ object Nonogram : PuzzleType {
         val done = remember { linesDone(motif, clues) }
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             val g = Geometry(motif, clues, maxWidth, maxHeight, density)
-            val text = remember(g.u) { measureClues(measurer, clues, g.u, density) }
+            val text = remember(g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Bold) }
+            val thin = remember(g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Normal) }
             Canvas(g.box) {
-                translate(g.gridX, g.gridY) { drawGrid(motif, g.u, scheme, paletteFor(motif)) }
-                drawClues(motif, g, text, done, scheme)
+                translate(g.gridX, g.gridY) { drawGrid(motif, g.u, scheme, paletteFor(motif, BoardHues.isDark(scheme))) }
+                drawClues(motif, g, text, thin, done, scheme)
             }
         }
     }

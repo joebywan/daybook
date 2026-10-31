@@ -1,5 +1,6 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -814,9 +815,9 @@ object Dominoes : PuzzleType {
                             highlight = highlight,
                             glow = glow,
                             pulse = pulse.value,
-                            select = Color(accent),
+                            select = vivid(accent),
                         ),
-                        feel, Color(accent),
+                        feel, vivid(accent),
                     )
                 }
                 // The tray is what the player reaches for to make a hinted move: keep the popover off it.

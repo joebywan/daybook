@@ -292,7 +292,7 @@ kept is the best until beaten, and Best can be slower than the best time beside 
   choice and hands the result down as `LocalReducedMotion`, on both builds. The same section holds Vibration and a line on
   what is always on (long press for a double tap, `boardSp`, right and wrong never by colour alone). Under it: no confetti; Today's three's sparkles drawn still (no
   infinite transition runs); the hint glow steady at full strength (`rememberHintPulse`, which every board uses); Pointers'
-  arrow simply goes and a bump flashes red without the shake; Sand has no pour stream and no refusal shake (the refused tube's red tint, shown always, is held 400 ms
+  arrow simply goes and a bump flashes red with no lunge or knock, and the lost heart is simply out; Mines' ring stays close to the mine and no square is pushed; a win has its sound and haptic at once, with no freeze, thump or wave; Sand has no pour stream and no refusal shake (the refused tube's red tint, shown always, is held 400 ms
   instead of fading), and a lifted tube rises at once; a Pipes tile shows its new turn; the hint popover jumps rather than slides. Fades (the finished frame's
   fade-in) and the loading spinner stay: they are not motion across the screen. A new decorative animation should read
   `LocalReducedMotion` too. Also off under it: the move feel below, and the 200 ms fade between screens (`DaybookApp`'s
@@ -315,30 +315,48 @@ kept is the best until beaten, and Best can be slower than the best time beside 
   same way. `DaybookApp` hands the puzzle and tier to Home as `LocalJustSolved` (never stored; never for a random or
   archive solve, which marks no tile) and clears it when Home goes away. Random mode shows the same daily marks as Daily.
   Under reduced motion the dot, tick and tint are simply there.
+- **The win's thump** (`PlayScreen`, on `solves` going up, so never on load, undo, restart, the walkthrough or Training): the
+  move shows at once, state is not held, then its settle and glow hold still for `WIN_FREEZE_MS` (50). On the next frame the fanfare, the
+  heavy haptic and the thump's first frame land together: the board's box (a `graphicsLayer`, so nothing recomposes or moves in layout) drops
+  10dp and rebounds over 220 ms (`winThump`). Vertical only, since small sideways motion means a mistake. The solve wave starts on the
+  rebound (`SOLVE_WAVE_DELAY_MS`), and the finished frame and confetti after the wave.
+- **A mine's blast** (`Mines`, `MinesLogic.blastPush`): a ring spreads from the mine hit, and every square within 3.5 squares is pushed
+  directly away and springs back, later and weaker with distance, whatever it hides.
+- **An arrow's recoil** (`Pointers`, `PointersLogic.lunge`, `knock`, `heartBreak`): the arrow speeds along its own line until it touches the
+  blocker (78 ms, whatever the gap), snaps back; at that touch the blocker is knocked the way the arrow was going and the lost heart breaks in two.
 - **Haptics** (`rememberHaptics`, `LocalHaptics`): `tick` when a push changes the board (the same test as the play log's
-  move: a selection or a typed letter is silent), `bump` for a Pointers bump or a wrong Sets pick, `success` on a solve
-  beside the chime (the solving move does not tick as well). Android uses `performHapticFeedback` (CLOCK_TICK; REJECT and
+  move: a selection or a typed letter is silent), `bump` for a Pointers bump or a wrong Sets pick, `thump` on a solve
+  beside the fanfare (the solving move does not tick as well; LONG_PRESS on Android, 70 ms on the web), `success` for Training's cheers. Android uses `performHapticFeedback` (CLOCK_TICK; REJECT and
   CONFIRM from Android 11, LONG_PRESS and VIRTUAL_KEY before), which honours the system's touch-feedback setting; the web
   uses `navigator.vibrate` (8 ms, 50 ms, a 20-60-40 pattern), which iOS lacks. The walkthrough does not buzz. The
   Settings switch "Vibration" (`LaunchPreferences.vibrate`, key `vibrate`, default on) turns it all off.
 
 ## Sounds (`core/Tones.kt`, `rememberTonePlayer` in the platform seam)
 
-All synthesised from the owner's marimba pluck, rendered once, no audio files. The Sound switch silences all of them, and on
-Android so does the ringer on silent or vibrate; reduced motion stills nothing here, since sound is not motion. Each kind but
-the wheel has three small variants (a different pitch, or for a win the chime a hair flat or sharp with a different brightness;
-the first win variant is the owner's chime, sample for sample), one drawn per play from `kotlin.random.Random`, never a generator's `Rng`.
+Chiptune, as the owner asked when the marimba beeps wore thin (2026-10-31): pulse waves at 12.5, 25 and 50% duty, a stepped
+triangle bass, 15-bit LFSR noise, volume in sixteen hard steps, fast arpeggios and small pitch sweeps, all synthesised and rendered
+once, no audio files. A voice's level is its RMS, because a square wave is much louder than a plucked sine of the same peak;
+pulses carry no DC, so a note starting or a volume step is no thump; a millisecond's fade at each end of a tone stops a click.
+The Sound switch silences all of them, and on Android so does the ringer on silent or vibrate; reduced motion stills nothing here,
+since sound is not motion. Each kind but the wheel and the phrase has three variants (a different pitch, or for a win the same tune on a different
+pulse width with the landing chord broken a different way), one drawn per play from `kotlin.random.Random`, never a generator's `Rng`.
 
-- **Tick:** 30 ms, at most 0.05 of full scale, beside the haptic tick in `PlayScreen.push`: a move that lands, not a selection or a typed letter.
-- **Unit finished** (a row, a box, a cage, a found word): `rememberMoveFeel`, the one hook, so every board with units has it.
+- **An ordinary move is silent** (the owner, 2026-10-31: the beeps wore thin); the haptic stays.
+- **Unit finished** (a row, a box, a cage, a found word): `rememberMoveFeel`, the one hook, so every board with units has it. Each plays
+  a note of the board's phrase, C major pentatonic C4 to E5, so the win's opening G5 is the scale's next note. The note is derived, nothing
+  stored: `Tones.phraseStep(units done by the rules, units)` spreads any board over the eight notes, bottom on the first unit, top on the
+  last that does not also solve it. So a small board skips notes, a big one repeats them (Sudoku's 27 hold a note about three units), it
+  holds at the top rather than leave the scale, and an undo or a move that breaks a unit steps back down. A board with no units has no phrase.
   Never on load, undo, restart, or the solving move (the win has that), and it plays under reduced motion, unlike the glow and the pop.
+- **Confirmation:** the coin (`Kind.UNIT`, three variants, off the phrase): a hint's move made by the player and a walkthrough's step (`LocalChime`).
 - **Word Wheel:** each letter added rises a step of C major pentatonic (`Tones.wheel`), each taken back falls one; the state is the
   board's own `remember`. A word tried or cleared is silent.
-- **Win** (`Praise.winKind`): the chime on a light flourish; on a full show the chime carries on up the arpeggio to G6 (1.06 s); on
-  all three tiers on to C7, landing on a chord (1.36 s). The Training pass and a hint's "reached" keep the plain chime (`LocalChime`).
+- **Win** (`Praise.winKind`): every win opens G5 C6 E6 on a kick, a triangle falling fast from D3 under a click of noise, for the thump. On a light flourish it lands on an arpeggiated C major (0.7 s); on a full show it
+  runs on up G6 E6 G6 A6 first (1.1 s); on all three tiers on through B6 to C7, with a pulse harmony, landing on a noise crash, the
+  bass ringing on last (1.5 s). Training's right answer and pass play the plain win (`LocalChime`).
 
 The board's sounds come through `LocalBoardTones`, provided only around the play screen's board, so a walkthrough, a Training
-board and a home motif are silent however they are drawn. Mistakes have no sound; nobody asked, and a bump already shakes.
+board and a home motif are silent however they are drawn. Mistakes have no sound; nobody asked, and a bump already recoils.
 
 ## Claim to keep honest
 

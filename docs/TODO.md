@@ -1,5 +1,12 @@
 # Daybook TODO
 
+
+## Arcade: the rest of the boards
+
+Six boards are fully converted (`docs/COLOUR.md`, top). The other 25 are on the lighter look, so the app is uneven until they are done. Also owed:
+- Drawn accent spacing: `vivid()` measured 2.34 light / 1.94 dark on the closest pair against 5.79 for the raw accents, and `AccentSpacingTest` reads only the raw ones. The real form is an accent pair per puzzle, solved as a set per scheme, replacing `vivid()`'s global flag.
+- The hint popover, finish popup and solved pills are not on the Arcade tokens; `hintRims` stays muted in light.
+- Word Wheel's home motif uses its old colours.
 The one list of outstanding work. Small enough to read in a minute; maintained as part of normal work.
 
 **How to keep it current**
@@ -119,9 +126,8 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   Expert board creation on the phone.
 - [ ] **Kings dark mode glare.** The new opaque palette is bright tiles on a near-black page. Ask whether it
   is too much; the alternative (dimmer dark-mode tiles) costs crown/cross contrast.
-- [ ] **Do the sounds work, and are they pleasant?** No sound in `core/Tones.kt` but the owner's chime has ever been heard by
-  anyone: they were built and tested by numbers alone. On a phone, listen to the tick over a long Sudoku (is it too much? its level
-  is one number in `Tones.samples`), a unit, Word Wheel's scale at speed, and all three wins, and judge the latency by ear. The web
+- [ ] **Do the sounds work, and are they pleasant?** The chiptune bank in `core/Tones.kt` was built and tested by numbers alone until someone listens
+  (the env-gated `TonesTest.writeTheBankForListening` writes it to WAVs). On a phone, listen to a board's phrase of units over a long Sudoku (a note repeats about three times there; is that fine?), the kick under the win against the thump, Word Wheel's scale at speed, and all three wins, and judge the latency by ear. The web
   build wakes its `AudioContext` on the first tap (`rememberTonePlayer` in `web/.../WebPlatform.kt`).
   Headless Chromium has no audio output, so nobody has heard it on the web. Check on the iPhone that it is audible after a solve, that the Settings
   "Sound" switch silences it, and that the Settings note ("a browser cannot see your phone's silent switch") reads right.
