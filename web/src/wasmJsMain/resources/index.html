@@ -16,8 +16,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Daybook">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#F4EFFF" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#120D33" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F6F1E7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#11201C" media="(prefers-color-scheme: dark)">
   <title>Daybook</title>
   <meta name="description" content="A daily logic-puzzle app: new puzzles every day, no ads, no subscription. Works offline.">
   <!-- The app is served from a subpath, so its own files are relative. A link preview is fetched by a
@@ -49,9 +49,9 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
   <style>
     /* data-theme is the player's Light/Dark choice in Settings (script below, and the app once it runs). */
-    :root { --bg: #F4EFFF; --fg: #4A3F86; color-scheme: light; }
-    @media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --bg: #120D33; --fg: #D9D4FF; color-scheme: dark; } }
-    :root[data-theme=dark] { --bg: #120D33; --fg: #D9D4FF; color-scheme: dark; }
+    :root { --bg: #F6F1E7; --fg: #41504B; color-scheme: light; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --bg: #11201C; --fg: #E6DECD; color-scheme: dark; } }
+    :root[data-theme=dark] { --bg: #11201C; --fg: #E6DECD; color-scheme: dark; }
     html, body {
       margin: 0; padding: 0; height: 100%; overflow: hidden;
       background: var(--bg); color: var(--fg);
@@ -95,7 +95,7 @@
       if (a !== 'DARK' && a !== 'LIGHT') return;
       const dark = a === 'DARK';
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-      document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = dark ? '#120D33' : '#F4EFFF');
+      document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = dark ? '#11201C' : '#F6F1E7');
     })();
   </script>
 </head>

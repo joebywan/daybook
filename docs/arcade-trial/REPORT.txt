@@ -49,12 +49,18 @@ outline on surface 2.21 (decorative: no threshold)
 hue     8 fill F69C8E ink AE2813 mark E94D35: ink 5.99, onFill 7.57, onSurface-on-fill 7.57, mark 3.77 (old recipe 3.84), fill/surface 2.09
 hue    34 fill F6C98E ink 9C6011 mark E99B35: ink 4.55, onFill 10.27, onSurface-on-fill 10.27, mark 2.28 (old recipe 2.58), fill/surface 1.54
 hue    46 fill F6DE8E ink 856A0F mark E9BF35: ink 4.58, onFill 11.85, onSurface-on-fill 11.85, mark 1.75 (old recipe 2.12), fill/surface 1.33
-hue   145 fill 8EF6B9 ink 0E7C3C mark 35E980: ink 4.70, onFill 12.06, onSurface-on-fill 12.06, mark 1.60 (old recipe 2.02), fill/surface 1.31
-hue   175 fill 8EF6ED ink 0D776F mark 35E9DA: ink 4.80, onFill 12.45, onSurface-on-fill 12.45, mark 1.52 (old recipe 1.93), fill/surface 1.27
+hue   145 fill 9AEABB ink 0E7C3C mark 35E980: ink 4.70, onFill 11.17, onSurface-on-fill 11.17, mark 1.60 (old recipe 2.02), fill/surface 1.41
+hue   175 fill 9AEAE3 ink 0D776F mark 35E9DA: ink 4.80, onFill 11.47, onSurface-on-fill 11.47, mark 1.52 (old recipe 1.93), fill/surface 1.38
 hue   215 fill 8EB9F6 ink 1354AE mark 3580E9: ink 6.41, onFill 7.84, onSurface-on-fill 7.84, mark 3.88 (old recipe 3.76), fill/surface 2.02
 hue   268 fill BE8EF6 ink 5C13AE mark 8935E9: ink 8.63, onFill 6.31, onSurface-on-fill 6.31, mark 5.60 (old recipe 5.05), fill/surface 2.50
 hue   330 fill F68EC2 ink AE1361 mark E9358F: ink 6.08, onFill 7.19, onSurface-on-fill 7.19, mark 3.91 (old recipe 4.06), fill/surface 2.20
 selected FFD23D: digit 10.93, error digit 4.61, ring on surface 5.13
+error digit on Sudoku box tint, hue 215: 4.96
+error digit on Sudoku box tint, hue 175: 5.50
+error digit on Sudoku box tint, hue 268: 4.69
+error digit on Sudoku box tint, hue 34: 5.33
+error digit on Sudoku box tint, hue 330: 4.81
+error digit on Sudoku box tint, hue 46: 5.54
 -- spacing, CIEDE2000, closest pair (shipped: normal 5.79, colour-blind 2.90)
 as built             normal        2.34 dominoes/whoswho, 3.21 sudoku/mambo, 3.25 kings/nonogram  under-floor pairs 9
 as built             deuteranopia  0.15 sets/inequality, 0.67 cages/pointers, 0.99 regions/whoswho  under-floor pairs 11
@@ -124,6 +130,17 @@ hue   215 fill 214E8C ink 5A97ED mark 3580E9: ink 5.18, onFill 8.29, onSurface-o
 hue   268 fill 53218C ink AC71EF mark 8935E9: ink 4.65, onFill 10.69, onSurface-on-fill 9.49, mark 2.74 (old recipe 3.04), fill/surface 1.44
 hue   330 fill 8C2157 ink ED5AA3 mark E9358F: ink 4.82, onFill 8.50, onSurface-on-fill 7.54, mark 3.93 (old recipe 3.78), fill/surface 1.81
 selected FABD2E: digit 9.31, error digit 4.52, ring on surface 15.36
+  FAIL error digit on box tint 215.0                  4.10 < 4.5 (FF5C7A on 213070)
+error digit on Sudoku box tint, hue 215: 4.10
+  FAIL error digit on box tint 175.0                  3.53 < 4.5 (FF5C7A on 1F4164)
+error digit on Sudoku box tint, hue 175: 3.53
+error digit on Sudoku box tint, hue 268: 4.51
+  FAIL error digit on box tint 34.0                   3.62 < 4.5 (FF5C7A on 4E3743)
+error digit on Sudoku box tint, hue 34: 3.62
+  FAIL error digit on box tint 330.0                  4.29 < 4.5 (FF5C7A on 4E1D5A)
+error digit on Sudoku box tint, hue 330: 4.29
+  FAIL error digit on box tint 46.0                   3.55 < 4.5 (FF5C7A on 493B42)
+error digit on Sudoku box tint, hue 46: 3.55
 -- spacing, CIEDE2000, closest pair (shipped: normal 5.79, colour-blind 2.90)
 as built             normal        1.94 codeword/mini, 1.95 mosaic/atoms, 2.82 dominoes/whoswho  under-floor pairs 10
 as built             deuteranopia  0.30 inequality/dominoes, 0.45 shikaku/lamps, 0.55 nonogram/whoswho  under-floor pairs 26
@@ -136,4 +153,4 @@ the brief's flat .85 tritanopia    0.00 codeword/mini, 0.27 kings/pointers, 0.30
 accent nearest the error red: mines 10.99
 accent nearest the Green mark: lits 15.01
 
-threshold failures: 0
+threshold failures: 5

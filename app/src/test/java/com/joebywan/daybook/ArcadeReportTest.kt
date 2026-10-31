@@ -97,6 +97,10 @@ class ArcadeReportTest {
                 check(4.5f, BoardHues.onFill(sel), sel, "digit on selected"),
                 check(4.5f, BoardHues.textOn(s.error, sel), sel, "error digit on selected"),
                 check(3f, BoardHues.selectedRing(dark), s.surface, "selected ring against surface")))
+            for ((a, _) in BoardHues.HUE_PAIRS) {
+                val tint = BoardHues.fill(a, dark).copy(alpha = if (dark) .42f else .30f).compositeOver(s.surface)
+                line("error digit on Sudoku box tint, hue %.0f: %.2f".format(a, check(4.5f, s.error, tint, "error digit on box tint $a")))
+            }
             line("-- spacing, CIEDE2000, closest pair (shipped: normal 5.79, colour-blind 2.90)")
             val acc = PuzzleRegistry.all.map { it.id to vividFor(it.accent, dark) }
             for ((label, set) in listOf("as built" to acc, "the brief's flat .85" to PuzzleRegistry.all.map { it.id to flatVivid(it.accent, dark) }))

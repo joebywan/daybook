@@ -80,7 +80,8 @@ object BoardHues {
 
     /** Cell or region background; carries `onSurface` text. */
     fun fill(hue: Float, dark: Boolean): Color {
-        if (!dark) return Color.hsl(hue, .85f, .76f)
+        // Green and Teal at .85 are fluorescent at this lightness (Regions read as highlighter), so they stop at .65.
+        if (!dark) return Color.hsl(hue, if (hue in 130f..190f) .65f else .85f, .76f)
         // hsl(h, .62, .34), a hundredth darker at a time where onSurface would miss 4.5:1 on it (Gold, Green, Teal).
         var l = 34
         while (l > 20 && contrast(DarkScheme.onSurface, Color.hsl(hue, .62f, l / 100f)) < 4.5f) l--

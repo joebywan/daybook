@@ -307,6 +307,8 @@ object Chess : PuzzleType {
 
         val (light, dark) = squareColours(scheme)
         val note = vivid(accent)
+        // The accent over lavender squares went to mud; amber is the selection colour everywhere else in the trial.
+        val warm = com.joebywan.daybook.ui.theme.BoardHues.selected(com.joebywan.daybook.ui.theme.BoardHues.isDark(scheme))
 
         BoxWithConstraints(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -345,8 +347,8 @@ object Chess : PuzzleType {
                         for (sq in 0..63) {
                             drawRect(if ((sq % 8 + sq / 8) % 2 == 0) dark else light, at(sq), Size(c, c))
                         }
-                        for (sq in lastSquares) drawRect(note.copy(alpha = 0.30f), at(sq), Size(c, c))
-                        if (selected >= 0) drawRect(note.copy(alpha = 0.55f), at(selected), Size(c, c))
+                        for (sq in lastSquares) drawRect(warm.copy(alpha = 0.55f), at(sq), Size(c, c))
+                        if (selected >= 0) drawRect(warm.copy(alpha = 0.85f), at(selected), Size(c, c))
                         if (kingSq >= 0) {
                             drawCircle(scheme.error.copy(alpha = 0.55f), c * 0.46f, at(kingSq) + Offset(c / 2, c / 2))
                         }

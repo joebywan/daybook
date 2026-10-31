@@ -108,7 +108,7 @@ internal fun SudokuGridBoard(
     // structure (box tint, selection, pencil), B is the player's digits and their twins.
     val dark = BoardHues.isDark(scheme)
     val (hueA, hueB) = BoardHues.pair(hueSeed)
-    val boxTint = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.55f else 0.30f).compositeOver(scheme.surface)
+    val boxTint = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.42f else 0.30f).compositeOver(scheme.surface)
     val selectedValue = s.selected?.let { s.cells[it] } ?: 0
     val (highlight, glow, pulse) = rememberHintPaint()
     // Which way the digit keys act. Transient UI state, so it lives here and not in the state:
