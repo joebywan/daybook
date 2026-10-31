@@ -139,7 +139,7 @@ object Lexicon : PuzzleType {
             drawRoundRect(ink, Offset(w * 1.5f, w * 1.5f), Size(size.width - w * 3, size.height - w * 3), CornerRadius(w * 2), style = Stroke(w))
         }
         LexiconMark.PRESENT -> drawBehind {
-            val r = unit.toPx() * 1.6f
+            val r = unit.toPx() * 1.3f
             drawCircle(ink, r, Offset(size.width - r * 2, r * 2))
         }
         else -> this
