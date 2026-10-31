@@ -58,7 +58,8 @@ Measured over 365 daily boards a tier (`DwindleRulesTest`, `build/reports/dwindl
 | Mean uses a tile | 1.83 | 2.14 | 2.32 |
 | JVM generation ms, median / p95 / max | 1.0 / 4.7 / 13.8 | 2.0 / 6.7 / 28.7 | 5.6 / 22.0 / 285.6 |
 
-Browser generation: see the PR's report; the parity check runs a year.
+Browser generation over the same year, median / p95 / max ms: Chromium 1 / 4 / 8, 4 / 13 / 61, 9 / 38 / 512; WebKit 3 / 8 / 13, 7 / 22 / 67, 16 / 61 / 808. The Expert
+maximum is one slow day of draws abandoned at `MAX_SCAN`; it sits behind the "Setting out" screen.
 
 ## Hints
 
