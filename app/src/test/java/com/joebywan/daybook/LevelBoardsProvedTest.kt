@@ -67,6 +67,7 @@ class LevelBoardsProvedTest {
         "lamps" to LampsLogic::generateVerified,
         "pearls" to PearlsLogic::generateVerified,
         "mini" to MiniLogic::generateVerified,
+        "hexwords" to com.joebywan.daybook.puzzles.HexLogic::generateVerified,
     )
 
     @Test

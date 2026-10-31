@@ -172,6 +172,11 @@ class FallbackTest {
     @Test
     fun `mini proves every daily board of a year on every tier`() = assertYearProved(Mini) { seed, d -> MiniLogic.generateVerified(seed, d) }
 
+    /** [com.joebywan.daybook.puzzles.HexLogic.generateVerified] returns a board only when the exact search says common words reach its target. */
+    @Test
+    fun `hexwords proves every daily board of a year on every tier`() =
+        assertYearProved(com.joebywan.daybook.puzzles.Hexwords) { seed, d -> com.joebywan.daybook.puzzles.HexLogic.generateVerified(seed, d) }
+
     /** [WordWheelLogic.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
     @Test
     fun `wordwheel proves every daily board of a year on every tier`() = assertYearProved(WordWheel) { seed, d -> WordWheelLogic.generateVerified(seed, d) }
