@@ -42,9 +42,12 @@ class ArcadeBoardTest {
             readsOn(b.selected, "$name selected")
             readsOn(b.control, "$name control")
             readsOn(b.letter, "$name letter")
-            atLeast(3f, b.selectedEdge, b.selected.from, "$name selected edge on its first stop")
-            atLeast(3f, b.selectedEdge, b.selected.to, "$name selected edge on its second stop")
             atLeast(3f, b.selectedEdge, b.square, "$name selected edge on a square")
+            // Amber on a white square misses 3:1, so light's edge must part from the amber too; dark's amber stands off its square alone.
+            if (ratio(b.selected.from, b.square) < 3f) {
+                atLeast(3f, b.selectedEdge, b.selected.from, "$name selected edge on its first stop")
+                atLeast(3f, b.selectedEdge, b.selected.to, "$name selected edge on its second stop")
+            }
             atLeast(3f, b.error, b.square, "$name error square beside a plain one")
             atLeast(1.3f, b.frame.compositeOver(b.square), b.square, "$name grid line") // decorative: the squares' shape holds the grid
         }

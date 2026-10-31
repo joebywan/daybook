@@ -1,0 +1,151 @@
+== light scheme ==
+puzzle       vivid   on-surface on-bg  textOn-surf  onTint-.22 tileInk-solved onFill
+sudoku       1930FF   7.22   6.41     6.41        4.52       4.64      7.22
+kings        A123C0   5.97   5.30     5.30        4.53       4.51      5.97
+mambo        4A25F2   7.40   6.57     6.57        4.53       4.59      7.40
+pipes        056B9A   5.87   5.21     5.21        4.60       4.52      5.87
+shikaku      837211   4.79   4.25     4.57        4.58       4.57      4.79
+mosaic       CC1698   5.08   4.51     4.51        4.52       4.51      5.08
+sets         883CDF   5.59   4.96     4.96        4.54       4.51      5.59
+atoms        D920A0   4.50   4.00     4.50        4.59       4.54      4.50
+snap         D2106C   5.21   4.62     4.62        4.55       4.69      5.21
+lits         689319   3.64   3.23     4.51        4.59       4.64      5.78
+tower        C7701A   3.65   3.24     4.55        4.51       4.58      5.76
+words        097B7B   5.08   4.51     4.51        4.56       4.63      5.08
+nonogram     9816CE   6.29   5.58     5.58        4.51       4.65      6.29
+inequality   056BDD   5.06   4.49     4.63        4.50       4.69      5.06
+chess        C67805   3.45   3.06     4.51        4.59       4.69      4.58
+tents        B05F00   4.68   4.16     4.63        4.61       4.65      4.68
+regions      183FC9   8.10   7.19     7.19        4.98       4.50      8.10
+cages        298AEC   3.53   3.14     4.59        4.55       4.76      5.94
+target       DF3A97   4.05   3.59     4.64        4.53       4.53      5.19
+cipher       D53EDB   3.79   3.36     4.55        4.52       4.66      5.54
+wordwheel    0A88A9   4.11   3.65     4.51        4.52       4.53      5.11
+tally        C2226F   5.60   4.97     4.97        4.58       4.64      5.60
+sand         84870F   3.85   3.42     4.59        4.54       4.56      5.45
+pointers     C731EA   4.15   3.69     4.59        4.59       4.56      5.06
+dominoes     610FD6   8.24   7.32     7.32        4.90       4.54      8.24
+mines        EF207B   4.07   3.61     4.52        4.51       4.50      5.16
+lamps        515A0C   7.45   6.61     6.61        4.74       4.52      7.45
+codeword     019C88   3.44   3.05     4.67        4.57       4.59      4.60
+pearls       825809   6.27   5.57     5.57        4.53       4.57      6.27
+whoswho      5D21C5   8.44   7.49     7.49        5.13       4.52      8.44
+mini         006255   7.30   6.48     6.48        4.59       4.52      7.30
+worst: marks 3.05 (codeword), text 4.50 (atoms), onTint 4.50 (inequality), tile ink 4.50 (mines), button 4.50 (atoms)
+-- structure
+error on surface    6.04
+onSurfaceVariant on surface    8.95
+primary on surface    6.12
+secondary on surface    3.73
+error on background 5.36
+onSurfaceVariant on background 7.94
+primary on background 5.43
+secondary on background 3.31
+onError on error 6.04
+onPrimary on primary 6.12
+onSecondary on secondary 5.63
+outline on surface 2.21 (decorative: no threshold)
+-- content hues
+hue     8 fill F69C8E ink AE2813 mark E94D35: ink 5.99, onFill 7.57, onSurface-on-fill 7.57, mark 3.77 (old recipe 3.84), fill/surface 2.09
+hue    34 fill F6C98E ink 9C6011 mark E99B35: ink 4.55, onFill 10.27, onSurface-on-fill 10.27, mark 2.28 (old recipe 2.58), fill/surface 1.54
+hue    46 fill F6DE8E ink 856A0F mark E9BF35: ink 4.58, onFill 11.85, onSurface-on-fill 11.85, mark 1.75 (old recipe 2.12), fill/surface 1.33
+hue   145 fill 9AEABB ink 0E7C3C mark 35E980: ink 4.70, onFill 11.17, onSurface-on-fill 11.17, mark 1.60 (old recipe 2.02), fill/surface 1.41
+hue   175 fill 9AEAE3 ink 0D776F mark 35E9DA: ink 4.80, onFill 11.47, onSurface-on-fill 11.47, mark 1.52 (old recipe 1.93), fill/surface 1.38
+hue   215 fill 8EB9F6 ink 1354AE mark 3580E9: ink 6.41, onFill 7.84, onSurface-on-fill 7.84, mark 3.88 (old recipe 3.76), fill/surface 2.02
+hue   268 fill BE8EF6 ink 5C13AE mark 8935E9: ink 8.63, onFill 6.31, onSurface-on-fill 6.31, mark 5.60 (old recipe 5.05), fill/surface 2.50
+hue   330 fill F68EC2 ink AE1361 mark E9358F: ink 6.08, onFill 7.19, onSurface-on-fill 7.19, mark 3.91 (old recipe 4.06), fill/surface 2.20
+selected FFD23D: digit 10.93, error digit 4.61, ring on surface 5.13
+error digit on Sudoku box tint, hue 215: 4.96
+error digit on Sudoku box tint, hue 175: 5.50
+error digit on Sudoku box tint, hue 268: 4.69
+error digit on Sudoku box tint, hue 34: 5.33
+error digit on Sudoku box tint, hue 330: 4.81
+error digit on Sudoku box tint, hue 46: 5.54
+-- spacing, CIEDE2000, closest pair (shipped: normal 5.79, colour-blind 2.90)
+as built             normal        2.34 dominoes/whoswho, 3.21 sudoku/mambo, 3.25 kings/nonogram  under-floor pairs 9
+as built             deuteranopia  0.15 sets/inequality, 0.67 cages/pointers, 0.99 regions/whoswho  under-floor pairs 11
+as built             protanopia    0.39 inequality/cipher, 0.51 chess/sand, 0.72 pipes/target  under-floor pairs 18
+as built             tritanopia    1.96 dominoes/whoswho, 2.00 tower/chess, 3.09 atoms/target  under-floor pairs 2
+the brief's flat .85 normal        0.19 kings/pointers, 0.35 codeword/mini, 0.44 snap/tally  under-floor pairs 26
+the brief's flat .85 deuteranopia  0.11 tower/tents, 0.15 regions/dominoes, 0.16 inequality/cages  under-floor pairs 37
+the brief's flat .85 protanopia    0.09 kings/pointers, 0.15 sudoku/dominoes, 0.21 shikaku/sand  under-floor pairs 38
+the brief's flat .85 tritanopia    0.07 codeword/mini, 0.25 kings/pointers, 0.26 snap/tally  under-floor pairs 18
+accent nearest the error red: snap 15.76
+accent nearest the Green mark: lits 25.30
+
+== dark scheme ==
+puzzle       vivid   on-surface on-bg  textOn-surf  onTint-.22 tileInk-solved onFill
+sudoku       7F8CFF   5.19   6.28     5.19        4.55       4.52      5.34
+kings        B427D5   3.07   3.71     4.51        4.55       4.63      5.01
+mambo        9A85F8   5.18   6.26     5.18        4.56       4.53      5.33
+pipes        08A5EE   5.58   6.74     5.58        4.53       4.58      5.73
+shikaku      E4C92F   9.29  11.22     9.29        5.87       4.53      9.54
+mosaic       DF18A6   3.53   4.26     4.56        4.50       4.66      4.82
+sets         AD79E9   4.89   5.91     4.89        4.51       4.52      5.03
+atoms        E02EA9   3.76   4.54     4.54        4.56       4.58      5.13
+snap         E51276   3.42   4.14     4.50        4.55       4.60      4.68
+lits         ABE14B   9.95  12.03     9.95        6.10       4.52     10.23
+tower        E79342   6.33   7.65     6.33        4.50       4.60      6.50
+words        25EFEF  10.73  12.97    10.73        6.35       4.51     11.03
+nonogram     AE26E7   3.10   3.74     4.66        4.62       4.65      4.96
+inequality   0675F1   3.53   4.26     4.54        4.51       4.60      4.82
+chess        FAAB38   8.01   9.68     8.01        5.26       4.52      8.23
+tents        FF9112   6.81   8.23     6.81        4.76       4.54      7.00
+regions      4065E9   3.11   3.76     4.62        4.54       4.53      4.93
+cages        4096EE   4.99   6.03     4.99        4.58       4.52      5.12
+target       E24CA0   4.22   5.11     4.54        4.52       4.60      5.78
+cipher       D84FDE   4.46   5.39     4.57        4.53       4.52      4.58
+wordwheel    31CBF3   8.02   9.70     8.02        5.15       4.55      8.25
+tally        D32579   3.15   3.81     4.53        4.51       4.60      4.87
+sand         E6EA3F  11.86  14.33    11.86        6.84       4.50     12.18
+pointers     CC43EC   4.08   4.93     4.59        4.52       4.58      5.58
+dominoes     8F49F3   3.23   3.90     4.58        4.51       4.50      4.76
+mines        F03387   4.04   4.89     4.55        4.55       4.50      5.53
+lamps        C1D81E   9.59  11.59     9.59        6.01       4.51      9.86
+codeword     33FEE4  12.03  14.53    12.03        6.87       4.51     12.36
+pearls       E69C11   6.68   8.07     6.68        4.66       4.54      6.86
+whoswho      8954E3   3.25   3.93     4.51        4.56       4.62      4.73
+mini         00FBDB  11.57  13.99    11.57        6.82       4.52     11.90
+worst: marks 3.07 (kings), text 4.50 (snap), onTint 4.50 (tower), tile ink 4.50 (mines), button 4.58 (cipher)
+-- structure
+error on surface    6.86
+onSurfaceVariant on surface    10.84
+primary on surface    9.99
+secondary on surface    8.56
+error on background 8.29
+onSurfaceVariant on background 13.10
+primary on background 12.07
+secondary on background 10.34
+onError on error 8.29
+onPrimary on primary 12.07
+onSecondary on secondary 10.34
+outline on surface 2.48 (decorative: no threshold)
+-- content hues
+hue     8 fill 8C2F21 ink ED6D5A mark E94D35: ink 5.07, onFill 8.26, onSurface-on-fill 7.33, mark 4.08 (old recipe 4.00), fill/surface 1.86
+hue    34 fill 8C5E21 ink EDAD5A mark E99B35: ink 7.85, onFill 5.62, onSurface-on-fill 4.99, mark 6.73 (old recipe 5.96), fill/surface 2.73
+hue    46 fill 80691E ink EDCA5A mark E9BF35: ink 9.65, onFill 5.31, onSurface-on-fill 4.71, mark 8.76 (old recipe 7.26), fill/surface 2.89
+hue   145 fill 1D7C45 ink 5AED97 mark 35E980: ink 10.24, onFill 5.22, onSurface-on-fill 4.63, mark 9.60 (old recipe 7.62), fill/surface 2.94
+hue   175 fill 1C7870 ink 5AEDE0 mark 35E9DA: ink 10.70, onFill 5.29, onSurface-on-fill 4.69, mark 10.11 (old recipe 7.95), fill/surface 2.90
+hue   215 fill 214E8C ink 5A97ED mark 3580E9: ink 5.18, onFill 8.29, onSurface-on-fill 7.36, mark 3.96 (old recipe 4.09), fill/surface 1.85
+hue   268 fill 53218C ink AC71EF mark 8935E9: ink 4.65, onFill 10.69, onSurface-on-fill 9.49, mark 2.74 (old recipe 3.04), fill/surface 1.44
+hue   330 fill 8C2157 ink ED5AA3 mark E9358F: ink 4.82, onFill 8.50, onSurface-on-fill 7.54, mark 3.93 (old recipe 3.78), fill/surface 1.81
+selected FABD2E: digit 9.31, error digit 4.57, ring on surface 15.36
+error digit on Sudoku box tint, hue 215: 5.45
+error digit on Sudoku box tint, hue 175: 4.69
+error digit on Sudoku box tint, hue 268: 5.99
+error digit on Sudoku box tint, hue 34: 4.81
+error digit on Sudoku box tint, hue 330: 5.69
+error digit on Sudoku box tint, hue 46: 4.72
+-- spacing, CIEDE2000, closest pair (shipped: normal 5.79, colour-blind 2.90)
+as built             normal        1.94 codeword/mini, 1.95 mosaic/atoms, 2.82 dominoes/whoswho  under-floor pairs 10
+as built             deuteranopia  0.30 inequality/dominoes, 0.45 shikaku/lamps, 0.55 nonogram/whoswho  under-floor pairs 26
+as built             protanopia    0.85 regions/pointers, 0.99 tents/pearls, 1.08 sudoku/mambo  under-floor pairs 19
+as built             tritanopia    1.41 codeword/mini, 1.67 words/codeword, 1.86 tower/tents  under-floor pairs 7
+the brief's flat .85 normal        0.00 codeword/mini, 0.20 kings/pointers, 0.46 snap/tally  under-floor pairs 23
+the brief's flat .85 deuteranopia  0.00 codeword/mini, 0.03 dominoes/whoswho, 0.14 sudoku/regions  under-floor pairs 44
+the brief's flat .85 protanopia    0.00 codeword/mini, 0.09 kings/pointers, 0.36 sets/dominoes  under-floor pairs 33
+the brief's flat .85 tritanopia    0.00 codeword/mini, 0.27 kings/pointers, 0.30 snap/tally  under-floor pairs 13
+accent nearest the error red: mines 16.58
+accent nearest the Green mark: lits 15.01
+
+threshold failures: 0
