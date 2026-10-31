@@ -5,6 +5,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MoveFeelTest {
+    @Test
+    fun aFinishedUnitsToneFiresOnAMoveOnly() {
+        val row = listOf(intArrayOf(0, 1))
+        fun d(v: Boolean) = BooleanArray(1) { v }
+        val a = listOf(1, 0)
+        val b = listOf(1, 2)
+        // A move; reduced motion stills the feel, never the sound.
+        for (still in listOf(false, true)) assertEquals(1, MoveFeel().apply {
+            observe(0, a, row, d(false), still)
+            observe(1, b, row, d(true), still)
+        }.unitRun)
+        // Loaded finished, undone into finished, or finished by the solving move (the chime has that one).
+        assertEquals(0, MoveFeel().apply { observe(3, b, row, d(true), false) }.unitRun)
+        assertEquals(0, MoveFeel().apply {
+            observe(0, a, row, d(false), false)
+            observe(0, b, row, d(true), false, undos = 1)
+        }.unitRun)
+        assertEquals(0, MoveFeel().apply {
+            observe(0, a, row, d(false), false)
+            observe(1, b, row, d(true), false, solves = 1)
+        }.unitRun)
+    }
+
     private val row = listOf(intArrayOf(0, 1, 2))
     private fun full(cells: List<Int>) = BooleanArray(1) { cells.all { it != 0 } }
 

@@ -119,9 +119,11 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   Expert board creation on the phone.
 - [ ] **Kings dark mode glare.** The new opaque palette is bright tiles on a near-black page. Ask whether it
   is too much; the alternative (dimmer dark-mode tiles) costs crown/cross contrast.
-- [ ] **Does the solve sound play?** The web build wakes its `AudioContext` on the first tap (`rememberSolveSoundPlayer`
-  in `web/.../WebPlatform.kt`) and plays the marimba pluck on a solve. Headless Chromium has no audio output, so
-  nobody has heard it on the web. Check on the iPhone that it is audible after a solve, that the Settings
+- [ ] **Do the sounds work, and are they pleasant?** No sound in `core/Tones.kt` but the owner's chime has ever been heard by
+  anyone: they were built and tested by numbers alone. On a phone, listen to the tick over a long Sudoku (is it too much? its level
+  is one number in `Tones.samples`), a unit, Word Wheel's scale at speed, and all three wins, and judge the latency by ear. The web
+  build wakes its `AudioContext` on the first tap (`rememberTonePlayer` in `web/.../WebPlatform.kt`).
+  Headless Chromium has no audio output, so nobody has heard it on the web. Check on the iPhone that it is audible after a solve, that the Settings
   "Sound" switch silences it, and that the Settings note ("a browser cannot see your phone's silent switch") reads right.
 - [ ] **Saves survive?** Safari can clear site data after ~7 days unused, but home-screen web apps are
   exempt. Confirm progress persists from the home-screen icon; the export/import backup on the stats

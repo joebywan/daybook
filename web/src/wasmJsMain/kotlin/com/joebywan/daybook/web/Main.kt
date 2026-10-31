@@ -162,8 +162,10 @@ fun main() {
         )
         finishPreview = Praise(
             // `&level=N` previews a level board's frame; `&leveldone` the one its fifth board shows.
-            title = if (n > 0) "7 day streak" else if ("leveldone" in params) "Level ${params["level"]} done" else "All your own work.",
-            big = n > 0, streak = if (n > 0) 7 else 0, lines = listOf(sampleLine(params, tier)),
+            // `&alltiers` previews the top show (`allTiers`), its confetti and its border.
+            allTiers = "alltiers" in params,
+            title = if ("alltiers" in params) "All three tiers!" else if (n > 0) "7 day streak" else if ("leveldone" in params) "Level ${params["level"]} done" else "All your own work.",
+            big = n > 0 || "alltiers" in params, streak = if (n > 0) 7 else 0, lines = listOf(sampleLine(params, tier)),
             achievements = all.take(n), toGo = if ("togo" in params) "Only Hard on Kings left for all done today!" else null,
             share = sampleShare(params["puzzle"], tier),
             // `&leveldone` also shows the level's card, `&threedone` today's three's (sample solves, never stored).

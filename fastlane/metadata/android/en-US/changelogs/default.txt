@@ -1,1 +1,6 @@
-- Switching Home to Training folds Today's three away and slides the puzzles up into its place, and back down as you switch out, instead of leaving a gap.
+- New sounds as you play, with rising tones in Word Wheel.
+- Bigger wins, and a special show for finishing all three tiers of a puzzle.
+- Crossword: less direct clues on Hard and Expert; red boxes wait until the grid is full.
+- Word Wheel: words shorter than the board's shortest slot aren't taken; tap the bonus line for the full A-Z list.
+- Lexicon: Enter is now on the right.
+- Nonogram: clearer help wording.

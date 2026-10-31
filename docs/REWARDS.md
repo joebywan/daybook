@@ -77,7 +77,10 @@ The rule is told once, under the stats calendar: "Play on 5 of any 7 days to kee
     `CodewordTeacher.walk` from the givens: a crossing on Hard, every word together on Expert). Not shown when it is the puzzle's
     simplest step. The rest keep the note: their boards are proved by a ladder or a search, but nothing measures the hardest
     step a board needs without walking the whole teacher (Cage's tiers, for one, only make the 45 rule likely, not certain).
-- No new sound: the existing solve chime plays, muted by the existing setting. A milestone fanfare is not done.
+- **All three tiers** (`Praise.allTiers`, `finishedAllTiers`): the solve that finishes Standard, Hard and Expert of one puzzle's
+  boards for one date, today's or an archive day's, is the top show: "All three tiers!", loud, whatever else the solve did.
+  Derived from completions, nothing stored; a replay of a tier already done is not it, and practice and level boards have no date.
+- The win sound follows the show (`Praise.winKind`; "Sounds", below).
 
 ## Achievements (`core/Achievements.kt`, `ui/stats/AchievementsScreen.kt`)
 
@@ -112,7 +115,7 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
 - **Full show or light flourish** (`Praise.full`, decided in `finishPraise`, tested in `FinishPraiseTest`): the full
   confetti for the first daily solve of today, an Expert solve, a personal record, a streak milestone (7, 30, 100) or an
   earned achievement; any other solve gets a light flourish, 14 pieces for 1.2 s. A frame with no verdict (the render
-  hook) is full. The banner and poppers are the same either way.
+  hook) is full. The banner and poppers are the same either way. Above full is `Praise.allTiers`, the top show.
 - **The solving move** runs one wave of the board's accent across every square in reading order (350 ms, `SOLVE_WAVE_MS` in
   `ui/MoveFeel.kt`), and the frame and the confetti wait that long before they show. Not when the board was already solved
   when it opened, and not under reduced motion (then the frame shows at once).
@@ -120,9 +123,10 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
   an extended streak counts up in the title, from 1 to its new length over 600 ms, drawn over the final title's own box so the
   banner does not change width; at 7/30/100 the title stamps in from 130% with a small spring settle; an earned badge flips in
   about its vertical axis (as does each next badge tapped to). Under reduced motion: the final values at once.
-- **Confetti** (`Confetti`): 70 pieces on a Canvas over the whole screen, ~2 s, once per finish (`confettiPlayed` is
+- **Confetti** (`Confetti`): 140 pieces (the top show 220, 3 s) on a Canvas over the whole screen, ~2 s, with a rainbow band in
+  the confetti's colours turning round the screen's edge on a full show (wider on the top show), once per finish (`confettiPlayed` is
   `rememberSaveable`, so a rotation does not replay it), takes no input. Not drawn at all under the system's reduced motion
-  (`LocalReducedMotion`, below); the Sound switch governs the chime only. No emoji: the web build has no emoji font.
+  (`LocalReducedMotion`, below); the Sound switch governs sound only. No emoji: the web build has no emoji font.
 - **Centre** (`ResultsBlock`), only when the solve earned achievements; otherwise empty (no silhouette, no block). One
   achievement at a time: badge (`AchievementBadge`, 72dp, 44dp under 640dp tall), title, description. With several: "1 of 3",
   dots and "Tap to see next achievement"; one tap on the block shows the next and it **wraps** after the last.
@@ -317,6 +321,24 @@ kept is the best until beaten, and Best can be slower than the best time beside 
   CONFIRM from Android 11, LONG_PRESS and VIRTUAL_KEY before), which honours the system's touch-feedback setting; the web
   uses `navigator.vibrate` (8 ms, 50 ms, a 20-60-40 pattern), which iOS lacks. The walkthrough does not buzz. The
   Settings switch "Vibration" (`LaunchPreferences.vibrate`, key `vibrate`, default on) turns it all off.
+
+## Sounds (`core/Tones.kt`, `rememberTonePlayer` in the platform seam)
+
+All synthesised from the owner's marimba pluck, rendered once, no audio files. The Sound switch silences all of them, and on
+Android so does the ringer on silent or vibrate; reduced motion stills nothing here, since sound is not motion. Each kind but
+the wheel has three small variants (a different pitch, or for a win the chime a hair flat or sharp with a different brightness;
+the first win variant is the owner's chime, sample for sample), one drawn per play from `kotlin.random.Random`, never a generator's `Rng`.
+
+- **Tick:** 30 ms, at most 0.05 of full scale, beside the haptic tick in `PlayScreen.push`: a move that lands, not a selection or a typed letter.
+- **Unit finished** (a row, a box, a cage, a found word): `rememberMoveFeel`, the one hook, so every board with units has it.
+  Never on load, undo, restart, or the solving move (the win has that), and it plays under reduced motion, unlike the glow and the pop.
+- **Word Wheel:** each letter added rises a step of C major pentatonic (`Tones.wheel`), each taken back falls one; the state is the
+  board's own `remember`. A word tried or cleared is silent.
+- **Win** (`Praise.winKind`): the chime on a light flourish; on a full show the chime carries on up the arpeggio to G6 (1.06 s); on
+  all three tiers on to C7, landing on a chord (1.36 s). The Training pass and a hint's "reached" keep the plain chime (`LocalChime`).
+
+The board's sounds come through `LocalBoardTones`, provided only around the play screen's board, so a walkthrough, a Training
+board and a home motif are silent however they are drawn. Mistakes have no sound; nobody asked, and a bump already shakes.
 
 ## Claim to keep honest
 

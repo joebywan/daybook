@@ -26,7 +26,7 @@ this puzzle. Where the two disagree on a point not listed here, the standards wi
 - Every row and column of white squares is a word, and each word has a clue: 1 Across, 2 Down and so on.
 - Tap a square, then type. Tap it again to turn between Across and Down, or tap the clue.
 - Letters cross: a letter in one word is a letter of the word across it.
-- A word that is no word in the list turns red. Each clue has exactly one answer.
+- Once every square is filled, a word that is no word in the list turns red, and a note says if anything is still wrong. Each clue has exactly one answer.
 
 ## State (`puzzles/Mini.kt`)
 
@@ -50,7 +50,7 @@ Squares are `row * size + col`. Keep the names and meanings fixed once shipped (
 - `slots(size, grid)`: every across slot then every down slot, in reading order of their first squares, numbered as a
   printed crossword is (a square starting a word either way takes the next number).
 - `isSolved`: every slot spells a grid word whose plain or hard clue is the slot's clue.
-- `deadSlots`: a slot full and spelling no word of the list. Shown red after a 1 s settle. A real word under another
+- `deadSlots`: a slot full and spelling no word of the list. Shown red after a 1 s settle, and only once no square is open (`shownDead`). A full grid that is not solved (`fullButWrong`, the rule check) shows "Something's not right yet" in the reserved line under the grid, after the same settle, never saying where. A real word under another
   clue is not flagged: that would be reading the answer.
 - `solve(size, letters)`: every fill of the open squares in which every slot is a grid word, counted to two, branching
   on the open slot fewest words fit. No budget. Only `Verdict.ExactlyOne` carries a grid.
