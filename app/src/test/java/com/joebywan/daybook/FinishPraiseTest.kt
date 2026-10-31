@@ -5,6 +5,8 @@ import com.joebywan.daybook.core.puzzleNote
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.ui.play.TITLES_PLAIN
 import com.joebywan.daybook.ui.play.TITLES_UNAIDED
+import com.joebywan.daybook.core.Tones
+import com.joebywan.daybook.ui.play.TITLE_ALL_TIERS
 import com.joebywan.daybook.ui.play.TITLE_EXPERT
 import com.joebywan.daybook.ui.play.TITLE_FIRST
 import com.joebywan.daybook.ui.play.TITLE_MAX
@@ -18,6 +20,34 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FinishPraiseTest {
+    @Test fun finishingAllThreeTiersOfAPuzzleOnADayIsTheTopShow() {
+        val two = listOf(c(today, tier = Difficulty.STANDARD), c(today, tier = Difficulty.EXPERT))
+        val p = run(two, c(today, tier = Difficulty.HARD))
+        assertTrue(p.allTiers && p.full && p.big)
+        assertEquals(TITLE_ALL_TIERS, p.title)
+        assertTrue(TITLE_ALL_TIERS.length <= TITLE_MAX)
+        assertEquals(Tones.Kind.ALL_TIERS, p.winKind())
+        // An archive day's three count too.
+        val back = d(9)
+        assertTrue(run(listOf(c(back, tier = Difficulty.STANDARD), c(back, tier = Difficulty.EXPERT)), c(back)).allTiers)
+    }
+
+    @Test fun allTiersNeedsTheSamePuzzleTheSameDateAndANewTier() {
+        val hard = c(today, tier = Difficulty.HARD)
+        val std = c(today, tier = Difficulty.STANDARD)
+        val exp = c(today, tier = Difficulty.EXPERT)
+        assertFalse(run(listOf(std), hard).allTiers)
+        assertFalse(run(listOf(std, exp.copy(puzzleId = "tally")), hard).allTiers)
+        assertFalse(run(listOf(std, exp.copy(day = d(1))), hard).allTiers)
+        assertFalse(run(listOf(std, exp, hard), hard).allTiers)                 // a replay is not the finish
+        assertFalse(run(listOf(std.copy(day = null), exp.copy(day = null)), c(null)).allTiers)  // practice has no date
+    }
+
+    @Test fun theWinSoundFollowsTheShow() {
+        assertEquals(Tones.Kind.BIG_WIN, run(emptyList(), c(today)).winKind())
+        assertEquals(Tones.Kind.WIN, run(listOf(c(today, 50)), c(today, 100)).winKind())
+    }
+
     private val today = LocalDate(2026, 10, 10)
     private fun d(back: Int) = LocalDate.fromEpochDays(today.toEpochDays() - back)
     private fun c(day: LocalDate?, secs: Int = 100, hints: Int = 0, tier: Difficulty = Difficulty.HARD, id: String = "nonogram") =

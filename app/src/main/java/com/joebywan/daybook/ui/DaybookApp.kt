@@ -50,7 +50,9 @@ import com.joebywan.daybook.platform.prepareBoards
 import com.joebywan.daybook.platform.rememberHaptics
 import com.joebywan.daybook.platform.rememberKeyValueStore
 import com.joebywan.daybook.platform.rememberReducedMotion
-import com.joebywan.daybook.platform.rememberSolveSoundPlayer
+import com.joebywan.daybook.platform.rememberTonePlayer
+import com.joebywan.daybook.core.Tones
+import com.joebywan.daybook.ui.LocalTones
 import com.joebywan.daybook.ui.tutorial.LocalChime
 import com.joebywan.daybook.ui.archive.ArchiveDaysScreen
 import com.joebywan.daybook.ui.archive.ArchiveScreen
@@ -291,7 +293,8 @@ private fun DaybookScreens(
     LaunchedEffect(Unit) { welcome = launchPrefs.needsWelcome { store.hasPlayed() } }
     val (playSound, setPlaySound) = rememberPref(launchPrefs.playSound, true, launchPrefs::setPlaySound)
     // Armed while the switch is on (the web wakes its audio on the first taps); a no-op when off.
-    val playSolveSound = rememberSolveSoundPlayer(playSound)
+    val tones = rememberTonePlayer(playSound)
+    val playSolveSound = remember(tones) { { tones(Tones.pick(Tones.Kind.WIN)) } }
     val (vibrate, setVibrate) = rememberPref(launchPrefs.vibrate, true, launchPrefs::setVibrate)
     val haptics = rememberHaptics(vibrate)
     // The player's choice in Settings, or the device's (the default): Accessibility in SettingsScreen.
@@ -368,7 +371,7 @@ private fun DaybookScreens(
     PlatformBackHandler(enabled = route != Route.Home) { route = back(route) }
 
     val keptLists = rememberSaveableStateHolder()
-    CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics) {
+    CompositionLocalProvider(LocalReducedMotion provides reducedMotion, LocalHaptics provides haptics, LocalTones provides tones) {
     // A short fade between screens (none under reduced motion). Each route is its own keyed content, so a screen's
     // rememberSaveable state is kept across a rotation as before; the screen going out stays composed for the fade.
     // On the page colour: fading two screens over the bare window would dim the middle of the fade.
@@ -643,9 +646,6 @@ private fun DaybookScreens(
                     onSolved = { seconds, hints ->
                         // The slot moves on, so leaving and tapping the tile again is a new board.
                         if (current.day == null && level == null) scope.launch { store.newRandomNonce(puzzle.id, difficulty) }
-                        // PlayScreen calls this once per solve (its `recorded` flag survives
-                        // recreation), so the chime cannot repeat on a rotation.
-                        playSolveSound()
                         // Only a solve that marks a tile: today's daily or a level board, never a random or archive one.
                         if (current.day == today || level != null) justSolved = puzzle.id to difficulty
                         scope.launch {

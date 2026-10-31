@@ -89,7 +89,7 @@ fun SettingsScreen(
             item {
                 SettingSwitch(
                     title = "Sound",
-                    detail = "A short, soft chime when you solve a puzzle. $SOLVE_SOUND_NOTE",
+                    detail = "Soft sounds as you play, and a chime when you solve a puzzle. $SOLVE_SOUND_NOTE",
                     checked = playSound,
                     onChecked = onPlaySound,
                 )

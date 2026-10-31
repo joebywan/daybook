@@ -33,9 +33,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,6 +49,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.stats.AchievementBadge
@@ -59,30 +66,35 @@ private val CONFETTI = listOf(
     Color(0xFFE53935), Color(0xFFFFB300), Color(0xFF43A047), Color(0xFF1E88E5), Color(0xFF8E24AA), Color(0xFFFB8C00),
 )
 
+// Closed, so the sweep has no seam.
+private val RAINBOW = CONFETTI + CONFETTI.first()
+
 private class Piece(val x: Float, val delay: Float, val speed: Float, val sway: Float, val spin: Float, val color: Color, val w: Float, val h: Float)
 
 /**
  * About two seconds of confetti falling over the whole screen, drawn on a Canvas. It takes no input, so taps
  * pass through to what is beneath. Plays once: [played] (the caller's saved flag) stops a rotation replaying it.
- * Not [full] (an ordinary solve, [Praise.full]): a light flourish instead, a fifth of the pieces for a little over a second.
+ * Not [full] (an ordinary solve, [Praise.full]): a light flourish instead, 14 pieces for a little over a second. A full
+ * show has twice the pieces and a rainbow running round the edge of the screen; [allTiers] ([Praise.allTiers]) has the most
+ * and runs longest. Reduced motion: none of it. Drawn over everything and never laid out, so the board cannot move.
  */
 @Composable
-fun Confetti(played: Boolean, full: Boolean, onPlayed: () -> Unit) {
+fun Confetti(played: Boolean, full: Boolean, allTiers: Boolean = false, onPlayed: () -> Unit) {
     // Reduced motion: no confetti at all.
     if (LocalReducedMotion.current) return
     val t = remember { Animatable(if (played) 1f else 0f) }
-    val pieces = remember(full) {
+    val pieces = remember(full, allTiers) {
         val r = Random(2026)
-        List(if (full) 70 else 14) {
+        List(if (allTiers) 220 else if (full) 140 else 14) {
             Piece(r.nextFloat(), r.nextFloat() * 0.35f, 0.7f + r.nextFloat() * 0.5f, r.nextFloat() * 24f + 6f,
                 r.nextFloat() * 720f - 360f, CONFETTI[r.nextInt(CONFETTI.size)], 5f + r.nextFloat() * 5f, 8f + r.nextFloat() * 6f)
         }
     }
     // Keyed on [full]: the praise that decides it lands a frame after the solve, and the show starts over with it.
-    LaunchedEffect(full) {
+    LaunchedEffect(full, allTiers) {
         if (!played) {
             t.snapTo(0f)
-            t.animateTo(1f, tween(if (full) 2000 else 1200, easing = LinearEasing))
+            t.animateTo(1f, tween(if (allTiers) 3000 else if (full) 2000 else 1200, easing = LinearEasing))
             onPlayed()
         }
     }
@@ -97,6 +109,21 @@ fun Confetti(played: Boolean, full: Boolean, onPlayed: () -> Unit) {
             rotate(p.spin * life, Offset(x, y)) {
                 drawRect(p.color.copy(alpha = 1f - life * life * life), Offset(x, y), Size(p.w * d, p.h * d))
             }
+        }
+        if (full) rainbowBorder(t.value, (if (allTiers) 9f else 6f) * d)
+    }
+}
+
+/** A band of the confetti's colours [width] wide round the edge, turning as [t] goes 0 to 1, in fast and out slowly. */
+private fun DrawScope.rainbowBorder(t: Float, width: Float) {
+    val frame = Path().apply {
+        fillType = PathFillType.EvenOdd
+        addRect(Rect(Offset.Zero, size))
+        addRoundRect(RoundRect(Rect(Offset.Zero, size).deflate(width), CornerRadius(width)))
+    }
+    clipPath(frame) {
+        rotate(t * 540f, center) {
+            drawCircle(Brush.sweepGradient(RAINBOW, center), size.getDistance(), center, alpha = minOf(t / 0.1f, (1f - t) / 0.3f, 1f))
         }
     }
 }

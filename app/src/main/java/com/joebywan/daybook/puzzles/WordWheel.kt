@@ -70,6 +70,8 @@ import kotlin.math.hypot
 import kotlin.math.sin
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.core.Tones
+import com.joebywan.daybook.ui.LocalBoardTones
 import com.joebywan.daybook.ui.rememberMoveFeel
 
 /**
@@ -254,6 +256,13 @@ object WordWheel : PuzzleType {
         // The word being spelled (wheel positions) and the finger, transient: never PuzzleState, so a refused word costs nothing.
         var picked by remember(s.wheel) { mutableStateOf(listOf<Int>()) }
         var finger by remember { mutableStateOf<Offset?>(null) }
+        // Each letter added rises a step of the scale, each taken back falls one. Silent in the walkthrough (LocalBoardTones).
+        val tones = LocalBoardTones.current
+        val sounded = remember { intArrayOf(0) }
+        LaunchedEffect(picked.size) {
+            wheelToneStep(sounded[0], picked.size)?.let { tones(Tones.wheel(it)) }
+            sounded[0] = picked.size
+        }
         var notice by remember { mutableStateOf<String?>(null) }
         var noticeIsError by remember { mutableStateOf(false) }
         LaunchedEffect(notice) {
