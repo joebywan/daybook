@@ -829,7 +829,12 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
 The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
-A move's feel (the changed squares settle, a unit finished by the rules glows once) is `ui/MoveFeel.kt`'s
+Sound is a bank of pre-rendered tones (`core/Tones.kt`, from the owner's pluck in `SolveTone.kt`), played by `rememberTonePlayer` in
+the seam (Android `SoundPool`, web Web Audio): a very quiet tick beside the haptic in `push`, a unit's tone from `rememberMoveFeel`, Word
+Wheel's rising scale, a win by the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones`, so a walkthrough or
+a practice is silent; a variant is drawn from `kotlin.random`, never `Rng`. `docs/REWARDS.md` (Sounds). A win never shakes: Pointers and
+Mines use a shake for a mistake. The top show (`Praise.allTiers`, all three tiers of a puzzle on a date) is derived from completions.
+A move's feel (the changed squares settle, a unit finished by the rules glows and pops once) is `ui/MoveFeel.kt`'s
 `rememberMoveFeel`, read in the draw phase; it fires only on `LocalMoveCount` (raised by `push`, so never on load,
 undo, restart or the walkthrough). The same helper dips what an Undo took back (`LocalUndoCount`), runs one wave across
 every square when a move solves the board (`LocalSolveCount`; the finished frame waits `SOLVE_WAVE_MS` for it) and fades a

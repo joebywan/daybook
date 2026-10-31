@@ -123,7 +123,7 @@ private fun DrawScope.rainbowBorder(t: Float, width: Float) {
     }
     clipPath(frame) {
         rotate(t * 540f, center) {
-            drawCircle(Brush.sweepGradient(RAINBOW, center), size.getDistance(), center, alpha = minOf(t / 0.1f, (1f - t) / 0.3f, 1f))
+            drawCircle(Brush.sweepGradient(RAINBOW, center), size.width + size.height, center, alpha = minOf(t / 0.1f, (1f - t) / 0.3f, 1f))
         }
     }
 }
