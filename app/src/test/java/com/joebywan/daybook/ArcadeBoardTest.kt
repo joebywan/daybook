@@ -3,11 +3,16 @@ package com.joebywan.daybook
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.puzzles.SudokuHintLight
 import com.joebywan.daybook.puzzles.SudokuTwin
 import com.joebywan.daybook.puzzles.boxShade
 import com.joebywan.daybook.puzzles.Lexicon
+import com.joebywan.daybook.puzzles.NONOGRAM_DONE_DARK
+import com.joebywan.daybook.puzzles.NONOGRAM_DONE_LIGHT
+import com.joebywan.daybook.puzzles.NONOGRAM_FILLS_DARK
+import com.joebywan.daybook.puzzles.NONOGRAM_FILLS_LIGHT
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import org.junit.Assert.assertTrue
@@ -51,6 +56,14 @@ class ArcadeBoardTest {
                 assertTrue("right and present are $apart apart in the worst vision", apart > 10.0)
             }
         }
+    @Test fun `Nonogram's filled squares stand off an empty one at every step of the blend, and finished clues read`() {
+        for ((b, fills) in listOf(ArcadeBoard.Light to NONOGRAM_FILLS_LIGHT, ArcadeBoard.Dark to NONOGRAM_FILLS_DARK)) {
+            for ((from, to) in fills) for (i in 0..10) {
+                atLeast(3f, lerp(Color(from), Color(to), i / 10f), b.square, "fill ${from.toString(16)} step $i")
+            }
+        }
+        readsOn(NONOGRAM_DONE_LIGHT, "finished clue, light")
+        readsOn(NONOGRAM_DONE_DARK, "finished clue, dark")
     }
 
     @Test fun `board tokens read, in both schemes`() {
