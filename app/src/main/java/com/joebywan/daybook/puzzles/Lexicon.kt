@@ -537,6 +537,8 @@ object Lexicon : PuzzleType {
                 .then(modifier)
                 .padding(2.dp)
                 .ring(look, glow, pulse, corner, outside = true)
+                // A dimmed tile fades to a square, not to the dark frame behind it.
+                .background(a.square, shape)
                 .dimmed(look)
                 .then(fill?.glow?.let { Modifier.arcadeGlow(it, corner, reach = 2.dp) } ?: Modifier)
                 .clip(shape)
