@@ -549,6 +549,7 @@ walkthrough, motif). `id = "hexwords"` is hashed into every seed: never rename i
   when the search runs out of budget (none in a year). Only "Show me" spells a word.
 - **A lost target is said** (`HexLogic.targetLost`: `No` from every accepted word, never `Truncated`): the header line, red, a second late, suggests Undo or starting over.
 - **The word being traced is `remember`; one word is one state.** Saves hold `taken` (word and hexes), so undo needs nothing else.
+- **A taken word's letters leave in spelling order** (`leavingHexes`, also for "Show me"): `remember` decoration drawn over a state already moved on, so input never waits. A word put back returns last letter first (`returningHexes`). Nothing when several words change at once or on load, or under reduced motion.
 - **A swipe walks the way between touch samples** (`swipePoints`, shared with Word Wheel and Dwindle): a slow device reports them tiles apart, and the line crossed hexes it never took.
 - Highlight indices are hexes. `HexGeometry` is the one source of where a hex is; `hit` tests the six sides, `hitCore` (a moving
   finger) only the middle, so sliding past a corner takes neither hex.
