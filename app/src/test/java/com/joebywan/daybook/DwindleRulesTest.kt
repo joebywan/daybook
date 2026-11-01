@@ -30,33 +30,33 @@ class DwindleRulesTest {
     fun `a goal is found, a real word is a bonus, and nothing else changes the board`() {
         val s = small
         assertEquals(DwindleEntry.Goal, DwindleLogic.judge(s, "chef"))
-        assertEquals(DwindleEntry.Bonus, DwindleLogic.judge(s, "she"))
+        assertEquals(DwindleEntry.Bonus, DwindleLogic.judge(s, "eat"))
         assertEquals(DwindleEntry.TooShort, DwindleLogic.judge(s, "he"))
-        assertEquals(DwindleEntry.NotOnTiles, DwindleLogic.judge(s, "cat"))
-        assertEquals(DwindleEntry.NotAWord, DwindleLogic.judge(s, "chs"))
-        assertEquals(s, s.enter("cat"))
-        val one = s.enter("chef").enter("she")
+        assertEquals(DwindleEntry.NotOnTiles, DwindleLogic.judge(s, "dog"))
+        assertEquals(DwindleEntry.NotAWord, DwindleLogic.judge(s, "aef"))
+        assertEquals(s, s.enter("dog"))
+        val one = s.enter("chef").enter("eat")
         assertEquals(listOf("chef"), one.found)
-        assertEquals(listOf("she"), one.bonus)
+        assertEquals(listOf("eat"), one.bonus)
         assertEquals("one word is one move", 2, one.moves)
         assertEquals(DwindleEntry.Found, DwindleLogic.judge(one, "chef"))
-        assertEquals(DwindleEntry.Found, DwindleLogic.judge(one, "she"))
+        assertEquals(DwindleEntry.Found, DwindleLogic.judge(one, "eat"))
     }
 
     @Test
     fun `counts fall by the goal found, a bonus word uses nothing, and a used-up tile can no longer be spelled through`() {
         val s = small
-        assertEquals(listOf(2, 2, 1, 2, 2, 1, 2, 2, 2), s.counts().toList())
-        assertEquals(s.counts().toList(), s.enter("she").counts().toList())
-        val after = s.enter("chef").enter("chest")
-        assertEquals(listOf(1, 0, 1, 0, 1, 1, 0, 1, 2), after.counts().toList())
-        assertEquals("SHE goes through a vanished H", DwindleEntry.NotOnTiles, DwindleLogic.judge(after, "she"))
+        assertEquals(listOf(3, 3, 1, 1, 3, 2, 3, 2, 1), s.counts().toList())
+        assertEquals(s.counts().toList(), s.enter("eat").counts().toList())
+        val after = s.enter("chef").enter("cat")
+        assertEquals(listOf(1, 2, 1, 0, 2, 1, 2, 2, 1), after.counts().toList())
+        assertEquals("EAT goes through a vanished A", DwindleEntry.NotOnTiles, DwindleLogic.judge(after, "eat"))
     }
 
     @Test
     fun `solved is every goal found, in any order, and only that`() {
         val words = small.goals.map { it.word }
-        for (order in listOf(words, words.reversed(), listOf(words[2], words[0], words[3], words[1]))) {
+        for (order in listOf(words, words.reversed(), listOf(words[2], words[0], words[4], words[3], words[1]))) {
             var s = small
             order.forEachIndexed { i, w ->
                 assertFalse(s.solved)
@@ -73,6 +73,8 @@ class DwindleRulesTest {
         val saved = """{"width":3,"height":3,"letters":"tckhsrefi","goals":[{"word":"chef","cells":[1,3,6,7]}]}"""
         val s = kotlinx.serialization.json.Json.decodeFromString(DwindleState.serializer(), saved)
         assertEquals(emptyList<String>(), s.bonus)
+        assertEquals("a diagonal goal on an old save can still be spelled", DwindleEntry.Goal, DwindleLogic.judge(s, "chef"))
+        assertEquals(listOf(1, 3), DwindleLogic.swipe(s, s.counts(), listOf(1), 3))
         assertEquals(0, s.moves)
     }
 
@@ -167,11 +169,12 @@ class DwindleRulesTest {
         val s = small
         val c = s.counts()
         assertEquals(listOf(1), DwindleLogic.swipe(s, c, emptyList(), 1))
-        assertEquals("a diagonal touches", listOf(1, 3), DwindleLogic.swipe(s, c, listOf(1), 3))
+        assertEquals("a side touches", listOf(1, 4), DwindleLogic.swipe(s, c, listOf(1), 4))
+        assertEquals("a diagonal does not", listOf(0), DwindleLogic.swipe(s, c, listOf(0), 4))
         assertEquals("too far", listOf(0), DwindleLogic.swipe(s, c, listOf(0), 2))
-        assertEquals("back out", listOf(1), DwindleLogic.swipe(s, c, listOf(1, 3), 1))
-        assertEquals("no tile twice", listOf(1, 3, 4, 0), DwindleLogic.swipe(s, c, listOf(1, 3, 4, 0), 3))
-        val gone = s.enter("chef").enter("chest").counts()
+        assertEquals("back out", listOf(1), DwindleLogic.swipe(s, c, listOf(1, 4), 1))
+        assertEquals("no tile twice", listOf(1, 4, 3, 0), DwindleLogic.swipe(s, c, listOf(1, 4, 3, 0), 1))
+        val gone = s.enter("cat").counts()
         assertEquals("a vanished tile does not join", listOf(0), DwindleLogic.swipe(s, gone, listOf(0), 3))
     }
 
@@ -179,22 +182,22 @@ class DwindleRulesTest {
     fun `tapping joins neighbours, takes the last back and restarts elsewhere`() {
         val s = small
         val c = s.counts()
-        assertEquals(listOf(1, 3), DwindleLogic.tap(s, c, listOf(1), 3))
-        assertEquals(listOf(1), DwindleLogic.tap(s, c, listOf(1, 3), 3))
+        assertEquals(listOf(1, 4), DwindleLogic.tap(s, c, listOf(1), 4))
+        assertEquals(listOf(1), DwindleLogic.tap(s, c, listOf(1, 4), 4))
         assertEquals(listOf(8), DwindleLogic.tap(s, c, listOf(0), 8))
     }
 
     @Test
     fun `typing finds tiles for the letters, and refuses a letter no live way takes`() {
         val s = small
-        assertEquals(listOf(1, 3, 6, 7), DwindleLogic.liveWay(s, "chef"))
+        assertEquals(listOf(0, 1, 4, 5), DwindleLogic.liveWay(s, "chef"))
         assertNull(DwindleLogic.liveWay(s, "chz"))
-        assertNull("a vanished tile", DwindleLogic.liveWay(s.enter("chef").enter("chest"), "she"))
+        assertNull("a vanished tile", DwindleLogic.liveWay(s.enter("cat"), "eat"))
         assertNotNull(WheelKeyAction.Enter)
     }
 
     @Test
-    fun `a diagonal swipe passes between its two side tiles`() {
+    fun `a swipe past a corner takes neither tile`() {
         val side = 100f
         fun at(x: Float, y: Float) = Dwindle.tileAt(x, y, side, 4, 4, 0.42f)
         assertEquals(0, at(50f, 50f))
@@ -217,5 +220,13 @@ class DwindleRulesTest {
         val phone = board(0, Difficulty.EXPERT)
         val f = Dwindle.fit(375f, 330f, phone.width, phone.height, phone.goals.map { it.word.length })
         assertTrue("Expert at 375x537 keeps a thumb-sized tile: ${f.tile}", f.tile >= 28f)
+    }
+
+    @Test
+    fun `the board kept has the fewest common bonus words of its draws, and far fewer than diagonals allowed`() {
+        val mean = Difficulty.entries.associateWith { d -> (0 until 60).map { DwindleLogic.commonBonus(board(it, d)) }.average() }
+        // With diagonals the means were 58 / 123 / 196.
+        println("PROBE dwindle bonus $mean")
+        assertTrue("$mean", mean.getValue(Difficulty.STANDARD) < 14 && mean.getValue(Difficulty.HARD) < 30 && mean.getValue(Difficulty.EXPERT) < 47)
     }
 }

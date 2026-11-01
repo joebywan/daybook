@@ -25,6 +25,8 @@ data class DwindleState(
     val found: List<String> = emptyList(),
     val bonus: List<String> = emptyList(),
     override val moves: Int = 0,
+    /** Whether diagonal tiles touch: only a save from the first build, whose goals may run diagonally (hence the default). */
+    val diagonal: Boolean = true,
 ) : PuzzleState {
 
     /** The rule: every goal word is found (which leaves every tile vanished; `DwindleRulesTest` holds the two together). */
@@ -59,7 +61,7 @@ enum class DwindleEntry { Goal, Bonus, Found, NotAWord, TooShort, NotOnTiles }
  * **Generation:** cover, then share. The most boxed-in empty square is covered by the next word of a seed-shuffled pool (sorted
  * lists, so no hash order can reach it) that can run through it over enough tiles already lettered, keeping every word so
  * far to one way. Then words the full grid already holds, one way each, are added, those over the tiles used least first,
- * until the tier's word count.
+ * until the tier's word count. Of the first [KEEP] proved draws, the one with the fewest [commonBonus] words ships.
  */
 internal object DwindleLogic {
 
@@ -86,19 +88,27 @@ internal object DwindleLogic {
     const val MIN_LENGTH = 3
     const val ATTEMPTS = 40
 
+    /** How many proved draws compete; the one with the fewest [commonBonus] words ships. */
+    const val KEEP = 6
+
     /** How far down the pool one square is tried before the draw is abandoned: a stubborn square is cheaper to redraw than to search. */
     private const val MAX_SCAN = 1500
 
-    fun adjacent(a: Int, b: Int, width: Int): Boolean =
-        a != b && abs(a / width - b / width) <= 1 && abs(a % width - b % width) <= 1
+    /** Side by side or one above the other. Diagonals were tried and allowed four times the bonus words (`docs/DWINDLE_SPEC.md`). */
+    fun adjacent(a: Int, b: Int, width: Int, diagonal: Boolean = false): Boolean {
+        val dr = abs(a / width - b / width)
+        val dc = abs(a % width - b % width)
+        return dr + dc == 1 || (diagonal && dr == 1 && dc == 1)
+    }
 
-    /** The squares touching [i], diagonals included, in reading order. */
-    fun neighbours(i: Int, width: Int, height: Int): List<Int> {
+    /** The squares sharing a side with [i], in reading order. */
+    fun neighbours(i: Int, width: Int, height: Int, diagonal: Boolean = false): List<Int> {
         val r = i / width
         val c = i % width
         val out = ArrayList<Int>(8)
         for (rr in maxOf(r - 1, 0)..minOf(r + 1, height - 1)) for (cc in maxOf(c - 1, 0)..minOf(c + 1, width - 1)) {
-            if (rr != r || cc != c) out += rr * width + cc
+            val n = rr * width + cc
+            if (adjacent(i, n, width, diagonal)) out += n
         }
         return out
     }
@@ -107,7 +117,7 @@ internal object DwindleLogic {
      * Every way [word] runs across the tiles [live] allows (all of them when null), counted exhaustively, no budget. Only
      * [Verdict.ExactlyOne] carries a way. On a full grid the letters bound the walk, so it is tiny.
      */
-    fun ways(letters: String, width: Int, height: Int, word: String, live: IntArray? = null): Verdict<List<Int>> {
+    fun ways(letters: String, width: Int, height: Int, word: String, live: IntArray? = null, diagonal: Boolean = false): Verdict<List<Int>> {
         var count = 0
         var first: List<Int> = emptyList()
         val path = IntArray(word.length)
@@ -120,7 +130,7 @@ internal object DwindleLogic {
                 return
             }
             used[at] = true
-            for (n in neighbours(at, width, height)) go(i + 1, n)
+            for (n in neighbours(at, width, height, diagonal)) go(i + 1, n)
             used[at] = false
         }
         for (at in letters.indices) go(0, at)
@@ -135,7 +145,7 @@ internal object DwindleLogic {
             if (s.letters[at] != word[i] || counts[at] == 0 || at in path) return false
             path += at
             if (i == word.lastIndex) return true
-            for (n in neighbours(at, s.width, s.height)) if (go(i + 1, n)) return true
+            for (n in neighbours(at, s.width, s.height, s.diagonal)) if (go(i + 1, n)) return true
             path.removeAt(path.lastIndex)
             return false
         }
@@ -154,7 +164,7 @@ internal object DwindleLogic {
     fun swipe(s: DwindleState, counts: IntArray, path: List<Int>, i: Int): List<Int> = when {
         counts[i] == 0 -> path
         path.isEmpty() -> listOf(i)
-        adjacent(path.last(), i, s.width) -> swipeWheelLetter(path, i)
+        adjacent(path.last(), i, s.width, s.diagonal) -> swipeWheelLetter(path, i)
         else -> path
     }
 
@@ -163,7 +173,7 @@ internal object DwindleLogic {
         counts[i] == 0 -> path
         path.lastOrNull() == i -> path.dropLast(1)
         i in path -> path
-        path.isNotEmpty() && adjacent(path.last(), i, s.width) -> path + i
+        path.isNotEmpty() && adjacent(path.last(), i, s.width, s.diagonal) -> path + i
         else -> listOf(i)
     }
 
@@ -176,17 +186,27 @@ internal object DwindleLogic {
      */
     fun proved(s: DwindleState): Boolean =
         s.counts().all { it > 0 } && s.goals.distinctBy { it.word }.size == s.goals.size && s.goals.all { goal ->
-            val v = ways(s.letters, s.width, s.height, goal.word)
+            val v = ways(s.letters, s.width, s.height, goal.word, diagonal = s.diagonal)
             v is Verdict.ExactlyOne && v.value == goal.cells
         }
 
     fun generateVerified(seed: Long, difficulty: Difficulty): DwindleState? {
         val spec = specFor(difficulty)
+        val proved = ArrayList<DwindleState>(KEEP)
         for (attempt in 0 until ATTEMPTS) {
             val board = build(spec, Rng(seed + attempt)) ?: continue
-            if (accepts(board, spec)) return board
+            if (accepts(board, spec)) proved += board
+            if (proved.size == KEEP) break
         }
-        return null
+        return proved.minByOrNull(::commonBonus)
+    }
+
+    /** The common words the tiles spell that are not goals: what a player tries before reaching the goals. */
+    fun commonBonus(s: DwindleState): Int {
+        val goals = s.goals.map { it.word }
+        return (MIN_LENGTH..7).sumOf { n ->
+            WheelWords.grid(n).count { it !in goals && WheelWords.spellable(it, s.letters) && liveWay(s, it) != null }
+        }
     }
 
     fun accepts(s: DwindleState, spec: Spec): Boolean =
@@ -222,7 +242,7 @@ internal object DwindleLogic {
         share(grid.concatToString(), spec, pool, placed, rng.nextInt(spec.minWords, spec.maxWords))
         // A goal's place in the list says nothing about when it was laid: longest first, ties shuffled.
         val goals = rng.shuffled(placed).sortedByDescending { it.word.length }
-        return DwindleState(spec.width, spec.height, grid.concatToString(), goals)
+        return DwindleState(spec.width, spec.height, grid.concatToString(), goals, diagonal = false)
     }
 
     /** The word's way stays the only one on the letters so far (an empty square matches nothing here). */
@@ -250,7 +270,7 @@ internal object DwindleLogic {
     private fun cover(grid: CharArray, spec: Spec, word: String, target: Int, need: Int, rng: Rng): List<Int>? {
         val path = IntArray(word.length)
         val used = BooleanArray(grid.size)
-        fun reach(a: Int, b: Int) = maxOf(abs(a / spec.width - b / spec.width), abs(a % spec.width - b % spec.width))
+        fun reach(a: Int, b: Int) = abs(a / spec.width - b / spec.width) + abs(a % spec.width - b % spec.width)
         fun go(i: Int, at: Int, overlap: Int, through: Boolean): Boolean {
             if (used[at] || (grid[at] != EMPTY && grid[at] != word[i])) return false
             val over = overlap + if (grid[at] != EMPTY) 1 else 0

@@ -88,11 +88,11 @@ class DwindleTeachingTest {
         val tried = s.found + s.bonus
         val options = open.distinct().flatMap { n ->
             WheelWords.grid(n).filter { it !in tried }.mapNotNull { w ->
-                val v = DwindleLogic.ways(s.letters, s.width, s.height, w)
+                val v = DwindleLogic.ways(s.letters, s.width, s.height, w, diagonal = s.diagonal)
                 if (v is Verdict.ExactlyOne && v.value.all { counts[it] > 0 }) w to v.value else null
             }
         }
-        if (options.size > 40) return null
+        if (options.size > 28) return null
         val out = mutableListOf<Set<String>>()
         fun go(i: Int, left: IntArray, picked: List<String>) {
             if (picked.size == open.size) {
@@ -116,7 +116,7 @@ class DwindleTeachingTest {
     fun `the reasoning takes only what the player can see`() {
         val fn = DwindleTeacher::class.java.methods.first { it.name == "deduce" }
         assertEquals(
-            listOf("int", "int", "java.lang.String", "int[]", "java.util.List", "java.util.List"),
+            listOf("int", "int", "java.lang.String", "int[]", "java.util.List", "java.util.List", "boolean"),
             fn.parameterTypes.map { it.typeName },
         )
     }
@@ -148,29 +148,29 @@ class DwindleTeachingTest {
         fun spell(s: DwindleState, cells: List<Int>) = cells.map { s.letters[it] }.joinToString("")
         // Real gestures: the swipe and the taps build the path the frames name.
         var path = emptyList<Int>()
-        for (c in listOf(1, 3, 6, 7)) path = DwindleLogic.swipe(s0, s0.counts(), path, c)
+        for (c in listOf(0, 1, 4, 5)) path = DwindleLogic.swipe(s0, s0.counts(), path, c)
         assertEquals("chef", spell(s0, path))
         val s1 = s0.enter(spell(s0, path))
         assertTrue(frames[1].accepts!!(s1))
-        assertFalse(frames[1].accepts!!(s0.enter("she")))
+        assertFalse(frames[1].accepts!!(s0.enter("eat")))
         assertEquals(s1, frames[2].state)
 
         path = emptyList()
         for (c in listOf(4, 3, 6)) path = DwindleLogic.swipe(s1, s1.counts(), path, c)
         val s2 = s1.enter(spell(s1, path))
-        assertEquals(listOf("she"), s2.bonus)
+        assertEquals(listOf("eat"), s2.bonus)
         assertTrue(frames[2].accepts!!(s2))
-        assertFalse(frames[2].accepts!!(s1.enter("chest")))
+        assertFalse(frames[2].accepts!!(s1.enter("cat")))
         assertEquals(s2, frames[3].state)
 
         path = emptyList()
-        for (c in listOf(1, 3, 6, 4, 0)) path = DwindleLogic.tap(s2, s2.counts(), path, c)
+        for (c in listOf(0, 3, 6)) path = DwindleLogic.tap(s2, s2.counts(), path, c)
         val s3 = s2.enter(spell(s2, path))
         assertTrue(frames[3].accepts!!(s3))
         assertFalse(frames[3].accepts!!(s2.enter("fist")))
         assertEquals(s3, frames[4].state)
-        for (c in listOf(1, 3, 6)) assertEquals("the caption says C, H and E vanish", 0, s3.counts()[c])
-        for (c in listOf(1, 3, 6)) assertEquals("the caption says one use left", 1, s2.counts()[c])
+        assertEquals("the caption says A vanishes", 0, s3.counts()[3])
+        assertEquals("the caption says one use left", 1, s2.counts()[3])
         for (f in frames) assertTrue(f.caption, f.caption.length <= 170)
     }
 
@@ -180,7 +180,7 @@ class DwindleTeachingTest {
         assertTrue(DwindleLogic.proved(s0))
         assertEquals(emptyList<String>(), DwindleOracle.problems(s0))
         assertTrue(s0.goals.all { WheelWords.isGridWord(it.word) })
-        assertTrue("SHE is real", WheelWords.isWord("she"))
+        assertTrue("EAT is real", WheelWords.isWord("eat"))
         var s = Dwindle.tutorial.last().state as DwindleState
         while (!s.solved) {
             val h = Dwindle.teach(s)!!

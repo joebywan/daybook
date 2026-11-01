@@ -22,12 +22,12 @@ letters.
 
   | Tier | Block | Words planted | Target |
   |---|---|---|---|
-  | Standard | 19 hexes (3-4-5-4-3) | up to 5 letters | the middle of 12 biggest-word-first tries |
+  | Standard | 19 hexes (3-4-5-4-3) | up to 5 letters | the lowest of 12 biggest-word-first tries (the middle felt too high in play, 2026-11-01) |
   | Hard | 29 hexes (5-6-7-6-5) | up to 6 | one more than the best of those tries |
   | Expert | 44 hexes (5-6-7-8-7-6-5) | up to 7 | one more than those and a player who looks one word ahead |
 
   The target is not set to the board's proved best: that would make every board one exact tiling, a test of vocabulary more than
-  of planning. It sits as low as beating the player allows, so several roads usually reach it. (Measured below: 18 / 17 / 31% of
+  of planning. It sits as low as beating the player allows, so several roads usually reach it. (Measured below: 10 / 17 / 31% of
   targets happen to be the best anyway.)
 - **Lists.** Proof and hints use `WheelWords.grid` (common, screened, clued). Any word `WheelWords.isWord` takes is accepted and
   scores, as Word Wheel's bonus rule has it; so a wide vocabulary helps, and that is measured too. No list was regenerated; no other
@@ -58,13 +58,13 @@ letters.
 
 | | Standard | Hard | Expert |
 |---|---|---|---|
-| Mean target | 21 | 41 | 71 |
-| Biggest word first reaches it | 78% | 3% | 1% |
-| ... knowing every accepted word | 77% | 37% | 14% |
+| Mean target | 19 | 41 | 71 |
+| Biggest word first reaches it | 99% | 3% | 1% |
+| ... knowing every accepted word | 92% | 37% | 14% |
 | One word of lookahead reaches it | 100% | 86% | 0% |
 | ... knowing every accepted word | 100% | 97% | 81% |
-| Any word at random | 9% | 0% | 0% |
-| Target is the board's proved best | 18% | 17% | 31% |
+| Any word at random | 26% | 0% | 0% |
+| Target is the board's proved best | 10% | 17% | 31% |
 | Hint walk: biggest / hold back | 1265 / 7 | 1843 / 376 | 2745 / 499 |
 | Hint fallback | 0 | 0 | 0 |
 | Generation, JVM median / p95 / max ms | 0.3 / 0.6 / 1.5 | 0.6 / 1.9 / 2.9 | 13 / 67 / 127 |

@@ -206,7 +206,7 @@ fun TutorialRunner(
         val tallest = frames.indices.maxOf { i ->
             val caption = measurer.measure(frames[i].caption, captionStyle, constraints = c).size.height
             val n = perFrame[i]
-            caption + if (n == 0) 0 else measurer.measure("\n".repeat(n - 1), feedbackStyle, constraints = c).size.height
+            caption + if (n == 0) 0 else measurer.measure("\n".repeat(n - 1) + "\u2713 M", feedbackStyle, constraints = c).size.height
         }
         with(density) { minOf(tallest.toDp(), MaxCaptionSlot) } to perFrame
     }

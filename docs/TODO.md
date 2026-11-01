@@ -326,3 +326,8 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
   8. Acceptance for the whole thing: every board shows at least two non-grey, non-accent hues in both schemes; dark
      fills stay clear of the surface; no hex literal for content colour outside the helper; `PUZZLE_STANDARDS.md`
      checklist gets a "content hues from the helper" row so new puzzles start compliant.
+
+- **Let players add words.** Real words a player tried were refused (plied, awed, wean, denial, heaped, deaths on Word Wheel and Dwindle). The owner's idea, large and for later: a
+  personal local list is the small version (nothing global is ranked, so it cannot cheat anyone); shared suggestions need a backend and an approval process.
+- **"Buttons stop working, had to force quit" (web, iPad, 2026-11-01).** Not reproduced: buttons kept working in WebKit and Chromium after repeated rotations, and in Chromium after a cancelled touch. Needs what was on screen when it happened.
+

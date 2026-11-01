@@ -1,5 +1,5 @@
-- Two new word puzzles. Hexwords: spell words through touching hexes, each word uses its letters up, reach the target. Dwindle: find the listed words; each tile counts its uses left and vanishes at zero.
-- A brighter Arcade look in light and dark; six boards redrawn, the rest to follow.
-- New chiptune sounds, and a win lands with a thump.
-- Mines goes off with a blast; in Arrows a blocked arrow lunges and recoils.
-- Sudoku and Cage Sudoku: pick the digit first, then tap every square it goes in.
+Dwindle: tiles now join by their sides, not corners, and boards are picked for far fewer stray words, so the goal words come sooner. Hints give away the answer much less often too.
+Word Wheel: boards are picked to have fewer bonus words.
+Hexwords: Standard's target is a little lower.
+Dwindle's bonus words now open as a list, as Word Wheel's do.
+Web: the app fills the screen after rotating a tablet, and the walkthrough's text no longer overlaps.

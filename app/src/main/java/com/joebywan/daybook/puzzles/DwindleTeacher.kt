@@ -52,18 +52,18 @@ internal object DwindleTeacher {
     class Candidate(val word: String, val cells: List<Int>)
 
     /** The words that can still be goals, by length then list order. Nothing here can see the goals. */
-    fun candidates(width: Int, height: Int, letters: String, counts: IntArray, openLengths: List<Int>, tried: List<String>): List<Candidate> =
+    fun candidates(width: Int, height: Int, letters: String, counts: IntArray, openLengths: List<Int>, tried: List<String>, diagonal: Boolean = false): List<Candidate> =
         openLengths.distinct().sorted().flatMap { n ->
             WheelWords.grid(n).mapNotNull { w ->
                 if (w in tried || !WheelWords.spellable(w, letters)) return@mapNotNull null
-                val v = DwindleLogic.ways(letters, width, height, w)
+                val v = DwindleLogic.ways(letters, width, height, w, diagonal = diagonal)
                 if (v is Verdict.ExactlyOne && v.value.all { counts[it] > 0 }) Candidate(w, v.value) else null
             }
         }
 
     /** A forced word from visible facts only: no parameter through which a goal could arrive except the dashes' lengths. */
-    fun deduce(width: Int, height: Int, letters: String, counts: IntArray, openLengths: List<Int>, tried: List<String>): Step? {
-        val all = candidates(width, height, letters, counts, openLengths, tried)
+    fun deduce(width: Int, height: Int, letters: String, counts: IntArray, openLengths: List<Int>, tried: List<String>, diagonal: Boolean = false): Step? {
+        val all = candidates(width, height, letters, counts, openLengths, tried, diagonal)
         for (t in counts.indices) {
             val c = counts[t]
             if (c == 0) continue
@@ -174,7 +174,7 @@ internal object DwindleTeacher {
         val open = s.goals.filter { it.word !in s.found }
         val tried = s.found + s.bonus
         val lengths = open.map { it.word.length }
-        val step = deduce(s.width, s.height, s.letters, counts, lengths, tried) ?: clue(s, counts, open, lengths, tried)
+        val step = deduce(s.width, s.height, s.letters, counts, lengths, tried, s.diagonal) ?: clue(s, counts, open, lengths, tried)
         // A length step names dashes; only the state knows which of them are open.
         return if (step.technique != LENGTH) step else Step(
             step.technique, step.word, step.nudge, step.explanation,
@@ -184,7 +184,7 @@ internal object DwindleTeacher {
 
     /** Nothing is forced: the tile with the fewest words to spare, with a goal through it given by its clue. Reads a stored goal. */
     private fun clue(s: DwindleState, counts: IntArray, open: List<DwindleGoal>, lengths: List<Int>, tried: List<String>): Step {
-        val all = candidates(s.width, s.height, s.letters, counts, lengths, tried)
+        val all = candidates(s.width, s.height, s.letters, counts, lengths, tried, s.diagonal)
         val tile = counts.indices.filter { counts[it] > 0 }.minBy { t -> all.count { t in it.cells } - counts[t] }
         val word = open.first { tile in it.cells }.word
         val n = all.count { tile in it.cells }
