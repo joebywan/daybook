@@ -292,7 +292,8 @@ private fun DaybookScreens(
     LaunchedEffect(Unit) { welcome = launchPrefs.needsWelcome { store.hasPlayed() } }
     val (playSound, setPlaySound) = rememberPref(launchPrefs.playSound, true, launchPrefs::setPlaySound)
     // Armed while the switch is on (the web wakes its audio on the first taps); a no-op when off.
-    val tones = rememberTonePlayer(playSound)
+    val player = rememberTonePlayer(playSound)
+    val tones = remember(player) { Tones.oneDaDing(player) }
     val playSolveSound = remember(tones) { { tones(Tones.pick(Tones.Kind.WIN)) } }
     val playDaDing = remember(tones) { { tones(Tones.word()) } }
     val (vibrate, setVibrate) = rememberPref(launchPrefs.vibrate, true, launchPrefs::setVibrate)

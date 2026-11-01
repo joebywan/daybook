@@ -22,6 +22,25 @@ import kotlin.math.sqrt
 class TonesTest {
     private val rate = Tones.SAMPLE_RATE
 
+    @Test
+    fun `a hinted word is one da-ding, and only the da-ding is held back`() {
+        val played = mutableListOf<Int>()
+        var now = 0L
+        val tones = Tones.oneDaDing(played::add) { now }
+        val letter = Tones.wheel(0)
+
+        tones(Tones.word()) // the very first one is not swallowed
+        now = 16
+        tones(Tones.word()) // the same move's other confirmation
+        tones(letter)
+        tones(letter)
+        assertEquals(listOf(Tones.word(), letter, letter), played)
+
+        now = Tones.DA_DING_GAP_MS
+        tones(Tones.word()) // the next word
+        assertEquals(listOf(Tones.word(), letter, letter, Tones.word()), played)
+    }
+
     // Bank entries of a kind, from the same public index pick() draws from: every index it can return, found by asking.
     private fun of(kind: Tones.Kind): List<Int> = (1..400).mapTo(HashSet()) { Tones.pick(kind) }.sorted()
     private fun hz(s: FloatArray): Double {
