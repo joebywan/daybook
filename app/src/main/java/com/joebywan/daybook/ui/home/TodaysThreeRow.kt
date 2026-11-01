@@ -112,7 +112,7 @@ private fun ThreeChip(
         .then(if (enabled) Modifier.arcadeLift(tile, 14.dp) else Modifier)
         .clip(shape)
         .background(tile.brush)
-        .then(if (solved) Modifier.border(SOLVED_RING, tile.ink, shape) else Modifier)
+        .then(if (solved) Modifier.border(SOLVED_RING, scheme.onBackground, shape) else Modifier)
         .then(if (next) Modifier.sparkleFrame(14.dp) else Modifier)
         .clickable(enabled = enabled, onClick = onClick)
         .padding(6.dp)

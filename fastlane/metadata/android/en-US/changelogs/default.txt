@@ -5,4 +5,4 @@
 - Solved dailies reopen on your result, share card and next choices.
 - Hexwords: lower Standard target; says when it's out of reach.
 - Sudoku and Cage Sudoku: pick the digit, then tap its squares.
-- Web: fills the screen after rotating.
+- Home: solved tiers get a tick and a clearer border.
