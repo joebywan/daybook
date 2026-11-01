@@ -60,7 +60,9 @@ import com.joebywan.daybook.ui.LocalBoardTones
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlin.math.sqrt
 
 /**
@@ -197,10 +199,12 @@ object Hexwords : PuzzleType {
 
     private val LINE = 22.dp
     private val PILL = 40.dp
+    private const val LOST_MILLIS = 1000L
 
-    private fun headerOf(s: HexwordsState, stuck: Boolean): String = when {
+    private fun headerOf(s: HexwordsState, stuck: Boolean, lost: Boolean): String = when {
         s.solved -> "${s.score} points. Target reached"
         stuck -> "No words left. Undo one, or start over"
+        lost -> "Out of reach. Undo a word, or start over"
         else -> "${s.left} points to go · ${s.score} of ${s.target}"
     }
 
@@ -230,6 +234,16 @@ object Hexwords : PuzzleType {
         var typed by remember(s.letters) { mutableStateOf("") }
         var trace by remember(s.letters) { mutableIntStateOf(0) }
         var finger by remember { mutableStateOf<Offset?>(null) }
+        // "Out of reach" is derived by a search, so it is computed off the main thread and shown a second late (Chess's pattern).
+        var lostShown by remember { mutableStateOf(false) }
+        LaunchedEffect(s.letters, free, s.target) {
+            lostShown = false
+            val lost = withContext(Dispatchers.Default) { HexLogic.targetLost(s) }
+            if (lost) {
+                delay(LOST_MILLIS)
+                lostShown = true
+            }
+        }
         var notice by remember { mutableStateOf<String?>(null) }
         LaunchedEffect(notice) {
             if (notice != null) {
@@ -298,9 +312,9 @@ object Hexwords : PuzzleType {
         ) {
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    notice ?: headerOf(s, stuck),
+                    notice ?: headerOf(s, stuck, lostShown),
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (notice != null || (stuck && !s.solved)) scheme.error else scheme.onSurfaceVariant,
+                    color = if (notice != null || ((stuck || lostShown) && !s.solved)) scheme.error else scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

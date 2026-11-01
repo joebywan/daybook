@@ -195,6 +195,14 @@ internal object HexLogic {
     val gridWords: List<String> by lazy { (MIN_WORD..MAX_WORD).flatMap { WheelWords.grid(it) } }
     val acceptedWords: List<String> by lazy { gridWords + WordWheelWords.BONUS.filter { it.length in MIN_WORD..MAX_WORD } }
 
+    /** Proved that no accepted words can make up the points still needed. A search out of budget proves nothing, so it says false. */
+    fun targetLost(s: HexwordsState): Boolean {
+        if (s.solved) return false
+        val free = s.free
+        val roads = roads(s.letters, neighbours(s.rows), free, acceptedWords)
+        return HexSearch(roads, s.letters.length, HexwordsTeacher.BUDGET).reach(free, s.left) == HexReach.No
+    }
+
     fun isWord(word: String): Boolean = word.length in MIN_WORD..MAX_WORD && WheelWords.isWord(word)
 
     /** A tier: the block's rows, the longest planted word, and which simple player the target sets out to beat. */

@@ -48,8 +48,9 @@ letters.
   highlight is the first hex alone.
 - **A mistake** is a position `No` from every accepted word (the PR #15 rule). The step names the earliest word after which that was so,
   and Show me puts it back, with the words after it.
-- **The board never says a target is lost.** Working that out is the game. It says only when no word at all is left, which the player
-  could see; a hint says the rest. Undo and Restart are the way back.
+- **The board says when the target is lost** (the owner, 2026-11-01, reversing "working that out is the game"): once `HexLogic.targetLost`
+  proves `No` from every accepted word, the header line says "Out of reach. Undo a word, or start over" in red, a second late, in room
+  always kept. `Truncated` says nothing. The search runs off the main thread after each word.
 
 ## Measured
 

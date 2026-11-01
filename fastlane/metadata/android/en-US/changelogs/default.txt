@@ -1,6 +1,6 @@
-- Dwindle: tiles join by their sides only, with far fewer stray words before the goals. Its bonus words open as a list.
+- Dwindle: tiles join by their sides only, with far fewer stray words. Bonus words open as a list.
 - Word Wheel: fewer bonus words.
 - Word Wheel, Dwindle, Hexwords: letters beep up a scale, found words da-ding. So do hints and walkthroughs.
-- Hexwords: Standard's target is a little lower.
+- Hexwords: lower Standard target; says when the target is out of reach.
 - Sudoku and Cage Sudoku: pick the digit first, then tap every square it goes in.
 - Web: fills the screen after rotating a tablet; walkthrough text no longer overlaps.
