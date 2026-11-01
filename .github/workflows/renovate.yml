@@ -34,7 +34,7 @@ jobs:
       # themselves and that step finds nothing to do.
       # This action publishes only full version tags; a bare major like `@v41` does not resolve,
       # and every run failed at "Set up job" until it was pinned exactly. Renovate bumps it.
-      - uses: renovatebot/github-action@6d26fcf0275dc65624cbc3d51fe78bc773f98321 # v46.3.6
+      - uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
         with:
           token: ${{ secrets.RENOVATE_TOKEN || github.token }}
         env:
