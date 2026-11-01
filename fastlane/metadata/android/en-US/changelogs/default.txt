@@ -1,6 +1,6 @@
 - Dwindle: tiles join by their sides only.
 - Word games: fewer bonus words; fast swipes skip no letters.
-- Word games: letters beep up a scale, found words da-ding.
+- Letters and finished rows climb on the marimba; found words da-ding.
 - The marimba chime is back when you finish, growing with bigger wins.
 - Solved dailies reopen on your result, share card and next choices.
 - Hexwords: lower Standard target; says when it's out of reach.

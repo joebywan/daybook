@@ -13,7 +13,7 @@ import kotlin.time.TimeSource
 
 /**
  * Every sound the game makes, synthesised (no audio files), rendered once and kept, so a play is instant: a win is a marimba
- * chime that grows with the show, everything else an old handheld's pulse wave with volume in sixteen hard steps. A tone is an index into the bank
+ * chime that grows with the show, a progression (letters, finished units) climbs on the same marimba, and the da-ding is an old handheld's pulse wave with volume in sixteen hard steps. A tone is an index into the bank
  * (`0 until COUNT`), which is what `rememberTonePlayer` in the platform seam plays. Pure apart from [pick], whose `Random` is the
  * default one: never a generator's `Rng`, so sound cannot move a board. Android and the web play identical samples.
  */
@@ -87,13 +87,9 @@ object Tones {
         var n = i
         val kind = Kind.entries.first { k -> (n < k.count).also { if (!it) n -= k.count } }
         return when (kind) {
-            Kind.STEP -> Chip(0.15).apply {
-                // One pitch, wide then thin, sliding up a hair, on a note of the phrase.
-                pulse(0.0, 0.04, PHRASE[n], 0.5, rms = 0.09, every = 0.02)
-                pulse(0.04, 0.11, PHRASE[n], 0.25, rms = 0.1, every = 0.008, sweep = 6.0)
-            }
-            // A plain beep, faded right out by its end.
-            Kind.WHEEL -> Chip(0.085).apply { pulse(0.0, 0.085, SCALE[n], 0.5, rms = 0.065, every = 0.0056) }
+            Kind.STEP -> return Marimba.pluck(hz(PHRASE[n].toDouble()), 0.15)
+            // Quieter than the phrase: a word has many letters, and they come quickly.
+            Kind.WHEEL -> return Marimba.pluck(hz(SCALE[n].toDouble()), 0.12)
             // Da-ding: up a fifth, the second note thin and ringing.
             Kind.WORD -> Chip(0.34).apply {
                 pulse(0.0, 0.07, C6, 0.5, rms = 0.08, every = 0.012)
@@ -131,7 +127,7 @@ object Tones {
 
     private fun hz(note: Double): Double = 440.0 * 2.0.pow((note - 69) / 12)
 
-    /** A win: plucked bars, a fundamental plus a partial at four times it, both decaying, the upper about three times faster. */
+    /** A win or a progression's note: plucked bars, a fundamental plus a partial at four times it, both decaying, the upper about three times faster. */
     private object Marimba {
         const val LENGTH = 35_720
         const val C5 = 523.25
@@ -142,6 +138,7 @@ object Tones {
         const val G6 = 1567.98
         const val C7 = 2093.00
 
+        private const val PLUCK = 0.4
         private const val DECAY = 7.05
         private const val UPPER_DECAY = 22.0
         private const val ATTACK = 0.002
@@ -150,6 +147,10 @@ object Tones {
         class Note(val freq: Double, val start: Double, val length: Double, val gain: Double)
 
         fun chime(pitch: Double): List<Note> = listOf(Note(G5 * pitch, 0.0, 0.50, 0.218), Note(C6 * pitch, 0.11, 0.61, 0.184))
+
+        /** One bar struck, for a progression. */
+        fun pluck(freq: Double, gain: Double): FloatArray =
+            render(listOf(Note(freq, 0.0, PLUCK, gain)), (PLUCK * SAMPLE_RATE).toInt(), UPPER[0])
 
         fun render(notes: List<Note>, length: Int, upper: Double): FloatArray {
             val out = FloatArray(length)
@@ -184,14 +185,14 @@ object Tones {
         }
 
         /**
-         * [note], [sweep] semitones a second. High [duty] of the time, low the rest, with no DC,
+         * [note]. High [duty] of the time, low the rest, with no DC,
          * so a note starting or a volume step is no thump. Averaged over [OVERSAMPLE] so high notes do not alias into wrong pitches.
          */
-        fun pulse(at: Double, seconds: Double, note: Int, duty: Double, rms: Double, every: Double, sweep: Double = 0.0) {
+        fun pulse(at: Double, seconds: Double, note: Int, duty: Double, rms: Double, every: Double) {
             val span = rms / sqrt(duty * (1 - duty))
             var phase = 0.0
+            val step = hz(note.toDouble()) / SAMPLE_RATE / OVERSAMPLE
             voice(at, seconds) { u, _ ->
-                val step = hz(note + sweep * u) / SAMPLE_RATE / OVERSAMPLE
                 var sum = 0.0
                 repeat(OVERSAMPLE) {
                     phase = (phase + step) % 1.0
