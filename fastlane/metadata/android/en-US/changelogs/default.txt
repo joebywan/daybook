@@ -1,5 +1,5 @@
-Dwindle: tiles now join by their sides, not corners, and boards are picked for far fewer stray words, so the goal words come sooner. Hints give away the answer much less often too.
-Word Wheel: boards are picked to have fewer bonus words.
-Hexwords: Standard's target is a little lower.
-Dwindle's bonus words now open as a list, as Word Wheel's do.
-Web: the app fills the screen after rotating a tablet, and the walkthrough's text no longer overlaps.
+- Dwindle: tiles join by their sides only, with far fewer stray words before the goals. Its bonus words open as a list.
+- Word Wheel: fewer bonus words; letters beep up a tighter scale, and a found word ends on a da-ding.
+- Hexwords: Standard's target is a little lower.
+- Sudoku and Cage Sudoku: pick the digit first, then tap every square it goes in.
+- Web: fills the screen after rotating a tablet; walkthrough text no longer overlaps.

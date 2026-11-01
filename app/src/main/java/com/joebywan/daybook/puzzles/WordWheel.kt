@@ -259,7 +259,7 @@ object WordWheel : PuzzleType {
 
         // A found word's squares settle, and the glow runs along it.
         val units = remember(s.wheel) { s.slots.map { it.cells(s.width).toIntArray() } }
-        val feel = rememberMoveFeel(s.shown().toList(), units) { s.slots[it].word in s.found }
+        val feel = rememberMoveFeel(s.shown().toList(), units, { Tones.word() }) { s.slots[it].word in s.found }
 
         // The word being spelled (wheel positions) and the finger, transient: never PuzzleState, so a refused word costs nothing.
         var picked by remember(s.wheel) { mutableStateOf(listOf<Int>()) }

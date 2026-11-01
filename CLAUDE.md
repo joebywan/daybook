@@ -872,7 +872,7 @@ The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings 
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
 Sound is a bank of pre-rendered chiptune tones (`core/Tones.kt`: pulse, triangle and noise voices, synthesised, no audio files), played by `rememberTonePlayer` in
 the seam (Android `SoundPool`, web Web Audio): ordinary moves are silent (the haptic stays), a unit's note climbs the board's phrase from `rememberMoveFeel` (`Tones.phraseStep`, derived from the units done), Word
-Wheel's rising scale, a win by the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones`, so a walkthrough or
+Wheel's rising beeps and found-word da-ding, a win by the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones`, so a walkthrough or
 a practice is silent; a variant is drawn from `kotlin.random`, never `Rng`. `docs/REWARDS.md` (Sounds). A win thumps, it never wobbles (a 50 ms freeze, then the whole board drops and rebounds with the fanfare and a heavy haptic on one
 frame, `PlayScreen`, from a solving move only); mistakes are small and sideways or a piece's own recoil (Mines' blast, Arrows' lunge). The top show (`Praise.allTiers`, all three tiers of a puzzle on a date) is derived from completions.
 A move's feel (the changed squares settle, a unit finished by the rules glows and pops once) is `ui/MoveFeel.kt`'s
