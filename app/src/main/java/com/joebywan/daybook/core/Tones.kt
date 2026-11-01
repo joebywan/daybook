@@ -14,8 +14,8 @@ import kotlin.random.Random
  * default one: never a generator's `Rng`, so sound cannot move a board. Android and the web play identical samples.
  */
 object Tones {
-    /** Each kind's size is its variants, except [WHEEL] and [STEP], whose are the steps of their scales. */
-    enum class Kind(val count: Int) { UNIT(3), STEP(8), WHEEL(7), WIN(3), BIG_WIN(3), ALL_TIERS(3) }
+    /** Each kind's size is its variants, except [WHEEL] and [STEP], whose are the steps of their scales, and [WORD], one sound. */
+    enum class Kind(val count: Int) { UNIT(3), STEP(8), WHEEL(7), WIN(3), BIG_WIN(3), ALL_TIERS(3), WORD(1) }
 
     const val SAMPLE_RATE = 44_100
 
@@ -39,8 +39,8 @@ object Tones {
     private const val B6 = 95
     private const val C7 = 96
 
-    // C major pentatonic: a letter added on the Word Wheel, one step each. Seven letters is the biggest wheel.
-    private val SCALE = intArrayOf(C5, C5 + 2, E5, G5, A5, C6, D6)
+    // C major, C5 to G5: a letter added on the Word Wheel, one step each, holding on G from the fifth. Seven letters is the biggest wheel.
+    private val SCALE = intArrayOf(C5, C5 + 2, E5, E5 + 1, G5, G5, G5)
 
     // The phrase a board's finished units climb: C major pentatonic below the win, whose first note (G5) is this scale's next.
     private val PHRASE = intArrayOf(C4, C4 + 2, C4 + 4, C4 + 7, C4 + 9, C5, C5 + 2, E5)
@@ -59,6 +59,9 @@ object Tones {
 
     /** The Word Wheel's tone for the [step]th letter of a word (0 the first); a word cannot pass the top of the scale. */
     fun wheel(step: Int): Int = index(Kind.WHEEL, step.coerceIn(0, Kind.WHEEL.count - 1))
+
+    /** The Word Wheel's found word: above every letter whatever the word's length, so spelling one never ends on a drop. */
+    fun word(): Int = index(Kind.WORD, 0)
 
     /**
      * Where a board stands in its phrase, from what the rules show alone: [done] of its [total] units finished. The bottom note
@@ -89,7 +92,13 @@ object Tones {
                 pulse(0.0, 0.04, intArrayOf(PHRASE[n]), 0.5, rms = 0.09, every = 0.02)
                 pulse(0.04, 0.11, intArrayOf(PHRASE[n]), 0.25, rms = 0.1, every = 0.008, sweep = 6.0)
             }
-            Kind.WHEEL -> Chip(0.12).apply { pulse(0.0, 0.12, intArrayOf(SCALE[n]), 0.25, rms = 0.075, every = 0.01) }
+            // A plain beep, faded right out by its end.
+            Kind.WHEEL -> Chip(0.085).apply { pulse(0.0, 0.085, intArrayOf(SCALE[n]), 0.5, rms = 0.065, every = 0.0056) }
+            // Da-ding: up a fifth, the second note thin and ringing.
+            Kind.WORD -> Chip(0.34).apply {
+                pulse(0.0, 0.07, intArrayOf(C6), 0.5, rms = 0.08, every = 0.012)
+                pulse(0.07, 0.27, intArrayOf(G6), 0.25, rms = 0.1, every = 0.018)
+            }
             Kind.WIN -> Chip(0.7).apply {
                 rise(n)
                 triangle(0.05, 0.15, G3)

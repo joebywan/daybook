@@ -69,11 +69,12 @@ class TonesTest {
         assertTrue(seconds(Tones.Kind.STEP) <= 0.2)
         assertTrue(loud(Tones.Kind.STEP) < loud(Tones.Kind.WIN))
         assertTrue(loud(Tones.Kind.WHEEL) < loud(Tones.Kind.WIN))
+        assertTrue(loud(Tones.Kind.WORD) < loud(Tones.Kind.WIN))
         assertTrue(loud(Tones.Kind.WIN) <= loud(Tones.Kind.ALL_TIERS))
     }
 
     @Test fun variantsDifferButATierIsOneTune() {
-        for (k in Tones.Kind.entries.filter { it != Tones.Kind.WHEEL && it != Tones.Kind.STEP }) {
+        for (k in Tones.Kind.entries.filter { it != Tones.Kind.WHEEL && it != Tones.Kind.STEP && it != Tones.Kind.WORD }) {
             assertEquals(k.name, 3, of(k).map { Tones.samples(it).toList() }.toSet().size)
         }
         // In each win's first three notes, every variant's strongest note is the same one: G5, C6, E6.
@@ -95,8 +96,8 @@ class TonesTest {
     }
 
     @Test fun aNoteReallyIsAPulseWave() {
-        // In one volume step of a wheel note the samples sit on two values a quarter and three quarters of the time.
-        val note = Tones.samples(Tones.wheel(0)).window(0.002, 0.0095)
+        // In one volume step of the da-ding's ring the samples sit on two values a quarter and three quarters of the time.
+        val note = Tones.samples(Tones.word()).window(0.072, 0.087)
         val high = note.max()
         val low = note.min()
         val atHigh = note.count { abs(it - high) < 0.001f }
@@ -110,7 +111,7 @@ class TonesTest {
     @Test fun volumeFallsInHardSteps() {
         // The note's top level, read every 2 ms over the note: few distinct values, and it holds between them.
         val note = Tones.samples(Tones.wheel(0))
-        val tops = (0 until 50).map { k -> note.window(0.002 + k * 0.002, 0.002 + (k + 1) * 0.002 + 0.002).max() }
+        val tops = (0 until 40).map { k -> note.window(0.002 + k * 0.002, 0.002 + (k + 1) * 0.002 + 0.002).max() }
         val values = tops.map { (it * 2000).toInt() }.distinct()
         assertTrue("${values.size} levels in ${tops.size} readings", values.size in 3..15)
         assertEquals(values, values.sortedDescending())
@@ -130,12 +131,25 @@ class TonesTest {
         assertTrue(movement(all.window(0.63, 0.70)) > 1.5 * movement(all.window(0.50, 0.56)))
     }
 
-    @Test fun theWheelRisesAStepPerLetterAndStopsAtTheTop() {
+    @Test fun theWheelRisesAStepPerLetterThenHolds() {
         val pitches = (0 until Tones.Kind.WHEEL.count).map { hz(Tones.samples(Tones.wheel(it))) }
         assertEquals(pitches, pitches.sorted())
-        assertEquals(pitches.size, pitches.toSet().size)
+        assertEquals(5, pitches.toSet().size)
+        assertEquals(pitches[4], pitches[6], 0.0)
         assertEquals(523.25, pitches[0], 25.0)
         assertEquals(Tones.wheel(6), Tones.wheel(12))
+        assertEquals(noteHz(79), pitches.last(), 25.0)
+    }
+
+    @Test fun aFoundWordRisesAndLandsAboveEveryLetter() {
+        val s = Tones.samples(Tones.word())
+        val top = hz(Tones.samples(Tones.wheel(6)))
+        val candidates = listOf(72, 79, 84, 91, 96).map(::noteHz)
+        val da = candidates.maxByOrNull { strength(s.window(0.005, 0.065), it) }!!
+        val ding = candidates.maxByOrNull { strength(s.window(0.075, 0.2), it) }!!
+        assertEquals(noteHz(84), da, 0.01)
+        assertEquals(noteHz(91), ding, 0.01)
+        assertTrue(da > top)
     }
 
     @Test fun thePhraseRisesToTheWinsFirstNote() {

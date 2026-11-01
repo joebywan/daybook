@@ -216,12 +216,14 @@ internal fun sweepGlow(t: Float, at: Float): Float {
  * stores: compared with `==` to find what a move changed) and whose units are [units] (each the squares of one, in the
  * order the glow should run), [complete] saying whether a unit is finished **by the rules**, never by the stored answer.
  * Only a move fires the settle and the glow: a board loaded, restarted or undone into a finished unit stays quiet. Under
- * reduced motion nothing moves; the unit's tone still plays (sound has its own switch).
+ * reduced motion nothing moves; the unit's tone still plays (sound has its own switch). [unitTone] is that tone for a
+ * [Tones.phraseStep]: the phrase, unless a board's other sounds would make the phrase a step down (Word Wheel).
  */
 @Composable
 fun rememberMoveFeel(
     cells: List<Any?>,
     units: List<IntArray> = emptyList(),
+    unitTone: (Int) -> Int = Tones::step,
     complete: (Int) -> Boolean = { false },
 ): MoveFeel {
     val feel = remember { MoveFeel() }
@@ -230,7 +232,7 @@ fun rememberMoveFeel(
         LocalUndoCount.current, LocalSolveCount.current, LocalBoardArrives.current,
     )
     val tones = LocalBoardTones.current
-    LaunchedEffect(feel.unitRun) { if (feel.unitRun > 0) tones(Tones.step(feel.unitStep)) }
+    LaunchedEffect(feel.unitRun) { if (feel.unitRun > 0) tones(unitTone(feel.unitStep)) }
     // The move that solved stays on its first frame through the win's freeze. No move follows it.
     val hold = if (LocalSolveCount.current > 0) WIN_FREEZE_MS else 0
     Play(feel.settleRun, tween(SETTLE_MS), hold) { feel.settle = it }
