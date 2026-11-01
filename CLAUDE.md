@@ -547,7 +547,9 @@ walkthrough, motif). `id = "hexwords"` is hashed into every seed: never rename i
   is stored, so **`solved` is the score** and no hint can read an answer. Any `WheelWords.isWord` word scores.
 - **Hints:** the biggest common word that keeps the target, by its clue, naming the trap when the biggest word loses it. Fallback only
   when the search runs out of budget (none in a year). Only "Show me" spells a word.
+- **A lost target is said** (`HexLogic.targetLost`: `No` from every accepted word, never `Truncated`): the header line, red, a second late, suggests Undo or starting over.
 - **The word being traced is `remember`; one word is one state.** Saves hold `taken` (word and hexes), so undo needs nothing else.
+- **A swipe walks the way between touch samples** (`swipePoints`, shared with Word Wheel and Dwindle): a slow device reports them tiles apart, and the line crossed hexes it never took.
 - Highlight indices are hexes. `HexGeometry` is the one source of where a hex is; `hit` tests the six sides, `hitCore` (a moving
   finger) only the middle, so sliding past a corner takes neither hex.
 

@@ -393,19 +393,23 @@ object Dwindle : PuzzleType {
                                     val before = picked
                                     var path = listOf(start)
                                     var swiped = false
+                                    var last = down.position
                                     if (before.isEmpty()) picked = path
                                     while (true) {
                                         val event = awaitPointerEvent()
                                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                                         change.consume()
                                         if (!change.pressed) break
-                                        val at = tileAt(change.position.x, change.position.y, side, s.width, s.height, SWIPE_REACH) ?: continue
-                                        val next = DwindleLogic.swipe(latest, latest.counts(), path, at)
-                                        if (next != path) {
-                                            path = next
-                                            if (path.size >= 2) swiped = true
-                                            if (swiped) picked = path
+                                        for (p in swipePoints(last, change.position, side / 8f)) {
+                                            val at = tileAt(p.x, p.y, side, s.width, s.height, SWIPE_REACH) ?: continue
+                                            val next = DwindleLogic.swipe(latest, latest.counts(), path, at)
+                                            if (next != path) {
+                                                path = next
+                                                if (path.size >= 2) swiped = true
+                                                if (swiped) picked = path
+                                            }
                                         }
+                                        last = change.position
                                     }
                                     if (swiped) submit(path) else picked = DwindleLogic.tap(latest, latest.counts(), before, start)
                                 }

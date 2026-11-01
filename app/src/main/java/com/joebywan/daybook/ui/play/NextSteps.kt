@@ -94,15 +94,6 @@ fun mainOption(options: List<NextOption>): NextOption? =
     options.firstOrNull { it.kind == NextKind.LEVEL || it.kind == NextKind.TODAY } ?: options.firstOrNull { it.kind == NextKind.DONE }
 
 /**
- * The one way on that the results pill shows beside Done, once the frame is hidden (as it always is on a solved board
- * reopened): today's next puzzle; else a daily tier still to play, harder first, since the pill has no room for the rest
- * of the frame; else the first option that is not Done (Another on a random board, the next board on a level).
- */
-fun pillOption(options: List<NextOption>): NextOption? =
-    options.firstOrNull { it.kind == NextKind.TODAY } ?: options.lastOrNull { it.kind == NextKind.DAILY }
-        ?: options.firstOrNull { it.kind != NextKind.DONE }
-
-/**
  * The buttons for a solved board of [level]: [plan] is its boards, [solved] the puzzles solved in it, and
  * [justSolved] the board just finished (the store records it a moment after the win). "Next in level N" names
  * the first unsolved board in plan order; once all five are solved it becomes the level to go on with: the one

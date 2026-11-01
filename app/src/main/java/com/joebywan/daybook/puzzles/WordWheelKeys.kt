@@ -1,9 +1,12 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.isEnterKey
 import com.joebywan.daybook.core.isEraseKey
 import com.joebywan.daybook.core.letterKey
+import kotlin.math.ceil
 
 /** What a physical key asks of a Word Wheel board. No state, no focus: that is [wordWheelKeyAction]'s whole job. */
 sealed interface WheelKeyAction {
@@ -55,6 +58,15 @@ fun swipeWheelLetter(path: List<Int>, index: Int): List<Int> = when {
     path.size >= 2 && path[path.size - 2] == index -> path.dropLast(1)
     index in path -> path
     else -> path + index
+}
+
+/**
+ * The points along a finger's move, at most [spacing] apart, ending at [to]. A slow device or a fast swipe can report samples
+ * a whole tile apart, so a swipe asks about the way between them, or the tile the line crossed is never taken.
+ */
+fun swipePoints(from: Offset, to: Offset, spacing: Float): List<Offset> {
+    val steps = maxOf(1, ceil((to - from).getDistance() / spacing).toInt())
+    return List(steps) { lerp(from, to, (it + 1f) / steps) }
 }
 
 /** Which step of the scale a word going from [before] to [after] letters sounds: the new length's; nothing if it did not change or emptied. */

@@ -4,6 +4,8 @@ import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.HexLogic
+import com.joebywan.daybook.puzzles.HexReach
+import com.joebywan.daybook.puzzles.HexSearch
 import com.joebywan.daybook.puzzles.HexTake
 import com.joebywan.daybook.puzzles.Hexwords
 import com.joebywan.daybook.puzzles.HexwordsState
@@ -73,6 +75,7 @@ class HexwordsTeachingTest {
                 val step = HexwordsTeacher.teach(s)!!
                 val can = oracle.best(s.free) >= s.left
                 assertEquals("${s.letters} ${s.taken}", !can, step.technique == HexwordsTeacher.MISTAKE)
+                assertEquals("the board's line: ${s.letters} ${s.taken}", !can, HexLogic.targetLost(s))
                 if (can) fine++ else mistakes++
                 if (!can) {
                     val taken = s.taken
@@ -117,6 +120,31 @@ class HexwordsTeachingTest {
                 s = s.take(step.word, step.path)
             }
         }
+    }
+
+    /** The check runs after every word, so what it costs on the biggest board matters: a random player, then its worst. */
+    @Test
+    fun `the out of reach check is quick, and never runs out of budget`() {
+        val times = ArrayList<Double>()
+        var lost = 0
+        repeat(60) { day ->
+            val rng = Rng(day + 7L)
+            var s = board(day, Difficulty.EXPERT)
+            while (!s.solved) {
+                val roads = HexLogic.roads(s.letters, HexLogic.neighbours(s.rows), s.free, HexLogic.acceptedWords)
+                if (roads.isEmpty()) break
+                val r = roads[rng.nextInt(roads.size)]
+                s = s.take(r.word, r.path.toList())
+                val t0 = System.nanoTime()
+                if (HexLogic.targetLost(s)) lost++
+                times += (System.nanoTime() - t0) / 1e6
+                val verdict = HexSearch(HexLogic.roads(s.letters, HexLogic.neighbours(s.rows), s.free, HexLogic.acceptedWords), s.letters.length, HexwordsTeacher.BUDGET).reach(s.free, s.left)
+                assertFalse("out of budget: ${s.letters} ${s.taken}", !s.solved && verdict == HexReach.Truncated)
+            }
+        }
+        times.sort()
+        println("hex out of reach ms: median ${times[times.size / 2]} p95 ${times[times.size * 95 / 100]} max ${times.last()}; lost $lost of ${times.size}")
+        assertTrue(lost > 0)
     }
 
     @Test
