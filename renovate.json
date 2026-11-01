@@ -10,19 +10,16 @@
   "schedule": ["before 9am on monday"],
   "labels": ["dependencies"],
   "prConcurrentLimit": 5,
-  "minimumReleaseAge": "3 days",
+  "prHourlyLimit": 0,
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "automerge": true,
+  "platformAutomerge": true,
   "packageRules": [
     {
-      "description": "Action bumps are low risk and this repo's releases depend on them staying current. Each is pinned to a commit SHA, and a release has three days to be pulled before it is taken.",
+      "description": "Each action is pinned to a commit SHA.",
       "matchManagers": ["github-actions"],
-      "groupName": "GitHub Actions",
-      "automerge": true
-    },
-    {
-      "description": "A major action release can change what runs with the signing key and the Play account. It waits for a look.",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["major"],
-      "automerge": false
+      "groupName": "GitHub Actions"
     },
     {
       "description": "gradle/actions v6 moved caching into a proprietary component whose Terms of Use you accept by upgrading. Held at v5 (MIT) until the owner decides.",
@@ -51,28 +48,6 @@
         "org.jetbrains.kotlin.plugin.compose"
       ],
       "groupName": "Android Gradle plugin and Kotlin"
-    },
-    {
-      "description": "Patch bumps automerge. Minor and major wait for a look, though they are built by CI too.",
-      "matchUpdateTypes": ["patch"],
-      "automerge": true,
-      "platformAutomerge": true
-    },
-    {
-      "description": "Gradle plugins and the wrapper run inside the build that signs the release, so even a patch waits for a look.",
-      "matchPackageNames": ["/^com\\.android\\./", "/^org\\.jetbrains\\.kotlin[.:]/", "/^org\\.jetbrains\\.compose[.:]/"],
-      "automerge": false
-    },
-    {
-      "description": "Any other Gradle plugin, likewise.",
-      "matchManagers": ["gradle"],
-      "matchDepTypes": ["plugin"],
-      "automerge": false
-    },
-    {
-      "description": "The wrapper is the build's own code. Its distributionSha256Sum must match the new release.",
-      "matchManagers": ["gradle-wrapper"],
-      "automerge": false
     }
   ]
 }

@@ -12,26 +12,26 @@ concurrency:
   group: renovate
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  pull-requests: write
-  actions: write         # to dispatch ci.yml on Renovate's branches
-  checks: read           # to see whether a branch's head commit already has a `build` check
-  statuses: read         # ... or a `build` commit status
-  issues: write          # the Dependency Dashboard is an issue
+permissions: {}   # each job names its own, so the job that runs Gradle holds no write token
 
 jobs:
   renovate:
     runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write          # the Dependency Dashboard is an issue
+      checks: read           # automerge reads the branch's checks
+      statuses: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false   # Renovate takes its token as an input; the dispatch script uses gh
+          persist-credentials: false   # Renovate takes its token as an input
 
       # Self-hosted so this works without installing the Renovate GitHub App. With the default
-      # GITHUB_TOKEN, Renovate's pull requests do not trigger CI; the step below gives them a
+      # GITHUB_TOKEN, Renovate's pull requests do not trigger CI; the `build-prs` job gives them a
       # `build` check by dispatching ci.yml. If RENOVATE_TOKEN (a PAT) is set they trigger CI
-      # themselves and that step finds nothing to do.
+      # themselves and that job finds nothing to do.
       # This action publishes only full version tags; a bare major like `@v41` does not resolve,
       # and every run failed at "Set up job" until it was pinned exactly. Renovate bumps it.
       - uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
@@ -42,12 +42,119 @@ jobs:
           RENOVATE_PLATFORM: github
           LOG_LEVEL: info
 
-      # workflow_dispatch is exempt from the "GITHUB_TOKEN events trigger nothing" rule, and a
-      # check run attaches to a commit SHA, so a dispatched ci.yml run on a Renovate branch
-      # satisfies the `build` check that main's ruleset requires. Runs every time so a branch
-      # Renovate has just rebased (new head SHA) is built again.
+  # Renovate cannot regenerate gradle/verification-metadata.xml here, so a Gradle update fails CI
+  # until it is done. The three jobs below do it. A rebase drops the commit, so it is done again.
+  checksums-needed:
+    needs: renovate
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: read
+    outputs:
+      branches: ${{ steps.find.outputs.branches }}
+    steps:
+      - id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          branches=$(gh pr list --repo "$REPO" --state open --limit 30 \
+            --json headRefName,isCrossRepository,files,commits \
+            --jq '[.[] | select(.isCrossRepository == false and (.headRefName | startswith("renovate/"))
+                    and any(.files[]; .path | test("^gradle/|^gradle\\.properties$|\\.gradle\\.kts$"))
+                    and .commits[-1].messageHeadline != "Regenerate dependency checksums")
+                  | .headRefName]')
+          echo "branches=$branches" >> "$GITHUB_OUTPUT"
+
+  # This runs the new dependency's code, so it can read the repo and nothing else, and hands on
+  # only the one file.
+  checksums-generate:
+    needs: checksums-needed
+    if: ${{ !cancelled() && needs.checksums-needed.outputs.branches != '[]' && needs.checksums-needed.outputs.branches != '' }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJSON(needs.checksums-needed.outputs.branches) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.branch }}
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-build
+
+      - run: ./gradlew --write-verification-metadata sha256 test assembleRelease bundleRelease :app:assembleDebug :web:wasmJsBrowserDistribution
+
+      - run: cp gradle/verification-metadata.xml "checksums-${{ strategy.job-index }}.xml"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: checksums-${{ strategy.job-index }}
+          path: checksums-${{ strategy.job-index }}.xml
+          retention-days: 1
+
+  # Holds the write token and runs nothing from the branch. The same author as Renovate's own
+  # commits, so Renovate does not take the branch for edited by hand and stop rebasing it.
+  checksums-commit:
+    needs: [checksums-needed, checksums-generate]
+    if: ${{ !cancelled() && needs.checksums-needed.outputs.branches != '[]' && needs.checksums-needed.outputs.branches != '' }}
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/checksums
+          merge-multiple: true   # the same flat folder for one artifact or several
+
+      - env:
+          BRANCHES: ${{ needs.checksums-needed.outputs.branches }}
+          CHECKSUMS: ${{ runner.temp }}/checksums
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          i=0
+          for branch in $(jq -r '.[]' <<< "$BRANCHES"); do
+            file="$CHECKSUMS/checksums-$i.xml"
+            i=$((i + 1))
+            [ -f "$file" ] || { echo "::warning::no checksums for $branch"; continue; }
+            git fetch --depth=1 origin "$branch"
+            git switch -C "$branch" FETCH_HEAD
+            cp "$file" gradle/verification-metadata.xml
+            if git diff --quiet; then
+              echo "$branch: checksums already right"
+            else
+              git commit -am 'Regenerate dependency checksums'
+              git push origin "$branch"
+            fi
+          done
+
+  # workflow_dispatch is exempt from the "GITHUB_TOKEN events trigger nothing" rule, and a
+  # check run attaches to a commit SHA, so a dispatched ci.yml run on a Renovate branch
+  # satisfies the `build` check that main's ruleset requires. Runs every time so a branch
+  # Renovate has just rebased, or the job above has just committed to (new head SHA), is built again.
+  build-prs:
+    needs: [renovate, checksums-commit]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: write         # to dispatch ci.yml on Renovate's branches
+      checks: read           # to see whether a branch's head commit already has a `build` check
+      statuses: read         # ... or a `build` commit status
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Build Renovate's pull requests
-        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: tools/dispatch-ci-for-renovate.sh

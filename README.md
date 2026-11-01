@@ -366,8 +366,16 @@ inside for a signature block rather than trusting the filename.
 
 Renovate runs daily from `.github/workflows/renovate.yml`, self-hosted so it needs no GitHub App
 installed. It only *opens* PRs inside `renovate.json`'s `schedule` (before 9am on Monday, Sydney),
-so the other six runs a week just merge what is ready. GitHub Actions bumps and patch bumps
-automerge; minor and major open a PR to look at.
+so the other six runs a week just merge what is ready. A release must be 7 days old before it is
+taken, and every update merges itself, major ones included, once CI is green. A merge ships to Play,
+so CI and the release's save check are the only gate. A failed build stays open on the Dependency
+Dashboard for someone to look at.
+
+Gradle verifies dependencies against `gradle/verification-metadata.xml`, which Renovate cannot
+regenerate here. After it runs, the workflow regenerates the file on each `renovate/*` PR that
+touches Gradle files and commits it. The job that runs Gradle has a read-only token, and the job
+that commits runs nothing from the branch. This trusts whatever checksum the release has by then:
+the 7 days are the protection, and they apply to direct dependencies only, not to new transitive ones.
 
 `main` requires a PR and a passing `build` check, but pull requests made with the default
 `GITHUB_TOKEN` do not trigger other workflows, so CI would never start on Renovate's. The workflow
@@ -379,9 +387,8 @@ dispatched, which is what satisfies the ruleset. A rebased branch has a new comm
 built again; a PR already built is left alone; a failed build is not re-run.
 
 Renovate merges a PR on a later run once `build` is green (daily), or at once if the repository's
-"Allow auto-merge" setting is on, since `platformAutomerge` then hands the merge to GitHub. Minor
-and major PRs get the same build but are merged by hand. A `RENOVATE_TOKEN` PAT (or the Renovate
-App) remains an optional alternative: PRs then trigger CI themselves and the script finds nothing
+"Allow auto-merge" setting is on, since `platformAutomerge` then hands the merge to GitHub. A
+`RENOVATE_TOKEN` PAT (or the Renovate App) remains an optional alternative: PRs then trigger CI themselves and the script finds nothing
 to do.
 
 ## Licence
