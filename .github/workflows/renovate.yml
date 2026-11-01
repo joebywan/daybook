@@ -89,10 +89,12 @@ jobs:
 
       - run: ./gradlew --write-verification-metadata sha256 test assembleRelease bundleRelease :app:assembleDebug :web:wasmJsBrowserDistribution
 
+      - run: cp gradle/verification-metadata.xml "checksums-${{ strategy.job-index }}.xml"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: checksums-${{ strategy.job-index }}
-          path: gradle/verification-metadata.xml
+          path: checksums-${{ strategy.job-index }}.xml
           retention-days: 1
 
   # Holds the write token and runs nothing from the branch. The same author as Renovate's own
@@ -109,6 +111,7 @@ jobs:
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: ${{ runner.temp }}/checksums
+          merge-multiple: true   # the same flat folder for one artifact or several
 
       - env:
           BRANCHES: ${{ needs.checksums-needed.outputs.branches }}
@@ -118,7 +121,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           i=0
           for branch in $(jq -r '.[]' <<< "$BRANCHES"); do
-            file="$CHECKSUMS/checksums-$i/verification-metadata.xml"
+            file="$CHECKSUMS/checksums-$i.xml"
             i=$((i + 1))
             [ -f "$file" ] || { echo "::warning::no checksums for $branch"; continue; }
             git fetch --depth=1 origin "$branch"
