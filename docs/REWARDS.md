@@ -338,7 +338,7 @@ triangle bass, 15-bit LFSR noise, volume in sixteen hard steps, fast arpeggios a
 once, no audio files. A voice's level is its RMS, because a square wave is much louder than a plucked sine of the same peak;
 pulses carry no DC, so a note starting or a volume step is no thump; a millisecond's fade at each end of a tone stops a click.
 The Sound switch silences all of them, and on Android so does the ringer on silent or vibrate; reduced motion stills nothing here,
-since sound is not motion. Each kind but the wheel and the phrase has three variants (a different pitch, or for a win the same tune on a different
+since sound is not motion. Each kind but the wheel, the phrase and the found word has three variants (a different pitch, or for a win the same tune on a different
 pulse width with the landing chord broken a different way), one drawn per play from `kotlin.random.Random`, never a generator's `Rng`.
 
 - **An ordinary move is silent** (the owner, 2026-10-31: the beeps wore thin); the haptic stays.
@@ -349,8 +349,10 @@ pulse width with the landing chord broken a different way), one drawn per play f
   holds at the top rather than leave the scale, and an undo or a move that breaks a unit steps back down. A board with no units has no phrase.
   Never on load, undo, restart, or the solving move (the win has that), and it plays under reduced motion, unlike the glow and the pop.
 - **Confirmation:** the coin (`Kind.UNIT`, three variants, off the phrase): a hint's move made by the player and a walkthrough's step (`LocalChime`).
-- **Word Wheel:** each letter added rises a step of C major pentatonic (`Tones.wheel`), each taken back falls one; the state is the
-  board's own `remember`. A word tried or cleared is silent.
+- **Word Wheel:** each letter added beeps a step up C major, C5 to G5, holding on G from the fifth (`Tones.wheel`), each taken back falls one; the state is the
+  board's own `remember`. A refused or cleared word is silent. A found word is a da-ding, C6 to G6 (`Tones.word`, through `rememberMoveFeel`'s
+  `unitTone`), not the phrase, whose top is E5: under the letters, it made every found word a drop and sound like a mistake (the owner, 2026-11-01).
+  The word that solves the board plays the win.
 - **Win** (`Praise.winKind`): every win opens G5 C6 E6 on a kick, a triangle falling fast from D3 under a click of noise, for the thump. On a light flourish it lands on an arpeggiated C major (0.7 s); on a full show it
   runs on up G6 E6 G6 A6 first (1.1 s); on all three tiers on through B6 to C7, with a pulse harmony, landing on a noise crash, the
   bass ringing on last (1.5 s). Training's right answer and pass play the plain win (`LocalChime`).

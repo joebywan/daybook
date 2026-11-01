@@ -122,7 +122,7 @@ internal fun SudokuGridBoard(
     complete: (Int) -> Boolean = { s.cells.holdsOneToNine(SUDOKU_UNITS[it]) },
     overlay: @Composable BoxScope.(cell: Dp) -> Unit = {},
 ) {
-    val feel = rememberMoveFeel(s.cells, units, complete)
+    val feel = rememberMoveFeel(s.cells, units, complete = complete)
     val a = ArcadeBoard.current
     val dark = BoardHues.isDark(MaterialTheme.colorScheme)
     val boxShade = a.boxShade()
