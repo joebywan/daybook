@@ -30,6 +30,7 @@ import com.joebywan.daybook.puzzles.PearlsState
 import com.joebywan.daybook.puzzles.WhosWhoState
 import com.joebywan.daybook.puzzles.TargetOp
 import com.joebywan.daybook.puzzles.TargetState
+import com.joebywan.daybook.puzzles.DwindleState
 import com.joebywan.daybook.puzzles.WordWheelState
 import com.joebywan.daybook.puzzles.SandState
 import com.joebywan.daybook.puzzles.TentsState
@@ -119,6 +120,7 @@ class StateSerializationTest {
      * [PuzzleState] is sealed, so a new puzzle cannot be added without landing here.
      */
     internal fun mutate(state: PuzzleState): PuzzleState = when (state) {
+        is com.joebywan.daybook.puzzles.HexwordsState -> state.take(state.letters.take(3), listOf(0, 1, 2))
         is AtomsState -> state.pairs.indices.take(2).fold(state) { acc, i -> acc.cycle(i) }
         is CageState -> {
             val cell = state.grid.givens.indexOfFirst { !it }
@@ -140,6 +142,7 @@ class StateSerializationTest {
         is DominoState -> DominoLogic.flip(DominoLogic.place(DominoLogic.place(state, 0, state.answer[0]), 1, state.answer[1]), 1)
         is TargetState -> state.combine(0, TargetOp.Add, 1)!!
         is WordWheelState -> state.enter(state.slots[1].word)
+        is DwindleState -> state.enter(state.goals[1].word)
         is SandState -> state.pour(0, state.tubes.size - 1)!!
         is TentsState -> state.withMark(state.trees.indexOfFirst { !it }, 1)
         is KingsState -> state.toggleMark(0).toggleKing(1)

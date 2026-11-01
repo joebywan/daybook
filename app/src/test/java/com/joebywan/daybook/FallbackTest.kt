@@ -37,6 +37,8 @@ import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.MinesLogic
 import com.joebywan.daybook.puzzles.Mines
+import com.joebywan.daybook.puzzles.Dwindle
+import com.joebywan.daybook.puzzles.DwindleLogic
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.WordWheelLogic
 import com.joebywan.daybook.puzzles.Tents
@@ -172,9 +174,18 @@ class FallbackTest {
     @Test
     fun `mini proves every daily board of a year on every tier`() = assertYearProved(Mini) { seed, d -> MiniLogic.generateVerified(seed, d) }
 
+    /** [com.joebywan.daybook.puzzles.HexLogic.generateVerified] returns a board only when the exact search says common words reach its target. */
+    @Test
+    fun `hexwords proves every daily board of a year on every tier`() =
+        assertYearProved(com.joebywan.daybook.puzzles.Hexwords) { seed, d -> com.joebywan.daybook.puzzles.HexLogic.generateVerified(seed, d) }
+
     /** [WordWheelLogic.generateVerified] returns a board only when it was laid to the tier's size and hints leave a small choice at every step. */
     @Test
     fun `wordwheel proves every daily board of a year on every tier`() = assertYearProved(WordWheel) { seed, d -> WordWheelLogic.generateVerified(seed, d) }
+
+    /** [DwindleLogic.generateVerified] returns a board only when it has its tier's words and sharing and every goal has exactly one way, so no order can get stuck. */
+    @Test
+    fun `dwindle proves every daily board of a year on every tier`() = assertYearProved(Dwindle) { seed, d -> DwindleLogic.generateVerified(seed, d) }
 
     /** [SandLogic.generateVerified] returns a board only when the search found a sorting road and the naive player does not always sort it. */
     @Test

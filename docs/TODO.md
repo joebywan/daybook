@@ -198,6 +198,9 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 
 ## Future puzzle candidates
 
+- **Dwindle's marked-letter daily scoring mode.** The player's game also has a daily mode scored on letters marked on the board. Left out of the first
+  build on instruction. A score is new state on `DwindleState` (defaulted, so saves load) and a new share-card line; the board itself would not change.
+
 Ideas for further puzzles, none started. Any new puzzle follows `docs/PUZZLE_STANDARDS.md` (three
 tiers, proved or deliberately-unproved boards, a teacher, a walkthrough, parity pins, tests).
 
@@ -286,6 +289,7 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
 (`MosaicDrill`); the other puzzles' courses are classified and batched in `docs/TRAINING_SPEC.md`.
 
 ## Owner's call
+
 
 - **Web address.** The web version is served at `knowhowit.com.au/daybook/`, a path on the owner's
   existing domain. That works, and nothing needs doing unless it matters. The one thing to know: a

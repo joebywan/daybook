@@ -42,6 +42,7 @@ import com.joebywan.daybook.puzzles.WhosWhoTeacher
 import com.joebywan.daybook.puzzles.TargetTeacher
 import com.joebywan.daybook.puzzles.TentsTeacher
 import com.joebywan.daybook.puzzles.TowerTeacher
+import com.joebywan.daybook.puzzles.DwindleTeacher
 import com.joebywan.daybook.puzzles.WordWheelTeacher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -57,12 +58,13 @@ class TechniqueNamesTest {
         "tower" to TowerTeacher.TECHNIQUES, "words" to LexiconTeacher.TECHNIQUES, "nonogram" to NonogramTeacher.TECHNIQUES,
         "inequality" to InequalityTeacher.TECHNIQUES, "chess" to ChessTeacher.TECHNIQUES, "tents" to TentsTeacher.TECHNIQUES,
         "regions" to RegionsTeacher.TECHNIQUES, "cages" to CageTeacher.TECHNIQUES, "target" to TargetTeacher.TECHNIQUES,
-        "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
+        "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "dwindle" to DwindleTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
         "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
         "whoswho" to WhosWhoTeacher.TECHNIQUES,
         "mini" to MiniTeacher.TECHNIQUES,
+        "hexwords" to com.joebywan.daybook.puzzles.HexwordsTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 

@@ -13,7 +13,7 @@ No ads. No subscription. No accounts. No network permission in the manifest at a
 
 | Every puzzle, every day | Sudoku | Cage Sudoku | Word Wheel |
 |---|---|---|---|
-| ![The home screen on day one: the Daily/Random, Levels and Training row over the tier row, today's three and the grid of all 31 puzzles, the first twelve in view, Crossword and Mines among them](docs/screenshots/home.png) | ![A Sudoku board with a hint open, offering to practise its technique](docs/screenshots/sudoku.png) | ![A Hard Cage Sudoku board with a hint open](docs/screenshots/cage-sudoku.png) | ![A Word Wheel board](docs/screenshots/word-wheel.png) |
+| ![The home screen on day one: the Daily/Random, Levels and Training row over the tier row, today's three and the grid of all 33 puzzles, the first twelve in view, Crossword and Mines among them](docs/screenshots/home.png) | ![A Sudoku board with a hint open, offering to practise its technique](docs/screenshots/sudoku.png) | ![A Hard Cage Sudoku board with a hint open](docs/screenshots/cage-sudoku.png) | ![A Word Wheel board](docs/screenshots/word-wheel.png) |
 
 ![On a tablet the board sits beside the title, hints and tools: a Cage Sudoku with a hint open](docs/screenshots/tablet-cage-sudoku.png)
 
@@ -79,6 +79,8 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Target | Number-target arithmetic | Combine six numbers with + − × ÷ (whole numbers only) until a tile equals the target |
 | Cipher | Cryptarithm (alphametic) | A sum of real words in which each letter stands for one digit: find the digits that make it true |
 | Word Wheel | Letter-wheel crossword | Spell words from a wheel of letters to fill a small crossword; other real words count as bonus words |
+| Hexwords | Letter-spending | Spell words through touching hexes to reach a target score; a word's letters are used up, so which word to take first matters |
+| Dwindle | Vanishing letter grid | Find every listed word by swiping through touching tiles; each tile counts its uses left and vanishes at zero |
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
 | Arrows | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
@@ -155,6 +157,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   [Lichess puzzle database](https://database.lichess.org/#puzzles) (CC0). `tools/chess/build.py` keeps only those with
   exactly one key move and a shortest forced mate of exactly N, checked with python-chess; the tests re-prove the shipped
   lists with the app's own engine and an independent naive minimax.
+- **Hexwords** — words planted over the block seed its letters and are then forgotten. An exact search proves common words alone can
+  reach the target, and an independent checker re-reads every board's words and best score; no answer is stored.
+- **Dwindle** — every goal word has exactly one way across the full grid, proved by an exhaustive count. Tiles never fall, so finding
+  words only removes ways: no order can get stuck, and an independent checker walks every subset of found goals to confirm it.
 - **Word Wheel** — the wheel is an index into a fixed sorted list of well-known words (the same SCOWL screening as
   Lexicon), and its crossword is laid from the words it spells. A board ships only if, solving it from the hints alone,
   no slot ever has more than six words that fit it; an independent checker re-reads every row and column of the

@@ -30,6 +30,8 @@ import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
 import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.Hexwords
+import com.joebywan.daybook.puzzles.Dwindle
 import com.joebywan.daybook.puzzles.WordWheel
 
 /**
@@ -72,6 +74,8 @@ object PuzzleRegistry {
         Pearls,
         WhosWho,
         Mini,
+        Hexwords,
+        Dwindle,
     )
 
     fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }

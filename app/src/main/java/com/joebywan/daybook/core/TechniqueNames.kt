@@ -154,6 +154,18 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "columns-together" to "every column worked through together",
         "pair-what-if" to "a what-if on two columns",
     ),
+    "hexwords" to linkedMapOf(
+        "biggest" to "the biggest word that keeps the target",
+        "hold-back" to "holding back a costly word",
+        "rare" to "a less common word that saves the target",
+        "unchecked" to "the biggest word left",
+    ),
+    "dwindle" to linkedMapOf(
+        "clue" to "a word from its clue",
+        "through" to "a tile only so many words reach",
+        "length" to "a length only so many words fit",
+        "all-tiles" to "every tile's number taken together",
+    ),
     "wordwheel" to linkedMapOf(
         "clue" to "a word from its clue",
         "pinned" to "a slot only one word fits",
@@ -242,6 +254,8 @@ private val NOT_PRAISED: Map<String, Set<String>> = mapOf(
     "words" to setOf("opener", "submit", "best-guess", "only-word-left"),
     "target" to setOf("step", "finish"),
     "wordwheel" to setOf("clue"),
+    "hexwords" to setOf("unchecked"),
+    "dwindle" to setOf("clue"),
     "mini" to setOf("clue"),
     "sand" to setOf("finish"),
 )

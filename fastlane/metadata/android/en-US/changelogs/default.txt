@@ -1,4 +1,5 @@
-- A brighter new look: Arcade colours in light and dark, with vivid tiles on Home.
-- Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents and Word Wheel are redrawn to match; the other boards will follow.
-- New chiptune sounds. Ordinary moves are quiet now, finishing a row or box climbs a scale, and a win lands with a thump.
+- Two new word puzzles. Hexwords: spell words through touching hexes, each word uses its letters up, reach the target. Dwindle: find the listed words; each tile counts its uses left and vanishes at zero.
+- A brighter Arcade look in light and dark; six boards redrawn, the rest to follow.
+- New chiptune sounds, and a win lands with a thump.
 - Mines goes off with a blast; in Arrows a blocked arrow lunges and recoils.
+- Sudoku and Cage Sudoku: pick the digit first, then tap every square it goes in.

@@ -15,6 +15,7 @@ import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.SetsState
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.TowerState
+import com.joebywan.daybook.puzzles.DwindleState
 import com.joebywan.daybook.puzzles.WordWheelState
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
@@ -249,7 +250,7 @@ fun shareCard(
         lines = lines,
         stats = clock +
             (if (hints > 0) " · ${plural(hints, "hint")}" else "") +
-            (if (state is WordWheelState && state.bonus.isNotEmpty()) " · +${plural(state.bonus.size, "bonus word")}" else "") +
+            bonusCount(state).let { if (it > 0) " · +${plural(it, "bonus word")}" else "" } +
             if (streak >= 2) " · $streak day streak" else "",
         key = key,
         nudge = if (hints > 0) "The hints got you there. Try ${if (date != null) "tomorrow's" else "the next one"} with fewer." else own,
@@ -331,4 +332,11 @@ fun levelShareCard(level: Int, plan: List<String>, solves: List<LevelSolve>, clo
         key = listOf(Mark.GREEN to "no hints", Mark.RED to "hints"),
         nudge = if (hints == 0) "Every board your own work." else "Level $level done. On to level ${level + 1}.",
     )
+}
+
+/** The bonus words a board has counted, on the puzzles that count them. */
+internal fun bonusCount(state: PuzzleState): Int = when (state) {
+    is WordWheelState -> state.bonus.size
+    is DwindleState -> state.bonus.size
+    else -> 0
 }

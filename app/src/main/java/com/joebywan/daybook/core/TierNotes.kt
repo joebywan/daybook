@@ -50,10 +50,20 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
         "Some digits need every column at once",
         "Some digits need a what-if across two columns",
     ),
+    "hexwords" to listOf(
+        "19 hexes; biggest word first often gets there",
+        "29 hexes; biggest word first always falls short",
+        "44 hexes; looking one word ahead falls short too",
+    ),
     "wordwheel" to listOf(
         "Five-letter wheel, 4 to 6 words",
         "Six-letter wheel, 6 to 8 words",
         "Seven-letter wheel, 8 to 11 words",
+    ),
+    "dwindle" to listOf(
+        "4x4 tiles, 6 or 7 words, words up to 5 letters",
+        "5x5 tiles, 10 to 12 words, words up to 6 letters",
+        "6x6 tiles, 15 to 18 words, words up to 7 letters",
     ),
     "tally" to listOf("5x5 grid", "6x6 grid", "7x7 grid"),
     "sand" to listOf("5 colours, 7 tubes", "7 colours, 9 tubes", "8 colours, 10 tubes"),

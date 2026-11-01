@@ -532,6 +532,25 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   stronger teacher never moves a board. No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
   `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.
 
+## Hexwords (spend a block of letters)
+
+Drag through touching hexes to spell words; a word scores 3 / 5 / 8 / 12 / 17 for 3-7 letters and its letters go; reach the target.
+Spec, decisions and measurements: `docs/HEXWORDS_SPEC.md`. `puzzles/HexwordsRules.kt` (state, `HexSearch`, `HexLogic`: finder,
+players, generator), `HexwordsTeacher.kt`, `HexwordsKeys.kt` (keys, the pure swipe and tap, `HexGeometry`), `Hexwords.kt` (board,
+walkthrough, motif). `id = "hexwords"` is hashed into every seed: never rename it.
+
+- **Letters vanish on every tier and holes stay holes.** So a position is a bitmask and reaching a score is an exact question:
+  `HexSearch.reach` says `Yes(road)`, `No` or `Truncated` (a budget counted in positions). Only `Yes` ships; only `No` is a mistake.
+- **Tiers: 19 / 29 / 44 hexes, and the player the target beats** (`HexLogic.targetFor`): the middle of 12 biggest-word-first tries /
+  one more than their best / one more than those and a one-word-lookahead player. Measured in `HexwordsRulesTest`.
+- **The words planted seed the letters and are thrown away.** The proof searches the board from `WheelWords.grid` alone. No answer
+  is stored, so **`solved` is the score** and no hint can read an answer. Any `WheelWords.isWord` word scores.
+- **Hints:** the biggest common word that keeps the target, by its clue, naming the trap when the biggest word loses it. Fallback only
+  when the search runs out of budget (none in a year). Only "Show me" spells a word.
+- **The word being traced is `remember`; one word is one state.** Saves hold `taken` (word and hexes), so undo needs nothing else.
+- Highlight indices are hexes. `HexGeometry` is the one source of where a hex is; `hit` tests the six sides, `hitCore` (a moving
+  finger) only the middle, so sliding past a corner takes neither hex.
+
 ## Tally (keep the numbers that make every sum)
 
 A square of digits 1-9 with a target beside every row and under every column; remove numbers until what is left in every line adds
@@ -794,6 +813,20 @@ Display name "Crossword" (one line on a home tile), never a newspaper's.
   clears. The clue bar (fixed height, room for two lines) shows the cursor's clue, turns on a tap, and ‹ › walk the words. Keys:
   letters, Backspace, arrows (one across the word's way turns first), Space turns.
 
+## Dwindle
+
+A grid of letter tiles and a dashed list of goal words. Each tile shows how many goals still run through it and vanishes at zero. Spec and decisions:
+`docs/DWINDLE_SPEC.md`. `puzzles/DwindleRules.kt` (state, `DwindleLogic`: rules, `ways`, generator), `DwindleTeacher.kt`, `Dwindle.kt` (board, walkthrough, motif; keys are
+Word Wheel's `wordWheelKeyAction`). `id = "dwindle"` is hashed into every seed: never rename it.
+
+- **Tiles do not fall and every goal has exactly one way on the full grid (`DwindleLogic.proved`), so no order can get stuck:** removal only takes ways away, and a tile on a
+  goal's way counts that goal until it is found. Falling would make this an exhaustive search over positions. `DwindleOracle` checks all 2^n subsets on its own reading.
+- **Diagonals count**; while swiping a tile answers only within 0.42 of its middle, so a diagonal passes between its side tiles.
+- **Goals are `WheelWords.grid`, read only.** Do not regenerate lists for this game. Bonus words are `WheelWords.isWord` and use nothing up.
+- **Tiers: 4x4, 6-7 words / 5x5, 10-12 / 6x6, 15-18**, longest word 5 / 6 / 7, tiles used twice or more at least 55 / 65 / 75% (measured 66 / 78 / 86).
+- **Hints give the clue, and glow no more than one tile:** the word's own tiles would spell it. `all-tiles` is a capped search whose `Truncated` proves nothing; the fallback is 15-20% of steps.
+- The path being spelled is `remember`; one word is one state and one undo. Counts are derived from the goals not found, never stored.
+
 ## Pipes
 
 Rotate tiles until every opening meets another and the pipework is one network. `puzzles/Pipes.kt` (state, generator, board,
@@ -894,7 +927,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list; the lengths, 11 / 13 / 7, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths, 11 / 13 / 9, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
   **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
   once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,
@@ -955,7 +988,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword and Mini (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords and Dwindle (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved
@@ -1030,6 +1063,7 @@ the owner wants bad judgements allowed, and conflict display catches them). Plac
 from its peers' notes in the same state, so one undo restores both; erasing does not resurrect them.
 The notes mode is `rememberSaveable` in the board, not state. Storing them means owning which to retract when a
 piece is lifted, which is where the feature rots.
+Digit-first entry (#384): with no square selected a pad key arms its digit (`armed`, `rememberSaveable` in `SudokuGridBoard`, never state) and a square tap enters it, one state each; a selection beats it, and a tap on the selected square lets go (`squareTap`). The keyboard ignores it.
 Keyboard (web, or a hardware one): `puzzles/SudokuKeys.kt` maps a key to a `SudokuKeyAction` (digits, clear, arrows; pure, tested) and applies it through the pad's own `enter`/`withCell`/`toggleNote`, so notes, undo and peer-striking cannot differ; chords are ignored and a held digit is not repeated. The board's box takes focus (clicking a cell, or a hint opening, hands it back; on the web `focusCanvas` in `web/Main.kt` gives Compose's canvas DOM focus on load, so a link or a refresh takes keys without a click).
 
 **Verify by rendering, not reasoning.** Icons, motifs, crescents, pipe joints and crosses have
