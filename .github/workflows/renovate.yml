@@ -58,7 +58,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
-          branches=$(gh pr list --repo "$REPO" --state open --limit 100 \
+          branches=$(gh pr list --repo "$REPO" --state open --limit 30 \
             --json headRefName,isCrossRepository,files,commits \
             --jq '[.[] | select(.isCrossRepository == false and (.headRefName | startswith("renovate/"))
                     and any(.files[]; .path | test("^gradle/|^gradle\\.properties$|\\.gradle\\.kts$"))
