@@ -66,24 +66,26 @@ private fun focusCanvas(): Unit = js("""(() => {
 })()""")
 
 /**
- * iOS Safari can keep 100svh at its old value after a rotation (the app stayed landscape-short in portrait, width
- * right, height not). `#app` is sized by svh for the floating toolbar, so when svh is plainly not the window's height,
- * this falls back to the inset rule underneath it. Compose follows its container.
+ * iOS Safari can keep 100svh at its old value after a rotation (the app stayed landscape-short in portrait, width right,
+ * height not). `#app` is sized by svh for the floating toolbar, so when `#app` itself is plainly not the window's height,
+ * this falls back to the inset rule underneath it. Compose follows its container. Safari can settle well after its events,
+ * so a rotation looks again for two seconds, and a touch looks again in case even that was too soon.
  */
 private fun followRotation(): Unit = js("""(() => {
     const app = document.getElementById('app');
-    const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;top:0;width:0;height:100svh;visibility:hidden';
-    document.body.appendChild(probe);
     const check = () => {
-        const stale = probe.offsetHeight > 0 && Math.abs(probe.offsetHeight - window.innerHeight) > window.innerHeight * 0.2;
-        app.style.height = stale ? 'auto' : '';
-        app.style.bottom = stale ? 'env(safe-area-inset-bottom, 0px)' : '';
+        app.style.height = '';
+        app.style.bottom = '';
+        if (Math.abs(app.offsetHeight - window.innerHeight) > window.innerHeight * 0.2) {
+            app.style.height = 'auto';
+            app.style.bottom = 'env(safe-area-inset-bottom, 0px)';
+        }
     };
-    const later = () => { check(); setTimeout(check, 300); };
+    const later = () => { check(); for (let ms = 250; ms <= 2000; ms += 250) setTimeout(check, ms); };
     window.addEventListener('resize', later);
     window.addEventListener('orientationchange', later);
     window.visualViewport?.addEventListener('resize', later);
+    window.addEventListener('pointerdown', check, true);
 })()""")
 
 /**

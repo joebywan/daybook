@@ -419,14 +419,16 @@ object WordWheel : PuzzleType {
                                             break
                                         }
                                         change.consume()
-                                        finger = change.position
-                                        val at = geometry.hit(change.position)?.let { order[it] } ?: continue
-                                        val next = swipeWheelLetter(path, at)
-                                        if (next != path) {
-                                            path = next
-                                            if (path.size >= 2) swiped = true
-                                            if (swiped) picked = path
+                                        for (p in swipePoints(finger ?: change.position, change.position, geometry.disc / 4f)) {
+                                            val at = geometry.hit(p)?.let { order[it] } ?: continue
+                                            val next = swipeWheelLetter(path, at)
+                                            if (next != path) {
+                                                path = next
+                                                if (path.size >= 2) swiped = true
+                                                if (swiped) picked = path
+                                            }
                                         }
+                                        finger = change.position
                                     }
                                     finger = null
                                     if (swiped) submit(path) else picked = tapWheelLetter(before, start)

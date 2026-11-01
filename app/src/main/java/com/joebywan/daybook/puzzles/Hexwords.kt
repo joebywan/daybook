@@ -382,14 +382,16 @@ object Hexwords : PuzzleType {
                                         break
                                     }
                                     change.consume()
-                                    finger = change.position
-                                    val at = open(g.hitCore(change.position.x, change.position.y)) ?: continue
-                                    val next = swipeHex(path, at, nb)
-                                    if (next != path) {
-                                        path = next
-                                        if (path.size >= 2) swiped = true
-                                        if (swiped) picked = path
+                                    for (p in swipePoints(finger ?: change.position, change.position, g.apothem / 4f)) {
+                                        val at = open(g.hitCore(p.x, p.y)) ?: continue
+                                        val next = swipeHex(path, at, nb)
+                                        if (next != path) {
+                                            path = next
+                                            if (path.size >= 2) swiped = true
+                                            if (swiped) picked = path
+                                        }
                                     }
+                                    finger = change.position
                                 }
                                 finger = null
                                 if (swiped) submit(path) else picked = tapHex(before, start, nb)

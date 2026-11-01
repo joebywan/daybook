@@ -12,10 +12,12 @@ import com.joebywan.daybook.puzzles.HexTake
 import com.joebywan.daybook.puzzles.Hexwords
 import com.joebywan.daybook.puzzles.HexwordsState
 import com.joebywan.daybook.puzzles.swipeHex
+import com.joebywan.daybook.puzzles.swipePoints
 import com.joebywan.daybook.puzzles.tapHex
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
+import androidx.compose.ui.geometry.Offset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -252,5 +254,29 @@ class HexwordsRulesTest {
         val j = """{"rows":[3,4,3],"letters":"dhoacrince","target":16,"taken":[{"word":"dance","path":[0,3,7,8,9]}],"moves":1}"""
         val s = kotlinx.serialization.json.Json.decodeFromString(HexwordsState.serializer(), j)
         assertEquals(listOf(HexTake("dance", listOf(0, 3, 7, 8, 9))), s.taken)
+    }
+
+    /** One sample from the first hex of a row to the third: the hex between is crossed, so it is taken (a slow iPad's swipe). */
+    @Test
+    fun `a swipe whose samples are far apart still takes the hexes it crossed`() {
+        val rows = listOf(3, 4, 5, 4, 3)
+        val g = HexGeometry(rows, 600f, 500f)
+        val nb = HexLogic.neighbours(rows)
+        var path = listOf(0)
+        for (p in swipePoints(Offset(g.xs[0], g.ys[0]), Offset(g.xs[2], g.ys[2]), g.apothem / 4f)) {
+            val at = g.hitCore(p.x, p.y) ?: continue
+            path = swipeHex(path, at, nb)
+        }
+        assertEquals(listOf(0, 1, 2), path)
+    }
+
+    @Test
+    fun `swipe points are close together, end at the finger, and a still finger is one point`() {
+        val to = Offset(30f, 40f)
+        val points = swipePoints(Offset.Zero, to, 7f)
+        assertEquals(to, points.last())
+        assertEquals(8, points.size)
+        assertTrue(points.zipWithNext().all { (a, b) -> (b - a).getDistance() <= 7.001f })
+        assertEquals(listOf(to), swipePoints(to, to, 7f))
     }
 }

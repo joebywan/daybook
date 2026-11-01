@@ -330,4 +330,4 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
 - **Let players add words.** Real words a player tried were refused (plied, awed, wean, denial, heaped, deaths on Word Wheel and Dwindle). The owner's idea, large and for later: a
   personal local list is the small version (nothing global is ranked, so it cannot cheat anyone); shared suggestions need a backend and an approval process.
 - **Frozen screen on iPad (web, 2026-11-01; once in the Hexwords walkthrough).** Unconfirmed cause. Random play found no crash in WebKit or Chromium; a lost WebGL context did kill the page for good, so `reloadOnLostContext` now reloads it. If it still freezes on an iPad, it is something else: try Safari remote debugging.
-
+- **Short page after rotating an iPad (web, 2026-11-01).** Not reproduced on a device: `followRotation` now measures `#app` itself, again for two seconds and on every touch, checked only with a simulated stale height in desktop WebKit and Chromium. If it stays short on an iPad, try Safari remote debugging.
