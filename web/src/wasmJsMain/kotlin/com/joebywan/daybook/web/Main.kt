@@ -86,6 +86,26 @@ private fun followRotation(): Unit = js("""(() => {
     window.visualViewport?.addEventListener('resize', later);
 })()""")
 
+/**
+ * Compose never recovers a lost WebGL context, and everything is drawn through it, so the page stays dead until the app is
+ * force quit. iOS Safari can take the context under memory pressure. A reload brings it back and saved games survive
+ * one; the stored time stops a device that keeps losing it from reloading in a loop.
+ */
+private fun reloadOnLostContext(): Unit = js("""(() => {
+    const onLost = () => {
+        let last = 0;
+        try { last = Number(sessionStorage.getItem('daybook_gl_reload')) || 0; sessionStorage.setItem('daybook_gl_reload', String(Date.now())); } catch (e) {}
+        if (Date.now() - last > 10000) location.reload();
+    };
+    const until = Date.now() + 5000;
+    const attach = () => {
+        const canvas = [...document.querySelectorAll('#app *')].find(e => e.shadowRoot)?.shadowRoot.querySelector('canvas');
+        if (canvas) canvas.addEventListener('webglcontextlost', onLost);
+        else if (Date.now() < until) requestAnimationFrame(attach);
+    };
+    attach();
+})()""")
+
 private fun query(): Map<String, String> =
     locationSearch().removePrefix("?").split('&').filter { it.isNotEmpty() }.associate {
         val eq = it.indexOf('=')
@@ -220,5 +240,6 @@ fun main() {
     removeLoadingNote()
     nudgeFirstFrame()
     followRotation()
+    reloadOnLostContext()
     focusCanvas()
 }
