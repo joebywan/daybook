@@ -333,13 +333,12 @@ kept is the best until beaten, and Best can be slower than the best time beside 
 
 ## Sounds (`core/Tones.kt`, `rememberTonePlayer` in the platform seam)
 
-Chiptune, as the owner asked when the marimba beeps wore thin (2026-10-31): pulse waves at 12.5, 25 and 50% duty, a stepped
-triangle bass, 15-bit LFSR noise, volume in sixteen hard steps, fast arpeggios and small pitch sweeps, all synthesised and rendered
+Wins are a marimba chime (the owner brought it back, 2026-11-01, over a chiptune fanfare); everything else is chiptune, as the owner
+asked when the marimba beeps wore thin (2026-10-31): pulse waves at 25 and 50% duty, volume in sixteen hard steps, small pitch sweeps. All synthesised and rendered
 once, no audio files. A voice's level is its RMS, because a square wave is much louder than a plucked sine of the same peak;
 pulses carry no DC, so a note starting or a volume step is no thump; a millisecond's fade at each end of a tone stops a click.
 The Sound switch silences all of them, and on Android so does the ringer on silent or vibrate; reduced motion stills nothing here,
-since sound is not motion. Each win has three variants (the same tune on a different
-pulse width with the landing chord broken a different way), one drawn per play from `kotlin.random.Random`, never a generator's `Rng`.
+since sound is not motion. Each win has three variants (the chime as first chosen, then a hair flat and bright, a hair sharp and round), one drawn per play from `kotlin.random.Random`, never a generator's `Rng`.
 
 - **An ordinary move is silent** (the owner, 2026-10-31: the beeps wore thin); the haptic stays.
 - **Unit finished** (a row, a box, a cage, a found word): `rememberMoveFeel`, the one hook, so every board with units has it. Each plays
@@ -353,9 +352,8 @@ pulse width with the landing chord broken a different way), one drawn per play f
   board's own `remember` (`LetterBeeps`). A refused or cleared word is silent. A found word is a da-ding, C6 to G6 (`Tones.word`, through `rememberMoveFeel`'s
   `unitTone`; Hexwords has no units and plays it as the word is taken), not the phrase, whose top is E5: under the letters, it made every found word a drop and sound like a mistake (the owner, 2026-11-01).
   The word that solves the board plays the win.
-- **Win** (`Praise.winKind`): every win opens G5 C6 E6 on a kick, a triangle falling fast from D3 under a click of noise, for the thump. On a light flourish it lands on an arpeggiated C major (0.7 s); on a full show it
-  runs on up G6 E6 G6 A6 first (1.1 s); on all three tiers on through B6 to C7, with a pulse harmony, landing on a noise crash, the
-  bass ringing on last (1.5 s). Training's right answer and pass play the plain win (`LocalChime`).
+- **Win** (`Praise.winKind`): the owner's chime, a two-note marimba pluck, G5 then C6 (0.81 s). On a full show it carries on up the C major arpeggio to E6 and G6 (1.06 s); on
+  all three tiers on to the top C, landing on a C major chord under it (1.36 s). Training's right answer and pass play the plain win (`LocalChime`).
 
 The board's sounds come through `LocalBoardTones`, provided only around the play screen's board, so a walkthrough, a Training
 board and a home motif are silent however they are drawn. Mistakes have no sound; nobody asked, and a bump already recoils.
