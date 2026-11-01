@@ -279,4 +279,26 @@ class HexwordsRulesTest {
         assertTrue(points.zipWithNext().all { (a, b) -> (b - a).getDistance() <= 7.001f })
         assertEquals(listOf(to), swipePoints(to, to, 7f))
     }
+
+    @Test
+    fun `a word taken leaves in spelling order and a word undone comes back in reverse`() {
+        val cat = HexTake("cat", listOf(4, 1, 2))
+        val dog = HexTake("dog", listOf(7, 8, 9))
+        assertEquals(cat.path, Hexwords.leavingHexes(emptyList(), listOf(cat)))
+        assertEquals(dog.path, Hexwords.leavingHexes(listOf(cat), listOf(cat, dog)))
+        assertEquals(emptyList<Int>(), Hexwords.leavingHexes(listOf(cat, dog), listOf(cat))) // undo
+        assertEquals(emptyList<Int>(), Hexwords.leavingHexes(listOf(cat), emptyList())) // restart
+        assertEquals(emptyList<Int>(), Hexwords.leavingHexes(listOf(cat), listOf(cat))) // load
+        assertEquals(emptyList<Int>(), Hexwords.leavingHexes(listOf(cat), listOf(dog, cat))) // another game's list
+
+        assertEquals(dog.path.reversed(), Hexwords.returningHexes(listOf(cat, dog), listOf(cat))) // undo
+        assertEquals(emptyList<Int>(), Hexwords.returningHexes(listOf(cat), listOf(cat, dog))) // a take
+        assertEquals(emptyList<Int>(), Hexwords.returningHexes(listOf(cat, dog), emptyList())) // restart
+        assertEquals(emptyList<Int>(), Hexwords.returningHexes(listOf(cat), listOf(dog))) // another game's list
+
+        assertEquals(0f, Hexwords.leaveProgress(0, 0f), 0f)
+        assertTrue(Hexwords.leaveProgress(0, 100f) > Hexwords.leaveProgress(1, 100f))
+        assertEquals(0f, Hexwords.leaveProgress(2, 100f), 0f)
+        assertEquals(1f, Hexwords.leaveProgress(2, 10_000f), 0f)
+    }
 }

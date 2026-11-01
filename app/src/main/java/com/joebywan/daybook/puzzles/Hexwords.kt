@@ -1,5 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,6 +37,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -57,6 +61,7 @@ import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.ui.LocalBoardTones
+import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
@@ -200,6 +205,19 @@ object Hexwords : PuzzleType {
     private val LINE = 22.dp
     private val PILL = 40.dp
     private const val LOST_MILLIS = 1000L
+    private const val LEAVE_STAGGER_MS = 60
+    private const val LEAVE_FADE_MS = 180
+
+    /** The hexes to see off, in spelling order: the word just taken, and nothing on an undo, a restart or a load. */
+    internal fun leavingHexes(before: List<HexTake>, after: List<HexTake>): List<Int> =
+        if (after.size == before.size + 1 && after.dropLast(1) == before) after.last().path else emptyList()
+
+    /** The hexes to bring back, last gone first: the one word just put back; several at once (a restart) simply reappear. */
+    internal fun returningHexes(before: List<HexTake>, after: List<HexTake>): List<Int> =
+        if (before.size == after.size + 1 && before.dropLast(1) == after) before.last().path.reversed() else emptyList()
+
+    /** How far the [k]th letter of a word has gone, 0 to 1, [ms] after it was taken. */
+    internal fun leaveProgress(k: Int, ms: Float): Float = ((ms - k * LEAVE_STAGGER_MS) / LEAVE_FADE_MS).coerceIn(0f, 1f)
 
     private fun headerOf(s: HexwordsState, stuck: Boolean, lost: Boolean): String = when {
         s.solved -> "${s.score} points. Target reached"
@@ -226,6 +244,23 @@ object Hexwords : PuzzleType {
         val free = s.free
         val stuck = remember(s.letters, free) { HexLogic.roads(s.letters, nb, free, HexLogic.acceptedWords).isEmpty() }
         val feel = rememberMoveFeel(s.letters.indices.map { free shr it and 1L == 1L }, remember { emptyList<IntArray>() }) { false }
+
+        // Letters leaving or coming back are decoration over a state that has already moved on, so the board plays on under them.
+        val reduced = LocalReducedMotion.current
+        val lastTaken = remember { arrayOf(s.taken) }
+        val (leaving, returning) = remember(s.taken) {
+            val before = lastTaken[0]
+            lastTaken[0] = s.taken
+            if (reduced) emptyList<Int>() to emptyList() else leavingHexes(before, s.taken) to returningHexes(before, s.taken)
+        }
+        val leaveMs = remember(leaving, returning) { Animatable(0f) }
+        LaunchedEffect(leaveMs) {
+            val moving = leaving.size + returning.size
+            if (moving > 0) {
+                val total = (moving - 1) * LEAVE_STAGGER_MS + LEAVE_FADE_MS
+                leaveMs.animateTo(total.toFloat(), tween(total, easing = LinearEasing))
+            }
+        }
 
         // The word being spelled and the finger are transient: a refused word costs nothing, one word is one state.
         var picked by remember(s.letters) { mutableStateOf(listOf<Int>()) }
@@ -398,7 +433,13 @@ object Hexwords : PuzzleType {
                             }
                         },
                 ) {
-                    drawBlock(s, free, picked, finger, highlight, glow, pulse.value, hueA, hueB, dark, measurer, feel, vivid(accent))
+                    val ms = leaveMs.value
+                    // A hex on its way back stays an empty outline until it lands; one the player has already picked just shows.
+                    val landing = returning.filterIndexed { k, i -> leaveProgress(k, ms) < 1f && i !in picked }
+                    val shown = landing.fold(free) { m, i -> m and (1L shl i).inv() }
+                    drawBlock(s, shown, picked, finger, highlight, glow, pulse.value, hueA, hueB, dark, measurer, feel, vivid(accent))
+                    drawLeaving(s, leaving, ms, BoardHues.mark(hueA), false, measurer)
+                    drawLeaving(s, returning.map { if (it in landing) it else -1 }, ms, BoardHues.fill(hueB, dark), true, measurer)
                 }
                 Text(
                     takenLine(s),
@@ -409,6 +450,26 @@ object Hexwords : PuzzleType {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth().height(LINE).padding(top = 4.dp),
                 )
+            }
+        }
+    }
+
+    /** [hexes] going, or with [back] coming back, in turn; a hex of -1 keeps its turn and draws nothing. */
+    private fun DrawScope.drawLeaving(s: HexwordsState, hexes: List<Int>, ms: Float, tone: Color, back: Boolean, measurer: TextMeasurer) {
+        if (hexes.isEmpty()) return
+        val g = HexGeometry(s.rows, size.width, size.height)
+        hexes.forEachIndexed { k, i ->
+            val p = leaveProgress(k, ms)
+            if (i < 0 || p >= 1f) return@forEachIndexed
+            val t = if (back) 1f - p else p
+            val c = Offset(g.xs[i], g.ys[i])
+            scale(1f - 0.5f * t, c) {
+                drawPath(hexPath(c, g.radius * 0.94f), tone.copy(alpha = 1f - t))
+                val layout = measurer.measure(
+                    s.letters[i].uppercase(),
+                    TextStyle(color = BoardHues.onFill(tone).copy(alpha = 1f - t), fontSize = (g.radius * 0.95f).toSp(), lineHeight = (g.radius * 1.14f).toSp(), fontWeight = FontWeight.Bold),
+                )
+                drawText(layout, topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
             }
         }
     }
