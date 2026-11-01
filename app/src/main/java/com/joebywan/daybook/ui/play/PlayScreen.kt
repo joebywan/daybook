@@ -700,8 +700,7 @@ fun PlayScreen(
         if (resultsHidden) {
             ResultsPill(
                 accent = accent,
-                next = pillOption(options),
-                done = options.last(),
+                shown = pillOptions(options),
                 onShow = {
                     // A reopened solve's Share card, drawn from the saved board and log when asked for, so the
                     // streak it reads is from completions that have loaded by then.
@@ -1009,18 +1008,17 @@ private fun ShareChip(card: ShareCard, accent: Color, label: String = "Share") {
 
 /** What stays on screen while the frame is hidden: bring it back, or move on. */
 @Composable
-private fun ResultsPill(accent: Color, next: NextOption?, done: NextOption, onShow: () -> Unit, onOption: (NextOption) -> Unit, modifier: Modifier) {
+private fun ResultsPill(accent: Color, shown: List<NextOption>, onShow: () -> Unit, onOption: (NextOption) -> Unit, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
     Row(
         modifier.padding(horizontal = 18.dp).widthIn(max = 360.dp).fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
-            Modifier.weight(1.4f).heightIn(min = 48.dp).shadow(4.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
+            Modifier.weight(1f).heightIn(min = 48.dp).shadow(4.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
                 .background(scheme.surface).background(accent.copy(alpha = 0.22f)).clickable(onClick = onShow),
             contentAlignment = Alignment.Center,
         ) { Text("Show results", style = MaterialTheme.typography.titleSmall, color = scheme.onSurface) }
-        val shown = listOfNotNull(next, done)
         val main = mainOption(shown)
         shown.forEach {
             NextTile(it, it == main, accent, Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(scheme.surface)) { onOption(it) }

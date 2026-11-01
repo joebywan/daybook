@@ -11,6 +11,7 @@ import com.joebywan.daybook.ui.play.mainOption
 import com.joebywan.daybook.ui.play.nextToday
 import com.joebywan.daybook.ui.play.nextOptions
 import com.joebywan.daybook.ui.play.pillOption
+import com.joebywan.daybook.ui.play.pillOptions
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
@@ -219,5 +220,14 @@ class NextStepsTest {
         // The three done at this tier: the home order, skipping what is done.
         assertEquals("y", nextToday(three, order, HARD, setOf("a" to HARD, "b" to HARD, "x" to HARD), justSolved = "c"))
         assertEquals(null, nextToday(three, order, HARD, (order - "y").map { it to HARD }.toSet(), justSolved = "y"))
+    }
+
+    @Test
+    fun `a solved daily's bar always offers Random, and other boards keep Done`() {
+        fun labels(options: List<NextOption>) = pillOptions(options).map { it.label }
+        assertEquals(listOf("Harder daily", "Random"), labels(nextOptions(true, Difficulty.STANDARD, emptySet())))
+        assertEquals(listOf("Next puzzle", "Random"), labels(nextOptions(true, Difficulty.STANDARD, emptySet(), today = "sudoku")))
+        assertEquals(listOf("Random", "Done"), labels(nextOptions(true, Difficulty.STANDARD, Difficulty.entries.toSet())))
+        assertEquals(listOf("Another", "Done"), labels(nextOptions(false, Difficulty.STANDARD, emptySet())))
     }
 }

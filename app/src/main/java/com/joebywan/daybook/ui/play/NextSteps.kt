@@ -103,6 +103,16 @@ fun pillOption(options: List<NextOption>): NextOption? =
         ?: options.firstOrNull { it.kind != NextKind.DONE }
 
 /**
+ * The tiles beside "Show results". A daily's are the way on and Random, so a solved daily reopened always offers another game;
+ * there is no room for Done as well, and the back arrow is the same thing. Every other board keeps its way on and its Done.
+ */
+fun pillOptions(options: List<NextOption>): List<NextOption> {
+    val next = pillOption(options)
+    val random = options.firstOrNull { it.label == "Random" }
+    return if (random != null && next != random) listOfNotNull(next, random) else listOfNotNull(next, options.last())
+}
+
+/**
  * The buttons for a solved board of [level]: [plan] is its boards, [solved] the puzzles solved in it, and
  * [justSolved] the board just finished (the store records it a moment after the win). "Next in level N" names
  * the first unsolved board in plan order; once all five are solved it becomes the level to go on with: the one
