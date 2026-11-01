@@ -59,7 +59,7 @@ import com.joebywan.daybook.ui.teach.rememberHintSession
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** A confirmation (a no-op when sound is off): the unit blip for a hint or a walkthrough step reached, the win for Training's right answer and pass. */
+/** A confirmation (a no-op when sound is off): the da-ding for a hint or a walkthrough step reached, the win for Training's right answer and pass. */
 val LocalChime = staticCompositionLocalOf<() -> Unit> { {} }
 
 /**

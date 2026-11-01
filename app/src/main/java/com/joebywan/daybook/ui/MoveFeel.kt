@@ -217,7 +217,7 @@ internal fun sweepGlow(t: Float, at: Float): Float {
  * order the glow should run), [complete] saying whether a unit is finished **by the rules**, never by the stored answer.
  * Only a move fires the settle and the glow: a board loaded, restarted or undone into a finished unit stays quiet. Under
  * reduced motion nothing moves; the unit's tone still plays (sound has its own switch). [unitTone] is that tone for a
- * [Tones.phraseStep]: the phrase, unless a board's other sounds would make the phrase a step down (Word Wheel).
+ * [Tones.phraseStep]: the phrase, unless a board's other sounds would make the phrase a step down (the spelling games).
  */
 @Composable
 fun rememberMoveFeel(

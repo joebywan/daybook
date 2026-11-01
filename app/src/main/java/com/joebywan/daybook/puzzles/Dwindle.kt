@@ -57,6 +57,7 @@ import com.joebywan.daybook.ui.boardStyle
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
@@ -275,10 +276,11 @@ object Dwindle : PuzzleType {
 
         // A found word's tiles settle, and the glow runs along it.
         val units = remember(s.letters) { s.goals.map { it.cells.toIntArray() } }
-        val feel = rememberMoveFeel(counts.toList(), units) { s.goals[it].word in s.found }
+        val feel = rememberMoveFeel(counts.toList(), units, { Tones.word() }) { s.goals[it].word in s.found }
 
         // The word being spelled, transient: never PuzzleState, so a refused word costs nothing.
         var picked by remember(s.letters) { mutableStateOf(listOf<Int>()) }
+        LetterBeeps(picked.size)
         var notice by remember { mutableStateOf<String?>(null) }
         var noticeIsError by remember { mutableStateOf(false) }
         LaunchedEffect(notice) {

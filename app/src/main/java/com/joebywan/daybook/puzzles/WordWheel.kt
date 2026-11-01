@@ -264,13 +264,7 @@ object WordWheel : PuzzleType {
         // The word being spelled (wheel positions) and the finger, transient: never PuzzleState, so a refused word costs nothing.
         var picked by remember(s.wheel) { mutableStateOf(listOf<Int>()) }
         var finger by remember { mutableStateOf<Offset?>(null) }
-        // Each letter added rises a step of the scale, each taken back falls one. Silent in the walkthrough (LocalBoardTones).
-        val tones = LocalBoardTones.current
-        val sounded = remember { intArrayOf(0) }
-        LaunchedEffect(picked.size) {
-            wheelToneStep(sounded[0], picked.size)?.let { tones(Tones.wheel(it)) }
-            sounded[0] = picked.size
-        }
+        LetterBeeps(picked.size)
         var notice by remember { mutableStateOf<String?>(null) }
         var noticeIsError by remember { mutableStateOf(false) }
         LaunchedEffect(notice) {
@@ -632,5 +626,16 @@ internal fun BonusLine(bonus: List<String>, height: Dp) {
             },
             confirmButton = { TextButton(onClick = { open = false }) { Text("Close") } },
         )
+    }
+}
+
+/** Each letter added to a word being spelled rises a step of the scale, each taken back falls one. Silent in a walkthrough (`LocalBoardTones`). */
+@Composable
+internal fun LetterBeeps(letters: Int) {
+    val tones = LocalBoardTones.current
+    val sounded = remember { intArrayOf(0) }
+    LaunchedEffect(letters) {
+        wheelToneStep(sounded[0], letters)?.let { tones(Tones.wheel(it)) }
+        sounded[0] = letters
     }
 }

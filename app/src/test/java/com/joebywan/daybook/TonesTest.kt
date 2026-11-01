@@ -58,8 +58,8 @@ class TonesTest {
         fun peak(k: Tones.Kind) = of(k).maxOf { i -> Tones.samples(i).maxOf { abs(it) } }
         fun seconds(k: Tones.Kind) = Tones.samples(of(k).first()).size / rate.toDouble()
         fun loud(k: Tones.Kind) = of(k).maxOf { loudest(Tones.samples(it)) }
-        assertTrue(seconds(Tones.Kind.UNIT) <= 0.25)
-        assertTrue(peak(Tones.Kind.UNIT) <= 0.25f)
+        assertTrue(seconds(Tones.Kind.WORD) <= 0.4)
+        assertTrue(peak(Tones.Kind.WORD) <= 0.25f)
         assertEquals(0.7, seconds(Tones.Kind.WIN), 0.05)
         assertEquals(1.1, seconds(Tones.Kind.BIG_WIN), 0.05)
         assertEquals(1.5, seconds(Tones.Kind.ALL_TIERS), 0.05)

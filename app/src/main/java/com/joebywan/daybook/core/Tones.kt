@@ -15,7 +15,7 @@ import kotlin.random.Random
  */
 object Tones {
     /** Each kind's size is its variants, except [WHEEL] and [STEP], whose are the steps of their scales, and [WORD], one sound. */
-    enum class Kind(val count: Int) { UNIT(3), STEP(8), WHEEL(7), WIN(3), BIG_WIN(3), ALL_TIERS(3), WORD(1) }
+    enum class Kind(val count: Int) { STEP(8), WHEEL(7), WIN(3), BIG_WIN(3), ALL_TIERS(3), WORD(1) }
 
     const val SAMPLE_RATE = 44_100
 
@@ -29,17 +29,15 @@ object Tones {
     private const val C5 = 72
     private const val E5 = 76
     private const val G5 = 79
-    private const val A5 = 81
-    private const val C6 = 84
-    private const val D6 = 86
-    private const val E6 = 88
+        private const val C6 = 84
+        private const val E6 = 88
     private const val F6 = 89
     private const val G6 = 91
     private const val A6 = 93
     private const val B6 = 95
     private const val C7 = 96
 
-    // C major, C5 to G5: a letter added on the Word Wheel, one step each, holding on G from the fifth. Seven letters is the biggest wheel.
+    // C major, C5 to G5: a letter added to a word being spelled, one step each, holding on G from the fifth. Seven letters is the biggest wheel.
     private val SCALE = intArrayOf(C5, C5 + 2, E5, E5 + 1, G5, G5, G5)
 
     // The phrase a board's finished units climb: C major pentatonic below the win, whose first note (G5) is this scale's next.
@@ -57,10 +55,10 @@ object Tones {
     /** A random variant of [kind], different each play. */
     fun pick(kind: Kind): Int = index(kind, Random.nextInt(kind.count))
 
-    /** The Word Wheel's tone for the [step]th letter of a word (0 the first); a word cannot pass the top of the scale. */
+    /** The tone for the [step]th letter of a word being spelled (0 the first); a word cannot pass the top of the scale. */
     fun wheel(step: Int): Int = index(Kind.WHEEL, step.coerceIn(0, Kind.WHEEL.count - 1))
 
-    /** The Word Wheel's found word: above every letter whatever the word's length, so spelling one never ends on a drop. */
+    /** The da-ding: a found word, above every letter whatever its length so spelling one never ends on a drop, and a confirmation ([com.joebywan.daybook.ui.tutorial.LocalChime]). */
     fun word(): Int = index(Kind.WORD, 0)
 
     /**
@@ -81,14 +79,8 @@ object Tones {
         var n = i
         val kind = Kind.entries.first { k -> (n < k.count).also { if (!it) n -= k.count } }
         return when (kind) {
-            Kind.UNIT -> Chip(0.17).apply {
-                // Up a fourth or fifth, the second note sliding up a little: the coin in the box.
-                val (low, high) = arrayOf(G5 to C6, A5 to D6, C6 to G6)[n]
-                pulse(0.0, 0.05, intArrayOf(low), 0.5, rms = 0.09, every = 0.02)
-                pulse(0.05, 0.12, intArrayOf(high), 0.25, rms = 0.1, every = 0.008, sweep = 10.0)
-            }
             Kind.STEP -> Chip(0.15).apply {
-                // One pitch, wide then thin, sliding up a hair: the coin's shape, on a note of the phrase.
+                // One pitch, wide then thin, sliding up a hair, on a note of the phrase.
                 pulse(0.0, 0.04, intArrayOf(PHRASE[n]), 0.5, rms = 0.09, every = 0.02)
                 pulse(0.04, 0.11, intArrayOf(PHRASE[n]), 0.25, rms = 0.1, every = 0.008, sweep = 6.0)
             }

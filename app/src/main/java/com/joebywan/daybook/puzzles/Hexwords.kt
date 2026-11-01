@@ -55,6 +55,8 @@ import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.core.Tones
+import com.joebywan.daybook.ui.LocalBoardTones
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
@@ -223,6 +225,8 @@ object Hexwords : PuzzleType {
 
         // The word being spelled and the finger are transient: a refused word costs nothing, one word is one state.
         var picked by remember(s.letters) { mutableStateOf(listOf<Int>()) }
+        LetterBeeps(picked.size)
+        val tones = LocalBoardTones.current
         var typed by remember(s.letters) { mutableStateOf("") }
         var trace by remember(s.letters) { mutableIntStateOf(0) }
         var finger by remember { mutableStateOf<Offset?>(null) }
@@ -246,7 +250,10 @@ object Hexwords : PuzzleType {
                 !HexLogic.isWord(word) -> notice = "${word.uppercase()} is not in the word list"
                 else -> {
                     notice = null
-                    onState(now.take(word, path))
+                    // No units here, so the found word's da-ding is played by hand; the word that solves the board plays the win.
+                    val next = now.take(word, path)
+                    onState(next)
+                    if (!next.solved) tones(Tones.word())
                 }
             }
         }
