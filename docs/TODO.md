@@ -141,6 +141,9 @@ Nothing below can be verified from a desktop browser. The tester has the device.
   `tap Hint` finds no Hint ("no 'Hint' on screen") and it exits before the README copies; it also looks for "Snap", shown as
   Trail. It needs a Skip tap after each `open_puzzle`. `docs/screenshots/home.png` was recaptured by hand (2026-10-28, clean
   install, 7 Oct 2026, 1080x2400 halved); the store shots and the README's board shots were not. *S.*
+- [ ] **Can Renovate's token update workflow files?** No Renovate PR among the last 60 touched `.github/`, and GitHub
+  normally refuses workflow changes from a token without the `workflows` permission. If a GitHub Actions update fails on
+  the Dependency Dashboard, it needs a `RENOVATE_TOKEN` PAT with that scope. Owner only. *S.*
 - [ ] **Verify Renovate's CI workaround on the first real Monday run.** Renovate runs daily and
   `tools/dispatch-ci-for-renovate.sh` dispatches `ci.yml` on `renovate/*` branches, where it posts a
   `build` commit status (README, "Dependency updates"). Proven on a throwaway PR with a stand-in

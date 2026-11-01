@@ -1191,8 +1191,8 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   verifies every dependency against `gradle/verification-metadata.xml` (sha256). A dependency or
   plugin change must regenerate it: `./gradlew --no-daemon --write-verification-metadata sha256 test
   assembleRelease bundleRelease :app:assembleDebug :web:wasmJsBrowserDistribution`, and the diff
-  reviewed. Renovate does not do it here (it needs `allowedUnsafeExecutions`), so its Gradle PRs fail
-  CI until someone does.
+  reviewed. On Renovate's PRs `renovate.yml` does it and nobody reviews it: every update merges itself on green CI
+  (the owner, 2026-11-01), and the 7-day `minimumReleaseAge` is the supply-chain protection.
 
 ## Settled — do not reopen
 
