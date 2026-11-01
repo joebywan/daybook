@@ -60,9 +60,9 @@ class TonesTest {
         fun loud(k: Tones.Kind) = of(k).maxOf { loudest(Tones.samples(it)) }
         assertTrue(seconds(Tones.Kind.WORD) <= 0.4)
         assertTrue(peak(Tones.Kind.WORD) <= 0.25f)
-        assertEquals(0.7, seconds(Tones.Kind.WIN), 0.05)
-        assertEquals(1.1, seconds(Tones.Kind.BIG_WIN), 0.05)
-        assertEquals(1.5, seconds(Tones.Kind.ALL_TIERS), 0.05)
+        assertEquals(0.81, seconds(Tones.Kind.WIN), 0.05)
+        assertEquals(1.06, seconds(Tones.Kind.BIG_WIN), 0.05)
+        assertEquals(1.36, seconds(Tones.Kind.ALL_TIERS), 0.05)
         assertTrue("no win startles", peak(Tones.Kind.WIN) <= 0.5f && peak(Tones.Kind.BIG_WIN) <= 0.5f && peak(Tones.Kind.ALL_TIERS) <= 0.6f)
         assertTrue("a win is heard", peak(Tones.Kind.WIN) >= 0.2f)
         // A square wave is far louder than a plucked sine of the same peak, so loudness, not peak, keeps the order.
@@ -77,22 +77,28 @@ class TonesTest {
         for (k in Tones.Kind.entries.filter { it != Tones.Kind.WHEEL && it != Tones.Kind.STEP && it != Tones.Kind.WORD }) {
             assertEquals(k.name, 3, of(k).map { Tones.samples(it).toList() }.toSet().size)
         }
-        // In each win's first three notes, every variant's strongest note is the same one: G5, C6, E6.
-        val candidates = listOf(79, 81, 83, 84, 86, 88, 89).map(::noteHz)
+        // Every variant of every win opens on the chime: G5 alone, then C6 ringing over it.
         for (k in listOf(Tones.Kind.WIN, Tones.Kind.BIG_WIN, Tones.Kind.ALL_TIERS)) for (i in of(k)) {
             val s = Tones.samples(i)
-            val heard = listOf(0.005, 0.075, 0.145).map { from ->
-                candidates.maxByOrNull { strength(s.window(from, from + 0.055), it) }
-            }
-            assertEquals("$k entry $i", listOf(79, 84, 88).map(::noteHz), heard)
+            assertTrue("$k entry $i", strength(s.window(0.01, 0.1), 784.0) > 20 * strength(s.window(0.01, 0.1), 1046.5))
+            assertTrue("$k entry $i", strength(s.window(0.12, 0.21), 1046.5) > strength(s.window(0.01, 0.1), 1046.5) * 20)
         }
     }
 
     @Test fun theFanfaresGrow() {
-        // A bigger win's opening is the smaller's, and it goes higher: the top C only arrives on all tiers' run.
+        // Up the arpeggio: E6 arrives on the full show, the top C only on all tiers'; the plain chime has neither.
         val win = Tones.samples(of(Tones.Kind.WIN).first())
+        val big = Tones.samples(of(Tones.Kind.BIG_WIN).first())
         val all = Tones.samples(of(Tones.Kind.ALL_TIERS).first())
-        assertTrue(strength(all.window(0.565, 0.62), noteHz(96)) > 20 * strength(win.window(0.565, 0.62), noteHz(96)))
+        assertTrue(strength(big.window(0.23, 0.32), 1318.51) > 20 * strength(win.window(0.23, 0.32), 1318.51))
+        assertTrue(strength(all.window(0.46, 0.6), 2093.0) > 20 * strength(big.window(0.46, 0.6), 2093.0))
+    }
+
+    @Test fun aWinIsAPluckThatDiesAway() {
+        val win = Tones.samples(of(Tones.Kind.WIN).first())
+        assertTrue(rms(win.window(0.12, 0.2)) > 3 * rms(win.window(0.55, 0.63)))
+        // Past the last note's end, silence.
+        assertTrue(win.window(0.73, 0.8).all { it == 0f })
     }
 
     @Test fun aNoteReallyIsAPulseWave() {
@@ -115,20 +121,6 @@ class TonesTest {
         val values = tops.map { (it * 2000).toInt() }.distinct()
         assertTrue("${values.size} levels in ${tops.size} readings", values.size in 3..15)
         assertEquals(values, values.sortedDescending())
-    }
-
-    @Test fun theBassIsAStairCaseAndTheCrashIsNoise() {
-        val all = Tones.samples(of(Tones.Kind.ALL_TIERS).first())
-        // After 1.38 s only the triangle rings, one volume step from 1.43 s. Sixteen levels: the wave holds still between
-        // steps, which no sine does.
-        val bass = all.window(1.435, 1.495)
-        val held = (1 until bass.size).count { bass[it] == bass[it - 1] }
-        assertTrue("$held of ${bass.size} samples hold", held >= bass.size / 2)
-        assertTrue(bass.distinct().size <= 17)
-        assertEquals(noteHz(60), hz(bass), 12.0)
-        // The crash: sample-to-sample movement jumps where it lands, and it has no pitch to find.
-        fun movement(s: FloatArray) = (1 until s.size).sumOf { abs(s[it] - s[it - 1]).toDouble() } / s.size
-        assertTrue(movement(all.window(0.63, 0.70)) > 1.5 * movement(all.window(0.50, 0.56)))
     }
 
     @Test fun theWheelRisesAStepPerLetterThenHolds() {
@@ -173,18 +165,6 @@ class TonesTest {
         // A small board moves every unit; a Sudoku's 27 share eight notes.
         assertEquals(listOf(0, 1, 3, 5, 7), (1..5).map { Tones.phraseStep(it, 6) })
         assertEquals(8, (1..26).map { Tones.phraseStep(it, 27) }.toSet().size)
-    }
-
-    @Test fun everyWinOpensOnAKick() {
-        // Averaged over 4 ms, which leaves the bass and takes out the pulses (G5 is 1.3 ms a cycle).
-        fun bass(s: FloatArray): Double {
-            val w = (0.004 * rate).toInt()
-            return rms(FloatArray(s.size - w) { i -> (0 until w).sumOf { s[i + it].toDouble() }.toFloat() / w })
-        }
-        for (k in listOf(Tones.Kind.WIN, Tones.Kind.BIG_WIN, Tones.Kind.ALL_TIERS)) for (i in of(k)) {
-            val s = Tones.samples(i)
-            assertTrue("$k entry $i", bass(s.window(0.0, 0.04)) > 1.5 * bass(s.window(0.1, 0.14)))
-        }
     }
 
     @Test fun wheelStepFollowsTheWordsLength() {

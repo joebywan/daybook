@@ -870,9 +870,9 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
 The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
-Sound is a bank of pre-rendered chiptune tones (`core/Tones.kt`: pulse, triangle and noise voices, synthesised, no audio files), played by `rememberTonePlayer` in
+Sound is a bank of pre-rendered tones (`core/Tones.kt`: chiptune pulse voices, and a marimba for wins; synthesised, no audio files), played by `rememberTonePlayer` in
 the seam (Android `SoundPool`, web Web Audio): ordinary moves are silent (the haptic stays), a unit's note climbs the board's phrase from `rememberMoveFeel` (`Tones.phraseStep`, derived from the units done), the spelling
-games' rising beeps (Word Wheel, Dwindle, Hexwords), the da-ding for a found word, a hint's move and a walkthrough step, a win by the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones`, so a walkthrough or
+games' rising beeps (Word Wheel, Dwindle, Hexwords), the da-ding for a found word, a hint's move and a walkthrough step, a win's marimba chime growing with the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones`, so a walkthrough or
 a practice is silent; a variant is drawn from `kotlin.random`, never `Rng`. `docs/REWARDS.md` (Sounds). A win thumps, it never wobbles (a 50 ms freeze, then the whole board drops and rebounds with the fanfare and a heavy haptic on one
 frame, `PlayScreen`, from a solving move only); mistakes are small and sideways or a piece's own recoil (Mines' blast, Arrows' lunge). The top show (`Praise.allTiers`, all three tiers of a puzzle on a date) is derived from completions.
 A move's feel (the changed squares settle, a unit finished by the rules glows and pops once) is `ui/MoveFeel.kt`'s
