@@ -1,4 +1,3 @@
-- Dwindle: tiles join by their sides only.
 - Word games: fewer bonus words; fast swipes skip no letters.
 - Word games: letters beep up a scale, found words da-ding.
 - The marimba chime is back when you finish, growing with bigger wins.
@@ -6,3 +5,4 @@
 - Hexwords: lower Standard target; says when it's out of reach.
 - Sudoku and Cage Sudoku: pick the digit, then tap its squares.
 - Hexwords: letters leave and undo back one by one.
+- Word Wheel, Dwindle: tap letters, then press Enter.

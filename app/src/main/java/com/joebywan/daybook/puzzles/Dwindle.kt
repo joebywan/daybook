@@ -79,7 +79,7 @@ object Dwindle : PuzzleType {
     override val tagline = "Find every word, and watch the letters go"
     override val accent = 0xFFA55C09
     override val rules = listOf(
-        "Spell words by swiping through touching tiles, across or up and down (never diagonally), or tap them in turn and tap the word.",
+        "Spell words by swiping through touching tiles, across or up and down (never diagonally), or tap them in turn and press Enter.",
         "A word has three letters or more and uses a tile at most once. Tiles never fall or move.",
         "The dashes show the goal words' lengths. Find them all to finish.",
         "Each tile's number is how many goal words still run through it. At zero it vanishes.",
@@ -156,10 +156,10 @@ object Dwindle : PuzzleType {
             ),
             TutorialFrame(
                 state = s2,
-                caption = "A has one use left. This time tap C, A and T in turn, then tap the word.",
+                caption = "A has one use left. This time tap C, A and T in turn, then press Enter.",
                 highlight = BoardHighlight(strong = tiles(4)),
                 accepts = only(listOf("chef", "cat"), listOf("eat")),
-                retry = "Tap the glowing tiles in order: C, A, T. Then tap the word.",
+                retry = "Tap the glowing tiles in order: C, A, T. Then press Enter.",
                 done = "CAT. A is used up, so it vanishes.",
             ),
             TutorialFrame(
@@ -281,6 +281,8 @@ object Dwindle : PuzzleType {
         // The word being spelled, transient: never PuzzleState, so a refused word costs nothing.
         var picked by remember(s.letters) { mutableStateOf(listOf<Int>()) }
         LetterBeeps(picked.size)
+        // Whether a tap last added to the word: what shows Enter, so a swipe never flashes it.
+        var tapping by remember(s.letters) { mutableStateOf(false) }
         var notice by remember { mutableStateOf<String?>(null) }
         var noticeIsError by remember { mutableStateOf(false) }
         LaunchedEffect(notice) {
@@ -355,7 +357,7 @@ object Dwindle : PuzzleType {
                     drawList(s, fit, highlight, glow, pulse.value, hueA, dark, scheme.onSurfaceVariant, measurer, family)
                 }
 
-                // The word being spelled. Tapping it tries it; its room is always kept, so nothing moves when it fills.
+                // The word being spelled, and Enter for a tapped one. Either tries it; the row's room is always kept, so nothing moves.
                 Box(Modifier.fillMaxWidth().height(PILL.dp).padding(vertical = 3.dp), contentAlignment = Alignment.Center) {
                     if (picked.isNotEmpty()) {
                         Box(
@@ -375,6 +377,7 @@ object Dwindle : PuzzleType {
                             )
                         }
                     }
+                    if (tapping && picked.isNotEmpty()) EnterButton(playable, Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)) { submit(picked) }
                 }
 
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -394,7 +397,10 @@ object Dwindle : PuzzleType {
                                     var path = listOf(start)
                                     var swiped = false
                                     var last = down.position
-                                    if (before.isEmpty()) picked = path
+                                    if (before.isEmpty()) {
+                                        picked = path
+                                        tapping = false
+                                    }
                                     while (true) {
                                         val event = awaitPointerEvent()
                                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -405,13 +411,21 @@ object Dwindle : PuzzleType {
                                             val next = DwindleLogic.swipe(latest, latest.counts(), path, at)
                                             if (next != path) {
                                                 path = next
-                                                if (path.size >= 2) swiped = true
+                                                if (path.size >= 2) {
+                                                    swiped = true
+                                                    tapping = false
+                                                }
                                                 if (swiped) picked = path
                                             }
                                         }
                                         last = change.position
                                     }
-                                    if (swiped) submit(path) else picked = DwindleLogic.tap(latest, latest.counts(), before, start)
+                                    if (swiped) {
+                                        submit(path)
+                                    } else {
+                                        picked = DwindleLogic.tap(latest, latest.counts(), before, start)
+                                        tapping = true
+                                    }
                                 }
                             },
                     ) {
