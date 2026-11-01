@@ -66,7 +66,7 @@ jobs:
       # two pull requests merged side by side, is tested again before it ships.
       - name: Record the tree that passed
         run: git rev-parse 'HEAD^{tree}' > tested-tree.txt && echo "TREE=$(cat tested-tree.txt)" >> "$GITHUB_ENV"
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: tested-tree-${{ env.TREE }}
           path: tested-tree.txt
