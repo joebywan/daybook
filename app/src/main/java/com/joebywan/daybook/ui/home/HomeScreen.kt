@@ -806,7 +806,7 @@ private fun rememberPop(play: Boolean, solved: Boolean, peak: Float): Animatable
 
 /**
  * The shape every home tile shares: a motif with the solved tick in its corner, a name, a footer line, on [tile]'s solid
- * gradient. Solved adds a heavy ring in the tile's ink, so it is a change of shape as well as colour. [justSolved] (the solve
+ * gradient. Solved adds a heavy ring in the page's ink (the tile's own vanished on a dark page wherever a bright tile has dark ink), so it is a change of shape as well as colour. [justSolved] (the solve
  * just made) pops the tick in and draws the ring; under reduced motion they are simply there.
  */
 @Composable
@@ -838,7 +838,7 @@ internal fun HomeTile(
                 if (t > 0f) {
                     val w = SOLVED_RING.toPx()
                     drawRoundRect(
-                        tile.ink.copy(alpha = t), Offset(w / 2, w / 2), Size(size.width - w, size.height - w),
+                        scheme.onBackground.copy(alpha = t), Offset(w / 2, w / 2), Size(size.width - w, size.height - w),
                         CornerRadius(18.dp.toPx() - w / 2), style = Stroke(w),
                     )
                 }
@@ -916,18 +916,29 @@ internal fun TierDots(accent: Color, selected: Difficulty?, cleared: (Difficulty
         Difficulty.entries.forEach { tier ->
             val isSelected = tier == selected
             // The tier just solved pops in big, to say where the solve went ([LocalJustSolved]).
-            val pop = rememberPop(tier == popped && cleared(tier), cleared(tier), 2.2f)
+            val pop = rememberPop(tier == popped && cleared(tier), cleared(tier), 1.5f)
             // Solved: filled in the accent, darkened or lightened to 3:1 on the surface if it needs it (on a tile,
-            // [onTile], the tile's ink at full strength). Not solved: a ring, so the two differ by shape as well as colour,
-            // darker for the tier the grid is set to.
-            val dot = Modifier
-                .size(if (isSelected) 7.dp else 5.dp)
-                .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
-                .clip(CircleShape)
-            Box(
-                if (cleared(tier)) dot.background(fill)
-                else dot.border(1.dp, onTile ?: scheme.onSurfaceVariant.copy(alpha = if (isSelected) 1f else 0.6f), CircleShape)
-            )
+            // [onTile], the tile's ink at full strength), with a tick. Not solved: a small ring, so the two differ by shape as
+            // well as colour, darker for the tier the grid is set to. Every slot is one size, so a solve never moves the row.
+            Box(Modifier.size(12.dp), contentAlignment = Alignment.Center) {
+                val dot = Modifier
+                    .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+                    .clip(CircleShape)
+                if (cleared(tier)) {
+                    Box(dot.size(if (isSelected) 12.dp else 10.dp).background(fill), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Check, "Solved",
+                            tint = if (fill.luminance() < .5f) Color.White else Color.Black,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                } else {
+                    Box(
+                        dot.size(if (isSelected) 7.dp else 5.dp)
+                            .border(1.dp, onTile ?: scheme.onSurfaceVariant.copy(alpha = if (isSelected) 1f else 0.6f), CircleShape)
+                    )
+                }
+            }
         }
     }
 }
