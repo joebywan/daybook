@@ -19,6 +19,7 @@ object DwindleOracle {
             visit(spelled, here.map { (a, b) -> a * s.width + b })
             if (here.size == maxLength) return
             for (dr in -1..1) for (dc in -1..1) {
+                if (dr != 0 && dc != 0 && !s.diagonal) continue
                 val rr = r + dr
                 val cc = c + dc
                 if (rr in rows.indices && cc in 0 until s.width && (rr to cc) !in here) go(rr, cc, here, spelled)

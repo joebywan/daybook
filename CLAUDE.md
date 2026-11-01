@@ -515,7 +515,7 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
   no side-by-side squares and nothing before or after a word, so every run is exactly one word; every word crosses the grid. The pool
   is shuffled from the sorted list (no hash order), longest first, each placed at a spot drawn from those with the most crossings.
 - **A board ships only if it is winnable without luck:** walking it by hints alone, the slot a clue names never has more than
-  `MAX_CHOICE` (6) grid words that fit. `generateVerified` tries 40 seeds (Expert: 71% first attempt, at most 5 in a year);
+  `MAX_CHOICE` (6) grid words that fit. `generateVerified` tries up to 40 seeds and ships the fewest `commonBonus` of the first 8 that pass;
   `lastResort` is the board of seed 1, proved by a test; a year per tier never reaches it (`FallbackTest`). `WordWheelOracle` (test)
   re-reads every board's squares run by run, shares nothing with the placer. JVM: median 0.3 / 0.5 / 0.7 ms a board, max 3.5 ms;
   Chromium Expert median / p95 / max 1.7 / 4.4 / 10.6 ms, WebKit 4 / 12 / 19 ms.
@@ -527,7 +527,7 @@ motif), `WordWheelWords.kt` and `WordWheelClues.kt` (generated). `id = "wordwhee
 - **Teacher:** `PINNED` (an empty slot whose length, crossing letters and the wheel leave one grid word, found and bonus words excluded:
   reads the public grid list, never a slot's word; given as that word's clue, as Lexicon's hints are: only "Show me" types it), then `CROSSING` (of the words that fit an empty slot,
   only one leaves every empty slot crossing it a different word that fits and agrees at the crossing; same list, same clue), then `CLUE` (the slot with the fewest words that fit, given as its word's clue: reads
-  the stored word, so it is the fallback: 33 / 35 / 33% of steps over a year a tier, and an exhaustive search of every consistent filling
+  the stored word, so it is the fallback: 22 / 32 / 30% of steps over a year a tier, and an exhaustive search of every consistent filling
   pins only 0.1-0.2 points more, so the rest is honestly open). The generator's `walk` keeps the old ladder (`crossings = false`) so a
   stronger teacher never moves a board. No mistake exists. Highlight indices: squares `row * width + col`, wheel letter `i` (of
   `WordWheelState.wheel`, not its shuffled place) `WordWheelTeacher.WHEEL + i`.
@@ -541,7 +541,7 @@ walkthrough, motif). `id = "hexwords"` is hashed into every seed: never rename i
 
 - **Letters vanish on every tier and holes stay holes.** So a position is a bitmask and reaching a score is an exact question:
   `HexSearch.reach` says `Yes(road)`, `No` or `Truncated` (a budget counted in positions). Only `Yes` ships; only `No` is a mistake.
-- **Tiers: 19 / 29 / 44 hexes, and the player the target beats** (`HexLogic.targetFor`): the middle of 12 biggest-word-first tries /
+- **Tiers: 19 / 29 / 44 hexes, and the player the target beats** (`HexLogic.targetFor`): the lowest of 12 biggest-word-first tries /
   one more than their best / one more than those and a one-word-lookahead player. Measured in `HexwordsRulesTest`.
 - **The words planted seed the letters and are thrown away.** The proof searches the board from `WheelWords.grid` alone. No answer
   is stored, so **`solved` is the score** and no hint can read an answer. Any `WheelWords.isWord` word scores.
@@ -821,10 +821,11 @@ Word Wheel's `wordWheelKeyAction`). `id = "dwindle"` is hashed into every seed: 
 
 - **Tiles do not fall and every goal has exactly one way on the full grid (`DwindleLogic.proved`), so no order can get stuck:** removal only takes ways away, and a tile on a
   goal's way counts that goal until it is found. Falling would make this an exhaustive search over positions. `DwindleOracle` checks all 2^n subsets on its own reading.
-- **Diagonals count**; while swiping a tile answers only within 0.42 of its middle, so a diagonal passes between its side tiles.
+- **Tiles touch by a side, never a corner** (`docs/DWINDLE_SPEC.md`: diagonals allowed four times the common bonus words; 35 bonus to one goal, the owner gave up). `DwindleState.diagonal` defaults true so a save from the diagonal build stays spellable; new boards write false.
+- **A board is the fewest `commonBonus` of `KEEP` = 6 proved draws** (58 / 123 / 196 common bonus words a board then, 8 / 18 / 32 now). Word Wheel likewise, 8 draws (4.3 / 11.2 / 21.6, now 0.8 / 3.3 / 9.5). The bonus line (`BonusLine` in `WordWheel.kt`) is shared.
 - **Goals are `WheelWords.grid`, read only.** Do not regenerate lists for this game. Bonus words are `WheelWords.isWord` and use nothing up.
 - **Tiers: 4x4, 6-7 words / 5x5, 10-12 / 6x6, 15-18**, longest word 5 / 6 / 7, tiles used twice or more at least 55 / 65 / 75% (measured 66 / 78 / 86).
-- **Hints give the clue, and glow no more than one tile:** the word's own tiles would spell it. `all-tiles` is a capped search whose `Truncated` proves nothing; the fallback is 15-20% of steps.
+- **Hints give the clue, and glow no more than one tile:** the word's own tiles would spell it. `all-tiles` is a capped search whose `Truncated` proves nothing; the fallback is about 4% of steps.
 - The path being spelled is `remember`; one word is one state and one undo. Counts are derived from the goals not found, never stored.
 
 ## Pipes

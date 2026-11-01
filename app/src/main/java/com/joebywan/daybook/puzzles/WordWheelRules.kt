@@ -177,20 +177,31 @@ internal object WordWheelLogic {
 
     const val ATTEMPTS = 40
 
+    /** How many proved draws compete; the one with the fewest [commonBonus] words ships. */
+    const val KEEP = 8
+
     /** The most grid words that may fit the easiest empty slot at any step of the hints-alone walk. */
     const val MAX_CHOICE = 6
 
     fun generateVerified(seed: Long, difficulty: Difficulty): WordWheelState? {
         val spec = specFor(difficulty)
         val roots = WheelWords.roots(spec.letters)
+        val proved = ArrayList<WordWheelState>(KEEP)
         for (attempt in 0 until ATTEMPTS) {
             val rng = Rng(seed + attempt)
             val root = roots[rng.nextInt(roots.size)]
             val board = lay(root, spec, rng) ?: continue
             if (WordWheelTeacher.walk(board).maxChoice > MAX_CHOICE) continue
-            return board
+            proved += board
+            if (proved.size == KEEP) break
         }
-        return null
+        return proved.minByOrNull(::commonBonus)
+    }
+
+    /** The common words the wheel spells that the grid does not hold: what a player tries before reaching the grid's. */
+    fun commonBonus(s: WordWheelState): Int {
+        val shortest = s.slots.minOf { it.word.length }
+        return WheelWords.gridWordsFrom(s.wheel).count { w -> w.length >= shortest && s.slots.none { it.word == w } }
     }
 
     fun judge(s: WordWheelState, word: String): WheelEntry {

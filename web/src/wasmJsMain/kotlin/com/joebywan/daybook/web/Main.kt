@@ -65,6 +65,27 @@ private fun focusCanvas(): Unit = js("""(() => {
     requestAnimationFrame(tryFocus);
 })()""")
 
+/**
+ * iOS Safari can keep 100svh at its old value after a rotation (the app stayed landscape-short in portrait, width
+ * right, height not). `#app` is sized by svh for the floating toolbar, so when svh is plainly not the window's height,
+ * this falls back to the inset rule underneath it. Compose follows its container.
+ */
+private fun followRotation(): Unit = js("""(() => {
+    const app = document.getElementById('app');
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;width:0;height:100svh;visibility:hidden';
+    document.body.appendChild(probe);
+    const check = () => {
+        const stale = probe.offsetHeight > 0 && Math.abs(probe.offsetHeight - window.innerHeight) > window.innerHeight * 0.2;
+        app.style.height = stale ? 'auto' : '';
+        app.style.bottom = stale ? 'env(safe-area-inset-bottom, 0px)' : '';
+    };
+    const later = () => { check(); setTimeout(check, 300); };
+    window.addEventListener('resize', later);
+    window.addEventListener('orientationchange', later);
+    window.visualViewport?.addEventListener('resize', later);
+})()""")
+
 private fun query(): Map<String, String> =
     locationSearch().removePrefix("?").split('&').filter { it.isNotEmpty() }.associate {
         val eq = it.indexOf('=')
@@ -198,5 +219,6 @@ fun main() {
     }
     removeLoadingNote()
     nudgeFirstFrame()
+    followRotation()
     focusCanvas()
 }

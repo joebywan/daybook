@@ -217,7 +217,7 @@ internal object HexLogic {
     fun targetFor(roads: List<HexRoad>, all: Long, difficulty: Difficulty, rng: Rng): Int {
         val tries = List(GREEDY_TRIES) { greedy(roads, all, rng) }.sorted()
         return when (difficulty) {
-            Difficulty.STANDARD -> tries[tries.size / 2]
+            Difficulty.STANDARD -> tries.first()
             Difficulty.HARD -> tries.last() + 1
             Difficulty.EXPERT -> maxOf(tries.last(), careful(roads, all)) + 1
         }

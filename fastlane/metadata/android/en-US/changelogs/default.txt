@@ -1,6 +1,5 @@
-- Two new word puzzles: Hexwords, where each word uses its letters up, and Dwindle, where tiles count down and vanish.
-- A brighter Arcade look in light and dark; six boards redrawn, the rest to follow.
-- New chiptune sounds, and a win lands with a thump.
-- Word Wheel: letters beep up a tighter scale, and a found word ends on a da-ding.
-- Mines goes off with a blast; in Arrows a blocked arrow lunges and recoils.
+- Dwindle: tiles join by their sides only, with far fewer stray words before the goals. Its bonus words open as a list.
+- Word Wheel: fewer bonus words; letters beep up a tighter scale, and a found word ends on a da-ding.
+- Hexwords: Standard's target is a little lower.
 - Sudoku and Cage Sudoku: pick the digit first, then tap every square it goes in.
+- Web: fills the screen after rotating a tablet; walkthrough text no longer overlaps.

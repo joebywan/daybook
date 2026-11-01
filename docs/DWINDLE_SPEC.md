@@ -5,7 +5,7 @@
 ## The game
 
 A grid of letter tiles and a dashed list of goal words, filled in when found. Most tiles are used by more than one goal, and each shows how many goals
-still run through it. A tile with none left vanishes, so a board starts crowded and gets easier. Spell by swiping through touching tiles (or tapping them,
+still run through it. A tile with none left vanishes, so a board starts crowded and gets easier. Spell by swiping through tiles that share a side (or tapping them,
 or typing). Other real words are bonus words, as in Word Wheel, and use nothing up. No lives, no way to lose.
 
 ## Decisions
@@ -14,10 +14,12 @@ or typing). Other real words are bonus words, as in Word Wheel, and use nothing 
 proof would become a search over every order. It would also move the board under the finger (CLAUDE.md, "Feedback must not move the board") and make a hint
 go stale. A vanished tile leaves a faint place, and the neighbours stay as they were.
 
-**Diagonals count.** Both were built and measured (200 draws a tier, same specs): orthogonal only draws boards about as often but shares less, 55 / 69 / 75%
-of tiles used twice or more before the gate against 55 / 73 / 82%. Eight neighbours also let a word wander, so it cannot be read along a row, and they are what
-players of this family of games expect. The cost is mis-swipes, so while swiping a tile answers only within 0.42 of a tile of its middle: the corner a diagonal
-crosses is nobody's (`Dwindle.tileAt`, tested). This is a judgement rather than a forced result; orthogonal stays possible if play says otherwise.
+**Diagonals do not count (2026-11-01; the first build had them).** Play said so: 35 bonus words and one goal, and the owner gave up. Common words the tiles spell besides
+the goals, mean a board over 60 days: 58 / 123 / 196 with diagonals, 14 / 30 / 47 without, and 8 / 18 / 32 with the fewest of six draws kept. Circular tiles, floated to
+ease diagonal swipes, are not needed without them. A save from the first build has no `diagonal` key, which reads as true, so its diagonal goals stay spellable.
+
+**Fewest bonus words of six.** `generateVerified` takes the first `KEEP` = 6 proved draws and ships the one with the fewest `commonBonus` words: the words a player tries
+before reaching the goals. Common words (`WheelWords.grid`) are counted, not every accepted word, since those are what get tried.
 
 **A goal has exactly one way on the full grid, and that is the whole proof.** Taking tiles away can only remove ways of spelling a word, never add one, because nothing
 falls. A tile on a goal's way counts that goal until it is found, so the way stays whole until then, whatever else has been found. So **no order can get stuck**, and a
@@ -52,13 +54,12 @@ Measured over 365 daily boards a tier (`DwindleRulesTest`, `build/reports/dwindl
 
 | | Standard | Hard | Expert |
 |---|---|---|---|
-| Mean words | 6.8 | 11.3 | 16.8 |
-| Mean tiles shared (worst) | 66% (56%) | 78% (68%) | 86% (75%) |
-| Mean uses a tile | 1.83 | 2.14 | 2.32 |
-| JVM generation ms, median / p95 / max | 1.0 / 4.7 / 13.8 | 2.0 / 6.7 / 28.7 | 5.6 / 22.0 / 285.6 |
+| Mean words | 6.9 | 11.5 | 17.1 |
+| Mean tiles shared (worst) | 63% (56%) | 75% (68%) | 80% (75%) |
+| Mean uses a tile | 1.75 | 2.01 | 2.13 |
+| JVM generation ms, median / p95 / max (a loaded machine) | 6.3 / 10.7 / 17.2 | 13.2 / 25.0 / 35.2 | 29.4 / 50.0 / 75.0 |
 
-Browser generation over the same year, median / p95 / max ms: Chromium 1 / 4 / 8, 4 / 13 / 61, 9 / 38 / 512; WebKit 3 / 8 / 13, 7 / 22 / 67, 16 / 61 / 808. The Expert
-maximum is one slow day of draws abandoned at `MAX_SCAN`; it sits behind the "Setting out" screen.
+Browser generation was last measured before the six draws (Expert median 9 ms in Chromium, 16 in WebKit), so expect about six times that; it sits behind the "Setting out" screen.
 
 ## Hints
 
@@ -72,8 +73,7 @@ tried, has one way on the full grid and that way is all live tiles. Then, simple
 
 Every step gives the word's crossword clue. Only "Show me" enters it, and no more than one tile glows, since the word's own tiles would spell it. No mistake exists.
 
-Fallback, hints alone over a year a tier: 19.5 / 14.9 / 17.5% of steps; boards needing no clue 132 / 110 / 84 of 365 (`build/reports/dwindle-teaching-coverage.txt`). Without
-`all-tiles` it was 59 / 64 / 65%. Requiring boards with no clue was not done: it would keep about a quarter of draws and cost a cover search per draw.
+Fallback, hints alone over a year a tier: 3.7 / 4.2 / 4.2% of steps; boards needing no clue 287 / 227 / 188 of 365 (`build/reports/dwindle-teaching-coverage.txt`). Requiring boards with no clue was not done: it would keep about a quarter of draws and cost a cover search per draw.
 
 ## Left out
 

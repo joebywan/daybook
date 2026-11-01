@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.joebywan.daybook.core.BoardHighlight
@@ -243,9 +244,6 @@ object WordWheel : PuzzleType {
         if (s.bonus.isNotEmpty()) append(" · ${s.bonus.size} bonus")
     }
 
-    /** The bonus words found, newest first, so the one just made is always the one showing. */
-    private fun bonusLine(s: WordWheelState): String =
-        if (s.bonus.isEmpty()) "" else "Bonus: " + s.bonus.asReversed().joinToString(", ") { it.uppercase() }
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
@@ -281,7 +279,6 @@ object WordWheel : PuzzleType {
                 notice = null
             }
         }
-        var showBonus by remember(s.wheel) { mutableStateOf(false) }
         // Shuffle only reorders the display; the count is all it needs to remember.
         var shuffles by rememberSaveable(s.wheel) { mutableIntStateOf(0) }
         val order = remember(s.wheel, shuffles) {
@@ -447,45 +444,8 @@ object WordWheel : PuzzleType {
                     SideButton("✕", playable && picked.isNotEmpty()) { picked = emptyList() }
                 }
 
-                // A tap opens the whole list; the line's room is always kept, so nothing moves when it fills.
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(LINE)
-                        .clickable(enabled = s.bonus.isNotEmpty()) { showBonus = true }
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    if (s.bonus.isNotEmpty()) Row(
-                        Modifier.fillMaxHeight().clip(RoundedCornerShape(50)).background(a.control.brush).padding(horizontal = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            bonusLine(s),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = a.control.ink,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        Text(" ›", style = MaterialTheme.typography.bodySmall, color = a.control.ink)
-                    }
-                }
+                BonusLine(s.bonus, LINE)
             }
-        }
-
-        if (showBonus) {
-            AlertDialog(
-                onDismissRequest = { showBonus = false },
-                title = { Text("Bonus words: ${s.bonus.size}") },
-                text = {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        s.bonus.sorted().forEach { Text(it.uppercase(), Modifier.padding(vertical = 2.dp)) }
-                    }
-                },
-                confirmButton = { TextButton(onClick = { showBonus = false }) { Text("Close") } },
-            )
         }
     }
 
@@ -627,4 +587,50 @@ object WordWheel : PuzzleType {
 
     /** The wheel's dark middle: the frame's indigo in light, the given square's in dark (whose frame is translucent). */
     internal fun wheelWell(a: ArcadeBoard): Color = if (a.frame.alpha == 1f) a.frame else a.given
+}
+
+/**
+ * The bonus words found, newest first so the one just made shows; a tap opens the whole list, A-Z. Word Wheel's and Dwindle's.
+ * The line's room is always kept, so nothing moves when it fills.
+ */
+@Composable
+internal fun BonusLine(bonus: List<String>, height: Dp) {
+    val a = ArcadeBoard.current
+    var open by remember { mutableStateOf(false) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(height)
+            .clickable(enabled = bonus.isNotEmpty()) { open = true }
+            .padding(top = 4.dp),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        if (bonus.isNotEmpty()) Row(
+            Modifier.fillMaxHeight().clip(RoundedCornerShape(50)).background(a.control.brush).padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Bonus: " + bonus.asReversed().joinToString(", ") { it.uppercase() },
+                style = MaterialTheme.typography.bodySmall,
+                color = a.control.ink,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Text(" \u203A", style = MaterialTheme.typography.bodySmall, color = a.control.ink)
+        }
+    }
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text("Bonus words: ${bonus.size}") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    bonus.sorted().forEach { Text(it.uppercase(), Modifier.padding(vertical = 2.dp)) }
+                }
+            },
+            confirmButton = { TextButton(onClick = { open = false }) { Text("Close") } },
+        )
+    }
 }

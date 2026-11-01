@@ -1,5 +1,6 @@
 package com.joebywan.daybook
 
+import com.joebywan.daybook.core.DailySeed
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.LexiconWords
 import com.joebywan.daybook.puzzles.WheelEntry
@@ -10,6 +11,7 @@ import com.joebywan.daybook.puzzles.WordWheelLogic
 import com.joebywan.daybook.puzzles.WordWheelState
 import com.joebywan.daybook.puzzles.WordWheelTeacher
 import com.joebywan.daybook.puzzles.WordWheelWords
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -218,5 +220,18 @@ class WordWheelRulesTest {
         }
         for (w in listOf("larp", "ate", "eat", "tea", "rain", "brain", "planet")) assertTrue(w, WheelWords.isWord(w))
         assertFalse(WheelWords.isWord("xqz"))
+    }
+
+    @Test
+    fun `the board kept has fewer common bonus words than the first proved draw would`() {
+        for (d in Difficulty.entries) {
+            val days = 0 until 60
+            val seeds = days.map { DailySeed.seedFor(LocalDate.fromEpochDays(LocalDate(2026, 1, 1).toEpochDays() + it), WordWheel.id, d) }
+            val began = System.nanoTime()
+            val kept = seeds.map { WordWheelLogic.commonBonus(WordWheelLogic.generateVerified(it, d)!!) }.average()
+            println("PROBE wheel $d bonus $kept, ${(System.nanoTime() - began) / 60_000_000.0} ms a board")
+            // The first proved draw alone gave 4.3 / 11.2 / 21.6.
+            assertTrue("$d $kept", kept < listOf(4.3, 11.2, 21.6)[d.ordinal])
+        }
     }
 }

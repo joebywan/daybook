@@ -64,8 +64,8 @@ import kotlinx.coroutines.delay
 import kotlin.math.hypot
 
 /**
- * Dwindle: a grid of letter tiles and a dashed list of goal words. Spell words by swiping through touching tiles, diagonals
- * included. Each tile shows how many goal words still run through it and vanishes when the last is found, so a board starts
+ * Dwindle: a grid of letter tiles and a dashed list of goal words. Spell words by swiping through tiles side by side or one
+ * above the other. Each tile shows how many goal words still run through it and vanishes when the last is found, so a board starts
  * crowded and clears as it is solved. Other real words are bonus words. No lives and no way to lose.
  *
  * The rules and the generator are in [DwindleLogic], the hints in [DwindleTeacher]; this file is the board. Highlight
@@ -78,7 +78,7 @@ object Dwindle : PuzzleType {
     override val tagline = "Find every word, and watch the letters go"
     override val accent = 0xFFA55C09
     override val rules = listOf(
-        "Spell words by swiping through touching tiles, diagonals included, or tap them in turn and tap the word.",
+        "Spell words by swiping through touching tiles, across or up and down (never diagonally), or tap them in turn and tap the word.",
         "A word has three letters or more and uses a tile at most once. Tiles never fall or move.",
         "The dashes show the goal words' lengths. Find them all to finish.",
         "Each tile's number is how many goal words still run through it. At zero it vanishes.",
@@ -100,22 +100,24 @@ object Dwindle : PuzzleType {
      * The walkthrough's board, by hand:
      *
      * ```
-     * T C K
-     * H S R
-     * E F I
+     * C H T
+     * A E F
+     * T S I
      * ```
      *
-     * `DwindleTeachingTest` proves each goal has one way, that SHE is a real word and no goal, and that hints alone finish the
+     * `DwindleTeachingTest` proves each goal has one way, that EAT is a real word and no goal, and that hints alone finish the
      * free-play frame without the fallback.
      */
     internal fun tutorialBoard(): DwindleState = DwindleState(
-        3, 3, "tckhsrefi",
+        3, 3, "chtaeftsi",
         listOf(
-            DwindleGoal("chest", listOf(1, 3, 6, 4, 0)),
-            DwindleGoal("chef", listOf(1, 3, 6, 7)),
-            DwindleGoal("fist", listOf(7, 8, 4, 0)),
-            DwindleGoal("irk", listOf(8, 5, 2)),
+            DwindleGoal("chest", listOf(0, 1, 4, 7, 6)),
+            DwindleGoal("chef", listOf(0, 1, 4, 5)),
+            DwindleGoal("fist", listOf(5, 8, 7, 6)),
+            DwindleGoal("the", listOf(2, 1, 4)),
+            DwindleGoal("cat", listOf(0, 3, 6)),
         ),
+        diagonal = false,
     )
 
     /** Accepts a board with exactly these words found and these bonus words, nothing else. */
@@ -126,8 +128,8 @@ object Dwindle : PuzzleType {
     override val tutorial: List<TutorialFrame> by lazy {
         val s0 = tutorialBoard()
         val s1 = s0.enter("chef")
-        val s2 = s1.enter("she")
-        val s3 = s2.enter("chest")
+        val s2 = s1.enter("eat")
+        val s3 = s2.enter("cat")
         fun tiles(g: Int) = s0.goals[g].cells.toSet()
         listOf(
             TutorialFrame(
@@ -137,7 +139,7 @@ object Dwindle : PuzzleType {
             ),
             TutorialFrame(
                 state = s0,
-                caption = "Swipe through touching tiles to spell a word, diagonals included. Swipe C, H, E, F, then let go.",
+                caption = "Swipe through touching tiles to spell a word, across or up and down. Swipe C, H, E, F, then let go.",
                 highlight = BoardHighlight(strong = tiles(1)),
                 accepts = only(listOf("chef"), emptyList()),
                 retry = "Swipe through the glowing tiles in order: C, H, E, F.",
@@ -145,19 +147,19 @@ object Dwindle : PuzzleType {
             ),
             TutorialFrame(
                 state = s1,
-                caption = "A real word off the list is a bonus word: counted, never needed, and it uses nothing up. Spell SHE.",
+                caption = "A real word off the list is a bonus word: counted, never needed, and it uses nothing up. Spell EAT.",
                 highlight = BoardHighlight(strong = setOf(4, 3, 6)),
-                accepts = only(listOf("chef"), listOf("she")),
-                retry = "Swipe through the glowing tiles in order: S, H, E.",
-                done = "SHE is a bonus word. The numbers did not change.",
+                accepts = only(listOf("chef"), listOf("eat")),
+                retry = "Swipe through the glowing tiles in order: E, A, T.",
+                done = "EAT is a bonus word. The numbers did not change.",
             ),
             TutorialFrame(
                 state = s2,
-                caption = "C, H and E have one use left. This time tap C, H, E, S and T in turn, then tap the word.",
-                highlight = BoardHighlight(strong = tiles(0)),
-                accepts = only(listOf("chef", "chest"), listOf("she")),
-                retry = "Tap the glowing tiles in order: C, H, E, S, T. Then tap the word.",
-                done = "CHEST. C, H and E are used up, so they vanish.",
+                caption = "A has one use left. This time tap C, A and T in turn, then tap the word.",
+                highlight = BoardHighlight(strong = tiles(4)),
+                accepts = only(listOf("chef", "cat"), listOf("eat")),
+                retry = "Tap the glowing tiles in order: C, A, T. Then tap the word.",
+                done = "CAT. A is used up, so it vanishes.",
             ),
             TutorialFrame(
                 state = s3,
@@ -411,15 +413,7 @@ object Dwindle : PuzzleType {
                     }
                 }
 
-                Text(
-                    if (s.bonus.isEmpty()) "" else "Bonus: " + s.bonus.asReversed().joinToString(", ") { it.uppercase() },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth().height(LINE.dp).padding(top = 4.dp),
-                )
+                BonusLine(s.bonus, LINE.dp)
             }
         }
     }
