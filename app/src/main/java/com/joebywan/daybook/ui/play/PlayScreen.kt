@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -294,11 +295,11 @@ fun PlayScreen(
         if (stored != null && game == pristine && stored.fits(initial)) {
             game = stored
             if (stored.state.solved) {
-                // Already counted; just the board, with the finish frame out of the way.
+                // Already counted, so no show: the solve, its share card (drawn again from the saved board and log) and what to play next.
                 reopenedSolved = true
                 recorded = true
-                resultsHidden = true
                 confettiPlayed = true
+                praise = Praise(share = praiseFor(stored.seconds, stored.hints, stored.state, stored.log, stored.taught).share)
             }
         }
         consulted = true
@@ -700,13 +701,8 @@ fun PlayScreen(
         if (resultsHidden) {
             ResultsPill(
                 accent = accent,
-                shown = pillOptions(options),
-                onShow = {
-                    // A reopened solve's Share card, drawn from the saved board and log when asked for, so the
-                    // streak it reads is from completions that have loaded by then.
-                    if (reopenedSolved) praise = Praise(share = praiseFor(seconds, game.hints, state, game.log, game.taught).share)
-                    resultsHidden = false
-                },
+                options = options,
+                onShow = { resultsHidden = false },
                 onOption = onNext,
                 modifier = Modifier.align(if (wide) Alignment.BottomStart else Alignment.BottomCenter)
                     .windowInsetsPadding(WindowInsets.safeDrawing).then(if (wide) Modifier.width(SidePanel) else Modifier)
@@ -1008,20 +1004,25 @@ private fun ShareChip(card: ShareCard, accent: Color, label: String = "Share") {
 
 /** What stays on screen while the frame is hidden: bring it back, or move on. */
 @Composable
-private fun ResultsPill(accent: Color, shown: List<NextOption>, onShow: () -> Unit, onOption: (NextOption) -> Unit, modifier: Modifier) {
+private fun ResultsPill(accent: Color, options: List<NextOption>, onShow: () -> Unit, onOption: (NextOption) -> Unit, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
-    Row(
-        modifier.padding(horizontal = 18.dp).widthIn(max = 360.dp).fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            Modifier.weight(1f).heightIn(min = 48.dp).shadow(4.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
-                .background(scheme.surface).background(accent.copy(alpha = 0.22f)).clickable(onClick = onShow),
-            contentAlignment = Alignment.Center,
-        ) { Text("Show results", style = MaterialTheme.typography.titleSmall, color = scheme.onSurface) }
-        val main = mainOption(shown)
-        shown.forEach {
-            NextTile(it, it == main, accent, Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(scheme.surface)) { onOption(it) }
+    val main = mainOption(options)
+    // Everything the frame offers, so hiding it never hides a way on: "Show results" and up to five options, in rows of three.
+    Column(modifier.padding(horizontal = 18.dp).widthIn(max = 360.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        (listOf<NextOption?>(null) + options).chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { option ->
+                    if (option == null) {
+                        Box(
+                            Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp).shadow(4.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
+                                .background(scheme.surface).background(accent.copy(alpha = 0.22f)).clickable(onClick = onShow),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("Show results", style = MaterialTheme.typography.titleSmall, color = scheme.onSurface) }
+                    } else {
+                        NextTile(option, option == main, accent, Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(14.dp)).background(scheme.surface)) { onOption(option) }
+                    }
+                }
+            }
         }
     }
 }

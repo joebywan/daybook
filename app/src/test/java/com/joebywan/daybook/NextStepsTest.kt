@@ -10,8 +10,6 @@ import com.joebywan.daybook.ui.play.NextOption
 import com.joebywan.daybook.ui.play.mainOption
 import com.joebywan.daybook.ui.play.nextToday
 import com.joebywan.daybook.ui.play.nextOptions
-import com.joebywan.daybook.ui.play.pillOption
-import com.joebywan.daybook.ui.play.pillOptions
 import com.joebywan.daybook.ui.play.tiersDoneOn
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
@@ -180,28 +178,9 @@ class NextStepsTest {
         assertEquals("Done", mainOption(nextOptions(daily = false, tier = HARD, doneTiers = emptySet()))?.label)
     }
 
-    // ---- the results pill (the only buttons on a solved board reopened) ----
-
-    private fun pill(daily: Boolean, tier: Difficulty, vararg done: Difficulty): String? =
-        pillOption(nextOptions(daily, tier, done.toSet()))?.let { render(listOf(it)).single() }
-
-    @Test fun `a reopened Standard daily offers the next undone tier, not Random`() {
-        assertEquals("Harder daily>daily:HARD", pill(true, STANDARD, STANDARD))
-        assertEquals("Harder daily>daily:EXPERT", pill(true, STANDARD, STANDARD, HARD))
-    }
-
-    @Test fun `the pill prefers harder, then easier, then Random`() {
-        assertEquals("Harder daily>daily:EXPERT", pill(true, HARD, HARD))
-        assertEquals("Easier daily>daily:STANDARD", pill(true, HARD, HARD, EXPERT))
-        assertEquals("Easier daily>daily:HARD", pill(true, EXPERT, EXPERT))
-        assertEquals("Random>random:EXPERT", pill(true, EXPERT, STANDARD, HARD, EXPERT))
-    }
-
-    @Test fun `a random board's pill is Another`() = assertEquals("Another>random:HARD", pill(false, HARD))
-
     // ---- next puzzle today ----
 
-    @Test fun `next puzzle today leads the daily's buttons, is the filled one and the pill's`() {
+    @Test fun `next puzzle today leads the daily's buttons, and is the filled one`() {
         val options = nextOptions(daily = true, tier = HARD, doneTiers = emptySet(), today = "kings")
         assertEquals(
             listOf("Next puzzle>today:kings:HARD", "Easier daily>daily:STANDARD", "Random>random:HARD", "Harder daily>daily:EXPERT", "Done>home"),
@@ -209,7 +188,6 @@ class NextStepsTest {
         )
         assertEquals("Kings", options.first().note)
         assertEquals("Next puzzle", mainOption(options)?.label)
-        assertEquals("Next puzzle", pillOption(options)?.label)
     }
 
     @Test fun `the next puzzle is the three's first undone, then the home order's, never the board just solved`() {
@@ -220,14 +198,5 @@ class NextStepsTest {
         // The three done at this tier: the home order, skipping what is done.
         assertEquals("y", nextToday(three, order, HARD, setOf("a" to HARD, "b" to HARD, "x" to HARD), justSolved = "c"))
         assertEquals(null, nextToday(three, order, HARD, (order - "y").map { it to HARD }.toSet(), justSolved = "y"))
-    }
-
-    @Test
-    fun `a solved daily's bar always offers Random, and other boards keep Done`() {
-        fun labels(options: List<NextOption>) = pillOptions(options).map { it.label }
-        assertEquals(listOf("Harder daily", "Random"), labels(nextOptions(true, Difficulty.STANDARD, emptySet())))
-        assertEquals(listOf("Next puzzle", "Random"), labels(nextOptions(true, Difficulty.STANDARD, emptySet(), today = "sudoku")))
-        assertEquals(listOf("Random", "Done"), labels(nextOptions(true, Difficulty.STANDARD, Difficulty.entries.toSet())))
-        assertEquals(listOf("Another", "Done"), labels(nextOptions(false, Difficulty.STANDARD, emptySet())))
     }
 }

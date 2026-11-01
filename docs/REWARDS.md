@@ -53,7 +53,7 @@ The rule is told once, under the stats calendar: "Play on 5 of any 7 days to kee
   never `String.hashCode`), so a solve always reads the same and a rotation cannot change it. Every title is at most
   `TITLE_MAX` (18) characters, which fits the banner between its poppers at 360dp. "Congratulations!" is left only for a
   frame nobody judged (a reopened solved board, whose frame keeps its Share button: the card is drawn again from the saved
-  board and log when the pill opens it). A level's fifth board says "Level N done".
+  board and log when it reopens). A solved board reopens on this frame: the solve, the share card and what to play next. A tap hides it to show the board, leaving a bar with every option. A level's fifth board says "Level N done".
 - **One line** beneath, in priority order: fastest at this tier (strictly faster than a non-empty tier history; a tie is
   not a record), perseverance (>= 10 min, or >= 2x the tier's median with 5+ solves and >= 4 min), "Faster than N%
   of your own solves" (5+ solves, N rounded down, shown from 75), then the technique line (`techniqueLine`, below), else
@@ -140,7 +140,7 @@ and one personal line), the next-step BUTTONS in a box at the bottom, and the CE
   Covers streaks (current run, only while it is alive, so never a lapsed one), per-puzzle streaks, 100 solves, 30 days, one
   of each, full set and clean sweep. Null for earned ones, first solve and top tier. Positive wording only; never a loss.
 - **Next puzzle today.** On today's own daily opened from Home (not an archive day), the frame's first button, filled as
-  the main one and the pill's way on, is "Next puzzle" with the puzzle named under it (`nextToday` in `ui/play/NextSteps.kt`): the first of today's
+  the main one, is "Next puzzle" with the puzzle named under it (`nextToday` in `ui/play/NextSteps.kt`): the first of today's
   three not yet solved at this tier, else the first unsolved daily at this tier in the home grid's order; none once every
   daily at the tier is done. It opens that board as from Home, so back (and Done) from it goes Home, where the board just
   solved was opened from. An archive board does not offer it: its back is its own puzzle's archive, which another puzzle's

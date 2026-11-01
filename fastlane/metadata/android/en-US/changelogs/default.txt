@@ -1,7 +1,7 @@
 - Dwindle: tiles join by their sides only, with far fewer stray words.
-- Word Wheel: fewer bonus words. Fast swipes no longer skip letters in word games.
-- Word Wheel, Dwindle, Hexwords: letters beep up a scale, found words da-ding.
-- Solved dailies offer Random.
+- Word games: fewer bonus words; fast swipes skip no letters.
+- Word games: letters beep up a scale, found words da-ding.
+- Solved dailies reopen on your result, share card and next choices.
 - Hexwords: lower Standard target; says when the target is out of reach.
 - Sudoku and Cage Sudoku: pick the digit first, then tap every square it goes in.
 - Web: fills the screen after rotating; walkthrough text no longer overlaps.
