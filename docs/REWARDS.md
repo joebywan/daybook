@@ -348,7 +348,7 @@ pulse width with the landing chord broken a different way), one drawn per play f
   last that does not also solve it. So a small board skips notes, a big one repeats them (Sudoku's 27 hold a note about three units), it
   holds at the top rather than leave the scale, and an undo or a move that breaks a unit steps back down. A board with no units has no phrase.
   Never on load, undo, restart, or the solving move (the win has that), and it plays under reduced motion, unlike the glow and the pop.
-- **Confirmation:** the da-ding (`Tones.word`): a hint's move made by the player and a walkthrough's step (`LocalChime`). It replaced the coin, three variants the owner called a gross boop (2026-11-01).
+- **Confirmation:** the da-ding (`Tones.word`): a hint's move made by the player and a walkthrough's step (`LocalChime`). It replaced the coin, three variants the owner called a gross boop (2026-11-01). A found word a hint named fires both on one move, so `Tones.oneDaDing`, around the app's one tone player, plays the first and drops any within 200 ms.
 - **Word Wheel, Dwindle and Hexwords:** each letter added beeps a step up C major, C5 to G5, holding on G from the fifth (`Tones.wheel`), each taken back falls one; the state is the
   board's own `remember` (`LetterBeeps`). A refused or cleared word is silent. A found word is a da-ding, C6 to G6 (`Tones.word`, through `rememberMoveFeel`'s
   `unitTone`; Hexwords has no units and plays it as the word is taken), not the phrase, whose top is E5: under the letters, it made every found word a drop and sound like a mistake (the owner, 2026-11-01).

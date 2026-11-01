@@ -6,6 +6,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.random.Random
+import kotlin.time.TimeSource
 
 /**
  * Every sound the game makes, synthesised as an old handheld's sound chip would (no audio files), rendered once and kept, so a
@@ -18,6 +19,7 @@ object Tones {
     enum class Kind(val count: Int) { STEP(8), WHEEL(7), WIN(3), BIG_WIN(3), ALL_TIERS(3), WORD(1) }
 
     const val SAMPLE_RATE = 44_100
+    const val DA_DING_GAP_MS = 200L
 
     val COUNT: Int = Kind.entries.sumOf { it.count }
 
@@ -60,6 +62,18 @@ object Tones {
 
     /** The da-ding: a found word, above every letter whatever its length so spelling one never ends on a drop, and a confirmation ([com.joebywan.daybook.ui.tutorial.LocalChime]). */
     fun word(): Int = index(Kind.WORD, 0)
+
+    /**
+     * [play] with a da-ding dropped if one started within [DA_DING_GAP_MS]: a found word a hint named is confirmed by the board and
+     * by the hint on the same move, and that is one da-ding, not two doubled. No two words can really be found that close together.
+     */
+    fun oneDaDing(play: (Int) -> Unit, nowMs: () -> Long = TimeSource.Monotonic.markNow().let { start -> { start.elapsedNow().inWholeMilliseconds } }): (Int) -> Unit {
+        var last = -DA_DING_GAP_MS
+        return { tone ->
+            if (tone != word()) play(tone)
+            else nowMs().let { now -> if (now - last >= DA_DING_GAP_MS) { last = now; play(tone) } }
+        }
+    }
 
     /**
      * Where a board stands in its phrase, from what the rules show alone: [done] of its [total] units finished. The bottom note
