@@ -84,7 +84,7 @@ object Hexwords : PuzzleType {
     override val tagline = "Spend the letters well: every word uses them up"
     override val accent = 0xFF96754A // AccentSpacingTest's printed candidate
     override val rules = listOf(
-        "Drag through touching hexes to spell a word of three to seven letters, or tap them in turn and tap the word.",
+        "Drag through touching hexes to spell a word of three to seven letters, or tap them in turn and press Enter.",
         "A word's letters leave the board, so a big word can break up the words around it.",
         "Three letters score 3, four 5, five 8, six 12, seven 17. Reach the target to finish.",
         "A word may come again from other letters. Nothing is lost for trying: Undo puts a word back.",
@@ -143,10 +143,10 @@ object Hexwords : PuzzleType {
             ),
             TutorialFrame(
                 state = s0,
-                caption = "Look before you take. Start over with DANCE: tap D, A, N, C, E in turn, then tap the word.",
+                caption = "Look before you take. Start over with DANCE: tap D, A, N, C, E in turn, then press Enter.",
                 highlight = BoardHighlight(strong = DANCE.toSet()),
                 accepts = tookOnly("dance", DANCE),
-                retry = "Tap the glowing hexes in order: D, A, N, C, E. Then tap the word.",
+                retry = "Tap the glowing hexes in order: D, A, N, C, E. Then press Enter.",
                 done = "DANCE scores 8 and leaves a word behind it.",
             ),
             TutorialFrame(
@@ -265,6 +265,8 @@ object Hexwords : PuzzleType {
         // The word being spelled and the finger are transient: a refused word costs nothing, one word is one state.
         var picked by remember(s.letters) { mutableStateOf(listOf<Int>()) }
         LetterBeeps(picked.size)
+        // Whether a tap last added to the word: what shows Enter, so a swipe never flashes it.
+        var tapping by remember(s.letters) { mutableStateOf(false) }
         val tones = LocalBoardTones.current
         var typed by remember(s.letters) { mutableStateOf("") }
         var trace by remember(s.letters) { mutableIntStateOf(0) }
@@ -355,7 +357,7 @@ object Hexwords : PuzzleType {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth().height(LINE),
                 )
-                // The word being spelled, with what it would score; tapping tries it. Its room is always kept.
+                // The word being spelled, with what it would score, and Enter for a tapped one. Either tries it; the row's room is always kept.
                 Box(Modifier.fillMaxWidth().height(PILL).padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
                     if (picked.isNotEmpty()) {
                         val pts = HexLogic.points(picked.size)
@@ -376,6 +378,7 @@ object Hexwords : PuzzleType {
                             )
                         }
                     }
+                    if (tapping && picked.isNotEmpty()) EnterButton(playable, Modifier.align(Alignment.CenterEnd)) { submit(picked) }
                 }
                 Canvas(
                     Modifier
@@ -408,7 +411,10 @@ object Hexwords : PuzzleType {
                                 var swiped = false
                                 typed = ""
                                 finger = down.position
-                                if (before.isEmpty()) picked = path
+                                if (before.isEmpty()) {
+                                    picked = path
+                                    tapping = false
+                                }
                                 while (true) {
                                     val event = awaitPointerEvent()
                                     val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -422,14 +428,22 @@ object Hexwords : PuzzleType {
                                         val next = swipeHex(path, at, nb)
                                         if (next != path) {
                                             path = next
-                                            if (path.size >= 2) swiped = true
+                                            if (path.size >= 2) {
+                                                swiped = true
+                                                tapping = false
+                                            }
                                             if (swiped) picked = path
                                         }
                                     }
                                     finger = change.position
                                 }
                                 finger = null
-                                if (swiped) submit(path) else picked = tapHex(before, start, nb)
+                                if (swiped) {
+                                    submit(path)
+                                } else {
+                                    picked = tapHex(before, start, nb)
+                                    tapping = true
+                                }
                             }
                         },
                 ) {
