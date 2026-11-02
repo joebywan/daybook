@@ -68,6 +68,7 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
+import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.ArcadeBoard
@@ -104,7 +105,7 @@ object WordWheel : PuzzleType {
     override val tagline = "Spell every word in the grid from the wheel"
     override val accent = 0xFF2891AC
     override val rules = listOf(
-        "Spell words from the wheel by swiping across its letters, or tap them in turn and tap the word to try it.",
+        "Spell words from the wheel by swiping across its letters, or tap them in turn and press Enter.",
         "Each letter on the wheel is used at most once in a word, and no word is shorter than the grid's shortest.",
         "A word the grid holds fills its slot. Fill every slot to finish.",
         "Other real words count as bonus words. They are never needed.",
@@ -177,10 +178,10 @@ object WordWheel : PuzzleType {
             TutorialFrame(
                 state = s1,
                 caption = "Crossing letters help: this four-letter slot has R third, and BARN is the only word the wheel " +
-                    "spells like that. This time tap B, A, R and N, then tap the word.",
+                    "spells like that. This time tap B, A, R and N, then press Enter.",
                 highlight = BoardHighlight(strong = slot(1), soft = wheelOf("barn")),
                 accepts = only(listOf("brain", "barn"), emptyList()),
-                retry = "Tap the glowing letters in order: B, A, R, N. Then tap the word.",
+                retry = "Tap the glowing letters in order: B, A, R, N. Then press Enter.",
                 done = "BARN. Swipe or tap, whichever you like.",
             ),
             TutorialFrame(
@@ -264,6 +265,8 @@ object WordWheel : PuzzleType {
         // The word being spelled (wheel positions) and the finger, transient: never PuzzleState, so a refused word costs nothing.
         var picked by remember(s.wheel) { mutableStateOf(listOf<Int>()) }
         var finger by remember { mutableStateOf<Offset?>(null) }
+        // Whether a tap last added to the word: what shows Enter, so a swipe never flashes it.
+        var tapping by remember(s.wheel) { mutableStateOf(false) }
         LetterBeeps(picked.size)
         var notice by remember { mutableStateOf<String?>(null) }
         var noticeIsError by remember { mutableStateOf(false) }
@@ -355,7 +358,7 @@ object WordWheel : PuzzleType {
                     }
                 }
 
-                // The word being spelled. Tapping it tries it; its room is always kept, so nothing moves when it fills.
+                // The word being spelled, and Enter for a tapped one. Either tries it; the row's room is always kept, so nothing moves.
                 Box(Modifier.fillMaxWidth().height(PILL).padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
                     if (picked.isNotEmpty()) {
                         Box(
@@ -377,6 +380,7 @@ object WordWheel : PuzzleType {
                             )
                         }
                     }
+                    if (tapping && picked.isNotEmpty()) EnterButton(playable, Modifier.align(Alignment.CenterEnd)) { submit(picked) }
                 }
 
                 Row(
@@ -410,7 +414,10 @@ object WordWheel : PuzzleType {
                                     var path = listOf(start)
                                     var swiped = false
                                     finger = down.position
-                                    if (before.isEmpty()) picked = path
+                                    if (before.isEmpty()) {
+                                        picked = path
+                                        tapping = false
+                                    }
                                     while (true) {
                                         val event = awaitPointerEvent()
                                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -424,14 +431,22 @@ object WordWheel : PuzzleType {
                                             val next = swipeWheelLetter(path, at)
                                             if (next != path) {
                                                 path = next
-                                                if (path.size >= 2) swiped = true
+                                                if (path.size >= 2) {
+                                                    swiped = true
+                                                    tapping = false
+                                                }
                                                 if (swiped) picked = path
                                             }
                                         }
                                         finger = change.position
                                     }
                                     finger = null
-                                    if (swiped) submit(path) else picked = tapWheelLetter(before, start)
+                                    if (swiped) {
+                                        submit(path)
+                                    } else {
+                                        picked = tapWheelLetter(before, start)
+                                        tapping = true
+                                    }
                                 }
                             },
                     ) {
@@ -583,6 +598,23 @@ object WordWheel : PuzzleType {
 
     /** The wheel's dark middle: the frame's indigo in light, the given square's in dark (whose frame is translucent). */
     internal fun wheelWell(a: ArcadeBoard): Color = if (a.frame.alpha == 1f) a.frame else a.given
+}
+
+/** Tries the word spelled by tapping, beside it in its fixed row. Word Wheel's and Dwindle's. */
+@Composable
+internal fun EnterButton(enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val a = ArcadeBoard.current
+    Box(
+        modifier
+            .arcadeLift(a.control, 16.dp)
+            .clip(RoundedCornerShape(50))
+            .background(a.control.brush)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        CappedFontScale { Text("Enter", color = a.control.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
+    }
 }
 
 /**

@@ -6,3 +6,4 @@
 - Sudoku and Cage Sudoku: pick the digit, then tap its squares.
 - Home: solved tiers get a tick and a clearer border.
 - Hexwords: letters leave and undo back one by one.
+- Word Wheel, Dwindle: tap letters, then press Enter.
