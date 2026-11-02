@@ -333,8 +333,8 @@ kept is the best until beaten, and Best can be slower than the best time beside 
 
 ## Sounds (`core/Tones.kt`, `rememberTonePlayer` in the platform seam)
 
-Wins are a marimba chime (the owner brought it back, 2026-11-01, over a chiptune fanfare); everything else is chiptune, as the owner
-asked when the marimba beeps wore thin (2026-10-31): pulse waves at 25 and 50% duty, volume in sixteen hard steps, small pitch sweeps. All synthesised and rendered
+Wins are a marimba chime (the owner brought it back, 2026-11-01, over a chiptune fanfare), and so is every progression, a letter or a finished unit (the owner, 2026-11-02, over chiptune notes). The da-ding stays
+chiptune: pulse waves at 25 and 50% duty, volume in sixteen hard steps. All synthesised and rendered
 once, no audio files. A voice's level is its RMS, because a square wave is much louder than a plucked sine of the same peak;
 pulses carry no DC, so a note starting or a volume step is no thump; a millisecond's fade at each end of a tone stops a click.
 The Sound switch silences all of them, and on Android so does the ringer on silent or vibrate; reduced motion stills nothing here,
@@ -342,13 +342,13 @@ since sound is not motion. Each win has three variants (the chime as first chose
 
 - **An ordinary move is silent** (the owner, 2026-10-31: the beeps wore thin); the haptic stays.
 - **Unit finished** (a row, a box, a cage, a found word): `rememberMoveFeel`, the one hook, so every board with units has it. Each plays
-  a note of the board's phrase, C major pentatonic C4 to E5, so the win's opening G5 is the scale's next note. The note is derived, nothing
+  a marimba note of the board's phrase, C major pentatonic C4 to E5, so the win's opening G5 is the scale's next note. The note is derived, nothing
   stored: `Tones.phraseStep(units done by the rules, units)` spreads any board over the eight notes, bottom on the first unit, top on the
   last that does not also solve it. So a small board skips notes, a big one repeats them (Sudoku's 27 hold a note about three units), it
   holds at the top rather than leave the scale, and an undo or a move that breaks a unit steps back down. A board with no units has no phrase.
   Never on load, undo, restart, or the solving move (the win has that), and it plays under reduced motion, unlike the glow and the pop.
 - **Confirmation:** the da-ding (`Tones.word`): a hint's move made by the player and a walkthrough's step (`LocalChime`). It replaced the coin, three variants the owner called a gross boop (2026-11-01). A found word a hint named fires both on one move, so `Tones.oneDaDing`, around the app's one tone player, plays the first and drops any within 200 ms.
-- **Word Wheel, Dwindle and Hexwords:** each letter added beeps a step up C major, C5 to G5, holding on G from the fifth (`Tones.wheel`), each taken back falls one; the state is the
+- **Word Wheel, Dwindle and Hexwords:** each letter added plays a marimba note a step up C major, C5 to G5, holding on G from the fifth (`Tones.wheel`), each taken back falls one; the state is the
   board's own `remember` (`LetterBeeps`). A refused or cleared word is silent. A found word is a da-ding, C6 to G6 (`Tones.word`, through `rememberMoveFeel`'s
   `unitTone`; Hexwords has no units and plays it as the word is taken), not the phrase, whose top is E5: under the letters, it made every found word a drop and sound like a mistake (the owner, 2026-11-01).
   The word that solves the board plays the win.

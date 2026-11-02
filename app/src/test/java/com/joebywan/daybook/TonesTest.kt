@@ -43,10 +43,10 @@ class TonesTest {
 
     // Bank entries of a kind, from the same public index pick() draws from: every index it can return, found by asking.
     private fun of(kind: Tones.Kind): List<Int> = (1..400).mapTo(HashSet()) { Tones.pick(kind) }.sorted()
+    // The strongest note: a marimba's upper partial would add zero crossings, so counting them cannot read its pitch.
     private fun hz(s: FloatArray): Double {
-        val n = (0.1 * rate).toInt().coerceAtMost(s.size)
-        val crossings = (1 until n).count { (s[it - 1] < 0) != (s[it] < 0) }
-        return crossings / 2.0 / (n.toDouble() / rate)
+        val start = s.window(0.0, 0.2)
+        return noteHz((48..96).maxByOrNull { strength(start, noteHz(it)) }!!)
     }
     private fun FloatArray.window(from: Double, to: Double) = copyOfRange((from * rate).toInt(), (to * rate).toInt())
     private fun rms(s: FloatArray) = sqrt(s.sumOf { it.toDouble() * it } / s.size)
@@ -85,7 +85,8 @@ class TonesTest {
         assertTrue("no win startles", peak(Tones.Kind.WIN) <= 0.5f && peak(Tones.Kind.BIG_WIN) <= 0.5f && peak(Tones.Kind.ALL_TIERS) <= 0.6f)
         assertTrue("a win is heard", peak(Tones.Kind.WIN) >= 0.2f)
         // A square wave is far louder than a plucked sine of the same peak, so loudness, not peak, keeps the order.
-        assertTrue(seconds(Tones.Kind.STEP) <= 0.2)
+        assertTrue(seconds(Tones.Kind.STEP) <= 0.5)
+        assertTrue(seconds(Tones.Kind.WHEEL) <= 0.5)
         assertTrue(loud(Tones.Kind.STEP) < loud(Tones.Kind.WIN))
         assertTrue(loud(Tones.Kind.WHEEL) < loud(Tones.Kind.WIN))
         assertTrue(loud(Tones.Kind.WORD) < loud(Tones.Kind.WIN))
@@ -120,6 +121,17 @@ class TonesTest {
         assertTrue(win.window(0.73, 0.8).all { it == 0f })
     }
 
+    @Test fun aProgressionIsAMarimbaPluckNotAPulse() {
+        for (i in List(Tones.Kind.STEP.count, Tones::step) + List(Tones.Kind.WHEEL.count, Tones::wheel)) {
+            val s = Tones.samples(i)
+            assertTrue("tone $i dies away", rms(s.window(0.01, 0.05)) > 3 * rms(s.window(0.25, 0.3)))
+            // A pulse sits on two levels; a pluck passes through them.
+            val start = s.window(0.01, 0.05)
+            val onLevels = start.count { abs(it - start.max()) < 0.001f || abs(it - start.min()) < 0.001f }
+            assertTrue("tone $i: $onLevels of ${start.size} on two levels", onLevels < start.size / 2)
+        }
+    }
+
     @Test fun aNoteReallyIsAPulseWave() {
         // In one volume step of the da-ding's ring the samples sit on two values a quarter and three quarters of the time.
         val note = Tones.samples(Tones.word()).window(0.072, 0.087)
@@ -134,9 +146,9 @@ class TonesTest {
     }
 
     @Test fun volumeFallsInHardSteps() {
-        // The note's top level, read every 2 ms over the note: few distinct values, and it holds between them.
-        val note = Tones.samples(Tones.wheel(0))
-        val tops = (0 until 40).map { k -> note.window(0.002 + k * 0.002, 0.002 + (k + 1) * 0.002 + 0.002).max() }
+        // The da-ding's first note's top level, read every 2 ms: few distinct values, and it holds between them.
+        val note = Tones.samples(Tones.word())
+        val tops = (0 until 29).map { k -> note.window(0.002 + k * 0.002, 0.002 + (k + 1) * 0.002 + 0.002).max() }
         val values = tops.map { (it * 2000).toInt() }.distinct()
         assertTrue("${values.size} levels in ${tops.size} readings", values.size in 3..15)
         assertEquals(values, values.sortedDescending())
