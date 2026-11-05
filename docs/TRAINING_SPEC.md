@@ -155,7 +155,9 @@ batch) follow it; the rest of the puzzles are classified at the end.
 - The run (right answers in a row) is not stored: leaving a technique starts its run again.
 - **Keys** (a hardware or web keyboard): the board's own, plus H for the hint's next step and Esc to close it, through
   `hintKeys` (`ui/teach/Hints.kt`), the modifier the play screen wraps its board in too, so a puzzle added to Training
-  needs nothing for them. No Ctrl/Cmd+Z: neither practice nor the final board has an undo.
+  needs nothing for them. No Ctrl/Cmd+Z on a practice, which judges one move and has no undo; the final board has Undo and Ctrl/Cmd+Z
+  (the owner, 2026-11-05: a whole Expert board with no way back from a slip was harsher than the daily game), except
+  where the puzzle has no Undo anywhere (Pointers, Mines). A Show me stays counted after it is undone.
 
 ## The two shapes, and adding a course
 
