@@ -1060,6 +1060,13 @@ to that empty board and wiped the line; Snap was completable only in one unbroke
 If a gesture detector must outlive state changes, read the board through `rememberUpdatedState`,
 never the captured value.
 
+**Every board with two kinds of mark takes taps the same way** (`ui/TwinTaps.kt`; the owner, 2026-11-05: one way to
+learn across the games): a tap makes the first (the pen's, where there is a pen), a double tap on the same square or a
+long press the other. The tap is drawn at once and emitted after the 300 ms window, so a double tap is one move.
+Kings, Tents, Lamps, Nonogram and Tally (through `penGrid`), Mines and Who's Who's pad all use it; a new two-mark board
+does too, never its own copy (three had grown). A tap that would show what the twin must not (Mines' reveal) or that
+undoes the twin (taking a crown back) passes `holds = false`. Detectors read `TwinTaps.board`, so they are not keyed on the state.
+
 **Derive, don't store, anything computed from board state.** Kings' eliminations and LITS's
 impossible squares are recomputed per render. The exception is the player's own marks: Sudoku's pencil
 marks (`SudokuState.notes`, a 9-bit mask per cell, defaulted so old saves load) are stored and always

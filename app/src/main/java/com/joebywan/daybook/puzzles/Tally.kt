@@ -62,6 +62,7 @@ import com.joebywan.daybook.ui.Sweep
 import com.joebywan.daybook.ui.swept
 import com.joebywan.daybook.ui.penKeys
 import com.joebywan.daybook.ui.penGrid
+import com.joebywan.daybook.ui.rememberTwinTaps
 import com.joebywan.daybook.ui.PenRow
 import androidx.compose.ui.geometry.Rect
 import com.joebywan.daybook.ui.hintRims
@@ -95,7 +96,7 @@ object Tally : PuzzleType {
     override val rules = listOf(
         "The number beside each row, and under each column, is its target.",
         "Remove numbers so that what is left in every row and every column adds up to its target.",
-        "Pick Remove or Keep under the board and tap numbers. Drag along a row or column to sweep several at once.",
+        "Pick Remove or Keep under the board and tap numbers; double-tap or long-press for the other. Drag along a row or column to sweep several at once.",
         "Keep circles a number you are sure of. It is only a note: a circled number counts exactly like any other left in.",
         "Solved when every row and column adds up. Every board has one answer, found without guessing.",
     )
@@ -367,6 +368,7 @@ object Tally : PuzzleType {
         // the play screen pushes an undo entry for every state it is handed.
         var pen by rememberSaveable(s.digits) { mutableStateOf(TallyLogic.REMOVED) }
         val sweep = remember(s.digits) { mutableStateOf<Sweep?>(null) }
+        val taps = rememberTwinTaps(s, onState)
         val cursor = remember(s.digits) { mutableStateOf<Int?>(null) }
         val targets = remember(s.digits, s.keep) { TallyLogic.targets(s) }
 
@@ -376,7 +378,7 @@ object Tally : PuzzleType {
             Modifier
                 .fillMaxSize()
                 .padding(horizontal = 14.dp)
-                .penKeys(s, interactive, TALLY_KEYS, cursor, onState),
+                .penKeys(taps, interactive, TALLY_KEYS, cursor),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             BoxWithConstraints(
@@ -388,7 +390,7 @@ object Tally : PuzzleType {
                 val unitPx = with(density) { unit.toPx() }
                 val texts = remember(s.digits, s.keep, unitPx) { measure(measurer, s, unitPx, density) }
 
-                val shown = s.swept(sweep.value)
+                val shown = taps.shown.swept(sweep.value)
                 val done = linesDone(shown, targets)
                 // Lines that add up, on the board as handed (not the sweep still under the finger).
                 val units = remember(n) { lineUnits(n, n) }
@@ -406,7 +408,7 @@ object Tally : PuzzleType {
                     Box(
                         Modifier
                             .size(unit * n)
-                            .penGrid(s, interactive, pen, unitPx, sweep, cursor, scheme.primary, onState),
+                            .penGrid(taps, interactive, pen, unitPx, sweep, cursor, scheme.primary),
                     )
                 }
             }

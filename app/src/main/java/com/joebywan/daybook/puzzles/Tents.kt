@@ -13,14 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -51,23 +45,21 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.core.union
-import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.gridCellAt
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.theme.arcadeGlow
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.time.TimeSource
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.rememberSettled
+import com.joebywan.daybook.ui.rememberTwinTaps
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 /** Tents' own colours, beyond [ArcadeBoard]'s: a tent wears its amber, the trees and grass these greens. Measured in TentsInksTest. */
 internal class TentsInks private constructor(
@@ -107,11 +99,6 @@ internal class TentsInks private constructor(
  * Highlight indices follow [TentsState]: squares `0 until n*n`, row clue `n*n + r`, column clue `n*n + n + c`.
  */
 object Tents : PuzzleType {
-
-    private const val DOUBLE_TAP_MS = 300L
-    private val tapClock = TimeSource.Monotonic.markNow()
-
-    private data class Pending(val cell: Int, val base: TentsState, val after: TentsState)
 
     override val id = "tents"
     override val displayName = "Tents"
@@ -440,28 +427,13 @@ object Tents : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val base = state as TentsState
         val n = base.size
-        // A single tap (grass) is drawn at once but handed to the screen only after the double-tap
-        // window, so a double tap becomes one tent move, not a grass entry under it (as Kings' crowns).
-        // [Pending.base] ties it to the board it was made on: undo or a hint drops it.
-        var pending by remember { mutableStateOf<Pending?>(null) }
-        var lastCell by remember { mutableIntStateOf(-1) }
-        var lastTapAt by remember { mutableLongStateOf(0L) }
-        val held = pending?.takeIf { it.base === base }
+        // A tap is grass, a double tap or long press a tent (`TwinTaps`, every two-mark board's rule).
+        val taps = rememberTwinTaps(base, onState)
         // A sweep lays grass on every empty square the finger crosses, drawn as it goes and emitted
         // once on lift (one move, one undo). Transient, so not in the state.
         var sweepBase by remember { mutableStateOf<TentsState?>(null) }
         var swept by remember { mutableStateOf(emptySet<Int>()) }
-        val s = sweepBase?.grassed(swept) ?: held?.after ?: base
-        val onStateNow by rememberUpdatedState(onState)
-        // The taps are driven by events and a timer of their own, never by recomposition (a frame can lag
-        // behind a quick tap): [latest] is the board as of the last thing this handler emitted or was handed.
-        val scope = rememberCoroutineScope()
-        val latest = remember { Cell(base) }.also { it.v = base }
-        val commit = remember { Cell<Job?>(null) }
-        fun emit(next: TentsState) {
-            latest.v = next
-            onStateNow(next)
-        }
+        val s = sweepBase?.grassed(swept) ?: taps.shown
 
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
@@ -494,7 +466,7 @@ object Tents : PuzzleType {
                 movedCursor(cursor, key, n, n)?.let { cursor = it; return@boardKeys true }
                 val at = cursor ?: return@boardKeys false
                 val action = tentsKeyAction(key) ?: return@boardKeys false
-                if (!repeat) s.applyKey(at, action)?.let(onState)
+                if (!repeat) taps.apply { it.applyKey(at, action) ?: it }
                 true
             }.padding(14.dp),
             contentAlignment = Alignment.Center,
@@ -528,11 +500,8 @@ object Tents : PuzzleType {
                             fun cellAt(o: Offset) = gridCellAt(o, unitPx, n, n)
                             detectDragGestures(
                                 onDragStart = { o ->
-                                    // Any tap still held rides along as the sweep's base.
-                                    commit.v?.cancel()
-                                    sweepBase = pending?.takeIf { it.base === latest.v }?.after ?: latest.v
-                                    pending = null
-                                    lastCell = -1
+                                    // Any tap still held is handed over first: it is the sweep's base.
+                                    sweepBase = taps.settle()
                                     swept = setOf(cellAt(o))
                                 },
                                 onDrag = { change, _ ->
@@ -544,63 +513,20 @@ object Tents : PuzzleType {
                                     val next = sweepBase!!.grassed(swept)
                                     sweepBase = null
                                     swept = emptySet()
-                                    if (next !== latest.v) emit(next)
+                                    taps.apply { next }
                                 },
                                 onDragCancel = { sweepBase = null; swept = emptySet() },
                             )
                         }
                         .pointerInput(interactive, unitPx) {
                             if (!interactive) return@pointerInput
-                            // A long press is the double tap's twin: a tent, or one taken back. `onLongPress`
-                            // never delays a tap (only `onDoubleTap` would).
                             detectTapGestures(
-                                onLongPress = { offset ->
-                                    val i = gridCellAt(offset, unitPx, n, n)
-                                    val held = pending?.takeIf { it.base === latest.v }
-                                    commit.v?.cancel()
-                                    lastCell = -1
-                                    pending = null
-                                    val from = if (held != null && held.cell != i) held.after else latest.v
-                                    val next = from.withTent(i)
-                                    if (next !== latest.v) emit(next)
-                                },
-                            ) { offset ->
-                                val i = gridCellAt(offset, unitPx, n, n)
-                                val held = pending?.takeIf { it.base === latest.v }
-                                commit.v?.cancel()
-                                if ((held?.after ?: latest.v).marks[i] == TentsLogic.TENT) { // taking a tent back is one tap
-                                    lastCell = -1
-                                    pending = null
-                                    emit((held?.after ?: latest.v).withTent(i))
-                                    return@detectTapGestures
-                                }
-                                val now = tapClock.elapsedNow().inWholeMilliseconds
-                                if (i == lastCell && now - lastTapAt < DOUBLE_TAP_MS) {
-                                    lastCell = -1
-                                    pending = null
-                                    val next = latest.v.withTent(i)
-                                    if (next !== latest.v) emit(next)
-                                    return@detectTapGestures
-                                }
-                                lastCell = i
-                                lastTapAt = now
-                                // A tap on another square settles the one held before it.
-                                if (held != null && held.cell != i) emit(held.after)
-                                val from = latest.v
-                                val next = from.tapped(i)
-                                if (next === from) {
-                                    pending = null
-                                } else {
-                                    val p = Pending(i, from, next)
-                                    pending = p
-                                    commit.v = scope.launch {
-                                        delay(DOUBLE_TAP_MS)
-                                        if (pending === p && p.base === latest.v) {
-                                            pending = null
-                                            emit(p.after)
-                                        }
-                                    }
-                                }
+                                onLongPress = { o -> gridCellAt(o, unitPx, n, n).let { i -> taps.press(i) { it.withTent(i) } } },
+                            ) { o ->
+                                val i = gridCellAt(o, unitPx, n, n)
+                                // Taking a tent back is one tap.
+                                val tent = taps.shown.marks[i] == TentsLogic.TENT
+                                taps.tap(i, { if (tent) it.withTent(i) else it.tapped(i) }, { it.withTent(i) }, holds = !tent)
                             }
                         },
                 )
