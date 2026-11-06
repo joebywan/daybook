@@ -59,6 +59,11 @@ batch) follow it; the rest of the puzzles are classified at the end.
   "<Puzzle> graduate" achievement the first time, its badge otherwise, then Training's progress as a whole,
   "Training: n of 21 courses graduated"; "Back to <Puzzle> training" (a solve with a
   Show me is not celebrated and stays, to start again). The solve is answered once, saved across a recreation. Hints are allowed (they teach).
+  It sounds and moves as a game board does, from the play screen's own locals (`LocalMoveCount`, `LocalUndoCount`,
+  `LocalSolveCount`, `LocalBoardTones`; the owner, 2026-11-07: "I like the audio feedback for small milestones"): a
+  finished unit's climbing note and glow, the spelling games' letter notes and found-word da-ding, the da-ding when a hint's
+  move is made, Undo's dip. Only a move plays them, never Restart, Undo or a recreation; the solving move is left to the
+  chime. Technique practices and walkthroughs stay silent.
 - **Ways in:**
   - **Home's Training mode**, the third segment of the mode row (`Daily/Random · Levels · Training`): the tier row gives
     way to one line, "N of 21 graduated · M techniques passed", and the grid shows only the puzzles with a course, in the
