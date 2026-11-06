@@ -22,6 +22,12 @@ import androidx.compose.ui.semantics.contentDescription
 import com.joebywan.daybook.core.TrainingRecord
 import com.joebywan.daybook.ui.LocalHaptics
 import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.LocalBoardTones
+import com.joebywan.daybook.ui.LocalMoveCount
+import com.joebywan.daybook.ui.LocalSolveCount
+import com.joebywan.daybook.ui.LocalTones
+import com.joebywan.daybook.ui.LocalUndoCount
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.ui.play.Confetti
 import com.joebywan.daybook.ui.play.EarnedAchievement
 import com.joebywan.daybook.ui.play.FinishedFrame
@@ -590,7 +596,15 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
     var board by rememberSaveable(course.id, stateSaver = BoardSaver) { mutableStateOf(start) }
     // The boards before this one, for Undo; a Show me is a move like any other, and Restart clears them.
     var history by rememberSaveable(course.id, stateSaver = HistorySaver) { mutableStateOf(emptyList<PuzzleState>()) }
+    // Sounds and move feel as on the play screen (PlayScreen.push and undo): only a move raises `pushes`, so Restart, Undo and
+    // a rotation play no note; `solves` leaves the solving move to the chime. Not saved, as there.
+    val tones = LocalTones.current
+    var pushes by remember { mutableIntStateOf(0) }
+    var undos by remember { mutableIntStateOf(0) }
+    var solves by remember { mutableIntStateOf(0) }
     fun push(next: PuzzleState) {
+        pushes++
+        if (next.solved && !board.solved) solves++
         history = history + board
         board = next
     }
@@ -599,6 +613,7 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
         undone(puzzle, board, history)?.let {
             board = it.state
             history = it.history
+            undos++
         }
     }
     var shown by rememberSaveable(course.id) { mutableStateOf(false) }
@@ -607,7 +622,7 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
     var earned by rememberSaveable(course.id) { mutableStateOf(if (passPreview) graduateCheer(course, record).json() else null) }
     var confettiPlayed by rememberSaveable(course.id) { mutableStateOf(false) }
     val haptics = LocalHaptics.current
-    WatchHint(hints, puzzle, board)
+    WatchHint(hints, puzzle, board, onReached = { tones(Tones.word()) })
     fun onHint() {
         val now = board
         scope.launch { hints.tap(puzzle, now, onOpened = {}, onApply = { shown = true; push(it) }) }
@@ -630,7 +645,13 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
             Modifier.weight(1f).fillMaxWidth().hintKeys(!board.solved, hints, if (puzzle.offersHints) ::onHint else null, if (puzzle.offersUndo) ::undo else null),
             contentAlignment = Alignment.Center,
         ) {
-            CompositionLocalProvider(LocalBoardHighlight provides hints.highlight) {
+            CompositionLocalProvider(
+                LocalBoardHighlight provides hints.highlight,
+                LocalMoveCount provides pushes,
+                LocalUndoCount provides undos,
+                LocalSolveCount provides solves,
+                LocalBoardTones provides tones,
+            ) {
                 puzzle.Board(board, ::push, interactive = !board.solved)
             }
         }
