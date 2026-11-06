@@ -1,5 +1,7 @@
 package com.joebywan.daybook.ui.training
 
+import com.joebywan.daybook.core.undone
+import kotlinx.serialization.builtins.ListSerializer
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.animation.core.Animatable
@@ -554,9 +556,15 @@ private val BoardSaver = Saver<PuzzleState, String>(
     restore = { runCatching { StateJson.decodeFromString(PuzzleState.serializer(), it) }.getOrNull() },
 )
 
+private val HistorySaver = Saver<List<PuzzleState>, String>(
+    save = { StateJson.encodeToString(ListSerializer(PuzzleState.serializer()), it) },
+    restore = { runCatching { StateJson.decodeFromString(ListSerializer(PuzzleState.serializer()), it) }.getOrNull() },
+)
+
 /**
  * The final board: a whole Expert board whose walk needs every technique ([Course.exam]). Solving it without
- * "Show me" calls [onPass] (the first time) and celebrates ([graduateCheer]); its button is [onBack]. Hints are allowed. Kept across a rotation, not across leaving:
+ * "Show me" calls [onPass] (the first time) and celebrates ([graduateCheer]); its button is [onBack]. Hints are allowed, and so
+ * is Undo, as in the daily game (not where the puzzle has none: Pointers, Mines). Kept across a rotation, not across leaving:
  * it is one board, not a save.
  */
 @Composable
@@ -578,18 +586,31 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
     val accent = vivid(puzzle.accent)
     val chime = LocalChime.current
     val scope = rememberCoroutineScope()
+    val hints = rememberHintSession("${course.id}|exam")
     var board by rememberSaveable(course.id, stateSaver = BoardSaver) { mutableStateOf(start) }
+    // The boards before this one, for Undo; a Show me is a move like any other, and Restart clears them.
+    var history by rememberSaveable(course.id, stateSaver = HistorySaver) { mutableStateOf(emptyList<PuzzleState>()) }
+    fun push(next: PuzzleState) {
+        history = history + board
+        board = next
+    }
+    fun undo() {
+        hints.clear()
+        undone(puzzle, board, history)?.let {
+            board = it.state
+            history = it.history
+        }
+    }
     var shown by rememberSaveable(course.id) { mutableStateOf(false) }
     // Saved: the solve is answered once (chime, haptics, pass, celebration), not again after a recreation.
     var answered by rememberSaveable(course.id) { mutableStateOf(false) }
     var earned by rememberSaveable(course.id) { mutableStateOf(if (passPreview) graduateCheer(course, record).json() else null) }
     var confettiPlayed by rememberSaveable(course.id) { mutableStateOf(false) }
     val haptics = LocalHaptics.current
-    val hints = rememberHintSession("${course.id}|exam")
     WatchHint(hints, puzzle, board)
     fun onHint() {
         val now = board
-        scope.launch { hints.tap(puzzle, now, onOpened = {}, onApply = { shown = true; board = it }) }
+        scope.launch { hints.tap(puzzle, now, onOpened = {}, onApply = { shown = true; push(it) }) }
     }
     LaunchedEffect(board.solved) {
         if (!board.solved || answered) return@LaunchedEffect
@@ -606,18 +627,18 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
     Box(Modifier.fillMaxSize()) {
     TitledScreen("Final board", if (course.passed(record, Training.EXAM)) "Passed" else "Every technique, in one board", onBack) {
         Box(
-            Modifier.weight(1f).fillMaxWidth().hintKeys(!board.solved, hints, if (puzzle.offersHints) ::onHint else null),
+            Modifier.weight(1f).fillMaxWidth().hintKeys(!board.solved, hints, if (puzzle.offersHints) ::onHint else null, if (puzzle.offersUndo) ::undo else null),
             contentAlignment = Alignment.Center,
         ) {
             CompositionLocalProvider(LocalBoardHighlight provides hints.highlight) {
-                puzzle.Board(board, { board = it }, interactive = !board.solved)
+                puzzle.Board(board, ::push, interactive = !board.solved)
             }
         }
         Box(Modifier.fillMaxWidth().height(slotHeight()).padding(horizontal = 18.dp)) {
             if (hints.active) HintPanel(hints, accent, ::onHint, Modifier.fillMaxSize())
             else Text(
                 when {
-                    board.solved && shown -> "Solved, with a Show me along the way. Start again to solve it on your own."
+                    board.solved && shown -> "Solved, with a Show me along the way. Restart to solve it on your own."
                     board.solved -> "Solved!"
                     else -> "This board needs every technique you've practised. Hints are here if you're stuck; " +
                         "solve it without a Show me to pass."
@@ -634,17 +655,23 @@ private fun FinalBoardOn(course: Course, start: PuzzleState, record: Set<String>
                 onClick = ::onHint,
                 enabled = !board.solved,
                 modifier = Modifier.weight(1f),
-            ) { Text(hints.buttonLabel()) }
+            ) { Text(hints.buttonLabel(), maxLines = 1) }
+            if (puzzle.offersUndo) OutlinedButton(
+                onClick = ::undo,
+                enabled = !board.solved && history.isNotEmpty(),
+                modifier = Modifier.weight(1f),
+            ) { Text("Undo", maxLines = 1) }
             Button(
                 onClick = {
                     hints.clear()
                     board = start
+                    history = emptyList()
                     shown = false
                     answered = false
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = BoardHues.onFill(accent)),
                 modifier = Modifier.weight(1f),
-            ) { Text("Start again") }
+            ) { Text("Restart", maxLines = 1) }
         }
     }
     cheerOf(earned)?.let { Celebration(it, accent, "Back to ${puzzle.displayName} training", confettiPlayed, { confettiPlayed = true }, onBack) }
