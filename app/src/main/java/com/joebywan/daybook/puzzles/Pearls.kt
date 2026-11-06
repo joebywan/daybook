@@ -284,6 +284,27 @@ object Pearls : PuzzleType {
     }
 
     /**
+     * The pearl at [p] as it glows once kept: its two line neighbours either side of it, or null while its own lines
+     * do not yet keep its rule. Black: two lines that turn, each neighbour on them going straight on. White: two lines
+     * straight through, each neighbour with two lines and at least one of them turning. Read from the lines alone.
+     */
+    internal fun keptPearl(s: PearlsState, p: Int): IntArray? {
+        val g = PearlsGrid.of(s.size)
+        fun ways(q: Int) = (0 until 4).filter { d -> g.edge(q, d).let { it >= 0 && s.edges[it] == PearlsLogic.LINE_MARK } }
+        fun straight(q: Int) = ways(q).let { it.size == 2 && it[0] + 2 == it[1] }
+        fun turns(q: Int) = ways(q).let { it.size == 2 && it[0] + 2 != it[1] }
+        val out = ways(p)
+        if (out.size != 2) return null
+        val (a, b) = out.map { g.next(p, it) }
+        val kept = when (s.pearls[p]) {
+            PearlsLogic.BLACK -> turns(p) && straight(a) && straight(b)
+            PearlsLogic.WHITE -> straight(p) && ways(a).size == 2 && ways(b).size == 2 && (turns(a) || turns(b))
+            else -> false
+        }
+        return if (kept) intArrayOf(a, p, b) else null
+    }
+
+    /**
      * A square with three or more lines; a pearl whose own lines already break its rule; and every line of a
      * closed loop that is not the whole answer (it leaves out a pearl or another line). Never reads the answer.
      */
@@ -459,7 +480,13 @@ object Pearls : PuzzleType {
         val red = Breaks(broken.squares.intersect(settled.squares), broken.edges.intersect(settled.edges))
         // A square's look is its pearl and which of its edges are lines.
         val g = PearlsGrid.of(n)
-        val feel = rememberMoveFeel(List(g.squares) { q -> (0 until 4).map { d -> g.edge(q, d).let { e -> if (e < 0) ' ' else s.edges[e] } } })
+        // A pearl whose lines come to keep its rule glows across it and its two neighbours, and plays its note.
+        val pearlSquares = remember(s.pearls) { s.pearls.indices.filter { s.pearls[it] != '.' } }
+        val kept = pearlSquares.map { keptPearl(s, it) }
+        val feel = rememberMoveFeel(
+            List(g.squares) { q -> (0 until 4).map { d -> g.edge(q, d).let { e -> if (e < 0) ' ' else s.edges[e] } } },
+            pearlSquares.mapIndexed { k, p -> kept[k] ?: intArrayOf(p) },
+        ) { kept[it] != null }
 
         BoxWithConstraints(
             Modifier

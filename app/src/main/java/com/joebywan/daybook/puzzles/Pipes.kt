@@ -44,6 +44,9 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.lineUnits
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.drawHintRings
@@ -239,16 +242,17 @@ object Pipes : PuzzleType {
     }
 
     /** True when no opening points at a wall or at a tile that does not open back. */
-    fun fullyJoined(s: PipesState): Boolean {
-        for (i in s.cells.indices) {
-            val r = i / s.width
-            val c = i % s.width
-            val mask = s.cells[i]
-            if (mask and UP != 0 && (r == 0 || s.cells[i - s.width] and DOWN == 0)) return false
-            if (mask and DOWN != 0 && (r == s.height - 1 || s.cells[i + s.width] and UP == 0)) return false
-            if (mask and LEFT != 0 && (c == 0 || s.cells[i - 1] and RIGHT == 0)) return false
-            if (mask and RIGHT != 0 && (c == s.width - 1 || s.cells[i + 1] and LEFT == 0)) return false
-        }
+    fun fullyJoined(s: PipesState): Boolean = s.cells.indices.all { joined(s, it) }
+
+    /** True when every opening of tile [i] meets a tile that opens back. */
+    fun joined(s: PipesState, i: Int): Boolean {
+        val r = i / s.width
+        val c = i % s.width
+        val mask = s.cells[i]
+        if (mask and UP != 0 && (r == 0 || s.cells[i - s.width] and DOWN == 0)) return false
+        if (mask and DOWN != 0 && (r == s.height - 1 || s.cells[i + s.width] and UP == 0)) return false
+        if (mask and LEFT != 0 && (c == 0 || s.cells[i - 1] and RIGHT == 0)) return false
+        if (mask and RIGHT != 0 && (c == s.width - 1 || s.cells[i + 1] and LEFT == 0)) return false
         return true
     }
 
@@ -577,6 +581,9 @@ object Pipes : PuzzleType {
         val dry = scheme.onSurfaceVariant.copy(alpha = DRY_TINT).compositeOver(scheme.surface)
         val wetCells = remember(s.cells, s.source) { filled(s) }
         val (highlight, glow, pulse) = rememberHintPaint()
+        // A row or column whose every tile meets a tile at each of its openings glows once and plays its note.
+        val units = remember(s.width, s.height) { lineUnits(s.width, s.height) }
+        val feel = rememberMoveFeel(s.cells, units) { u -> units[u].all { joined(s, it) } }
 
         // One angle per tile, held outside the state so a rotation can be shown turning while the
         // board itself has already moved on. Only the grid shape resets them.
@@ -653,7 +660,9 @@ object Pipes : PuzzleType {
                     }
             ) {
                 for (i in s.cells.indices) {
-                    drawTile(i, s.width, cellPx, s.cells[i], i == s.source, if (i in wetCells) wet else dry, wet, scheme.surface, spins[i].value)
+                    feelSquare(feel, i, Offset((i % s.width) * cellPx, (i / s.width) * cellPx), Size(cellPx, cellPx), wet) {
+                        drawTile(i, s.width, cellPx, s.cells[i], i == s.source, if (i in wetCells) wet else dry, wet, scheme.surface, spins[i].value)
+                    }
 
                     // Everything a hint does not name steps back, so the named tiles read without
                     // hunting for their outlines. A veil in the page colour rather than a fainter

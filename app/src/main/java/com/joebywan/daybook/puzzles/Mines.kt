@@ -69,6 +69,7 @@ import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.PenRow
 import com.joebywan.daybook.ui.gridCellAt
@@ -403,7 +404,10 @@ object Mines : PuzzleType {
         // Reduced motion: a mine found rings in place; no square is pushed.
         val still = LocalReducedMotion.current
         val live = interactive && !s.solved && !s.failed
-        val feel = rememberMoveFeel(List(n) { if (it in s.bumps) 'x' else s.marks[it] })
+        // A row or column with no square left untouched (each open, flagged or a mine hit) glows once and plays its note.
+        // The player's own flags count, right or wrong: the line is settled to their eye, and nothing is checked.
+        val units = remember(s.width, s.height) { lineUnits(s.width, s.height) }
+        val feel = rememberMoveFeel(List(n) { if (it in s.bumps) 'x' else s.marks[it] }, units) { u -> units[u].all { s.settled(it) } }
 
         // Every state goes out through here, so a mine hit shakes however it was made.
         val taps = rememberTwinTaps(s) { next: MinesState ->

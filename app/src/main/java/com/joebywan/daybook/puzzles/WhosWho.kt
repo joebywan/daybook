@@ -69,6 +69,7 @@ import com.joebywan.daybook.ui.rememberSettledFlags
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.boardSp
 import com.joebywan.daybook.ui.rememberTwinTaps
@@ -271,6 +272,17 @@ object WhosWho : PuzzleType {
         return bad
     }
 
+    /**
+     * Per unit (a list of table cells, `person * columns + column`): whether every cell in it has one tick and none is
+     * red ([badCells]). The player's ticks against the rules; the answer is never read.
+     */
+    internal fun settledLines(s: WhosWhoState, units: List<IntArray>): BooleanArray {
+        val bad = badCells(s, WhosWhoLogic.gridOf(s.n, s.columns, s.marks))
+        return BooleanArray(units.size) { u ->
+            units[u].all { c -> !bad[c] && (0 until s.n).count { s.marks[c * s.n + it] == WhosWhoLogic.TICK } == 1 }
+        }
+    }
+
     /** Clues no choice the marks still allow can keep. */
     internal fun badClues(s: WhosWhoState, grid: WhosWhoLogic.Grid): BooleanArray {
         val puzzle = WhosWhoLogic.puzzleOf(s)
@@ -319,7 +331,10 @@ object WhosWho : PuzzleType {
         val cluesNow = badClues(s, grid)
         val badCell = rememberSettledFlags(cellsNow, s.clues, s.marks)
         val badClue = rememberSettledFlags(cluesNow, s.clues, s.marks)
-        val feel = rememberMoveFeel(base.marks.chunked(s.n))
+        // A person's row, or a category's column, ticked all through with nothing in it red glows once and plays its note.
+        val units = remember(s.n, s.columns) { lineUnits(s.columns, s.n) }
+        val done = settledLines(base, units)
+        val feel = rememberMoveFeel(base.marks.chunked(s.n), units) { done[it] }
 
         Column(
             Modifier
