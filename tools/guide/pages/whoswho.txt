@@ -3,7 +3,7 @@
 
 ## How to play
 
-Tap a square in the table, then an item under the board. With the tick chosen beside the items, that item is theirs; with the cross chosen, it isn't. The same tap again takes the mark off.
+Tap a square in the table, then an item under the board. With the tick chosen beside the items, that item is theirs; with the cross chosen, it isn't. The same tap again takes the mark off. Double-tap or long-press an item for the other mark.
 
 A tick rules that item out of the rest of its column, and each open square shows what is still possible. Tap a clue to strike it through once you've used it: it's only a note, to keep your place.
 

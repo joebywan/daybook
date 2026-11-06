@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -70,6 +71,7 @@ import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.boardSp
+import com.joebywan.daybook.ui.rememberTwinTaps
 
 /**
  * Who's Who: a few people, a row of houses and one or two more categories (a pet, a job...), and a numbered list of
@@ -92,7 +94,7 @@ object WhosWho : PuzzleType {
     override val rules = listOf(
         "Each row is a person and each column a category: their house, and one or two more. No two people share anything.",
         "The houses stand in a row, numbered from the left. Next to means one house either side; somewhere left of means a lower number.",
-        "Tap a square, then an item under the board. With the tick chosen it is theirs; with the cross chosen it is not.",
+        "Tap a square, then an item under the board. With the tick chosen it is theirs; with the cross chosen it is not. Double-tap or long-press the item for the other mark.",
         "A tick rules that item out of the rest of its column, and the square shows what is still possible.",
         "Tap a clue to strike it through once you have used it. It is only a note.",
         "Solved when every square has its tick and every clue is true. Every board has one answer, found without guessing.",
@@ -299,7 +301,10 @@ object WhosWho : PuzzleType {
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
-        val s = state as WhosWhoState
+        val base = state as WhosWhoState
+        // A tap on an item uses the pen, a double tap or long press the other mark (`TwinTaps`, every two-mark board's rule).
+        val taps = rememberTwinTaps(base, onState)
+        val s = taps.shown
         val scheme = MaterialTheme.colorScheme
         // The selection and the pen belong to the screen, not the board: the play screen pushes an undo entry for every
         // state it is handed.
@@ -314,7 +319,7 @@ object WhosWho : PuzzleType {
         val cluesNow = badClues(s, grid)
         val badCell = rememberSettledFlags(cellsNow, s.clues, s.marks)
         val badClue = rememberSettledFlags(cluesNow, s.clues, s.marks)
-        val feel = rememberMoveFeel(s.marks.chunked(s.n))
+        val feel = rememberMoveFeel(base.marks.chunked(s.n))
 
         Column(
             Modifier
@@ -323,9 +328,9 @@ object WhosWho : PuzzleType {
                 .boardKeys(interactive, shift = true) { key, shift, repeat ->
                     val action = whosWhoKeyAction(key, shift) ?: return@boardKeys false
                     if (!repeat || action is WhosWhoKeyAction.Move) {
-                        val result = s.applyKey(selected, action)
+                        val result = taps.settle().applyKey(selected, action)
                         selected = result.cursor
-                        if (result.board !== s) onState(result.board)
+                        taps.apply { result.board }
                     }
                     true
                 },
@@ -336,11 +341,15 @@ object WhosWho : PuzzleType {
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.TopCenter) {
                     val wide = maxWidth > maxHeight * 1.3f && maxWidth >= 520.dp
                     val onCell = { c: Int -> selected = c }
-                    val onPad = { slot: Int ->
+                    val onPad = { slot: Int, long: Boolean ->
                         val c = selected
-                        if (c != null) onState(s.mark(c / s.columns, c % s.columns, slot, tick))
+                        if (c != null) {
+                            val twin = { b: WhosWhoState -> b.mark(c / s.columns, c % s.columns, slot, !tick) }
+                            val key = c * s.n + slot
+                            if (long) taps.press(key, twin) else taps.tap(key, { it.mark(c / s.columns, c % s.columns, slot, tick) }, twin)
+                        }
                     }
-                    val onClue = { k: Int -> onState(s.strike(k)) }
+                    val onClue = { k: Int -> taps.apply { it.strike(k) } }
                     if (wide) {
                         val rowH = ((maxHeight - HEADER - PAD - 12.dp) / s.n).coerceIn(30.dp, 52.dp)
                         Row(Modifier.widthIn(max = 1000.dp).fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -535,7 +544,7 @@ object WhosWho : PuzzleType {
         interactive: Boolean,
         look: Look,
         onPen: (Boolean) -> Unit,
-        onSlot: (Int) -> Unit,
+        onSlot: (slot: Int, long: Boolean) -> Unit,
     ) {
         val scheme = look.scheme
         val accent = vivid(accent)
@@ -579,7 +588,7 @@ object WhosWho : PuzzleType {
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (mark == WhosWhoLogic.TICK) BoardHues.fill(look.hueB, look.dark) else scheme.surface)
                             .border(1.dp, scheme.outline, RoundedCornerShape(10.dp))
-                            .clickable(enabled = interactive) { onSlot(slot) },
+                            .combinedClickable(enabled = interactive, onLongClick = { onSlot(slot, true) }) { onSlot(slot, false) },
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(

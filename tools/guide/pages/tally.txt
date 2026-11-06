@@ -3,7 +3,7 @@
 
 ## How to play
 
-Pick Remove or Keep under the board and tap numbers. Drag along a row or column to sweep several at once.
+Pick Remove or Keep under the board and tap numbers; double-tap or long-press for the other. Drag along a row or column to sweep several at once.
 
 Keep circles a number you are sure of. It is only a note: a circled number counts exactly like any other left in.
 

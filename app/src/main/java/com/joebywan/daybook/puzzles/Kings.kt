@@ -14,10 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,8 +44,6 @@ import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
-import kotlin.time.TimeSource
-import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.lineUnits
 import com.joebywan.daybook.ui.moveFeel
@@ -59,6 +54,7 @@ import com.joebywan.daybook.ui.gridCellAt
 import androidx.compose.foundation.layout.BoxScope
 import com.joebywan.daybook.core.cap
 import com.joebywan.daybook.core.orthogonal
+import com.joebywan.daybook.ui.rememberTwinTaps
 
 @Serializable
 enum class Mark { EMPTY, BLOCKED, KING }
@@ -781,57 +777,13 @@ object Kings : PuzzleType {
         }
     }
 
-    /**
-     * How long a tap waits to find out whether it was half of a double tap.
-     *
-     * The platform's own double-tap timeout. Only the *emission* waits this long — the mark itself
-     * is on screen before the finger is off the glass — so the window costs the player nothing
-     * they can see. What it does cost is that a mark reaches the undo history, the move count and
-     * the saved game up to this late, and that a mark made in the last third of a second before
-     * the app is killed is lost.
-     */
-    private const val DOUBLE_TAP_MS = 300L
-
-    /**
-     * Where tap times are measured from. The stdlib's monotonic clock rather than Android's
-     * `SystemClock.uptimeMillis()` so this file also compiles for the web build; only differences
-     * between two taps are ever read, so the origin does not matter.
-     */
-    private val tapClock = TimeSource.Monotonic.markNow()
-
-    /**
-     * A tap whose mark is already on the board but not yet in the undo history.
-     *
-     * [base] earns its place twice. A second tap on the same square builds its king from there, so
-     * a crown costs one entry in the history instead of a cross followed by a crown; and it
-     * identifies the board this tap was made on, so a held tap that Undo, Restart or a hint has
-     * overtaken is dropped rather than replayed onto a board it never saw.
-     */
-    private data class PendingTap(val cell: Int, val base: KingsState, val after: KingsState)
-
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as KingsState
         val scheme = MaterialTheme.colorScheme
 
-        // A tap paints its mark here and hands it to the screen a moment later — the same "draw it
-        // now, emit once" arrangement the sweep below already uses.
-        //
-        // Marking is the gesture a player makes dozens of times a board, so it must not wait:
-        // giving `onDoubleTap` to detectTapGestures would delay every mark by [DOUBLE_TAP_MS],
-        // which is a worse board than the one this replaced. Emitting the mark immediately instead
-        // would leave a cross in the undo history underneath every crown, and would re-key the
-        // pointer input between the two taps so the second one arrived at a detector that had
-        // forgotten the first. Holding back only the emission avoids both.
-        var pending by remember(s.solution) { mutableStateOf<PendingTap?>(null) }
-        // The tap memory deliberately outlives [pending], so a second tap landing just after the
-        // window closed still reads as a double rather than rubbing out the first tap's mark.
-        var lastCell by remember(s.solution) { mutableIntStateOf(-1) }
-        var lastTapAt by remember(s.solution) { mutableLongStateOf(0L) }
-        // A held tap that a sweep has started on top of. It cannot simply be emitted when the
-        // gesture begins: that would re-key the pointer input below and cancel the sweep before
-        // it painted anything, so the sweep carries it and delivers it at the end instead.
-        var carried by remember(s.solution) { mutableStateOf<PendingTap?>(null) }
+        // A tap is a cross, a double tap or long press a crown (`TwinTaps`, every two-mark board's rule).
+        val taps = rememberTwinTaps(s, onState)
 
         // The sweep in progress. Held here rather than in the board state so that the gesture can
         // be drawn as it happens while still emitting exactly one state — and one undo entry —
@@ -840,9 +792,8 @@ object Kings : PuzzleType {
         var swept by remember(s.solution) { mutableStateOf(emptySet<Int>()) }
         val sweepMark = sweeping
 
-        val held = pending?.takeIf { it.base === s }
         // The board as the finger has left it, which may be one tap ahead of the screen.
-        val shown = held?.after ?: s
+        val shown = taps.shown
         val conflicts = shown.conflicts()
         val eliminated = shown.eliminated()
         val (highlight, glow, pulse) = rememberHintPaint(ink = MarkInk) // on opaque tiles, in both themes
@@ -857,15 +808,6 @@ object Kings : PuzzleType {
             kings.size == 1 && kings[0] !in settled
         }
 
-        // Keyed on the board as well as the tap: a board that moved underneath a held tap restarts
-        // this, and [held] is null the second time round, so the stale mark is quietly dropped.
-        LaunchedEffect(held, s) {
-            if (held == null) return@LaunchedEffect
-            delay(DOUBLE_TAP_MS)
-            pending = null
-            onState(held.after)
-        }
-
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
         // The keyboard cursor (see KingsKeys): transient, so not in the state.
@@ -875,14 +817,7 @@ object Kings : PuzzleType {
                 movedCursor(cursor, key, s.size, s.size)?.let { cursor = it; return@boardKeys true }
                 val at = cursor ?: return@boardKeys false
                 val action = kingsKeyAction(key) ?: return@boardKeys false
-                if (!repeat) {
-                    // A mouse tap may still be inside its double-tap window: settle it first, so
-                    // the key lands on the board the player sees.
-                    val live = pending?.takeIf { it.base === s }
-                    pending = null
-                    lastCell = -1
-                    (live?.after ?: s).applyKey(at, action)?.let(onState) ?: live?.let { onState(it.after) }
-                }
+                if (!repeat) taps.apply { it.applyKey(at, action) ?: it }
                 true
             }.padding(14.dp),
             contentAlignment = Alignment.Center,
@@ -892,51 +827,6 @@ object Kings : PuzzleType {
 
             fun cellAt(offset: Offset) = gridCellAt(offset, cellPx, s.size, s.size)
 
-            // One tap: a mark now, or a king if its partner arrives in time.
-            //
-            // Double taps are counted here rather than by `detectTapGestures` so that the second
-            // tap has to land on the *same* square. Compose's own detector is a pure timing
-            // window — it has no distance check at all — so on a grid this dense it would crown
-            // squares the player only meant to cross off on the way past.
-            fun tap(offset: Offset) {
-                val i = cellAt(offset)
-                val now = tapClock.elapsedNow().inWholeMilliseconds
-                val live = pending?.takeIf { it.base === s }
-                val board = live?.after ?: s
-
-                if (i == lastCell && now - lastTapAt < DOUBLE_TAP_MS) {
-                    lastCell = -1
-                    pending = null
-                    // The pair's own first tap never reached the screen, so the crown replaces it
-                    // instead of following it: one entry in the history, one move. A mark held on
-                    // some *other* square is still owed to the player, so it rides along in
-                    // [board].
-                    val from = if (live != null && live.cell == i) live.base else board
-                    onState(from.toggleKing(i))
-                    return
-                }
-
-                lastCell = i
-                lastTapAt = now
-                // A tap on a different square settles the one before it. Two taps are two entries
-                // in the history — collapsing a burst of marks into one would mean a single Undo
-                // swallowing the four crosses that came before the one the player regretted.
-                if (live != null && live.cell != i) onState(live.after)
-                val next = board.toggleMark(i)
-                pending = if (next === board) null else PendingTap(i, board, next)
-            }
-
-            // A long press is the double tap's twin, for a player who finds two quick taps hard. Giving
-            // `onLongPress` to detectTapGestures never delays a tap (only `onDoubleTap` would).
-            fun press(offset: Offset) {
-                val i = cellAt(offset)
-                val live = pending?.takeIf { it.base === s }
-                lastCell = -1
-                pending = null
-                val from = if (live != null && live.cell == i) live.base else live?.after ?: s
-                onState(from.toggleKing(i))
-            }
-
             // Tap and drag are read on the grid as a whole: per-cell `clickable` boxes only ever
             // see the cell the finger went down on, which is the one thing a sweep is not about.
             Box(
@@ -944,33 +834,30 @@ object Kings : PuzzleType {
                     .size(cell * s.size)
                     .highlightGrid(s.size, s.size)
                     .gridCursor(cursor.takeIf { interactive }, s.size, s.size, scheme.primary)
-                    .pointerInput(s, interactive) {
+                    .pointerInput(interactive, cellPx) {
                         if (!interactive) return@pointerInput
+                        // The second tap of a double has to land on the *same* square (`TwinTaps` keys it):
+                        // Compose's own detector is a pure timing window, which on a grid this dense would
+                        // crown squares the player only meant to cross off on the way past.
                         detectTapGestures(
                             onLongPress = { offset ->
-                                cursor = cellAt(offset)
-                                press(offset)
+                                val i = cellAt(offset)
+                                cursor = i
+                                taps.press(i) { it.toggleKing(i) }
                             },
                         ) { offset ->
-                            cursor = cellAt(offset)
-                            tap(offset)
+                            val i = cellAt(offset)
+                            cursor = i
+                            taps.tap(i, { it.toggleMark(i) }, { it.toggleKing(i) })
                         }
                     }
-                    .pointerInput(s, interactive) {
+                    .pointerInput(interactive, cellPx) {
                         if (!interactive) return@pointerInput
                         detectDragGestures(
                             onDragStart = { offset ->
-                                // A mark still inside its double-tap window is folded into the
-                                // sweep's base rather than emitted: emitting mid-gesture would
-                                // re-key this pointer input and kill the sweep before it painted
-                                // anything.
-                                val tapped = pending?.takeIf { it.base === s }
-                                carried = tapped
-                                pending = null
-                                lastCell = -1
-                                val board = tapped?.after ?: s
+                                // A mark still inside its double-tap window is handed over first.
                                 val start = cellAt(offset)
-                                sweeping = board.sweepMark(start)
+                                sweeping = taps.settle().sweepMark(start)
                                 swept = if (sweeping == null) emptySet() else setOf(start)
                             },
                             onDrag = { change, _ ->
@@ -978,24 +865,12 @@ object Kings : PuzzleType {
                             },
                             onDragEnd = {
                                 val mark = sweeping
-                                val board = carried?.after ?: s
-                                val next = if (mark != null && swept.isNotEmpty()) {
-                                    board.paint(swept, mark)
-                                } else {
-                                    board
-                                }
-                                // A sweep that painted nothing and picked nothing up is not a move,
-                                // and the screen would push an undo entry for it all the same.
-                                if (next !== s) onState(next)
-                                carried = null
+                                // A sweep that painted nothing is not a move (`apply` drops it).
+                                if (mark != null && swept.isNotEmpty()) taps.apply { it.paint(swept, mark) }
                                 sweeping = null
                                 swept = emptySet()
                             },
                             onDragCancel = {
-                                // Nothing was emitted, so the tap the sweep picked up goes back on
-                                // its own clock.
-                                pending = carried
-                                carried = null
                                 sweeping = null
                                 swept = emptySet()
                             },

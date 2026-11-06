@@ -3,7 +3,7 @@
 
 ## How to play
 
-The first squares are already open when the board loads. The Reveal and Flag buttons under the board set what a tap does. A long press does the other one.
+The first squares are already open when the board loads. The Reveal and Flag buttons under the board set what a tap does. A long press does the other one, and so does a double tap with Flag chosen.
 
 Tap a number whose flags already match it to reveal all its other squares at once. A wrong flag there opens a mine and loses the board.
 

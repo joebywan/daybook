@@ -14,12 +14,8 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +46,6 @@ import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.orthogonalReading
-import com.joebywan.daybook.ui.Cell
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.ui.gridCellAt
@@ -60,10 +55,7 @@ import com.joebywan.daybook.ui.feelSquare
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.time.TimeSource
+import com.joebywan.daybook.ui.rememberTwinTaps
 
 /**
  * Lamps. The board is one canvas of squares: walls (numbered or blank) and white squares, lit squares washed in the
@@ -71,11 +63,6 @@ import kotlin.time.TimeSource
  * a drag lays crosses (Kings' and Tents' model). Highlight indices are squares, `row * size + col`.
  */
 object Lamps : PuzzleType {
-
-    private const val DOUBLE_TAP_MS = 300L
-    private val tapClock = TimeSource.Monotonic.markNow()
-
-    private data class Pending(val cell: Int, val base: LampsState, val after: LampsState)
 
     override val id = "lamps"
     override val displayName = "Lamps"
@@ -339,25 +326,12 @@ object Lamps : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val base = state as LampsState
         val n = base.size
-        // A single tap (a cross) is drawn at once but handed to the screen only after the double-tap window, so a double
-        // tap becomes one lamp move, not a cross under it (as Kings' crowns and Tents' tents). [Pending.base] ties it to
-        // the board it was made on: undo or a hint drops it.
-        var pending by remember { mutableStateOf<Pending?>(null) }
-        var lastCell by remember { mutableIntStateOf(-1) }
-        var lastTapAt by remember { mutableLongStateOf(0L) }
-        val held = pending?.takeIf { it.base === base }
+        // A tap is a cross, a double tap or long press a lamp (`TwinTaps`, every two-mark board's rule).
+        val taps = rememberTwinTaps(base, onState)
         // A sweep crosses every empty square the finger passes, drawn as it goes and emitted once on lift.
         var sweepBase by remember { mutableStateOf<LampsState?>(null) }
         var swept by remember { mutableStateOf(emptySet<Int>()) }
-        val s = sweepBase?.crossed(swept) ?: held?.after ?: base
-        val onStateNow by rememberUpdatedState(onState)
-        val scope = rememberCoroutineScope()
-        val latest = remember { Cell(base) }.also { it.v = base }
-        val commit = remember { Cell<Job?>(null) }
-        fun emit(next: LampsState) {
-            latest.v = next
-            onStateNow(next)
-        }
+        val s = sweepBase?.crossed(swept) ?: taps.shown
 
         val scheme = MaterialTheme.colorScheme
         val measurer = rememberTextMeasurer()
@@ -386,7 +360,7 @@ object Lamps : PuzzleType {
                 movedCursor(cursor, key, n, n)?.let { cursor = it; return@boardKeys true }
                 val at = cursor ?: return@boardKeys false
                 val action = lampsKeyAction(key) ?: return@boardKeys false
-                if (!repeat) s.applyKey(at, action)?.let(onState)
+                if (!repeat) taps.apply { it.applyKey(at, action) ?: it }
                 true
             }.padding(14.dp),
             contentAlignment = Alignment.Center,
@@ -406,11 +380,8 @@ object Lamps : PuzzleType {
                         fun cellAt(o: Offset) = gridCellAt(o, unitPx, n, n)
                         detectDragGestures(
                             onDragStart = { o ->
-                                // Any tap still held rides along as the sweep's base.
-                                commit.v?.cancel()
-                                sweepBase = pending?.takeIf { it.base === latest.v }?.after ?: latest.v
-                                pending = null
-                                lastCell = -1
+                                // Any tap still held is handed over first: it is the sweep's base.
+                                sweepBase = taps.settle()
                                 swept = setOf(cellAt(o))
                             },
                             onDrag = { change, _ ->
@@ -422,63 +393,20 @@ object Lamps : PuzzleType {
                                 val next = sweepBase!!.crossed(swept)
                                 sweepBase = null
                                 swept = emptySet()
-                                if (next !== latest.v) emit(next)
+                                taps.apply { next }
                             },
                             onDragCancel = { sweepBase = null; swept = emptySet() },
                         )
                     }
                     .pointerInput(interactive, unitPx) {
                         if (!interactive) return@pointerInput
-                        // A long press is the double tap's twin, as in Tents and Kings: a lamp, or one taken back.
-                        // `onLongPress` never delays a tap (only `onDoubleTap` would).
                         detectTapGestures(
-                            onLongPress = { offset ->
-                                val i = gridCellAt(offset, unitPx, n, n)
-                                val held = pending?.takeIf { it.base === latest.v }
-                                commit.v?.cancel()
-                                lastCell = -1
-                                pending = null
-                                val from = if (held != null && held.cell != i) held.after else latest.v
-                                val next = from.withLamp(i)
-                                if (next !== latest.v) emit(next)
-                            },
-                        ) { offset ->
-                            val i = gridCellAt(offset, unitPx, n, n)
-                            val held = pending?.takeIf { it.base === latest.v }
-                            commit.v?.cancel()
-                            if ((held?.after ?: latest.v).marks[i] == LampsLogic.LAMP_MARK) { // taking a lamp back is one tap
-                                lastCell = -1
-                                pending = null
-                                emit((held?.after ?: latest.v).withLamp(i))
-                                return@detectTapGestures
-                            }
-                            val now = tapClock.elapsedNow().inWholeMilliseconds
-                            if (i == lastCell && now - lastTapAt < DOUBLE_TAP_MS) {
-                                lastCell = -1
-                                pending = null
-                                val next = latest.v.withLamp(i)
-                                if (next !== latest.v) emit(next)
-                                return@detectTapGestures
-                            }
-                            lastCell = i
-                            lastTapAt = now
-                            // A tap on another square settles the one held before it.
-                            if (held != null && held.cell != i) emit(held.after)
-                            val from = latest.v
-                            val next = from.tapped(i)
-                            if (next === from) {
-                                pending = null
-                            } else {
-                                val p = Pending(i, from, next)
-                                pending = p
-                                commit.v = scope.launch {
-                                    delay(DOUBLE_TAP_MS)
-                                    if (pending === p && p.base === latest.v) {
-                                        pending = null
-                                        emit(p.after)
-                                    }
-                                }
-                            }
+                            onLongPress = { o -> gridCellAt(o, unitPx, n, n).let { i -> taps.press(i) { it.withLamp(i) } } },
+                        ) { o ->
+                            val i = gridCellAt(o, unitPx, n, n)
+                            // Taking a lamp back is one tap.
+                            val lamp = taps.shown.marks[i] == LampsLogic.LAMP_MARK
+                            taps.tap(i, { if (lamp) it.withLamp(i) else it.tapped(i) }, { it.withLamp(i) }, holds = !lamp)
                         }
                     },
             ) {

@@ -69,6 +69,7 @@ import com.joebywan.daybook.ui.Sweep
 import com.joebywan.daybook.ui.swept
 import com.joebywan.daybook.ui.penKeys
 import com.joebywan.daybook.ui.penGrid
+import com.joebywan.daybook.ui.rememberTwinTaps
 import com.joebywan.daybook.ui.PenRow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.geometry.Rect
@@ -135,7 +136,7 @@ object Nonogram : PuzzleType {
     override val rules = listOf(
         "The numbers beside a row, or above a column, give the lengths of its runs of filled squares, in order.",
         "Two runs always have at least one empty square between them.",
-        "Pick Fill or Cross under the board and tap squares. Drag along a row or column to sweep several at once.",
+        "Pick Fill or Cross under the board and tap squares; double-tap or long-press for the other. Drag along a row or column to sweep several at once.",
         "On a big board, pinch to zoom in. Zoomed in, a drag moves around the board instead of sweeping, and the corner button shows the whole board again.",
         "A cross just means \"empty\": it is a note to yourself and never counts against you.",
         "Solved when every row and column shows its numbers. Every board can be worked out one line at a time, with no guessing.",
@@ -491,6 +492,7 @@ object Nonogram : PuzzleType {
         // (see PenBoard): a pen stored in the state would make "switch to Cross" a step to walk back.
         var pen by rememberSaveable(s.solution) { mutableStateOf(NonogramLogic.FILLED) }
         val sweep = remember(s.solution) { mutableStateOf<Sweep?>(null) }
+        val taps = rememberTwinTaps(s, onState)
         val cursor = remember(s.solution) { mutableStateOf<Int?>(null) }
         val clues = remember(s.solution) { NonogramLogic.clues(s) }
 
@@ -500,7 +502,7 @@ object Nonogram : PuzzleType {
             Modifier
                 .fillMaxSize()
                 .padding(horizontal = 14.dp)
-                .penKeys(s, interactive, NONOGRAM_KEYS, cursor, onState),
+                .penKeys(taps, interactive, NONOGRAM_KEYS, cursor),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             BoxWithConstraints(
@@ -511,7 +513,7 @@ object Nonogram : PuzzleType {
                 val text = remember(s.solution, g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Bold) }
                 val thin = remember(s.solution, g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Normal) }
 
-                val shown = s.swept(sweep.value)
+                val shown = taps.shown.swept(sweep.value)
                 val palette = remember(s.solution, arcade) { paletteFor(s, arcade === ArcadeBoard.Dark) }
                 // Lines finished by their clues, on the board as handed (not the sweep still under the finger).
                 val units = remember(s.solution) { lineUnits(s.width, s.height) }
@@ -551,7 +553,7 @@ object Nonogram : PuzzleType {
                                     translationY = view.value.offset.y
                                 }
                                 // The cursor is drawn with the grid, as a ring of two colours, so the shared one stays clear.
-                                .penGrid(s, interactive, pen, g.u, sweep, cursor, Color.Transparent, onState, sweeps = !view.value.zoomed)
+                                .penGrid(taps, interactive, pen, g.u, sweep, cursor, Color.Transparent, sweeps = !view.value.zoomed)
                                 .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, vivid(accent), view.value.scale, cursor.value.takeIf { interactive }) },
                         )
                     }

@@ -3,7 +3,7 @@
 
 ## How to play
 
-Pick Fill or Cross under the board and tap squares. Drag along a row or column to sweep several at once.
+Pick Fill or Cross under the board and tap squares; double-tap or long-press for the other. Drag along a row or column to sweep several at once.
 
 A cross just means "empty": it is a note to yourself and never counts against you.
 

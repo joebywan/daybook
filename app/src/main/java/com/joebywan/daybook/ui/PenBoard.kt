@@ -40,7 +40,8 @@ import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.penKeyAction
 import com.joebywan.daybook.core.sweptCells
 
-// The input of a two-pen board (Nonogram, Tally): taps, sweeps, keys and the pen row. The pen, the
+// The input of a two-pen board (Nonogram, Tally): taps, sweeps, keys and the pen row. Taps follow
+// [TwinTaps], the rule of every board with two kinds of mark. The pen, the
 // sweep under the finger and the cursor are the caller's `remember` state, never the board's: the
 // play screen pushes an undo entry for every state it is handed.
 
@@ -54,55 +55,64 @@ fun <S : PenMarks<S>> S.swept(current: Sweep?): S =
 /** Keys for the board: arrows move [cursor], [pens] maps letters to marks; one state per key. */
 @Composable
 fun <S : PenMarks<S>> Modifier.penKeys(
-    s: S,
+    taps: TwinTaps<S>,
     interactive: Boolean,
     pens: Map<Key, Char>,
     cursor: MutableState<Int?>,
-    onState: (S) -> Unit,
 ): Modifier = boardKeys(interactive, shift = true) { key, shift, repeat ->
     val action = penKeyAction(key, shift, pens) ?: return@boardKeys false
     if (!repeat || action is PenKeyAction.Move) {
-        val result = s.applyKey(cursor.value, action)
+        val result = taps.settle().applyKey(cursor.value, action)
         cursor.value = result.cursor
-        if (result.board !== s) onState(result.board)
+        taps.apply { result.board }
     }
     true
 }
 
 /**
- * Taps and sweeps over the grid alone, in its own coordinates ([unitPx] a square). A sweep is one
- * state, emitted on lift, and locks to the row or column of the larger move ([sweptCells]).
+ * Taps and sweeps over the grid alone, in its own coordinates ([unitPx] a square). A tap uses [pen], a
+ * double tap or long press the other one ([TwinTaps]). A sweep is one state, emitted on lift, and
+ * locks to the row or column of the larger move ([sweptCells]).
  * Without [sweeps] (a zoomed Nonogram, where a drag pans) only taps are read.
  */
 fun <S : PenMarks<S>> Modifier.penGrid(
-    s: S,
+    taps: TwinTaps<S>,
     interactive: Boolean,
     pen: Char,
     unitPx: Float,
     sweep: MutableState<Sweep?>,
     cursor: MutableState<Int?>,
     cursorColour: Color,
-    onState: (S) -> Unit,
     sweeps: Boolean = true,
 ): Modifier {
+    val s = taps.board
     val w = s.penWidth
     val h = s.penHeight
+    val other = s.pens.first { it != pen }
     fun cellAt(offset: Offset): Int {
         val c = (offset.x / unitPx).toInt().coerceIn(0, w - 1)
         val r = (offset.y / unitPx).toInt().coerceIn(0, h - 1)
         return r * w + c
     }
+    // Not keyed on the board: [taps] holds the latest, and emitting must not restart a gesture.
     return this
         .highlightGrid(w, h)
         .gridCursor(cursor.value.takeIf { interactive }, w, h, cursorColour)
-        .pointerInput(s, interactive, pen) {
+        .pointerInput(interactive, pen, unitPx) {
             if (!interactive) return@pointerInput
-            detectTapGestures { offset ->
-                cursor.value = cellAt(offset)
-                onState(s.tap(cellAt(offset), pen))
+            detectTapGestures(
+                onLongPress = { offset ->
+                    val i = cellAt(offset)
+                    cursor.value = i
+                    taps.press(i) { it.tap(i, other) }
+                },
+            ) { offset ->
+                val i = cellAt(offset)
+                cursor.value = i
+                taps.tap(i, { it.tap(i, pen) }, { it.tap(i, other) })
             }
         }
-        .pointerInput(s, interactive, pen, sweeps) {
+        .pointerInput(interactive, pen, sweeps, unitPx) {
             if (!interactive || !sweeps) return@pointerInput
             // The overload that hands over the *down*: Compose's touch slop on the web is wider than
             // a 15x15 square, so the plain one would start every sweep a square or two along from
@@ -111,7 +121,8 @@ fun <S : PenMarks<S>> Modifier.penGrid(
                 orientationLock = null,
                 onDragStart = { down, _, _ ->
                     val start = cellAt(down.position)
-                    sweep.value = Sweep(start, start, s.sweepMark(start, pen), s.penMarks[start])
+                    val board = taps.settle()
+                    sweep.value = Sweep(start, start, board.sweepMark(start, pen), board.penMarks[start])
                 },
                 onDrag = { change, _ ->
                     change.consume()
@@ -120,10 +131,7 @@ fun <S : PenMarks<S>> Modifier.penGrid(
                 onDragEnd = { _ ->
                     val done = sweep.value
                     sweep.value = null
-                    if (done != null) {
-                        val next = s.swept(done)
-                        if (next !== s) onState(next)
-                    }
+                    if (done != null) taps.apply { it.swept(done) }
                 },
                 onDragCancel = { sweep.value = null },
             )

@@ -6,8 +6,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +32,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -65,7 +61,6 @@ import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.highlightGrid
-import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.movedCursor
 import com.joebywan.daybook.core.neighbours8
 import com.joebywan.daybook.core.plural
@@ -84,6 +79,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import com.joebywan.daybook.ui.rememberTwinTaps
 
 /**
  * Mines (`docs/MINES_SPEC.md`): numbers say how many mines touch a square; reveal every square without one. Every board
@@ -100,7 +96,7 @@ object Mines : PuzzleType {
         "Each number counts the mines in the squares touching it, corners included.",
         "Reveal every square without a mine. Reveal a mine and the board is lost: try it again from the start.",
         "Flag a square you are sure holds a mine. A flag is your note, never checked, and keeps its square from being revealed by mistake.",
-        "A tap uses the tool under the board, Reveal or Flag; a long press uses the other. Every board can be cleared without a guess.",
+        "A tap uses the tool under the board, Reveal or Flag; a long press uses the other (with Flag chosen, a double tap reveals too). Every board can be cleared without a guess.",
         "Tap a number whose flags already match it to reveal all its other squares at once. A wrong flag there opens a mine and loses the board.",
     )
 
@@ -409,9 +405,8 @@ object Mines : PuzzleType {
         val live = interactive && !s.solved && !s.failed
         val feel = rememberMoveFeel(List(n) { if (it in s.bumps) 'x' else s.marks[it] })
 
-        // Any tap or long press on a revealed number chords (nothing else could happen there); else the tool decides.
-        fun act(cell: Int, flag: Boolean) {
-            val next = (if (s.isOpen(cell)) s.chord(cell) else if (flag) s.flag(cell) else s.reveal(cell)) ?: return
+        // Every state goes out through here, so a mine hit shakes however it was made.
+        val taps = rememberTwinTaps(s) { next: MinesState ->
             if (next.bumps.size > s.bumps.size) {
                 val b = Bump(next.bumps.last(), Animatable(0f))
                 bump = b
@@ -423,12 +418,22 @@ object Mines : PuzzleType {
             onState(next)
         }
 
+        // Any tap or long press on a revealed number chords (nothing else could happen there); else the tool decides.
+        fun MinesState.act(cell: Int, flagging: Boolean) =
+            (if (isOpen(cell)) chord(cell) else if (flagging) flag(cell) else reveal(cell)) ?: this
+
+        // A tap uses the pen, a double tap or long press the other tool (`TwinTaps`). A reveal is never held for
+        // the double-tap window: it would show what is under the square before a second tap could flag it.
+        fun tap(cell: Int) = taps.tap(cell, { it.act(cell, flagPen) }, { it.act(cell, !flagPen) }, holds = flagPen && !taps.shown.isOpen(cell))
+
+        fun press(cell: Int) = taps.press(cell) { it.act(cell, !flagPen) }
+
         val keys = Modifier.boardKeys(live) { key, _, repeat ->
             movedCursor(cursor, key, s.height, s.width)?.let { cursor = it; return@boardKeys true }
             val at = cursor ?: return@boardKeys false
             val action = minesKeyAction(key) ?: return@boardKeys false
             // F on a revealed number does nothing; Space or Enter there chords.
-            if (!repeat && !(action == MinesKeyAction.Flag && s.isOpen(at))) act(at, action == MinesKeyAction.Flag)
+            if (!repeat && !(action == MinesKeyAction.Flag && s.isOpen(at))) taps.apply { it.act(at, action == MinesKeyAction.Flag) }
             true
         }
 
@@ -443,17 +448,14 @@ object Mines : PuzzleType {
                     .size(step * s.width, step * s.height)
                     .highlightGrid(s.width, s.height)
                     .gridCursor(cursor.takeIf { live }, s.width, s.height, scheme.primary)
-                    .pointerInput(s, live, flagPen) {
+                    .pointerInput(live, flagPen, s.mines) {
                         if (!live) return@pointerInput
                         fun cellAt(o: Offset) = gridCellAt(o, size.width.toFloat() / s.width, s.width, s.height)
-                        detectTapGestures(
-                            onTap = { o -> act(cellAt(o), flagPen) },
-                            onLongPress = { o -> act(cellAt(o), !flagPen) },
-                        )
+                        detectTapGestures(onTap = { o -> tap(cellAt(o)) }, onLongPress = { o -> press(cellAt(o)) })
                     },
             ) {
                 drawBoard(
-                    s, size.width / s.width, digits, scheme, hues,
+                    taps.shown, size.width / s.width, digits, scheme, hues,
                     Overlay(highlight, glow, pulse.value, b?.cell ?: -1, b?.progress?.value ?: 0f, !still),
                     feel, vivid(accent),
                 )
@@ -471,14 +473,14 @@ object Mines : PuzzleType {
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Box(Modifier.height(48.dp), contentAlignment = Alignment.Center) { Status(s, interactive, onState) }
+                        Box(Modifier.height(48.dp), contentAlignment = Alignment.Center) { Status(taps.shown, interactive, onState) }
                         Pens(flagPen, enabled = live, vertical = true, onPen = { flagPen = it })
                     }
                 }
             } else {
                 Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                     // The count, always this height, so a loss never moves the board.
-                    Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.CenterEnd) { Status(s, interactive, onState) }
+                    Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.CenterEnd) { Status(taps.shown, interactive, onState) }
                     Grid(Modifier.weight(1f).fillMaxWidth().padding(bottom = 8.dp))
                     Pens(flagPen, enabled = live, vertical = false, onPen = { flagPen = it })
                 }
