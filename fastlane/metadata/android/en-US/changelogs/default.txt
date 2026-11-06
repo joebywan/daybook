@@ -1,6 +1,6 @@
 - Tick/cross puzzles: double-tap or long-press for the other mark.
 - New player guide, linked from each puzzle's rules and every technique.
-- Letters and finished rows climb a marimba; words da-ding.
+- Letters and rows climb a marimba; words ring a glockenspiel.
 - Solved dailies reopen on your result, share card and next choices.
 - Hexwords: lower Standard target; says when it's out of reach.
 - Sudoku, Cage Sudoku: pick a digit, then tap squares.

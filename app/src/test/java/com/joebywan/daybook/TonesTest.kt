@@ -84,7 +84,7 @@ class TonesTest {
         assertEquals(1.36, seconds(Tones.Kind.ALL_TIERS), 0.05)
         assertTrue("no win startles", peak(Tones.Kind.WIN) <= 0.5f && peak(Tones.Kind.BIG_WIN) <= 0.5f && peak(Tones.Kind.ALL_TIERS) <= 0.6f)
         assertTrue("a win is heard", peak(Tones.Kind.WIN) >= 0.2f)
-        // A square wave is far louder than a plucked sine of the same peak, so loudness, not peak, keeps the order.
+        // Loudness, not peak, keeps the order: a note's level is how loud it sounds, not its highest sample.
         assertTrue(seconds(Tones.Kind.STEP) <= 0.5)
         assertTrue(seconds(Tones.Kind.WHEEL) <= 0.5)
         assertTrue(loud(Tones.Kind.STEP) < loud(Tones.Kind.WIN))
@@ -132,26 +132,18 @@ class TonesTest {
         }
     }
 
-    @Test fun aNoteReallyIsAPulseWave() {
-        // In one volume step of the da-ding's ring the samples sit on two values a quarter and three quarters of the time.
-        val note = Tones.samples(Tones.word()).window(0.072, 0.087)
-        val high = note.max()
-        val low = note.min()
-        val atHigh = note.count { abs(it - high) < 0.001f }
-        val atLow = note.count { abs(it - low) < 0.001f }
-        assertTrue("$atHigh + $atLow of ${note.size} on two levels", atHigh + atLow >= note.size * 0.9)
-        assertEquals(0.25, atHigh.toDouble() / (atHigh + atLow), 0.04)
-        // Zero mean: the levels are three to one, so a note starting makes no thump.
-        assertEquals(3.0, abs(high / low).toDouble(), 0.1)
-    }
-
-    @Test fun volumeFallsInHardSteps() {
-        // The da-ding's first note's top level, read every 2 ms: few distinct values, and it holds between them.
-        val note = Tones.samples(Tones.word())
-        val tops = (0 until 29).map { k -> note.window(0.002 + k * 0.002, 0.002 + (k + 1) * 0.002 + 0.002).max() }
-        val values = tops.map { (it * 2000).toInt() }.distinct()
-        assertTrue("${values.size} levels in ${tops.size} readings", values.size in 3..15)
-        assertEquals(values, values.sortedDescending())
+    @Test fun theDaDingIsABellNotAPulse() {
+        val s = Tones.samples(Tones.word())
+        val ding = s.window(0.075, 0.115)
+        // A pulse sits on two levels; a struck bar passes through them.
+        val onLevels = ding.count { abs(it - ding.max()) < 0.001f || abs(it - ding.min()) < 0.001f }
+        assertTrue("$onLevels of ${ding.size} on two levels", onLevels < ding.size / 10)
+        // A glockenspiel's bar: its upper partial near 2.76 times the note, not the marimba's tuned four times.
+        val g6 = noteHz(91)
+        assertTrue(strength(ding, g6 * 2.76) > 20 * strength(ding, g6 * 4))
+        assertTrue(strength(ding, g6 * 2.76) > 20 * strength(ding, g6 * 3.5))
+        // It rings and dies away, no hard steps.
+        assertTrue(rms(ding) > 3 * rms(s.window(0.28, 0.33)))
     }
 
     @Test fun theWheelRisesAStepPerLetterThenHolds() {

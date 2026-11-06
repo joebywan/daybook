@@ -333,10 +333,12 @@ kept is the best until beaten, and Best can be slower than the best time beside 
 
 ## Sounds (`core/Tones.kt`, `rememberTonePlayer` in the platform seam)
 
-Wins are a marimba chime (the owner brought it back, 2026-11-01, over a chiptune fanfare), and so is every progression, a letter or a finished unit (the owner, 2026-11-02, over chiptune notes). The da-ding stays
-chiptune: pulse waves at 25 and 50% duty, volume in sixteen hard steps. All synthesised and rendered
-once, no audio files. A voice's level is its RMS, because a square wave is much louder than a plucked sine of the same peak;
-pulses carry no DC, so a note starting or a volume step is no thump; a millisecond's fade at each end of a tone stops a click.
+Wins are a marimba chime (the owner brought it back, 2026-11-01, over a chiptune fanfare), and so is every progression, a letter or a finished unit (the owner, 2026-11-02, over chiptune notes). The da-ding was chiptune
+(pulse waves, volume in hard steps) until the owner, 2026-11-07: "the chiptunes have gotta go". It is now two struck glockenspiel
+bars, C6 then G6, the same struck-bar synthesis as the marimba but with the bar's upper partial left near its natural 2.76 times
+the note (the marimba's is tuned to four) and a longer ring, so it stays apart from the progressions. Levels are matched by loudness
+(the loudest 20 ms), not peak: the da-ding sits between a letter and a phrase note, every one under the win. All synthesised and
+rendered once, no audio files; each note fades in over 2 to 3 ms and out over 2 ms, so a tone never clicks at either end.
 The Sound switch silences all of them, and on Android so does the ringer on silent or vibrate; reduced motion stills nothing here,
 since sound is not motion. Each win has three variants (the chime as first chosen, then a hair flat and bright, a hair sharp and round), one drawn per play from `kotlin.random.Random`, never a generator's `Rng`.
 
