@@ -26,7 +26,7 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
     "mosaic" to listOf("8x12 grid, 3 colours, 4 moves", "9x14 grid, 4 colours, 5 moves", "10x16 grid, 5 colours, 6 moves"),
     "sets" to listOf("9 cards, 3 sets to find", "12 cards, 4 sets to find", "12 cards, 6 sets to find"),
     "atoms" to listOf("7x7 grid, 10 atoms", "9x9 grid, 18 atoms", "11x11 grid, 28 atoms"),
-    "snap" to listOf("5x5 grid", "6x6 grid", "6x7 grid"),
+    "snap" to listOf("4x5 grid", "5x6 grid", "6x7 grid"),
     "lits" to listOf("6x6 grid", "7x7 grid", "8x8 grid"),
     "tower" to listOf("4 pegs, 5 colours, 10 guesses", "5 pegs, 6 colours, 12 guesses", "5 pegs, 8 colours, 14 guesses"),
     "words" to listOf("Five-letter words, six guesses", "Five-letter words, five guesses", "Four-letter words, seven guesses"),
