@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -54,6 +55,10 @@ import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.lineUnits
+import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.coroutines.launch
@@ -300,9 +305,13 @@ object Pointers : PuzzleType {
         drawPath(tri, colour, style = Stroke(0.06f * unit, join = StrokeJoin.Round))
     }
 
-    /** Faint dots on every square, so a line's way to the edge can be read across bare squares. */
-    private fun DrawScope.drawDots(w: Int, h: Int, unit: Float, colour: Color) {
-        for (r in 0 until h) for (c in 0 until w) drawCircle(colour, 0.05f * unit, Offset((c + 0.5f) * unit, (r + 0.5f) * unit))
+    /** Faint dots on every square, so a line's way to the edge can be read across bare squares; a line cleared glows along them. */
+    private fun DrawScope.drawDots(w: Int, h: Int, unit: Float, colour: Color, feel: MoveFeel, glow: Color) {
+        for (r in 0 until h) for (c in 0 until w) {
+            feelSquare(feel, r * w + c, Offset(c * unit, r * unit), Size(unit, unit), glow) {
+                drawCircle(colour, 0.05f * unit, Offset((c + 0.5f) * unit, (r + 0.5f) * unit))
+            }
+        }
     }
 
     /** A heart in a [size] square: the lives row, and the share card's. */
@@ -401,6 +410,11 @@ object Pointers : PuzzleType {
         // Reduced motion: a cleared arrow simply goes and a bump flashes, nothing lunging or knocked; the lost heart is just out.
         val still = LocalReducedMotion.current
         val live = interactive && !s.solved && !s.failed
+        // A row or column left with no arrow is a unit: it glows along and a note climbs the phrase. Judged from the arrows
+        // still on the board, which the player sees; a bare line from the start is already done and never sounds.
+        val lines = remember(s.width, s.height) { lineUnits(s.width, s.height) }
+        val owner = remember(s) { List(s.width * s.height) { s.arrowAt(it) } }
+        val feel = rememberMoveFeel(owner, lines) { u -> lines[u].all { owner[it] < 0 } }
 
         fun tapAt(cell: Int) {
             val i = s.arrowAt(cell)
@@ -494,7 +508,7 @@ object Pointers : PuzzleType {
                 ) {
                     val unit = size.width / s.width
                     drawRoundRect(scheme.surface, cornerRadius = CornerRadius(0.25f * unit))
-                    drawDots(s.width, s.height, unit, scheme.onSurfaceVariant.copy(alpha = 0.35f))
+                    drawDots(s.width, s.height, unit, scheme.onSurfaceVariant.copy(alpha = 0.35f), feel, vivid(accent))
                     val b = bump
                     val flash = if (b == null) 0f else minOf(1f, 2f * (1f - b.progress.value)) // full warning for the first half, then fading
                     // A finger down on an arrow: the same band as the keyboard cursor's, under it.

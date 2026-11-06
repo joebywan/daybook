@@ -354,8 +354,13 @@ object Cipher : PuzzleType {
             shown = live
         }
         val redColumn = shown.column?.let { sum.columnTiles(it) } ?: emptySet()
-        // A digit set on a letter settles on every tile of that letter. No units: a column is judged with its carry.
-        val feel = rememberMoveFeel(s.digits)
+        // A digit set on a letter settles on every tile of that letter (tile `row * width + column`). A column is a unit,
+        // finished once it and everything to its right is placed and it adds up: it glows down and plays a note.
+        val columns = remember(s.words) { List(sum.width) { c -> (0 until sum.rows).filter { c < sum.words[it].length }.map { it * sum.width + c }.toIntArray() } }
+        val feel = rememberMoveFeel(
+            List(sum.rows * sum.width) { i -> sum.letterAt(i / sum.width, i % sum.width).let { if (it < 0) null else s.digits[it] } },
+            columns,
+        ) { CipherLogic.columnAddsUp(sum, s.digits, it) }
 
         BoxWithConstraints(
             Modifier
@@ -400,7 +405,7 @@ object Cipher : PuzzleType {
                     tileModifier = { r, c, l ->
                         val look = highlight.look(sum.tile(r, c))
                         Modifier
-                            .moveFeel(feel, l, vivid(accent))
+                            .moveFeel(feel, r * sum.width + c, vivid(accent))
                             .dimmed(look)
                             .ring(look, glow, pulse, corner = 8.dp)
                             .then(if (sum.tile(r, c) in redColumn) Modifier.border(2.dp, scheme.error, RoundedCornerShape(8.dp)) else Modifier)
