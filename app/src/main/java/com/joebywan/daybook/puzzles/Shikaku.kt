@@ -107,6 +107,12 @@ object Shikaku : PuzzleType {
         "Drag from one corner to another to draw a rectangle. Tap a rectangle to remove it.",
     )
 
+    /** Whether the number at square [q] has a rectangle round it, holding no other number, of the number's area. The rules, never the solution. */
+    fun fits(s: ShikakuState, q: Int): Boolean {
+        val b = s.blockAt(q / s.width, q % s.width) ?: return false
+        return b.area == s.clues[q] && b.cells(s.width).count { s.clues[it] != null } == 1
+    }
+
     /**
      * Whether [blocks] is a finished board: every block inside the grid, no two overlapping, every
      * square covered, and each block holding exactly one number, equal to its area. Reads only the
@@ -534,8 +540,11 @@ object Shikaku : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         val (highlight, glow, pulse) = rememberHintPaint()
-        // The squares a rectangle takes (or gives back) settle. No units: a rectangle is a move, not a line filled in.
-        val feel = rememberMoveFeel(List(s.width * s.height) { s.blockAt(it / s.width, it % s.width) })
+        // The squares a rectangle takes (or gives back) settle; a rectangle drawn round its number at that number's area
+        // glows once and plays its note. A unit per number: its rectangle's squares, or the number's square alone.
+        val numbered = remember(s.clues) { s.clues.indices.filter { s.clues[it] != null } }
+        val units = numbered.map { q -> s.blockAt(q / s.width, q % s.width)?.cells(s.width)?.toIntArray() ?: intArrayOf(q) }
+        val feel = rememberMoveFeel(List(s.width * s.height) { s.blockAt(it / s.width, it % s.width) }, units) { fits(s, numbered[it]) }
         var dragFrom by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
         var dragTo by remember(s.solution) { mutableStateOf<Pair<Int, Int>?>(null) }
 

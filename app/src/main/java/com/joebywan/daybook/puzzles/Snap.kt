@@ -36,6 +36,9 @@ import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.MoveFeel
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.drawHintRings
@@ -386,6 +389,20 @@ object Snap : PuzzleType {
         return current.copy(path = path + cell, moves = current.moves + 1)
     }
 
+    /**
+     * One leg per number after 1: the line's squares from number k - 1 to number k, once the line, from 1, has met 1 to k
+     * in order; null until it has. Read from the line and the numbers alone.
+     */
+    internal fun legs(s: SnapState): List<IntArray?> {
+        val top = s.waypoints.max()
+        // Where along the line each number it meets lies, in the order met.
+        val met = s.path.indices.filter { s.waypoints[s.path[it]] > 0 }
+        return (2..top).map { k ->
+            val inOrder = met.size >= k && (0 until k).all { s.waypoints[s.path[met[it]]] == it + 1 }
+            if (inOrder) s.path.subList(met[k - 2], met[k - 1] + 1).toIntArray() else null
+        }
+    }
+
     /** A drag begins at ([x], [y]), in cell units: on the line it trims back to that square, else it extends. */
     internal fun dragStart(current: SnapState, x: Float, y: Float): SnapState {
         val cell = gridCellAt(Offset(x, y), 1f, current.width, current.height)
@@ -662,6 +679,7 @@ object Snap : PuzzleType {
         numberSize: TextUnit,
         measurer: TextMeasurer,
         scheme: ColorScheme,
+        feel: MoveFeel = MoveFeel.Still,
     ) {
         fun centre(cell: Int) = Offset(
             origin.x + (cell % cols + 0.5f) * step,
@@ -669,12 +687,15 @@ object Snap : PuzzleType {
         )
 
         for (cell in waypoints.indices) {
-            drawRoundRect(
-                color = scheme.surfaceVariant,
-                topLeft = Offset(origin.x + (cell % cols) * step + gutter, origin.y + (cell / cols) * step + gutter),
-                size = Size(step - 2 * gutter, step - 2 * gutter),
-                cornerRadius = CornerRadius(corner),
-            )
+            val square = Offset(origin.x + (cell % cols) * step, origin.y + (cell / cols) * step)
+            feelSquare(feel, cell, square, Size(step, step), vivid(accent)) {
+                drawRoundRect(
+                    color = scheme.surfaceVariant,
+                    topLeft = Offset(square.x + gutter, square.y + gutter),
+                    size = Size(step - 2 * gutter, step - 2 * gutter),
+                    cornerRadius = CornerRadius(corner),
+                )
+            }
         }
 
         if (path.size >= 2) {
@@ -711,6 +732,12 @@ object Snap : PuzzleType {
         // line. Read the live board through this instead.
         val latest by rememberUpdatedState(s)
         val (highlight, glow, pulse) = rememberHintPaint()
+        // Each number the line reaches in order glows along the leg it took to get there and plays its note.
+        val legs = legs(s)
+        val feel = rememberMoveFeel(
+            IntArray(s.cellCount) { -1 }.also { at -> s.path.forEachIndexed { k, cell -> at[cell] = k } }.toList(),
+            legs.mapIndexed { k, leg -> leg ?: intArrayOf(s.waypoints.indexOf(k + 2)) },
+        ) { legs[it] != null }
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
@@ -754,7 +781,7 @@ object Snap : PuzzleType {
                 drawSnap(
                     s.width, stepPx, Offset.Zero, s.path, s.waypoints,
                     gutter = 2f, corner = stepPx * 0.16f, join = StrokeJoin.Miter, numberSize = (step * 0.30f).toSp(),
-                    measurer = measurer, scheme = scheme,
+                    measurer = measurer, scheme = scheme, feel = feel,
                 )
 
                 // Everything the highlight does not name steps back under a veil in the page

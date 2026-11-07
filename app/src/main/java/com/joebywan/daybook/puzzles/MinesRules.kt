@@ -32,6 +32,9 @@ data class MinesState(
     fun isOpen(i: Int) = marks[i] == MinesLogic.OPEN
     fun isFlag(i: Int) = marks[i] == MinesLogic.FLAG
 
+    /** Whether [i] is no longer untouched, as the player sees it: open, flagged (right or wrong) or a mine hit. */
+    fun settled(i: Int) = isOpen(i) || isFlag(i) || i in bumps
+
     /** Mines left to find, as the counter shows it: the total less flags and mines hit (below 0 with too many flags). */
     val minesLeft: Int get() = total - marks.count { it == MinesLogic.FLAG } - bumps.size
 

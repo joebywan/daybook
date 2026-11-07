@@ -1077,8 +1077,10 @@ object Mosaic : PuzzleType {
                 // the width alone would run it off the bottom of the screen.
                 val step = minOf(maxWidth / s.width, maxHeight / s.height)
                 val stepPx = with(LocalDensity.current) { step.toPx() }
-                // The area a fill recoloured settles. No units: the only one is the whole board, which is the solve.
-                val feel = rememberMoveFeel(s.cells)
+                // The area a fill recoloured settles. A fill that takes the last of a colour off the board glows across
+                // the area it made and plays its note: a unit per colour, done while no square has it.
+                val made = s.trail.lastOrNull()?.let { s.area(it / 8) } ?: IntArray(0)
+                val feel = rememberMoveFeel(s.cells, List(s.colours) { made }) { it !in s.cells }
 
                 Canvas(
                     Modifier
