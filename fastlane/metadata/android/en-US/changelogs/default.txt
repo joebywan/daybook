@@ -1,3 +1,4 @@
+- Pipes: real pipework, and water flows along it.
 - Tick/cross puzzles: double-tap or long-press for the other mark.
 - New player guide, linked from rules and techniques.
 - Letters and rows climb a marimba; words ring a glockenspiel.
@@ -6,4 +7,3 @@
 - Hexwords: lower Standard target; says when it's out of reach.
 - Sudoku, Cage Sudoku: pick a digit, then tap squares.
 - Sudoku: a note press lights its digit.
-- Word games: tap letters, then press Enter.
