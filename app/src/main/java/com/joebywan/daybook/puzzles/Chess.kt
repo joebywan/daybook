@@ -50,6 +50,9 @@ import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.reportHighlight
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.core.Tones
+import com.joebywan.daybook.ui.LocalBoardTones
+import com.joebywan.daybook.ui.LocalMoveCount
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -102,11 +105,14 @@ data class ChessState(
      * (attacker to move) has no forced mate within the moves left. Only a proof of "none" counts, a search
      * that ran out of budget is not read as one.
      */
-    fun lost(): Boolean {
-        if (solved) return false
+    fun lost(): Boolean = mateLeft() is ChessRules.Mate.None
+
+    /** The search behind [lost]: null when solved, [ChessRules.Mate.None] once no mate is left, else what the prover says. */
+    internal fun mateLeft(): ChessRules.Mate? {
+        if (solved) return null
         val r = replay()
-        if (played.size >= mateIn || r.over) return true
-        return ChessRules.forcedMate(r.position, remaining) is ChessRules.Mate.None
+        if (played.size >= mateIn || r.over) return ChessRules.Mate.None
+        return ChessRules.forcedMate(r.position, remaining)
     }
 
     /** The state after the player plays [m] (legal now). One emission; the reply is derived from it. */
@@ -151,6 +157,18 @@ internal class ChessReplay(
         }
     }
 }
+
+/**
+ * The note a move of the player's plays the moment it is made: the next of the board's phrase, by how many moves have
+ * been played, good or bad alike, so it tells nothing; the mating move has the win chime instead. Null when not [pushed]
+ * (undo, restart, load, a walkthrough).
+ */
+internal fun chessMoveTone(pushed: Boolean, solved: Boolean, played: Int, mateIn: Int): Int? =
+    if (!pushed || solved) null else Tones.step(Tones.phraseStep(played, mateIn))
+
+/** The tone a pushed move's search earns, played with the lost caption: the ba-bong once the mate is proved gone, else none. */
+internal fun chessVerdictTone(pushed: Boolean, mate: ChessRules.Mate?): Int? =
+    if (pushed && mate == ChessRules.Mate.None) Tones.miss() else null
 
 /** Mate: the forced checkmate in 2, 3 or 4, from a bundled list of verified positions. */
 object Chess : PuzzleType {
@@ -260,14 +278,24 @@ object Chess : PuzzleType {
         var settling by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
-        // "No forced mate" is derived by a search, so it is computed off the main thread and shown a second late.
+        // Whether this state came from the player's own move: only `PlayScreen.push` raises LocalMoveCount, so undo,
+        // restart, a load and the walkthrough (always 0) leave it where it was. Read once per state.
+        val tick = LocalMoveCount.current
+        val heard = remember { intArrayOf(tick) }
+        val pushed = remember(s) { (tick != heard[0]).also { heard[0] = tick } }
+        val tones = LocalBoardTones.current
+        LaunchedEffect(s) { chessMoveTone(pushed, s.solved, s.played.size, s.mateIn)?.let(tones) }
+
+        // "No forced mate" is derived by a search, so it is computed off the main thread and shown a second late, with
+        // the ba-bong. A new state (an undo included) cancels this, so a late verdict never sounds for a move taken back.
         var lostShown by remember { mutableStateOf(false) }
         LaunchedEffect(s) {
             lostShown = false
-            val lost = withContext(Dispatchers.Default) { s.lost() }
-            if (lost) {
+            val mate = withContext(Dispatchers.Default) { s.mateLeft() }
+            if (mate == ChessRules.Mate.None) {
                 delay(LOST_MILLIS)
                 lostShown = true
+                chessVerdictTone(pushed, mate)?.let(tones)
             }
         }
 
