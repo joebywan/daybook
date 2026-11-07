@@ -42,13 +42,15 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.Tones
+import com.joebywan.daybook.ui.LocalBoardTones
+import com.joebywan.daybook.ui.LocalMoveCount
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.feelSquare
-import com.joebywan.daybook.ui.lineUnits
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.drawHintRings
@@ -139,6 +141,20 @@ data class PipesState(
             turned = turned + index,
         )
 }
+
+/** Tenths of the board: [pipesMark] runs 0 to [MARKS] - 1; the whole board is the solve, which has the chime. */
+internal const val MARKS = 10
+
+/** The tenths of [total] tiles that [joined] of them reach, rounded down; never the last, which only a solve gives. */
+internal fun pipesMark(joined: Int, total: Int): Int = (joined * MARKS / total).coerceAtMost(MARKS - 1)
+
+/**
+ * The note a pushed move plays, from the tenth held [before] it to the one [after]: none if it did not change or the move
+ * [solved] the board, else the phrase's note for the tenth now held, so progress climbs the scale and going back walks it
+ * down, one note however many tenths a move crossed.
+ */
+internal fun pipesMarkTone(before: Int, after: Int, solved: Boolean): Int? =
+    if (solved || before == after) null else Tones.step(Tones.phraseStep(after, MARKS))
 
 /**
  * Pipes — the "Net" rotation puzzle.
@@ -633,9 +649,21 @@ object Pipes : PuzzleType {
         var nearest by remember(s.width, s.height) { mutableIntStateOf(0) }
         val front = remember(s.width, s.height) { Animatable(0f) }
         val (highlight, glow, pulse) = rememberHintPaint()
-        // A row or column whose every tile meets a tile at each of its openings glows once and plays its note.
-        val units = remember(s.width, s.height) { lineUnits(s.width, s.height) }
-        val feel = rememberMoveFeel(s.cells, units) { u -> units[u].all { joined(s, it) } }
+        // Progress in tenths of the tiles joined (each opening meeting a neighbour's). A move that changes the tenth held
+        // plays that tenth's note of the phrase, up or down; the solve has the chime. Only the player's own push sounds:
+        // `PlayScreen.push` alone raises LocalMoveCount, so undo, restart, a load and the walkthrough stay quiet.
+        val joinedTiles = remember(s.cells) { s.cells.indices.filter { joined(s, it) }.toIntArray() }
+        val mark = pipesMark(joinedTiles.size, s.cells.size)
+        val tick = LocalMoveCount.current
+        val heard = remember { intArrayOf(tick, mark) }
+        val tone = remember(s) {
+            (if (tick != heard[0]) pipesMarkTone(heard[1], mark, s.solved) else null).also { heard[0] = tick; heard[1] = mark }
+        }
+        val tones = LocalBoardTones.current
+        LaunchedEffect(s) { tone?.let(tones) }
+        // A tenth newly reached runs the glow over the tiles joined; its sound is the one above.
+        val units = remember(joinedTiles) { List(MARKS - 1) { joinedTiles } }
+        val feel = rememberMoveFeel(s.cells, units, unitTone = { null }) { u -> mark > u }
 
         // One angle per tile, held outside the state so a rotation can be shown turning while the
         // board itself has already moved on. Only the grid shape resets them.
