@@ -94,6 +94,19 @@ internal object PointersLogic {
         Difficulty.EXPERT -> Spec(14, 17, 3, 9, 30, 14)
     }
 
+    /**
+     * The arrows cleared at each mid-game milestone of a board of [total]: every tenth of the arrows, rounded up
+     * (`ceil(total * k / 10)`), so one tap never crosses two; the last tenth is the solve, which has the win's chime.
+     * A board of fewer than ten arrows has fewer milestones, never two at one count.
+     */
+    fun milestones(total: Int): List<Int> = (1..9).map { (total * it + 9) / 10 }.distinct().filter { it in 1 until total }
+
+    /** For each of [marks] (from [milestones]), the squares of the arrows cleared since the milestone before, in the order they went. */
+    fun milestoneUnits(s: PointersState, marks: List<Int>): List<IntArray> = List(marks.size) { k ->
+        val from = minOf(if (k == 0) 0 else marks[k - 1], s.removed.size)
+        s.removed.subList(from, minOf(marks[k], s.removed.size)).flatMap { s.arrows[it] }.toIntArray()
+    }
+
     /** Direction (index into up, right, down, left) the arrow's head points. */
     fun dirOf(arrow: List<Int>, width: Int): Int {
         val d = arrow[arrow.size - 1] - arrow[arrow.size - 2]

@@ -1,10 +1,13 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.data.SavedGame
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.PointersState
+import com.joebywan.daybook.puzzles.pointersTapTone
+import com.joebywan.daybook.ui.MoveFeel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -131,6 +134,78 @@ class PointersRulesTest {
             assertTrue("${tier.name} leaves over 6% of the board bare", bare < 0.06)
             lastCells = cells
             lastDepth = depth
+        }
+    }
+
+    /** The taps (by how many arrows are gone after it) that pass a tenth of [n], worked out in tenths: no rounding. */
+    private fun crossingTaps(n: Int): List<Int> =
+        (1 until n).filter { c -> (1..9).any { k -> 10 * (c - 1) < k * n && k * n <= 10 * c } }
+
+    @Test
+    fun `a milestone falls on the tap that passes each tenth of the arrows, never two on one tap, never the solve`() {
+        for (n in 1..120) {
+            val m = PointersLogic.milestones(n)
+            assertEquals("board of $n arrows", crossingTaps(n), m)
+            assertEquals("board of $n arrows repeats a milestone", m.size, m.toSet().size)
+            if (n >= 10) assertEquals("board of $n arrows", 9, m.size)
+        }
+        assertEquals(listOf(1, 2, 3, 4), PointersLogic.milestones(5))
+        assertEquals(listOf(2, 3, 5, 6, 7, 9, 10, 12, 13), PointersLogic.milestones(14))
+        assertEquals(listOf(1), PointersLogic.milestones(2))
+        assertEquals(emptyList<Int>(), PointersLogic.milestones(1))
+        for (tier in Difficulty.entries) {
+            val sizes = (0 until 365).map { board(it, tier).arrows.size }
+            println("pointers ${tier.name} arrows: ${sizes.min()}-${sizes.max()}, milestones ${sizes.map { PointersLogic.milestones(it).size }.toSet()}")
+            assertTrue("${tier.name} has a board under ten arrows", sizes.min() >= 10)
+        }
+    }
+
+    /**
+     * What each tap sounds like, through the board's own pieces ([pointersTapTone] and the [MoveFeel] it feeds), on a
+     * daily board played by this file's greedy player: two bumps first (a blocked arrow, by this file's own way check),
+     * then every free arrow. A bump is the ba-bong and nothing else; a removal plays the next note of the phrase exactly
+     * on the taps [crossingTaps] names, and nothing on the rest; the solve is left to the win's chime.
+     */
+    @Test
+    fun `a bump plays the miss, a removal plays a note only on the tap that passes a tenth`() {
+        for (tier in Difficulty.entries) {
+            var s = board(3, tier)
+            val marks = PointersLogic.milestones(s.arrows.size)
+            val feel = MoveFeel()
+            var tick = 0
+            fun observe() = feel.observe(
+                tick, List(s.width * s.height) { s.arrowAt(it) }, PointersLogic.milestoneUnits(s, marks),
+                BooleanArray(marks.size) { s.removed.size >= marks[it] }, still = false, solves = if (s.solved) 1 else 0,
+            )
+            observe()
+            fun play(next: PointersState): Int? {
+                val before = s
+                val run = feel.unitRun
+                s = next
+                tick++
+                observe()
+                val bump = pointersTapTone(true, before.bumps.size, s.bumps.size)
+                val note = if (feel.unitRun > run) Tones.step(feel.unitStep) else null
+                assertTrue("${tier.name}: a tap played two sounds", bump == null || note == null)
+                return bump ?: note
+            }
+            val blocked = s.arrows.indices.first { !free(s, emptySet(), it) }
+            repeat(2) { assertEquals("${tier.name}: a bump", Tones.miss(), play(s.tap(s.arrows[blocked].last())!!)) }
+            val notes = mutableListOf<Int>()
+            val gone = mutableSetOf<Int>()
+            while (!s.solved) {
+                val i = s.arrows.indices.first { it !in gone && free(s, gone, it) }
+                gone += i
+                val tone = play(s.tap(s.arrows[i].last())!!)
+                val crosses = gone.size in crossingTaps(s.arrows.size)
+                if (!crosses) assertNull("${tier.name}: tap ${gone.size} of ${s.arrows.size}", tone)
+                else notes += requireNotNull(tone) { "${tier.name}: tap ${gone.size} passes a tenth and is silent" }
+            }
+            assertEquals("${tier.name}: one note a tenth", 9, notes.size)
+            assertEquals("${tier.name}: the notes climb", notes.sorted(), notes)
+            // Nothing that is not the player's own tap sounds, and Try again only takes bumps away.
+            assertNull(pointersTapTone(false, 0, 1))
+            assertNull(pointersTapTone(true, 2, 0))
         }
     }
 
