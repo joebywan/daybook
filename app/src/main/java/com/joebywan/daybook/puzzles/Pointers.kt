@@ -1,6 +1,5 @@
 package com.joebywan.daybook.puzzles
 
-import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -22,6 +21,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -30,9 +30,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -50,20 +50,27 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.boardKeys
+import com.joebywan.daybook.ui.LocalBoardTones
+import com.joebywan.daybook.ui.LocalMoveCount
 import com.joebywan.daybook.ui.LocalReducedMotion
-import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
-import com.joebywan.daybook.ui.lineUnits
-import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.BoardHues
-import kotlinx.coroutines.launch
+import com.joebywan.daybook.ui.theme.vivid
 import kotlin.math.floor
 import kotlin.math.sqrt
+import kotlinx.coroutines.launch
+
+/** The tone a tap of the player's plays here: the ba-bong when it bumped (a life lost), else none (milestones are [rememberMoveFeel]'s). */
+internal fun pointersTapTone(pushed: Boolean, bumpsBefore: Int, bumpsAfter: Int): Int? =
+    if (pushed && bumpsAfter > bumpsBefore) Tones.miss() else null
 
 /**
  * Pointers: the board is covered in arrows. Tap one and it slides off the way its head points, if nothing is in its
@@ -308,8 +315,12 @@ object Pointers : PuzzleType {
     /** Faint dots on every square, so a line's way to the edge can be read across bare squares; a line cleared glows along them. */
     private fun DrawScope.drawDots(w: Int, h: Int, unit: Float, colour: Color, feel: MoveFeel, glow: Color) {
         for (r in 0 until h) for (c in 0 until w) {
-            feelSquare(feel, r * w + c, Offset(c * unit, r * unit), Size(unit, unit), glow) {
-                drawCircle(colour, 0.05f * unit, Offset((c + 0.5f) * unit, (r + 0.5f) * unit))
+            // A milestone's glow swells the bare squares' dots into discs of the accent: a square tint on white barely shows.
+            val g = feel.glow(r * w + c)
+            feelSquare(feel, r * w + c, Offset(c * unit, r * unit), Size(unit, unit), Color.Unspecified) {
+                val at = Offset((c + 0.5f) * unit, (r + 0.5f) * unit)
+                drawCircle(colour, 0.05f * unit, at)
+                if (g > 0f) drawCircle(glow.copy(alpha = 0.8f * g), (0.05f + 0.25f * g) * unit, at)
             }
         }
     }
@@ -410,11 +421,21 @@ object Pointers : PuzzleType {
         // Reduced motion: a cleared arrow simply goes and a bump flashes, nothing lunging or knocked; the lost heart is just out.
         val still = LocalReducedMotion.current
         val live = interactive && !s.solved && !s.failed
-        // A row or column left with no arrow is a unit: it glows along and a note climbs the phrase. Judged from the arrows
-        // still on the board, which the player sees; a bare line from the start is already done and never sounds.
-        val lines = remember(s.width, s.height) { lineUnits(s.width, s.height) }
+        // Every tenth of the arrows cleared is a milestone (`PointersLogic.milestones`): a note climbs the phrase, and the
+        // squares cleared since the one before glow along in the order they went. A bump clears nothing, so it is never one.
+        val marks = remember(s.arrows) { PointersLogic.milestones(s.arrows.size) }
         val owner = remember(s) { List(s.width * s.height) { s.arrowAt(it) } }
-        val feel = rememberMoveFeel(owner, lines) { u -> lines[u].all { owner[it] < 0 } }
+        val cleared = remember(s.removed, marks) { PointersLogic.milestoneUnits(s, marks) }
+        val feel = rememberMoveFeel(owner, cleared) { k -> s.removed.size >= marks[k] }
+        // A bump plays the ba-bong, the last life's too (nothing else sounds for a lost board). Only the player's own tap:
+        // `PlayScreen.push` alone raises LocalMoveCount (Chess's test), and Try again takes bumps away, never adds one.
+        val tick = LocalMoveCount.current
+        val heard = remember { intArrayOf(tick, s.bumps.size) }
+        val bumpTone = remember(s) {
+            pointersTapTone(tick != heard[0], heard[1], s.bumps.size).also { heard[0] = tick; heard[1] = s.bumps.size }
+        }
+        val tones = LocalBoardTones.current
+        LaunchedEffect(s) { bumpTone?.let(tones) }
 
         fun tapAt(cell: Int) {
             val i = s.arrowAt(cell)
