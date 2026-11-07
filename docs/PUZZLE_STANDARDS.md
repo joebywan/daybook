@@ -81,7 +81,7 @@ What varies, as built:
 | Mosaic | grid, blobs, colours, optimum | 8x12, 3 colours / 9x14, 4 / 10x16, 5; slack 0 |
 | Sets | cards on table, sets to find | 9 / 3, 12 / 4, 12 / 6 |
 | Atoms | lattice, atoms | 7 (10) / 9 (16) / 11 (24) |
-| Snap | grid (clue density is a budget, not a tier knob) | 5x5 / 6x6 / 6x7 |
+| Snap | grid (clue density is a budget, not a tier knob) | 4x5 / 5x6 / 6x7 |
 | LITS | grid | 6x6 / 7x7 / 8x8 |
 | Tower | slots, colours, guesses | 4/5/10, 5/6/12, 5/8/14 |
 | Lexicon | word length, guesses | 5/6, 5/5, 4/7 (four letters is the harder length; see `LexiconBalanceTest`) |
