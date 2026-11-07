@@ -1,8 +1,9 @@
 - Pipes: real pipework, and water flows along it.
 - Tick/cross puzzles: double-tap or long-press for the other mark.
-- New player guide, linked from each puzzle's rules and every technique.
+- New player guide, linked from rules and techniques.
 - Letters and rows climb a marimba; words ring a glockenspiel.
-- Solved dailies reopen on your result, share card and next choices.
+- Solved dailies reopen on your result and share card.
+- Trail: smaller Standard and Hard grids.
 - Hexwords: lower Standard target; says when it's out of reach.
 - Sudoku, Cage Sudoku: pick a digit, then tap squares.
-- Sudoku: a note press lights that digit.
+- Sudoku: a note press lights its digit.

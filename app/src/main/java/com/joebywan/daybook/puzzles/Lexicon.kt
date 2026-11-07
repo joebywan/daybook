@@ -56,6 +56,7 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.core.highlightAnchor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.keepClear
@@ -411,8 +412,14 @@ object Lexicon : PuzzleType {
                 // Sized from both axes (CLAUDE.md): the grid is the width, or the height left once the
                 // keyboard has its room, whichever binds. It never changes size, so a hint opening or a
                 // solve cannot move it.
-                // A guessed row settles as its marks land. No units: the one word is the solve.
-                val feel = rememberMoveFeel(List(s.maxGuesses * s.length) { s.guesses.getOrNull(it / s.length)?.get(it % s.length) })
+                // A guessed row settles as its marks land, and a row submitted is a unit: it glows along and plays a note
+                // as high as its marks landed (the marks are already showing, so the note tells nothing new).
+                val rows = remember(s.maxGuesses, s.length) { List(s.maxGuesses) { r -> IntArray(s.length) { r * s.length + it } } }
+                val feel = rememberMoveFeel(
+                    List(s.maxGuesses * s.length) { s.guesses.getOrNull(it / s.length)?.get(it % s.length) },
+                    rows,
+                    { Tones.step(s.guesses.lastOrNull()?.let { LexiconMark.step(s.marks(it).sum(), s.length) } ?: 0) },
+                ) { it < s.guesses.size }
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.length, maxHeight / s.maxGuesses, MAX_CELL * scale).coerceAtLeast(0.dp)
                     Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses).clip(RoundedCornerShape(8.dp)).background(a.frame)) {

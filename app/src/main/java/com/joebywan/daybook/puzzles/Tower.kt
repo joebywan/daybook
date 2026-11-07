@@ -36,6 +36,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import com.joebywan.daybook.ui.CappedFontScale
+import com.joebywan.daybook.ui.MoveFeel
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
+import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
@@ -426,6 +431,14 @@ object Tower : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         var selectedColour by remember(s.secret) { mutableIntStateOf(0) }
         val (highlight, glow, pulse) = rememberHintPaint()
+        // A guess marked is a unit: its pegs settle and glow along and a note plays as high as its pips landed (they are
+        // showing already, so the note tells nothing new). Pegs are `guess * slots + slot`.
+        val rows = remember(s.maxGuesses, s.slots) { List(s.maxGuesses) { g -> IntArray(s.slots) { g * s.slots + it } } }
+        val feel = rememberMoveFeel(
+            List(s.maxGuesses * s.slots) { s.guesses.getOrNull(it / s.slots)?.get(it % s.slots) },
+            rows,
+            { Tones.step(s.guesses.lastOrNull()?.let { s.score(it).let { f -> LexiconMark.step(2 * f.exact + f.misplaced, s.slots) } } ?: 0) },
+        ) { it < s.guesses.size }
 
         // A phone's width at most: on a tablet or a wide window the rows would otherwise stretch across the whole box.
         Column(
@@ -454,7 +467,7 @@ object Tower : PuzzleType {
                 reverseLayout = true,
             ) {
                 items(s.guesses.indices.reversed().toList()) { g ->
-                    GuessRow(g, s.guesses[g], s.score(s.guesses[g]), s.slots, highlight, glow, pulse)
+                    GuessRow(g, s.guesses[g], s.score(s.guesses[g]), s.slots, highlight, glow, pulse, feel)
                 }
             }
 
@@ -571,6 +584,7 @@ object Tower : PuzzleType {
         highlight: BoardHighlight,
         glow: Color,
         pulse: State<Float>,
+        feel: MoveFeel,
     ) {
         val scheme = MaterialTheme.colorScheme
         val pegs = guess.indices.map { highlight.look(TowerTeacher.peg(slots, index, it)) }
@@ -599,6 +613,8 @@ object Tower : PuzzleType {
                         .ring(pegs[slot], glow, pulse, 8.dp, round = true)
                         .dimmed(pegs[slot])
                         .clip(CircleShape)
+                        // Inside the clip, so a peg glows round.
+                        .moveFeel(feel, index * slots + slot, vivid(accent))
                         .background(palette[colour]),
                     contentAlignment = Alignment.Center,
                 ) { PegDigit(colour, 13) }

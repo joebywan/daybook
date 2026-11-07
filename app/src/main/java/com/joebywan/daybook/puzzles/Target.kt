@@ -184,8 +184,10 @@ object Target : PuzzleType {
         // The move being built is transient: it starts over whenever the board changes (a finished operation, undo, a hint).
         var entry by remember(s.slots) { mutableStateOf(TargetEntry()) }
         var note by remember(s.slots) { mutableStateOf<String?>(null) }
-        // An operation's answer settles into its tile. No units: there is one target, and reaching it is the solve.
-        val feel = rememberMoveFeel(s.slots)
+        // An operation's answer settles into its tile. A unit is a band of nearness (within half the target, a quarter, a
+        // tenth, 4%): the first tile into a band glows and plays a note, read off the tiles alone, never a road.
+        val near = TargetLogic.NEAR.map { TargetLogic.within(s.slots, s.target, it) }
+        val feel = rememberMoveFeel(s.slots, near) { near[it].isNotEmpty() }
         fun go(step: TargetStep) {
             entry = step.entry
             note = step.note

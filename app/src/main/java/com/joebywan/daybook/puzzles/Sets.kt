@@ -59,6 +59,8 @@ import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.core.isConfirmKey
 import com.joebywan.daybook.ui.HintLook
 import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.moveFeel
+import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.theme.BoardHues
 import kotlinx.serialization.Serializable
@@ -556,6 +558,10 @@ object Sets : PuzzleType {
         // The keyboard cursor over the cards (see SetsKeys): transient, so not in the state.
         var cursor by remember(s.cards) { mutableStateOf<Int?>(null) }
         val gapPx = with(LocalDensity.current) { CARD_GAP.toPx() }
+        // A set found is a unit: its three cards glow and a note climbs the phrase toward the target. Unit k is the k-th
+        // set found (empty until then), so the count of units never changes.
+        val sets = List(s.target) { k -> s.found.getOrNull(k)?.toIntArray() ?: IntArray(0) }
+        val feel = rememberMoveFeel(List(s.cards.size) { (it in s.selected) to (it in used) }, sets) { it < s.found.size }
 
         Column(
             Modifier.fillMaxWidth().boardKeys(interactive) { key, _, repeat ->
@@ -612,6 +618,7 @@ object Sets : PuzzleType {
                                     look = highlight.look(index),
                                     glow = glow,
                                     pulse = pulse,
+                                    feel = Modifier.moveFeel(feel, index, vivid(accent)),
                                 ) {
                                     // A tap is the player moving on; leaving the highlight up
                                     // would tint cards they are now picking between.
@@ -646,6 +653,7 @@ object Sets : PuzzleType {
         look: HintLook,
         glow: Color,
         pulse: State<Float>,
+        feel: Modifier,
         onTap: () -> Unit,
     ) {
         val scheme = MaterialTheme.colorScheme
@@ -659,6 +667,7 @@ object Sets : PuzzleType {
             Modifier
                 .width(width)
                 .height(width / CARD_ASPECT)
+                .then(feel)
                 // Everything the highlight does not name steps back, so the named cards read at
                 // a glance without hunting for their outlines.
                 .alpha(if (look.dim) 0.4f else 1f)
