@@ -94,7 +94,7 @@ class TonesTest {
     }
 
     @Test fun variantsDifferButATierIsOneTune() {
-        for (k in Tones.Kind.entries.filter { it != Tones.Kind.WHEEL && it != Tones.Kind.STEP && it != Tones.Kind.WORD }) {
+        for (k in Tones.Kind.entries.filter { it != Tones.Kind.WHEEL && it != Tones.Kind.STEP && it != Tones.Kind.WORD && it != Tones.Kind.MISS }) {
             assertEquals(k.name, 3, of(k).map { Tones.samples(it).toList() }.toSet().size)
         }
         // Every variant of every win opens on the chime: G5 alone, then C6 ringing over it.
@@ -144,6 +144,28 @@ class TonesTest {
         assertTrue(strength(ding, g6 * 2.76) > 20 * strength(ding, g6 * 3.5))
         // It rings and dies away, no hard steps.
         assertTrue(rms(ding) > 3 * rms(s.window(0.28, 0.33)))
+    }
+
+    @Test fun theBaBongFallsAMinorThirdSoftly() {
+        val s = Tones.samples(Tones.miss())
+        val candidates = (60..76).map(::noteHz)
+        val ba = candidates.maxByOrNull { strength(s.window(0.01, 0.15), it) }!!
+        val bong = candidates.maxByOrNull { strength(s.window(0.25, 0.45), it) }!!
+        assertEquals(noteHz(67), ba, 0.01)
+        assertEquals(noteHz(64), bong, 0.01)
+        // A marimba pluck dying away, not a buzzer held on two levels.
+        val start = s.window(0.01, 0.05)
+        assertTrue(start.count { abs(it - start.max()) < 0.001f || abs(it - start.min()) < 0.001f } < start.size / 10)
+        assertTrue(rms(s.window(0.2, 0.3)) > 3 * rms(s.window(0.62, 0.7)))
+        // About the phrase's loudness, under every win; no louder at its peak than a win's.
+        val loud = loudest(s)
+        val step = (0 until Tones.Kind.STEP.count).maxOf { loudest(Tones.samples(Tones.step(it))) }
+        val win = of(Tones.Kind.WIN).minOf { loudest(Tones.samples(it)) }
+        println("ba-bong: peak ${s.maxOf { abs(it) }}, loudest 20 ms RMS $loud, length ${s.size / rate.toDouble()} s; phrase loudest $step, win $win")
+        assertTrue("$loud against the phrase's $step", loud in step * 0.7..step * 1.3)
+        assertTrue("$loud against a win's $win", loud < win)
+        assertTrue(s.maxOf { abs(it) } <= 0.25f)
+        assertTrue(s.size / rate.toDouble() <= 0.8)
     }
 
     @Test fun theWheelRisesAStepPerLetterThenHolds() {
