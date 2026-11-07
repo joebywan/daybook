@@ -846,6 +846,9 @@ walkthrough), `PipesTeacher.kt`, `PipesKeys.kt`. `id = "pipes"` is hashed into e
   trees with `Rng(seed + attempt)`: 95 / 91 / 84% pass first, a year never needs more than 3; `lastResort` is seed 1's board,
   itself proved (`FallbackTest`). Under 0.5 ms a board on the JVM. Hints never fall back on a generated board (`PipesTeachingTest`).
 - **`solved` checks the rules** (fully joined and one network), never a stored answer; there is none.
+- Tiles are drawn as pipework (wall, bore, a coupling at each tile edge). Water runs out from the inlet a tile at a time
+  (`Pipes.flow`: breadth-first distance and the opening it comes in by), in by that opening and out the other arms; tiles
+  already wet stay full, a tile cut off drains at once, nothing flows on load or under reduced motion. `filled` is read off it.
 - Counter-clockwise rotation and a lock mark were proposed and **declined by the owner**: do not add them.
 
 ## Who's Who (a logic grid)
