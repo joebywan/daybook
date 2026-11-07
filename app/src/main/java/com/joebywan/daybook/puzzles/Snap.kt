@@ -88,8 +88,8 @@ object Snap : PuzzleType {
     )
 
     private fun shape(difficulty: Difficulty) = when (difficulty) {
-        Difficulty.STANDARD -> 5 to 5
-        Difficulty.HARD -> 6 to 6
+        Difficulty.STANDARD -> 4 to 5
+        Difficulty.HARD -> 5 to 6
         Difficulty.EXPERT -> 6 to 7
     }
 

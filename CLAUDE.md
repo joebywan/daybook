@@ -259,6 +259,9 @@ White (or Black) to play and mate in 2 / 3 / 4 by tier. Spec and decisions: `doc
   teacher flags (`forcedMate` is `None`, never `Truncated`), and `lost` shows a reserved caption, never a refusal.
 - **A truncated search is not `None`.** `Mate.Truncated` is its own type.
 - Highlight indices are squares (a1 = 0), not `row*8+col`: the board flips for Black, so it uses `reportHighlight`, not `highlightGrid`.
+- **Sound** (`docs/REWARDS.md`, Sounds): every move the player pushes plays the next phrase note at once (stepped by moves played,
+  never waiting on the search, so it reveals nothing); the mating move plays the win alone; a proved loss (`Mate.None`, never
+  `Truncated`) plays the ba-bong (`Tones.miss`) with the lost caption. A state not from `push` (`LocalMoveCount` unchanged) is silent.
 - Expert (mate in 4) hint search is measured on an emulator and the web (p95 94 ms, max 234 ms; `docs/TEACHING.md`); it runs off the main thread.
   `ChessSearchBenchTest` keeps the old search as an oracle: any search change must still agree with it.
 
@@ -846,6 +849,9 @@ walkthrough), `PipesTeacher.kt`, `PipesKeys.kt`. `id = "pipes"` is hashed into e
   trees with `Rng(seed + attempt)`: 95 / 91 / 84% pass first, a year never needs more than 3; `lastResort` is seed 1's board,
   itself proved (`FallbackTest`). Under 0.5 ms a board on the JVM. Hints never fall back on a generated board (`PipesTeachingTest`).
 - **`solved` checks the rules** (fully joined and one network), never a stored answer; there is none.
+- Tiles are drawn as pipework (wall, bore, a coupling at each tile edge). Water runs out from the inlet a tile at a time
+  (`Pipes.flow`: breadth-first distance and the opening it comes in by), in by that opening and out the other arms; tiles
+  already wet stay full, a tile cut off drains at once, nothing flows on load or under reduced motion. `filled` is read off it.
 - Counter-clockwise rotation and a lock mark were proposed and **declined by the owner**: do not add them.
 
 ## Who's Who (a logic grid)
@@ -875,8 +881,8 @@ The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings 
 `rememberHintPulse`, never a board's own infinite transition. Haptics are fired centrally in `PlayScreen.push`.
 Details and the list of what changes: `docs/REWARDS.md` (Reduced motion and haptics).
 Sound is a bank of pre-rendered tones (`core/Tones.kt`: a marimba for wins and progressions, a two-note glockenspiel for the da-ding; synthesised, no audio files), played by `rememberTonePlayer` in
-the seam (Android `SoundPool`, web Web Audio): ordinary moves are silent (the haptic stays), a unit's note climbs the board's phrase from `rememberMoveFeel` (`Tones.phraseStep`, derived from the units done), the spelling
-games' rising marimba notes (Word Wheel, Dwindle, Hexwords), the da-ding for a found word, a hint's move and a walkthrough step, a win's marimba chime growing with the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones` (the play screen and Training's final board, `FinalBoardOn`,
+the seam (Android `SoundPool`, web Web Audio): ordinary moves are silent (the haptic stays; Mate's moves are its phrase), a unit's note climbs the board's phrase from `rememberMoveFeel` (`Tones.phraseStep`, derived from the units done), the spelling
+games' rising marimba notes (Word Wheel, Dwindle, Hexwords), the da-ding for a found word, a hint's move and a walkthrough step, Mate's ba-bong (a falling minor third) for a board proved lost, a win's marimba chime growing with the size of the show (`Praise.winKind`). Boards reach it only through `LocalBoardTones` (the play screen and Training's final board, `FinalBoardOn`,
 which also raises the move, undo and solve counts, so it sounds and moves as a game does), so a walkthrough or a technique practice is silent; a variant is drawn from `kotlin.random`, never `Rng`. `docs/REWARDS.md` (Sounds). A win thumps, it never wobbles (a 50 ms freeze, then the whole board drops and rebounds with the fanfare and a heavy haptic on one
 frame, `PlayScreen`, from a solving move only); mistakes are small and sideways or a piece's own recoil (Mines' blast, Arrows' lunge). The top show (`Praise.allTiers`, all three tiers of a puzzle on a date) is derived from completions.
 A move's feel (the changed squares settle, a unit finished by the rules glows and pops once) is `ui/MoveFeel.kt`'s

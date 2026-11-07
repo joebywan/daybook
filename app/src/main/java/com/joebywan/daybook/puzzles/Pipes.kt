@@ -3,6 +3,7 @@ package com.joebywan.daybook.puzzles
 import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -15,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,8 +75,21 @@ private const val SPIN_MILLIS = 140
 /** Degrees in the quarter turn a tap performs; the tile is drawn wound back by this and unwinds. */
 private const val QUARTER = 90f
 
-/** Pipe width as a fraction of the cell. Everything else on a tile is sized from the result. */
-private const val PIPE_WIDTH = 0.18f
+/** Pipe width, wall to wall, as a fraction of the cell. Everything else on a tile is sized from the result. */
+private const val PIPE_WIDTH = 0.30f
+
+/** The bore (where the water runs) as a share of the pipe's width; the rest is wall. */
+private const val BORE = 0.6f
+
+/** A coupling at each tile edge: its length as a share of the arm, its width as a share of the pipe's. */
+private const val COLLAR = 0.16f
+private const val COLLAR_WIDTH = 1.35f
+
+/** How dark the pipe wall is blended over the tile, as [DRY_TINT] is. */
+private const val WALL_TINT = 0.6f
+
+/** How long the water takes to run through one tile. */
+private const val FLOW_MILLIS = 70
 
 /**
  * How far an unfilled pipe is tinted from the tile it sits on towards the foreground colour.
@@ -263,24 +278,37 @@ object Pipes : PuzzleType {
      * The board is coloured by this and the win condition is decided by it, so what the player
      * sees filling up and what counts as finished cannot drift apart.
      */
-    fun filled(s: PipesState): Set<Int> {
+    fun filled(s: PipesState): Set<Int> = flow(s).dist.let { d -> d.indices.filter { d[it] >= 0 }.toSet() }
+
+    /**
+     * How the water gets everywhere it reaches: for each tile its distance in tiles from the inlet
+     * (-1 if dry) and the opening it comes in by (0 for the inlet), breadth first, so the board
+     * can draw it running out along the pipes in that order.
+     */
+    internal class Flow(val dist: IntArray, val entry: IntArray)
+
+    internal fun flow(s: PipesState): Flow {
+        val dist = IntArray(s.cells.size) { -1 }
+        val entry = IntArray(s.cells.size)
         val start = s.source
-        if (start !in s.cells.indices) return emptySet()
+        if (start !in s.cells.indices) return Flow(dist, entry)
 
-        val stack = ArrayDeque<Int>()
-        stack.addLast(start)
-        val reached = mutableSetOf(start)
+        val queue = ArrayDeque<Int>()
+        queue.addLast(start)
+        dist[start] = 0
 
-        while (stack.isNotEmpty()) {
-            val i = stack.removeLast()
+        while (queue.isNotEmpty()) {
+            val i = queue.removeFirst()
             val mask = s.cells[i]
             val r = i / s.width
             val c = i % s.width
 
             fun flowTo(opening: Int, inBounds: Boolean, j: Int) {
                 if (!inBounds || mask and opening == 0) return
-                if (s.cells[j] and opposite(opening) == 0 || !reached.add(j)) return
-                stack.addLast(j)
+                if (s.cells[j] and opposite(opening) == 0 || dist[j] >= 0) return
+                dist[j] = dist[i] + 1
+                entry[j] = opposite(opening)
+                queue.addLast(j)
             }
 
             flowTo(UP, r > 0, i - s.width)
@@ -288,7 +316,7 @@ object Pipes : PuzzleType {
             flowTo(LEFT, c > 0, i - 1)
             flowTo(RIGHT, c < s.width - 1, i + 1)
         }
-        return reached
+        return Flow(dist, entry)
     }
 
     /**
@@ -483,21 +511,33 @@ object Pipes : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val scheme = MaterialTheme.colorScheme
-        val wet = vivid(accent)
-        val dry = scheme.onSurfaceVariant.copy(alpha = DRY_TINT).compositeOver(scheme.surface)
+        val ink = pipeInk(scheme.onSurfaceVariant, scheme.surface, vivid(accent))
 
         Canvas(modifier) {
             val cellPx = size.minDimension / PREVIEW_BOARD.width
             for (i in PREVIEW_BOARD.cells.indices) {
                 val isSource = i == PREVIEW_BOARD.source
-                drawTile(i, PREVIEW_BOARD.width, cellPx, PREVIEW_BOARD.cells[i], isSource, if (i in PREVIEW_FILLED) wet else dry, wet, scheme.surface)
+                drawTile(i, PREVIEW_BOARD.width, cellPx, PREVIEW_BOARD.cells[i], isSource, ink, if (i in PREVIEW_FILLED) 1f else 0f, 0, scheme.surface)
             }
         }
     }
 
+    /** The wall, the empty bore inside it, and the water, each blended opaque (see [DRY_TINT]). */
+    private class PipeInk(val wall: Color, val bore: Color, val water: Color)
+
+    private fun pipeInk(fore: Color, ground: Color, water: Color) = PipeInk(
+        wall = fore.copy(alpha = WALL_TINT).compositeOver(ground),
+        bore = fore.copy(alpha = DRY_TINT * 0.5f).compositeOver(ground),
+        water = water,
+    )
+
     /**
      * Tile [i] of a grid [width] tiles across: its ground, its pipes turned by [spin] degrees and, if it is
      * the inlet, the inlet. The board and the home-grid motif both draw through this.
+     *
+     * [fill] is how far the water has got through the tile, 0 to 1: in by the [entry] opening to the
+     * middle for the first half, then out along every other arm. The inlet ([entry] 0) has no way in,
+     * so its water runs straight out along every arm.
      */
     private fun DrawScope.drawTile(
         i: Int,
@@ -505,8 +545,9 @@ object Pipes : PuzzleType {
         cellPx: Float,
         mask: Int,
         isSource: Boolean,
-        pipeColour: Color,
-        wet: Color,
+        ink: PipeInk,
+        fill: Float,
+        entry: Int,
         ground: Color,
         spin: Float = 0f,
     ) {
@@ -514,59 +555,66 @@ object Pipes : PuzzleType {
         val c = i % width
         val cx = (c + 0.5f) * cellPx
         val cy = (r + 0.5f) * cellPx
-        val stroke = cellPx * PIPE_WIDTH
+        val outer = cellPx * PIPE_WIDTH
+        val bore = outer * BORE
         val reach = cellPx * 0.5f + JOIN_BLEED_PX
 
         drawRect(
-            color = if (isSource) wet.copy(alpha = 0.16f) else ground,
+            color = if (isSource) ink.water.copy(alpha = 0.16f) else ground,
             topLeft = Offset(c * cellPx + 1f, r * cellPx + 1f),
             size = Size(cellPx - 2f, cellPx - 2f),
         )
 
         if (mask != 0) {
-            // A single-ended pipe is an endpoint: the run stops here, and the knob is
-            // what says so.
+            // A single-ended pipe is an endpoint: the run stops here, and the cap is what says so.
             val endpoint = mask.countOneBits() == 1
+            val capR = cellPx * 0.21f
+            val arms = listOf(UP to Offset(0f, -1f), DOWN to Offset(0f, 1f), LEFT to Offset(-1f, 0f), RIGHT to Offset(1f, 0f))
+                .filter { (dir, _) -> mask and dir != 0 }
             rotate(degrees = spin, pivot = Offset(cx, cy)) {
-                // Butt caps stop the stroke dead on the cell edge. A round cap would
-                // instead push half a pipe width past it and into the neighbour, so
-                // two joined arms overlapped by a full width — the "overlapping rather
-                // than joining" the board reads as.
-                fun arm(dx: Float, dy: Float) {
+                // Butt caps stop the stroke dead on the cell edge. A round cap would instead push
+                // half a pipe width past it and into the neighbour, so two joined arms overlapped.
+                fun run(d: Offset, from: Float, to: Float, colour: Color, w: Float) {
+                    if (to <= from) return
                     drawLine(
-                        color = pipeColour,
-                        start = Offset(cx, cy),
-                        end = Offset(cx + dx * reach, cy + dy * reach),
-                        strokeWidth = stroke,
+                        color = colour,
+                        start = Offset(cx + d.x * reach * from, cy + d.y * reach * from),
+                        end = Offset(cx + d.x * reach * to, cy + d.y * reach * to),
+                        strokeWidth = w,
                         cap = StrokeCap.Butt,
                     )
                 }
-                if (mask and UP != 0) arm(0f, -1f)
-                if (mask and DOWN != 0) arm(0f, 1f)
-                if (mask and LEFT != 0) arm(-1f, 0f)
-                if (mask and RIGHT != 0) arm(1f, 0f)
+                // Wall, then a collar at each tile edge (two joined tiles' collars meet as one
+                // coupling), then the bore through both. The hub circles round off the bends the
+                // butt caps leave square.
+                for ((_, d) in arms) run(d, 0f, 1f, ink.wall, outer)
+                drawCircle(ink.wall, if (endpoint) capR else outer * 0.5f, Offset(cx, cy))
+                for ((_, d) in arms) run(d, 1f - COLLAR, 1f, ink.wall, outer * COLLAR_WIDTH)
+                for ((_, d) in arms) run(d, 0f, 1f, ink.bore, bore)
+                val hubR = if (endpoint) capR - (outer - bore) * 0.5f else bore * 0.5f
+                drawCircle(ink.bore, hubR, Offset(cx, cy))
 
-                // Square-ended arms leave a notch on the outside of a bend, so the hub
-                // stands in for the round join the stroke no longer draws itself: at
-                // exactly half the pipe width it rounds the corner off without the
-                // junction swelling wider than the run passing through it.
-                drawCircle(
-                    color = pipeColour,
-                    radius = if (endpoint) cellPx * 0.20f else stroke * 0.5f,
-                    center = Offset(cx, cy),
-                )
+                if (fill > 0f) {
+                    val inLeg = if (entry == 0) 1f else (fill * 2f).coerceAtMost(1f)
+                    val outLeg = if (entry == 0) fill else (fill * 2f - 1f).coerceIn(0f, 1f)
+                    for ((dir, d) in arms) {
+                        if (dir == entry) run(d, 1f - inLeg, 1f, ink.water, bore)
+                        else run(d, 0f, outLeg, ink.water, bore)
+                    }
+                    if (inLeg >= 1f) drawCircle(ink.water, hubR, Offset(cx, cy))
+                }
             }
         }
 
         // The inlet does not turn with its tile: it marks a fixed point on the board,
         // and a ring that spun would read as just another pipe.
         if (isSource) {
-            drawCircle(color = wet, radius = cellPx * 0.17f, center = Offset(cx, cy))
+            drawCircle(color = ink.water, radius = cellPx * 0.17f, center = Offset(cx, cy))
             drawCircle(
-                color = wet,
+                color = ink.water,
                 radius = cellPx * 0.31f,
                 center = Offset(cx, cy),
-                style = Stroke(width = stroke * 0.5f),
+                style = Stroke(width = cellPx * 0.09f),
             )
         }
     }
@@ -575,11 +623,15 @@ object Pipes : PuzzleType {
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as PipesState
         val scheme = MaterialTheme.colorScheme
-        val wet = vivid(accent)
-        // Flattened against the tile background it will be drawn on, so it lands on the same tone
-        // the translucent version used to show while being opaque everywhere it overlaps itself.
-        val dry = scheme.onSurfaceVariant.copy(alpha = DRY_TINT).compositeOver(scheme.surface)
-        val wetCells = remember(s.cells, s.source) { filled(s) }
+        val ink = pipeInk(scheme.onSurfaceVariant, scheme.surface, vivid(accent))
+        val flow = remember(s.cells, s.source) { flow(s) }
+        // The water runs out from the inlet a tile at a time. Tiles wet before the move stay full;
+        // the newly reached ones fill as [front] passes their distance (counted from the nearest
+        // of them). A tile cut off simply drains; nothing flows on load.
+        val wetCells = flow.dist.indices.filter { flow.dist[it] >= 0 }.toSet()
+        var full by remember(s.width, s.height) { mutableStateOf(wetCells) }
+        var nearest by remember(s.width, s.height) { mutableIntStateOf(0) }
+        val front = remember(s.width, s.height) { Animatable(0f) }
         val (highlight, glow, pulse) = rememberHintPaint()
         // A row or column whose every tile meets a tile at each of its openings glows once and plays its note.
         val units = remember(s.width, s.height) { lineUnits(s.width, s.height) }
@@ -596,6 +648,19 @@ object Pipes : PuzzleType {
         val spinScope = rememberCoroutineScope()
         // Reduced motion: a tile simply shows its new turn.
         val still = LocalReducedMotion.current
+
+        LaunchedEffect(flow) {
+            val fresh = wetCells - full
+            try {
+                if (fresh.isEmpty() || still) return@LaunchedEffect
+                nearest = fresh.minOf { flow.dist[it] }
+                val tiles = fresh.maxOf { flow.dist[it] } - nearest + 1
+                front.snapTo(0f)
+                front.animateTo(tiles.toFloat(), tween(tiles * FLOW_MILLIS, easing = LinearEasing))
+            } finally {
+                full = wetCells
+            }
+        }
 
         LaunchedEffect(s.cells) {
             val before = shown.toList()
@@ -660,8 +725,13 @@ object Pipes : PuzzleType {
                     }
             ) {
                 for (i in s.cells.indices) {
-                    feelSquare(feel, i, Offset((i % s.width) * cellPx, (i / s.width) * cellPx), Size(cellPx, cellPx), wet) {
-                        drawTile(i, s.width, cellPx, s.cells[i], i == s.source, if (i in wetCells) wet else dry, wet, scheme.surface, spins[i].value)
+                    val fill = when {
+                        flow.dist[i] < 0 -> 0f
+                        i in full -> 1f
+                        else -> (front.value - (flow.dist[i] - nearest)).coerceIn(0f, 1f)
+                    }
+                    feelSquare(feel, i, Offset((i % s.width) * cellPx, (i / s.width) * cellPx), Size(cellPx, cellPx), ink.water) {
+                        drawTile(i, s.width, cellPx, s.cells[i], i == s.source, ink, fill, flow.entry[i], scheme.surface, spins[i].value)
                     }
 
                     // Everything a hint does not name steps back, so the named tiles read without

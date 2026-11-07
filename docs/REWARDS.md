@@ -354,11 +354,19 @@ since sound is not motion. Each win has three variants (the chime as first chose
   board's own `remember` (`LetterBeeps`). A refused or cleared word is silent. A found word is a da-ding, C6 to G6 (`Tones.word`, through `rememberMoveFeel`'s
   `unitTone`; Hexwords has no units and plays it as the word is taken), not the phrase, whose top is E5: under the letters, it made every found word a drop and sound like a mistake (the owner, 2026-11-01).
   The word that solves the board plays the win.
+- **Mate** has no units, so its phrase is the player's moves (the owner, 2026-11-07): every move plays the next note the moment it is made,
+  `Tones.phraseStep(moves played, mate length)`, good or bad alike, so it tells nothing the board does not; the mating move plays the win
+  instead. When the search proves the mate gone, the ba-bong (`Tones.miss`) plays with the lost caption, a second late: try again. A
+  truncated search plays nothing. A new state cancels the search, so a verdict never sounds for a move undone. Pure rule:
+  `chessMoveTone` / `chessVerdictTone`, `ChessTonesTest`.
+- **Ba-bong** (`Tones.miss`, 0.72 s): two marimba plucks falling a minor third, G4 then E4 at 0.17 s, the second longer, upper partial
+  0.2 (the phrase's 0.348) so it reads round and soft, not a buzzer. Peak 0.20, loudest 20 ms 0.101: the phrase's loudness (0.100),
+  under a win's (0.142).
 - **Win** (`Praise.winKind`): the owner's chime, a two-note marimba pluck, G5 then C6 (0.81 s). On a full show it carries on up the C major arpeggio to E6 and G6 (1.06 s); on
   all three tiers on to the top C, landing on a C major chord under it (1.36 s). Training's right answer and pass play the plain win (`LocalChime`).
 
 The board's sounds come through `LocalBoardTones`, provided only around the play screen's board, so a walkthrough, a Training
-board and a home motif are silent however they are drawn. Mistakes have no sound; nobody asked, and a bump already recoils.
+board and a home motif are silent however they are drawn. Mistakes have no sound (a bump already recoils), except Mate's ba-bong for a lost board, which the owner asked for.
 
 ## Claim to keep honest
 

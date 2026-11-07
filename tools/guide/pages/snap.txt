@@ -15,6 +15,6 @@ Trail has no hints. Your first board opens on a walkthrough that teaches the rea
 
 ## What changes per tier
 
-- Standard: 5x5 grid.
-- Hard: 6x6 grid.
+- Standard: 4x5 grid.
+- Hard: 5x6 grid.
 - Expert: 6x7 grid.

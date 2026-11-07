@@ -143,6 +143,23 @@ internal object CipherLogic {
         return Conflicts(bad, column)
     }
 
+    /**
+     * Whether column [c] is finished by the rules: every letter in it placed, none sharing a digit or starting a word with
+     * 0, and the column adding up with the carry coming in from its right (known once everything there is placed, else any
+     * carry the addends could pass on; nothing comes into the units and nothing leaves the top). Read from the digits alone,
+     * never the answer: it is the column's own arithmetic, which the player can check.
+     */
+    fun columnAddsUp(sum: CipherSum, digits: List<Int>, c: Int): Boolean {
+        if (sum.columnLetters[c].any { digits[it] == EMPTY }) return false
+        val bad = conflicts(sum, digits).letters
+        if (sum.columnLetters[c].any { it in bad }) return false
+        val carries = sum.knownCarry(digits, c)?.let { listOf(it) } ?: (0..sum.maxCarry).toList()
+        return carries.any { carry ->
+            val s = sum.columnAddends[c].sumOf { digits[it] } + carry
+            s % 10 == digits[sum.columnTotal[c]] && (c < sum.width - 1 || s < 10)
+        }
+    }
+
     // ---- proof -------------------------------------------------------------------------------------
 
 

@@ -10,13 +10,13 @@ import kotlin.time.TimeSource
 
 /**
  * Every sound the game makes, synthesised (no audio files), rendered once and kept, so a play is instant: a win is a marimba
- * chime that grows with the show, a progression (letters, finished units) climbs on the same marimba, and the da-ding is two glockenspiel bars, C6 then G6. A tone is an index into the bank
+ * chime that grows with the show, a progression (letters, finished units) climbs on the same marimba, the da-ding is two glockenspiel bars, C6 then G6, and the ba-bong (not quite: try again) falls a minor third on the marimba. A tone is an index into the bank
  * (`0 until COUNT`), which is what `rememberTonePlayer` in the platform seam plays. Pure apart from [pick], whose `Random` is the
  * default one: never a generator's `Rng`, so sound cannot move a board. Android and the web play identical samples.
  */
 object Tones {
-    /** Each kind's size is its variants, except [WHEEL] and [STEP], whose are the steps of their scales, and [WORD], one sound. */
-    enum class Kind(val count: Int) { STEP(8), WHEEL(7), WIN(3), BIG_WIN(3), ALL_TIERS(3), WORD(1) }
+    /** Each kind's size is its variants, except [WHEEL] and [STEP], whose are the steps of their scales, and [WORD] and [MISS], one sound each. */
+    enum class Kind(val count: Int) { STEP(8), WHEEL(7), WIN(3), BIG_WIN(3), ALL_TIERS(3), WORD(1), MISS(1) }
 
     const val SAMPLE_RATE = 44_100
     const val DA_DING_GAP_MS = 200L
@@ -25,6 +25,7 @@ object Tones {
 
     // Notes are MIDI numbers: 60 is C4, each one a semitone.
     private const val C4 = 60
+    private const val G4 = 67
     private const val C5 = 72
     private const val E5 = 76
     private const val G5 = 79
@@ -72,6 +73,9 @@ object Tones {
         return if (total <= 2) 0 else ((done - 1).coerceAtLeast(0) * top / (total - 2)).coerceAtMost(top)
     }
 
+    /** The ba-bong: a move that has lost the board (Mate's "no forced mate from here"), soft, falling, never a buzzer. */
+    fun miss(): Int = index(Kind.MISS, 0)
+
     /** The phrase's tone for a [phraseStep]. */
     fun step(step: Int): Int = index(Kind.STEP, step.coerceIn(0, Kind.STEP.count - 1))
 
@@ -88,6 +92,12 @@ object Tones {
             Kind.WORD -> Marimba.render(
                 listOf(Marimba.Note(Marimba.C6, 0.0, 0.34, 0.11), Marimba.Note(Marimba.G6, 0.07, 0.27, 0.13)),
                 (0.34 * SAMPLE_RATE).toInt(), 0.3, partial = 2.76, decay = 9.0, upperDecay = 30.0, attack = 0.003,
+            )
+            // Ba-bong: G4 down a minor third to E4, the second held longer, the upper partial soft so it reads round and
+            // gentle. Below the phrase's middle and falling, so it never sounds like progress; quieter than a win.
+            Kind.MISS -> Marimba.render(
+                listOf(Marimba.Note(hz(G4.toDouble()), 0.0, 0.30, 0.13), Marimba.Note(hz(G4 - 3.0), 0.17, 0.55, 0.15)),
+                (0.72 * SAMPLE_RATE).toInt(), 0.2,
             )
             Kind.WIN -> Marimba.render(Marimba.chime(PITCH[n]), Marimba.LENGTH, UPPER[n])
             // The chime carries on up the C major arpeggio.
