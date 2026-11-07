@@ -76,6 +76,13 @@ data class TargetState(
  */
 internal object TargetLogic {
 
+    /** How near the target a tile has come, as shares of the target: each band a tile first enters is a milestone. */
+    val NEAR = listOf(0.5, 0.25, 0.1, 0.04)
+
+    /** The slots of [slots] whose tile is within [share] of [target] (and not the target itself: that is the solve). */
+    fun within(slots: List<Int>, target: Int, share: Double): IntArray =
+        slots.indices.filter { slots[it] > 0 && slots[it] != target && kotlin.math.abs(slots[it] - target) <= target * share }.toIntArray()
+
     /** No tile may go above this (four digits fit a tile). */
     const val CAP = 9999
     const val MIN_TARGET = 100

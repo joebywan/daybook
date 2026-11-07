@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.Tones
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.SeedHash
 import kotlinx.serialization.Serializable
@@ -13,6 +14,13 @@ object LexiconMark {
     const val ABSENT = 0
     const val PRESENT = 1
     const val CORRECT = 2
+
+    /**
+     * Where a marked row's note sits in the phrase (0 to 7): a letter in place counts two, one elsewhere in the word one,
+     * over a row of [length], so a row that landed more sounds higher. [score] is the row's marks added up. Read from the
+     * marks the row shows, so it tells nothing the row does not; Codebreaker's pegs use it too.
+     */
+    fun step(score: Int, length: Int): Int = (score * (Tones.Kind.STEP.count - 1) / (2 * length)).coerceIn(0, Tones.Kind.STEP.count - 1)
 }
 
 /**
