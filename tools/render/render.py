@@ -74,16 +74,20 @@ WEBKIT_SCREENSHOT_CSP = re.compile(r"^Refused to apply a stylesheet because its 
 # ---------------------------------------------------------------------------------------------
 
 def puzzle_ids() -> list[str]:
-    """The ids of every puzzle in core/PuzzleRegistry.kt, in home-grid order."""
+    """The ids of every puzzle in core/PuzzleRegistry.kt, in home-grid order, then the test puzzles (`lab`)."""
     core = REPO / "app" / "src" / "main" / "java" / "com" / "joebywan" / "daybook"
     try:
         registry = (core / "core" / "PuzzleRegistry.kt").read_text()
-        body = registry.split("val all: List<PuzzleType> = listOf(", 1)[1].split(")", 1)[0]
-        names = [n.strip() for n in body.split(",") if n.strip()]
+        names = []
+        for list_name in ("all", "lab"):
+            if f"val {list_name}: List<PuzzleType> = listOf(" not in registry:
+                continue
+            body = registry.split(f"val {list_name}: List<PuzzleType> = listOf(", 1)[1].split(")", 1)[0]
+            names += [n.strip() for n in body.split(",") if n.strip()]
         ids = []
         for name in names:
             source = (core / "puzzles" / f"{name}.kt").read_text()
-            ids.append(re.search(r'override val id\s*=\s*"([a-z0-9_]+)"', source).group(1))
+            ids.append(re.search(r'override val id\s*=\s*"([a-z0-9_-]+)"', source).group(1))
         if ids:
             return ids
     except (OSError, IndexError, AttributeError):

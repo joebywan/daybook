@@ -30,6 +30,7 @@ import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
 import com.joebywan.daybook.puzzles.WhosWho
+import com.joebywan.daybook.puzzles.WhosWhoGraph
 import com.joebywan.daybook.puzzles.Hexwords
 import com.joebywan.daybook.puzzles.Dwindle
 import com.joebywan.daybook.puzzles.WordWheel
@@ -78,5 +79,16 @@ object PuzzleRegistry {
         Dwindle,
     )
 
-    fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id }
+    /**
+     * Test puzzles: on the home grid only while Settings' "Test puzzles" is on, never recorded (no streak, statistic,
+     * achievement or best time), and in nothing built from [all] (Today's three, Levels, Training, the archive, the
+     * counts). Saves and routes still find them through [byId].
+     */
+    val lab: List<PuzzleType> = listOf(
+        WhosWhoGraph,
+    )
+
+    fun isLab(id: String): Boolean = lab.any { it.id == id }
+
+    fun byId(id: String): PuzzleType? = all.firstOrNull { it.id == id } ?: lab.firstOrNull { it.id == id }
 }

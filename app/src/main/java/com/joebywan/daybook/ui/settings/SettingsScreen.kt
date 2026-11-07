@@ -69,6 +69,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     /** Opens Training (`docs/TRAINING_SPEC.md`): its list of puzzles. */
     onTraining: () -> Unit = {},
+    testPuzzles: Boolean = false,
+    onTestPuzzles: (Boolean) -> Unit = {},
 ) {
     val rateLink = rememberRateLink()
 
@@ -109,6 +111,15 @@ fun SettingsScreen(
             }
             item { PuzzleOrderRow(customOrder, onResetOrder) }
             item { TrainingRow(onTraining) }
+            item {
+                SettingSwitch(
+                    title = "Test puzzles",
+                    detail = "Puzzles still being tried out, at the end of the home grid. They may change or go, and " +
+                        "nothing you do in them counts toward your streak, statistics or achievements.",
+                    checked = testPuzzles,
+                    onChecked = onTestPuzzles,
+                )
+            }
             item { RateRow(rateLink) }
             item { Credits() }
         }

@@ -171,6 +171,11 @@ class LaunchPreferences(private val store: KeyValueStore) {
 
     suspend fun setReducedMotion(choice: MotionChoice) = store.putString(KEY_REDUCED_MOTION, choice.name)
 
+    /** Whether the home grid shows the test puzzles (`PuzzleRegistry.lab`). Off unless the player turned it on. */
+    val showTestPuzzles: Flow<Boolean> = store.string(KEY_TEST_PUZZLES).map { it == "on" }
+
+    suspend fun setShowTestPuzzles(on: Boolean) = setFlag(KEY_TEST_PUZZLES, on)
+
     /** An on/off switch, stored as "on" or "off"; anything but "off" (nothing stored included) is on. */
     private fun flag(key: String): Flow<Boolean> = store.string(key).map { it != "off" }
 
@@ -231,6 +236,7 @@ class LaunchPreferences(private val store: KeyValueStore) {
         const val KEY_REDUCED_MOTION = "reduced_motion"
         const val KEY_ORDER = "puzzle_order"
         const val KEY_SOUND = "play_sound"
+        const val KEY_TEST_PUZZLES = "test_puzzles"
         const val KEY_DIFFICULTY = "difficulty"
         const val KEY_SHOW_TIMER = "show_timer"
         // The web page reads it before the app loads, as `daybook_launch.appearance` (index.html).

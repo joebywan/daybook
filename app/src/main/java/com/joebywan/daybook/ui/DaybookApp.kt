@@ -291,6 +291,7 @@ private fun DaybookScreens(
     var welcome by remember { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(Unit) { welcome = launchPrefs.needsWelcome { store.hasPlayed() } }
     val (playSound, setPlaySound) = rememberPref(launchPrefs.playSound, true, launchPrefs::setPlaySound)
+    val (testPuzzles, setTestPuzzles) = rememberPref(launchPrefs.showTestPuzzles, false, launchPrefs::setShowTestPuzzles)
     // Armed while the switch is on (the web wakes its audio on the first taps); a no-op when off.
     val player = rememberTonePlayer(playSound)
     val tones = remember(player) { Tones.oneDaDing(player) }
@@ -392,11 +393,11 @@ private fun DaybookScreens(
             // The board each tile would open, by save key; then only those saves are read (ProgressStore.inProgress).
             // In Levels mode, the current level's five boards, at the tier the level gives each.
             val levelBoards = if (mode == LaunchMode.LEVELS) loadedLevels?.let { it.plan(it.current) } else null
-            val tileKeys by produceState(emptyMap<String, String>(), today, difficulty, mode, levelBoards) {
+            val tileKeys by produceState(emptyMap<String, String>(), today, difficulty, mode, levelBoards, testPuzzles) {
                 value = if (mode == LaunchMode.LEVELS) {
                     levelBoards.orEmpty().associate { savedGameKey(it.puzzleId, it.difficulty, it.seed) to it.puzzleId }
                 } else if (mode == LaunchMode.TRAINING) emptyMap() // a course's tile opens no saved game
-                else PuzzleRegistry.all.mapNotNull { p ->
+                else (PuzzleRegistry.all + if (testPuzzles) PuzzleRegistry.lab else emptyList()).mapNotNull { p ->
                     val seed = when (mode) {
                         LaunchMode.RANDOM -> SeedHash.random(
                             p.id, difficulty, store.currentRandomNonce(p.id, difficulty) ?: return@mapNotNull null,
@@ -461,7 +462,8 @@ private fun DaybookScreens(
                     three, completions, today, difficulty, formatDate(today, SHARE_DATE),
                     Stats.streak(completions, today).current, ::formatClock,
                 ),
-                puzzles = puzzles,
+                // The test puzzles (PuzzleRegistry.lab) go last, and only in Daily and Random: Levels and Training are built from the registry.
+                puzzles = if (testPuzzles && mode.tiered) puzzles + PuzzleRegistry.lab else puzzles,
                 inProgress = { inProgress.value },
                 customOrder = customOrder.isNotEmpty(),
                 onOrder = setOrder,
@@ -535,6 +537,8 @@ private fun DaybookScreens(
             onResetOrder = { setOrder(emptyList()) },
             onBack = { route = Route.Home },
             onTraining = { route = Route.Training() },
+            testPuzzles = testPuzzles,
+            onTestPuzzles = setTestPuzzles,
         )
 
         is Route.Levels -> LevelsScreen(
@@ -649,7 +653,8 @@ private fun DaybookScreens(
                         if (current.day == null && level == null) scope.launch { store.newRandomNonce(puzzle.id, difficulty) }
                         // Only a solve that marks a tile: today's daily or a level board, never a random or archive one.
                         if (current.day == today || level != null) justSolved = puzzle.id to difficulty
-                        scope.launch {
+                        // A test puzzle is never recorded: it touches no streak, statistic or achievement.
+                        if (!PuzzleRegistry.isLab(puzzle.id)) scope.launch {
                             // A level solve is also a practice solve (day = null), for totals and best times.
                             if (level != null) store.recordLevelSolve(LevelSolve(level, puzzle.id, seconds, hints))
                             store.record(
@@ -677,7 +682,7 @@ private fun DaybookScreens(
                             formatClock(seconds), streak, state, log, hints, level,
                         )
                         // Kept for the stats screen: a random board's save goes when it is solved, and with it this card.
-                        scope.launch {
+                        if (!PuzzleRegistry.isLab(puzzle.id)) scope.launch {
                             val kept = KeptCard(
                                 puzzle.id, difficulty, best = true, seconds, hints, card,
                                 undos = PlayLog.played(log).count { it.undone },

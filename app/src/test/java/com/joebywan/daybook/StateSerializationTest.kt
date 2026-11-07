@@ -28,6 +28,7 @@ import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.PearlsState
 import com.joebywan.daybook.puzzles.WhosWhoState
+import com.joebywan.daybook.puzzles.WhosWhoGraphState
 import com.joebywan.daybook.puzzles.TargetOp
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.DwindleState
@@ -65,7 +66,7 @@ class StateSerializationTest {
 
     @Test
     fun `every puzzle survives the round trip mid-game`() {
-        for (puzzle in PuzzleRegistry.all) {
+        for (puzzle in PuzzleRegistry.all + PuzzleRegistry.lab) {
             for (difficulty in Difficulty.entries) {
                 val label = "${puzzle.id}/${difficulty.name}"
                 val pristine = puzzle.generate(seed, difficulty)
@@ -139,6 +140,7 @@ class StateSerializationTest {
         }
         is PearlsState -> state.drag(listOf(0, 1, 1 + state.size)).tap(state.size * (state.size - 1))
         is WhosWhoState -> state.mark(0, 0, 1, tick = true).mark(1, 1, 0, tick = false).strike(0)
+        is WhosWhoGraphState -> state.cycle(0, state.n).cycle(1, 2 * state.n).cycle(1, 2 * state.n).strike(0)
         is DominoState -> DominoLogic.flip(DominoLogic.place(DominoLogic.place(state, 0, state.answer[0]), 1, state.answer[1]), 1)
         is TargetState -> state.combine(0, TargetOp.Add, 1)!!
         is WordWheelState -> state.enter(state.slots[1].word)
