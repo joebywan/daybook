@@ -852,6 +852,12 @@ walkthrough), `PipesTeacher.kt`, `PipesKeys.kt`. `id = "pipes"` is hashed into e
 - Tiles are drawn as pipework (wall, bore, a coupling at each tile edge). Water runs out from the inlet a tile at a time
   (`Pipes.flow`: breadth-first distance and the opening it comes in by), in by that opening and out the other arms; tiles
   already wet stay full, a tile cut off drains at once, nothing flows on load or under reduced motion. `filled` is read off it.
+- **Progress notes are tenths of the tiles joined** (`pipesMark`, `pipesMarkTone`; the owner, 2026-11-07, replacing #428's row and
+  column notes, which bunched and went quiet): a pushed move that changes the tenth held plays that tenth's note of the phrase
+  (`Tones.phraseStep(mark, 10)`), up the scale as it climbs and down as it falls, one note however many tenths it crossed; the solve
+  has the chime and the water, undo and loads are silent, and there is no ba-bong. A tenth reached glows over the joined tiles
+  (move feel, `unitTone = { null }`). Measured (`PipesMarksTest`, a player turning each wrong tile round a quarter at a time):
+  8.7 / 8.7 / 8.6 up and 1.4 / 1.4 / 1.8 down notes a board over 42 / 69 / 112 taps, so no settle delay.
 - Counter-clockwise rotation and a lock mark were proposed and **declined by the owner**: do not add them.
 
 ## Who's Who (a logic grid)
