@@ -875,6 +875,22 @@ motif). `id = "whoswho"` is hashed into every seed: never rename it.
 - **Teacher:** clue, only, link, house, what-if (at most 3 steps). From boards marked the player's own way the short what-if
   can be led astray (its steps are taken first come), so the teacher alone tries a 12-step one before giving up; measured.
 
+## Test puzzles (`PuzzleRegistry.lab`)
+
+Puzzles being tried out, shown only with Settings' "Test puzzles" on (`showTestPuzzles`, off by default), last on the home
+grid in Daily and Random. A lab puzzle is in `PuzzleRegistry.lab`, never `all`, so nothing built from `all` sees it (Today's
+three, Levels, Training, the archive, achievements, the counts, parity); `byId` finds it, so routes and saves work. Its solves
+are never recorded (`DaybookApp`'s `onSolved`, the kept card), so no streak, statistic or best time moves. Its display name
+starts `test:`. Graduating one means a new id in `all` with the full standards (`docs/PUZZLE_STANDARDS.md`).
+
+- **test:Who's who** (`test-whoswho`, `puzzles/WhosWhoGraph.kt`, `WhosWhoGraphRules.kt`): Who's Who's boards as a graph, every
+  item a node in its category's column, the player marking pairs linked or anti-linked (tap one, then another: link, anti-link,
+  open). `WhosWhoGraphState` holds a whole dealt `WhosWhoState` (its table marks unused) and the pair marks; what they imply
+  (links join groups, anti-links hold across groups, one-to-one, last item left) is derived by `WhosWhoGraphLogic.close`. Hints
+  are Who's Who's teacher asked of the table the closure makes, mapped to nodes; a mistake is a pair mark the answer disagrees
+  with. "Group" lines linked items up in their person's row; the category buttons show the marks as a table with any category
+  as the rows. No walkthrough. Checked at 375 wide on the web only.
+
 ## Motion and haptics
 
 The reduced-motion setting (`LocalReducedMotion`: the system's, unless Settings > Accessibility overrides it) stills decoration; the hint glow is `ui/Motion.kt`'s

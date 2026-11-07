@@ -293,6 +293,14 @@ Cipher (without "only letter", never reached), Chess, Mambo, Nonogram, Tally, Mi
 Shikaku, Dominoes and LITS; Mosaic has its own judge
 (`MosaicDrill`); the other puzzles' courses are classified and batched in `docs/TRAINING_SPEC.md`.
 
+## Test puzzles
+
+- [ ] **test:Who's who** (`puzzles/WhosWhoGraph.kt`, `CLAUDE.md` "Test puzzles"). Built to try Who's Who as a graph; hidden
+  behind Settings' "Test puzzles". Open: hints are Who's Who's teacher, so their words still say "row", "column", "tick" and
+  "cross off" (`WhosWhoTeacher` lines 148-274); give the graph its own phrasing or a word map. No walkthrough. Not yet
+  checked on the emulator or a tablet. Whether it graduates (a new id in `all` with the full standards), replaces the table,
+  or goes is the owner's call after playing it. *M to finish.*
+
 ## Owner's call
 
 

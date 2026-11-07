@@ -36,6 +36,7 @@ import com.joebywan.daybook.puzzles.HexwordsState
 import com.joebywan.daybook.puzzles.DwindleState
 import com.joebywan.daybook.puzzles.WordWheelState
 import com.joebywan.daybook.puzzles.WhosWhoState
+import com.joebywan.daybook.puzzles.WhosWhoGraphState
 
 /**
  * One line per generated board, identical on the JVM and in the browser, so the two can be diffed:
@@ -108,5 +109,6 @@ object ParityFingerprint {
             "items=${s.items.joinToString("/") { it.joinToString("") }} " +
             "clues=${s.clues.joinToString(",") { "${it.kind}:${it.a}.${it.b}.${it.c}" }} " +
             "answer=${s.answer.joinToString("/") { it.joinToString("") }}"
+        is WhosWhoGraphState -> body(s.board)
     }
 }

@@ -1,0 +1,546 @@
+package com.joebywan.daybook.puzzles
+
+import androidx.compose.animation.core.animateOffsetAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.PuzzleType
+import com.joebywan.daybook.core.highlightAnchor
+import com.joebywan.daybook.ui.CappedFontScale
+import com.joebywan.daybook.ui.LocalReducedMotion
+import com.joebywan.daybook.ui.boardSp
+import com.joebywan.daybook.ui.dimmed
+import com.joebywan.daybook.ui.look
+import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.ui.rememberSettledFlags
+import com.joebywan.daybook.ui.ring
+import com.joebywan.daybook.ui.theme.BoardHues
+import kotlin.math.roundToInt
+
+/**
+ * Who's Who drawn as a graph, a lab puzzle (`PuzzleRegistry.lab`): shown only with Settings' "Test puzzles" on, and never
+ * recorded, so it touches no streak, statistic or achievement. Same boards as Who's Who (its own seeds, by its own id);
+ * the table is gone. Every item is a node in a column of its category; tap one, then an item of another category, and
+ * the pair cycles through linked, anti-linked and open. What the marks imply is drawn faint ([WhosWhoGraphLogic.close]).
+ * "Group" lines linked items up in their person's row, so a solved board settles into the answer table; the category
+ * buttons show the same marks as a table with any category as the rows.
+ *
+ * Highlight indices: item `ref` (`category * n + slot`), clue `k` [WhosWhoTeacher.CLUE_BASE] `+ k`.
+ */
+object WhosWhoGraph : PuzzleType {
+
+    override val id = "test-whoswho"
+    override val displayName = "test:Who's who"
+    override val tagline = "Who's Who as a web of links"
+    override val accent = 0xFF846CAD
+
+    override val rules = listOf(
+        "Every person and every item is a circle, one column per category. The clues fix who has what.",
+        "Tap a circle, then a circle in another column: the pair becomes linked (the same person's), then anti-linked (never the same person's), then open again.",
+        "What your marks imply is drawn faint: links join up, an anti-link holds across whole groups, and a category with one item left links to it.",
+        "With a circle chosen you see all its pairs: solid linked, dashed anti-linked, dotted still open.",
+        "Group lines linked items up in their person's row. The category buttons show the marks as a table, any category as the rows.",
+        "Solved when every person is linked to one of everything and every clue is true.",
+    )
+
+    override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
+        WhosWhoGraphState(WhosWhoLogic.generate(seed, difficulty))
+
+    override fun neededTechnique(state: PuzzleState): String? = WhosWho.neededTechnique((state as WhosWhoGraphState).board)
+
+    // ---- teaching -------------------------------------------------------------------------------
+
+    /**
+     * A mark of the player's that the one answer disagrees with first; else Who's Who's own teacher, asked of the table
+     * the marks imply, its cells read as their person and its ticks and crosses made as links and anti-links.
+     */
+    override fun teach(state: PuzzleState): Deduction? {
+        val s = state as WhosWhoGraphState
+        if (s.solved) return null
+        mistake(s)?.let { return it }
+        val step = WhosWhoTeacher.teach(WhosWhoGraphLogic.table(s)) ?: return null
+        if (step.technique == WhosWhoTeacher.MISTAKE) return null
+        val b = s.board
+        fun item(mark: Int): Pair<Int, Int> {
+            val cell = mark / b.n
+            return cell / b.columns to (cell % b.columns + 1) * b.n + mark % b.n
+        }
+        fun nodes(indices: Set<Int>) = indices.mapTo(LinkedHashSet()) { if (it >= WhosWhoTeacher.CLUE_BASE) it else it / b.columns }
+        val ticks = step.ticks.map(::item)
+        val crosses = step.crosses.map(::item)
+        val moved = (ticks + crosses).flatMapTo(LinkedHashSet()) { listOf(it.first, it.second) }
+        return Deduction(
+            step.technique, step.nudge, step.explanation,
+            focus = nodes(step.focus), cited = nodes(step.cited), targets = nodes(step.targets) + moved,
+            applyTo = { now ->
+                var next = now as WhosWhoGraphState
+                val closed = WhosWhoGraphLogic.close(next)
+                for ((p, ref) in ticks) if (closed.at(p, ref) != 1) next = next.withMark(p, ref, WhosWhoGraphLogic.LINK)
+                for ((p, ref) in crosses) if (closed.at(p, ref) != -1) next = next.withMark(p, ref, WhosWhoGraphLogic.ANTI)
+                if (next.moves > now.moves) next.copy(moves = now.moves + 1) else next
+            },
+            reachedBy = { now ->
+                val closed = WhosWhoGraphLogic.close(now as WhosWhoGraphState)
+                ticks.all { (p, ref) -> closed.at(p, ref) == 1 } && crosses.all { (p, ref) -> closed.at(p, ref) == -1 }
+            },
+        )
+    }
+
+    /** The first marked pair, in order, whose mark the board's one answer disagrees with. */
+    private fun mistake(s: WhosWhoGraphState): Deduction? {
+        val b = s.board
+        for (a in 0 until s.size) for (c in a + 1 until s.size) {
+            val mark = s.mark(a, c)
+            if (mark == WhosWhoGraphLogic.OPEN) continue
+            val same = WhosWhoGraphLogic.holder(b, a) == WhosWhoGraphLogic.holder(b, c)
+            if (same == (mark == WhosWhoGraphLogic.LINK)) continue
+            val first = WhosWhoLogic.word(b, a)
+            val second = WhosWhoLogic.word(b, c)
+            return Deduction(
+                technique = WhosWhoTeacher.MISTAKE,
+                nudge = "One of your marks doesn't fit.",
+                explanation = if (same) "$first and $second go together, so that anti-link can't be kept."
+                else "$first and $second belong to different people, so that link can't be kept.",
+                focus = setOf(a, c), cited = emptySet(), targets = setOf(a, c),
+                mistake = true,
+                applyTo = { now -> (now as WhosWhoGraphState).withMark(a, c, WhosWhoGraphLogic.OPEN) },
+                reachedBy = { now -> (now as WhosWhoGraphState).mark(a, c) == WhosWhoGraphLogic.OPEN },
+            )
+        }
+        return null
+    }
+
+    // ---- drawing --------------------------------------------------------------------------------
+
+    /** A hue per category: the people, then each column. */
+    private val HUES = listOf(268f, 175f, 34f, 215f)
+
+    private val CHIPS = 34.dp
+    private val HEADER = 20.dp
+
+    private fun title(b: WhosWhoState, category: Int) = if (category == 0) "Person" else WhosWhoWords.HEADERS[b.groups[category - 1]]
+
+    @Composable
+    override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
+        val s = state as WhosWhoGraphState
+        val b = s.board
+        val scheme = MaterialTheme.colorScheme
+        val closure = remember(s.links, b) { WhosWhoGraphLogic.close(s) }
+        val table = remember(closure) { WhosWhoGraphLogic.table(s, closure) }
+        // The chosen item, the view and the grouping are the screen's, never the board's: the play screen pushes an undo
+        // entry for every state it is handed.
+        var selected by remember(b.clues) { mutableIntStateOf(-1) }
+        var view by rememberSaveable { mutableIntStateOf(-1) }
+        var grouped by rememberSaveable { mutableIntStateOf(0) }
+        val paint = rememberHintPaint()
+        val dark = BoardHues.isDark(scheme)
+
+        val grid = WhosWhoLogic.gridOf(b.n, b.columns, table.marks)
+        val puzzle = WhosWhoLogic.puzzleOf(b)
+        val badClue = rememberSettledFlags(BooleanArray(b.clues.size) { !WhosWhoLogic.possible(puzzle, grid, b.clues[it]) }, b.clues, s.links)
+        val badItem = rememberSettledFlags(closure.badItem, b.clues, s.links)
+        val badPair = rememberSettledFlags(closure.badPair, b.clues, s.links)
+
+        CappedFontScale {
+            Column(Modifier.fillMaxSize().padding(horizontal = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(
+                    Modifier.fillMaxWidth().height(CHIPS).horizontalScroll(rememberScrollState()).padding(vertical = 3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                ) {
+                    Chip("Links", view < 0 && grouped == 0) { view = -1; grouped = 0 }
+                    Chip("Group", view < 0 && grouped == 1) { view = -1; grouped = 1 }
+                    for (c in 0..b.columns) Chip(title(b, c), view == c) { view = c }
+                }
+                Box(Modifier.weight(1.5f).fillMaxWidth().widthIn(max = 560.dp)) {
+                    if (view < 0) {
+                        Graph(s, closure, selected, grouped == 1, badItem, badPair, paint.highlight, paint.glow, paint.pulse, dark, interactive) { i ->
+                            val now = selected
+                            selected = when {
+                                i < 0 -> -1
+                                now < 0 || now / b.n == i / b.n -> if (i == now) -1 else i
+                                else -> {
+                                    onState(s.cycle(now, i))
+                                    now
+                                }
+                            }
+                        }
+                    } else {
+                        Table(s, closure, view, dark)
+                    }
+                }
+                Clues(b, badClue, paint.highlight, paint.glow, paint.pulse, dark, interactive, Modifier.weight(1f).fillMaxWidth().widthIn(max = 560.dp)) {
+                    onState(s.strike(it))
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun Chip(label: String, on: Boolean, onClick: () -> Unit) {
+        val scheme = MaterialTheme.colorScheme
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (on) scheme.secondaryContainer else scheme.surfaceVariant.copy(alpha = 0.5f))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(label, fontSize = 13.sp, color = if (on) scheme.onSecondaryContainer else scheme.onSurfaceVariant, maxLines = 1)
+        }
+    }
+
+    /**
+     * Where each item sits: a column per category and a row per slot, or, grouped, each item in the row of the person its
+     * links reach; a group with no person takes the first row free in all its columns, and an item linked to nothing the
+     * first row free in its own (drawn faint: it is placed nowhere).
+     */
+    private fun rows(s: WhosWhoGraphState, closure: WhosWhoGraphLogic.Closure, grouped: Boolean): Pair<IntArray, BooleanArray> {
+        val n = s.n
+        val loose = BooleanArray(s.size)
+        if (!grouped) return IntArray(s.size) { it % n } to loose
+        val row = IntArray(s.size) { -1 }
+        val used = Array(s.board.columns + 1) { BooleanArray(n) }
+        for (p in 0 until n) {
+            row[p] = p
+            used[0][p] = true
+            for (x in n until s.size) if (closure.at(p, x) == 1) {
+                row[x] = p
+                used[x / n][p] = true
+            }
+        }
+        for (x in n until s.size) {
+            if (row[x] >= 0) continue
+            val group = (n until s.size).filter { it == x || closure.at(x, it) == 1 }
+            if (group.size == 1) loose[x] = true
+            val free = (0 until n).firstOrNull { r -> group.all { !used[it / n][r] } } ?: (0 until n).first { !used[x / n][it] }
+            for (g in group) if (row[g] < 0 && !used[g / n][free]) {
+                row[g] = free
+                used[g / n][free] = true
+            }
+            if (row[x] < 0) row[x] = (0 until n).first { !used[x / n][it] }.also { used[x / n][it] = true }
+        }
+        return row to loose
+    }
+
+    @Composable
+    private fun Graph(
+        s: WhosWhoGraphState,
+        closure: WhosWhoGraphLogic.Closure,
+        selected: Int,
+        grouped: Boolean,
+        badItem: BooleanArray,
+        badPair: BooleanArray,
+        highlight: com.joebywan.daybook.core.BoardHighlight,
+        glow: Color,
+        pulse: State<Float>,
+        dark: Boolean,
+        interactive: Boolean,
+        onItem: (Int) -> Unit,
+    ) {
+        val b = s.board
+        val n = b.n
+        val cols = b.columns + 1
+        val scheme = MaterialTheme.colorScheme
+        val reduced = LocalReducedMotion.current
+        val (row, loose) = rows(s, closure, grouped)
+        BoxWithConstraints(
+            Modifier
+                .fillMaxSize()
+                .clickable(remember { MutableInteractionSource() }, indication = null, enabled = interactive) { onItem(-1) },
+        ) {
+            val cellW = maxWidth / cols
+            val cellH = (maxHeight - HEADER) / n
+            // Pills, so a word fits whole (circles that fitted the height cut "doctor" to "docto"), leaving a third of the
+            // column clear: at nine tenths the lines between neighbouring columns hid under them.
+            val w: Dp = minOf(cellW * 0.7f, 90.dp)
+            val h: Dp = minOf(cellH * 0.78f, 46.dp)
+            val density = LocalDensity.current
+            val centre = { col: Int, r: Int -> with(density) { Offset((cellW * (col + 0.5f)).toPx(), (HEADER + cellH * (r + 0.5f)).toPx()) } }
+            val pos = List(s.size) { i ->
+                key(i) {
+                    animateOffsetAsState(centre(i / n, row[i]), if (reduced) snap() else spring(dampingRatio = 0.8f, stiffness = 300f), label = "item")
+                }
+            }
+            for (c in 0 until cols) {
+                Text(
+                    title(b, c),
+                    Modifier.width(cellW).offset(x = cellW * c),
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            val ink = scheme.onSurface
+            val faint = scheme.onSurfaceVariant
+            val error = scheme.error
+            // Pairs in neighbouring columns are drawn under the pills; a pair that skips a column over them, so it plainly
+            // passes over the pills between rather than seeming to end at one (behind them it read as a chain through them).
+            val edges = { skipping: Boolean ->
+                Modifier.fillMaxSize().drawBehind {
+                    val dash = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx()))
+                    val dot = PathEffect.dashPathEffect(floatArrayOf(1.dp.toPx(), 5.dp.toPx()))
+                    for (a in 0 until s.size) for (c in a + 1 until s.size) {
+                        val gap = c / n - a / n
+                        if (gap == 0 || (gap > 1) != skipping) continue
+                        val touches = selected == a || selected == c
+                        val mine = s.mark(a, c) != WhosWhoGraphLogic.OPEN
+                        val v = closure.at(a, c)
+                        val (colour, width, effect) = when {
+                            badPair[a * s.size + c] -> Triple(error, 3.dp, null)
+                            v == 1 -> Triple(ink.copy(alpha = if (selected >= 0 && !touches) 0.15f else if (mine) 0.9f else 0.4f), if (mine) 2.5.dp else 1.2.dp, null)
+                            v == -1 && touches -> Triple(error.copy(alpha = if (mine) 0.85f else 0.45f), if (mine) 1.6.dp else 1.dp, dash)
+                            v == 0 && touches -> Triple(faint.copy(alpha = 0.7f), 1.2.dp, dot)
+                            else -> continue
+                        }
+                        val p = pos[a].value
+                        val q = pos[c].value
+                        // A skipping pair bows a quarter row (up, or down from the top row) so two of them seldom overlap.
+                        val row = cellH.toPx()
+                        val midY = (p.y + q.y) / 2
+                        val bend = if (!skipping) 0f else if (midY < HEADER.toPx() + row) -row / 2 else row / 2
+                        val path = Path().apply {
+                            moveTo(p.x, p.y)
+                            quadraticTo((p.x + q.x) / 2, midY - bend, q.x, q.y)
+                        }
+                        drawPath(path, colour, style = Stroke(width.toPx(), cap = StrokeCap.Round, pathEffect = effect))
+                    }
+                }
+            }
+            Box(edges(false))
+            for (i in 0 until s.size) {
+                val hue = HUES[(i / n) % HUES.size]
+                val hint = highlight.look(i)
+                val p = pos[i]
+                Box(
+                    Modifier
+                        .offset { IntOffset((p.value.x - w.toPx() / 2).roundToInt(), (p.value.y - h.toPx() / 2).roundToInt()) }
+                        .size(w, h)
+                        .highlightAnchor(i)
+                        .ring(hint, glow, pulse, h / 2, outside = true)
+                        .clip(RoundedCornerShape(50))
+                        .background(BoardHues.fill(hue, dark))
+                        .border(
+                            if (i == selected || badItem[i]) 2.5.dp else 0.5.dp,
+                            if (badItem[i]) scheme.error else if (i == selected) scheme.onSurface else BoardHues.ink(hue, dark),
+                            RoundedCornerShape(50),
+                        )
+                        .clickable(enabled = interactive) { onItem(i) }
+                        .alpha(if (loose[i]) 0.45f else 1f)
+                        .dimmed(hint),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        WhosWhoLogic.word(b, i),
+                        Modifier.padding(horizontal = 2.dp),
+                        fontSize = minOf(h * 0.4f, 14.dp).boardSp(),
+                        lineHeight = minOf(h * 0.5f, 18.dp).boardSp(),
+                        fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
+                        color = scheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                    )
+                }
+            }
+            Box(edges(true))
+        }
+    }
+
+    /** The marks as a table: a row per item of [base], a column per other category, its link or what is left. */
+    @Composable
+    private fun Table(s: WhosWhoGraphState, closure: WhosWhoGraphLogic.Closure, base: Int, dark: Boolean) {
+        val b = s.board
+        val n = b.n
+        val scheme = MaterialTheme.colorScheme
+        val others = (0..b.columns).filter { it != base }
+        Column(Modifier.fillMaxSize().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (c in listOf(base) + others) {
+                    Text(title(b, c), Modifier.weight(1f), fontSize = 12.sp, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                }
+            }
+            for (slot in 0 until n) {
+                val a = base * n + slot
+                Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Cell(WhosWhoLogic.word(b, a), bold = true, faint = false, bad = false, hue = HUES[base % HUES.size], dark = dark)
+                    for (c in others) {
+                        val linked = closure.linked(a, c)
+                        val left = (c * n until c * n + n).filter { closure.at(a, it) != -1 }
+                        if (linked >= 0) Cell(WhosWhoLogic.word(b, linked), bold = true, faint = false, bad = false, hue = HUES[c % HUES.size], dark = dark)
+                        else Cell(
+                            if (left.size == n) "any" else left.joinToString(" ") { WhosWhoLogic.word(b, it) }.ifEmpty { "none left" },
+                            bold = false, faint = true, bad = left.isEmpty(), hue = null, dark = dark,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun androidx.compose.foundation.layout.RowScope.Cell(text: String, bold: Boolean, faint: Boolean, bad: Boolean, hue: Float?, dark: Boolean) {
+        val scheme = MaterialTheme.colorScheme
+        Box(
+            Modifier
+                .weight(1f)
+                .fillMaxSize()
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (hue != null) BoardHues.fill(hue, dark) else scheme.surfaceVariant.copy(alpha = 0.5f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text,
+                Modifier.padding(horizontal = 3.dp),
+                fontSize = if (faint) 11.sp else 14.sp,
+                lineHeight = if (faint) 13.sp else 16.sp,
+                fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+                color = when {
+                    bad -> scheme.error
+                    faint -> scheme.onSurfaceVariant
+                    else -> scheme.onSurface
+                },
+                textAlign = TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Clip,
+            )
+        }
+    }
+
+    @Composable
+    private fun Clues(
+        b: WhosWhoState,
+        bad: BooleanArray,
+        highlight: com.joebywan.daybook.core.BoardHighlight,
+        glow: Color,
+        pulse: State<Float>,
+        dark: Boolean,
+        interactive: Boolean,
+        modifier: Modifier,
+        onClue: (Int) -> Unit,
+    ) {
+        val scheme = MaterialTheme.colorScheme
+        val list = rememberLazyListState()
+        val hinted = b.clues.indices.firstOrNull { WhosWhoTeacher.CLUE_BASE + it in highlight.strong || WhosWhoTeacher.CLUE_BASE + it in highlight.soft }
+        LaunchedEffect(hinted) { if (hinted != null) list.animateScrollToItem(hinted) }
+        LazyColumn(modifier.padding(vertical = 6.dp), state = list) {
+            itemsIndexed(b.clues) { k, _ ->
+                val index = WhosWhoTeacher.CLUE_BASE + k
+                val struck = b.isStruck(k)
+                val hint = highlight.look(index)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .highlightAnchor(index)
+                        .padding(vertical = 1.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .ring(hint, glow, pulse, 8.dp)
+                        .background(if (bad[k]) scheme.error.copy(alpha = 0.14f) else Color.Transparent)
+                        .clickable(enabled = interactive) { onClue(k) }
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                        .dimmed(hint),
+                ) {
+                    Text(
+                        "${k + 1}",
+                        Modifier.width(22.dp),
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (bad[k]) scheme.error else BoardHues.ink(HUES[0], dark),
+                    )
+                    Text(
+                        WhosWhoLogic.clueText(b, k),
+                        fontSize = 13.5.sp,
+                        lineHeight = 18.sp,
+                        color = when {
+                            bad[k] -> scheme.error
+                            struck -> scheme.onSurface.copy(alpha = 0.38f)
+                            else -> scheme.onSurface
+                        },
+                        textDecoration = if (struck) TextDecoration.LineThrough else null,
+                    )
+                }
+            }
+        }
+    }
+
+    /** Three columns of circles, two links and an anti-link. Fixed; never calls `generate()`. */
+    @Composable
+    override fun Preview(modifier: Modifier) {
+        val scheme = MaterialTheme.colorScheme
+        val dark = BoardHues.isDark(scheme)
+        BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+            val side = minOf(maxWidth, maxHeight)
+            Canvas(Modifier.size(side)) {
+                val u = size.width / 6f
+                val at = { c: Int, r: Int -> Offset(u * (1 + 2 * c), u * (1 + 2 * r)) }
+                drawLine(scheme.onSurface, at(0, 0), at(1, 1), u * 0.12f, StrokeCap.Round)
+                drawLine(scheme.onSurface, at(1, 1), at(2, 0), u * 0.12f, StrokeCap.Round)
+                drawLine(
+                    scheme.error, at(0, 2), at(1, 0), u * 0.08f, StrokeCap.Round,
+                    PathEffect.dashPathEffect(floatArrayOf(u * 0.3f, u * 0.25f)),
+                )
+                for (c in 0..2) for (r in 0..2) {
+                    drawCircle(BoardHues.fill(HUES[c], dark), u * 0.62f, at(c, r))
+                    drawCircle(BoardHues.ink(HUES[c], dark), u * 0.62f, at(c, r), style = Stroke(u * 0.06f))
+                }
+            }
+        }
+    }
+}
