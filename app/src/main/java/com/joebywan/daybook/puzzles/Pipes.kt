@@ -86,7 +86,7 @@ private const val COLLAR_WIDTH = 1.35f
 private const val WALL_TINT = 0.6f
 
 /** How long the water takes to run through one tile. */
-private const val FLOW_MILLIS = 70
+private const val FLOW_MILLIS = 140
 
 /**
  * How far an unfilled pipe is tinted from the tile it sits on towards the foreground colour.
