@@ -315,8 +315,12 @@ object Pointers : PuzzleType {
     /** Faint dots on every square, so a line's way to the edge can be read across bare squares; a line cleared glows along them. */
     private fun DrawScope.drawDots(w: Int, h: Int, unit: Float, colour: Color, feel: MoveFeel, glow: Color) {
         for (r in 0 until h) for (c in 0 until w) {
-            feelSquare(feel, r * w + c, Offset(c * unit, r * unit), Size(unit, unit), glow) {
-                drawCircle(colour, 0.05f * unit, Offset((c + 0.5f) * unit, (r + 0.5f) * unit))
+            // A milestone's glow swells the bare squares' dots into discs of the accent: a square tint on white barely shows.
+            val g = feel.glow(r * w + c)
+            feelSquare(feel, r * w + c, Offset(c * unit, r * unit), Size(unit, unit), Color.Unspecified) {
+                val at = Offset((c + 0.5f) * unit, (r + 0.5f) * unit)
+                drawCircle(colour, 0.05f * unit, at)
+                if (g > 0f) drawCircle(glow.copy(alpha = 0.8f * g), (0.05f + 0.25f * g) * unit, at)
             }
         }
     }

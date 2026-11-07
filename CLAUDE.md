@@ -493,7 +493,7 @@ hashed into every seed: never rename it.
   colours are derived (four hues, Blue/Amber/Violet/Teal ink, touching arrows differ where four allow), never stored; a bump flashes the
   arrow and the one in its way in `scheme.error`. Keyboard: arrows move a cursor (a square) to the nearest other arrow that way, Enter or
   Space taps it. Highlight indices (the walkthrough only) are arrow indices.
-- **Milestones are tenths of the arrows** (`PointersLogic.milestones`: `ceil(total * k / 10)` for k 1-9, distinct, below the total; the owner, 2026-11-07, after rows and columns left bare bunched up): nine notes a board on every tier (fewest arrows a year: 11 / 28 / 41), each through `rememberMoveFeel`, the squares cleared since the last milestone glowing. A bump plays the ba-bong (`Tones.miss`, `pointersTapTone`), the last life's once, on the player's own tap only (Chess's `LocalMoveCount` test).
+- **Milestones are tenths of the arrows** (`PointersLogic.milestones`: `ceil(total * k / 10)` for k 1-9, distinct, below the total; the owner, 2026-11-07, after rows and columns left bare bunched up): nine notes a board on every tier (fewest arrows a year: 11 / 28 / 41), each through `rememberMoveFeel`, the dots of the squares cleared since the last milestone swelling into accent discs along the order they went (a square tint on the white board barely showed). A bump plays the ba-bong (`Tones.miss`, `pointersTapTone`), the last life's once, on the player's own tap only (Chess's `LocalMoveCount` test).
 - Share card (`ui/play/ShareCard.kt`): the lives at the solve as hearts, `❤️❤️🖤` for two of three left, key `❤️ life left  🖤 life lost`,
   nudge "Not a single bump." with all three; the preview draws the hearts with `Pointers.heartPath`.
 
