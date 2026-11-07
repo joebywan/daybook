@@ -109,6 +109,16 @@ internal val SUDOKU_UNITS: List<IntArray> = List(27) { u ->
 /** Whether [unit] holds 1 to 9 once each: finished by the rules, whatever the stored answer says. */
 internal fun List<Int>.holdsOneToNine(unit: IntArray): Boolean = unit.fold(0) { m, i -> m or (1 shl this[i]) } == 0x3FE
 
+/** The squares holding [digit], in reading order: a unit of the move feel, so a digit-first player hears each digit finished. */
+internal fun List<Int>.squaresOf(digit: Int): IntArray = indices.filter { this[it] == digit }.toIntArray()
+
+/** Whether [digit] is on the board nine times, never twice in a row, column or box: finished by the rules, as a unit is. */
+internal fun List<Int>.allNine(digit: Int): Boolean {
+    val at = squaresOf(digit)
+    return at.size == 9 && at.map { it / 9 }.toSet().size == 9 && at.map { it % 9 }.toSet().size == 9 &&
+        at.map { it / 27 * 3 + it % 9 / 3 }.toSet().size == 9
+}
+
 @Composable
 internal fun SudokuGridBoard(
     s: SudokuState,
@@ -123,7 +133,10 @@ internal fun SudokuGridBoard(
     complete: (Int) -> Boolean = { s.cells.holdsOneToNine(SUDOKU_UNITS[it]) },
     overlay: @Composable BoxScope.(cell: Dp) -> Unit = {},
 ) {
-    val feel = rememberMoveFeel(s.cells, units, complete = complete)
+    // The board's own units, then each digit's nine squares (where they stand now; it glows once all nine are in).
+    val feel = rememberMoveFeel(s.cells, units + List(9) { s.cells.squaresOf(it + 1) }) { u ->
+        if (u < units.size) complete(u) else s.cells.allNine(u - units.size + 1)
+    }
     val a = ArcadeBoard.current
     val dark = BoardHues.isDark(MaterialTheme.colorScheme)
     val boxShade = a.boxShade()
