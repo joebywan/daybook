@@ -1,6 +1,8 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.GuessMarks
+import com.joebywan.daybook.core.TutorialStep
 
 /**
  * A board of guesses at a hidden row of symbols, each guess marked by [GuessMarks]: Lexicon's words and Equation's
@@ -54,4 +56,28 @@ sealed interface GuessKeyAction {
 
     /** Backspace or Delete: take the last symbol back. */
     data object Backspace : GuessKeyAction
+}
+
+/** A guess game's walkthrough frames that have the player type a guess: Lexicon's and Equation's. */
+object GuessTutorial {
+    /**
+     * Guess [n] of [guesses] typed a symbol at a time and then scored, in one frame: any start of the row is progress
+     * (a Backspace included), the row scored is the move, and anything else is refused.
+     */
+    fun typeGuess(guesses: List<String>, n: Int): (PuzzleState) -> TutorialStep = { next ->
+        val word = guesses[n]
+        when {
+            next !is GuessRows<*> -> TutorialStep.REJECT
+            next.guesses == guesses.take(n + 1) && next.current.isEmpty() -> TutorialStep.DONE
+            next.guesses == guesses.take(n) && word.startsWith(next.current) -> TutorialStep.PROGRESS
+            else -> TutorialStep.REJECT
+        }
+    }
+
+    /** The next key to tap glows: the next symbol of guess [n] ([key] numbers it), then Enter. */
+    fun keyGlow(guesses: List<String>, n: Int, key: (Char) -> Int): (PuzzleState) -> BoardHighlight = { s ->
+        val typed = (s as GuessRows<*>).current
+        val word = guesses[n]
+        BoardHighlight(strong = setOf(if (typed.length < word.length) key(word[typed.length]) else GuessTeacher.ENTER))
+    }
 }

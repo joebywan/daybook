@@ -188,5 +188,9 @@ class StateSerializationTest {
             val guess = WordList.answers(state.length).first { it != state.answer }
             guess.fold(state) { acc, c -> acc.withLetter(c) }.submit().withLetter('a')
         }
+        is com.joebywan.daybook.puzzles.EquationState -> {
+            val guess = com.joebywan.daybook.puzzles.EquationLogic.answers(state.length).first { it != state.answer }
+            guess.fold(state) { acc, c -> acc.withLetter(c) }.submit().withLetter('1')
+        }
     }
 }

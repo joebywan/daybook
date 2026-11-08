@@ -115,9 +115,12 @@ internal object GuessBoard {
         else -> this
     }
 
-    /** Scored rows of plain squares for a home tile: the colours are the whole of what reads at 80dp. */
+    /**
+     * Scored rows of squares for a home tile: the colours are most of what reads at 80dp. [symbols], one string a row,
+     * are drawn in the squares when given (Equation's signs tell it from Lexicon's tile).
+     */
     @Composable
-    fun PreviewRows(rows: List<List<Int>>, modifier: Modifier) {
+    fun PreviewRows(rows: List<List<Int>>, modifier: Modifier, symbols: List<String>? = null) {
         val m = marks()
         val width = rows.maxOf { it.size }
         // Sized from both axes, like every board: the tile is square-ish and its box is not.
@@ -125,9 +128,9 @@ internal object GuessBoard {
             val gap = 3.dp
             val cell = minOf((maxWidth - gap * (width - 1)) / width, (maxHeight - gap * (rows.size - 1)) / rows.size).coerceAtLeast(0.dp)
             Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-                rows.forEach { row ->
+                rows.forEachIndexed { r, row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        row.forEach { mark ->
+                        row.forEachIndexed { i, mark ->
                             Box(
                                 Modifier
                                     .size(cell)
@@ -138,8 +141,23 @@ internal object GuessBoard {
                                             GuessMarks.PRESENT -> Modifier.background(m.present.brush)
                                             else -> Modifier.background(m.absent)
                                         }
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                val symbol = symbols?.getOrNull(r)?.getOrNull(i)
+                                if (symbol != null) {
+                                    Text(
+                                        symbol.toString(),
+                                        fontSize = (cell * 0.62f).boardSp(), lineHeight = (cell * 0.62f).boardSp() * 1.2f,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when (mark) {
+                                            GuessMarks.CORRECT -> m.correct.ink
+                                            GuessMarks.PRESENT -> m.present.ink
+                                            else -> m.absentInk
+                                        },
                                     )
-                            )
+                                }
+                            }
                         }
                     }
                 }
@@ -163,7 +181,7 @@ internal object GuessBoard {
     /**
      * The board. [keyRows] are the keyboard's rows of symbols (each from [alphabet]); the last row has Del and Enter at
      * its ends, and a shorter row is centred under the widest. [label] is how a symbol is shown on a tile and a key.
-     * [problem] says why Enter refuses the row (shown in the header line), [lost] what the header says once the guesses
+     * [keyAction] maps a physical key (Shift reaches it only with [shift] set). [problem] says why Enter refuses the row (shown in the header line), [lost] what the header says once the guesses
      * have run out.
      */
     @Composable
@@ -175,7 +193,8 @@ internal object GuessBoard {
         alphabet: String,
         keyRows: List<String>,
         label: (Char) -> String,
-        keyAction: (Key) -> GuessKeyAction?,
+        keyAction: (key: Key, shift: Boolean) -> GuessKeyAction?,
+        shift: Boolean,
         problem: (S) -> String?,
         lost: (S) -> String,
     ) where S : PuzzleState, S : GuessRows<S> {
@@ -219,9 +238,9 @@ internal object GuessBoard {
                 Modifier
                     .fillMaxSize()
                     .padding(horizontal = 12.dp)
-                    .boardKeys(playable) { key, _, repeat ->
+                    .boardKeys(playable, shift) { key, shifted, repeat ->
                         // A held Backspace would eat the whole row, a held symbol fill it.
-                        val action = keyAction(key) ?: return@boardKeys false
+                        val action = keyAction(key, shifted) ?: return@boardKeys false
                         if (!repeat) press(action)
                         true
                     },

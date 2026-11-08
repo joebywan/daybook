@@ -8,7 +8,6 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.GuessMarks
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
-import com.joebywan.daybook.core.TutorialStep
 
 /**
  * Lexicon: Mastermind for words.
@@ -82,28 +81,9 @@ object Lexicon : PuzzleType {
         current = current,
     )
 
-    /**
-     * Guess [n] typed a letter at a time and then scored, in one frame: any start of the word is
-     * progress (a Backspace included), the word scored is the move, and anything else is refused.
-     */
-    private fun typeGuess(n: Int): (PuzzleState) -> TutorialStep = { next ->
-        val word = TUTORIAL_GUESSES[n]
-        when {
-            next !is LexiconState -> TutorialStep.REJECT
-            next.guesses == TUTORIAL_GUESSES.take(n + 1) && next.current.isEmpty() -> TutorialStep.DONE
-            next.guesses == TUTORIAL_GUESSES.take(n) && word.startsWith(next.current) -> TutorialStep.PROGRESS
-            else -> TutorialStep.REJECT
-        }
-    }
+    private fun typeGuess(n: Int) = GuessTutorial.typeGuess(TUTORIAL_GUESSES, n)
 
-    /** The next key to tap glows: the next letter of guess [n], then Enter. */
-    private fun keyGlow(n: Int): (PuzzleState) -> BoardHighlight = { s ->
-        val typed = (s as LexiconState).current
-        val word = TUTORIAL_GUESSES[n]
-        BoardHighlight(
-            strong = setOf(if (typed.length < word.length) LexiconTeacher.key(word[typed.length]) else LexiconTeacher.ENTER),
-        )
-    }
+    private fun keyGlow(n: Int) = GuessTutorial.keyGlow(TUTORIAL_GUESSES, n, LexiconTeacher::key)
 
     override val tutorial: List<TutorialFrame> by lazy {
         fun tiles(row: Int, vararg slots: Int) = slots.map { LexiconTeacher.tile(4, row, it) }.toSet()
@@ -165,7 +145,8 @@ object Lexicon : PuzzleType {
         alphabet = LexiconTeacher.vocab.alphabet,
         keyRows = keyRows,
         label = { it.uppercase() },
-        keyAction = ::lexiconKeyAction,
+        keyAction = { key, _ -> lexiconKeyAction(key) },
+        shift = false,
         problem = LexiconRules::problem,
         lost = { "Out of guesses. The word was ${it.answer.uppercase()}." },
     )

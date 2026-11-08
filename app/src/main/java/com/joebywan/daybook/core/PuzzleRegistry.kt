@@ -33,6 +33,7 @@ import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoGraph
 import com.joebywan.daybook.puzzles.Hexwords
 import com.joebywan.daybook.puzzles.Dwindle
+import com.joebywan.daybook.puzzles.Equation
 import com.joebywan.daybook.puzzles.WordWheel
 
 /**
@@ -77,6 +78,7 @@ object PuzzleRegistry {
         Mini,
         Hexwords,
         Dwindle,
+        Equation,
     )
 
     /**
