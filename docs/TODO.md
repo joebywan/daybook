@@ -253,30 +253,101 @@ below have a famous branded version; use the descriptive name).
 
 ### Suggested
 
-Roughly in order of how well they fit, best first. Before adding one, read the existing puzzles' `rules`, not just their
-names: Bridges (Hashi) turned out to be Atoms, Star Battle is Kings, Takuzu is Mambo, Calcudoku is Cage Sudoku plus Inequality,
-and Battleships is close to Tents.
-- [ ] **Word ladder.** Change one letter at a time from a start word to an end word through valid words.
-  Needs the same word lists as the word-deduction puzzle (the lists now exist: `LexiconWords`, `WordList`, rebuilt by `tools/words/build.py`); choose pairs
-  with a unique shortest ladder to keep it provable. *M after the lists exist.*
-- [ ] **Loop through the dots (Slitherlink-style).** Draw one closed loop so each numbered square has
-  exactly that many loop edges around it. Provable and rich, but tapping edges on a phone is fiddly:
-  prototype the input before committing. *L.* Pearls (built) has a loop's machinery to reuse: the loop rule, the
-  exhaustive count, edge hit testing (`Pearls.edgeNear`) and crosses as notes; its loop runs through squares, this one
-  along their edges.
-- [ ] **Skyscrapers.** A Latin square with edge clues (how many buildings are visible from that side). Inequality's
-  Latin-square rules, generator and prover carry over; only the clue type is new. *S–M.*
-- [ ] **Hitori.** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.
-  Tap-only; the connectivity proof is LITS's shape. *M.*
-- [ ] **Dominosa.** A pip grid holds each domino 0-0..N-N once; find where each lies. Tap between two squares to
-  place one. Pairs well with the domino-placement idea above. *M.*
-- [ ] **Galaxies.** Cut the grid into regions, each symmetric under a half-turn about its dot. Shikaku's input,
-  a different deduction. *M–L.*
-- [ ] **Unblock (sliding cars; not the trademarked name).** Slide cars to free the red one. Breadth-first search gives
-  the minimum, so tiers by minimum moves and a cap equal to it (Mosaic's zero slack). Planning, not the 15-puzzle
-  ruled out below, but the least deductive of these. *M.*
+**Demand, measured (2026-11-08).** Google Play detail pages carry Google's exact lifetime install count. Of the top ten
+search results per genre, the biggest app that really is the genre: Android only, lifetime installs not active players,
+old and heavily advertised apps inflated, and a genre that lives inside a bundle (NYT Games, Tatham's collection) undercounted.
+For scale, genres Daybook already has: Sudoku 127M, Arrows 121M, Sand 100M, Word Wheel 78M, Nonogram 73M, Mines 22M, Cage
+Sudoku 19M, Lexicon 18M, Who's Who 14M, Tally 9.4M, Tents 1.7M, Kings 1.3M, Atoms 1.2M, Codeword 1.0M, Inequality 413K,
+Regions 209K, Sun & Moon 175K, Shikaku 76K, Trail 83K, Lamps 22K, Pearls 3.6K. A small number is not a bad fit (Pearls,
+Lamps); a genre a big publisher has made a hit of is the strongest signal. NYT's own 2025 counts: Pips (Dominoes) 612M plays
+in its first four and a half months.
 
-Close to existing puzzles, so not suggested: Kakuro (Cages), Kropki (Inequality), Battleships (Tents).
+Before adding one, read the existing puzzles' `rules`, not just their names: Bridges (Hashi) turned out to be Atoms, Star
+Battle is Kings, Takuzu is Mambo, Hidato / Number chain (1.07M) is Trail, and Kakuro is Cages.
+
+**Build rule for all of these: reuse, never copy.** Each brief names the shared code to call. Where a helper is private
+to one puzzle and a new one needs it, lift it into `core/` or `ui/` (or make it `internal` and call it) in the same PR,
+with the old caller moved onto it; never paste a second copy. Shared already: `core/Grid.kt` (neighbours), `core/Bits.kt`
+(masks, `countMaskSolutions`), `core/Verdict.kt` (exhaustive counts), `core/PenMarks.kt` + `ui/PenBoard.kt` (two-mark pen,
+sweeps), `ui/TwinTaps.kt` (tap / double tap), `ui/Settle.kt` (1 s red), `ui/BoardDraw.kt` (`fitStep`, `gridCellAt`,
+`drawWalls`, hint dim and rings), `ui/DigitPad.kt`, `core/Teaching.kt` (`placementDeduction`, `answerFallback`,
+`TutorialPath`), `ui/MoveFeel.kt`, `core/TierNotes.kt`, `core/TechniqueNames.kt`.
+
+In order of measured demand, then fit:
+
+- [ ] **Links (pair-joining paths; Flow Free 226M, Flow Bridges 24M, Dot Link 29M).** Numbered (or coloured) pairs of
+  squares; join each pair with a path through side-touching squares, paths never meet, and every square is used. Never
+  "Flow" where a player sees it. *Generation:* a random cover of the grid by paths (grow paths from random seeds, merge
+  short ones), endpoints become the clues; prove one answer with an exhaustive count returning `core/Verdict` (no budget),
+  then gate on the teacher's walk. *Ladder (sound without assuming one answer):* a square with one way on; a path end
+  with one free neighbour; a square two paths cannot both reach; a cut that would strand a pair (connectivity); a
+  what-if, `MAX_LINKS` 3. Do **not** use the "no 2x2 of one path" shortcut: it assumes uniqueness. *Tiers:* 6x6 / 8x8 /
+  10x10 with the depth gate (Tally's `Spec.needs`). *Input:* drag from an end or a path's tip, backing up undoes (Pearls'
+  `Pearls.trail`), one state on lift, gestures through `rememberUpdatedState`. *State:* the path id per square as a
+  string (defaulted). Highlight indices are squares. *Reuse:* Pearls' drag, trail and edge drawing (lift
+  `Pearls.trail` and the line-drawing helper into `ui/` rather than copy), Trail's path rendering if lighter, Kings'/
+  Tents' `lastResort`/`generateVerified` shape. *L.*
+- [ ] **Unblock (sliding cars; Unblock Me 99M).** A 6x6 yard of cars two or three long, each sliding along its own axis;
+  slide them until the marked car leaves by the exit. Not the trademarked name. *Generation:* random yard, breadth-first
+  over positions for the exact minimum (positions are few on 6x6; still give the search a budget and a structural
+  `Solvable(path)` / `Unsolvable` / `Truncated` verdict, Sand's shape: `SandLogic.solve`). *Tiers:* minimum moves, e.g.
+  6-10 / 14-20 / 24+, a car count per tier. No move cap (Sand's choice, not Mosaic's); the share card shows moves against
+  the minimum. *Teacher:* the board is fully visible, so the hint is the first move of a shortest solution from where the
+  player stands (a fresh search, never the stored road), named by what it frees ("move the truck down: it is what blocks
+  the blue car"). No mistakes: a move that lengthens the road is allowed, as in Target. *Input:* drag a car, one state on
+  lift (snap to squares); keys: arrows select, Shift+arrow slides. *Reuse:* Sand's search and verdict (lift the generic
+  BFS over canonical positions into `core/` if it fits both), Sand's `log`/`withoutFrom` for "Show me". The TODO once
+  called this the least deductive candidate; the demand says build it anyway. *M.*
+- [ ] **Loop through the dots (Slitherlink-style; 817K, the biggest pencil-puzzle candidate).** Draw one closed loop
+  along grid edges so each numbered square has exactly that many loop edges around it. Provable and rich, but tapping
+  edges on a phone is fiddly: prototype the input before committing. Pearls (built) has a loop's machinery to reuse: the
+  loop rule, the exhaustive count, edge hit testing (`Pearls.edgeNear`) and crosses as notes; its loop runs through
+  squares, this one along their edges, so lift the loop rule and edge indexing into a shared file rather than fork it.
+  Tiers 5x5 / 7x7 / 10x10 by depth (local corner and number rules / loop rule / what-if). *L.*
+- [ ] **Thermometers (Grids of Thermometers 266K).** Straight or bent thermometers fill the grid; fill each from its bulb
+  with no gaps so every row and column holds its count of filled squares. *Generation:* random thermometer layout (grow
+  tubes as Shikaku grows rectangles), random fill levels, counts read off; prove one answer (`Verdict`), gate on the
+  ladder. *Ladder:* line full / line empty (Tally's shortcuts), a thermometer's least and most in a line, a bulb that
+  must fill / a tip that cannot, what-if. *Input:* Nonogram's pen (Fill / Cross) through `penGrid` and `TwinTaps`, sweeps
+  one state; a tap on a thermometer square fills it up to there (one state). Counts turn green or red as Tally's chips do
+  (`rememberSettled`). Tiers 5x5 / 6x6 / 8x8. *M.*
+- [ ] **Equation codebreaker (Nerdle 214K).** Guess a hidden sum such as `12+35=47` in six tries; marks as Lexicon's.
+  *Generation:* every valid equation of the tier's length is enumerable on the device (one `=`, no leading zeros, no
+  negatives, whole results), sorted, the answer an index: no word list. Tiers by length 6 / 7 / 8. *Teacher:* Lexicon's
+  pins checked against every valid equation; a legal probe is never a mistake. *Reuse:* `LexiconRules.mark` (lift to a
+  generic `mark(guess, answer)` over any alphabet if it is letter-bound), Lexicon's rows and keyboard composables with a
+  digit/operator key set, its walkthrough shape. Never "Nerdle" where a player sees it. *M.*
+- [ ] **Battleships (Conceptis 152K).** Place a fleet (one 4, two 3s, three 2s, four 1s on 10x10, smaller on lower tiers)
+  so ships never touch, even diagonally, matching row and column counts and a few given segments. Close to Tents, so reuse
+  Tents' count chips, no-touch logic and `countSolutions` shape; input is Tents' (tap water, double tap ship). *M.*
+- [ ] **Dominosa (63K).** A pip grid holds each domino 0-0..N-N once; find where each lies. Tap between two squares to
+  place one. Reuse Dominoes' domino drawing and tray. *M.*
+- [ ] **Hitori (57K).** Shade squares so no digit repeats in a line; shaded squares never touch, unshaded stay connected.
+  Tap-only (`TwinTaps`: shade / circle); the connectivity proof is LITS's shape. *M.*
+- [ ] **Skyscrapers (34K).** A Latin square with edge clues (how many buildings are visible from that side). Inequality's
+  Latin-square rules, generator, prover, keys and pad carry over; only the clue type is new. *S–M.*
+- [ ] **Kurodoko (Kuromasu 33K).** Shade squares so each number counts the white squares it sees in its row and column,
+  itself included; shaded never touch, white stay connected. Shares Hitori's shading, `TwinTaps` and connectivity. *M.*
+- [ ] **Word ladder (29K).** Change one letter at a time from a start word to an end word through valid words.
+  Lexicon's lists (`LexiconWords`, `WordList`); choose pairs with a unique shortest ladder to keep it provable. *M.*
+- [ ] **Word tiling (LinkedIn's Wend; clones 6K, the real one lives inside LinkedIn).** Cut a grid of letters into words of
+  given lengths, every letter used once, words traced through side-touching squares. Goals from `WheelWords.grid`, a unique
+  tiling proved with `BONUS` words allowed (Codeword's precaution); swipe input is `swipePoints` (Dwindle, Hexwords).
+  Hints give the clue, as Dwindle's do. *M.*
+- [ ] **Letter box (clones 3K).** Twelve letters on a square's four sides; words chain last letter to first, never two
+  letters from one side in a row; use every letter in at most N words. Many answers (Target's stance: prove reachability,
+  not uniqueness); tiers by N. `WheelWords.isWord`, Word Wheel's swipe. *M.*
+- [ ] **Galaxies (about 1K).** Cut the grid into regions, each symmetric under a half-turn about its dot. Shikaku's input,
+  a different deduction. *M–L.*
+- [ ] **Slant (Gokigen Naname; under 1K).** A diagonal in every square; corner numbers count the lines meeting there; no
+  closed loops. Tap-only (`TwinTaps`: one diagonal / the other). Little demand. *M.*
+- [ ] **Fillomino (under 1K).** Split the grid into regions where each number is its region's size and same-size regions
+  never touch. Little demand, and near the declined island puzzle: show the owner an example first. *M.*
+- Magnets and map colouring: no dedicated Android app found. Not suggested.
+
+Close to existing puzzles, so not suggested: Kakuro (Cages), Kropki (Inequality), Hidato (Trail). KenKen / Calcudoku
+(557K) is Cage Sudoku's cages with -, x and / on Inequality's Latin square: an *S–M* variant if wanted, built from
+`CageLogic` and `InequalityLogic`, not a new engine.
 
 **Not recommended** (noted so nobody re-investigates): plain word-search and sliding-tile puzzles are generator-easy
 but do not demand thought, against the owner's stated taste. (A crossword was here for want of a clue database; the
