@@ -1,6 +1,11 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.IntArrayList
+import com.joebywan.daybook.core.LoopEdges
+import com.joebywan.daybook.core.LoopFound
+import com.joebywan.daybook.core.LoopGrid
+import com.joebywan.daybook.core.LoopRules
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.Verdict
 import kotlinx.serialization.Serializable
@@ -29,102 +34,28 @@ data class PearlsState(
     override val solved: Boolean get() = PearlsLogic.isSolved(size, pearls, edges)
 
     /** [mark] on every edge of [indices] that is not already it; one state, one move per edge. */
-    fun paint(indices: Collection<Int>, mark: Char): PearlsState {
-        val next = edges.toCharArray()
-        var changed = 0
-        for (i in indices) {
-            if (next[i] != mark) {
-                next[i] = mark
-                changed++
-            }
-        }
-        return if (changed == 0) this else copy(edges = next.concatToString(), moves = moves + changed)
-    }
+    fun paint(indices: Collection<Int>, mark: Char): PearlsState = moved(LoopEdges.painted(edges, indices, mark))
 
     /**
      * A tap on edge [e]: an open edge is crossed, and a cross or a line is rubbed out. Lines are drawn
      * by dragging, so a tap never draws one.
      */
-    fun tap(e: Int): PearlsState =
-        paint(listOf(e), if (edges[e] == PearlsLogic.OPEN_MARK) PearlsLogic.CROSS_MARK else PearlsLogic.OPEN_MARK)
+    fun tap(e: Int): PearlsState = moved(LoopEdges.tapped(edges, e))
 
     /**
      * A drag through squares [path] (each a neighbour of the one before). Its first edge decides what the
      * whole drag does, as a pen does: over a line it rubs lines out, anywhere else it draws them (over
      * crosses too). One state for the whole drag.
      */
-    fun drag(path: List<Int>): PearlsState {
-        val grid = PearlsGrid.of(size)
-        val crossed = (1 until path.size).mapNotNull { grid.between(path[it - 1], path[it]).takeIf { e -> e >= 0 } }
-        if (crossed.isEmpty()) return this
-        return if (edges[crossed[0]] == PearlsLogic.LINE_MARK) {
-            paint(crossed.filter { edges[it] == PearlsLogic.LINE_MARK }, PearlsLogic.OPEN_MARK)
-        } else {
-            paint(crossed, PearlsLogic.LINE_MARK)
-        }
-    }
+    fun drag(path: List<Int>): PearlsState = moved(LoopEdges.dragged(PearlsGrid.of(size), edges, path))
+
+    private fun moved(painted: Pair<String, Int>): PearlsState =
+        if (painted.second == 0) this else copy(edges = painted.first, moves = moves + painted.second)
 }
 
 
-/**
- * Where everything is on an `n x n` board: each square's edge and neighbour in each direction
- * (0 up, 1 right, 2 down, 3 left; -1 off the board) and each edge's two squares. Cached per size
- * (a probe-only lookup: nothing iterates the cache).
- */
-internal class PearlsGrid private constructor(val n: Int) {
-    val squares = n * n
-    val horizontal = n * (n - 1)
-    val edgeCount = 2 * n * (n - 1)
-    private val edgeAt = IntArray(squares * 4) { -1 }
-    private val step = IntArray(squares * 4) { -1 }
-    val endA = IntArray(edgeCount)
-    val endB = IntArray(edgeCount)
-
-    init {
-        for (r in 0 until n) for (c in 0 until n - 1) {
-            val e = r * (n - 1) + c
-            val a = r * n + c
-            link(e, a, a + 1, RIGHT)
-        }
-        for (r in 0 until n - 1) for (c in 0 until n) {
-            val e = horizontal + r * n + c
-            val a = r * n + c
-            link(e, a, a + n, DOWN)
-        }
-    }
-
-    private fun link(e: Int, a: Int, b: Int, d: Int) {
-        endA[e] = a
-        endB[e] = b
-        edgeAt[a * 4 + d] = e
-        edgeAt[b * 4 + (d + 2) % 4] = e
-        step[a * 4 + d] = b
-        step[b * 4 + (d + 2) % 4] = a
-    }
-
-    fun edge(s: Int, d: Int): Int = edgeAt[s * 4 + d]
-
-    fun next(s: Int, d: Int): Int = step[s * 4 + d]
-
-    /** The edge between neighbouring squares [a] and [b], or -1 when they are not neighbours. */
-    fun between(a: Int, b: Int): Int {
-        for (d in 0 until 4) if (step[a * 4 + d] == b) return edgeAt[a * 4 + d]
-        return -1
-    }
-
-    fun isHorizontal(e: Int) = e < horizontal
-
-    companion object {
-        const val UP = 0
-        const val RIGHT = 1
-        const val DOWN = 2
-        const val LEFT = 3
-
-        private val cache = arrayOfNulls<PearlsGrid>(32)
-
-        fun of(n: Int): PearlsGrid = cache[n] ?: PearlsGrid(n).also { cache[n] = it }
-    }
-}
+/** Pearls' points are its squares' middles: the shared lattice of [LoopEdges], one point a square. */
+internal typealias PearlsGrid = LoopGrid
 
 /**
  * The rules, the ladder, the exhaustive count and the generator. Nothing here touches the screen, the
@@ -145,83 +76,45 @@ internal class PearlsGrid private constructor(val n: Int) {
  */
 internal object PearlsLogic {
 
-    const val OPEN_MARK = '.'
-    const val LINE_MARK = '-'
-    const val CROSS_MARK = 'x'
+    const val OPEN_MARK = LoopEdges.OPEN_MARK
+    const val LINE_MARK = LoopEdges.LINE_MARK
+    const val CROSS_MARK = LoopEdges.CROSS_MARK
 
-    const val OPEN = 0
-    const val LINE = 1
-    const val CROSS = 2
+    const val OPEN = LoopEdges.OPEN
+    const val LINE = LoopEdges.LINE
+    const val CROSS = LoopEdges.CROSS
 
     const val BLACK = 'b'
     const val WHITE = 'w'
 
     // ---- what a rule found ----------------------------------------------------------------
 
-    /** Kinds of step, in the teacher's order (simplest first), and kinds of contradiction. */
+    /** Kinds of step, in the teacher's order (simplest first), and kinds of contradiction. The square and loop rules' are [LoopEdges]'. */
     const val K_BLACK = 0
     const val K_WHITE = 1
     const val K_WHITE_TURN = 2
-    const val K_ONE_WAY = 3
-    const val K_PEARL_WAYS = 4
-    const val K_DEAD_END = 5
-    const val K_FULL = 6
-    const val K_SMALL_LOOP = 7
+    const val K_ONE_WAY = LoopEdges.K_ONE_WAY
+    const val K_PEARL_WAYS = LoopEdges.K_TWO_WAYS
+    const val K_DEAD_END = LoopEdges.K_DEAD_END
+    const val K_FULL = LoopEdges.K_FULL
+    const val K_SMALL_LOOP = LoopEdges.K_SMALL_LOOP
 
-    const val C_THREE = 10 // a square with three or more lines
-    const val C_DEAD_LINE = 11 // a line into a square with no way on
-    const val C_PEARL_SHUT = 12 // a pearl left fewer than two ways
+    const val C_THREE = LoopEdges.C_THREE // a square with three or more lines
+    const val C_DEAD_LINE = LoopEdges.C_DEAD_LINE // a line into a square with no way on
+    const val C_PEARL_SHUT = LoopEdges.C_SHUT // a pearl left fewer than two ways
     const val C_BLACK = 13 // a black pearl that can no longer turn with straight arms
     const val C_WHITE = 14 // a white pearl that can no longer go straight with a turn beside it
-    const val C_SMALL_LOOP = 15 // a closed loop that leaves something out
-
-    /** One rule applied at [square]: the edges it makes lines and crosses, or a contradiction ([kind] >= 10). */
-    class Found(val kind: Int, val square: Int, val lines: IntArray, val crosses: IntArray) {
-        val contradiction: Boolean get() = kind >= C_THREE
-    }
+    const val C_SMALL_LOOP = LoopEdges.C_SMALL_LOOP // a closed loop that leaves something out
 
     private val NONE = IntArray(0)
 
-    private fun contra(kind: Int, s: Int) = Found(kind, s, NONE, NONE)
+    private fun contra(kind: Int, s: Int) = LoopFound(kind, s, NONE, NONE)
 
     // ---- the local rules --------------------------------------------------------------------
 
-    /** The square rules at [s]; null when they settle nothing. [full] off skips "two lines take no more". */
-    fun squareRule(g: PearlsGrid, pearls: String, st: IntArray, s: Int, full: Boolean = true): Found? {
-        var lines = 0
-        var open = 0
-        for (d in 0 until 4) {
-            val e = g.edge(s, d)
-            if (e < 0) continue
-            when (st[e]) {
-                LINE -> lines++
-                OPEN -> open++
-            }
-        }
-        val pearl = pearls[s] != '.'
-        return when {
-            lines > 2 -> contra(C_THREE, s)
-            lines == 2 -> if (open > 0 && full) Found(K_FULL, s, NONE, opens(g, st, s)) else null
-            lines == 1 -> when (open) {
-                0 -> contra(C_DEAD_LINE, s)
-                1 -> Found(K_ONE_WAY, s, opens(g, st, s), NONE)
-                else -> null
-            }
-            pearl && open < 2 -> contra(C_PEARL_SHUT, s)
-            pearl && open == 2 -> Found(K_PEARL_WAYS, s, opens(g, st, s), NONE)
-            !pearl && open == 1 -> Found(K_DEAD_END, s, NONE, opens(g, st, s))
-            else -> null
-        }
-    }
-
-    private fun opens(g: PearlsGrid, st: IntArray, s: Int): IntArray {
-        val out = IntArrayList()
-        for (d in 0 until 4) {
-            val e = g.edge(s, d)
-            if (e >= 0 && st[e] == OPEN) out.add(e)
-        }
-        return out.toArray()
-    }
+    /** The square rules at [s] ([LoopEdges.pointRule], a pearl being a square the loop must pass); null when they settle nothing. */
+    fun squareRule(g: PearlsGrid, pearls: String, st: IntArray, s: Int, full: Boolean = true): LoopFound? =
+        LoopEdges.pointRule(g, st, s, mustPass = pearls[s] != '.', full = full)
 
     private fun isLine(st: IntArray, e: Int) = e >= 0 && st[e] == LINE
 
@@ -240,7 +133,7 @@ internal object PearlsLogic {
     }
 
     /** The black pearl's rule at [p]; null when it settles nothing. */
-    fun blackRule(g: PearlsGrid, pearls: String, st: IntArray, p: Int): Found? {
+    fun blackRule(g: PearlsGrid, pearls: String, st: IntArray, p: Int): LoopFound? {
         val lines = IntArrayList()
         val crosses = IntArrayList()
         for (axis in 0 until 2) {
@@ -264,7 +157,7 @@ internal object PearlsLogic {
             val back = g.edge(p, (arm + 2) % 4)
             if (back >= 0 && st[back] == OPEN) crosses.add(back)
         }
-        return if (lines.size + crosses.size == 0) null else Found(K_BLACK, p, lines.toArray(), crosses.toArray())
+        return if (lines.size + crosses.size == 0) null else LoopFound(K_BLACK, p, lines.toArray(), crosses.toArray())
     }
 
     /** Whether a white pearl at [p] can go straight along [axis] (0 up-down, 1 left-right). */
@@ -278,7 +171,7 @@ internal object PearlsLogic {
     }
 
     /** The white pearl's rule at [p]: its direction ([K_WHITE]), then its turn ([K_WHITE_TURN]); null when neither settles anything. */
-    fun whiteRule(g: PearlsGrid, st: IntArray, p: Int): Found? {
+    fun whiteRule(g: PearlsGrid, st: IntArray, p: Int): LoopFound? {
         val ok = BooleanArray(2) { whiteAxisOk(g, st, p, it) }
         val has = BooleanArray(2) { isLine(st, g.edge(p, it)) || isLine(st, g.edge(p, it + 2)) }
         if (has[0] && has[1] || !ok[0] && !ok[1] || has[0] && !ok[0] || has[1] && !ok[1]) return contra(C_WHITE, p)
@@ -297,19 +190,19 @@ internal object PearlsLogic {
             val e = g.edge(p, d)
             if (e >= 0 && st[e] == OPEN) crosses.add(e)
         }
-        if (lines.size + crosses.size > 0) return Found(K_WHITE, p, lines.toArray(), crosses.toArray())
+        if (lines.size + crosses.size > 0) return LoopFound(K_WHITE, p, lines.toArray(), crosses.toArray())
         // Straight through: if one neighbour goes straight on, the other must turn.
         for (d in intArrayOf(axis, axis + 2)) {
             if (!isLine(st, g.edge(g.next(p, d), d))) continue
             val o = (d + 2) % 4
             val other = g.edge(g.next(p, o), o)
-            if (other >= 0 && st[other] == OPEN) return Found(K_WHITE_TURN, p, NONE, intArrayOf(other))
+            if (other >= 0 && st[other] == OPEN) return LoopFound(K_WHITE_TURN, p, NONE, intArrayOf(other))
         }
         return null
     }
 
     /** Every local rule at [s], pearl first: the first that settles something, or a contradiction. */
-    fun localRule(g: PearlsGrid, pearls: String, st: IntArray, s: Int): Found? {
+    fun localRule(g: PearlsGrid, pearls: String, st: IntArray, s: Int): LoopFound? {
         val pearl = when (pearls[s]) {
             BLACK -> blackRule(g, pearls, st, s)
             WHITE -> whiteRule(g, st, s)
@@ -318,91 +211,50 @@ internal object PearlsLogic {
         return pearl ?: squareRule(g, pearls, st, s)
     }
 
-    // ---- the loop rule ----------------------------------------------------------------------
+    // ---- the loop rule and the shared ladder ---------------------------------------------------
 
     /**
-     * The stretches of line: each square's stretch (a union-find root, or -1 with no line), its edge
-     * count, and how many lines there are in all.
+     * Pearls' rules as the shared ladder ([LoopEdges]) reads them: a unit is a square; an edge touches its two squares
+     * and the pearls beside them; a closed stretch is the whole answer when it holds every line and every pearl.
      */
-    class Stretches(val root: IntArray, val edgesIn: IntArray, val degree: IntArray, val total: Int)
+    class Rules(override val g: PearlsGrid, val pearls: String) : LoopRules {
+        override val units = g.nodes
 
-    fun stretches(g: PearlsGrid, st: IntArray): Stretches {
-        val parent = IntArray(g.squares) { it }
-        fun find(x: Int): Int {
-            var a = x
-            while (parent[a] != a) {
-                parent[a] = parent[parent[a]]
-                a = parent[a]
+        override fun rule(st: IntArray, u: Int): LoopFound? = localRule(g, pearls, st, u)
+
+        override fun touch(e: Int, add: (Int) -> Unit) {
+            for (end in intArrayOf(g.endA[e], g.endB[e])) {
+                add(end)
+                for (d in 0 until 4) {
+                    val q = g.next(end, d)
+                    if (q >= 0 && pearls[q] != '.') add(q)
+                }
             }
-            return a
         }
-        val degree = IntArray(g.squares)
-        var total = 0
-        for (e in 0 until g.edgeCount) {
-            if (st[e] != LINE) continue
-            total++
-            degree[g.endA[e]]++
-            degree[g.endB[e]]++
-            val ra = find(g.endA[e])
-            val rb = find(g.endB[e])
-            if (ra != rb) parent[ra] = rb
+
+        override fun whole(s: LoopEdges.Stretches, root: Int, closing: Int): Boolean {
+            if (s.edgesIn[root] != s.total) return false
+            for (i in pearls.indices) if (pearls[i] != '.' && s.root[i] != root) return false
+            return true
         }
-        val root = IntArray(g.squares) { if (degree[it] == 0) -1 else find(it) }
-        val edgesIn = IntArray(g.squares)
-        for (e in 0 until g.edgeCount) if (st[e] == LINE) edgesIn[root[g.endA[e]]]++
-        return Stretches(root, edgesIn, degree, total)
+
+        override fun finished(st: IntArray): Boolean = finished(g, pearls, st)
+
+        override fun mustVisit(p: Int): Boolean = pearls[p] != '.'
     }
 
-    /** Whether a closed stretch [r] (or one about to close) would be the whole loop: every line and every pearl on it. */
-    private fun whole(pearls: String, s: Stretches, r: Int): Boolean {
-        if (s.edgesIn[r] != s.total) return false
-        for (i in pearls.indices) if (pearls[i] != '.' && s.root[i] != r) return false
-        return true
-    }
+    fun stretches(g: PearlsGrid, st: IntArray): LoopEdges.Stretches = LoopEdges.stretches(g, st)
 
     /**
-     * The loop rule: every open edge that would close a stretch into a loop leaving something out (in
-     * edge order), or the contradiction of a loop already closed that leaves something out; null when
-     * neither.
+     * The loop rule ([LoopEdges.smallLoop]): every open edge that would close a stretch into a loop leaving out a pearl
+     * or another stretch, or the contradiction of a loop already closed that does; null when neither.
      */
-    fun smallLoop(g: PearlsGrid, pearls: String, st: IntArray, firstOnly: Boolean = false): Found? {
-        val s = stretches(g, st)
-        if (s.total == 0) return null
-        // A stretch with no ends is a closed loop.
-        val hasEnd = BooleanArray(g.squares)
-        for (i in 0 until g.squares) if (s.degree[i] == 1) hasEnd[s.root[i]] = true
-        for (i in 0 until g.squares) {
-            val r = s.root[i]
-            if (r == i && !hasEnd[r] && !whole(pearls, s, r)) return contra(C_SMALL_LOOP, i)
-        }
-        val crosses = IntArrayList()
-        var at = -1
-        for (e in 0 until g.edgeCount) {
-            if (st[e] != OPEN) continue
-            val a = g.endA[e]
-            val b = g.endB[e]
-            if (s.degree[a] != 1 || s.degree[b] != 1 || s.root[a] != s.root[b]) continue
-            if (whole(pearls, s, s.root[a])) continue
-            if (at < 0) at = a
-            crosses.add(e)
-            if (firstOnly) break
-        }
-        return if (crosses.size == 0) null else Found(K_SMALL_LOOP, at, NONE, crosses.toArray())
-    }
+    fun smallLoop(g: PearlsGrid, pearls: String, st: IntArray, firstOnly: Boolean = false): LoopFound? =
+        LoopEdges.smallLoop(Rules(g, pearls), st, firstOnly)
 
     // ---- propagation ------------------------------------------------------------------------
 
-    /** How a propagation ended: settled ([contradiction] null), or the contradiction it reached and after how many rounds. */
-    class Outcome(val contradiction: Found?, val rounds: Int)
-
-    /**
-     * Applies the local rules (and with [loop] the loop rule) to [st] in place, to a fixpoint or a
-     * contradiction. Squares are worked in rounds: round 0 is [seeds] (every square when null), and a
-     * round's changes queue the squares they touch for the next. With [maxRounds] it stops quietly
-     * after that many rounds (a what-if that found nothing in time). The loop rule reads lines only, so
-     * when [st] already keeps it and no line has been drawn since ([linesNew] false and none added),
-     * it is not asked again: the outcome is the same, and a what-if that only crosses an edge is far cheaper.
-     */
+    /** [LoopEdges.propagate] with Pearls' rules. */
     fun propagate(
         g: PearlsGrid,
         pearls: String,
@@ -411,124 +263,31 @@ internal object PearlsLogic {
         seeds: IntArray? = null,
         maxRounds: Int = Int.MAX_VALUE,
         linesNew: Boolean = true,
-    ): Outcome {
-        var drawn = linesNew
-        val queued = BooleanArray(g.squares)
-        var current = IntArrayList()
-        for (s in seeds ?: IntArray(g.squares) { it }) if (!queued[s]) { queued[s] = true; current.add(s) }
-        var next = IntArrayList()
-        var rounds = 0
-        fun touch(e: Int) {
-            for (end in intArrayOf(g.endA[e], g.endB[e])) {
-                if (!queued[end]) { queued[end] = true; next.add(end) }
-                for (d in 0 until 4) {
-                    val q = g.next(end, d)
-                    if (q >= 0 && pearls[q] != '.' && !queued[q]) { queued[q] = true; next.add(q) }
-                }
-            }
-        }
-        while (true) {
-            while (current.size > 0) {
-                if (rounds >= maxRounds) return Outcome(null, rounds)
-                for (i in 0 until current.size) queued[current[i]] = false
-                for (i in 0 until current.size) {
-                    val s = current[i]
-                    // Every rule at the square in turn, until none settles anything more there.
-                    while (true) {
-                        val f = localRule(g, pearls, st, s) ?: break
-                        if (f.contradiction) return Outcome(f, rounds)
-                        for (e in f.lines) if (st[e] == OPEN) { st[e] = LINE; drawn = true; touch(e) }
-                        for (e in f.crosses) if (st[e] == OPEN) { st[e] = CROSS; touch(e) }
-                    }
-                }
-                rounds++
-                val t = current
-                current = next
-                next = t
-                next.clear()
-            }
-            if (!loop || !drawn) return Outcome(null, rounds)
-            drawn = false
-            val f = smallLoop(g, pearls, st) ?: return Outcome(null, rounds)
-            if (f.contradiction) return Outcome(f, rounds)
-            if (rounds >= maxRounds) return Outcome(null, rounds)
-            for (e in f.crosses) { st[e] = CROSS; touch(e) }
-            rounds++
-            val t = current
-            current = next
-            next = t
-            next.clear()
-        }
-    }
+    ): LoopEdges.Outcome = LoopEdges.propagate(Rules(g, pearls), st, loop, seeds, maxRounds, linesNew)
 
     /** How many rounds a what-if may follow: the explanation has to carry them. */
-    const val MAX_ROUNDS = 6
-
-    /** A supposition that failed: [edge] set to [assume] ([LINE] or [CROSS]) led to [contradiction] in [rounds] rounds. */
-    class WhatIf(val edge: Int, val assume: Int, val contradiction: Found, val rounds: Int)
+    const val MAX_ROUNDS = LoopEdges.MAX_ROUNDS
 
     /** [edge] set to [assume], followed for at most [maxRounds] rounds: the contradiction it reaches, or null. */
-    fun whatIf(g: PearlsGrid, pearls: String, st: IntArray, edge: Int, assume: Int, maxRounds: Int = MAX_ROUNDS): WhatIf? {
-        val trial = st.copyOf()
-        trial[edge] = assume
-        val out = propagate(g, pearls, trial, loop = true, seeds = seedsOf(g, pearls, edge), maxRounds = maxRounds, linesNew = assume == LINE)
-        return out.contradiction?.let { WhatIf(edge, assume, it, out.rounds) }
-    }
+    fun whatIf(g: PearlsGrid, pearls: String, st: IntArray, edge: Int, assume: Int, maxRounds: Int = MAX_ROUNDS): LoopEdges.WhatIf? =
+        LoopEdges.whatIf(Rules(g, pearls), st, edge, assume, maxRounds)
 
-    /** The squares whose rules read edge [e]: its two ends and the pearls beside them. */
-    fun seedsOf(g: PearlsGrid, pearls: String, e: Int): IntArray {
-        val seeds = IntArrayList()
-        for (end in intArrayOf(g.endA[e], g.endB[e])) {
-            seeds.add(end)
-            for (d in 0 until 4) {
-                val q = g.next(end, d)
-                if (q >= 0 && pearls[q] != '.') seeds.add(q)
-            }
-        }
-        return seeds.toArray()
-    }
-
-    /**
-     * The what-if with the fewest rounds over every open edge (a line tried before a cross), the first in
-     * edge order on a tie; with [first] the first found at all. At most [cap] rounds. Null when none settles anything.
-     */
-    fun bestWhatIf(g: PearlsGrid, pearls: String, st: IntArray, first: Boolean = false, cap: Int = MAX_ROUNDS): WhatIf? {
-        var best: WhatIf? = null
-        for (e in 0 until g.edgeCount) {
-            if (st[e] != OPEN) continue
-            for (assume in intArrayOf(LINE, CROSS)) {
-                // Strictly fewer rounds than the best so far, so a tie keeps the earlier edge.
-                val w = whatIf(g, pearls, st, e, assume, best?.rounds ?: cap) ?: continue
-                if (first || w.rounds == 0) return w
-                best = w
-            }
-        }
-        return best
-    }
+    /** The what-if with the fewest rounds ([LoopEdges.bestWhatIf]). */
+    fun bestWhatIf(g: PearlsGrid, pearls: String, st: IntArray, first: Boolean = false, cap: Int = MAX_ROUNDS): LoopEdges.WhatIf? =
+        LoopEdges.bestWhatIf(Rules(g, pearls), st, first, cap)
 
     // ---- the ladder ---------------------------------------------------------------------------
 
     /** The rungs a board may need: the local rules alone, the loop rule as well, or a what-if as well. */
-    const val LOCAL = 0
-    const val LOOP = 1
-    const val WHAT_IF = 2
+    const val LOCAL = LoopEdges.LOCAL
+    const val LOOP = LoopEdges.LOOP
+    const val WHAT_IF = LoopEdges.WHAT_IF
 
     /**
      * Everything the rungs up to [depth] settle from [start], to a fixpoint: the edges reached, or null on a
      * contradiction.
      */
-    fun settle(n: Int, pearls: String, start: IntArray, depth: Int): IntArray? {
-        val g = PearlsGrid.of(n)
-        val st = start.copyOf()
-        if (propagate(g, pearls, st, loop = depth >= LOOP).contradiction != null) return null
-        if (depth < WHAT_IF) return st
-        while (!finished(g, pearls, st)) {
-            val w = bestWhatIf(g, pearls, st, first = true) ?: return st
-            st[w.edge] = if (w.assume == LINE) CROSS else LINE
-            if (propagate(g, pearls, st, loop = true, seeds = seedsOf(g, pearls, w.edge)).contradiction != null) return null
-        }
-        return st
-    }
+    fun settle(n: Int, pearls: String, start: IntArray, depth: Int): IntArray? = LoopEdges.settle(Rules(PearlsGrid.of(n), pearls), start, depth)
 
     /** Whether the lines in [st] are already the whole answer: one closed loop keeping every rule. */
     fun finished(g: PearlsGrid, pearls: String, st: IntArray): Boolean {
@@ -537,26 +296,12 @@ internal object PearlsLogic {
     }
 
     /** The deepest rung the board needs from blank ([LOCAL], [LOOP] or [WHAT_IF]), or null when the ladder does not finish it. */
-    fun depth(n: Int, pearls: String): Int? {
-        val g = PearlsGrid.of(n)
-        val blank = IntArray(g.edgeCount)
-        for (d in LOCAL..WHAT_IF) {
-            val st = settle(n, pearls, blank, d) ?: return null
-            if (finished(g, pearls, st)) return d
-        }
-        return null
-    }
+    fun depth(n: Int, pearls: String): Int? = LoopEdges.depth(Rules(PearlsGrid.of(n), pearls))
 
     fun depth(s: PearlsState): Int? = depth(s.size, s.pearls)
 
     /** The player's edges as the rules read them. */
-    fun stateOf(edges: String): IntArray = IntArray(edges.length) {
-        when (edges[it]) {
-            LINE_MARK -> LINE
-            CROSS_MARK -> CROSS
-            else -> OPEN
-        }
-    }
+    fun stateOf(edges: String): IntArray = LoopEdges.stateOf(edges)
 
     // ---- the win check ------------------------------------------------------------------------
 
@@ -567,41 +312,14 @@ internal object PearlsLogic {
      */
     fun isSolved(n: Int, pearls: String, edges: String): Boolean {
         val g = PearlsGrid.of(n)
-        val nb = IntArray(g.squares * 2) { -1 }
-        val degree = IntArray(g.squares)
-        var total = 0
-        for (e in 0 until g.edgeCount) {
-            if (edges[e] != LINE_MARK) continue
-            total++
-            for ((s, o) in listOf(g.endA[e] to g.endB[e], g.endB[e] to g.endA[e])) {
-                if (degree[s] >= 2) return false
-                nb[s * 2 + degree[s]] = o
-                degree[s]++
-            }
-        }
-        if (total == 0) return false
-        for (s in 0 until g.squares) {
-            if (degree[s] == 1) return false
-            if (pearls[s] != '.' && degree[s] != 2) return false
-        }
-        // One loop: walk it from any square on it and count the steps.
-        val start = (0 until g.squares).first { degree[it] == 2 }
-        var prev = start
-        var at = nb[start * 2]
-        var steps = 1
-        while (at != start) {
-            val nx = if (nb[at * 2] == prev) nb[at * 2 + 1] else nb[at * 2]
-            prev = at
-            at = nx
-            steps++
-        }
-        if (steps != total) return false
+        val nb = LoopEdges.oneLoop(g) { edges[it] == LINE_MARK } ?: return false
+        for (s in 0 until g.nodes) if (pearls[s] != '.' && nb[s * 2 + 1] < 0) return false
         fun turns(s: Int): Boolean {
             val a = nb[s * 2]
             val b = nb[s * 2 + 1]
             return a / n != b / n && a % n != b % n
         }
-        for (s in 0 until g.squares) {
+        for (s in 0 until g.nodes) {
             when (pearls[s]) {
                 BLACK -> if (!turns(s) || turns(nb[s * 2]) || turns(nb[s * 2 + 1])) return false
                 WHITE -> if (turns(s) || !turns(nb[s * 2]) && !turns(nb[s * 2 + 1])) return false
@@ -613,81 +331,18 @@ internal object PearlsLogic {
     // ---- the exhaustive count -----------------------------------------------------------------
 
     /**
-     * How many loops keep every rule, with no budget: the local and loop rules to a fixpoint (sound, so
-     * they lose no answer), then a branch on an open edge (one beside the end of a stretch first), line
-     * and then cross, until two answers are found or every branch is closed. A finished branch is checked
-     * by [isSolved], not by the rules that led to it. Only [Verdict.ExactlyOne] carries the loop.
+     * How many loops keep every rule, with no budget ([LoopEdges.solutions]: the local and loop rules to a fixpoint, then
+     * a branch on an open edge, a finished branch checked by [isSolved]). Only [Verdict.ExactlyOne] carries the loop.
      */
     fun solutions(n: Int, pearls: String): Verdict<String> {
         val g = PearlsGrid.of(n)
-        var found = 0
-        var answer = ""
-        fun walk(st: IntArray) {
-            if (found > 1) return
-            if (propagate(g, pearls, st, loop = true).contradiction != null) return
-            if (!connected(g, pearls, st)) return
-            val marks = CharArray(g.edgeCount) { if (st[it] == LINE) LINE_MARK else OPEN_MARK }.concatToString()
-            if (isSolved(n, pearls, marks)) {
-                found++
-                if (found == 1) answer = CharArray(g.edgeCount) { if (st[it] == LINE) '1' else '0' }.concatToString()
-                return
-            }
-            val s = stretches(g, st)
-            var pick = -1
-            for (e in 0 until g.edgeCount) {
-                if (st[e] != OPEN) continue
-                if (pick < 0) pick = e
-                if (s.degree[g.endA[e]] == 1 || s.degree[g.endB[e]] == 1) {
-                    pick = e
-                    break
-                }
-            }
-            if (pick < 0) return
-            for (v in intArrayOf(LINE, CROSS)) {
-                val next = st.copyOf()
-                next[pick] = v
-                walk(next)
-                if (found > 1) return
-            }
-        }
         // The root is first taken as far as the whole ladder goes, what-ifs included: every step of it is sound, so no
         // answer is lost, and it spares the branches a short what-if would have closed (one board's count fell from half a
         // second to a few milliseconds).
-        walk(settle(n, pearls, IntArray(g.edgeCount), WHAT_IF) ?: return Verdict.None)
-        return Verdict.of(found) { answer }
+        val root = settle(n, pearls, IntArray(g.edgeCount), WHAT_IF) ?: return Verdict.None
+        return LoopEdges.solutions(Rules(g, pearls), root)
     }
 
-    /**
-     * Whether every pearl and every square with a line can still meet: one piece of the board joined by edges
-     * not crossed. A loop is one piece, so a board cut in two by crosses has no answer (a prune for [solutions]).
-     */
-    private fun connected(g: PearlsGrid, pearls: String, st: IntArray): Boolean {
-        val need = BooleanArray(g.squares)
-        var start = -1
-        for (e in 0 until g.edgeCount) if (st[e] == LINE) { need[g.endA[e]] = true; need[g.endB[e]] = true }
-        for (s in 0 until g.squares) {
-            if (pearls[s] != '.') need[s] = true
-            if (need[s] && start < 0) start = s
-        }
-        if (start < 0) return true
-        val seen = BooleanArray(g.squares)
-        val queue = IntArray(g.squares)
-        var lo = 0
-        var hi = 0
-        queue[hi++] = start
-        seen[start] = true
-        while (lo < hi) {
-            val s = queue[lo++]
-            for (d in 0 until 4) {
-                val e = g.edge(s, d)
-                if (e < 0 || st[e] == CROSS) continue
-                val q = g.next(s, d)
-                if (!seen[q]) { seen[q] = true; queue[hi++] = q }
-            }
-        }
-        for (s in 0 until g.squares) if (need[s] && !seen[s]) return false
-        return true
-    }
 
     // ---- generation ---------------------------------------------------------------------------
 
@@ -744,112 +399,20 @@ internal object PearlsLogic {
      *
      * Every candidate is walked in face order and scored the same on every platform; no hash order.
      */
-    fun randomLoop(rng: Rng, n: Int, low: Int, high: Int): String? {
-        val fw = n - 1
-        val faces = fw * fw
-        val inside = BooleanArray(faces)
-        inside[rng.nextInt(faces)] = true
-        val target = n * n * rng.nextInt(low, high) / 100
-        val shape = LoopShape(n)
-        shape.trace(inside)
-        var length = shape.length
-        while (length < target) {
-            val best = IntArrayList()
-            var bestScore = Int.MAX_VALUE
-            for (f in 0 until faces) {
-                if (inside[f]) continue
-                val r = f / fw
-                val c = f % fw
-                if (!(r > 0 && inside[f - fw] || r < fw - 1 && inside[f + fw] || c > 0 && inside[f - 1] || c < fw - 1 && inside[f + 1])) continue
-                inside[f] = true
-                val simple = shape.trace(inside)
-                inside[f] = false
-                if (!simple) continue
-                // The most squares that could carry a pearl.
-                val score = if (rng.nextInt(100) < GREEDY_PERCENT) -shape.pearlSquares() else 0
-                if (score < bestScore) {
-                    bestScore = score
-                    best.clear()
-                }
-                if (score == bestScore) best.add(f)
-            }
-            // Nowhere left to grow: good enough if it already visits the share's low end.
-            if (best.size == 0) break
-            inside[best[rng.nextInt(best.size)]] = true
-            shape.trace(inside)
-            length = shape.length
-        }
-        if (length < target && length < n * n * low / 100) return null
-        return CharArray(shape.on.size) { if (shape.on[it]) '1' else '0' }.concatToString()
-    }
+    fun randomLoop(rng: Rng, n: Int, low: Int, high: Int): String? =
+        LoopEdges.growLoop(rng, n, low, high, GREEDY_PERCENT) { -pearlSquares(it) }
 
-    /**
-     * The boundary of a face region, worked out in place with nothing allocated per candidate: [trace] fills
-     * [on] and says whether it is one simple closed curve, [length] is its edge count, and [pearlSquares] how
-     * many of its squares could carry a pearl ([implied]'s rule).
-     */
-    private class LoopShape(val n: Int) {
-        val g = PearlsGrid.of(n)
-        val on = BooleanArray(g.edgeCount)
-        private val nb = IntArray(g.squares * 2)
-        private val degree = IntArray(g.squares)
-        var length = 0
-
-        fun trace(inside: BooleanArray): Boolean {
-            val fw = n - 1
-            fun face(r: Int, c: Int) = r in 0 until fw && c in 0 until fw && inside[r * fw + c]
-            degree.fill(0)
-            length = 0
-            for (r in 0 until n) for (c in 0 until n - 1) on[r * (n - 1) + c] = face(r - 1, c) != face(r, c)
-            for (r in 0 until n - 1) for (c in 0 until n) on[g.horizontal + r * n + c] = face(r, c - 1) != face(r, c)
-            var simple = true
-            for (e in 0 until g.edgeCount) {
-                if (!on[e]) continue
-                length++
-                val a = g.endA[e]
-                val b = g.endB[e]
-                if (degree[a] == 2 || degree[b] == 2) {
-                    simple = false
-                    continue
-                }
-                nb[a * 2 + degree[a]++] = b
-                nb[b * 2 + degree[b]++] = a
-            }
-            if (!simple || length == 0) return false
-            var start = -1
-            for (s in 0 until g.squares) {
-                if (degree[s] == 1) return false
-                if (degree[s] == 2 && start < 0) start = s
-            }
-            var prev = start
-            var at = nb[start * 2]
-            var steps = 1
-            while (at != start) {
-                val next = if (nb[at * 2] == prev) nb[at * 2 + 1] else nb[at * 2]
-                prev = at
-                at = next
-                steps++
-            }
-            return steps == length
+    /** How many squares of [shape]'s loop could carry a pearl ([implied]'s rule). */
+    private fun pearlSquares(shape: LoopEdges.LoopShape): Int {
+        var count = 0
+        for (s in 0 until shape.g.nodes) {
+            if (shape.degree[s] != 2) continue
+            val t = shape.turns(s)
+            val ta = shape.turns(shape.nb[s * 2])
+            val tb = shape.turns(shape.nb[s * 2 + 1])
+            if (t && !ta && !tb || !t && (ta || tb)) count++
         }
-
-        private fun turns(s: Int): Boolean {
-            val a = nb[s * 2]
-            val b = nb[s * 2 + 1]
-            return a / n != b / n && a % n != b % n
-        }
-
-        fun pearlSquares(): Int {
-            var count = 0
-            for (s in 0 until g.squares) {
-                if (degree[s] != 2) continue
-                val t = turns(s)
-                val ta = turns(nb[s * 2])
-                val tb = turns(nb[s * 2 + 1])
-                if (t && !ta && !tb || !t && (ta || tb)) count++
-            }
-            return count
-        }
+        return count
     }
 
     /** How often a growth step is greedy (the face that leaves the most pearls); the rest take any face that keeps the loop simple. */
@@ -858,8 +421,8 @@ internal object PearlsLogic {
     /** Every pearl [loop] allows: black on a turn whose neighbours go straight, white on a straight with a turn beside it. */
     fun implied(n: Int, loop: String): String {
         val g = PearlsGrid.of(n)
-        val nb = IntArray(g.squares * 2) { -1 }
-        val degree = IntArray(g.squares)
+        val nb = IntArray(g.nodes * 2) { -1 }
+        val degree = IntArray(g.nodes)
         for (e in 0 until g.edgeCount) {
             if (loop[e] != '1') continue
             nb[g.endA[e] * 2 + degree[g.endA[e]]++] = g.endB[e]
@@ -870,7 +433,7 @@ internal object PearlsLogic {
             val b = nb[s * 2 + 1]
             return a / n != b / n && a % n != b % n
         }
-        return CharArray(g.squares) { s ->
+        return CharArray(g.nodes) { s ->
             when {
                 degree[s] != 2 -> '.'
                 turns(s) && !turns(nb[s * 2]) && !turns(nb[s * 2 + 1]) -> BLACK
@@ -890,21 +453,7 @@ internal object PearlsLogic {
     fun takeBack(rng: Rng, n: Int, all: String, needs: Int): String? {
         val g = PearlsGrid.of(n)
         val blank = IntArray(g.edgeCount)
-        fun finishes(p: String, d: Int) = settle(n, p, blank, d)?.let { finished(g, p, it) } == true
-        val order = rng.shuffled(all.indices.filter { all[it] != '.' })
-        val pearls = all.toCharArray()
-        val passes = if (needs == WHAT_IF) listOf(LOOP, WHAT_IF) else listOf(needs)
-        if (!finishes(all, needs)) return null
-        for (d in passes) {
-            if (!finishes(pearls.concatToString(), d)) continue
-            for (p in order) {
-                if (pearls[p] == '.') continue
-                val kept = pearls[p]
-                pearls[p] = '.'
-                if (!finishes(pearls.concatToString(), d)) pearls[p] = kept
-            }
-        }
-        return pearls.concatToString()
+        return LoopEdges.takeBack(rng, all, needs) { p, d -> settle(n, p, blank, d)?.let { finished(g, p, it) } == true }
     }
 
     /**
@@ -929,24 +478,4 @@ internal object PearlsLogic {
                 "100110011110011100100001110001000110001101000001101100101100010010111010011000101001",
         )
     }
-}
-
-/** A growable list of ints with no boxing; walked by index, so its order is its insertion order everywhere. */
-internal class IntArrayList {
-    private var data = IntArray(8)
-    var size = 0
-        private set
-
-    fun add(v: Int) {
-        if (size == data.size) data = data.copyOf(size * 2)
-        data[size++] = v
-    }
-
-    operator fun get(i: Int) = data[i]
-
-    fun clear() {
-        size = 0
-    }
-
-    fun toArray(): IntArray = data.copyOf(size)
 }
