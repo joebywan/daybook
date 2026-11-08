@@ -84,6 +84,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Hexwords | Letter-spending | Spell words through touching hexes to reach a target score; a word's letters are used up, so which word to take first matters |
 | Dwindle | Vanishing letter grid | Find every listed word by swiping through touching tiles; each tile counts its uses left and vanishes at zero |
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
+| Thermometers | Thermometer grid | Fill straight and bent thermometers from the bulb up, no gaps, so every row and column holds its count of filled squares |
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
 | Arrows | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 | Mines | Minefield, no guessing | Reveal every square without a mine; each number counts the mines touching it, the board opens with a clear patch, and a mine costs one of three lives |
@@ -127,6 +128,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
 - **Tally** — random digits and a random answer, kept only if a person's ladder finishes it (shortcuts, the ways one line can
   make its target, and on Expert a short what-if) needing exactly the tier's deepest step, and an exhaustive count finds one answer.
   An independent solver that lists every way each column can make its target confirms it in the tests.
+- **Thermometers** — thermometers grown as random bent walks and a random level for each, kept only if an exhaustive count finds
+  one answer and a person's ladder (a thermometer fills from its bulb, full and empty lines, what one thermometer can give a line,
+  and on Expert a short what-if) finishes it needing exactly the tier's deepest step. An independent solver that decides one square
+  at a time confirms it in the tests.
 - **Pearls** — a random loop grown so that the pearls it allows can pin it down, then pearls taken back while a person's ladder
   (the pearls' own rules, the loop that must be one, and on Expert a short what-if) still finishes it, needing exactly the tier's
   deepest step; an exhaustive count proves one loop, and an independent solver that decides every edge in reading order agrees.
