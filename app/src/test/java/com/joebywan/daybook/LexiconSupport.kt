@@ -3,6 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.LexiconRules
 import com.joebywan.daybook.puzzles.LexiconState
+import com.joebywan.daybook.puzzles.GuessTeacher
 import com.joebywan.daybook.puzzles.LexiconTeacher
 import com.joebywan.daybook.puzzles.LexiconWords
 import com.joebywan.daybook.puzzles.WordList
@@ -36,7 +37,7 @@ internal object LexiconSupport {
     fun board(day: Int, difficulty: Difficulty): LexiconState =
         LexiconRules.newBoard(daySeed(day, "words", difficulty), difficulty)
 
-    class Walk(val answer: String, val guesses: List<String>, val steps: List<LexiconTeacher.Step>, val solved: Boolean)
+    class Walk(val answer: String, val guesses: List<String>, val steps: List<GuessTeacher.Step>, val solved: Boolean)
 
     /**
      * A player who does exactly what the hints say, typing the word each asks for and submitting it,
@@ -46,16 +47,16 @@ internal object LexiconSupport {
     fun walkByHints(s: LexiconState): Walk {
         val guesses = ArrayList<String>()
         val marks = ArrayList<List<Int>>()
-        val steps = ArrayList<LexiconTeacher.Step>()
+        val steps = ArrayList<GuessTeacher.Step>()
         var solved = false
         while (guesses.size < s.maxGuesses && !solved) {
             val step = LexiconTeacher.teach(s.length, guesses, marks, "", s.opener)
                 ?: error("no hint for ${s.answer} after $guesses")
             steps += step
             val word = when (val m = step.move) {
-                is LexiconTeacher.Move.Open -> m.word
-                is LexiconTeacher.Move.Fill -> m.word
-                is LexiconTeacher.Move.Pin -> m.word
+                is GuessTeacher.Move.Open -> m.word
+                is GuessTeacher.Move.Fill -> m.word
+                is GuessTeacher.Move.Pin -> m.word
                 else -> error("a hint on an empty row asked for $m")
             }
             check(WordList.isWord(word)) { "$word is not a word" }

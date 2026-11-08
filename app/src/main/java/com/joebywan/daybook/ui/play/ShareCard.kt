@@ -7,7 +7,7 @@ import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.puzzles.ChessState
-import com.joebywan.daybook.puzzles.LexiconMark
+import com.joebywan.daybook.core.GuessMarks
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.PointersState
@@ -178,7 +178,7 @@ fun shareCard(
             suffix = " · $guessed/${state.maxGuesses}"
             lines = state.allMarks.mapIndexed { row, marks ->
                 ShareLine(marks.map {
-                    when (it) { LexiconMark.CORRECT -> Mark.GREEN; LexiconMark.PRESENT -> Mark.YELLOW; else -> Mark.WHITE }
+                    when (it) { GuessMarks.CORRECT -> Mark.GREEN; GuessMarks.PRESENT -> Mark.YELLOW; else -> Mark.WHITE }
                 }, hinted(row))
             }
             key = listOf(Mark.GREEN to "right place", Mark.YELLOW to "wrong place", Mark.RED to "hint")

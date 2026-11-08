@@ -8,8 +8,10 @@ package com.joebywan.daybook.core
 object SeedHash {
 
     fun daily(epochDay: Long, puzzleId: String, difficulty: Difficulty): Long {
-        if (puzzleId == "words" && epochDay >= LEXICON_CYCLE_FROM) {
-            return (LEXICON_CYCLE shl 32) or (difficulty.ordinal.toLong() shl 28) or (epochDay - LEXICON_CYCLE_FROM)
+        for (c in CYCLES) {
+            if (puzzleId == c.puzzleId && epochDay >= c.from) {
+                return (c.tag shl 32) or (difficulty.ordinal.toLong() shl 28) or (epochDay - c.from)
+            }
         }
         var h = epochDay * 0x100000001B3L
         h = mix(h xor puzzleId.stableHash())
@@ -25,11 +27,29 @@ object SeedHash {
      * before the change are untouched.
      */
     val LEXICON_CYCLE_FROM: Long = epochDay(2026, 11, 1)
-    private const val LEXICON_CYCLE = 0x4C784379L // "LxCy"
+
+    /**
+     * Equation's daily sums go round the same kind of cycle ([DailyCycle]) from its first day: it was added after
+     * Lexicon's lesson, so it never had hashed daily seeds and every day from 2026-01-01 is a cycle day.
+     */
+    val EQUATION_CYCLE_FROM: Long = epochDay(2026, 1, 1)
+
+    /** A puzzle whose daily seeds from [from] on are cycle days tagged [tag] (top 32 bits), not hashes. */
+    private class Cycle(val puzzleId: String, val from: Long, val tag: Long)
+
+    private val CYCLES = listOf(
+        Cycle("words", LEXICON_CYCLE_FROM, 0x4C784379L), // "LxCy"
+        Cycle("equation", EQUATION_CYCLE_FROM, 0x45714379L), // "EqCy"
+    )
+
+    /** The cycle's day count (0 on its first day) of [puzzleId]'s cycled daily seed, or null for any other seed. */
+    fun cycleDay(seed: Long, puzzleId: String): Long? {
+        val c = CYCLES.firstOrNull { it.puzzleId == puzzleId } ?: return null
+        return if (seed ushr 32 == c.tag) seed and 0x0FFFFFFFL else null
+    }
 
     /** The cycle's day count (0 on [LEXICON_CYCLE_FROM]) of a Lexicon daily seed, or null for any other seed. */
-    fun lexiconCycleDay(seed: Long): Long? =
-        if (seed ushr 32 == LEXICON_CYCLE) seed and 0x0FFFFFFFL else null
+    fun lexiconCycleDay(seed: Long): Long? = cycleDay(seed, "words")
 
     /** Days since 1970-01-01 for a proleptic Gregorian date, without `java.time` (the web has none). */
     fun epochDay(year: Int, month: Int, day: Int): Long {

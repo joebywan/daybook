@@ -3,7 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.puzzles.CipherLogic
 import com.joebywan.daybook.puzzles.CipherLogic.EMPTY
 import com.joebywan.daybook.puzzles.CipherSum
-import com.joebywan.daybook.puzzles.LexiconMark
+import com.joebywan.daybook.core.GuessMarks
 import com.joebywan.daybook.puzzles.TargetLogic
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -56,11 +56,11 @@ class MoveMilestonesTest {
     @Test
     fun `a marked row sounds higher the more it landed`() {
         // Five letters: in place counts 2, elsewhere 1, out of 10, onto the phrase's 0..7.
-        assertEquals(0, LexiconMark.step(0, 5))
-        assertEquals(3, LexiconMark.step(5, 5))
-        assertEquals(7, LexiconMark.step(10, 5))
+        assertEquals(0, GuessMarks.step(0, 5))
+        assertEquals(3, GuessMarks.step(5, 5))
+        assertEquals(7, GuessMarks.step(10, 5))
         // Codebreaker's four pegs: two exact and one misplaced is 5 of 8.
-        assertEquals(4, LexiconMark.step(2 * 2 + 1, 4))
-        assertTrue((0..8).map { LexiconMark.step(it, 4) }.zipWithNext().all { (a, b) -> a <= b })
+        assertEquals(4, GuessMarks.step(2 * 2 + 1, 4))
+        assertTrue((0..8).map { GuessMarks.step(it, 4) }.zipWithNext().all { (a, b) -> a <= b })
     }
 }

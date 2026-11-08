@@ -8,7 +8,7 @@ import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.puzzles.SudokuHintLight
 import com.joebywan.daybook.puzzles.SudokuTwin
 import com.joebywan.daybook.puzzles.boxShade
-import com.joebywan.daybook.puzzles.Lexicon
+import com.joebywan.daybook.puzzles.GuessBoard
 import com.joebywan.daybook.puzzles.NONOGRAM_DONE_DARK
 import com.joebywan.daybook.puzzles.NONOGRAM_DONE_LIGHT
 import com.joebywan.daybook.puzzles.NONOGRAM_FILLS_DARK
@@ -45,7 +45,7 @@ class ArcadeBoardTest {
     }
 
     @Test fun `Lexicon's marks read and stay apart, in both schemes`() {
-        for ((b, m) in listOf(ArcadeBoard.Light to Lexicon.LightMarks, ArcadeBoard.Dark to Lexicon.DarkMarks)) {
+        for ((b, m) in listOf(ArcadeBoard.Light to GuessBoard.LightMarks, ArcadeBoard.Dark to GuessBoard.DarkMarks)) {
             readsOn(m.correct, "right")
             readsOn(m.present, "present")
             atLeast(4.5f, m.absentInk, m.absent, "absent ink")

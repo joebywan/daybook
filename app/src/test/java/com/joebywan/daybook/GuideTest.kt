@@ -36,7 +36,8 @@ import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.KingsTeacher
 import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.LampsTeacher
-import com.joebywan.daybook.puzzles.LexiconMark
+import com.joebywan.daybook.core.GuessMarks
+import com.joebywan.daybook.puzzles.GuessTeacher
 import com.joebywan.daybook.puzzles.LexiconTeacher
 import com.joebywan.daybook.puzzles.Link
 import com.joebywan.daybook.puzzles.Lits
@@ -642,15 +643,15 @@ class GuideTest {
         val marks = guessRows.map { r ->
             List(n) { c ->
                 when (tiles.getValue(r * n + c)) {
-                    "right" -> LexiconMark.CORRECT
-                    "near" -> LexiconMark.PRESENT
-                    else -> LexiconMark.ABSENT
+                    "right" -> GuessMarks.CORRECT
+                    "near" -> GuessMarks.PRESENT
+                    else -> GuessMarks.ABSENT
                 }
             }
         }
         assertTrue("${b.technique}: some word draws these marks", LexiconTeacher.candidates(n, guesses, marks).isNotEmpty())
         val taught = LexiconTeacher.teach(n, guesses, marks, "") ?: return null
-        val move = taught.move as LexiconTeacher.Move.Pin
+        val move = taught.move as GuessTeacher.Move.Pin
         assertEquals("${b.technique}: the letter", move.letter.uppercase(), b.marks("answer")[guesses.size * n + move.slot])
         return step(taught, taught.focus, taught.targets.filter { it < LexiconTeacher.KEY }.toSet())
     }
