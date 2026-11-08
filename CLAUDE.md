@@ -798,7 +798,7 @@ bans it). `puzzles/LoopRules.kt` (`LoopState`, `LoopLogic`: the numbers' rules, 
   its count with each dot taking no line or two; it is where the patterns players learn come from (3 in a corner, 1 in a
   corner, a line into a 3's corner). Measured over a year (`LoopRulesTest`): numbers shown 43 / 41 / 36% of the squares;
   draws 1.00 / 2.82 / 3.96 mean, at most 1 / 14 / 29 of `ATTEMPTS` = 200; JVM median / p95 / max 1 / 2 / 6, 6 / 18 / 33,
-  108 / 248 / 547 ms. Expert is the costliest; its browser times are not measured yet (`docs/TODO.md`).
+  108 / 248 / 547 ms. Expert is the costliest; its browser times are not measured yet (the web build could not be made where Loop was written).
 - **A board ships only if the ladder finishes it and the count proves one loop.** The loop is grown (`growLoop`, uniform, no
   scoring) to 50-80% of the dots' count in edges, every square numbered from it, numbers taken back in random order while the
   tier's rungs still finish it (Pearls' two passes on Expert), then redrawn unless the walk needs exactly the tier's rung.
@@ -814,7 +814,9 @@ bans it). `puzzles/LoopRules.kt` (`LoopState`, `LoopLogic`: the numbers' rules, 
   `n*n + edgeCount + d`.
 - **Input is Pearls'**: a drag from dot to dot draws (its first edge decides: over a line it rubs out), one state on lift; a
   tap within 0.42 of a step of an edge's middle crosses it or rubs out what is there. The step is the box over (side + 1),
-  at most 64 dp; the edge's tap target is a disc 0.84 of a step across (see `docs/TODO.md` for the measured dp).
+  at most 64 dp; an edge takes taps in a disc 0.84 of a step across. Worked out from the layout, not rendered: at 390 wide the step
+  is about 62 / 47 / 34 dp (discs 52 / 39 / 29), at 375x537 about 58 / 44 / 32 dp (discs 49 / 37 / 27), the Expert step a little under
+  Pearls' 10x10 squares and well over Nonogram Expert's, the owner's floor for too small. Check it rendered (`tools/render/render.py`).
 
 ## Mini crossword
 
