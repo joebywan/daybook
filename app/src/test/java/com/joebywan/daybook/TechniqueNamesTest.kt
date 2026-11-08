@@ -59,6 +59,7 @@ class TechniqueNamesTest {
         "inequality" to InequalityTeacher.TECHNIQUES, "chess" to ChessTeacher.TECHNIQUES, "tents" to TentsTeacher.TECHNIQUES,
         "regions" to RegionsTeacher.TECHNIQUES, "cages" to CageTeacher.TECHNIQUES, "target" to TargetTeacher.TECHNIQUES,
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "dwindle" to DwindleTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
+        "thermometers" to com.joebywan.daybook.puzzles.ThermometersTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
         "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
@@ -94,6 +95,7 @@ class TechniqueNamesTest {
     @Test fun neededTechniqueMatchesTheTier() {
         val expected = mapOf(
             Tally to listOf(null, TallyTeacher.WAYS, TallyTeacher.WHAT_IF),
+            com.joebywan.daybook.puzzles.Thermometers to listOf(null, null, com.joebywan.daybook.puzzles.ThermometersTeacher.WHAT_IF),
             Dominoes to listOf(DominoTeacher.REGION_VALUE, DominoTeacher.COUNTING, DominoTeacher.WHAT_IF),
             Cipher to listOf(null, CipherTeacher.CHAIN, CipherTeacher.WHAT_IF),
             Lamps to listOf(null, LampsTeacher.STARVE, LampsTeacher.WHAT_IF),
@@ -108,6 +110,10 @@ class TechniqueNamesTest {
             // Cipher's Standard is "columns and pairs only": whichever of those its walk ends on.
             if (p == WhosWho && t == Difficulty.HARD) {
                 assertTrue("whoswho seed $seed: $got", got in setOf(WhosWhoTeacher.LINK, WhosWhoTeacher.HOUSE))
+            } else if (p == com.joebywan.daybook.puzzles.Thermometers && t == Difficulty.HARD) {
+                // Hard needs what one thermometer can give a line: whichever of the two bounds its walk went deepest to.
+                val bounds = setOf(com.joebywan.daybook.puzzles.ThermometersTeacher.AT_MOST, com.joebywan.daybook.puzzles.ThermometersTeacher.AT_LEAST)
+                assertTrue("thermometers seed $seed: $got", got in bounds)
             } else if (p == Lamps && t == Difficulty.HARD) {
                 // Hard needs a look-ahead: whichever of the two its walk went deepest to.
                 assertTrue("lamps seed $seed: $got", got in setOf(LampsTeacher.STARVE, LampsTeacher.DARK))

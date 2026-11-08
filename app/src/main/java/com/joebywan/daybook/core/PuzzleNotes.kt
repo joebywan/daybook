@@ -170,6 +170,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Circled numbers that already make the target: the rest go.",
         "List the ways a short line can make its target.",
     ),
+    "thermometers" to listOf(
+        "A filled square fills everything below it, down to the bulb.",
+        "A line needing one more takes at most one square from a thermometer.",
+        "A line counting 0 leaves each thermometer in it empty to its tip.",
+        "Count the open squares the other thermometers leave in a line.",
+    ),
     "sand" to listOf(
         "Pour onto a matching colour before using an empty tube.",
         "An empty tube is your spare room: try to keep one free.",

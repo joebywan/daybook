@@ -1,7 +1,6 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.vivid
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -25,7 +24,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -69,6 +67,7 @@ import com.joebywan.daybook.ui.hintRims
 import com.joebywan.daybook.ui.squareRim
 import com.joebywan.daybook.ui.rememberSettledFlags
 import com.joebywan.daybook.ui.HintGlow
+import com.joebywan.daybook.ui.drawLineChips
 
 /** X or R removes, K or O keeps; the other keys are every pen board's ([penKeyAction]). */
 private val TALLY_KEYS = mapOf(Key.X to TallyLogic.REMOVED, Key.R to TallyLogic.REMOVED, Key.K to TallyLogic.KEPT, Key.O to TallyLogic.KEPT)
@@ -256,7 +255,6 @@ object Tally : PuzzleType {
         val (hueA, hueB) = BoardHues.pair(s.digits.hashCode())
         val circle = BoardHues.ink(hueB, dark)
         val band = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.55f else 0.30f)
-        val good = BoardHues.mark(145f)
 
         fun named(i: Int) = i in highlight.strong || i in highlight.soft
 
@@ -298,43 +296,7 @@ object Tally : PuzzleType {
 
         // Targets: a chip beside each row and under each column, green once the line adds up, red
         // once it can no longer.
-        for (line in 0 until 2 * n) {
-            val index = n * n + line
-            val (topLeft, size) = if (line < n) {
-                Offset(n * u + GAP * u, line * u + u * 0.08f) to Size(TARGET_W * u, u * 0.84f)
-            } else {
-                Offset((line - n) * u + u * 0.08f, n * u + GAP * u) to Size(u * 0.84f, TARGET_H * u)
-            }
-            val fill = when {
-                bad[line] -> scheme.error
-                done[line] -> good
-                else -> band
-            }
-            drawRoundRect(fill, topLeft, size, CornerRadius(u * 0.18f))
-            // Red and green differ by more than hue: a chip that can no longer add up also gets a dashed ring.
-            if (bad[line]) {
-                val w = maxOf(u * 0.05f, 1.5f)
-                val inset = u * 0.07f
-                drawRoundRect(
-                    BoardHues.onFill(scheme.error), topLeft + Offset(inset, inset), Size(size.width - 2 * inset, size.height - 2 * inset),
-                    CornerRadius(u * 0.12f), style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(w * 2f, w * 1.5f))),
-                )
-            }
-            if (lit && named(index)) {
-                drawRoundRect(overlay.glow.copy(alpha = overlay.pulse), topLeft, size, CornerRadius(u * 0.18f), style = Stroke(u * 0.08f))
-            }
-            val ink = when {
-                bad[line] -> BoardHues.onFill(scheme.error)
-                done[line] -> BoardHues.onFill(good)
-                else -> scheme.onSurface
-            }
-            val alpha = if (lit && !named(index)) 0.4f else 1f
-            val layout = texts.targets[line]
-            drawText(
-                layout, ink.copy(alpha = alpha),
-                Offset(topLeft.x + (size.width - layout.size.width) / 2f, topLeft.y + (size.height - layout.size.height) / 2f),
-            )
-        }
+        drawLineChips(n, u, GAP, TARGET_W, TARGET_H, texts.targets, done, bad, band, scheme, overlay)
 
         if (!lit) return
 

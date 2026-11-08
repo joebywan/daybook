@@ -28,6 +28,8 @@ import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.PearlsLogic
 import com.joebywan.daybook.puzzles.TallyLogic
+import com.joebywan.daybook.puzzles.Thermometers
+import com.joebywan.daybook.puzzles.ThermometersLogic
 import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.Sand
@@ -256,6 +258,17 @@ class FallbackTest {
     @Test
     fun `tally proves every daily board of a year on every tier`() =
         assertYearProved(Tally, attempts = TallyLogic.ATTEMPTS, attempt = TallyLogic::attempt) { seed, d -> TallyLogic.generateVerified(seed, d) }
+
+    /**
+     * [ThermometersLogic.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the
+     * tier's rung, and the count proved one answer. Also measures the redraws (printed): Expert, which must need a
+     * what-if, redraws most.
+     */
+    @Test
+    fun `thermometers proves every daily board of a year on every tier`() =
+        assertYearProved(Thermometers, attempts = ThermometersLogic.ATTEMPTS, attempt = ThermometersLogic::attempt) { seed, d ->
+            ThermometersLogic.generateVerified(seed, d)
+        }
 
     /**
      * [LampsLogic.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the tier's
