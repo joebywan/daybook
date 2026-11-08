@@ -1,0 +1,131 @@
+# Loop
+> One loop round the numbers
+
+## How to play
+
+Drag from dot to dot to draw the line along the sides of the squares. Drag back along a line to rub it out. Tap an edge between two dots to cross it out: a cross is only a note, for an edge you know the loop doesn't use.
+
+On a keyboard, the arrows move between dots, Shift and an arrow draws or rubs out the line that way, and X then an arrow crosses that edge.
+
+After a moment, red marks what can't stand: a number with too many lines round it, a dot with three lines, or a closed loop that leaves something out. Nothing stops you drawing it. A number with all its lines drawn turns lighter, so what is left stands out.
+
+Stuck? The first tap on Hint says where to look, and the second explains why. You make the move yourself, unless you ask for "Show me". Every board has exactly one loop, and you never need to guess to find it.
+
+## Rules
+
+- Draw one closed loop along the sides of the squares, from dot to dot. It never crosses or branches.
+- A number says how many of that square's four sides the loop runs along. Squares without a number can have any.
+
+## What changes per tier
+
+- Standard: 5x5 grid. The numbers' and dots' own rules finish it.
+- Hard: 7x7 grid. Needs the rule that there's only one loop.
+- Expert: 10x10 grid. Needs a what-if.
+
+## Techniques
+
+These are the steps the hints teach, simplest first. On each board, the tinted square is where to look, grey lines and crosses are already drawn, and the coloured line or cross is the move. Every board here is a real position from the game, and this is the step the hint gives on it.
+
+### count | A number's count
+
+A number with all its lines already drawn has no more: its other sides are crossed. A number with only as many sides left as it needs takes all of them. A 0 crosses all four sides at once.
+
+~~~board
+1 0 . 1 0
+. . . . 1
+. 3 2 . 2
+. . . . 2
+2 1 1 . .
+draw: dots
+focus: r1c2
+moves: r1c2xr1c3 r1c3xr2c3 r2c2xr2c3 r1c2xr2c2
+caption: A 0 has no line round it, so all four of its sides are crossed.
+~~~
+
+### one-way | A line with one way on
+
+A line can't stop. A dot with one line into it and only one way left sends the line on that way.
+
+~~~board
+1 0 . 1 0
+. . . . 1
+. 3 2 . 2
+. . . . 2
+2 1 1 . .
+draw: dots
+lines: r1c1xr1c2 r1c2xr1c3 r1c5xr1c6 r2c1-r2c2 r2c2xr2c3 r2c5xr2c6 r1c1xr2c1 r1c2xr2c2 r1c3xr2c3 r1c5xr2c5 r1c6xr2c6
+moves: r2c1-r3c1
+caption: The line along the top of row 2 has reached the left edge of the board. The edge above is crossed, so its only way on is down.
+~~~
+
+### dead-end | A dead end
+
+A dot with no line yet and only one way left can never be passed through: the loop would need two ways. So that way is crossed.
+
+~~~board
+1 0 . 1 0
+. . . . 1
+. 3 2 . 2
+. . . . 2
+2 1 1 . .
+draw: dots
+lines: r1c2xr1c3 r1c5xr1c6 r2c2xr2c3 r2c5xr2c6 r1c2xr2c2 r1c3xr2c3 r1c5xr2c5 r1c6xr2c6
+moves: r1c1xr1c2
+caption: The 0 has crossed two of the edges at the dot between the 1 and the 0. With one way left, the loop can never pass through it, so that way is crossed too.
+~~~
+
+### corner | A number and its corners
+
+Look at a number together with the dots at its four corners. Each dot takes no line or two, never one. Often only one way of giving the number its count keeps every corner right, and an edge is settled. A 3 in a corner of the board always takes both sides at that corner; a 1 there takes neither.
+
+~~~board
+1 0 . 3 .
+. . 2 . 1
+. . 0 2 .
+1 . . . .
+. 0 . . .
+draw: dots
+focus: r1c4
+lines: r1c1xr1c2 r1c2xr1c3 r1c3xr1c4 r2c1-r2c2 r2c2xr2c3 r3c3xr3c4 r4c3xr4c4 r5c2xr5c3 r6c1xr6c2 r6c2xr6c3 r6c3xr6c4 r1c1xr2c1 r1c2xr2c2 r1c3xr2c3 r2c1-r3c1 r2c2-r3c2 r3c3xr4c3 r3c4xr4c4 r5c1xr6c1 r5c2xr6c2 r5c3xr6c3
+moves: r1c4-r1c5 r1c4-r2c4
+caption: The dot at this 3's top-left corner has no way out except along the 3's top and left sides, so both are lines or neither is. A 3 leaves out only one side, so both are lines.
+~~~
+
+### small-loop | The loop that must be one
+
+There is only one loop. If two ends of one line sit side by side, joining them would close a loop, and that's wrong while any other line or number is left out.
+
+~~~board
+. 0 0 0 1 . 2
+. . . . . . .
+0 . 1 1 . . 2
+0 . . 3 . . .
+. . 2 1 . 0 1
+. 0 . . . . .
+. . 3 . . 1 2
+draw: dots
+lines: r1c1xr1c2 r1c2xr1c3 r1c3xr1c4 r1c4xr1c5 r1c5xr1c6 r1c6-r1c7 r1c7-r1c8 r2c1xr2c2 r2c2xr2c3 r2c3xr2c4 r2c4xr2c5 r2c5xr2c6 r2c6-r2c7 r2c7xr2c8 r3c1xr3c2 r3c2xr3c3 r3c3xr3c4 r3c4xr3c5 r3c5-r3c6 r4c1xr4c2 r4c2xr4c3 r4c3-r4c4 r4c5xr4c6 r4c6-r4c7 r5c1xr5c2 r5c2xr5c3 r5c3xr5c4 r5c4-r5c5 r5c5xr5c6 r5c6xr5c7 r5c7xr5c8 r6c1xr6c2 r6c2xr6c3 r6c3-r6c4 r6c4xr6c5 r6c6xr6c7 r6c7xr6c8 r7c2xr7c3 r7c3-r7c4 r7c4xr7c5 r7c6xr7c7 r8c2xr8c3 r8c3-r8c4 r8c4-r8c5 r8c5-r8c6 r8c6-r8c7 r8c7-r8c8 r1c1xr2c1 r1c2xr2c2 r1c3xr2c3 r1c4xr2c4 r1c5xr2c5 r1c6-r2c6 r1c7xr2c7 r1c8-r2c8 r2c1xr3c1 r2c2xr3c2 r2c3xr3c3 r2c4xr3c4 r2c5xr3c5 r2c7-r3c7 r2c8-r3c8 r3c1xr4c1 r3c2xr4c2 r3c3xr4c3 r3c4xr4c4 r3c5-r4c5 r3c6-r4c6 r4c1xr5c1 r4c2xr5c2 r4c3-r5c3 r4c4-r5c4 r4c5-r5c5 r4c6xr5c6 r4c7xr5c7 r4c8-r5c8 r5c1xr6c1 r5c2xr6c2 r5c3-r6c3 r5c4xr6c4 r5c5xr6c5 r5c6xr6c6 r5c7xr6c7 r5c8-r6c8 r6c1xr7c1 r6c2xr7c2 r6c3xr7c3 r6c4-r7c4 r6c7xr7c7 r6c8-r7c8 r7c3-r8c3 r7c4xr8c4 r7c6xr8c6 r7c7xr8c7 r7c8-r8c8
+moves: r3c7xr3c8
+caption: The two dots at the ends of this edge are the two ends of one line. Joining them would close a small loop and leave the other lines out, so the edge is crossed.
+~~~
+
+### what-if | A what-if
+
+When nothing simpler works, suppose an edge is a line (or isn't), follow the rules a few steps, and see something break. Then the edge must be the other way.
+
+~~~board
+. . 0 . . . . . . 0
+. 3 . . . 3 . 2 2 1
+. 2 . 0 . 1 . . . .
+. 1 2 . . . 1 . 2 1
+2 1 . . 1 . . 3 . .
+. 0 1 . 2 1 . . 0 1
+. 0 . . . 3 . 0 . .
+. . . 1 . . . . 0 .
+1 . 0 . . 0 . . 0 1
+2 . . . 1 . . 1 . .
+draw: dots
+lines: r1c2xr1c3 r1c3xr1c4 r1c4xr1c5 r1c9xr1c10 r1c10xr1c11 r2c2-r2c3 r2c3xr2c4 r2c10xr2c11 r3c4xr3c5 r4c4xr4c5 r6c2xr6c3 r6c8-r6c9 r6c9xr6c10 r7c1xr7c2 r7c2xr7c3 r7c3xr7c4 r7c8xr7c9 r7c9xr7c10 r8c2xr8c3 r8c3xr8c4 r8c8xr8c9 r8c9xr8c10 r9c1xr9c2 r9c2xr9c3 r9c3xr9c4 r9c4xr9c5 r9c6xr9c7 r9c8xr9c9 r9c9xr9c10 r9c10xr9c11 r10c1xr10c2 r10c2xr10c3 r10c3xr10c4 r10c4xr10c5 r10c5xr10c6 r10c6xr10c7 r10c8xr10c9 r10c9xr10c10 r11c1-r11c2 r11c2-r11c3 r11c3-r11c4 r11c4-r11c5 r11c7-r11c8 r11c10-r11c11 r1c3xr2c3 r1c4xr2c4 r1c10xr2c10 r1c11xr2c11 r2c3-r3c3 r2c11xr3c11 r3c4xr4c4 r3c5xr4c5 r4c1xr5c1 r5c9-r6c9 r6c1-r7c1 r6c2xr7c2 r6c3xr7c3 r6c9xr7c9 r6c10xr7c10 r7c1-r8c1 r7c2xr8c2 r7c3xr8c3 r7c8xr8c8 r7c9xr8c9 r8c1-r9c1 r8c2xr9c2 r8c3xr9c3 r8c4xr9c4 r8c9xr9c9 r8c10xr9c10 r9c1-r10c1 r9c2xr10c2 r9c3xr10c3 r9c4xr10c4 r9c6xr10c6 r9c7xr10c7 r9c9xr10c9 r9c10xr10c10 r10c1-r11c1 r10c3xr11c3 r10c6xr11c6 r10c9xr11c9 r10c11-r11c11
+moves: r5c2xr5c3
+caption: Suppose this edge were a line. Followed a few steps on, the 2 in row 4, column 3 could no longer get its two lines with every dot at its corners taking none or two. So there is no line here: it is crossed.
+~~~

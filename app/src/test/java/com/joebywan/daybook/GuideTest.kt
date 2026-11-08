@@ -51,6 +51,7 @@ import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.NonogramTeacher
 import com.joebywan.daybook.puzzles.Pair2
 import com.joebywan.daybook.puzzles.PearlsTeacher
+import com.joebywan.daybook.puzzles.LoopTeacher
 import com.joebywan.daybook.puzzles.PipesTeacher
 import com.joebywan.daybook.puzzles.Placement
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -168,6 +169,7 @@ class GuideTest {
         "pipes" to ::pipesStep,
         "atoms" to ::atomsStep,
         "pearls" to ::pearlsStep,
+        "loop" to ::loopStep,
         "mosaic" to ::mosaicStep,
         "dominoes" to ::dominoesStep,
         // No techniques and so no boards (hints are off): these two lines are never asked.
@@ -252,6 +254,28 @@ class GuideTest {
         val moved = b.drawn("moves")
         assertEquals("${b.technique}: the lines", moved.filter { it.second != 'x' }.map(::edge).toSet(), step.lines.toSet())
         assertEquals("${b.technique}: the crosses", moved.filter { it.second == 'x' }.map(::edge).toSet(), step.crosses.toSet())
+        return Drawn(step.technique, step.focus.filter { it < n * n }.toSet())
+    }
+
+    /** Loop draws its lines from dot to dot (`draw: dots`): `r1c1` is a square's top-left corner, on a lattice one wider. */
+    private fun loopStep(b: Board): TeachStep? {
+        val n = b.width
+        val m = n + 1
+        val clues = b.rows.flatten().joinToString("")
+        fun edge(part: String): Int {
+            val (r1, c1, r2, c2) = Regex("\\d+").findAll(part).map { it.value.toInt() - 1 }.toList()
+            val (a, z) = listOf(r1 * m + c1, r2 * m + c2).sorted()
+            assertTrue("$part: one side of a square", z - a == 1 && a / m == z / m || z - a == m)
+            return if (z - a == 1) (a / m) * n + a % m else n * m + a
+        }
+        val parts = { key: String -> b.fields[key].orEmpty().split(' ').filter { it.isNotEmpty() } }
+        fun crossed(part: String) = Regex("r\\d+c\\d+([-x])").find(part)!!.groupValues[1] == "x"
+        val edges = CharArray(2 * n * m) { '.' }
+        for (p in parts("lines")) edges[edge(p)] = if (crossed(p)) 'x' else '-'
+        val step = LoopTeacher.deduce(n, clues, edges.concatToString()) ?: return null
+        val moved = parts("moves")
+        assertEquals("${b.technique}: the lines", moved.filterNot(::crossed).map(::edge).toSet(), step.lines.toSet())
+        assertEquals("${b.technique}: the crosses", moved.filter(::crossed).map(::edge).toSet(), step.crosses.toSet())
         return Drawn(step.technique, step.focus.filter { it < n * n }.toSet())
     }
 
@@ -948,7 +972,7 @@ class GuideTest {
         val anyCase = listOf(
             "minesweeper", "masyu", "killer sudoku", "rullo", "akari", "wordle", "kakuro", "number sums", "hashiwokakero",
             "hashi", "takuzu", "binairo", "einstein", "zebra puzzle", "fill-a-pix", "nikoli", "new york times", "nyt",
-            "wordscapes", "water sort",
+            "wordscapes", "water sort", "slitherlink",
         )
         for (p in pages) {
             for (word in exact) assertTrue("${p.id} says $word", !Regex("\\b$word\\b").containsMatchIn(p.text))

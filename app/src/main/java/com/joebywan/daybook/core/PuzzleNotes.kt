@@ -207,8 +207,8 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Never join the two ends of a line unless it is the whole loop.",
     ),
     "loop" to listOf(
-        "A 3 in a corner of the board always takes both sides at that corner.",
-        "A 1 in a corner of the board never takes either side at that corner.",
+        "A 3 in a corner of the board takes both sides at that corner.",
+        "A 1 in a corner of the board takes neither side there.",
         "A dot takes no line or two, never one or three.",
         "Never join the two ends of a line unless it is the whole loop.",
     ),

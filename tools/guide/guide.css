@@ -78,4 +78,5 @@ svg text.corner { font-size: 9.5px; font-weight: 600; text-anchor: start; }
 .pearl { stroke: var(--ink); stroke-width: 2.5; }
 .pearl.b { fill: var(--ink); }
 .pearl.w { fill: var(--surface); }
+.dot { fill: var(--ink); }
 .over { paint-order: stroke; stroke: var(--surface); stroke-width: 5px; }

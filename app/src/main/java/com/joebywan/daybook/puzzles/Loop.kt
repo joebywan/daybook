@@ -74,7 +74,7 @@ object Loop : PuzzleType {
     override val id = "loop"
     override val displayName = "Loop"
     override val tagline = "One loop round the numbers"
-    override val accent = 0xFF3F7F94
+    override val accent = 0xFFD062BA
 
     override val rules = listOf(
         "Draw one closed loop along the sides of the squares, from dot to dot. It never crosses or branches.",

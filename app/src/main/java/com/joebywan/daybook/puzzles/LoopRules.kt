@@ -361,10 +361,26 @@ internal object LoopLogic {
         return verdict is Verdict.ExactlyOne && verdict.value == s.loop
     }
 
-    /** Only when none of [ATTEMPTS] draws was accepted. Filled in from a measured seed; proved by `LoopRulesTest`. */
+    /**
+     * Only when none of [ATTEMPTS] draws was accepted, which a year of daily seeds on every tier never reaches
+     * (`FallbackTest`). A fixed board per tier (what seed 424242 drew), which `LoopRulesTest` proves is accepted at its
+     * tier: one loop, the tier's rung needed exactly.
+     */
     fun lastResort(difficulty: Difficulty): LoopState = when (difficulty) {
-        Difficulty.STANDARD -> LoopState(1, "4", "1111")
-        Difficulty.HARD -> LoopState(1, "4", "1111")
-        Difficulty.EXPERT -> LoopState(1, "4", "1111")
+        Difficulty.STANDARD -> LoopState(
+            5, ".1.00...1.101221....22.23",
+            "000001100000110000010011011001000000101000100010100001101011",
+        )
+        Difficulty.HARD -> LoopState(
+            7, ".0.00.1.01.1......3..2....013..001.2.1.22.2.3....",
+            "00000000000011101100001001001000000100001100101001101000000000000000" +
+                "01011110110110000001010000011000010010111000",
+        )
+        Difficulty.EXPERT -> LoopState(
+            10,
+            "1..2.111...1.0...0.12..1....1.30...0...3.....0.12........03..1.1.0.....2.3...0.3..1..........132131.",
+            "01011111110010000000000000000010010000101010000001010100001011100000101001000011011000101100000100000000" +
+                "10010001110000001010000000010100000000110011000111011010001000001000001010000000100010110000010000101110000001101100",
+        )
     }
 }

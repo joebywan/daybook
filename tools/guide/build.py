@@ -156,7 +156,7 @@ def board(lines, where):
                 x, y = x + dc * (half - inset), y + dr * (half - inset)
                 svg.append(f'<line class="cage" x1="{x - tc * reach(-1)}" y1="{y - tr * reach(-1)}" x2="{x + tc * reach(1)}" y2="{y + tr * reach(1)}"/>')
     draw = fields.get("draw", "")
-    if draw not in ("", "spokes", "discs", "pearls"):
+    if draw not in ("", "spokes", "discs", "pearls", "dots"):
         fail(where, f"unknown draw: {draw}")
     # `a-b` a line, `a=b` two side by side, `axb` a cross on the edge between two squares. `moves` are the step's, on top.
     for key, kind in (("lines", "run done" if "moves" in fields else "run"), ("moves", "run move")):
@@ -164,8 +164,13 @@ def board(lines, where):
             m = re.fullmatch(r"(r\d+c\d+)([-=x])(r\d+c\d+)", part)
             if not m:
                 fail(where, f"not a line: {part}")
-            (r1, c1), (r2, c2) = (cells(end, where, w, h)[0] for end in (m[1], m[3]))
-            (x1, y1), (x2, y2) = centre(r1, c1), centre(r2, c2)
+            if draw == "dots":
+                # Lines run along the squares' sides, from dot to dot: r1c1 is the top-left corner of square r1c1.
+                (r1, c1), (r2, c2) = (cells(end, where, w + 1, h + 1)[0] for end in (m[1], m[3]))
+                (x1, y1), (x2, y2) = (c1 * CELL, r1 * CELL), (c2 * CELL, r2 * CELL)
+            else:
+                (r1, c1), (r2, c2) = (cells(end, where, w, h)[0] for end in (m[1], m[3]))
+                (x1, y1), (x2, y2) = centre(r1, c1), centre(r2, c2)
             if m[2] == "x":
                 mx, my = (x1 + x2) // 2, (y1 + y2) // 2
                 svg += [f'<line class="{kind} x" x1="{mx - 5}" y1="{my - 5}" x2="{mx + 5}" y2="{my + 5}"/>',
@@ -174,6 +179,8 @@ def board(lines, where):
                 dx, dy = (4, 0) if x1 == x2 else (0, 4)
                 for k in ((-1, 1) if m[2] == "=" else (0,)):
                     svg.append(f'<line class="{kind}" x1="{x1 + k * dx}" y1="{y1 + k * dy}" x2="{x2 + k * dx}" y2="{y2 + k * dy}"/>')
+    if draw == "dots":
+        svg += [f'<circle class="dot" cx="{c * CELL}" cy="{r * CELL}" r="3.5"/>' for r in range(h + 1) for c in range(w + 1)]
     for r, c in cite:
         svg.append(f'<rect class="cite" x="{c * CELL + 3}" y="{r * CELL + 3}" width="{CELL - 6}" height="{CELL - 6}" rx="6"/>')
     for r, c in answer:
@@ -241,7 +248,8 @@ def board(lines, where):
     svg += [f'<text class="label" x="{-side // 2}" y="{r * CELL + CELL // 2}">{html.escape(t)}</text>' for r, t in enumerate(left)]
     pad = max(0, 240 - W - side) // 2 if top or left else 0
     caption = inline(fields["caption"])
-    return (f'<figure><svg viewBox="{-2 - side - pad} {-2 - head} {W + 4 + side + 2 * pad} {H + 4 + head}" role="img" aria-label="{html.escape(fields["caption"])}">'
+    edge = 5 if draw == "dots" else 2  # Dots and lines sit on the board's own edge: room for them.
+    return (f'<figure><svg viewBox="{-edge - side - pad} {-edge - head} {W + 2 * edge + side + 2 * pad} {H + 2 * edge + head}" role="img" aria-label="{html.escape(fields["caption"])}">'
             + "".join(svg) + f"</svg><figcaption>{caption}</figcaption></figure>")
 
 
