@@ -233,6 +233,13 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "small-loop" to "the loop that must be one",
         "what-if" to "a what-if",
     ),
+    "links" to linkedMapOf(
+        "one-way" to "a line's end with one way on",
+        "two-ways" to "a square with two ways in",
+        "reach" to "a square only some paths can reach",
+        "cut-off" to "a way that would cut a path off",
+        "what-if" to "a what-if",
+    ),
     "whoswho" to linkedMapOf(
         "clue" to "a clue that names someone",
         "only" to "the one item left",

@@ -1,0 +1,25 @@
+# Links
+> Join every pair, fill every square
+
+## How to play
+
+Drag from a number, or from the end of a line, to draw a path through the squares. A line can also start on any empty square; it takes a pair's colour once it reaches one. Drag back along a line to rub it out, and go back over your own drag to take back the last squares. Drawing across another pair's path cuts it there.
+
+On a keyboard, the arrows move, and Shift and an arrow draws from the square you are on (or rubs out the line that way).
+
+Stuck? The first tap on Hint says where to look, and the second explains why. You make the move yourself, unless you ask for "Show me". Every board has exactly one answer, and you never need to guess to find it.
+
+## Rules
+
+- Join each pair of matching numbers with one path through squares that share a side.
+- Paths never cross or touch the same square, and every square is on a path.
+
+## What changes per tier
+
+- Standard: 6x6 grid, 5 to 7 pairs. A line's end with one way on, and a square with two ways in, finish it.
+- Hard: 8x8 grid, 7 to 9 pairs. Needs which paths can reach a square, or what a way would cut off.
+- Expert: 10x10 grid, 9 to 12 pairs. Needs a what-if.
+
+## Techniques
+
+TECHNIQUES

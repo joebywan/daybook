@@ -143,7 +143,11 @@ internal object LinksTeacher {
                 val because = s.chainBroke?.let { brokeText(v, it) } ?: "something would break"
                 val dir = way(n, q, s.supposed)
                 val chain = if (s.chain.isEmpty()) "at once" else "a few forced moves later"
-                "Suppose ${who.second} at $here went $dir: $chain, $because. So it goes $goes."
+                if (tip) {
+                    "Suppose ${who.second} at $here went $dir: $chain, $because. So it goes $goes."
+                } else {
+                    "Suppose the square at $here joined the one $dir: $chain, $because. So it joins $goes."
+                }
             }
         }
         val cited = buildSet {

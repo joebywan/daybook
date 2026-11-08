@@ -157,16 +157,16 @@ object Links : PuzzleType {
     // ---- the walkthrough ------------------------------------------------------------------------
 
     /** Five by five, five pairs, one answer, finished by the local rules alone (`LinksTutorialTest` proves both). */
-    internal const val TUTORIAL_ENDS = "a.c.c" + "..bde" + "....." + ".b.d." + ".ad.e"
+    internal const val TUTORIAL_ENDS = "a.b.c" + "..d.e" + "....." + ".b.c." + ".ade."
     private const val TUTORIAL_N = 5
 
     /** The answer's paths, each from its first end. */
     internal val TUTORIAL_PATHS = listOf(
         listOf(0, 5, 10, 15, 20, 21),
-        listOf(7, 6, 11, 16),
-        listOf(2, 3, 4),
-        listOf(8, 13, 18, 23, 22),
-        listOf(9, 14, 19, 24),
+        listOf(2, 1, 6, 11, 16),
+        listOf(4, 3, 8, 13, 18),
+        listOf(7, 12, 17, 22),
+        listOf(9, 14, 19, 24, 23),
     )
 
     internal fun tutorialBoard(lines: List<Pair<Int, Int>> = emptyList()): LinksState {
@@ -186,8 +186,8 @@ object Links : PuzzleType {
     override val tutorial: List<TutorialFrame> by lazy {
         val corner = along(21, 20, 15)
         val one = corner + along(15, 10, 5, 0)
-        val two = one + along(24, 19)
-        val slip = two + along(7, 12)
+        val two = one + along(19, 24, 23)
+        val slip = two + along(7, 8)
         val solved = tutorialBoard(TUTORIAL_PATHS.flatMap { p -> (1 until p.size).map { p[it - 1] to p[it] } })
         listOf(
             TutorialFrame(
@@ -215,25 +215,25 @@ object Links : PuzzleType {
             ),
             TutorialFrame(
                 state = tutorialBoard(one),
-                caption = "A line can start on any square. The square above the bottom-right 5 has only it and one " +
-                    "other neighbour free: drag from that square down to the 5.",
-                highlight = BoardHighlight(strong = setOf(19, 24)),
+                caption = "A line can start on any square. The bottom-right corner touches only two squares: drag from " +
+                    "the one above it, through the corner, onto the 5.",
+                highlight = BoardHighlight(strong = setOf(19, 24, 23)),
                 accepts = only(tutorialBoard(two)),
-                retry = "Drag from the glowing square down onto the 5.",
+                retry = "Drag from the glowing square above the corner, through it, onto the 5.",
                 done = "Drawn, and it takes the 5's colour.",
             ),
             TutorialFrame(
                 state = tutorialBoard(two),
-                caption = "What if the 2 in the middle went down? Drag from it one square down and see.",
-                highlight = BoardHighlight(strong = setOf(7, 12)),
+                caption = "What if the 4 went right? Drag from it one square right and see.",
+                highlight = BoardHighlight(strong = setOf(7, 8)),
                 accepts = only(tutorialBoard(slip)),
-                retry = "Drag from the glowing 2 one square down.",
-                done = "Now the 4 below it has only one way left, and the 2 can't reach its other end.",
+                retry = "Drag from the glowing 4 one square right.",
+                done = "Now the 3 in the top corner can't reach its other 3, so that line is wrong.",
             ),
             TutorialFrame(
                 state = tutorialBoard(slip),
-                caption = "Drag back along that line, from its end up to the 2, to rub it out.",
-                highlight = BoardHighlight(strong = setOf(12, 7), warning = true),
+                caption = "Drag back along that line, from its end to the 4, to rub it out.",
+                highlight = BoardHighlight(strong = setOf(8, 7), warning = true),
                 accepts = only(tutorialBoard(two)),
                 retry = "Drag back along the glowing line, in one stroke.",
                 done = "Rubbed out. Dragging along a line takes it away.",
