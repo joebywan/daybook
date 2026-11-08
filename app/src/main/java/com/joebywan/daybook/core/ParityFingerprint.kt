@@ -22,6 +22,7 @@ import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.RegionsState
 import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.PearlsState
+import com.joebywan.daybook.puzzles.LinksState
 import com.joebywan.daybook.puzzles.SandState
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.TentsState
@@ -90,6 +91,7 @@ object ParityFingerprint {
         is TallyState -> "n=${s.size} digits=${s.digits} keep=${s.keep}"
         is LampsState -> "n=${s.size} walls=${s.walls} solution=${s.solution}"
         is PearlsState -> "n=${s.size} pearls=${s.pearls} loop=${s.loop}"
+        is LinksState -> "n=${s.size} ends=${s.ends} answer=${s.answer}"
         is DominoState -> "${s.width}x${s.height} open=${s.open.joinToString("") { if (it) "1" else "0" }} " +
             "regions=${s.regionOf.joinToString(",")} rules=${s.rules.joinToString(",") { "${it.kind.name[0]}${it.n}" }} " +
             "tray=${s.tray.joinToString(",") { "${it.a}${it.b}" }} answer=${s.answer.joinToString(",") { "${it.first}-${it.second}" }}"
