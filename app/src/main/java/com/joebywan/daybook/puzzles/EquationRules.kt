@@ -43,7 +43,8 @@ data class EquationState(
  * - **No negatives written**: no minus sign before a number, and the right side is a plain number (so the value is at
  *   least 0). A running total may dip below 0 on the way (`1-5+6=2` is true).
  * - **No leading zeros** (`07`); a lone `0` is a number, so `5-5=0` and `0+7=7` are true and may be guessed.
- * - **Answers never hold a lone 0** (any number that is just 0, on either side), so a hidden sum is never `0*9=0`: the
+ * - **Answers never hold a lone 0** (any number that is just 0, on either side), so a hidden sum is never `0*9=0`, **nor
+ *   multiply or divide by a lone 1** (`1*7=7`, `14/1=14`: a step that changes nothing). Both are fine in a guess, so the
  *   guesses are wider than the answers, as Lexicon's are.
  *
  * The lists are not stored: [valid] enumerates every true sum of a length on the device (sorted, so the daily answer is
@@ -59,13 +60,16 @@ object EquationLogic {
     class Shape(val length: Int, val guesses: Int)
 
     /**
-     * Standard six symbols, Hard seven, Expert eight, six guesses each. Measured by `EquationBalanceTest` (the answer
-     * lists, and two modest players): see `CLAUDE.md`, Equation.
+     * Standard six symbols and six guesses, Hard seven and six, Expert eight and five. Measured by `EquationBalanceTest`:
+     * a careful player needs about three guesses at every length (the marks split any list fast), so length alone does not
+     * make a tier harder by guesses. What length does is leave more to work out by hand: after the opener a median 3 / 20
+     * / 28 equations still fit. So the tiers grow by that, and Expert also has one guess fewer, which a hint follower
+     * still always wins (its worst board takes four).
      */
     fun shape(difficulty: Difficulty): Shape = when (difficulty) {
         Difficulty.STANDARD -> Shape(6, 6)
         Difficulty.HARD -> Shape(7, 6)
-        Difficulty.EXPERT -> Shape(8, 6)
+        Difficulty.EXPERT -> Shape(8, 5)
     }
 
     /** Lengths [valid] can enumerate. */
@@ -80,9 +84,15 @@ object EquationLogic {
         return validCache[length] ?: enumerate(length).also { validCache[length] = it }
     }
 
-    /** The sums a board's answer can be: [valid] less any with a lone 0. Sorted. */
+    /** The sums a board's answer can be: [valid] less any with a lone 0 or a × or ÷ by a lone 1. Sorted. */
     fun answers(length: Int): List<String> =
-        answerCache[length] ?: valid(length).filter { !hasLoneZero(it) }.also { answerCache[length] = it }
+        answerCache[length] ?: valid(length).filter { !hasLoneZero(it) && !timesOne(it) }.also { answerCache[length] = it }
+
+    /** Whether [row] multiplies by a lone 1 (either side of ×) or divides by one. */
+    fun timesOne(row: String): Boolean = row.indices.any { i ->
+        row[i] == '1' && (i == 0 || !row[i - 1].isDigit()) && (i == row.lastIndex || !row[i + 1].isDigit()) &&
+            ((i > 0 && (row[i - 1] == '*' || row[i - 1] == '/')) || (i < row.lastIndex && row[i + 1] == '*'))
+    }
 
     /** Whether [row] holds a number that is just 0 (on either side). */
     fun hasLoneZero(row: String): Boolean = row.indices.any { i ->
@@ -224,21 +234,17 @@ object EquationLogic {
                     if (end == lhs - 1) continue
                     val from = if (k == 1) 0L else pow10(k - 1)
                     for (n in from until pow10(k)) {
-                        var t = total
-                        var m = term
-                        var g = sign
-                        when (op) {
-                            ' ' -> m = n
-                            '+', '-' -> {
-                                t += sign * term
-                                m = n
-                                g = if (op == '-') -1L else 1L
-                            }
-                            '*' -> m = term * n
-                            else -> {
-                                if (n == 0L || term % n != 0L) continue
-                                m = term / n
-                            }
+                        if (op == '/' && (n == 0L || term % n != 0L)) continue
+                        val t = if (op == '+' || op == '-') total + sign * term else total
+                        val g = when (op) {
+                            '+' -> 1L
+                            '-' -> -1L
+                            else -> sign
+                        }
+                        val m = when (op) {
+                            '*' -> term * n
+                            '/' -> term / n
+                            else -> n
                         }
                         writeNumber(buf, pos, k, n)
                         for (next in OPS) {

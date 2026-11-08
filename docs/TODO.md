@@ -311,12 +311,6 @@ In order of measured demand, then fit:
   must fill / a tip that cannot, what-if. *Input:* Nonogram's pen (Fill / Cross) through `penGrid` and `TwinTaps`, sweeps
   one state; a tap on a thermometer square fills it up to there (one state). Counts turn green or red as Tally's chips do
   (`rememberSettled`). Tiers 5x5 / 6x6 / 8x8. *M.*
-- [ ] **Equation codebreaker (Nerdle 214K).** Guess a hidden sum such as `12+35=47` in six tries; marks as Lexicon's.
-  *Generation:* every valid equation of the tier's length is enumerable on the device (one `=`, no leading zeros, no
-  negatives, whole results), sorted, the answer an index: no word list. Tiers by length 6 / 7 / 8. *Teacher:* Lexicon's
-  pins checked against every valid equation; a legal probe is never a mistake. *Reuse:* `LexiconRules.mark` (lift to a
-  generic `mark(guess, answer)` over any alphabet if it is letter-bound), Lexicon's rows and keyboard composables with a
-  digit/operator key set, its walkthrough shape. Never "Nerdle" where a player sees it. *M.*
 - [ ] **Battleships (Conceptis 152K).** Place a fleet (one 4, two 3s, three 2s, four 1s on 10x10, smaller on lower tiers)
   so ships never touch, even diagonally, matching row and column counts and a few given segments. Close to Tents, so reuse
   Tents' count chips, no-touch logic and `countSolutions` shape; input is Tents' (tap water, double tap ship). *M.*

@@ -96,6 +96,13 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "only-word-left" to "the one word left",
         "pinned-letter" to "a letter pinned to its slot",
     ),
+    "equation" to linkedMapOf(
+        "opener" to "a good opening equation",
+        "submit" to "a row that fits every mark",
+        "best-guess" to "the equation that narrows it most",
+        "only-sum-left" to "the one equation left",
+        "pinned-symbol" to "a symbol pinned to its slot",
+    ),
     "nonogram" to linkedMapOf(
         "full-line" to "a clue that fills its line",
         "line-finished" to "a line whose clue is complete",
@@ -254,6 +261,7 @@ private val NOT_PRAISED: Map<String, Set<String>> = mapOf(
     "sets" to setOf("continue", "fresh"),
     "tower" to setOf("opener", "submit", "consistent-guess", "only-code-left"),
     "words" to setOf("opener", "submit", "best-guess", "only-word-left"),
+    "equation" to setOf("opener", "submit", "best-guess", "only-sum-left"),
     "target" to setOf("step", "finish"),
     "wordwheel" to setOf("clue"),
     "hexwords" to setOf("unchecked"),

@@ -84,6 +84,14 @@ internal object EquationOracle {
         found.mapValues { it.value.sorted() }
     }
 
+    /** Whether [row] multiplies or divides by a number that is exactly 1, read from its token list. */
+    fun timesOne(row: String): Boolean {
+        val tokens = Regex("[0-9]+|[-+*/=]").findAll(row).map { it.value }.toList()
+        return tokens.indices.any { i ->
+            tokens[i] == "1" && (tokens.getOrNull(i - 1) in setOf("*", "/") || tokens.getOrNull(i + 1) == "*")
+        }
+    }
+
     /** Whether [row] has a number that is exactly 0, read by splitting on the signs. */
     fun loneZero(row: String): Boolean = row.split('+', '-', '*', '/', '=').any { it == "0" }
 }

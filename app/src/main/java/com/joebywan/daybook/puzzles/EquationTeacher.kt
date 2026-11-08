@@ -10,7 +10,7 @@ package com.joebywan.daybook.puzzles
  * - [PIN]: a symbol known to be in the sum has only as many slots left as it has copies. A fact about the marks alone,
  *   so it holds for every true sum that fits them (`EquationTeachingTest` checks it against all of them).
  * - [SUBMIT]: the row fits every mark; press Enter.
- * - [ONLY_SUM] / [CHOOSE]: pins have run out. Of the sums it can be (true, and no lone 0), one fits or several do;
+ * - [ONLY_SUM] / [CHOOSE]: pins have run out. Of the sums it can be (true, no lone 0, no × or ÷ by 1), one fits or several do;
  *   these read that list, say so, and count as the fallback. They give the sum's shape (its signs and its right side,
  *   the left side's digits as ?) rather than the sum: only "Show me" types it.
  */
@@ -67,9 +67,12 @@ internal object EquationTeacher {
         override fun shout(symbol: Char) = shown(symbol)
         override fun show(row: String) = shown(row)
         override fun refusal(row: String): String {
-            val why = EquationLogic.problem(row, row.length) ?: "not a true sum"
-            return "${shown(row)} can't be guessed: ${why.replaceFirstChar { it.lowercaseChar() }}. " +
-                "Every guess must be a true sum."
+            val why = EquationLogic.problem(row, row.length) ?: "Not a true sum"
+            return if (why.startsWith("Not true: ")) {
+                "${shown(row)} isn't true: ${why.removePrefix("Not true: ")}, so Enter won't take it. Every guess must be a true sum."
+            } else {
+                "${shown(row)} can't be guessed: ${why.replaceFirstChar { it.lowercaseChar() }}. Every guess must be a true sum."
+            }
         }
         override val openerNudge = "Nothing is known yet. Start with a sum of many different symbols."
         override fun openerText(word: String) =

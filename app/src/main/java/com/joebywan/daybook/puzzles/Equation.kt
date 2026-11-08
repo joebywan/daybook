@@ -29,7 +29,7 @@ object Equation : PuzzleType {
         "Yellow: the symbol is in the equation, but somewhere else.",
         "Grey: the equation has no (more) of that symbol.",
         "× and ÷ come before + and −, and every ÷ comes out whole.",
-        "No number starts with 0, and the hidden one has no lone 0.",
+        "No number starts with 0. The hidden one has no lone 0, and never × or ÷ by 1.",
         "The keys keep the best clue for each symbol.",
     )
 

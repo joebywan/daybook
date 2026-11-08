@@ -72,6 +72,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | LITS | LITS (Nikoli) | One L/I/T/S tetromino per region, no 2×2, no same letter touching |
 | Codebreaker | Mastermind | Break the hidden colour code from scored guesses |
 | Lexicon | Mastermind for words | Find the hidden word; each guess marks every letter green, yellow or grey |
+| Equation | Mastermind for sums | Find the hidden equation; every guess must be true, and each symbol is marked as Lexicon's letters are |
 | Nonogram | Nonogram | Fill squares to match the run lengths beside each row and column and a picture appears |
 | Inequality | Futoshiki | 1 to N once per row and column, `<` and `>` signs between some neighbours |
 | Mate | Chess mate-in-N | White to play and mate in 2, 3 or 4; the opponent defends as well as it can |
@@ -200,10 +201,11 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   give: the hints' walk (a slot only one word fits, one word its crossings leave, every crossing worked through) must
   finish the grid reading a tier's share of its letters from the clues, and an exhaustive search proves those letters
   and the crossings leave one grid. An independent solver that fills square by square over the alphabet confirms it.
-- **Codebreaker and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
-  guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
+- **Codebreaker, Lexicon and Equation** — nothing hidden to prove: the code, the word or the equation is one
+  pick, and a guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by
-  `tools/words/build.py`.
+  `tools/words/build.py`. Equation's list is every true equation of the tier's length, enumerated on the device
+  and checked against an independent brute-force enumeration.
 
 Two things make that harder than it sounds, and both have gone wrong here:
 
