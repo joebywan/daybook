@@ -232,7 +232,7 @@ internal object PearlsLogic {
             }
         }
 
-        override fun whole(s: LoopEdges.Stretches, root: Int, closing: Int): Boolean {
+        override fun whole(st: IntArray, s: LoopEdges.Stretches, root: Int, closing: Int): Boolean {
             if (s.edgesIn[root] != s.total) return false
             for (i in pearls.indices) if (pearls[i] != '.' && s.root[i] != root) return false
             return true

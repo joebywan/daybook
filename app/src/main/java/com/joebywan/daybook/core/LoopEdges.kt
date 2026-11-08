@@ -108,10 +108,10 @@ internal interface LoopRules {
     fun touch(e: Int, add: (Int) -> Unit)
 
     /**
-     * Whether stretch [root] of [s], closed (with [closing] drawn, or -1 when it is closed already), would be the whole
+     * Whether stretch [root] of [s] (the stretches of [st]), closed (with [closing] drawn, or -1 when it is closed already), would be the whole
      * answer, so that the loop rule must let it close.
      */
-    fun whole(s: LoopEdges.Stretches, root: Int, closing: Int): Boolean
+    fun whole(st: IntArray, s: LoopEdges.Stretches, root: Int, closing: Int): Boolean
 
     /** Whether the lines in [st] are already the whole answer. */
     fun finished(st: IntArray): Boolean
@@ -346,7 +346,7 @@ internal object LoopEdges {
         for (i in 0 until g.nodes) if (s.degree[i] == 1) hasEnd[s.root[i]] = true
         for (i in 0 until g.nodes) {
             val root = s.root[i]
-            if (root == i && !hasEnd[root] && !r.whole(s, root, -1)) return LoopFound(C_SMALL_LOOP, i, NONE, NONE)
+            if (root == i && !hasEnd[root] && !r.whole(st, s, root, -1)) return LoopFound(C_SMALL_LOOP, i, NONE, NONE)
         }
         val crosses = IntArrayList()
         var at = -1
@@ -355,7 +355,7 @@ internal object LoopEdges {
             val a = g.endA[e]
             val b = g.endB[e]
             if (s.degree[a] != 1 || s.degree[b] != 1 || s.root[a] != s.root[b]) continue
-            if (r.whole(s, s.root[a], e)) continue
+            if (r.whole(st, s, s.root[a], e)) continue
             if (at < 0) at = a
             crosses.add(e)
             if (firstOnly) break
