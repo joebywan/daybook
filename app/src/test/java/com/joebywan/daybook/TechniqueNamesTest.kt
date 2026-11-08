@@ -58,7 +58,7 @@ class TechniqueNamesTest {
         "tower" to TowerTeacher.TECHNIQUES, "words" to LexiconTeacher.TECHNIQUES, "nonogram" to NonogramTeacher.TECHNIQUES,
         "inequality" to InequalityTeacher.TECHNIQUES, "chess" to ChessTeacher.TECHNIQUES, "tents" to TentsTeacher.TECHNIQUES,
         "regions" to RegionsTeacher.TECHNIQUES, "cages" to CageTeacher.TECHNIQUES, "target" to TargetTeacher.TECHNIQUES,
-        "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "dwindle" to DwindleTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
+        "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "dwindle" to DwindleTeacher.TECHNIQUES, "unblock" to com.joebywan.daybook.puzzles.UnblockTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
         "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,

@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
+import com.joebywan.daybook.core.SearchVerdict
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.TutorialStep
@@ -30,7 +31,7 @@ class SandTeachingTest {
     /** Sortable, proved by a witness that replays under the test's own rules. */
     private fun provedSortable(s: SandState): Boolean {
         val v = SandLogic.solve(s.tubes, s.height, SandTeacher.HINT_BUDGET)
-        return v is SandLogic.Verdict.Solvable && SandOracle.replays(s.tubes, s.height, v.path)
+        return v is SearchVerdict.Solvable && SandOracle.replays(s.tubes, s.height, v.path)
     }
 
     /** Takes each hint in turn until sorted; every step is one pour that keeps the board sortable and no board comes twice. Returns the steps taken. */
@@ -215,7 +216,7 @@ class SandTeachingTest {
                     val (v, n) = SandLogic.search(now.tubes, now.height, SandTeacher.HINT_BUDGET)
                     verdicts++
                     largest = maxOf(largest, n)
-                    if (v == SandLogic.Verdict.Truncated) truncated++
+                    if (v == SearchVerdict.Truncated) truncated++
                 }
             }
             println("${d.name}: Truncated $truncated of $verdicts verdicts; largest search $largest positions (budget ${SandTeacher.HINT_BUDGET})")

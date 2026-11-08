@@ -70,6 +70,7 @@ class LevelBoardsProvedTest {
         "mini" to MiniLogic::generateVerified,
         "hexwords" to com.joebywan.daybook.puzzles.HexLogic::generateVerified,
         "dwindle" to DwindleLogic::generateVerified,
+        "unblock" to com.joebywan.daybook.puzzles.UnblockLogic::generateVerified,
     )
 
     @Test

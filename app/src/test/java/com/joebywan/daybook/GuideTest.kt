@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.ui.play.guideUrl
+import com.joebywan.daybook.core.SearchVerdict
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.PuzzleRegistry
@@ -863,7 +864,7 @@ class GuideTest {
         val colours = Sand.colourNames.map { it.take(2) }
         val height = b.rows.size
         val tubes = (0 until b.width).map { t -> b.rows.reversed().map { it[t] }.filter { it != "." }.map(colours::indexOf) }
-        val road = (SandLogic.solve(tubes, height, SandTeacher.HINT_BUDGET) as? SandLogic.Verdict.Solvable)?.path
+        val road = (SandLogic.solve(tubes, height, SandTeacher.HINT_BUDGET) as? SearchVerdict.Solvable)?.path
             ?: error("${b.technique}: a board that sorts")
         val step = SandTeacher.deduce(tubes, height, road) ?: return null
         val landed = (tubes[step.to].size until step.after[step.to].size).map { (height - 1 - it) * b.width + step.to }
