@@ -138,7 +138,8 @@ def board(lines, where):
                 walls.append((x, y, x, y + CELL))
             if r == 0 or rows[r - 1][c] == "_":
                 walls.append((x, y, x + CELL, y))
-    svg += [f'<line class="wall" x1="{a}" y1="{b}" x2="{c}" y2="{d}"/>' for a, b, c, d in walls]
+    if fields.get("draw") != "dots":  # On a dot board the sides are the loop's own edges: no wall may look like a line.
+        svg += [f'<line class="wall" x1="{a}" y1="{b}" x2="{c}" y2="{d}"/>' for a, b, c, d in walls]
     centre = lambda r, c: (c * CELL + CELL // 2, r * CELL + CELL // 2)
     # A dashed outline just inside each cage: a side wherever the neighbour is another cage, joined round its corners.
     inset, half = 4, CELL // 2
@@ -248,7 +249,7 @@ def board(lines, where):
     svg += [f'<text class="label" x="{-side // 2}" y="{r * CELL + CELL // 2}">{html.escape(t)}</text>' for r, t in enumerate(left)]
     pad = max(0, 240 - W - side) // 2 if top or left else 0
     caption = inline(fields["caption"])
-    edge = 5 if draw == "dots" else 2  # Dots and lines sit on the board's own edge: room for them.
+    edge = 10 if draw == "dots" else 2  # Dots and lines sit on the board's own edge: room for them.
     return (f'<figure><svg viewBox="{-edge - side - pad} {-edge - head} {W + 2 * edge + side + 2 * pad} {H + 2 * edge + head}" role="img" aria-label="{html.escape(fields["caption"])}">'
             + "".join(svg) + f"</svg><figcaption>{caption}</figcaption></figure>")
 
