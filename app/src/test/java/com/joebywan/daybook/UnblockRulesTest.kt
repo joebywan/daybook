@@ -74,7 +74,7 @@ class UnblockRulesTest {
         val stuck = listOf(UnblockCar(2, 0, 2, true), UnblockCar(2, 3, 3, true))
         assertEquals(SearchVerdict.Unsolvable, UnblockLogic.solve(stuck))
         assertEquals(-1, UnblockOracle.fewest(stuck))
-        val hard = UnblockLogic.generateVerified(daySeed(0, Unblock.id, Difficulty.EXPERT), Difficulty.EXPERT)!!
+        val hard = UnblockLogic.lastResort(Difficulty.EXPERT)
         assertEquals(SearchVerdict.Truncated, UnblockLogic.solve(hard.cars, 5))
     }
 
@@ -86,9 +86,22 @@ class UnblockRulesTest {
         assertEquals(listOf("+1", "*2", "+1", "*2"), (v as SearchVerdict.Solvable).path)
         assertEquals(SearchVerdict.Unsolvable, Search.shortest(1, 1000, { it }, step) { if (it == 99) Reached.GOAL else Reached.EXPAND })
         assertEquals(SearchVerdict.Truncated, Search.shortest(1, 3, { it }, step) { if (it == 10) Reached.GOAL else Reached.EXPAND })
-        val r = Search.reach(listOf(1), 1000, { it }) { n, emit -> step(n) { _, c -> emit(c) } }!!
-        assertEquals(3, r.distance[r.positions.indexOf(4)])
-        assertNull(Search.reach(listOf(1), 5, { it }) { n, emit -> step(n) { _, c -> emit(c) } })
+        // A dropped position is never searched past: with 2 barred (1's only children are 2), 10 is out of reach.
+        assertEquals(SearchVerdict.Unsolvable, Search.shortest(1, 1000, { it }, step) {
+            when (it) { 10 -> Reached.GOAL; 2 -> Reached.DROP; else -> Reached.EXPAND }
+        })
+    }
+
+    @Test
+    fun `the yard's space gives every position its fewest moves, as a fresh search from it finds`() {
+        val s = UnblockLogic.space(yard)!!
+        val y = s.yard
+        for (i in s.positions.indices step 7) {
+            val v = UnblockLogic.solve(y.cars(s.positions[i])) as SearchVerdict.Solvable
+            assertEquals(s.distance[i], v.path.size)
+        }
+        assertNull("over the cap", UnblockLogic.space(yard, cap = 5))
+        assertNull("no way out", UnblockLogic.space(listOf(UnblockCar(2, 0, 2, true), UnblockCar(2, 3, 3, true))))
     }
 
     // ---- generated boards -----------------------------------------------------------------------
@@ -130,30 +143,36 @@ class UnblockRulesTest {
     @Test
     fun `a year of daily boards - the tiers get harder in the order they are offered`() {
         val report = StringBuilder()
-        var last = 0.0
         for (d in Difficulty.entries) {
             val pars = mutableListOf<Int>()
             val cars = mutableListOf<Int>()
             val ms = mutableListOf<Double>()
+            val draws = mutableListOf<Int>()
+            var failed = 0
             for (day in 0 until 365) {
                 val seed = daySeed(day, Unblock.id, d)
                 val t0 = System.nanoTime()
-                val s = UnblockLogic.generateVerified(seed, d)!!
+                val k = (0 until UnblockLogic.ATTEMPTS).firstOrNull { UnblockLogic.attempt(seed, d, it) != null }
                 ms += (System.nanoTime() - t0) / 1e6
+                if (k == null) { failed++; continue }
+                draws += k + 1
+                val s = UnblockLogic.attempt(seed, d, k)!!
                 pars += s.par
                 cars += s.cars.size
             }
             ms.sort()
+            draws.sort()
             val mean = pars.average()
             report.append(
-                "${d.name}: par min ${pars.min()} mean ${"%.1f".format(mean)} max ${pars.max()}; cars mean ${"%.1f".format(cars.average())}; " +
+                "${d.name}: failed $failed; draws median ${draws[draws.size / 2]} max ${draws.last()}; " +
+                    "par min ${pars.min()} mean ${"%.1f".format(mean)} max ${pars.max()}; cars mean ${"%.1f".format(cars.average())}; " +
                     "ms median ${"%.1f".format(ms[ms.size / 2])} p95 ${"%.1f".format(ms[ms.size * 95 / 100])} max ${"%.1f".format(ms.last())}\n",
             )
-            assertTrue("${d.name} mean par $mean after $last", mean > last)
-            last = mean
         }
         File("build/reports").mkdirs()
         File("build/reports/unblock-tiers.txt").writeText(report.toString())
         println(report)
+        assertTrue(report.toString(), !report.contains(Regex("failed [1-9]")))
+        assertTrue(report.toString(), report.lines().filter { it.isNotBlank() }.map { Regex("mean ([0-9.]+) max").find(it)!!.groupValues[1].toDouble() }.zipWithNext().all { (a, b) -> b > a })
     }
 }

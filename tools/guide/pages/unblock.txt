@@ -1,0 +1,35 @@
+# Unblock
+> Slide the cars aside and drive the red one out
+
+## How to play
+
+Drag a car to slide it. A car only slides along its length, forwards or back, and stops at the first car or wall in its way. Let go and it settles on the nearest square.
+
+Any slide, however far, is one move. The line over the yard counts your moves against the board's par: the fewest moves it can be done in. There is no move limit, and Undo takes a slide back.
+
+The red car carries an arrow pointing to the exit, so you never have to go by colour alone.
+
+On a keyboard, the arrow keys pick a car, and Shift with an arrow slides it one square. Each press is a move.
+
+Stuck? The first tap on Hint says where to look, and the second names the slide and what it frees. You make the move yourself, unless you ask for "Show me". A hint is always the first move of a shortest way out from where you are now, so following hints from the start finishes in par.
+
+Nothing you do can lose a board: any slide can be slid back. A slide that makes the way longer is just a longer way, never a mistake.
+
+## Rules
+
+- Get the red car out through the exit on the right of its row.
+- A car only slides along its length, over empty squares.
+
+## What changes per tier
+
+- Standard: 10 or 11 cars, par 6 to 10.
+- Hard: 12 or 13 cars, par 13 to 18. More of them are trucks, three squares long.
+- Expert: 13 or 14 cars, par 22 or more. Three trucks on every board.
+
+## Techniques
+
+These are the steps the hints teach. On each board, R is the red car and each other letter is one car; the exit is on the right of the third row. The tinted car is the one to slide, and the filled squares are where it ends up. Every board here is a real position from the game, and this is the step the hint gives on it.
+
+### exit | Driving the red car out
+
+When nothing stands between the red car and the exit, drive it out: that's the last move.

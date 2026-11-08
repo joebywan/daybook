@@ -191,7 +191,21 @@ class GuideTest {
         "sets" to ::setsStep,
         "tower" to ::towerStep,
         "sand" to ::sandStep,
+        "unblock" to ::unblockStep,
     )
+
+    /** A yard: `R` the red car, any other token one car (its squares in a line), `.` empty. */
+    private fun unblockStep(b: Board): TeachStep? {
+        val tokens = b.rows.flatten()
+        val names = listOf("R") + tokens.filter { it != "." && it != "R" }.distinct()
+        val cars = names.map { t ->
+            val sq = tokens.indices.filter { tokens[it] == t }
+            val across = sq.size > 1 && sq[1] == sq[0] + 1
+            com.joebywan.daybook.puzzles.UnblockCar(sq[0] / b.width, sq[0] % b.width, sq.size, across)
+        }
+        assertTrue("${b.technique}: a legal yard", com.joebywan.daybook.puzzles.UnblockLogic.isLegal(cars))
+        return com.joebywan.daybook.puzzles.UnblockTeacher.deduce(cars)
+    }
 
     /** A step's squares as a board draws them, for a teacher whose highlights are not all squares (or whose move is a line). */
     private class Drawn(override val technique: String, override val focus: Set<Int>, override val targets: Set<Int> = emptySet()) : TeachStep {
@@ -949,7 +963,7 @@ class GuideTest {
         val anyCase = listOf(
             "minesweeper", "masyu", "killer sudoku", "rullo", "akari", "wordle", "kakuro", "number sums", "hashiwokakero",
             "hashi", "takuzu", "binairo", "einstein", "zebra puzzle", "fill-a-pix", "nikoli", "new york times", "nyt",
-            "wordscapes", "water sort",
+            "wordscapes", "water sort", "rush hour", "unblock me",
         )
         for (p in pages) {
             for (word in exact) assertTrue("${p.id} says $word", !Regex("\\b$word\\b").containsMatchIn(p.text))

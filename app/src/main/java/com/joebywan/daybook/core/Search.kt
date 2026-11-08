@@ -19,11 +19,6 @@ sealed interface SearchVerdict<out M> {
 /** What [Search.shortest] makes of a position it reaches: a goal, one to search on from, or one to leave alone. */
 enum class Reached { GOAL, EXPAND, DROP }
 
-/** Every position [Search.reach] found, in breadth-first order, each with its distance from the nearest start. */
-class Reach<P>(val positions: List<P>, val distance: IntArray) {
-    val farthest: Int get() = distance.maxOrNull() ?: -1
-}
-
 /**
  * Breadth-first search over positions, shared by the puzzles whose boards are a few thousand positions apart (Sand's
  * plan line, Unblock's minimum). A position's key decides whether it was seen; the set is membership only, and positions
@@ -84,31 +79,5 @@ object Search {
         }
         path.reverse()
         return SearchVerdict.Solvable(path)
-    }
-
-    /**
-     * Every position reachable from [starts] by [moves], breadth first, with its distance from the nearest start: the
-     * whole space when the moves can be undone (Unblock's yard), or null when it holds more than [budget] positions.
-     */
-    fun <P, K> reach(starts: List<P>, budget: Int, key: (P) -> K, moves: (P, (P) -> Unit) -> Unit): Reach<P>? {
-        val seen = HashSet<K>() // membership only
-        val positions = ArrayList<P>()
-        val distance = ArrayList<Int>()
-        for (s in starts) if (seen.add(key(s))) { positions.add(s); distance.add(0) }
-        if (positions.size > budget) return null
-        var head = 0
-        var over = false
-        while (head < positions.size && !over) {
-            val at = head++
-            val d = distance[at] + 1
-            moves(positions[at]) { child ->
-                if (over || !seen.add(key(child))) return@moves
-                if (seen.size > budget) { over = true; return@moves }
-                positions.add(child)
-                distance.add(d)
-            }
-        }
-        if (over) return null
-        return Reach(positions, distance.toIntArray())
     }
 }
