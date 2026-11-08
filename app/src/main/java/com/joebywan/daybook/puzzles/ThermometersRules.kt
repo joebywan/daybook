@@ -64,8 +64,10 @@ data class ThermometersState(
  * it, so the hints never run out.
  *
  * ## Tiers
- * Size, and the deepest rung a board must need ([depth]): Standard 5x5 is finished by rungs 1-2, Hard 6x6 needs a
- * tube's least or most in a line, Expert 8x8 needs a what-if. A draw needing more or less is redrawn.
+ * Size, tube length, and the deepest rung a board must need ([depth]): Standard 5x5 is finished by the lines and a
+ * tip that cannot fill ([TIPS]), Hard 6x6 needs a bulb that must fill ([BULBS]), Expert 8x8 needs a what-if. A draw
+ * needing more or less is redrawn, and so is one with a line counting 0 or every square: such a line gives itself away
+ * (Tally's rule), and without them no board is finished by full and empty lines alone, so tips are where every board starts.
  */
 internal object ThermometersLogic {
 
@@ -156,7 +158,7 @@ internal object ThermometersLogic {
         } else {
             val low = s.marks[index] == CROSSED && (k == 0 || s.marks[tube[k - 1]] != CROSSED)
             for ((p, i) in tube.withIndex()) {
-                if (p > k || (p == k && !low)) next[i] = CROSSED
+                if (p >= k && !low) next[i] = CROSSED
                 else if (next[i] == CROSSED) next[i] = UNMARKED
             }
         }
@@ -452,27 +454,28 @@ internal object ThermometersLogic {
 
     // ---- generation -------------------------------------------------------------------------
 
-    const val SHORTCUTS = 0
-    const val BOUNDS = 1
+    /** Tiers' rungs: lines and tips ([AT_MOST] and simpler), bulbs ([AT_LEAST]), a what-if. */
+    const val TIPS = 0
+    const val BULBS = 1
     const val WHAT_IF = 2
 
     /** Side, the tubes' lengths, their chance of keeping straight (percent), and the deepest rung a board must need. */
     class Spec(val side: Int, val minLength: Int, val maxLength: Int, val straight: Int, val needs: Int)
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
-        Difficulty.STANDARD -> Spec(5, 2, 4, 50, SHORTCUTS)
-        Difficulty.HARD -> Spec(6, 2, 5, 45, BOUNDS)
-        Difficulty.EXPERT -> Spec(8, 2, 6, 40, WHAT_IF)
+        Difficulty.STANDARD -> Spec(5, 2, 4, 50, TIPS)
+        Difficulty.HARD -> Spec(6, 3, 6, 40, BULBS)
+        Difficulty.EXPERT -> Spec(8, 4, 8, 30, WHAT_IF)
     }
 
-    /** The deepest rung [s] needs from a blank board ([SHORTCUTS], [BOUNDS] or [WHAT_IF]), or null when the ladder does not finish it. */
+    /** The deepest rung [s] needs from a blank board ([TIPS], [BULBS] or [WHAT_IF]), or null when the ladder does not finish it. */
     fun depth(s: ThermometersState): Int? {
         val l = layout(s)
         val targets = targets(s)
         val blank = IntArray(s.size * s.size)
         fun finished(g: IntArray?) = g != null && g.none { it == OPEN }
-        if (finished(solveBy(l, targets, blank, ROOM))) return SHORTCUTS
-        if (finished(solveBy(l, targets, blank, AT_LEAST))) return BOUNDS
+        if (finished(solveBy(l, targets, blank, AT_MOST))) return TIPS
+        if (finished(solveBy(l, targets, blank, AT_LEAST))) return BULBS
         return if (finished(settle(l, targets, blank).first)) WHAT_IF else null
     }
 
@@ -497,9 +500,10 @@ internal object ThermometersLogic {
 
     /** Whether [s] may ship at [spec]: the ladder finishes it, needing exactly the tier's deepest rung, and it has one answer. */
     fun accepts(s: ThermometersState, spec: Spec): Boolean {
-        if (depth(s) != spec.needs) return false
+        // The count first: it is the cheaper of the two, and most draws fail it.
         val verdict = countSolutions(s.size, s.tubes, targets(s))
-        return verdict is Verdict.ExactlyOne && verdict.value == s.fill
+        if (verdict !is Verdict.ExactlyOne || verdict.value != s.fill) return false
+        return depth(s) == spec.needs
     }
 
     /** A random tiling by tubes and a random level for each, or null when a square was left that no tube could take. */
@@ -508,6 +512,8 @@ internal object ThermometersLogic {
         val tubes = layTubes(rng, n, spec) ?: return null
         val fill = CharArray(n * n) { '0' }
         for (tube in tubes) for (p in 0 until rng.nextInt(0, tube.size)) fill[tube[p]] = '1'
+        // A line with nothing filled, or everything, gives itself away (as Tally's do).
+        for (line in 0 until 2 * n) if (lineCells(n, line).count { fill[it] == '1' } !in 1 until n) return null
         return ThermometersState(n, tubes, fill.concatToString())
     }
 
@@ -516,7 +522,7 @@ internal object ThermometersLogic {
      * ([bentWalk], Pointers' arrow bodies); a walk that cannot leave its square is left bare and later joins the end
      * of a tube beside it. Each tube is turned bulb-first at random, then the tubes are put in their bulbs' order.
      */
-    private fun layTubes(rng: Rng, n: Int, spec: Spec): List<List<Int>>? {
+    fun layTubes(rng: Rng, n: Int, spec: Spec): List<List<Int>>? {
         val owner = IntArray(n * n) { -1 }
         val tubes = ArrayList<MutableList<Int>>()
         for (start in rng.shuffled((0 until n * n).toList())) {
@@ -543,9 +549,31 @@ internal object ThermometersLogic {
 
     /**
      * Only when none of [ATTEMPTS] draws was accepted, which a year of daily seeds on every tier never reaches
-     * (`FallbackTest`). A fixed board per tier, which `ThermometersRulesTest` proves is accepted at its tier.
+     * (`FallbackTest`). A fixed board per tier: the first seed from 1 whose first draw the tier accepts (Standard 57,
+     * Hard 13, Expert 21), which `ThermometersRulesTest` proves is accepted at its tier.
      */
-    fun lastResort(difficulty: Difficulty): ThermometersState = LAST_RESORT.getValue(difficulty)
-
-    private val LAST_RESORT: Map<Difficulty, ThermometersState> by lazy { emptyMap() }
+    fun lastResort(difficulty: Difficulty): ThermometersState = when (difficulty) {
+        Difficulty.STANDARD -> ThermometersState(
+            5,
+            listOf(listOf(2, 7, 8, 9), listOf(3, 4), listOf(6, 1, 0, 5), listOf(11, 10, 15), listOf(12, 13, 18), listOf(14, 19, 24), listOf(16, 17), listOf(20, 21, 22, 23)),
+            "1101001000001110111111000",
+        )
+        Difficulty.HARD -> ThermometersState(
+            6,
+            listOf(
+                listOf(1, 0, 6, 7), listOf(4, 10, 11, 5), listOf(8, 9, 3, 2), listOf(12, 18, 19, 13), listOf(14, 15, 16, 17, 23),
+                listOf(22, 21, 27, 33), listOf(29, 28, 34, 35), listOf(30, 24, 25, 31), listOf(32, 26, 20),
+            ),
+            "001110001110001100000110111011111000",
+        )
+        Difficulty.EXPERT -> ThermometersState(
+            8,
+            listOf(
+                listOf(0, 8, 16, 17, 25), listOf(1, 2), listOf(7, 15, 14, 6, 5, 13, 12, 4), listOf(9, 10, 11, 3), listOf(19, 27, 26, 18),
+                listOf(29, 37, 38, 30, 22, 21, 20), listOf(33, 41), listOf(34, 42, 50, 49, 48, 40, 32, 24), listOf(35, 36, 28),
+                listOf(39, 31, 23), listOf(43, 51), listOf(44, 45, 46, 47, 55, 54, 53), listOf(52, 60, 59, 58, 57, 56), listOf(61, 62, 63),
+            ),
+            "1100011110001111000101110000011101111111001011110000101100000100",
+        )
+    }
 }

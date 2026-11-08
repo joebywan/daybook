@@ -172,8 +172,8 @@ private val NOTES: Map<String, List<String>> = mapOf(
     ),
     "thermometers" to listOf(
         "A filled square fills everything below it, down to the bulb.",
-        "A line needing one more takes at most one square from a thermometer.",
-        "A line counting 0 leaves each thermometer in it empty to its tip.",
+        "A line needing one more takes at most one from each thermometer.",
+        "An empty square leaves everything above it empty too.",
         "Count the open squares the other thermometers leave in a line.",
     ),
     "sand" to listOf(

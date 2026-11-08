@@ -34,6 +34,14 @@ class ThermometersTeachingTest {
             else if (s.fill[it] == '1') ThermometersLogic.FILLED else ThermometersLogic.CROSSED
         }))
 
+    /** A random small board: the real generator's tubes at a made-up spec, levels drawn here, giveaway lines allowed. */
+    private fun smallBoard(rng: Rng, n: Int): ThermometersState? {
+        val tubes = ThermometersLogic.layTubes(rng, n, ThermometersLogic.Spec(n, 2, n, 50, ThermometersLogic.TIPS)) ?: return null
+        val fill = CharArray(n * n) { '0' }
+        for (tube in tubes) for (p in 0 until rng.nextInt(0, tube.size)) fill[tube[p]] = '1'
+        return ThermometersState(n, tubes, fill.concatToString())
+    }
+
     private fun deduce(s: ThermometersState) = ThermometersTeacher.deduce(s.size, s.tubes, ThermometersLogic.targets(s), s.marks)
 
     // ---- soundness on real boards ---------------------------------------------------------------
@@ -106,7 +114,7 @@ class ThermometersTeachingTest {
         var whatIfs = 0
         for (n in listOf(3, 4, 5)) {
             repeat(200) {
-                val base = ThermometersLogic.draw(rng, ThermometersLogic.Spec(n, 2, n, 50, ThermometersLogic.SHORTCUTS)) ?: return@repeat
+                val base = smallBoard(rng, n) ?: return@repeat
                 val targets = ThermometersLogic.targets(base)
                 val all = ThermometersOracle.answers(n, base.tubes, targets.take(n), targets.drop(n))
                 if (all.size > 1) ambiguous++
@@ -178,10 +186,9 @@ class ThermometersTeachingTest {
                 used += step.technique
                 s = applied(s, step)
             }
-            val bounds = ThermometersTeacher.AT_MOST in used || ThermometersTeacher.AT_LEAST in used
             when (d) {
-                Difficulty.STANDARD -> assertTrue("$d/$seed used $used", !bounds && ThermometersTeacher.WHAT_IF !in used)
-                Difficulty.HARD -> assertTrue("$d/$seed used $used", bounds && ThermometersTeacher.WHAT_IF !in used)
+                Difficulty.STANDARD -> assertTrue("$d/$seed used $used", ThermometersTeacher.AT_LEAST !in used && ThermometersTeacher.WHAT_IF !in used)
+                Difficulty.HARD -> assertTrue("$d/$seed used $used", ThermometersTeacher.AT_LEAST in used && ThermometersTeacher.WHAT_IF !in used)
                 Difficulty.EXPERT -> assertTrue("$d/$seed used $used", ThermometersTeacher.WHAT_IF in used)
             }
         }

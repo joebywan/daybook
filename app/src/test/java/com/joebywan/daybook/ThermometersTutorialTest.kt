@@ -27,7 +27,7 @@ class ThermometersTutorialTest {
         val s = Thermometers.tutorial.first().state as ThermometersState
         val (rows, cols) = countsOf(s)
         assertEquals(listOf(s.fill), ThermometersOracle.answers(4, s.tubes, rows, cols))
-        assertEquals(ThermometersLogic.SHORTCUTS, ThermometersLogic.depth(s))
+        assertEquals(ThermometersLogic.TIPS, ThermometersLogic.depth(s))
     }
 
     @Test

@@ -90,8 +90,8 @@ class ThermometersRulesTest {
         assertEquals("......#..", crossed.tap(3, ThermometersLogic.CROSSED).marks)
         // Crossing higher takes the crosses below back.
         assertEquals("x.....#..", crossed.tap(0, ThermometersLogic.CROSSED).marks)
-        // Filling over a cross takes the crosses it passes.
-        assertEquals("...#..#..", crossed.tap(3, ThermometersLogic.FILLED).let { it.marks })
+        // Filling over a cross fills through it; a cross above the fill stays.
+        assertEquals("x..#..#..", crossed.tap(3, ThermometersLogic.FILLED).marks)
         assertSame("a tap that changes nothing is the same state", crossed, crossed.paint(listOf(0), ThermometersLogic.CROSSED))
     }
 
@@ -105,9 +105,13 @@ class ThermometersRulesTest {
 
     // ---- the ladder against the oracle -------------------------------------------------------------
 
-    /** A random small board by the real generator's layout at a made-up spec. */
-    private fun smallBoard(rng: Rng, n: Int): ThermometersState? =
-        ThermometersLogic.draw(rng, ThermometersLogic.Spec(n, 2, n, 50, ThermometersLogic.SHORTCUTS))
+    /** A random small board: the real generator's tubes at a made-up spec, levels drawn here, giveaway lines allowed. */
+    private fun smallBoard(rng: Rng, n: Int): ThermometersState? {
+        val tubes = ThermometersLogic.layTubes(rng, n, ThermometersLogic.Spec(n, 2, n, 50, ThermometersLogic.TIPS)) ?: return null
+        val fill = CharArray(n * n) { '0' }
+        for (tube in tubes) for (p in 0 until rng.nextInt(0, tube.size)) fill[tube[p]] = '1'
+        return ThermometersState(n, tubes, fill.concatToString())
+    }
 
     @Test
     fun `every fact the ladder finds holds in every answer the marks allow`() {

@@ -76,15 +76,15 @@ internal fun thermometersKeyAction(key: Key, shift: Boolean): PenKeyAction? = pe
  * Every board is dealt only if a person's ladder finishes it ([ThermometersLogic.accepts]) and an exhaustive count
  * proves one answer, so the hints teach that reasoning and never run out ([ThermometersTeacher]).
  *
- * Tiers differ in size (5x5, 6x6, 8x8) and in the deepest rung a board needs: Standard is finished by full and empty
- * lines alone, Hard needs what one thermometer can give a line, Expert a what-if.
+ * Tiers differ in size (5x5, 6x6, 8x8) and in the deepest rung a board needs: Standard is finished by lines and tips
+ * that cannot fill, Hard needs a bulb that must fill, Expert a what-if.
  */
 object Thermometers : PuzzleType {
 
     override val id = "thermometers"
     override val displayName = "Thermometers"
     override val tagline = "Fill each one from the bulb up"
-    override val accent = 0xFFC2603E
+    override val accent = 0xFFD062BA
 
     override val rules = listOf(
         "Each thermometer fills from its round bulb, with no gaps: a filled square has every square below it filled.",
@@ -101,15 +101,15 @@ object Thermometers : PuzzleType {
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
         ThermometersLogic.generateVerified(seed, difficulty) ?: ThermometersLogic.lastResort(difficulty)
 
-    /** The deepest technique the board needs from blank ([ThermometersLogic.depth]); null for full and empty lines alone. */
+    /** The deepest technique the board needs from blank ([ThermometersLogic.depth]); null when full and empty lines alone finish it (the walkthrough's board). */
     override fun neededTechnique(state: PuzzleState): String? {
         val s = state as ThermometersState
         return when (ThermometersLogic.depth(s)) {
-            ThermometersLogic.BOUNDS -> {
-                val l = ThermometersLogic.layout(s)
-                val done = ThermometersLogic.solveBy(l, ThermometersLogic.targets(s), IntArray(s.size * s.size), ThermometersLogic.AT_MOST)
-                if (done != null && done.none { it == ThermometersLogic.OPEN }) ThermometersTeacher.AT_MOST else ThermometersTeacher.AT_LEAST
+            ThermometersLogic.TIPS -> {
+                val lines = ThermometersLogic.solveBy(ThermometersLogic.layout(s), ThermometersLogic.targets(s), IntArray(s.size * s.size), ThermometersLogic.ROOM)
+                if (lines != null && lines.none { it == ThermometersLogic.OPEN }) null else ThermometersTeacher.AT_MOST
             }
+            ThermometersLogic.BULBS -> ThermometersTeacher.AT_LEAST
             ThermometersLogic.WHAT_IF -> ThermometersTeacher.WHAT_IF
             else -> null
         }
