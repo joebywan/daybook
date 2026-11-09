@@ -3,7 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.LexiconRules
 import com.joebywan.daybook.puzzles.LexiconTeacher
-import com.joebywan.daybook.puzzles.LexiconTeacher.Move
+import com.joebywan.daybook.puzzles.GuessTeacher.Move
 import com.joebywan.daybook.puzzles.WordList
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

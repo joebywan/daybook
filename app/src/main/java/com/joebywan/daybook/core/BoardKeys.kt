@@ -136,6 +136,20 @@ fun digitKey(key: Key): Int? =
 /** 'a'..'z' for a letter key, else null. */
 fun letterKey(key: Key): Char? = LETTER_KEYS.indexOf(key).takeIf { it >= 0 }?.let { 'a' + it }
 
+/**
+ * '+', '-', '*' or '/' for an arithmetic key, else null (Target and Equation). [shift] is whether Shift is held, since
+ * + and * are shifted on most keyboards: Shift+8 is *, Shift+= is +. X is * too.
+ */
+fun operatorKey(key: Key, shift: Boolean): Char? = when {
+    shift && digitKey(key) == 8 -> '*'
+    key == Key.Plus || key == Key.NumPadAdd -> '+'
+    key == Key.Equals && shift -> '+'
+    key == Key.Minus || key == Key.NumPadSubtract -> '-'
+    key == Key.NumPadMultiply || key == Key.X -> '*'
+    key == Key.Slash || key == Key.NumPadDivide -> '/'
+    else -> null
+}
+
 /** Enter, on the main block or the number pad. */
 fun isEnterKey(key: Key): Boolean = key == Key.Enter || key == Key.NumPadEnter
 

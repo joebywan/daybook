@@ -1,7 +1,6 @@
+- New puzzle: Equation. Find the hidden equation, one true sum at a time.
 - New puzzle: Unblock. Slide the cars aside and drive the red one out, in as few moves as par.
 - New puzzle: Thermometers. Fill each from its bulb so every row and column holds its count.
 - New puzzle: Loop. Draw one loop round the numbers, dot to dot.
-- All three come with a Training course and a guide page.
+- Each comes with a guide page; Unblock, Thermometers and Loop with a Training course too.
 - Pipes: real pipework, and water flows along it.
-- Tick/cross puzzles: double-tap or long-press for the other mark.
-- Sudoku, Cage Sudoku: pick a digit, then tap squares.

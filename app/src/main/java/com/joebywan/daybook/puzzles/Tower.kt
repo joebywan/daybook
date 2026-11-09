@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.GuessMarks
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.keepClear
 import com.joebywan.daybook.core.highlightAnchor
@@ -437,7 +438,7 @@ object Tower : PuzzleType {
         val feel = rememberMoveFeel(
             List(s.maxGuesses * s.slots) { s.guesses.getOrNull(it / s.slots)?.get(it % s.slots) },
             rows,
-            { Tones.step(s.guesses.lastOrNull()?.let { s.score(it).let { f -> LexiconMark.step(2 * f.exact + f.misplaced, s.slots) } } ?: 0) },
+            { Tones.step(s.guesses.lastOrNull()?.let { s.score(it).let { f -> GuessMarks.step(2 * f.exact + f.misplaced, s.slots) } } ?: 0) },
         ) { it < s.guesses.size }
 
         // A phone's width at most: on a tablet or a wide window the rows would otherwise stretch across the whole box.

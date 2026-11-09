@@ -531,6 +531,7 @@ techniques no walk reached.
 | Sand | 2: gather, spare (finish not praised; plan never reached) | — | — | excluded: two thin rungs, and a pour is reversible, so a practice could hardly ever be wrong |
 | Tower | 8 named, but every walk reaches the guess fallback right after the opener: the reasoning rungs need a guess history scored against the hidden code | — | — | excluded for now: needs its own walk that plays consistent guesses |
 | Lexicon | 5 named; the walk sticks after the opener and the rungs are vocabulary | — | — | excluded: knowledge |
+| Equation | 1: pinned symbol (98 / 98 / 85 pin steps in a year's 365 hint walks a tier); opener, submit, best guess and one left point at a guess (not praised) | — | — | excluded: one rung, as Sets |
 | Word Wheel | 2: pinned, crossing, but 27-29 of 30 walks fall back to a clue's answer | — | — | excluded: knowledge |
 | Mini | 3 named; every walk falls back at once (clues) | — | — | excluded: knowledge |
 | Codeword | 4: one word, run agrees, crossing, all words, all reached | — | — | excluded: every rung is "which words fit", against a word list the player cannot see |

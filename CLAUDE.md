@@ -134,6 +134,54 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
 - The typed row and the "Not in the word list" note are `remember` state, never `PuzzleState`; the note sits in
   the header line whose room is always reserved, so a refusal cannot move the board.
 
+## Equation (an equation codebreaker)
+
+Lexicon with sums: a true equation such as `12+35=47` is hidden; every guess must be a true equation of the same length, and
+each symbol is marked as Lexicon's letters are. Never "Nerdle" where a player sees it. `puzzles/EquationRules.kt` (state,
+`EquationLogic`: the rules, the enumeration, boards), `EquationTeacher.kt` (Lexicon's ladder, Equation's words),
+`EquationKeys.kt`, `Equation.kt` (walkthrough, motif). `id = "equation"` is hashed into every seed: never rename it.
+
+- **It runs on Lexicon's machinery, lifted, not copied**: `core/GuessMarks.kt` (the marker over any alphabet, scanning for
+  the first unmatched copy, so no table is indexed by symbol), `puzzles/GuessRows.kt` (the state shape, its mutators,
+  `GuessKeyAction`, the walkthrough's typing frames), `GuessTeacher.kt` (the ladder; each game supplies a `GuessVocab`:
+  alphabet, what may be submitted, the answers, its words), `GuessBoard.kt` (rows over a keyboard; a game gives its key
+  rows and how a symbol is shown), `core/DailyCycle.kt` and `SeedHash.cycleDay` (the no-repeat daily cycle). Lexicon moved
+  onto all of it with every board, mark, hint text and save unchanged (its `BoardPinTest` line and tests untouched).
+  Codebreaker keeps its own peg scoring (`TowerTeacher.score`): a peg count is not a per-slot mark.
+- **The rules, decided 2026-11-08:** one `=`, a plain number after it; at least one of `+ - * /` before it; `*` and `/`
+  before `+` and `-`, each left to right; **every `/` comes out whole** within its term (`8/4*3=6` yes, `3/2*4=6` no); no
+  minus sign before a number and no negative result (a running total may dip: `1-5+6=2`); no leading zeros; a lone `0`
+  is a number in a guess (`5-5=0`), but **an answer never holds a lone 0, nor multiplies or divides by a lone 1** (`1*7/1=7` was a daily answer before
+  that screen), so guesses are wider than answers.
+  `EquationLogic.problem` says why a row is refused (header line, at most 30 characters, `EquationRulesTest`).
+- **The lists are enumerated on the device, not stored** (`EquationLogic.valid`, sorted, cached per length): left sides
+  built number by number with the running total and term, the last number solved for (a range for `+ - *`, the term's
+  divisors for `/`). 476 / 11,705 / 65,704 true equations of 6 / 7 / 8 symbols, 206 / 5,431 / 15,963 answers (pinned).
+  A fresh enumeration takes under 25 ms on the JVM for eight symbols (not measured in a browser). `EquationOracle` (test) tries every left side of 3 to 6 symbols and evaluates it by folding × and ÷ out
+  of a token list: the lists agree exactly, and `problem` agrees with it on every true row, every one-symbol change of a
+  sample and random rows. Changing a rule or the enumeration moves every board (`BoardPinTest`).
+- **Tiers: 6 / 7 / 8 symbols, six guesses each** (`EquationLogic.shape`). Measured (`EquationBalanceTest`, 100 days a tier):
+  a careful player (the hints) needs 2.7 / 3.1 / 3.0 guesses on average and never more than 4 / 6 / 5; a prober that also
+  spends guesses on equations that cannot win, 2.7 / 3.1 / 3.0. So length does not make a tier take more guesses; it
+  leaves more to work out by hand: 206 / 5,431 / 15,963 answers, and 4.8 / 24.0 / 27.6 still fitting after the opener on
+  average (medians 4 / 20 / 22, p90 10 / 49 / 59). Expert with five guesses was tried and dropped: the hints lost 2 of a
+  year's 365 boards.
+- **Daily answers go round Lexicon's cycle from the first day** (`SeedHash.EQUATION_CYCLE_FROM` = 2026-01-01; it never had
+  hashed daily seeds): no answer recurs within 206 / 5,431 / 15,963 days. Random and Levels draw an index.
+- **The teacher is Lexicon's**: mistake (a row that is not a true equation, with the reason; a probe is never a mistake),
+  opener (seven per length, measured best by the mean answers left, named outright since it says nothing), pinned symbol
+  (a fact about the marks, checked against every true equation that fits, lone zeros included), submit, then one left /
+  best guess, which read the answer list, say so, and give the equation's **shape** (signs and right side, `??+??=47`),
+  never its left-hand digits; only "Show me" types it. Measured (`EquationTeachingTest`, a year of daily boards a tier):
+  every board of a year solved on every tier, in 2.67 / 3.08 / 3.06 guesses; the fallback (one left, best guess) is
+  52 / 58 / 59% of steps and on almost every board, as Lexicon's is: choosing a guess is most of the game. Pins are
+  98 / 98 / 85 steps a year. The worst Expert hint (the first after the opener) takes about 4 ms. No Training course: its one praised rung is the pin (the rest point at a guess), and a one-rung ladder is
+  excluded (`docs/TRAINING_SPEC.md`, classification).
+- `solved` is the last guess equal to the answer (every guess is a true equation, so it is all greens). Highlight indices are
+  Lexicon's: tiles `row * length + slot`, key `GuessTeacher.KEY + ALPHABET.indexOf(c)`, Enter, Del.
+- Keys: digits, `+ - * /` (X is ×; Shift+= and Shift+8 work), `=`, Enter, Backspace (`operatorKey`, lifted from Target's keys).
+  Shown as + − × ÷ on the keys and tiles.
+
 ## Shikaku
 
 Cut the grid into rectangles, one number each, the number its area. `puzzles/Shikaku.kt` (state, generator, `countTilings`, board,
@@ -1083,7 +1131,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list; the lengths, 11 / 14 / 9, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths are 11 / 16 / 10, quick and words stay coprime and a test says so; a mid-weight list sharing a factor with their 110-day cycle skips a place at each turn of it), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
   **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
   once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,

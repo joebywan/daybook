@@ -7,8 +7,8 @@ import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.puzzles.ChessState
-import com.joebywan.daybook.puzzles.LexiconMark
-import com.joebywan.daybook.puzzles.LexiconState
+import com.joebywan.daybook.core.GuessMarks
+import com.joebywan.daybook.puzzles.GuessRows
 import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -38,12 +38,12 @@ object PlayLog {
 
     /**
      * What a push from [prev] to [next] adds to the log. A move is a change of board ([PuzzleType.sameBoard]), so picking
-     * a cell or a card is not one; in Lexicon and Tower only a submitted guess is (typing a letter or a peg is not), and in
+     * a cell or a card is not one; in Lexicon, Equation and Tower only a submitted guess is (typing a letter or a peg is not), and in
      * Target a push that takes operations back ("Show me" on a mistake) is that many undos.
      */
     fun step(puzzle: PuzzleType, prev: PuzzleState, next: PuzzleState): String = when {
         next is SetsState && next.lastWrong -> WRONG.toString()
-        next is LexiconState && prev is LexiconState -> if (next.guesses.size > prev.guesses.size) MOVE.toString() else ""
+        next is GuessRows<*> && prev is GuessRows<*> -> if (next.guesses.size > prev.guesses.size) MOVE.toString() else ""
         next is TowerState && prev is TowerState -> if (next.guesses.size > prev.guesses.size) MOVE.toString() else ""
         next is TargetState && prev is TargetState -> (next.log.size - prev.log.size).let {
             if (it > 0) MOVE.toString() else UNDO.toString().repeat(-it)
@@ -173,13 +173,13 @@ fun shareCard(
     // Every nudge below is for a solve without hints; one with them gets the same line whatever the puzzle.
     val own: String
     when (state) {
-        is LexiconState -> {
+        is GuessRows<*> -> {
             val guessed = state.guesses.size
             val hinted = hintedRows(guessed)
             suffix = " · $guessed/${state.maxGuesses}"
             lines = state.allMarks.mapIndexed { row, marks ->
                 ShareLine(marks.map {
-                    when (it) { LexiconMark.CORRECT -> Mark.GREEN; LexiconMark.PRESENT -> Mark.YELLOW; else -> Mark.WHITE }
+                    when (it) { GuessMarks.CORRECT -> Mark.GREEN; GuessMarks.PRESENT -> Mark.YELLOW; else -> Mark.WHITE }
                 }, hinted(row))
             }
             key = listOf(Mark.GREEN to "right place", Mark.YELLOW to "wrong place", Mark.RED to "hint")

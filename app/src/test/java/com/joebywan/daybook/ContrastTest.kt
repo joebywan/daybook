@@ -4,7 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import com.joebywan.daybook.core.PuzzleRegistry
-import com.joebywan.daybook.puzzles.Lexicon
+import com.joebywan.daybook.puzzles.GuessBoard
 import com.joebywan.daybook.ui.home.tileInk
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.theme.BoardHues.contrast
@@ -82,7 +82,7 @@ class ContrastTest {
     }
 
     @Test fun `Lexicon letters read on green and gold tiles`() {
-        for (m in listOf(Lexicon.LightMarks, Lexicon.DarkMarks)) for (f in listOf(m.correct, m.present)) for (c in listOf(f.from, f.to)) {
+        for (m in listOf(GuessBoard.LightMarks, GuessBoard.DarkMarks)) for (f in listOf(m.correct, m.present)) for (c in listOf(f.from, f.to)) {
             atLeast(4.5f, f.ink, c, "letter on a marked tile")
         }
     }

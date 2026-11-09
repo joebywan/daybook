@@ -10,6 +10,7 @@ import com.joebywan.daybook.puzzles.LampsState
 import com.joebywan.daybook.puzzles.ChessState
 import com.joebywan.daybook.puzzles.InequalityState
 import com.joebywan.daybook.puzzles.KingsState
+import com.joebywan.daybook.puzzles.EquationState
 import com.joebywan.daybook.puzzles.LexiconState
 import com.joebywan.daybook.puzzles.LitsState
 import com.joebywan.daybook.puzzles.MamboState
@@ -103,6 +104,7 @@ object ParityFingerprint {
         is PointersState -> "${s.width}x${s.height} arrows=" + s.arrows.joinToString(",") { it.joinToString(".") }
         is MinesState -> "${s.width}x${s.height} opening=${s.opening} mines=${s.mines} marks=${s.marks}"
         is LexiconState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer} opener=${s.opener}"
+        is EquationState -> "length=${s.length} max=${s.maxGuesses} answer=${s.answer} opener=${s.opener}"
         is CodewordState -> "${s.size}x${s.size} numbers=${s.numbers.joinToString(".")} solution=${s.solution.joinToString(".")} given=${s.given.joinToString(".")}"
         is MiniState -> "${s.size}x${s.size} answer=${s.answer} clues=${s.clues.joinToString("|")}"
         is CipherState -> "words=${s.words.joinToString(",")} solution=${s.solution.joinToString("")}"

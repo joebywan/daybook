@@ -45,6 +45,7 @@ import com.joebywan.daybook.puzzles.TargetTeacher
 import com.joebywan.daybook.puzzles.TentsTeacher
 import com.joebywan.daybook.puzzles.TowerTeacher
 import com.joebywan.daybook.puzzles.DwindleTeacher
+import com.joebywan.daybook.puzzles.EquationTeacher
 import com.joebywan.daybook.puzzles.WordWheelTeacher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -63,6 +64,7 @@ class TechniqueNamesTest {
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "dwindle" to DwindleTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
         "thermometers" to com.joebywan.daybook.puzzles.ThermometersTeacher.TECHNIQUES,
         "unblock" to com.joebywan.daybook.puzzles.UnblockTeacher.TECHNIQUES,
+        "equation" to EquationTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
         "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES, "loop" to LoopTeacher.TECHNIQUES,

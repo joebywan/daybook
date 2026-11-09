@@ -78,6 +78,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Open with common, different letters to learn the most.",
         "A guess that could still be the word can win on the spot.",
     ),
+    "equation" to listOf(
+        "Times and divide come before plus and minus: 2+3×4 is 14.",
+        "The = is in every equation once: find its place early.",
+        "A guess that can't be the answer can still sort the rest apart.",
+        "The right side is one number, so its length says a lot.",
+    ),
     "nonogram" to listOf(
         "If clues and gaps fill a line exactly, fill it completely.",
         "In a 10-square line, a 6 always fills the middle two squares.",

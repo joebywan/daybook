@@ -1,74 +1,13 @@
 package com.joebywan.daybook.puzzles
 
-import com.joebywan.daybook.ui.theme.vivid
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import com.joebywan.daybook.ui.theme.ArcadeBoard
-import com.joebywan.daybook.ui.theme.ArcadeFill
-import com.joebywan.daybook.ui.theme.arcadeGlow
-import com.joebywan.daybook.ui.theme.arcadeHardShadow
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.boardKeys
+import com.joebywan.daybook.core.GuessMarks
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
-import com.joebywan.daybook.core.TutorialStep
-import com.joebywan.daybook.core.Tones
-import com.joebywan.daybook.core.highlightAnchor
-import com.joebywan.daybook.core.highlightGrid
-import com.joebywan.daybook.core.keepClear
-import com.joebywan.daybook.ui.rememberHintPaint
-import com.joebywan.daybook.ui.HintLook
-import com.joebywan.daybook.ui.dimmed
-import com.joebywan.daybook.ui.look
-import com.joebywan.daybook.ui.ring
-import kotlinx.coroutines.delay
-import com.joebywan.daybook.ui.moveFeel
-import com.joebywan.daybook.ui.rememberMoveFeel
-import com.joebywan.daybook.ui.boardSp
 
 /**
  * Lexicon: Mastermind for words.
@@ -103,87 +42,17 @@ object Lexicon : PuzzleType {
 
     override fun generate(seed: Long, difficulty: Difficulty) = LexiconRules.newBoard(seed, difficulty)
 
-    // ---- colours ---------------------------------------------------------------------------------
-
-    /**
-     * The marks, on [ArcadeBoard]'s squares. Present is the board's own amber letter tile. Colour is never alone: right has an
-     * inset ring, present a corner dot ([markCue]), and absent is flat and lighter in weight. Right runs towards teal, so it
-     * keeps some blue a red-green eye can part from the amber. Measured in ArcadeBoardTest.
-     */
-    internal class Marks(val correct: ArcadeFill, val present: ArcadeFill, val absent: Color, val absentInk: Color)
-
-    internal val LightMarks = Marks(
-        ArcadeFill(Color(0xFF08854A), Color(0xFF00806E), Color.White),
-        ArcadeBoard.Light.letter,
-        Color(0xFF736D9A),
-        Color.White,
-    )
-    internal val DarkMarks = Marks(
-        ArcadeFill(Color(0xFF2BF08F), Color(0xFF00C2A8), Color(0xFF04231C), Color(0xFF00E5A0)),
-        ArcadeBoard.Dark.letter,
-        Color(0xFF6E68A0),
-        Color.White,
-    )
-
-    @Composable
-    @ReadOnlyComposable
-    private fun isDark() = ArcadeBoard.current === ArcadeBoard.Dark
-
-    @Composable
-    @ReadOnlyComposable
-    private fun marks() = if (isDark()) DarkMarks else LightMarks
-
-    /** Right's ring or present's dot, in the fill's ink; [unit] is the ring's stroke. Drawn, so it takes no room. */
-    private fun Modifier.markCue(mark: Int?, ink: Color, unit: Dp) = when (mark) {
-        LexiconMark.CORRECT -> drawBehind {
-            val w = unit.toPx()
-            drawRoundRect(ink, Offset(w * 1.5f, w * 1.5f), Size(size.width - w * 3, size.height - w * 3), CornerRadius(w * 2), style = Stroke(w))
-        }
-        LexiconMark.PRESENT -> drawBehind {
-            val r = unit.toPx() * 1.3f
-            drawCircle(ink, r, Offset(size.width - r * 2, r * 2))
-        }
-        else -> this
-    }
-
     // ---- the home tile ----------------------------------------------------------------------------
 
     /** Three scored rows, letters left out: the colours are the whole of what reads at 80dp. */
     private val previewRows = listOf(
-        listOf(LexiconMark.ABSENT, LexiconMark.PRESENT, LexiconMark.ABSENT, LexiconMark.ABSENT, LexiconMark.PRESENT),
-        listOf(LexiconMark.CORRECT, LexiconMark.ABSENT, LexiconMark.PRESENT, LexiconMark.CORRECT, LexiconMark.ABSENT),
-        listOf(LexiconMark.CORRECT, LexiconMark.CORRECT, LexiconMark.CORRECT, LexiconMark.CORRECT, LexiconMark.CORRECT),
+        listOf(GuessMarks.ABSENT, GuessMarks.PRESENT, GuessMarks.ABSENT, GuessMarks.ABSENT, GuessMarks.PRESENT),
+        listOf(GuessMarks.CORRECT, GuessMarks.ABSENT, GuessMarks.PRESENT, GuessMarks.CORRECT, GuessMarks.ABSENT),
+        listOf(GuessMarks.CORRECT, GuessMarks.CORRECT, GuessMarks.CORRECT, GuessMarks.CORRECT, GuessMarks.CORRECT),
     )
 
     @Composable
-    override fun Preview(modifier: Modifier) {
-        val m = marks()
-        // Sized from both axes, like every board: the tile is square-ish and its box is not.
-        BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-            val gap = 3.dp
-            val cell = minOf((maxWidth - gap * 4) / 5, (maxHeight - gap * 2) / 3).coerceAtLeast(0.dp)
-            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-                previewRows.forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        row.forEach { mark ->
-                            Box(
-                                Modifier
-                                    .size(cell)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .then(
-                                        when (mark) {
-                                            LexiconMark.CORRECT -> Modifier.background(m.correct.brush)
-                                            LexiconMark.PRESENT -> Modifier.background(m.present.brush)
-                                            else -> Modifier.background(m.absent)
-                                        }
-                                    )
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
+    override fun Preview(modifier: Modifier) = GuessBoard.PreviewRows(previewRows, modifier)
 
     // ---- the walkthrough ---------------------------------------------------------------------------
 
@@ -212,28 +81,9 @@ object Lexicon : PuzzleType {
         current = current,
     )
 
-    /**
-     * Guess [n] typed a letter at a time and then scored, in one frame: any start of the word is
-     * progress (a Backspace included), the word scored is the move, and anything else is refused.
-     */
-    private fun typeGuess(n: Int): (PuzzleState) -> TutorialStep = { next ->
-        val word = TUTORIAL_GUESSES[n]
-        when {
-            next !is LexiconState -> TutorialStep.REJECT
-            next.guesses == TUTORIAL_GUESSES.take(n + 1) && next.current.isEmpty() -> TutorialStep.DONE
-            next.guesses == TUTORIAL_GUESSES.take(n) && word.startsWith(next.current) -> TutorialStep.PROGRESS
-            else -> TutorialStep.REJECT
-        }
-    }
+    private fun typeGuess(n: Int) = GuessTutorial.typeGuess(TUTORIAL_GUESSES, n)
 
-    /** The next key to tap glows: the next letter of guess [n], then Enter. */
-    private fun keyGlow(n: Int): (PuzzleState) -> BoardHighlight = { s ->
-        val typed = (s as LexiconState).current
-        val word = TUTORIAL_GUESSES[n]
-        BoardHighlight(
-            strong = setOf(if (typed.length < word.length) LexiconTeacher.key(word[typed.length]) else LexiconTeacher.ENTER),
-        )
-    }
+    private fun keyGlow(n: Int) = GuessTutorial.keyGlow(TUTORIAL_GUESSES, n, LexiconTeacher::key)
 
     override val tutorial: List<TutorialFrame> by lazy {
         fun tiles(row: Int, vararg slots: Int) = slots.map { LexiconTeacher.tile(4, row, it) }.toSet()
@@ -283,338 +133,21 @@ object Lexicon : PuzzleType {
      * A mistake to take back or a step to reason out; see [LexiconTeacher]. The teacher is handed
      * the guesses and their marks, never the word.
      */
-    override fun teach(state: PuzzleState): Deduction? {
-        val s = state as LexiconState
-        if (!s.open) return null
-        val marks = s.allMarks
-        val step = LexiconTeacher.teach(s.length, s.guesses, marks, s.current, s.opener) ?: return null
-        val base = s
-        fun fits(word: String) = LexiconRules.consistent(word, base.guesses, marks)
-        fun newGuesses(now: LexiconState) = now.guesses.drop(base.guesses.size)
-        return Deduction(
-            step,
-            mistake = step.technique == LexiconTeacher.MISTAKE,
-            fallback = step.technique in LexiconTeacher.FALLBACKS,
-            applyTo = { now -> applyMove(now as LexiconState, step.move) },
-            reachedBy = { now ->
-                val t = now as LexiconState
-                when (val m = step.move) {
-                    is LexiconTeacher.Move.Retype ->
-                        t.current.length <= m.keep || newGuesses(t).isNotEmpty()
-                    is LexiconTeacher.Move.Open ->
-                        t.current.length == t.length || newGuesses(t).isNotEmpty()
-                    is LexiconTeacher.Move.Pin ->
-                        (t.current.length > m.slot && t.current[m.slot] == m.letter) ||
-                            newGuesses(t).any { it[m.slot] == m.letter }
-                    // Any whole row that fits the marks does: the suggestion was one of several.
-                    is LexiconTeacher.Move.Fill ->
-                        (t.current.length == t.length && fits(t.current)) || newGuesses(t).any(::fits)
-                    LexiconTeacher.Move.Submit -> newGuesses(t).isNotEmpty()
-                }
-            },
-        )
-    }
-
-    /** "Show me": the step, made on the board as it is now. One state, so one undo entry. */
-    private fun applyMove(s: LexiconState, move: LexiconTeacher.Move): LexiconState {
-        fun typed(word: String) = if (s.current == word) s else s.copy(current = word, moves = s.moves + 1)
-        return when (move) {
-            is LexiconTeacher.Move.Retype ->
-                if (s.current.length <= move.keep) s else s.copy(current = s.current.take(move.keep), moves = s.moves + 1)
-            is LexiconTeacher.Move.Open -> typed(move.word)
-            is LexiconTeacher.Move.Pin -> typed(move.word)
-            is LexiconTeacher.Move.Fill -> typed(move.word)
-            LexiconTeacher.Move.Submit -> s.submit()
-        }
-    }
+    override fun teach(state: PuzzleState): Deduction? = LexiconTeacher.deduction(state as LexiconState)
 
     // ---- drawing -----------------------------------------------------------------------------------
-
-    /** The best clue the board holds for each letter, a..z: a [LexiconMark], or -1 for a letter not yet tried. */
-    private fun keyMarks(s: LexiconState): IntArray {
-        val best = IntArray(26) { -1 }
-        s.guesses.forEach { guess ->
-            val marks = s.marks(guess)
-            guess.forEachIndexed { i, c -> if (marks[i] > best[c - 'a']) best[c - 'a'] = marks[i] }
-        }
-        return best
-    }
 
     private val keyRows = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
 
     @Composable
-    override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
-        val s = state as LexiconState
-        val scheme = MaterialTheme.colorScheme
-        val (highlight, glow, pulse) = rememberHintPaint()
-        val tilesNamed = highlight.strong.any { it < LexiconTeacher.KEY } || highlight.soft.any { it < LexiconTeacher.KEY }
-        val a = ArcadeBoard.current
-        val m = marks()
-        val playable = interactive && s.open
-
-        // Why Enter was refused. Transient UI state, so it lives here and not in the state:
-        // PlayScreen would otherwise make every refusal an undo step. It is shown in the header line,
-        // whose room is always reserved, so a refusal never moves the board.
-        var notice by remember { mutableStateOf<String?>(null) }
-        LaunchedEffect(notice) {
-            if (notice != null) {
-                delay(1600)
-                notice = null
-            }
-        }
-        LaunchedEffect(s.current, s.guesses.size) { notice = null }
-
-        fun press(action: LexiconKeyAction) {
-            if (!playable) return
-            when (action) {
-                is LexiconKeyAction.Letter -> s.withLetter(action.letter).takeIf { it != s }?.let(onState)
-                LexiconKeyAction.Backspace -> s.withoutLetter().takeIf { it != s }?.let(onState)
-                LexiconKeyAction.Enter -> {
-                    val why = LexiconRules.problem(s)
-                    if (why != null) notice = why else onState(s.submit())
-                }
-            }
-        }
-
-        // Grows past phone size on a tablet or a large window, from both axes (CLAUDE.md): 1 wherever the
-        // phone keyboard's 520dp cap does not bind on width or the box is under 640dp tall, so a phone in
-        // either orientation keeps its exact look; at most 1.5 (keys about 63dp tall, tiles up to 96dp).
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            val scale = minOf(maxWidth / MAX_KEYBOARD, maxHeight / SCALE_HEIGHT).coerceIn(1f, MAX_SCALE)
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp)
-                    .boardKeys(playable) { key, _, repeat ->
-                        // A held Backspace would eat the whole row, a held letter fill it.
-                        val action = lexiconKeyAction(key) ?: return@boardKeys false
-                        if (!repeat) press(action)
-                        true
-                    },
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                // One line, always laid out: the guesses left, or why Enter refused, or the word.
-                val line = when {
-                    notice != null -> notice!!
-                    s.failed -> "Out of guesses. The word was ${s.answer.uppercase()}."
-                    else -> "${s.maxGuesses - s.guesses.size} guesses left"
-                }
-                Text(
-                    line,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (notice != null || s.failed) a.error else scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    minLines = 1,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                )
-
-                // Sized from both axes (CLAUDE.md): the grid is the width, or the height left once the
-                // keyboard has its room, whichever binds. It never changes size, so a hint opening or a
-                // solve cannot move it.
-                // A guessed row settles as its marks land, and a row submitted is a unit: it glows along and plays a note
-                // as high as its marks landed (the marks are already showing, so the note tells nothing new).
-                val rows = remember(s.maxGuesses, s.length) { List(s.maxGuesses) { r -> IntArray(s.length) { r * s.length + it } } }
-                val feel = rememberMoveFeel(
-                    List(s.maxGuesses * s.length) { s.guesses.getOrNull(it / s.length)?.get(it % s.length) },
-                    rows,
-                    { Tones.step(s.guesses.lastOrNull()?.let { LexiconMark.step(s.marks(it).sum(), s.length) } ?: 0) },
-                ) { it < s.guesses.size }
-                BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    val cell = minOf(maxWidth / s.length, maxHeight / s.maxGuesses, MAX_CELL * scale).coerceAtLeast(0.dp)
-                    Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses).clip(RoundedCornerShape(8.dp)).background(a.frame)) {
-                        repeat(s.maxGuesses) { row ->
-                            Row {
-                                repeat(s.length) { slot ->
-                                    val guess = s.guesses.getOrNull(row)
-                                    val typing = row == s.guesses.size && s.open
-                                    val letter = guess?.get(slot) ?: if (typing) s.current.getOrNull(slot) else null
-                                    val mark = guess?.let { s.marks(it)[slot] }
-                                    val look = highlight.look(LexiconTeacher.tile(s.length, row, slot), dims = tilesNamed)
-                                    val place = when {
-                                        !typing -> TilePlace.PLAIN
-                                        letter != null -> if (notice != null) TilePlace.REFUSED else TilePlace.TYPED
-                                        slot == s.current.length -> TilePlace.NEXT
-                                        else -> TilePlace.ROW
-                                    }
-                                    Tile(letter, mark, place, cell, look, glow, pulse, Modifier.moveFeel(feel, row * s.length + slot, vivid(accent)))
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                val known = keyMarks(s)
-                Column(
-                    Modifier.widthIn(max = MAX_KEYBOARD * scale).fillMaxWidth().keepClear().padding(bottom = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(KEY_GAP * scale),
-                ) {
-                    keyRows.forEachIndexed { r, letters ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KEY_GAP * scale)) {
-                            // The nine-key row is centred under the ten above it.
-                            if (r == 1) Spacer(Modifier.weight(0.5f))
-                            if (r == 2) {
-                                KeyButton("Del", Modifier.weight(1.5f), playable, LexiconTeacher.DELETE, highlight, glow, pulse,
-                                    a.control.brush, a.control.ink, a.control.glow, null, small = true, scale) {
-                                    press(LexiconKeyAction.Backspace)
-                                }
-                            }
-                            letters.forEach { c ->
-                                val mark = known[c - 'a']
-                                val fill = when (mark) {
-                                    -1 -> SolidColor(a.given)
-                                    LexiconMark.ABSENT -> SolidColor(m.absent)
-                                    LexiconMark.CORRECT -> m.correct.brush
-                                    else -> m.present.brush
-                                }
-                                val text = when (mark) {
-                                    -1 -> a.givenInk
-                                    LexiconMark.ABSENT -> m.absentInk
-                                    LexiconMark.CORRECT -> m.correct.ink
-                                    else -> m.present.ink
-                                }
-                                val lift = when (mark) {
-                                    LexiconMark.CORRECT -> m.correct.glow
-                                    LexiconMark.PRESENT -> m.present.glow
-                                    else -> null
-                                }
-                                KeyButton(c.uppercase(), Modifier.weight(1f), playable, LexiconTeacher.key(c), highlight, glow, pulse,
-                                    fill, text, lift, mark, small = false, scale) {
-                                    press(LexiconKeyAction.Letter(c))
-                                }
-                            }
-                            if (r == 1) Spacer(Modifier.weight(0.5f))
-                            if (r == 2) {
-                                KeyButton("Enter", Modifier.weight(1.5f), playable, LexiconTeacher.ENTER, highlight, glow, pulse,
-                                    a.control.brush, a.control.ink, a.control.glow, null, small = true, scale) {
-                                    press(LexiconKeyAction.Enter)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private val MAX_CELL = 64.dp
-    private val SCALE_HEIGHT = 640.dp
-    private const val MAX_SCALE = 1.5f
-    private val MAX_KEYBOARD = 520.dp
-    private val KEY_GAP = 5.dp
-    private val KEY_HEIGHT = 42.dp
-
-    /** Where an unmarked square stands: the row being typed is one strip, its next square amber, a refused word red. */
-    private enum class TilePlace { PLAIN, ROW, NEXT, TYPED, REFUSED }
-
-    /** One square of the grid: a typed letter, a marked one, or an empty square. */
-    @Composable
-    private fun Tile(
-        letter: Char?,
-        mark: Int?,
-        place: TilePlace,
-        cell: Dp,
-        look: HintLook,
-        glow: Color,
-        pulse: State<Float>,
-        modifier: Modifier = Modifier,
-    ) {
-        val a = ArcadeBoard.current
-        val m = marks()
-        val shape = RoundedCornerShape(6.dp)
-        val corner = 6.dp
-        val fill: ArcadeFill? = when {
-            mark == LexiconMark.CORRECT -> m.correct
-            mark == LexiconMark.PRESENT -> m.present
-            mark != null -> null
-            place == TilePlace.TYPED -> a.control
-            place == TilePlace.NEXT -> a.selected
-            else -> null
-        }
-        val ink = fill?.ink ?: when {
-            mark != null -> m.absentInk
-            place == TilePlace.REFUSED -> a.errorInk
-            else -> a.squareInk
-        }
-        Box(
-            Modifier
-                .size(cell)
-                .then(modifier)
-                .padding(2.dp)
-                .ring(look, glow, pulse, corner, outside = true)
-                // A dimmed tile fades to a square, not to the dark frame behind it.
-                .background(a.square, shape)
-                .dimmed(look)
-                .then(fill?.glow?.let { Modifier.arcadeGlow(it, corner, reach = 2.dp) } ?: Modifier)
-                .clip(shape)
-                .then(
-                    when {
-                        fill != null -> Modifier.background(fill.brush)
-                        mark != null -> Modifier.background(m.absent)
-                        place == TilePlace.REFUSED -> Modifier.background(a.error)
-                        place == TilePlace.ROW -> Modifier.background(a.given)
-                        else -> Modifier.background(a.square)
-                    }
-                )
-                .then(if (place == TilePlace.NEXT) Modifier.border(2.dp, a.selectedEdge, shape) else Modifier)
-                // A refused word has right's kind of ring in red's own ink, so it is more than a change of hue.
-                .markCue(if (place == TilePlace.REFUSED) LexiconMark.CORRECT else mark, ink, 2.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (letter != null) {
-                Text(
-                    letter.uppercase(),
-                    fontSize = (cell * 0.46f).boardSp(), lineHeight = (cell * 0.46f).boardSp() * 1.2f,
-                    fontWeight = if (mark == LexiconMark.ABSENT) FontWeight.Medium else FontWeight.Bold,
-                    color = ink,
-                )
-            }
-        }
-    }
-
-    /** One key of the on-screen keyboard. [index] is what a hint names it by; [mark] its best clue, or null for Del and Enter. */
-    @Composable
-    private fun KeyButton(
-        label: String,
-        modifier: Modifier,
-        enabled: Boolean,
-        index: Int,
-        highlight: BoardHighlight,
-        glow: Color,
-        pulse: State<Float>,
-        fill: Brush,
-        text: Color,
-        lift: Color?,
-        mark: Int?,
-        small: Boolean,
-        scale: Float,
-        onClick: () -> Unit,
-    ) {
-        val shape = RoundedCornerShape(6.dp)
-        Box(
-            modifier
-                .height(KEY_HEIGHT * scale)
-                .highlightAnchor(index)
-                .ring(highlight.look(index, dims = false), glow, pulse, 6.dp, outside = true)
-                // Inside the keys' gap: a glow where dark gives one, else light's sticker edge.
-                .then(if (lift != null) Modifier.arcadeGlow(lift, 6.dp, reach = 2.dp) else if (!isDark()) Modifier.arcadeHardShadow(6.dp, drop = 2.dp) else Modifier)
-                .clip(shape)
-                .background(fill)
-                .markCue(mark, text, 1.25.dp)
-                .clickable(enabled = enabled, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                label,
-                fontSize = (if (small) 12.dp else 16.dp).times(scale).boardSp(),
-                lineHeight = (if (small) 14.dp else 19.dp).times(scale).boardSp(),
-                fontWeight = if (mark == LexiconMark.ABSENT) FontWeight.Normal else FontWeight.SemiBold,
-                textDecoration = if (mark == LexiconMark.ABSENT) TextDecoration.LineThrough else null,
-                color = text,
-                maxLines = 1,
-            )
-        }
-    }
+    override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) = GuessBoard.Board(
+        state as LexiconState, onState, interactive, accent,
+        alphabet = LexiconTeacher.vocab.alphabet,
+        keyRows = keyRows,
+        label = { it.uppercase() },
+        keyAction = { key, _ -> lexiconKeyAction(key) },
+        shift = false,
+        problem = LexiconRules::problem,
+        lost = { "Out of guesses. The word was ${it.answer.uppercase()}." },
+    )
 }

@@ -1,47 +1,29 @@
 package com.joebywan.daybook.puzzles
 
-import com.joebywan.daybook.core.listed
-import com.joebywan.daybook.core.TeachStep
-
 /**
- * Lexicon, reasoned the way a person reasons it: from the marks already on the board.
+ * Lexicon, reasoned the way a person reasons it: from the marks already on the board. The ladder is the shared
+ * [GuessTeacher] (mistake, opener, pin, submit, only word, best guess); this file is Lexicon's words for it.
  *
- * [teach] is handed exactly what the player sees: the guesses, the marks each drew, and the row
- * being typed. It has no parameter through which the hidden word could reach it, so a step cannot
- * lean on the answer, and it never needs it: a row that cannot be submitted is a mistake whatever
- * the word is, and the last resort is "here is a word that fits every mark", which is honest
- * reasoning that does not fit in a sentence. That last resort is flagged so the coverage test can
- * count it.
- *
- * What it teaches, simplest first:
- *
- * - [MISTAKE] — the row cannot be submitted because it is not a word. Any word is allowed, so
- *   probing with one that cannot be the answer is never called wrong.
- * - [OPENER] — nothing is known yet, so one of the words that split the answer list best (which one is the board's
+ * - [MISTAKE]: the row cannot be submitted because it is not a word. Any word is allowed, so probing with one that
+ *   cannot be the answer is never called wrong.
+ * - [OPENER]: nothing is known yet, so one of the words that split the answer list best (which one is the board's
  *   [LexiconState.opener]), given as a clue.
- * - [PIN] — a letter known to be in the word has only as many slots left as it has copies, because
- *   every other slot is a green of another letter or was marked against it.
- * - [SUBMIT] — the row fits every mark; press Enter.
- * - [ONLY_WORD] / [CHOOSE] — pins have run out. Of the answer list, one word fits (type it), or
- *   several do and this guess leaves the fewest whichever way it is marked.
+ * - [PIN]: a letter known to be in the word has only as many slots left as it has copies.
+ * - [SUBMIT]: the row fits every mark; press Enter.
+ * - [ONLY_WORD] / [CHOOSE]: pins have run out. Of the answer list, one word fits (type it), or several do and this
+ *   guess leaves the fewest whichever way it is marked.
  *
- * Those three name a word, so they give it as a crossword-style clue ([clueFor]) and leave the
- * player to work it out; only "Show me" types it.
- *
- * A pin is a fact about the marks alone, so it holds for every word that fits them, on the answer
- * list or not. Only [ONLY_WORD] and [CHOOSE] read the answer list, and they say so.
- *
- * Nothing here walks a hash container: letters, slots and words are visited by index, so the same
- * board gets the same hint on every platform (CLAUDE.md, "Hash iteration order").
+ * Those three name a word, so they give it as a crossword-style clue ([clueFor]) and leave the player to work it out;
+ * only "Show me" types it.
  */
 internal object LexiconTeacher {
 
-    const val MISTAKE = "mistake"
-    const val OPENER = "opener"
+    const val MISTAKE = GuessTeacher.MISTAKE
+    const val OPENER = GuessTeacher.OPENER
     const val PIN = "pinned-letter"
-    const val SUBMIT = "submit"
+    const val SUBMIT = GuessTeacher.SUBMIT
     const val ONLY_WORD = "only-word-left"
-    const val CHOOSE = "best-guess"
+    const val CHOOSE = GuessTeacher.CHOOSE
 
     /** Every step [teach] can produce, for reports. */
     val TECHNIQUES = listOf(MISTAKE, OPENER, PIN, SUBMIT, ONLY_WORD, CHOOSE)
@@ -49,14 +31,10 @@ internal object LexiconTeacher {
     /** The two steps that point at a word from the answer list rather than at a fact about a slot. */
     val FALLBACKS = listOf(ONLY_WORD, CHOOSE)
 
-    /**
-     * The hint panel shows four lines of body text, about 170 characters on a phone. A step whose
-     * explanation would be longer is shortened rather than shown cut off.
-     */
-    const val MAX_EXPLANATION = 170
-
-    /** The most guesses weighed when picking [CHOOSE]'s word; the rest of the list is a stride. */
-    private const val POOL = 300
+    const val MAX_EXPLANATION = GuessTeacher.MAX_EXPLANATION
+    const val KEY = GuessTeacher.KEY
+    const val ENTER = GuessTeacher.ENTER
+    const val DELETE = GuessTeacher.DELETE
 
     /**
      * First guesses for an empty board, one per board by [LexiconState.opener], so the opening hint is not the same clue
@@ -68,305 +46,66 @@ internal object LexiconTeacher {
         if (length == 4) listOf("tale", "sale", "late", "real", "lane", "seal", "lean")
         else listOf("raise", "arise", "irate", "slate", "arose", "alert", "stare")
 
-    /** The opener for [pick], a board's [LexiconState.opener]. */
-    fun opener(length: Int, pick: Int = 0): String = openers(length).let { it[pick.mod(it.size)] }
-
     /** "Clue: Lift (5)": a clue to [word] without the word, ready to drop into an explanation. */
-    private fun clueFor(word: String) = "\u201C${WordList.clue(word)}\u201D (${word.length})"
+    private fun clueFor(word: String) = "“${WordList.clue(word)}” (${word.length})"
 
-    // ---- what the indices in a Deduction mean on Lexicon's board -----------------------------------
-    // A tile is `row * length + slot`, rows counting down the grid with the row being typed after the
-    // submitted guesses, which is what `highlightGrid` expects. Keys and buttons have their own ranges.
+    val vocab = object : GuessVocab {
+        override val alphabet = "abcdefghijklmnopqrstuvwxyz"
+        override fun isLegal(row: String) = WordList.isWord(row)
+        override fun answers(length: Int) = WordList.answers(length)
+        override fun openers(length: Int) = LexiconTeacher.openers(length)
+        override val pinTechnique = PIN
+        override val onlyTechnique = ONLY_WORD
+        override val noun = "word"
+        override fun shout(symbol: Char) = symbol.uppercaseChar().toString()
+        override fun show(row: String) = row.uppercase()
+        override fun refusal(row: String) =
+            "${row.uppercase()} isn't in the word list, so Enter won't take it. Change a letter or two."
+        override val openerNudge = "Nothing is known yet. Start with a word of common letters."
+        override fun openerText(word: String) =
+            "A good first guess has common letters, so it cuts the list down fast. Try the word that goes ${clueFor(word)}."
+        override val onlyNudge = "Check every mark against the word list."
+        override fun onlyText(word: String) =
+            "Only one word on the answer list fits every mark. Its clue: ${clueFor(word)}. Type it."
+        override val chooseNudge = "Nothing more is forced. Pick a word that fits and splits what is left."
 
-    const val KEY = 3000
-    const val ENTER = 4000
-    const val DELETE = 4001
-
-    fun tile(length: Int, row: Int, slot: Int) = row * length + slot
-
-    fun key(letter: Char) = KEY + (letter - 'a')
-
-    /** What a step asks the player to do. */
-    sealed interface Move {
-        /** Take the row back to its first [keep] letters. */
-        data class Retype(val keep: Int) : Move
-
-        /** Type this whole word. It is done when a row that fits every mark is typed or submitted. */
-        data class Fill(val word: String) : Move
-
-        /** Type this opening word. It is done when any whole row is typed or submitted. */
-        data class Open(val word: String) : Move
-
-        /** Get [letter] into [slot]; "show me" types [word], which has it there and fits every mark. */
-        data class Pin(val slot: Int, val letter: Char, val word: String) : Move
-
-        data object Submit : Move
+        /**
+         * "7 words on the answer list fit every mark. Try the one that goes "Lift" (5): it can be marked 5 ways, and none
+         * leaves more than 2." Read off the candidates alone, as the pick is.
+         */
+        override fun splitText(word: String, size: Int, ways: Int, worst: Int): List<String> {
+            val clue = clueFor(word)
+            val long = when {
+                size == 2 -> "Two words fit every mark, and either could be it. Try the one that goes $clue: " +
+                    "if it isn't the word, its marks point to the other."
+                worst == 1 -> "$size words on the answer list fit every mark. Try the one that goes $clue: " +
+                    "each of them would mark it differently, so after it you will know the word."
+                else -> "$size words on the answer list fit every mark. Try the one that goes $clue: " +
+                    "it can be marked $ways ways, and none leaves more than $worst."
+            }
+            val short = if (size == 2) "Two words fit. Try $clue: if it isn't the word, it is the other."
+            else "$size words fit. Try $clue: whatever its marks, at most $worst will be left."
+            return listOf(long, short)
+        }
     }
 
-    class Step(
-        override val technique: String,
-        val move: Move,
-        override val focus: Set<Int>,
-        override val cited: Set<Int>,
-        override val targets: Set<Int>,
-        override val nudge: String,
-        override val explanation: String,
-    ) : TeachStep
+    private val engine = GuessTeacher(vocab)
+
+    /** The opener for [pick], a board's [LexiconState.opener]. */
+    fun opener(length: Int, pick: Int = 0): String = engine.opener(length, pick)
+
+    fun tile(length: Int, row: Int, slot: Int) = GuessTeacher.tile(length, row, slot)
+
+    fun key(letter: Char) = engine.key(letter)
 
     /** Answer-list words that would have drawn every mark on the board. */
     fun candidates(length: Int, guesses: List<String>, marks: List<List<Int>>): List<String> =
-        WordList.answers(length).filter { LexiconRules.consistent(it, guesses, marks) }
+        engine.candidates(length, guesses, marks)
 
-    /** What the marks say, slot by slot and letter by letter. */
-    private class Clues(val length: Int, val guesses: List<String>, val marks: List<List<Int>>) {
-        /** The letter a green fixed in each slot, and the guess that showed it. */
-        val green = arrayOfNulls<Char>(length)
-        val greenGuess = IntArray(length) { -1 }
+    fun bestGuess(fits: List<String>): String = GuessTeacher.bestGuess(fits)
 
-        /** At least this many of each letter: the most any one guess showed as green or yellow. */
-        val min = IntArray(26)
+    fun teach(length: Int, guesses: List<String>, marks: List<List<Int>>, current: String, opener: Int = 0): GuessTeacher.Step? =
+        engine.teach(length, guesses, marks, current, opener)
 
-        /** Whether a slot is ruled out for a letter, and the guess that ruled it out. */
-        val ruledBy = Array(length) { IntArray(26) { -1 } }
-
-        /** The first tile showing each letter as green or yellow, or -1. */
-        val shownAt = IntArray(26) { -1 }
-
-        init {
-            for (g in guesses.indices) {
-                val seen = IntArray(26)
-                for (i in 0 until length) {
-                    val k = guesses[g][i] - 'a'
-                    when (marks[g][i]) {
-                        LexiconMark.CORRECT -> {
-                            seen[k]++
-                            if (green[i] == null) {
-                                green[i] = guesses[g][i]
-                                greenGuess[i] = g
-                            }
-                            if (shownAt[k] < 0) shownAt[k] = tile(length, g, i)
-                        }
-                        LexiconMark.PRESENT -> {
-                            seen[k]++
-                            if (ruledBy[i][k] < 0) ruledBy[i][k] = g
-                            if (shownAt[k] < 0) shownAt[k] = tile(length, g, i)
-                        }
-                        else -> if (ruledBy[i][k] < 0) ruledBy[i][k] = g
-                    }
-                }
-                for (k in 0 until 26) if (seen[k] > min[k]) min[k] = seen[k]
-            }
-        }
-    }
-
-    fun teach(
-        length: Int,
-        guesses: List<String>,
-        marks: List<List<Int>>,
-        current: String,
-        opener: Int = 0,
-    ): Step? {
-        val clues = Clues(length, guesses, marks)
-        mistake(clues, current)?.let { return it }
-        if (guesses.isEmpty()) return opening(length, opener)
-        pin(clues, current)?.let { return it }
-        return choose(clues, current)
-    }
-
-    // ---- mistakes ---------------------------------------------------------------------------------
-
-    private fun mistake(c: Clues, current: String): Step? {
-        val row = c.guesses.size
-        if (current.length != c.length) return null
-        if (!WordList.isWord(current)) {
-            return Step(
-                MISTAKE, Move.Retype(c.length - 1),
-                focus = (0 until c.length).map { tile(c.length, row, it) }.toSet(),
-                cited = emptySet(),
-                targets = setOf(DELETE),
-                nudge = "Look at the row you typed.",
-                explanation = "${current.uppercase()} isn't in the word list, so Enter won't take it. " +
-                    "Change a letter or two.",
-            )
-        }
-        return null
-    }
-
-    // ---- opener -----------------------------------------------------------------------------------
-
-    private fun opening(length: Int, pick: Int): Step {
-        val word = opener(length, pick)
-        return Step(
-            OPENER, Move.Open(word),
-            focus = (0 until length).map { tile(length, 0, it) }.toSet(),
-            cited = emptySet(),
-            targets = word.map { key(it) }.toSet(),
-            nudge = "Nothing is known yet. Start with a word of common letters.",
-            explanation = "A good first guess has common letters, so it cuts the list down fast. " +
-                "Try the word that goes ${clueFor(word)}.",
-        )
-    }
-
-    // ---- pinned letters ---------------------------------------------------------------------------
-
-    private fun pin(c: Clues, current: String): Step? {
-        val row = c.guesses.size
-        for (k in 0 until 26) {
-            if (c.min[k] == 0) continue
-            val letter = 'a' + k
-            val fixed = (0 until c.length).count { c.green[it] == letter }
-            val need = c.min[k] - fixed
-            if (need <= 0) continue
-            val open = (0 until c.length).filter { c.green[it] == null && c.ruledBy[it][k] < 0 }
-            if (open.size != need) continue
-            val slot = open.firstOrNull { !(current.length > it && current[it] == letter) } ?: continue
-            val word = wordWith(c, letter, slot) ?: continue
-            val ruled = (0 until c.length).filter { c.green[it] == null && c.ruledBy[it][k] >= 0 }
-            val taken = (0 until c.length).filter { c.green[it] != null && c.green[it] != letter }
-            val cited = buildSet {
-                add(c.shownAt[k])
-                ruled.forEach { add(tile(c.length, c.ruledBy[it][k], it)) }
-                taken.forEach { add(tile(c.length, c.greenGuess[it], it)) }
-            }
-            val shownTiles = (0 until c.guesses.size).flatMap { g ->
-                (0 until c.length).filter { c.guesses[g][it] == letter && c.marks[g][it] != LexiconMark.ABSENT }
-                    .map { tile(c.length, g, it) }
-            }.toSet()
-            val shout = letter.uppercaseChar()
-            val where = if (need == 1) "slot ${slot + 1}" else "slots ${listed(open.map { it + 1 })}"
-            val long = buildString {
-                append("$shout is in the word, but ")
-                if (ruled.isNotEmpty()) append("not in ${slots(ruled)}")
-                if (ruled.isNotEmpty() && taken.isNotEmpty()) append(", and ")
-                if (taken.isNotEmpty()) {
-                    append("${slots(taken)} already ${if (taken.size == 1) "holds" else "hold"} ")
-                    append(listed(taken.map { c.green[it]!!.uppercaseChar() }))
-                }
-                append(if (need == 1) ", so it goes in $where." else ", so it fills $where.")
-            }
-            val explanation = if (long.length <= MAX_EXPLANATION) long
-            else "$shout is in the word, and every slot but $where is ruled out or taken."
-            return Step(
-                PIN, Move.Pin(slot, letter, word),
-                focus = shownTiles,
-                cited = cited,
-                targets = setOf(tile(c.length, row, slot), key(letter)),
-                nudge = "Look at where $shout has been marked.",
-                explanation = explanation,
-            )
-        }
-        return null
-    }
-
-    /** The best answer-list word that fits every mark and has [letter] in [slot], or null. */
-    private fun wordWith(c: Clues, letter: Char, slot: Int): String? {
-        val fits = candidates(c.length, c.guesses, c.marks).filter { it[slot] == letter }
-        return if (fits.isEmpty()) null else bestGuess(fits)
-    }
-
-    // ---- choosing a word --------------------------------------------------------------------------
-
-    private fun choose(c: Clues, current: String): Step? {
-        val row = c.guesses.size
-        val fits = candidates(c.length, c.guesses, c.marks)
-        if (fits.isEmpty()) return null
-        val rowFits = current.length == c.length && fits.contains(current)
-        if (rowFits) {
-            return Step(
-                SUBMIT, Move.Submit,
-                focus = (0 until c.length).map { tile(c.length, row, it) }.toSet(),
-                cited = emptySet(),
-                targets = setOf(ENTER),
-                nudge = "Your row fits every mark.",
-                explanation = "${current.uppercase()} fits every mark so far, so it could be the word. " +
-                    "Press Enter to try it.",
-            )
-        }
-        val lastRow = (0 until c.length).map { tile(c.length, row - 1, it) }.toSet()
-        if (fits.size == 1) {
-            val word = fits[0]
-            return Step(
-                ONLY_WORD, Move.Fill(word),
-                focus = lastRow,
-                cited = lastRow,
-                targets = word.map { key(it) }.toSet(),
-                nudge = "Check every mark against the word list.",
-                explanation = "Only one word on the answer list fits every mark. Its clue: ${clueFor(word)}. Type it.",
-            )
-        }
-        val word = bestGuess(fits)
-        val shown = splitText(word, fits)
-        return Step(
-            CHOOSE, Move.Fill(word),
-            focus = lastRow,
-            cited = lastRow,
-            targets = word.map { key(it) }.toSet(),
-            nudge = "Nothing more is forced. Pick a word that fits and splits what is left.",
-            explanation = shown,
-        )
-    }
-
-    /**
-     * The word of [fits] that leaves the fewest of them in its worst case (then in the most
-     * outcomes, then first alphabetically, so the pick is the same everywhere). A long list is
-     * thinned by a fixed stride rather than at random.
-     */
-    fun bestGuess(fits: List<String>): String {
-        val pool = fits
-        val stride = (pool.size + POOL - 1) / POOL
-        var best = pool[0]
-        var bestWorst = Int.MAX_VALUE
-        var bestSpread = -1
-        var i = 0
-        while (i < pool.size) {
-            val word = pool[i]
-            val counts = outcomes(word, fits)
-            val worst = counts.values.max()
-            val spread = counts.size
-            if (worst < bestWorst || (worst == bestWorst && spread > bestSpread)) {
-                best = word
-                bestWorst = worst
-                bestSpread = spread
-            }
-            i += stride
-        }
-        return best
-    }
-
-    /**
-     * Why [word] is the guess to make of [fits]: how its marks would split them. "7 words on the answer list fit every
-     * mark. Try the one that goes "Lift" (5): it can be marked 5 ways, and none leaves more than 2." Read off the
-     * candidates alone, as the pick is; shortened when the clue makes it too long for the panel.
-     */
-    private fun splitText(word: String, fits: List<String>): String {
-        val counts = outcomes(word, fits)
-        val worst = counts.values.max()
-        val clue = clueFor(word)
-        val long = when {
-            fits.size == 2 -> "Two words fit every mark, and either could be it. Try the one that goes $clue: " +
-                "if it isn't the word, its marks point to the other."
-            worst == 1 -> "${fits.size} words on the answer list fit every mark. Try the one that goes $clue: " +
-                "each of them would mark it differently, so after it you will know the word."
-            else -> "${fits.size} words on the answer list fit every mark. Try the one that goes $clue: " +
-                "it can be marked ${counts.size} ways, and none leaves more than $worst."
-        }
-        val short = if (fits.size == 2) "Two words fit. Try $clue: if it isn't the word, it is the other."
-        else "${fits.size} words fit. Try $clue: whatever its marks, at most $worst will be left."
-        return if (long.length <= MAX_EXPLANATION) long else short
-    }
-
-    /** How many of [fits] draw each mark code for [word]. A probe-only hash container: read for its size and values, never its order. */
-    private fun outcomes(word: String, fits: List<String>): Map<Int, Int> {
-        val counts = HashMap<Int, Int>()
-        for (f in fits) {
-            val code = LexiconRules.markCode(word, f)
-            counts[code] = (counts[code] ?: 0) + 1
-        }
-        return counts
-    }
-
-    // ---- wording ----------------------------------------------------------------------------------
-
-    private fun slots(slots: List<Int>): String =
-        (if (slots.size == 1) "slot " else "slots ") + listed(slots.map { it + 1 })
+    fun deduction(s: LexiconState) = engine.deduction(s, FALLBACKS, s.opener)
 }

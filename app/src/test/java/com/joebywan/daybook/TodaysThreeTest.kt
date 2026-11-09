@@ -18,10 +18,11 @@ class TodaysThreeTest {
 
     @Test fun `the three are pinned to the date`() {
         // Worked out by hand from the lists and the epoch day (20751): a change here moves everyone's three.
-        // 20751 mod 11 = 5 (mosaic), mod 16 = 15 (unblock, last in the registry's order), mod 9 = 6 (tally).
-        assertEquals(listOf("mosaic", "unblock", "tally"), TodaysThree.of(day))
-        assertEquals(listOf("kings", "sudoku", "hexwords"), TodaysThree.of(LocalDate(2026, 10, 26)))
-        assertEquals(listOf("tents", "mambo", "dwindle"), TodaysThree.of(LocalDate(2026, 10, 27)))
+        // 20751 mod 11 = 5 (mosaic), mod 10 = 1 (wordwheel); the mid-weight list (16) shares 2 with the 110-day cycle, so it
+        // steps from 20751 mod 110 + 20751 / 110 = 259, and 259 mod 16 = 3 (tower, in the registry's order).
+        assertEquals(listOf("mosaic", "tower", "wordwheel"), TodaysThree.of(day))
+        assertEquals(listOf("kings", "nonogram", "mini"), TodaysThree.of(LocalDate(2026, 10, 26)))
+        assertEquals(listOf("tents", "inequality", "target"), TodaysThree.of(LocalDate(2026, 10, 27)))
     }
 
     @Test fun `quick and words are coprime, and every puzzle comes round within twice the longest list`() {
@@ -29,7 +30,7 @@ class TodaysThreeTest {
         val mid = ids.filter { it !in TodaysThree.QUICK && it !in TodaysThree.WORDS }
         tailrec fun gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)
         val sizes = listOf(TodaysThree.QUICK.size, mid.size, TodaysThree.WORDS.size)
-        assertEquals(listOf(11, 16, 9), sizes)
+        assertEquals(listOf(11, 16, 10), sizes)
         assertEquals("quick and words must stay coprime", 1, gcd(sizes[0], sizes[2]))
         val days = (0 until 1001).map { TodaysThree.of(LocalDate.fromEpochDays(day.toEpochDays() + it)) }
         assertEquals("no set repeats in 1,001 days", 1001, days.toSet().size)

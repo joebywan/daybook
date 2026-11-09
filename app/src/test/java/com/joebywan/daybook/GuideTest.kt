@@ -28,6 +28,8 @@ import com.joebywan.daybook.puzzles.Domino
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.DominoTeacher
 import com.joebywan.daybook.puzzles.DwindleTeacher
+import com.joebywan.daybook.puzzles.EquationLogic
+import com.joebywan.daybook.puzzles.EquationTeacher
 import com.joebywan.daybook.puzzles.Feedback
 import com.joebywan.daybook.puzzles.HexTake
 import com.joebywan.daybook.puzzles.HexwordsState
@@ -37,7 +39,8 @@ import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.KingsTeacher
 import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.LampsTeacher
-import com.joebywan.daybook.puzzles.LexiconMark
+import com.joebywan.daybook.core.GuessMarks
+import com.joebywan.daybook.puzzles.GuessTeacher
 import com.joebywan.daybook.puzzles.LexiconTeacher
 import com.joebywan.daybook.puzzles.Link
 import com.joebywan.daybook.puzzles.Lits
@@ -186,6 +189,7 @@ class GuideTest {
         "mines" to ::minesStep,
         "lits" to ::litsStep,
         "words" to ::lexiconStep,
+        "equation" to ::equationStep,
         "wordwheel" to ::wordWheelStep,
         "mini" to ::miniStep,
         "codeword" to ::codewordStep,
@@ -727,17 +731,46 @@ class GuideTest {
         val marks = guessRows.map { r ->
             List(n) { c ->
                 when (tiles.getValue(r * n + c)) {
-                    "right" -> LexiconMark.CORRECT
-                    "near" -> LexiconMark.PRESENT
-                    else -> LexiconMark.ABSENT
+                    "right" -> GuessMarks.CORRECT
+                    "near" -> GuessMarks.PRESENT
+                    else -> GuessMarks.ABSENT
                 }
             }
         }
         assertTrue("${b.technique}: some word draws these marks", LexiconTeacher.candidates(n, guesses, marks).isNotEmpty())
         val taught = LexiconTeacher.teach(n, guesses, marks, "") ?: return null
-        val move = taught.move as LexiconTeacher.Move.Pin
+        val move = taught.move as GuessTeacher.Move.Pin
         assertEquals("${b.technique}: the letter", move.letter.uppercase(), b.marks("answer")[guesses.size * n + move.slot])
         return step(taught, taught.focus, taught.targets.filter { it < LexiconTeacher.KEY }.toSet())
+    }
+
+    /** Equation's board is Lexicon's with symbols: × ÷ − on the page are * / - in the rows the teacher reads. */
+    private fun equationStep(b: Board): TeachStep? {
+        fun typed(token: String) = when (token) {
+            "×" -> "*"
+            "÷" -> "/"
+            "−" -> "-"
+            else -> token
+        }
+        val tiles = b.marks("tiles")
+        val n = b.width
+        val guessRows = b.rows.indices.filter { r -> (0 until n).all { r * n + it in tiles } }
+        val guesses = guessRows.map { r -> b.rows[r].joinToString("") { typed(it) } }
+        val marks = guessRows.map { r ->
+            List(n) { c ->
+                when (tiles.getValue(r * n + c)) {
+                    "right" -> GuessMarks.CORRECT
+                    "near" -> GuessMarks.PRESENT
+                    else -> GuessMarks.ABSENT
+                }
+            }
+        }
+        guesses.forEach { assertTrue("${b.technique}: $it is a true equation", EquationLogic.isTrue(it)) }
+        assertTrue("${b.technique}: some equation draws these marks", EquationTeacher.candidates(n, guesses, marks).isNotEmpty())
+        val taught = EquationTeacher.teach(n, guesses, marks, "") ?: return null
+        val move = taught.move as GuessTeacher.Move.Pin
+        assertEquals("${b.technique}: the symbol", move.letter.toString(), typed(b.marks("answer")[guesses.size * n + move.slot]!!))
+        return step(taught, taught.focus, taught.targets.filter { it < GuessTeacher.KEY }.toSet())
     }
 
     /** Maximal lines of two or more squares among [rows], across by row and then down by column. */
