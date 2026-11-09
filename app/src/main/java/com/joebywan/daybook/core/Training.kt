@@ -216,6 +216,8 @@ object Training {
             DominoesTraining,
             LitsTraining,
             LoopTraining,
+            ThermometersTraining,
+            UnblockTraining,
             LinksTraining,
         )
     }

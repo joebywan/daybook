@@ -1,27 +1,10 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
-import com.joebywan.daybook.core.Tones
+import com.joebywan.daybook.core.DailyCycle
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.SeedHash
 import kotlinx.serialization.Serializable
-
-/**
- * One guess's letters, marked. [CORRECT] is the right letter in the right place, [PRESENT] the
- * right letter in the wrong place, [ABSENT] a letter the word has no (more) of.
- */
-object LexiconMark {
-    const val ABSENT = 0
-    const val PRESENT = 1
-    const val CORRECT = 2
-
-    /**
-     * Where a marked row's note sits in the phrase (0 to 7): a letter in place counts two, one elsewhere in the word one,
-     * over a row of [length], so a row that landed more sounds higher. [score] is the row's marks added up. Read from the
-     * marks the row shows, so it tells nothing the row does not; Codebreaker's pegs use it too.
-     */
-    fun step(score: Int, length: Int): Int = (score * (Tones.Kind.STEP.count - 1) / (2 * length)).coerceIn(0, Tones.Kind.STEP.count - 1)
-}
 
 /**
  * Lexicon's board: a hidden word, the guesses so far, and the row being typed.
@@ -36,36 +19,20 @@ object LexiconMark {
  */
 @Serializable
 data class LexiconState(
-    val length: Int,
-    val maxGuesses: Int,
-    val answer: String,
-    val guesses: List<String> = emptyList(),
-    val current: String = "",
+    override val length: Int,
+    override val maxGuesses: Int,
+    override val answer: String,
+    override val guesses: List<String> = emptyList(),
+    override val current: String = "",
     override val moves: Int = 0,
     val opener: Int = 0,
-) : PuzzleState {
+) : PuzzleState, GuessRows<LexiconState> {
 
     override val solved: Boolean get() = guesses.lastOrNull() == answer
     override val failed: Boolean get() = !solved && guesses.size >= maxGuesses
 
-    /** Whether the board still takes letters. */
-    val open: Boolean get() = !solved && !failed
-
-    fun marks(guess: String): List<Int> = LexiconRules.mark(guess, answer)
-
-    /** Every submitted guess's marks, in order. */
-    val allMarks: List<List<Int>> get() = guesses.map(::marks)
-
-    fun withLetter(letter: Char): LexiconState =
-        if (!open || current.length >= length) this else copy(current = current + letter, moves = moves + 1)
-
-    fun withoutLetter(): LexiconState =
-        if (!open || current.isEmpty()) this else copy(current = current.dropLast(1), moves = moves + 1)
-
-    /** The row typed so far, whole, as a guess. Callers have already asked [LexiconRules.problem]. */
-    fun submit(): LexiconState =
-        if (!open || current.length != length) this
-        else copy(guesses = guesses + current, current = "", moves = moves + 1)
+    override fun withRows(guesses: List<String>, current: String): LexiconState =
+        copy(guesses = guesses, current = current, moves = moves + 1)
 }
 
 /**
@@ -118,9 +85,7 @@ object LexiconRules {
     fun cycle(day: Long, difficulty: Difficulty): Int {
         val length = shape(difficulty).length
         val n = WordList.answers(length).size
-        val round = day / n
-        val order = Rng(CYCLE_SALT + round * 3 + difficulty.ordinal).shuffled(List(n) { it })
-        val first = if (round == 0L) {
+        return DailyCycle.pick(day, n, CYCLE_SALT, difficulty) {
             val used = BooleanArray(n)
             for (tier in Difficulty.entries) {
                 if (shape(tier).length != length) continue
@@ -128,51 +93,11 @@ object LexiconRules {
                     used[Rng(SeedHash.daily(d, "words", tier)).nextInt(n)] = true
                 }
             }
-            order.filter { !used[it] } + order.filter { used[it] }
-        } else order
-        return first[(day % n).toInt()]
+            used
+        }
     }
 
     private const val CYCLE_SALT = 0x4379636C65L // "Cycle"
-
-    /**
-     * [guess] marked against [answer]. Greens first, then each remaining letter of the guess is
-     * yellow only while the answer still has an unmatched copy of it, left to right: "eerie" against
-     * "these" is yellow, grey, grey, grey, green, because the answer's other e is already matched.
-     */
-    fun mark(guess: String, answer: String): List<Int> {
-        var code = markCode(guess, answer)
-        return List(guess.length) { (code % 3).also { code /= 3 } }
-    }
-
-    /** [mark] packed base 3, first slot lowest: cheap to count and compare across a whole list. */
-    fun markCode(guess: String, answer: String): Int {
-        val n = guess.length
-        val left = IntArray(26)
-        val out = IntArray(n)
-        for (i in 0 until n) {
-            if (guess[i] == answer[i]) out[i] = LexiconMark.CORRECT else left[answer[i] - 'a']++
-        }
-        var code = 0
-        var weight = 1
-        for (i in 0 until n) {
-            var m = out[i]
-            if (m != LexiconMark.CORRECT) {
-                val k = guess[i] - 'a'
-                if (left[k] > 0) {
-                    left[k]--
-                    m = LexiconMark.PRESENT
-                }
-            }
-            code += m * weight
-            weight *= 3
-        }
-        return code
-    }
-
-    /** Whether [word] would have drawn exactly these marks for every guess so far. */
-    fun consistent(word: String, guesses: List<String>, marks: List<List<Int>>): Boolean =
-        guesses.indices.all { mark(guesses[it], word) == marks[it] }
 
     /**
      * Why the row in [state] cannot be submitted, or null if it can: too short, or not a word. Shown

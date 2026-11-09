@@ -1,0 +1,57 @@
+# Equation
+> Find the hidden equation
+
+## How to play
+
+Type an equation on the keys under the board and press Enter. A physical keyboard works too: type digits, + − * / (or X for ×) and =, Backspace deletes, Enter submits.
+
+Each symbol of a guess is then marked:
+
+- Green: the right symbol in the right place.
+- Yellow: the symbol is in the equation, but somewhere else.
+- Grey: the equation has no (more) of that symbol.
+
+A symbol is marked only as many times as the equation holds it, so a second 1 can be grey while the first is yellow. The keys keep the best mark each symbol has had.
+
+Every guess must be a true equation of the right length, with one = and a single number after it. × and ÷ come before + and −, every ÷ comes out whole, and no number starts with 0. A row that isn't true is refused with the reason (for example "Not true: the left makes 15"), and doesn't use up a guess. Any true equation is allowed, even one the marks have already ruled out, and that can be a good way to test several symbols at once. The hidden equation never has a number that is just 0, and never multiplies or divides by 1.
+
+Stuck? The first tap on Hint says where to look, and the second explains why. A hint that points at an equation gives its shape (its signs and the number after =, the other digits as ?), and only "Show me" types it.
+
+## Rules
+
+- Find the hidden equation before you run out of guesses.
+- Every guess must be a true equation of the right length.
+
+## What changes per tier
+
+- Standard: Six symbols, six guesses.
+- Hard: Seven symbols, six guesses.
+- Expert: Eight symbols, six guesses. Far more equations fit eight symbols, so there is more to work out after each guess.
+
+## Techniques
+
+These are the steps the hints teach. On the board, a green tile has an inner line and a yellow one a corner dot.
+
+### opener | A good opening equation
+
+Nothing is known yet, so start with an equation of many different digits and signs: it cuts the list down fast. The hint names one, and which one changes from board to board. It says nothing about the hidden equation.
+
+### best-guess | The equation that narrows it most
+
+When the marks force nothing, pick an equation that fits them and splits what's left. The hint reads the list of equations it could be here, says so, and tells you how far its pick narrows things down, given as its shape.
+
+### pinned-symbol | A symbol pinned to its slot
+
+You know a symbol is in the equation. Cross off each slot a mark has ruled out for it and each slot already held by a green. If only one slot is left, that's where it goes.
+
+~~~board
+4 2 ÷ 7 = 6
+9 + 9 = 1 8
+3 × 5 = 1 5
+5 . . . . .
+tiles: r1c1=out r1c2=out r1c3=out r1c4=out r1c5=near r1c6=out r2c1=out r2c2=right r2c3=out r2c4=right r2c5=right r2c6=near r3c1=near r3c2=out r3c3=near r3c4=right r3c5=right r3c6=out
+focus: r3c3
+cite: r3c3 r3c6 r2c2 r2c4 r2c5
+answer: r4c1=5
+caption: The yellow 5 is in the equation, but not in slot 3 or slot 6, and slots 2, 4 and 5 hold +, = and 1, so 5 goes in slot 1.
+~~~

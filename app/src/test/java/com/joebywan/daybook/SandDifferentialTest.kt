@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.SearchVerdict
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.SandLogic
 import com.joebywan.daybook.puzzles.SandState
@@ -83,7 +84,7 @@ class SandDifferentialTest {
             val h = b.height
             val oracle = SandOracle.solve(p, h)
             when (val v = SandLogic.solve(p, h, 50_000_000)) {
-                is SandLogic.Verdict.Solvable -> {
+                is SearchVerdict.Solvable -> {
                     assertTrue("solve found a road the oracle says cannot exist on $p", oracle.solvable)
                     val end = SandOracle.replay(p, h, v.path)
                     assertNotNull("solve's road has an illegal pour on $p: ${v.path}", end)
@@ -91,11 +92,11 @@ class SandDifferentialTest {
                     assertTrue("shorter than the oracle's shortest on $p", v.path.size >= oracle.shortest!!.size)
                     solvable++
                 }
-                is SandLogic.Verdict.Unsolvable -> {
+                is SearchVerdict.Unsolvable -> {
                     assertFalse("solve said Unsolvable but the oracle sorts $p by ${oracle.shortest}", oracle.solvable)
                     unsolvable++
                 }
-                is SandLogic.Verdict.Truncated -> fail("Truncated on a small board with a huge budget: $p")
+                is SearchVerdict.Truncated -> fail("Truncated on a small board with a huge budget: $p")
             }
         }
         // Both verdicts must actually be exercised, or the comparison proves one direction only.
@@ -107,7 +108,7 @@ class SandDifferentialTest {
     fun `a solved position is Solvable with an empty road`() {
         val sorted = listOf(listOf(1, 1, 1), emptyList(), listOf(0, 0, 0), emptyList())
         val v = SandLogic.solve(sorted, 3, 1_000)
-        assertTrue("$v", v is SandLogic.Verdict.Solvable && v.path.isEmpty())
+        assertTrue("$v", v is SearchVerdict.Solvable && v.path.isEmpty())
     }
 
     @Test
@@ -119,9 +120,9 @@ class SandDifferentialTest {
             val b = deal(rng, 5, 4, 2)
             if (!SandOracle.solve(b.tubes, 4).solvable) return@repeat
             when (val v = SandLogic.solve(b.tubes, 4, 1)) {
-                is SandLogic.Verdict.Unsolvable -> fail("a budget of one called a sortable board Unsolvable: ${b.tubes}")
-                is SandLogic.Verdict.Solvable -> assertTrue(SandOracle.isSolved(SandOracle.replay(b.tubes, 4, v.path)!!, 4))
-                is SandLogic.Verdict.Truncated -> Unit
+                is SearchVerdict.Unsolvable -> fail("a budget of one called a sortable board Unsolvable: ${b.tubes}")
+                is SearchVerdict.Solvable -> assertTrue(SandOracle.isSolved(SandOracle.replay(b.tubes, 4, v.path)!!, 4))
+                is SearchVerdict.Truncated -> Unit
             }
         }
     }
@@ -132,8 +133,8 @@ class SandDifferentialTest {
             assertTrue("$what: the oracle cannot sort ${s.tubes}", SandOracle.solve(s.tubes, s.height).solvable)
         } else {
             val v = SandLogic.solve(s.tubes, s.height, 50_000_000)
-            assertTrue("$what: solve did not prove ${s.tubes}: $v", v is SandLogic.Verdict.Solvable)
-            val end = SandOracle.replay(s.tubes, s.height, (v as SandLogic.Verdict.Solvable).path)
+            assertTrue("$what: solve did not prove ${s.tubes}: $v", v is SearchVerdict.Solvable)
+            val end = SandOracle.replay(s.tubes, s.height, (v as SearchVerdict.Solvable).path)
             assertTrue("$what: solve's road does not replay to solved by the oracle's rule", end != null && SandOracle.isSolved(end, s.height))
         }
     }

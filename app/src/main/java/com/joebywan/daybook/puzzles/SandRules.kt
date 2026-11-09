@@ -2,6 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.SearchVerdict
 
 /**
  * Sand's rules, and the search that proves a board can be sorted (`docs/SAND_SPEC.md`).
@@ -14,18 +15,6 @@ import com.joebywan.daybook.core.Rng
  * The search's visited set is membership only: its order never reaches a choice, so the JVM and wasm agree.
  */
 internal object SandLogic {
-
-    /** What [solve] found. Only [Solvable] carries anything, so "ran out of budget" cannot be read as an answer. */
-    sealed interface Verdict {
-        /** A sorting sequence of pours `(from, to)` from the position searched; replaying it ends solved. */
-        data class Solvable(val path: List<Pair<Int, Int>>) : Verdict
-
-        /** Every position reachable was searched (within the budget) and none is solved. A proof. */
-        data object Unsolvable : Verdict
-
-        /** The budget ran out first: nothing is known. Never read this as [Unsolvable]. */
-        data object Truncated : Verdict
-    }
 
     /** Colours and height per tier. Two spare tubes on every tier: slack never varies (standards section 3). */
     class Spec(val colours: Int, val height: Int)
@@ -170,7 +159,7 @@ internal object SandLogic {
 
     /**
      * Depth first from [tubes], trying pours in index order (`from` outer, `to` inner), never visiting a canonical position
-     * twice. [budget] is the number of new positions it may visit; past it the answer is [Verdict.Truncated].
+     * twice. [budget] is the number of new positions it may visit; past it the answer is [SearchVerdict.Truncated].
      *
      * Two prunings, each exact because the position it skips has the same canonical key as one the search does visit
      * (tubes all hold [height], so which tube holds what is all that differs): a tube of one colour is never poured into
@@ -180,15 +169,15 @@ internal object SandLogic {
      * the visited set already covers the case where it does.
      *
      * Works from any position (part-full tubes, any number of empty ones). A board already solved is `Solvable(empty)`;
-     * [Verdict.Unsolvable] is returned only when the whole reachable space was searched without passing [budget].
+     * [SearchVerdict.Unsolvable] is returned only when the whole reachable space was searched without passing [budget].
      */
-    fun solve(tubes: List<List<Int>>, height: Int, budget: Int): Verdict = search(tubes, height, budget).first
+    fun solve(tubes: List<List<Int>>, height: Int, budget: Int): SearchVerdict<Pair<Int, Int>> = search(tubes, height, budget).first
 
     /** [solve]'s verdict with the number of positions it visited, for measuring the tiers. */
-    fun search(tubes: List<List<Int>>, height: Int, budget: Int): Pair<Verdict, Int> {
+    fun search(tubes: List<List<Int>>, height: Int, budget: Int): Pair<SearchVerdict<Pair<Int, Int>>, Int> {
         val n = tubes.size
         val start = IntArray(n) { pack(tubes[it]) }
-        if (packedSolved(start, height)) return Verdict.Solvable(emptyList()) to 0
+        if (packedSolved(start, height)) return SearchVerdict.Solvable(emptyList<Pair<Int, Int>>()) to 0
         val seen = HashSet<String>() // membership only: its order never reaches a choice
         seen.add(key(start))
         val stack = ArrayList<Frame>()
@@ -231,16 +220,16 @@ internal object SandLogic {
                     val path = ArrayList<Pair<Int, Int>>()
                     for (i in 1 until stack.size) path.add(stack[i].from to stack[i].to)
                     path.add(from to to)
-                    return Verdict.Solvable(path) to visited
+                    return SearchVerdict.Solvable(path) to visited
                 }
-                if (++visited > budget) return Verdict.Truncated to visited
+                if (++visited > budget) return SearchVerdict.Truncated to visited
                 stack.add(Frame(child, from, to))
                 moved = true
                 break
             }
             if (!moved) stack.removeAt(stack.size - 1)
         }
-        return Verdict.Unsolvable to visited
+        return SearchVerdict.Unsolvable to visited
     }
 
     // ---- generation ---------------------------------------------------------------------------
@@ -275,7 +264,7 @@ internal object SandLogic {
         for (attempt in 0 until ATTEMPTS) {
             val tubes = deal(seed, attempt, spec)
             if (givesAway(tubes, spec.height)) continue
-            if (solve(tubes, spec.height, GEN_BUDGET) !is Verdict.Solvable) continue
+            if (solve(tubes, spec.height, GEN_BUDGET) !is SearchVerdict.Solvable) continue
             if (trivial(tubes, spec.height, seed + attempt)) continue
             return SandState(tubes, spec.height, spec.colours)
         }

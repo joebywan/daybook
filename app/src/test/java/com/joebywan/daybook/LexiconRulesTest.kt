@@ -3,7 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.LexiconRules
 import com.joebywan.daybook.puzzles.LexiconState
-import com.joebywan.daybook.puzzles.LexiconMark
+import com.joebywan.daybook.core.GuessMarks
 import com.joebywan.daybook.puzzles.WordList
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -16,7 +16,7 @@ import org.junit.Test
 class LexiconRulesTest {
 
     private fun marks(guess: String, answer: String) =
-        LexiconRules.mark(guess, answer).joinToString("") { "AYG"[it].toString() }
+        GuessMarks.mark(guess, answer).joinToString("") { "AYG"[it].toString() }
 
     @Test
     fun `marks follow the repeated-letter rule`() {
@@ -42,7 +42,7 @@ class LexiconRulesTest {
                 for (j in words.indices step 7) {
                     val g = words[i]
                     val a = words[j]
-                    assertEquals("$g at $a", LexiconSupport.refMark(g, a), LexiconRules.mark(g, a))
+                    assertEquals("$g at $a", LexiconSupport.refMark(g, a), GuessMarks.mark(g, a))
                     checked++
                 }
             }
@@ -60,7 +60,7 @@ class LexiconRulesTest {
                     repeat(k) { p *= 3 }
                     acc + m * p
                 }
-                assertEquals(packed, LexiconRules.markCode(words[i], words[j]))
+                assertEquals(packed, GuessMarks.markCode(words[i], words[j]))
             }
         }
     }

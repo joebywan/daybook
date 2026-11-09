@@ -59,6 +59,7 @@ class LevelBoardsProvedTest {
         "cipher" to Cipher::generateVerified,
         "wordwheel" to WordWheelLogic::generateVerified,
         "tally" to TallyLogic::generateVerified,
+        "thermometers" to com.joebywan.daybook.puzzles.ThermometersLogic::generateVerified,
         "sand" to SandLogic::generateVerified,
         "tents" to TentsLogic::generateVerified,
         "pointers" to PointersLogic::generateVerified,
@@ -73,6 +74,7 @@ class LevelBoardsProvedTest {
         "mini" to MiniLogic::generateVerified,
         "hexwords" to com.joebywan.daybook.puzzles.HexLogic::generateVerified,
         "dwindle" to DwindleLogic::generateVerified,
+        "unblock" to com.joebywan.daybook.puzzles.UnblockLogic::generateVerified,
         "links" to LinksLogic::generateVerified,
     )
 

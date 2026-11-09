@@ -4,6 +4,7 @@ import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.digitKey
 import com.joebywan.daybook.core.isEnterKey
 import com.joebywan.daybook.core.isEraseKey
+import com.joebywan.daybook.core.operatorKey
 
 /**
  * What a physical key asks of a Target board. Keys read like a calculator: type a tile's number, an operator,
@@ -25,17 +26,18 @@ sealed interface TargetKeyAction {
 
 /** The action for [key] (with [shift] held, since + and * are shifted on most keyboards), or null. */
 fun targetKeyAction(key: Key, shift: Boolean = false): TargetKeyAction? {
-    digitKey(key)?.let { digit ->
-        // Shift+8 is *, Shift+= is +: operators, not digits.
-        if (shift && digit == 8) return TargetKeyAction.Operator(TargetOp.Mul)
-        return if (shift) null else TargetKeyAction.Digit(digit)
+    operatorKey(key, shift)?.let { op ->
+        return TargetKeyAction.Operator(
+            when (op) {
+                '+' -> TargetOp.Add
+                '-' -> TargetOp.Sub
+                '*' -> TargetOp.Mul
+                else -> TargetOp.Div
+            },
+        )
     }
+    digitKey(key)?.let { digit -> return if (shift) null else TargetKeyAction.Digit(digit) }
     return when {
-        key == Key.Plus || key == Key.NumPadAdd -> TargetKeyAction.Operator(TargetOp.Add)
-        key == Key.Equals -> if (shift) TargetKeyAction.Operator(TargetOp.Add) else null
-        key == Key.Minus || key == Key.NumPadSubtract -> TargetKeyAction.Operator(TargetOp.Sub)
-        key == Key.NumPadMultiply || key == Key.X -> TargetKeyAction.Operator(TargetOp.Mul)
-        key == Key.Slash || key == Key.NumPadDivide -> TargetKeyAction.Operator(TargetOp.Div)
         isEnterKey(key) -> TargetKeyAction.Enter
         isEraseKey(key) -> TargetKeyAction.Back
         else -> null

@@ -136,6 +136,20 @@ fun digitKey(key: Key): Int? =
 /** 'a'..'z' for a letter key, else null. */
 fun letterKey(key: Key): Char? = LETTER_KEYS.indexOf(key).takeIf { it >= 0 }?.let { 'a' + it }
 
+/**
+ * '+', '-', '*' or '/' for an arithmetic key, else null (Target and Equation). [shift] is whether Shift is held, since
+ * + and * are shifted on most keyboards: Shift+8 is *, Shift+= is +. X is * too.
+ */
+fun operatorKey(key: Key, shift: Boolean): Char? = when {
+    shift && digitKey(key) == 8 -> '*'
+    key == Key.Plus || key == Key.NumPadAdd -> '+'
+    key == Key.Equals && shift -> '+'
+    key == Key.Minus || key == Key.NumPadSubtract -> '-'
+    key == Key.NumPadMultiply || key == Key.X -> '*'
+    key == Key.Slash || key == Key.NumPadDivide -> '/'
+    else -> null
+}
+
 /** Enter, on the main block or the number pad. */
 fun isEnterKey(key: Key): Boolean = key == Key.Enter || key == Key.NumPadEnter
 
@@ -229,3 +243,31 @@ fun movedCursor(cursor: Int?, key: Key, rows: Int, cols: Int): Int? {
 /** [at] moved by one arrow step on a [rows] x [cols] grid, clamped at the edges and never wrapping. */
 fun stepCursor(at: Int, dRow: Int, dCol: Int, rows: Int, cols: Int): Int =
     (at / cols + dRow).coerceIn(0, rows - 1) * cols + (at % cols + dCol).coerceIn(0, cols - 1)
+
+/**
+ * Where a cursor goes from square [from] one step towards ([dRow], [dCol]) on a board of pieces (Pointers' arrows,
+ * Unblock's cars): the nearest square of another piece that way ([owner] gives a square's piece, -1 for none), counting a
+ * square off to the side as twice as far as one straight ahead (ties to the lower square). Stays put when nothing lies
+ * that way.
+ */
+fun nearestPiece(from: Int, dRow: Int, dCol: Int, width: Int, height: Int, owner: (Int) -> Int): Int {
+    val mine = owner(from)
+    val fr = from / width
+    val fc = from % width
+    var best = from
+    var bestScore = Int.MAX_VALUE
+    for (cell in 0 until width * height) {
+        val a = owner(cell)
+        if (a < 0 || a == mine) continue
+        val dr = cell / width - fr
+        val dc = cell % width - fc
+        val ahead = dr * dRow + dc * dCol
+        if (ahead <= 0) continue
+        val score = ahead + 2 * kotlin.math.abs(dr * dCol + dc * dRow)
+        if (score < bestScore) {
+            bestScore = score
+            best = cell
+        }
+    }
+    return best
+}

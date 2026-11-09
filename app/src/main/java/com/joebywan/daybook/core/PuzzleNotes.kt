@@ -78,6 +78,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Open with common, different letters to learn the most.",
         "A guess that could still be the word can win on the spot.",
     ),
+    "equation" to listOf(
+        "Times and divide come before plus and minus: 2+3×4 is 14.",
+        "The = is in every equation once: find its place early.",
+        "A guess that can't be the answer can still sort the rest apart.",
+        "The right side is one number, so its length says a lot.",
+    ),
     "nonogram" to listOf(
         "If clues and gaps fill a line exactly, fill it completely.",
         "In a 10-square line, a 6 always fills the middle two squares.",
@@ -170,11 +176,23 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Circled numbers that already make the target: the rest go.",
         "List the ways a short line can make its target.",
     ),
+    "thermometers" to listOf(
+        "A filled square fills everything below it, down to the bulb.",
+        "A line needing one more takes at most one from each thermometer.",
+        "An empty square leaves everything above it empty too.",
+        "Count the open squares the other thermometers leave in a line.",
+    ),
     "sand" to listOf(
         "Pour onto a matching colour before using an empty tube.",
         "An empty tube is your spare room: try to keep one free.",
         "Uncover a colour only when it has somewhere to go.",
         "A finished tube never needs touching again.",
+    ),
+    "unblock" to listOf(
+        "Work back from the exit: what is in the red car's way?",
+        "A car in the way may need another car moved first.",
+        "A slide of any length is one move: go as far as helps.",
+        "Moving the red car back can let a car cross its row.",
     ),
     "pointers" to listOf(
         "An arrow with an empty line to the edge can always go.",

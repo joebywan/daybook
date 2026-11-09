@@ -26,6 +26,8 @@ import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.LampsState
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
+import com.joebywan.daybook.puzzles.ThermometersLogic
+import com.joebywan.daybook.puzzles.ThermometersState
 import com.joebywan.daybook.puzzles.PearlsState
 import com.joebywan.daybook.puzzles.LoopState
 import com.joebywan.daybook.puzzles.LinksState
@@ -36,6 +38,8 @@ import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.DwindleState
 import com.joebywan.daybook.puzzles.WordWheelState
 import com.joebywan.daybook.puzzles.SandState
+import com.joebywan.daybook.puzzles.UnblockState
+import com.joebywan.daybook.puzzles.UnblockLogic
 import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
@@ -137,6 +141,7 @@ class StateSerializationTest {
         is InequalityState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is RegionsState -> state.givens.indexOfFirst { !it }.let { state.select(it).withCell(it, 1) }
         is TallyState -> state.tap(0, TallyLogic.REMOVED).tap(1, TallyLogic.KEPT)
+        is ThermometersState -> state.tap(state.tubes[0].last(), ThermometersLogic.FILLED).tap(state.tubes[1][0], ThermometersLogic.CROSSED)
         is LampsState -> state.walls.indexOf(LampsLogic.WHITE).let {
             state.withMark(it, LampsLogic.LAMP_MARK).withMark(state.walls.indexOf(LampsLogic.WHITE, it + 1), LampsLogic.CROSS)
         }
@@ -151,6 +156,7 @@ class StateSerializationTest {
         is WordWheelState -> state.enter(state.slots[1].word)
         is DwindleState -> state.enter(state.goals[1].word)
         is SandState -> state.pour(0, state.tubes.size - 1)!!
+        is UnblockState -> UnblockLogic.slides(state.cars).first().let { state.slide(it.car, it.by)!! }
         is TentsState -> state.withMark(state.trees.indexOfFirst { !it }, 1)
         is KingsState -> state.toggleMark(0).toggleKing(1)
         is LitsState -> state.toggle(0)
@@ -192,6 +198,10 @@ class StateSerializationTest {
         is LexiconState -> {
             val guess = WordList.answers(state.length).first { it != state.answer }
             guess.fold(state) { acc, c -> acc.withLetter(c) }.submit().withLetter('a')
+        }
+        is com.joebywan.daybook.puzzles.EquationState -> {
+            val guess = com.joebywan.daybook.puzzles.EquationLogic.answers(state.length).first { it != state.answer }
+            guess.fold(state) { acc, c -> acc.withLetter(c) }.submit().withLetter('1')
         }
     }
 }

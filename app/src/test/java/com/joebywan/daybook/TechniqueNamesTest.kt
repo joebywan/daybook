@@ -47,6 +47,7 @@ import com.joebywan.daybook.puzzles.TargetTeacher
 import com.joebywan.daybook.puzzles.TentsTeacher
 import com.joebywan.daybook.puzzles.TowerTeacher
 import com.joebywan.daybook.puzzles.DwindleTeacher
+import com.joebywan.daybook.puzzles.EquationTeacher
 import com.joebywan.daybook.puzzles.WordWheelTeacher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -63,6 +64,9 @@ class TechniqueNamesTest {
         "inequality" to InequalityTeacher.TECHNIQUES, "chess" to ChessTeacher.TECHNIQUES, "tents" to TentsTeacher.TECHNIQUES,
         "regions" to RegionsTeacher.TECHNIQUES, "cages" to CageTeacher.TECHNIQUES, "target" to TargetTeacher.TECHNIQUES,
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "dwindle" to DwindleTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
+        "thermometers" to com.joebywan.daybook.puzzles.ThermometersTeacher.TECHNIQUES,
+        "unblock" to com.joebywan.daybook.puzzles.UnblockTeacher.TECHNIQUES,
+        "equation" to EquationTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
         "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES, "loop" to LoopTeacher.TECHNIQUES,
@@ -99,6 +103,10 @@ class TechniqueNamesTest {
     @Test fun neededTechniqueMatchesTheTier() {
         val expected = mapOf(
             Tally to listOf(null, TallyTeacher.WAYS, TallyTeacher.WHAT_IF),
+            com.joebywan.daybook.puzzles.Thermometers to listOf(
+                com.joebywan.daybook.puzzles.ThermometersTeacher.AT_MOST, com.joebywan.daybook.puzzles.ThermometersTeacher.AT_LEAST,
+                com.joebywan.daybook.puzzles.ThermometersTeacher.WHAT_IF,
+            ),
             Dominoes to listOf(DominoTeacher.REGION_VALUE, DominoTeacher.COUNTING, DominoTeacher.WHAT_IF),
             Cipher to listOf(null, CipherTeacher.CHAIN, CipherTeacher.WHAT_IF),
             Lamps to listOf(null, LampsTeacher.STARVE, LampsTeacher.WHAT_IF),

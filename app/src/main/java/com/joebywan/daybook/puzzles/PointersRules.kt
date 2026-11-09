@@ -2,6 +2,9 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.WALK_DC
+import com.joebywan.daybook.core.WALK_DR
+import com.joebywan.daybook.core.bentWalk
 import kotlinx.serialization.Serializable
 import kotlin.math.PI
 import kotlin.math.sin
@@ -79,8 +82,8 @@ internal object PointersLogic {
     private const val ATTEMPTS = 12
 
     /** Row and column step of each direction: up, right, down, left. */
-    val DR = intArrayOf(-1, 0, 1, 0)
-    val DC = intArrayOf(0, 1, 0, -1)
+    val DR = WALK_DR
+    val DC = WALK_DC
 
     /**
      * [width] x [height] squares; arrows of [minLength] to [maxLength] squares that keep straight with
@@ -264,24 +267,7 @@ internal object PointersLogic {
             walk.clear()
             walk += head
             walk += br * w + bc
-            var wd = (dir + 2) % 4
-            while (walk.size < length) {
-                val cur = walk.last()
-                val options = ArrayList<Int>(3)
-                for (d in 0 until 4) {
-                    if (d == (wd + 2) % 4) continue
-                    val r = cur / w + DR[d]
-                    val c = cur % w + DC[d]
-                    if (r !in 0 until h || c !in 0 until w) continue
-                    val cell = r * w + c
-                    if (owner[cell] >= 0 || onRay[cell] || cell in walk) continue
-                    options += d
-                }
-                if (options.isEmpty()) break
-                val next = if (wd in options && rng.nextInt(100) < spec.straight) wd else rng.pick(options)
-                wd = next
-                walk += (cur / w + DR[next]) * w + cur % w + DC[next]
-            }
+            bentWalk(rng, walk, (dir + 2) % 4, length, w, h, spec.straight) { owner[it] < 0 && !onRay[it] }
             ray.forEach { onRay[it] = false }
             // Acyclic: no arrow this one would be in the way of may already (indirectly) be in this one's way.
             val waitsFor = ArrayList<Int>()

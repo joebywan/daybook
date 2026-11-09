@@ -32,6 +32,8 @@ import com.joebywan.daybook.puzzles.PearlsLogic
 import com.joebywan.daybook.puzzles.Loop
 import com.joebywan.daybook.puzzles.LoopLogic
 import com.joebywan.daybook.puzzles.TallyLogic
+import com.joebywan.daybook.puzzles.Thermometers
+import com.joebywan.daybook.puzzles.ThermometersLogic
 import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoLogic
 import com.joebywan.daybook.puzzles.Sand
@@ -43,6 +45,8 @@ import com.joebywan.daybook.puzzles.MinesLogic
 import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.Dwindle
 import com.joebywan.daybook.puzzles.DwindleLogic
+import com.joebywan.daybook.puzzles.Unblock
+import com.joebywan.daybook.puzzles.UnblockLogic
 import com.joebywan.daybook.puzzles.WordWheel
 import com.joebywan.daybook.puzzles.WordWheelLogic
 import com.joebywan.daybook.puzzles.Tents
@@ -191,6 +195,10 @@ class FallbackTest {
     @Test
     fun `dwindle proves every daily board of a year on every tier`() = assertYearProved(Dwindle) { seed, d -> DwindleLogic.generateVerified(seed, d) }
 
+    /** [UnblockLogic.generateVerified] returns a board only when a fresh breadth-first search proves its par, the fewest moves, inside the tier. */
+    @Test
+    fun `unblock proves every daily board of a year on every tier`() = assertYearProved(Unblock) { seed, d -> UnblockLogic.generateVerified(seed, d) }
+
     /**
      * [LinksLogic.generateVerified] returns a board only when the tier's rungs finished it, needing exactly the tier's
      * (Hard: the reach or a cut), and the exhaustive count proved one answer, the drawn one. Also measures the redraws.
@@ -268,6 +276,17 @@ class FallbackTest {
     @Test
     fun `tally proves every daily board of a year on every tier`() =
         assertYearProved(Tally, attempts = TallyLogic.ATTEMPTS, attempt = TallyLogic::attempt) { seed, d -> TallyLogic.generateVerified(seed, d) }
+
+    /**
+     * [ThermometersLogic.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the
+     * tier's rung, and the count proved one answer. Also measures the redraws (printed): Expert, which must need a
+     * what-if, redraws most.
+     */
+    @Test
+    fun `thermometers proves every daily board of a year on every tier`() =
+        assertYearProved(Thermometers, attempts = ThermometersLogic.ATTEMPTS, attempt = ThermometersLogic::attempt) { seed, d ->
+            ThermometersLogic.generateVerified(seed, d)
+        }
 
     /**
      * [LampsLogic.generateVerified] returns a board only when the tier's ladder finished it, needing exactly the tier's

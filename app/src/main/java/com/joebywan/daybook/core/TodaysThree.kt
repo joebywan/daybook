@@ -5,10 +5,10 @@ import kotlinx.datetime.LocalDate
 /**
  * Today's three (`docs/REWARDS.md`): one quick puzzle, one mid-weight, one word or number puzzle, derived from the date
  * alone, so it is the same for everyone and nothing is stored. Each slot steps one place a day through its own list
- * (quick 11, mid-weight 15, words 9; quick and words coprime, and while the mid-weight length is coprime with both a set of
- * three comes round again only after their product, and no puzzle waits longer than its list's length). If a new puzzle (which joins the mid-weight list unless listed) gives
- * the mid-weight list a factor of 3 or 11, it steps one more each time the 99-day quick-and-words cycle comes round
- * (`d mod 99 + d / 99`), so no set repeats within the year whatever its length, at the cost of one puzzle's gap doubling
+ * (quick 11, words 10: coprime, so those two come round together every 110 days; the mid-weight list takes every other
+ * puzzle, 17 now). A mid-weight list coprime with 110, as 17 is, just steps too, and no puzzle waits longer than its
+ * list's length; one that shares 2, 5 or 11 with it steps one more each time the 110-day quick-and-words cycle comes round
+ * (`d mod 110 + d / 110`), so no set repeats within the year whatever its length, at the cost of one puzzle's gap doubling
  * at each turn of that cycle. Plain list indexing: no hash order, so the JVM and the web agree.
  *
  * The slots were sorted by what each puzzle asks (2026-10-26): quick is one gesture, or few rules and about a dozen hint
@@ -26,7 +26,7 @@ object TodaysThree {
     val QUICK = listOf("pointers", "pipes", "snap", "sand", "sets", "mosaic", "kings", "tents", "shikaku", "atoms", "lamps")
 
     /** Words and numbers. */
-    val WORDS = listOf("words", "wordwheel", "mini", "target", "cipher", "codeword", "tally", "hexwords", "dwindle")
+    val WORDS = listOf("words", "wordwheel", "mini", "target", "cipher", "codeword", "tally", "hexwords", "dwindle", "equation")
 
     /** Below this many solves in all, a player is new and gets [starter]. */
     const val NEWCOMER_SOLVES = 5

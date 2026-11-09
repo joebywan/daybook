@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.ui.play.guideUrl
+import com.joebywan.daybook.core.SearchVerdict
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.PuzzleRegistry
@@ -27,6 +28,8 @@ import com.joebywan.daybook.puzzles.Domino
 import com.joebywan.daybook.puzzles.DominoLogic
 import com.joebywan.daybook.puzzles.DominoTeacher
 import com.joebywan.daybook.puzzles.DwindleTeacher
+import com.joebywan.daybook.puzzles.EquationLogic
+import com.joebywan.daybook.puzzles.EquationTeacher
 import com.joebywan.daybook.puzzles.Feedback
 import com.joebywan.daybook.puzzles.HexTake
 import com.joebywan.daybook.puzzles.HexwordsState
@@ -36,7 +39,8 @@ import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.KingsTeacher
 import com.joebywan.daybook.puzzles.LampsLogic
 import com.joebywan.daybook.puzzles.LampsTeacher
-import com.joebywan.daybook.puzzles.LexiconMark
+import com.joebywan.daybook.core.GuessMarks
+import com.joebywan.daybook.puzzles.GuessTeacher
 import com.joebywan.daybook.puzzles.LexiconTeacher
 import com.joebywan.daybook.puzzles.Link
 import com.joebywan.daybook.puzzles.Lits
@@ -73,6 +77,8 @@ import com.joebywan.daybook.puzzles.SudokuTeacher
 import com.joebywan.daybook.puzzles.Sym
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyTeacher
+import com.joebywan.daybook.puzzles.ThermometersLogic
+import com.joebywan.daybook.puzzles.ThermometersTeacher
 import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.TentsTeacher
 import com.joebywan.daybook.puzzles.TowerTeacher
@@ -166,6 +172,7 @@ class GuideTest {
         "regions" to ::regionsStep,
         "cages" to ::cagesStep,
         "tally" to ::tallyStep,
+        "thermometers" to ::thermometersStep,
         "nonogram" to ::nonogramStep,
         "shikaku" to ::shikakuStep,
         "pipes" to ::pipesStep,
@@ -185,6 +192,7 @@ class GuideTest {
         "mines" to ::minesStep,
         "lits" to ::litsStep,
         "words" to ::lexiconStep,
+        "equation" to ::equationStep,
         "wordwheel" to ::wordWheelStep,
         "mini" to ::miniStep,
         "codeword" to ::codewordStep,
@@ -195,7 +203,21 @@ class GuideTest {
         "sets" to ::setsStep,
         "tower" to ::towerStep,
         "sand" to ::sandStep,
+        "unblock" to ::unblockStep,
     )
+
+    /** A yard: `R` the red car, any other token one car (its squares in a line; tokens sort in the game's car order), `.` empty. */
+    private fun unblockStep(b: Board): TeachStep? {
+        val tokens = b.rows.flatten()
+        val names = listOf("R") + tokens.filter { it != "." && it != "R" }.distinct().sorted() // letters in the game's car order
+        val cars = names.map { t ->
+            val sq = tokens.indices.filter { tokens[it] == t }
+            val across = sq.size > 1 && sq[1] == sq[0] + 1
+            com.joebywan.daybook.puzzles.UnblockCar(sq[0] / b.width, sq[0] % b.width, sq.size, across)
+        }
+        assertTrue("${b.technique}: a legal yard", com.joebywan.daybook.puzzles.UnblockLogic.isLegal(cars))
+        return com.joebywan.daybook.puzzles.UnblockTeacher.deduce(cars)
+    }
 
     /** A step's squares as a board draws them, for a teacher whose highlights are not all squares (or whose move is a line). */
     private class Drawn(override val technique: String, override val focus: Set<Int>, override val targets: Set<Int> = emptySet()) : TeachStep {
@@ -501,6 +523,49 @@ class GuideTest {
         return Mapped(step, step.focus.map(::mapped).toSet(), step.targets.map(::mapped).toSet())
     }
 
+    /**
+     * Counts in a margin right and below. `lines` draws each thermometer bulb first (`a-b`: `b` is the next square up it),
+     * a `solid` square is filled and an `x` crossed; both must agree with the one answer. An answer of `fill` fills, `x` crosses.
+     */
+    private fun thermometersStep(b: Board): TeachStep? {
+        val n = b.width - 1
+        fun board(i: Int) = i / n * b.width + i % n
+        val targets = List(n) { b.rows[it][n].toInt() } + List(n) { b.rows[n][it].toInt() }
+        val up = IntArray(n * n) { -1 }
+        val hasBelow = BooleanArray(n * n)
+        for (part in b.fields["lines"].orEmpty().split(' ').filter { it.isNotEmpty() }) {
+            val k = Regex("\\d+").findAll(part).map { it.value.toInt() - 1 }.toList()
+            up[k[0] * n + k[1]] = k[2] * n + k[3]
+            hasBelow[k[2] * n + k[3]] = true
+        }
+        val tubes = (0 until n * n).filter { !hasBelow[it] }.map { bulb -> generateSequence(bulb) { up[it].takeIf { u -> u >= 0 } }.toList() }
+        assertEquals("${b.technique}: every square in one thermometer", (0 until n * n).toList(), tubes.flatten().sorted())
+        val filled = b.squares("solid")
+        val marks = String(CharArray(n * n) {
+            when {
+                board(it) in filled -> ThermometersLogic.FILLED
+                b.rows[it / n][it % n] == "x" -> ThermometersLogic.CROSSED
+                else -> ThermometersLogic.UNMARKED
+            }
+        })
+        val answer = ThermometersLogic.countSolutions(n, tubes, targets)
+        assertTrue("${b.technique}: a position with one answer", answer is Verdict.ExactlyOne)
+        val fill = (answer as Verdict.ExactlyOne).value
+        for (i in 0 until n * n) {
+            if (marks[i] == ThermometersLogic.FILLED) assertEquals("${b.technique}: a filled square the answer empties", '1', fill[i])
+            if (marks[i] == ThermometersLogic.CROSSED) assertEquals("${b.technique}: a cross the answer fills", '0', fill[i])
+        }
+        val step = ThermometersTeacher.deduce(n, tubes, targets, marks) ?: return null
+        for (i in step.full) assertEquals("${b.technique}: a square filled", "fill", b.marks("answer")[board(i)])
+        for (i in step.empty) assertEquals("${b.technique}: a square crossed", "x", b.marks("answer")[board(i)])
+        fun mapped(i: Int) = when {
+            i < n * n -> board(i)
+            i < n * n + n -> (i - n * n) * b.width + n
+            else -> n * b.width + i - n * n - n
+        }
+        return Mapped(step, step.focus.map(::mapped).toSet(), step.targets.map(::mapped).toSet())
+    }
+
     /** Clues in margins above and to the left: `.` or `_` where a line has fewer. An answer of `.` is a fill, `x` a cross. */
     private fun nonogramStep(b: Board): TeachStep? {
         val height = b.rows.size
@@ -682,17 +747,46 @@ class GuideTest {
         val marks = guessRows.map { r ->
             List(n) { c ->
                 when (tiles.getValue(r * n + c)) {
-                    "right" -> LexiconMark.CORRECT
-                    "near" -> LexiconMark.PRESENT
-                    else -> LexiconMark.ABSENT
+                    "right" -> GuessMarks.CORRECT
+                    "near" -> GuessMarks.PRESENT
+                    else -> GuessMarks.ABSENT
                 }
             }
         }
         assertTrue("${b.technique}: some word draws these marks", LexiconTeacher.candidates(n, guesses, marks).isNotEmpty())
         val taught = LexiconTeacher.teach(n, guesses, marks, "") ?: return null
-        val move = taught.move as LexiconTeacher.Move.Pin
+        val move = taught.move as GuessTeacher.Move.Pin
         assertEquals("${b.technique}: the letter", move.letter.uppercase(), b.marks("answer")[guesses.size * n + move.slot])
         return step(taught, taught.focus, taught.targets.filter { it < LexiconTeacher.KEY }.toSet())
+    }
+
+    /** Equation's board is Lexicon's with symbols: × ÷ − on the page are * / - in the rows the teacher reads. */
+    private fun equationStep(b: Board): TeachStep? {
+        fun typed(token: String) = when (token) {
+            "×" -> "*"
+            "÷" -> "/"
+            "−" -> "-"
+            else -> token
+        }
+        val tiles = b.marks("tiles")
+        val n = b.width
+        val guessRows = b.rows.indices.filter { r -> (0 until n).all { r * n + it in tiles } }
+        val guesses = guessRows.map { r -> b.rows[r].joinToString("") { typed(it) } }
+        val marks = guessRows.map { r ->
+            List(n) { c ->
+                when (tiles.getValue(r * n + c)) {
+                    "right" -> GuessMarks.CORRECT
+                    "near" -> GuessMarks.PRESENT
+                    else -> GuessMarks.ABSENT
+                }
+            }
+        }
+        guesses.forEach { assertTrue("${b.technique}: $it is a true equation", EquationLogic.isTrue(it)) }
+        assertTrue("${b.technique}: some equation draws these marks", EquationTeacher.candidates(n, guesses, marks).isNotEmpty())
+        val taught = EquationTeacher.teach(n, guesses, marks, "") ?: return null
+        val move = taught.move as GuessTeacher.Move.Pin
+        assertEquals("${b.technique}: the symbol", move.letter.toString(), typed(b.marks("answer")[guesses.size * n + move.slot]!!))
+        return step(taught, taught.focus, taught.targets.filter { it < GuessTeacher.KEY }.toSet())
     }
 
     /** Maximal lines of two or more squares among [rows], across by row and then down by column. */
@@ -903,7 +997,7 @@ class GuideTest {
         val colours = Sand.colourNames.map { it.take(2) }
         val height = b.rows.size
         val tubes = (0 until b.width).map { t -> b.rows.reversed().map { it[t] }.filter { it != "." }.map(colours::indexOf) }
-        val road = (SandLogic.solve(tubes, height, SandTeacher.HINT_BUDGET) as? SandLogic.Verdict.Solvable)?.path
+        val road = (SandLogic.solve(tubes, height, SandTeacher.HINT_BUDGET) as? SearchVerdict.Solvable)?.path
             ?: error("${b.technique}: a board that sorts")
         val step = SandTeacher.deduce(tubes, height, road) ?: return null
         val landed = (tubes[step.to].size until step.after[step.to].size).map { (height - 1 - it) * b.width + step.to }
@@ -988,7 +1082,7 @@ class GuideTest {
         val anyCase = listOf(
             "minesweeper", "masyu", "killer sudoku", "rullo", "akari", "wordle", "kakuro", "number sums", "hashiwokakero",
             "hashi", "takuzu", "binairo", "einstein", "zebra puzzle", "fill-a-pix", "nikoli", "new york times", "nyt",
-            "wordscapes", "water sort", "slitherlink", "numberlink", "flow free",
+            "wordscapes", "water sort", "slitherlink", "numberlink", "flow free", "rush hour", "unblock me",
         )
         for (p in pages) {
             for (word in exact) assertTrue("${p.id} says $word", !Regex("\\b$word\\b").containsMatchIn(p.text))

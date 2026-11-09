@@ -275,30 +275,6 @@ sweeps), `ui/TwinTaps.kt` (tap / double tap), `ui/Settle.kt` (1 s red), `ui/Boar
 
 In order of measured demand, then fit:
 
-- [ ] **Unblock (sliding cars; Unblock Me 99M).** A 6x6 yard of cars two or three long, each sliding along its own axis;
-  slide them until the marked car leaves by the exit. Not the trademarked name. *Generation:* random yard, breadth-first
-  over positions for the exact minimum (positions are few on 6x6; still give the search a budget and a structural
-  `Solvable(path)` / `Unsolvable` / `Truncated` verdict, Sand's shape: `SandLogic.solve`). *Tiers:* minimum moves, e.g.
-  6-10 / 14-20 / 24+, a car count per tier. No move cap (Sand's choice, not Mosaic's); the share card shows moves against
-  the minimum. *Teacher:* the board is fully visible, so the hint is the first move of a shortest solution from where the
-  player stands (a fresh search, never the stored road), named by what it frees ("move the truck down: it is what blocks
-  the blue car"). No mistakes: a move that lengthens the road is allowed, as in Target. *Input:* drag a car, one state on
-  lift (snap to squares); keys: arrows select, Shift+arrow slides. *Reuse:* Sand's search and verdict (lift the generic
-  BFS over canonical positions into `core/` if it fits both), Sand's `log`/`withoutFrom` for "Show me". The TODO once
-  called this the least deductive candidate; the demand says build it anyway. *M.*
-- [ ] **Thermometers (Grids of Thermometers 266K).** Straight or bent thermometers fill the grid; fill each from its bulb
-  with no gaps so every row and column holds its count of filled squares. *Generation:* random thermometer layout (grow
-  tubes as Shikaku grows rectangles), random fill levels, counts read off; prove one answer (`Verdict`), gate on the
-  ladder. *Ladder:* line full / line empty (Tally's shortcuts), a thermometer's least and most in a line, a bulb that
-  must fill / a tip that cannot, what-if. *Input:* Nonogram's pen (Fill / Cross) through `penGrid` and `TwinTaps`, sweeps
-  one state; a tap on a thermometer square fills it up to there (one state). Counts turn green or red as Tally's chips do
-  (`rememberSettled`). Tiers 5x5 / 6x6 / 8x8. *M.*
-- [ ] **Equation codebreaker (Nerdle 214K).** Guess a hidden sum such as `12+35=47` in six tries; marks as Lexicon's.
-  *Generation:* every valid equation of the tier's length is enumerable on the device (one `=`, no leading zeros, no
-  negatives, whole results), sorted, the answer an index: no word list. Tiers by length 6 / 7 / 8. *Teacher:* Lexicon's
-  pins checked against every valid equation; a legal probe is never a mistake. *Reuse:* `LexiconRules.mark` (lift to a
-  generic `mark(guess, answer)` over any alphabet if it is letter-bound), Lexicon's rows and keyboard composables with a
-  digit/operator key set, its walkthrough shape. Never "Nerdle" where a player sees it. *M.*
 - [ ] **Battleships (Conceptis 152K).** Place a fleet (one 4, two 3s, three 2s, four 1s on 10x10, smaller on lower tiers)
   so ships never touch, even diagonally, matching row and column counts and a few given segments. Close to Tents, so reuse
   Tents' count chips, no-touch logic and `countSolutions` shape; input is Tents' (tap water, double tap ship). *M.*

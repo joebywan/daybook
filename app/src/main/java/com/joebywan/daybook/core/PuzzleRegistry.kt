@@ -25,16 +25,19 @@ import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Tally
+import com.joebywan.daybook.puzzles.Thermometers
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
+import com.joebywan.daybook.puzzles.Unblock
 import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoGraph
 import com.joebywan.daybook.puzzles.Hexwords
 import com.joebywan.daybook.puzzles.Dwindle
+import com.joebywan.daybook.puzzles.Equation
 import com.joebywan.daybook.puzzles.WordWheel
 
 /**
@@ -80,6 +83,9 @@ object PuzzleRegistry {
         Hexwords,
         Dwindle,
         Loop,
+        Thermometers,
+        Unblock,
+        Equation,
         Links,
     )
 

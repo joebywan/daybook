@@ -7,14 +7,15 @@ import com.joebywan.daybook.core.plural
 import com.joebywan.daybook.data.Completion
 import com.joebywan.daybook.data.LevelSolve
 import com.joebywan.daybook.puzzles.ChessState
-import com.joebywan.daybook.puzzles.LexiconMark
-import com.joebywan.daybook.puzzles.LexiconState
+import com.joebywan.daybook.core.GuessMarks
+import com.joebywan.daybook.puzzles.GuessRows
 import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.PointersState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.SetsState
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.TowerState
+import com.joebywan.daybook.puzzles.UnblockState
 import com.joebywan.daybook.puzzles.DwindleState
 import com.joebywan.daybook.puzzles.WordWheelState
 import kotlinx.datetime.LocalDate
@@ -37,12 +38,12 @@ object PlayLog {
 
     /**
      * What a push from [prev] to [next] adds to the log. A move is a change of board ([PuzzleType.sameBoard]), so picking
-     * a cell or a card is not one; in Lexicon and Tower only a submitted guess is (typing a letter or a peg is not), and in
+     * a cell or a card is not one; in Lexicon, Equation and Tower only a submitted guess is (typing a letter or a peg is not), and in
      * Target a push that takes operations back ("Show me" on a mistake) is that many undos.
      */
     fun step(puzzle: PuzzleType, prev: PuzzleState, next: PuzzleState): String = when {
         next is SetsState && next.lastWrong -> WRONG.toString()
-        next is LexiconState && prev is LexiconState -> if (next.guesses.size > prev.guesses.size) MOVE.toString() else ""
+        next is GuessRows<*> && prev is GuessRows<*> -> if (next.guesses.size > prev.guesses.size) MOVE.toString() else ""
         next is TowerState && prev is TowerState -> if (next.guesses.size > prev.guesses.size) MOVE.toString() else ""
         next is TargetState && prev is TargetState -> (next.log.size - prev.log.size).let {
             if (it > 0) MOVE.toString() else UNDO.toString().repeat(-it)
@@ -172,13 +173,13 @@ fun shareCard(
     // Every nudge below is for a solve without hints; one with them gets the same line whatever the puzzle.
     val own: String
     when (state) {
-        is LexiconState -> {
+        is GuessRows<*> -> {
             val guessed = state.guesses.size
             val hinted = hintedRows(guessed)
             suffix = " · $guessed/${state.maxGuesses}"
             lines = state.allMarks.mapIndexed { row, marks ->
                 ShareLine(marks.map {
-                    when (it) { LexiconMark.CORRECT -> Mark.GREEN; LexiconMark.PRESENT -> Mark.YELLOW; else -> Mark.WHITE }
+                    when (it) { GuessMarks.CORRECT -> Mark.GREEN; GuessMarks.PRESENT -> Mark.YELLOW; else -> Mark.WHITE }
                 }, hinted(row))
             }
             key = listOf(Mark.GREEN to "right place", Mark.YELLOW to "wrong place", Mark.RED to "hint")
@@ -218,13 +219,19 @@ fun shareCard(
                 else -> "A clean mate. Nothing to improve on."
             }
         }
-        is TargetState -> {
-            val steps = state.log.size
-            lines = listOf(ShareLine(moves.map { it.mark() }, tail = "   ${plural(steps, "step")} · par ${state.par}"))
-            key = listOf(Mark.GREEN to "step", Mark.YELLOW to "taken back", Mark.RED to "hint")
+        // Moves against the proved fewest: Target's steps, Unblock's slides.
+        is TargetState, is UnblockState -> {
+            val (made, par, unit) = when (state) {
+                is TargetState -> Triple(state.log.size, state.par, "step")
+                else -> (state as UnblockState).let { Triple(it.moves, it.par, "move") }
+            }
+            // Target's few steps a square each; Unblock's dozens in tenths.
+            val marks = if (state is TargetState) moves.map { it.mark() } else strip(moves)
+            lines = listOf(ShareLine(marks, tail = "   ${plural(made, unit)} · par $par"))
+            key = listOf(Mark.GREEN to unit, Mark.YELLOW to "taken back", Mark.RED to "hint")
             own = when {
-                undone > 0 -> "No hints, ${plural(undone, "step")} taken back. Fewer $next?"
-                steps > state.par -> "No hints, nothing taken back. Par is ${state.par}: $next?"
+                undone > 0 -> "No hints, ${plural(undone, unit)} taken back. Fewer $next?"
+                made > par -> "No hints, nothing taken back. Par is $par: $next?"
                 else -> "On par, nothing taken back. Nothing to improve on."
             }
         }

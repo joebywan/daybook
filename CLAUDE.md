@@ -44,7 +44,7 @@ section 7. The settled play-screen UX (popover, finish frame, solve sound) and t
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
-Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS, Loop and Links, each technique practised on real positions found by walking generated boards by
+Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS, Loop, Thermometers, Unblock and Links, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer (Pipes judges its own way: a
@@ -133,6 +133,54 @@ the tier shapes, `WordList`), `LexiconTeacher.kt`, `LexiconKeys.kt` (hardware ke
   fallback.
 - The typed row and the "Not in the word list" note are `remember` state, never `PuzzleState`; the note sits in
   the header line whose room is always reserved, so a refusal cannot move the board.
+
+## Equation (an equation codebreaker)
+
+Lexicon with sums: a true equation such as `12+35=47` is hidden; every guess must be a true equation of the same length, and
+each symbol is marked as Lexicon's letters are. Never "Nerdle" where a player sees it. `puzzles/EquationRules.kt` (state,
+`EquationLogic`: the rules, the enumeration, boards), `EquationTeacher.kt` (Lexicon's ladder, Equation's words),
+`EquationKeys.kt`, `Equation.kt` (walkthrough, motif). `id = "equation"` is hashed into every seed: never rename it.
+
+- **It runs on Lexicon's machinery, lifted, not copied**: `core/GuessMarks.kt` (the marker over any alphabet, scanning for
+  the first unmatched copy, so no table is indexed by symbol), `puzzles/GuessRows.kt` (the state shape, its mutators,
+  `GuessKeyAction`, the walkthrough's typing frames), `GuessTeacher.kt` (the ladder; each game supplies a `GuessVocab`:
+  alphabet, what may be submitted, the answers, its words), `GuessBoard.kt` (rows over a keyboard; a game gives its key
+  rows and how a symbol is shown), `core/DailyCycle.kt` and `SeedHash.cycleDay` (the no-repeat daily cycle). Lexicon moved
+  onto all of it with every board, mark, hint text and save unchanged (its `BoardPinTest` line and tests untouched).
+  Codebreaker keeps its own peg scoring (`TowerTeacher.score`): a peg count is not a per-slot mark.
+- **The rules, decided 2026-11-08:** one `=`, a plain number after it; at least one of `+ - * /` before it; `*` and `/`
+  before `+` and `-`, each left to right; **every `/` comes out whole** within its term (`8/4*3=6` yes, `3/2*4=6` no); no
+  minus sign before a number and no negative result (a running total may dip: `1-5+6=2`); no leading zeros; a lone `0`
+  is a number in a guess (`5-5=0`), but **an answer never holds a lone 0, nor multiplies or divides by a lone 1** (`1*7/1=7` was a daily answer before
+  that screen), so guesses are wider than answers.
+  `EquationLogic.problem` says why a row is refused (header line, at most 30 characters, `EquationRulesTest`).
+- **The lists are enumerated on the device, not stored** (`EquationLogic.valid`, sorted, cached per length): left sides
+  built number by number with the running total and term, the last number solved for (a range for `+ - *`, the term's
+  divisors for `/`). 476 / 11,705 / 65,704 true equations of 6 / 7 / 8 symbols, 206 / 5,431 / 15,963 answers (pinned).
+  A fresh enumeration takes under 25 ms on the JVM for eight symbols (not measured in a browser). `EquationOracle` (test) tries every left side of 3 to 6 symbols and evaluates it by folding × and ÷ out
+  of a token list: the lists agree exactly, and `problem` agrees with it on every true row, every one-symbol change of a
+  sample and random rows. Changing a rule or the enumeration moves every board (`BoardPinTest`).
+- **Tiers: 6 / 7 / 8 symbols, six guesses each** (`EquationLogic.shape`). Measured (`EquationBalanceTest`, 100 days a tier):
+  a careful player (the hints) needs 2.7 / 3.1 / 3.0 guesses on average and never more than 4 / 6 / 5; a prober that also
+  spends guesses on equations that cannot win, 2.7 / 3.1 / 3.0. So length does not make a tier take more guesses; it
+  leaves more to work out by hand: 206 / 5,431 / 15,963 answers, and 4.8 / 24.0 / 27.6 still fitting after the opener on
+  average (medians 4 / 20 / 22, p90 10 / 49 / 59). Expert with five guesses was tried and dropped: the hints lost 2 of a
+  year's 365 boards.
+- **Daily answers go round Lexicon's cycle from the first day** (`SeedHash.EQUATION_CYCLE_FROM` = 2026-01-01; it never had
+  hashed daily seeds): no answer recurs within 206 / 5,431 / 15,963 days. Random and Levels draw an index.
+- **The teacher is Lexicon's**: mistake (a row that is not a true equation, with the reason; a probe is never a mistake),
+  opener (seven per length, measured best by the mean answers left, named outright since it says nothing), pinned symbol
+  (a fact about the marks, checked against every true equation that fits, lone zeros included), submit, then one left /
+  best guess, which read the answer list, say so, and give the equation's **shape** (signs and right side, `??+??=47`),
+  never its left-hand digits; only "Show me" types it. Measured (`EquationTeachingTest`, a year of daily boards a tier):
+  every board of a year solved on every tier, in 2.67 / 3.08 / 3.06 guesses; the fallback (one left, best guess) is
+  52 / 58 / 59% of steps and on almost every board, as Lexicon's is: choosing a guess is most of the game. Pins are
+  98 / 98 / 85 steps a year. The worst Expert hint (the first after the opener) takes about 4 ms. No Training course: its one praised rung is the pin (the rest point at a guess), and a one-rung ladder is
+  excluded (`docs/TRAINING_SPEC.md`, classification).
+- `solved` is the last guess equal to the answer (every guess is a true equation, so it is all greens). Highlight indices are
+  Lexicon's: tiles `row * length + slot`, key `GuessTeacher.KEY + ALPHABET.indexOf(c)`, Enter, Del.
+- Keys: digits, `+ - * /` (X is ×; Shift+= and Shift+8 work), `=`, Enter, Backspace (`operatorKey`, lifted from Target's keys).
+  Shown as + − × ÷ on the keys and tiles.
 
 ## Shikaku
 
@@ -587,6 +635,45 @@ is hashed into every seed: never rename it.
   numbers can make it any more (solid `scheme.error`, so it cannot be mistaken for a Rose or Amber chip), after a 1 s debounce. Hue pair from `BoardHues.pair(digits.hashCode())`: A tints the target chips, B
   inks the circles. Highlight indices: squares `0 until n*n`, row target `n*n + r`, column target `n*n + n + c`.
 - The regions variant of the genre (sums per coloured region as well as per line) was deliberately not built; see `docs/TODO.md`.
+## Thermometers
+
+Straight and bent thermometers tile a square grid; fill each from its round bulb with no gap so every row and column holds its
+count of filled squares. Exactly one answer. `puzzles/ThermometersRules.kt` (state, `ThermometersLogic`: rules, the tap, the ladder,
+the exhaustive count, generator), `ThermometersTeacher.kt`, `Thermometers.kt` (board, keys, walkthrough, motif). `id = "thermometers"`
+is hashed into every seed: never rename it.
+
+- **State is the tubes, the answer and the marks**: `tubes` (each bulb first, in their bulbs' reading order), `fill` (`1`/`0`, the
+  answer), `marks` (`.`, `#` filled, `x` crossed: a note, counting as empty). Counts are derived from `fill`, never stored.
+  **`solved` checks the rules** (no filled square over an unfilled one in its tube, every line at its count), not `fill`.
+- **Input is Nonogram's and Tally's pen stack** (`core/PenMarks.kt`, `ui/PenBoard.kt`, `ui/TwinTaps.kt`), with one change: `tap` is
+  overridden (`ThermometersLogic.tubeTap`), one state and one move. Fill fills the tube from the bulb to the square and takes any fill
+  above back; on the top of a fill it lowers the fill below the square. Cross crosses from the square to the tip and takes any cross
+  below back; on the lowest of a run of crosses it clears the run. A double tap or long press is the other pen, a sweep marks only the
+  squares it passes. Counts are Tally's chips (`ui/LineChips.kt`, lifted from Tally): green when the line holds its count, red after
+  `rememberSettled`'s second once too many are filled or too few left open; a tube with a fill over a cross draws its outline red.
+- **Tiers: 5x5 tubes of 2-4 / 6x6 of 3-6 / 8x8 of 4-8 squares, and the rung a board must need, exactly** (`ThermometersLogic.depth`,
+  Tally's `Spec.needs`): Standard the lines and a tip that cannot fill (`TIPS`), Hard a bulb that must fill (`BULBS`), Expert a
+  what-if. A draw with a line counting 0 or every square is redrawn (Tally's rule: it gives itself away); with that rule no board is
+  finished by full and empty lines alone (0 of 170 proved 5x5 draws), so the brief's "lines only" Standard was dropped and the
+  rungs split tips from bulbs instead. Draws a board over a year: mean 16.8 / 14.9 / 102, most 106 / 83 / 714 of `ATTEMPTS` = 2000;
+  JVM median / p95 / max 0.5 / 3.6 / 23, 0.5 / 2.0 / 6.5, 9.9 / 39 / 88 ms; tubes 8.3 / 9.1 / 13.4 a board; 49-51% filled.
+- **Tubes are grown by `bentWalk`** (`core/Grid.kt`, lifted from Pointers' arrow bodies, Pointers' boards unmoved): from each bare
+  square in a shuffled order a walk of the tier's length; a lone square left joins a tube whose end is beside it, else the draw is
+  redrawn. Each tube is turned bulb-first at random. No hash container reaches the `Rng`.
+- **The ladder is the teacher's and the generator's** (`nextFact`, simplest first): `TUBE` (a thermometer fills from its bulb: below a
+  fill fills, above an empty empties), `DONE` / `ROOM` (Tally's shortcuts), `AT_MOST` (a line needing k more takes at most k of one
+  tube's open squares there, bulb side first: its next one and all above stay empty), `AT_LEAST` (the other tubes' open squares in a
+  line fall j short, so this one fills to its j-th), then a what-if (`MAX_LINKS` = 3 lines, each a line's rungs to its own fixpoint).
+  Every amount between a tube's least and most is possible for one line, so `AT_MOST`/`AT_LEAST` are all a single line says.
+- **A board ships only if the count proves one answer** (`countSolutions`: tube by tube over every level, cut when a line passes its
+  count or can no longer reach it; no budget; `Verdict`) **and the ladder finishes it at the tier's rung**, count first (it is the
+  cheaper). `ThermometersOracle` (test: square by square in reading order, no levels, no line logic) is the independent check.
+  `lastResort` is the first seed from 1 whose first draw the tier accepts, proved by a test; a year per tier never reaches it.
+- **Teacher:** reads only the tubes, counts and marks; a mistake is a mark the one answer disagrees with. No fallback exists:
+  200 boards a tier and a year a tier finish by hints alone, 15.1 / 21.8 / 38.3 steps a board, of which tips 4.1 / 6.2 / 10.3,
+  bulbs 0 / 2.5 / 7.5 and what-ifs 0 / 0 / 2.2 (every Hard board needs a bulb, every Expert board a what-if). Every single-tube step is one tap. Highlight indices:
+  squares `0 until n*n`, row count `n*n + r`, column count `n*n + n + c`.
+
 ## Sand (colour sort)
 
 Tubes of layered coloured sand; pour from tube to tube until every tube holds one colour (the water-sort family). Spec and decisions:
@@ -618,6 +705,49 @@ palette, walkthrough, motif), `SandTeacher.kt`, `SandKeys.kt`. `id = "sand"` is 
   in 57 dp columns; at 390x844 Standard's tubes are 63 dp, Hard's and Expert's 50 dp.
 - Colours: six hues at three steps, ordered by CIEDE2000 with colour-blind vision for the 5 / 7 / 8 prefixes (`SandPaletteTest`), and a symbol on every
   layer. The grain and the uneven tops come from the tube and layer index, never random per frame and never stored.
+
+## Unblock (sliding cars)
+
+A 6x6 yard of cars 2 or 3 long, each sliding only along its length; slide them until the red car leaves by the exit on the right
+of row 3. `puzzles/UnblockRules.kt` (`UnblockState`, `UnblockLogic`: rules, the yard's space, generator), `UnblockTeacher.kt`,
+`Unblock.kt` (board, keys, walkthrough, motif). `id = "unblock"` is hashed into every seed: never rename it. "Unblock" is a plain
+word; the genre's trademarked names ("Rush Hour", "Unblock Me") never appear where a player sees them (`GuideTest` bans both).
+
+- **A move is one car slid any distance** (a drag, one state on lift; the drag is `remember`). Car 0 is the red car, lying across
+  row 3; `solved` is it at the exit (a rule check). Slides can be slid back, so every board stays solvable whatever is played:
+  **no mistakes exist**, many answers, and no move cap (Sand's choice). `UnblockState` is the cars, `par` and `moves`; no log, since
+  "Show me" is one slide forward and there is never anything to take back (the brief's Sand/Target log had nothing to do here).
+- **Tiers: 10-11 cars (1-2 trucks), par 6-10 / 12-13 cars (2-3 trucks), par 13-18 / 14 cars (3 trucks), par 20 or more**
+  (`UnblockLogic.specFor`). The brief's 24+ for Expert was measured and dropped: random 14-car yards reach 24 on about 0.5% of
+  draws against 0.8% for 20 (`UnblockMeasure`, not kept), and the tail of a year of Expert days ran to 2.5 s on the JVM. Over a
+  year (`UnblockRulesTest`): par mean 7.9 / 14.9 / 23.0, Expert's longest 41; draws median 2 / 6 / 146, most 15 / 48 / 2530 of
+  `ATTEMPTS` = 6000; JVM ms median / p95 / max 8 / 57 / 120, 32 / 249 / 869, 52 / 233 / 903 (a busy shared machine).
+- **Generation is the yard's whole space, not a search for a start.** A random yard (no car but the red one across row 3), its
+  space breadth first (`space`, a primitive hash table: this is the generator's whole cost; at most `SPACE_CAP` = 12,000
+  positions or the yard is redrawn), then a second pass from every exit at once gives each position its fewest moves. A yard
+  within `NEAR` (5) of the tier is climbed: up to `CLIMB` (15) times a car is moved elsewhere from the hardest position, kept when
+  the farthest is no nearer. The start is drawn among the positions at the tier's distance (the farthest, capped at the tier's
+  most), and ships only if a fresh `Search.shortest` from it says `Solvable` in exactly that many: the par is proved by a search
+  that shares nothing with the space. `UnblockOracle` (test: a picture of letters, one square a step, 0-1 breadth first) agrees.
+  `lastResort` is seed 1's board per tier, written out and proved by a test; a year per tier never reaches it (`FallbackTest`).
+- **`core/Search.kt` is shared with Sand**: `SearchVerdict` (`Solvable(path)` / `Unsolvable` / `Truncated`, lifted from
+  `SandLogic.Verdict`, moving no board) and `Search.shortest`, a breadth-first search Sand's plan line now runs on. Sand's
+  own depth-first `solve` stays its own: packed tubes and two prunings, and its budget counts decide which deals ship.
+- **Teacher: a fresh breadth-first search from the cars on the board**, never the stored road or `par`; the hint is the first
+  slide of a shortest way out, named by what it frees (the first later slide over a square it leaves): `exit`, `clear-the-way`
+  (the red car's), `make-room` (another car's), `plan` (frees nothing at once: the red car driving on early). Following hints from
+  the start finishes in exactly par (`UnblockTeachingTest`, each step one nearer by the oracle). Per board over 40 a tier:
+  make-room 4.5 / 10.8 / 18.2, clear-the-way 2.4 / 3.0 / 3.8, plan 0.05 / 0.15 / 0.1, exit 1. No fallback exists; a search out of
+  budget says so (`unsure`) and cannot happen on a board made here (its space is under the budget).
+- Cars are named by colour, kind and line ("the teal truck in column 5"); colours are derived from what never moves (which way a
+  car lies and its line), so two cars in one line never share one and a name always picks one car. The red car is Coral (nothing on
+  this board is ever right or wrong) and carries a chevron. A fixed-height line over the yard shows "Moves n · par p"; the share
+  card shows moves against par (Target's branch, shared). Keys: arrows pick a car (`nearestPiece`, lifted from Pointers), Shift
+  with an arrow slides it one square, a move a press. Highlight indices are squares.
+- **Training** (`core/training/UnblockTraining.kt`): clear the way, make room and plan, on Standard boards (exit, one slide,
+  is left out). Right is any shortest slide of the technique (`UnblockTeacher.steps`); since the game has no mistakes, a slide
+  is wrong in practice when a fresh search says it leaves the red car no nearer (a practice board sits on the hints' walk, so
+  it is `par - moves` from the exit). A shortest slide of another kind plays on. `UnblockTrainingTest` checks both with the oracle.
 
 ## Dominoes (domino placement on a region board)
 
@@ -1042,7 +1172,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 - The mode row (`Daily/Random · Levels · Training`, `LaunchOptions`) sits above the tier row. Daily and Random share the first
   segment, the one in use large over the other small; a tap on it while selected swaps them (150 ms, snapped under reduced
   motion), and from another mode it returns to the last of the two (`tappedMode`, `dayMode` in `DaybookApp`; Daily on launch,
-  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 23"
+  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 25"
   graduated) so the three share one height; the swap scales the two lines rather than measuring them again, so the row's
   height never changes mid-swap. In Levels and Training the tier row stays laid out, invisible, under the level strip or the
   training strip, so the grid below cannot move when the mode changes. The sticky rows sit tight (4dp over, 4dp between,
@@ -1057,7 +1187,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list; the lengths are 11 / 15 / 9; where the mid-weight length shares a factor with the others the slot skips a day each cycle, and a test says no set repeats in a year), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths are 11 / 17 / 10, quick and words stay coprime and a test says so; a mid-weight list sharing a factor with their 110-day cycle skips a place at each turn of it), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
   **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
   once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,
@@ -1118,7 +1248,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`, `LinksLogic`, `LoopLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords, Dwindle, Loop and Links (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`, `LoopLogic`, `UnblockLogic`, `LinksLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords, Dwindle, Unblock, Loop and Links (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

@@ -3,10 +3,12 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.core.TutorialStep
+import com.joebywan.daybook.core.GuessMarks
 import com.joebywan.daybook.puzzles.Lexicon
-import com.joebywan.daybook.puzzles.LexiconKeyAction
+import com.joebywan.daybook.puzzles.GuessKeyAction
 import com.joebywan.daybook.puzzles.LexiconRules
 import com.joebywan.daybook.puzzles.LexiconState
+import com.joebywan.daybook.puzzles.GuessTeacher
 import com.joebywan.daybook.puzzles.LexiconTeacher
 import com.joebywan.daybook.puzzles.WordList
 import com.joebywan.daybook.puzzles.lexiconKeyAction
@@ -125,24 +127,24 @@ class LexiconDeductionTest {
     @Test
     fun `the walkthrough's claims hold - OAT leaves three answers, and CLOG, which cannot win, tells them apart`() {
         fun left(guesses: List<String>) = WordList.answers(4).filter { w ->
-            LexiconRules.consistent(w, guesses, guesses.map { LexiconRules.mark(it, Lexicon.TUTORIAL_ANSWER) })
+            GuessMarks.consistent(w, guesses, guesses.map { GuessMarks.mark(it, Lexicon.TUTORIAL_ANSWER) })
         }
         val (tape, boat, clog) = Lexicon.TUTORIAL_GUESSES
         assertEquals(listOf("coat", "goat", "moat"), left(listOf(tape, boat)))
         assertTrue(WordList.isWord(clog))
         // Each of the three marks CLOG differently, so one guess settles it whichever is the word.
-        assertEquals(3, listOf("coat", "goat", "moat").map { LexiconRules.mark(clog, it) }.toSet().size)
+        assertEquals(3, listOf("coat", "goat", "moat").map { GuessMarks.mark(clog, it) }.toSet().size)
         assertEquals(listOf("coat"), left(listOf(tape, boat, clog)))
     }
 
     @Test
     fun `physical keys map to letters, enter and backspace, and nothing else`() {
-        assertEquals(LexiconKeyAction.Letter('a'), lexiconKeyAction(Key.A))
-        assertEquals(LexiconKeyAction.Letter('z'), lexiconKeyAction(Key.Z))
-        assertEquals(LexiconKeyAction.Enter, lexiconKeyAction(Key.Enter))
-        assertEquals(LexiconKeyAction.Enter, lexiconKeyAction(Key.NumPadEnter))
-        assertEquals(LexiconKeyAction.Backspace, lexiconKeyAction(Key.Backspace))
-        assertEquals(LexiconKeyAction.Backspace, lexiconKeyAction(Key.Delete))
+        assertEquals(GuessKeyAction.Letter('a'), lexiconKeyAction(Key.A))
+        assertEquals(GuessKeyAction.Letter('z'), lexiconKeyAction(Key.Z))
+        assertEquals(GuessKeyAction.Enter, lexiconKeyAction(Key.Enter))
+        assertEquals(GuessKeyAction.Enter, lexiconKeyAction(Key.NumPadEnter))
+        assertEquals(GuessKeyAction.Backspace, lexiconKeyAction(Key.Backspace))
+        assertEquals(GuessKeyAction.Backspace, lexiconKeyAction(Key.Delete))
         assertNull(lexiconKeyAction(Key.One))
         assertNull(lexiconKeyAction(Key.DirectionLeft))
         assertNull(lexiconKeyAction(Key.Spacebar))

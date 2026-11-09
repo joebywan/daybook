@@ -72,6 +72,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | LITS | LITS (Nikoli) | One L/I/T/S tetromino per region, no 2×2, no same letter touching |
 | Codebreaker | Mastermind | Break the hidden colour code from scored guesses |
 | Lexicon | Mastermind for words | Find the hidden word; each guess marks every letter green, yellow or grey |
+| Equation | Mastermind for sums | Find the hidden equation; every guess must be true, and each symbol is marked as Lexicon's letters are |
 | Nonogram | Nonogram | Fill squares to match the run lengths beside each row and column and a picture appears |
 | Inequality | Futoshiki | 1 to N once per row and column, `<` and `>` signs between some neighbours |
 | Mate | Chess mate-in-N | White to play and mate in 2, 3 or 4; the opponent defends as well as it can |
@@ -84,7 +85,9 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Hexwords | Letter-spending | Spell words through touching hexes to reach a target score; a word's letters are used up, so which word to take first matters |
 | Dwindle | Vanishing letter grid | Find every listed word by swiping through touching tiles; each tile counts its uses left and vanishes at zero |
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
+| Thermometers | Thermometer grid | Fill straight and bent thermometers from the bulb up, no gaps, so every row and column holds its count of filled squares |
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
+| Unblock | Sliding-block puzzle | Slide cars along their length, in a 6x6 yard, until the red car can drive out of the exit; each board's par is its proved fewest moves |
 | Arrows | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 | Mines | Minefield, no guessing | Reveal every square without a mine; each number counts the mines touching it, the board opens with a clear patch, and a mine costs one of three lives |
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
@@ -129,6 +132,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
 - **Tally** — random digits and a random answer, kept only if a person's ladder finishes it (shortcuts, the ways one line can
   make its target, and on Expert a short what-if) needing exactly the tier's deepest step, and an exhaustive count finds one answer.
   An independent solver that lists every way each column can make its target confirms it in the tests.
+- **Thermometers** — thermometers grown as random bent walks and a random level for each, kept only if an exhaustive count finds
+  one answer and a person's ladder (a thermometer fills from its bulb, full and empty lines, what one thermometer can give a line,
+  and on Expert a short what-if) finishes it needing exactly the tier's deepest step. An independent solver that decides one square
+  at a time confirms it in the tests.
 - **Pearls** — a random loop grown so that the pearls it allows can pin it down, then pearls taken back while a person's ladder
   (the pearls' own rules, the loop that must be one, and on Expert a short what-if) still finishes it, needing exactly the tier's
   deepest step; an exhaustive count proves one loop, and an independent solver that decides every edge in reading order agrees.
@@ -145,6 +152,9 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   is redrawn). Deals that give the board away (a tube already one colour, a long run) are redrawn, and so is a board a player
   pouring at random sorts every time. An independent breadth-first search confirms in the tests every "can't be sorted" the
   game and its hints claim.
+- **Unblock** — many answers by design; what is proved is the par, the fewest moves. The yard's whole space of positions is
+  searched, every position given its distance to the exit, and a start is drawn at the tier's distance; a fresh breadth-first
+  search from that start must agree before it ships, and an independent solver that moves one square at a time confirms it in the tests.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
 - **Nonogram** — a random picture is kept only if a line solver finishes it: for each row or column, work out
@@ -210,10 +220,11 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   give: the hints' walk (a slot only one word fits, one word its crossings leave, every crossing worked through) must
   finish the grid reading a tier's share of its letters from the clues, and an exhaustive search proves those letters
   and the crossings leave one grid. An independent solver that fills square by square over the alphabet confirms it.
-- **Codebreaker and Lexicon** — nothing hidden to prove: the code, or the word, is one random pick, and a
-  guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
+- **Codebreaker, Lexicon and Equation** — nothing hidden to prove: the code, the word or the equation is one
+  pick, and a guess that cannot be it is still a fair probe. Lexicon's word is an index into a fixed sorted list
   (SCOWL, screened by hand), so the browser and the app always agree; the lists are rebuilt by
-  `tools/words/build.py`.
+  `tools/words/build.py`. Equation's list is every true equation of the tier's length, enumerated on the device
+  and checked against an independent brute-force enumeration.
 
 Two things make that harder than it sounds, and both have gone wrong here:
 
