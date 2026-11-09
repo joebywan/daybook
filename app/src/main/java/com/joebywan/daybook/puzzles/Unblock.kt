@@ -41,6 +41,7 @@ import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.highlightGrid
 import com.joebywan.daybook.core.nearestPiece
+import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.drawHintDim
 import com.joebywan.daybook.ui.drawHintRings
@@ -66,7 +67,7 @@ object Unblock : PuzzleType {
     override val id = "unblock"
     override val displayName = "Unblock"
     override val tagline = "Slide the cars aside and drive the red one out"
-    override val accent = 0xFF3F86A6
+    override val accent = 0xFFD062BA // AccentSpacingTest's printed candidate
     override val rules = listOf(
         "Get the red car out through the exit on the right of its row.",
         "Drag a car to slide it. A car only slides along its length, forwards or back, as far as the way is clear.",
@@ -267,12 +268,14 @@ object Unblock : PuzzleType {
         ) {
             // The par and the count so far, one line always this height, so nothing moves the yard.
             Box(Modifier.fillMaxWidth().height(36.dp), contentAlignment = Alignment.Center) {
-                Text(
-                    "Moves ${s.moves} · par ${s.par}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
+                CappedFontScale {
+                    Text(
+                        "Moves ${s.moves} · par ${s.par}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
             }
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(bottom = 12.dp), contentAlignment = Alignment.Center) {
             val step = fitStep(n, n)

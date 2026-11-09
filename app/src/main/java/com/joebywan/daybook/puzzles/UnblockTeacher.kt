@@ -126,8 +126,28 @@ internal object UnblockTeacher {
     }
 
     /** The [Deduction] for the play screen; `Unblock.teach` is just this. */
-    fun deduction(s: UnblockState): Deduction? {
-        val step = teach(s) ?: return null
+    fun deduction(s: UnblockState): Deduction? = teach(s)?.let { deduction(s, it) }
+
+    /**
+     * Every slide from [cars] that starts a shortest way out and is [technique], each named as the hint would name it if
+     * it were the hint's pick (Training's "any step of the technique", from the cars alone). Several shortest ways often
+     * exist; the hint names one, and these are the rest.
+     */
+    fun steps(cars: List<UnblockCar>, technique: String): List<Step> {
+        val here = (UnblockLogic.solve(cars) as? SearchVerdict.Solvable)?.path?.size ?: return emptyList()
+        return UnblockLogic.slides(cars).mapNotNull { m ->
+            val after = UnblockLogic.slide(cars, m.car, m.by)
+            val road = (UnblockLogic.solve(after) as? SearchVerdict.Solvable)?.path ?: return@mapNotNull null
+            if (road.size != here - 1) return@mapNotNull null
+            explain(cars, listOf(m) + road).takeIf { it.technique == technique }
+        }
+    }
+
+    /** The fewest moves from [cars] to the exit, or -1 when the search found none (never on a board made here). */
+    fun fewest(cars: List<UnblockCar>): Int = (UnblockLogic.solve(cars) as? SearchVerdict.Solvable)?.path?.size ?: -1
+
+    /** The [Deduction] for [step] on [s]. */
+    fun deduction(s: UnblockState, step: Step): Deduction {
         val m = step.move
         val target = m?.let { UnblockLogic.slide(s.cars, it.car, it.by)[it.car] }
         return Deduction(

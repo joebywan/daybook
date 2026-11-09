@@ -55,6 +55,29 @@ class UnblockTeachingTest {
     }
 
     @Test
+    fun `hints alone finish every daily board of a year on every tier, in exactly par, never unsure`() {
+        val report = StringBuilder()
+        for (d in Difficulty.entries) {
+            var steps = 0
+            for (day in 0 until 365) {
+                var s = board(d, day)
+                var n = 0
+                while (!s.solved) {
+                    val dd = Unblock.teach(s)!!
+                    assertTrue("${d.name} day $day: ${dd.technique}", dd.technique in UnblockTeacher.TECHNIQUES)
+                    assertFalse(dd.fallback)
+                    s = dd.apply(s) as UnblockState
+                    n++
+                }
+                assertEquals("${d.name} day $day", s.par, n)
+                steps += n
+            }
+            report.append("${d.name}: 365 boards, $steps hint steps, no fallback, no unsure\n")
+        }
+        println(report)
+    }
+
+    @Test
     fun `from boards a player has wandered on, a hint is still one move nearer and never a mistake`() {
         for (d in Difficulty.entries) for (day in 0 until 15) {
             var s = board(d, day)

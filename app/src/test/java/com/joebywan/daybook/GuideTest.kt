@@ -194,10 +194,10 @@ class GuideTest {
         "unblock" to ::unblockStep,
     )
 
-    /** A yard: `R` the red car, any other token one car (its squares in a line), `.` empty. */
+    /** A yard: `R` the red car, any other token one car (its squares in a line; tokens sort in the game's car order), `.` empty. */
     private fun unblockStep(b: Board): TeachStep? {
         val tokens = b.rows.flatten()
-        val names = listOf("R") + tokens.filter { it != "." && it != "R" }.distinct()
+        val names = listOf("R") + tokens.filter { it != "." && it != "R" }.distinct().sorted() // letters in the game's car order
         val cars = names.map { t ->
             val sq = tokens.indices.filter { tokens[it] == t }
             val across = sq.size > 1 && sq[1] == sq[0] + 1

@@ -85,6 +85,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Dwindle | Vanishing letter grid | Find every listed word by swiping through touching tiles; each tile counts its uses left and vanishes at zero |
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
+| Unblock | Sliding-block puzzle | Slide cars along their length, in a 6x6 yard, until the red car can drive out of the exit; each board's par is its proved fewest moves |
 | Arrows | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 | Mines | Minefield, no guessing | Reveal every square without a mine; each number counts the mines touching it, the board opens with a clear patch, and a mine costs one of three lives |
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
@@ -135,6 +136,9 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   is redrawn). Deals that give the board away (a tube already one colour, a long run) are redrawn, and so is a board a player
   pouring at random sorts every time. An independent breadth-first search confirms in the tests every "can't be sorted" the
   game and its hints claim.
+- **Unblock** — many answers by design; what is proved is the par, the fewest moves. The yard's whole space of positions is
+  searched, every position given its distance to the exit, and a start is drawn at the tier's distance; a fresh breadth-first
+  search from that start must agree before it ships, and an independent solver that moves one square at a time confirms it in the tests.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
 - **Nonogram** — a random picture is kept only if a line solver finishes it: for each row or column, work out

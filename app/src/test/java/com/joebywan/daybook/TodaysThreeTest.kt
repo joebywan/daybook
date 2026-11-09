@@ -18,7 +18,7 @@ class TodaysThreeTest {
 
     @Test fun `the three are pinned to the date`() {
         // Worked out by hand from the lists and the epoch day (20751): a change here moves everyone's three.
-        // 20751 mod 11 = 5 (mosaic), mod 13 = 3 (tower, in the registry's order), mod 9 = 6 (tally).
+        // 20751 mod 11 = 5 (mosaic), mod 14 = 3 (tower, in the registry's order), mod 9 = 6 (tally).
         assertEquals(listOf("mosaic", "tower", "tally"), TodaysThree.of(day))
         assertEquals(listOf("kings", "nonogram", "hexwords"), TodaysThree.of(LocalDate(2026, 10, 26)))
         assertEquals(listOf("tents", "inequality", "dwindle"), TodaysThree.of(LocalDate(2026, 10, 27)))
@@ -29,16 +29,16 @@ class TodaysThreeTest {
         val mid = ids.filter { it !in TodaysThree.QUICK && it !in TodaysThree.WORDS }
         tailrec fun gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)
         val sizes = listOf(TodaysThree.QUICK.size, mid.size, TodaysThree.WORDS.size)
-        assertEquals(listOf(11, 13, 9), sizes)
+        assertEquals(listOf(11, 14, 9), sizes)
         assertTrue(sizes.indices.all { i -> sizes.indices.all { j -> i == j || gcd(sizes[i], sizes[j]) == 1 } })
         val days = (0 until 1001).map { TodaysThree.of(LocalDate.fromEpochDays(day.toEpochDays() + it)) }
         assertEquals("no set repeats in 1,001 days", 1001, days.toSet().size)
         ids.forEach { id ->
             val on = days.indices.filter { id in days[it] }
             val gap = on.zipWithNext { a, b -> b - a }.max()
-            assertTrue("$id waits $gap days", gap <= 13)
+            assertTrue("$id waits $gap days", gap <= 14)
         }
-        // A new puzzle joining the mid-weight list makes it 14, sharing 2 with the words: the slot then skips, and still
+        // A new puzzle joining the mid-weight list makes it 15, sharing 3 with the words: the slot then skips, and still
         // no set repeats within a year.
         val more = ids + "new"
         assertEquals(365, (0 until 365).map { TodaysThree.of(LocalDate.fromEpochDays(day.toEpochDays() + it), more) }.toSet().size)
