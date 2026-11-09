@@ -137,8 +137,8 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   exactly the tier's deepest step; an exhaustive count proves one loop, and an independent solver that colours squares in or
   out agrees.
 - **Links** — the board is a random cover of the grid by paths that never run beside themselves, their ends the numbers;
-  it is kept only if a person's ladder (a line's end with one way on, a square with two ways in, which pairs can still
-  reach a square, a way that would cut a pair off, and on Expert a short what-if) finishes it at the tier's depth, and an
+  it is kept only if a person's ladder (a line's end with one way on, a square with two ways in, a way that would cut a
+  pair off or leave a square no pair can reach, and on Expert a short what-if) finishes it at the tier's depth, and an
   exhaustive count proves one answer; an independent solver that decides every square's lines in reading order agrees.
 - **Sand** — many answers by design, so what is proved is that one exists: a deal is kept only once a search has found a
   sequence of pours that sorts it (the found road is the proof; a search that runs out of budget proves nothing and the deal
