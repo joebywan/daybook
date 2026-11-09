@@ -298,12 +298,6 @@ In order of measured demand, then fit:
   lift (snap to squares); keys: arrows select, Shift+arrow slides. *Reuse:* Sand's search and verdict (lift the generic
   BFS over canonical positions into `core/` if it fits both), Sand's `log`/`withoutFrom` for "Show me". The TODO once
   called this the least deductive candidate; the demand says build it anyway. *M.*
-- [ ] **Loop through the dots (Slitherlink-style; 817K, the biggest pencil-puzzle candidate).** Draw one closed loop
-  along grid edges so each numbered square has exactly that many loop edges around it. Provable and rich, but tapping
-  edges on a phone is fiddly: prototype the input before committing. Pearls (built) has a loop's machinery to reuse: the
-  loop rule, the exhaustive count, edge hit testing (`Pearls.edgeNear`) and crosses as notes; its loop runs through
-  squares, this one along their edges, so lift the loop rule and edge indexing into a shared file rather than fork it.
-  Tiers 5x5 / 7x7 / 10x10 by depth (local corner and number rules / loop rule / what-if). *L.*
 - [ ] **Equation codebreaker (Nerdle 214K).** Guess a hidden sum such as `12+35=47` in six tries; marks as Lexicon's.
   *Generation:* every valid equation of the tier's length is enumerable on the device (one `=`, no leading zeros, no
   negatives, whole results), sorted, the answer an index: no word list. Tiers by length 6 / 7 / 8. *Teacher:* Lexicon's

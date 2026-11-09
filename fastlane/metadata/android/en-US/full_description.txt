@@ -12,6 +12,7 @@ WHAT'S INSIDE
 • Mines: clear a minefield by its numbers alone, never a guess
 • Lamps: light every square, with no lamp shining on another
 • Pearls: draw one loop through every black and white pearl
+• Loop: draw one loop round the numbers, from dot to dot
 • Who's Who: match everyone to their house, pet and job from the clues
 • Word puzzles: Lexicon (find the hidden word in a few guesses), Word Wheel, Codeword and a mini Crossword
 • Codebreaker: crack a hidden colour code from scored guesses

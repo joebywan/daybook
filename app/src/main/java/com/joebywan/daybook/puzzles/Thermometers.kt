@@ -84,7 +84,7 @@ object Thermometers : PuzzleType {
     override val id = "thermometers"
     override val displayName = "Thermometers"
     override val tagline = "Fill each one from the bulb up"
-    override val accent = 0xFFD062BA
+    override val accent = 0xFF9F568E
 
     override val rules = listOf(
         "Each thermometer fills from its round bulb, with no gaps: a filled square has every square below it filled.",

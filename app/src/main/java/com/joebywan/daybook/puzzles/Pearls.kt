@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Deduction
 import com.joebywan.daybook.core.Difficulty
+import com.joebywan.daybook.core.LoopEdges
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.boardKeys
@@ -46,8 +47,6 @@ import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.geometry.Rect
 import com.joebywan.daybook.ui.gridCellAt
-import kotlin.math.floor
-import kotlin.math.roundToInt
 
 
 /**
@@ -89,33 +88,6 @@ object Pearls : PuzzleType {
     }
 
     // ---- input geometry (pure, tested) ----------------------------------------------------------
-
-    /** How near the middle of an edge a tap must land to name it, in squares. */
-    const val TAP_REACH = 0.42f
-
-    /**
-     * The edge whose middle is nearest ([x], [y]), in square units, if within [TAP_REACH]; else -1. A tap
-     * on the middle of a square names no edge (all four are half a square away).
-     */
-    fun edgeNear(n: Int, x: Float, y: Float): Int {
-        val g = PearlsGrid.of(n)
-        var best = -1
-        var bestD = TAP_REACH * TAP_REACH
-        // Horizontal edge (r, c)-(r, c+1) has its middle at (c + 1, r + 0.5); vertical (r, c)-(r+1, c) at (c + 0.5, r + 1).
-        val r = floor(y).toInt()
-        val k = x.roundToInt()
-        if (r in 0 until n && k in 1 until n) {
-            val d = (x - k) * (x - k) + (y - r - 0.5f) * (y - r - 0.5f)
-            if (d < bestD) { bestD = d; best = r * (n - 1) + (k - 1) }
-        }
-        val c = floor(x).toInt()
-        val j = y.roundToInt()
-        if (c in 0 until n && j in 1 until n) {
-            val d = (y - j) * (y - j) + (x - c - 0.5f) * (x - c - 0.5f)
-            if (d < bestD) { best = g.horizontal + (j - 1) * n + c }
-        }
-        return best
-    }
 
     /**
      * A drag's trail after the finger reaches [cell]: added when it is a neighbour of the last square, taken
@@ -314,7 +286,7 @@ object Pearls : PuzzleType {
         val st = IntArray(g.edgeCount) { if (s.edges[it] == PearlsLogic.LINE_MARK) PearlsLogic.LINE else PearlsLogic.OPEN }
         // Probe-only sets: drawn by membership, never walked into a choice.
         val squares = mutableSetOf<Int>()
-        for (q in 0 until g.squares) {
+        for (q in 0 until g.nodes) {
             if ((0 until 4).count { d -> g.edge(q, d).let { it >= 0 && st[it] == PearlsLogic.LINE } } > 2) squares.add(q)
             val f = when (s.pearls[q]) {
                 PearlsLogic.BLACK -> PearlsLogic.blackRule(g, s.pearls, st, q)
@@ -326,9 +298,9 @@ object Pearls : PuzzleType {
         val edges = mutableSetOf<Int>()
         val parts = PearlsLogic.stretches(g, st)
         if (parts.total > 0) {
-            val hasEnd = BooleanArray(g.squares)
-            for (q in 0 until g.squares) if (parts.degree[q] == 1 || parts.degree[q] > 2) hasEnd[parts.root[q]] = true
-            for (q in 0 until g.squares) {
+            val hasEnd = BooleanArray(g.nodes)
+            for (q in 0 until g.nodes) if (parts.degree[q] == 1 || parts.degree[q] > 2) hasEnd[parts.root[q]] = true
+            for (q in 0 until g.nodes) {
                 val r = parts.root[q]
                 if (r != q || hasEnd[r]) continue
                 val all = parts.edgesIn[r] == parts.total && s.pearls.indices.all { s.pearls[it] == '.' || parts.root[it] == r }
@@ -368,14 +340,14 @@ object Pearls : PuzzleType {
 
         // Squares, a light hue-A tint over the surface so their middles read.
         drawRect(scheme.surface, Offset.Zero, Size(n * u, n * u))
-        for (q in 0 until g.squares) {
+        for (q in 0 until g.nodes) {
             drawRect(tint, Offset((q % n) * u + u * 0.04f, (q / n) * u + u * 0.04f), Size(u * 0.92f, u * 0.92f))
         }
         // The frame.
         drawRect(scheme.onSurfaceVariant.copy(alpha = 0.7f), Offset.Zero, Size(n * u, n * u), style = Stroke(maxOf(u * 0.04f, 1.5f)))
 
         // Each square's own half of every line it has, and its pearl: drawn per square so a move's squares settle.
-        for (q in 0 until g.squares) {
+        for (q in 0 until g.nodes) {
             val c = centre(q)
             feelSquare(feel, q, Offset((q % n) * u, (q / n) * u), Size(u, u), accent) {
                 val bad = q in broken.squares
@@ -418,7 +390,7 @@ object Pearls : PuzzleType {
         if (!lit) return
 
         // Everything the hint does not name steps back, so the glow is findable.
-        for (q in 0 until g.squares) {
+        for (q in 0 until g.nodes) {
             if (named(q) || (0 until 4).any { d -> g.edge(q, d).let { it >= 0 && named(n * n + it) } }) continue
             drawRect(scheme.background.copy(alpha = 0.55f), Offset((q % n) * u, (q / n) * u), Size(u, u))
         }
@@ -484,7 +456,7 @@ object Pearls : PuzzleType {
         val pearlSquares = remember(s.pearls) { s.pearls.indices.filter { s.pearls[it] != '.' } }
         val kept = pearlSquares.map { keptPearl(s, it) }
         val feel = rememberMoveFeel(
-            List(g.squares) { q -> (0 until 4).map { d -> g.edge(q, d).let { e -> if (e < 0) ' ' else s.edges[e] } } },
+            List(g.nodes) { q -> (0 until 4).map { d -> g.edge(q, d).let { e -> if (e < 0) ' ' else s.edges[e] } } },
             pearlSquares.mapIndexed { k, p -> kept[k] ?: intArrayOf(p) },
         ) { kept[it] != null }
 
@@ -517,7 +489,7 @@ object Pearls : PuzzleType {
                     .pointerInput(n, interactive) {
                         if (!interactive) return@pointerInput
                         detectTapGestures { at ->
-                            val e = edgeNear(n, at.x / unitPx, at.y / unitPx)
+                            val e = LoopEdges.edgeNear(n, at.x / unitPx, at.y / unitPx)
                             if (e >= 0) emit(latest.tap(e))
                         }
                     }
