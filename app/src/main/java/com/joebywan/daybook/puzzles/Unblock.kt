@@ -67,7 +67,7 @@ object Unblock : PuzzleType {
     override val id = "unblock"
     override val displayName = "Unblock"
     override val tagline = "Slide the cars aside and drive the red one out"
-    override val accent = 0xFFD062BA // AccentSpacingTest's printed candidate
+    override val accent = 0xFF7B6F3D // AccentSpacingTest's printed candidate
     override val rules = listOf(
         "Get the red car out through the exit on the right of its row.",
         "Drag a car to slide it. A car only slides along its length, forwards or back, as far as the way is clear.",

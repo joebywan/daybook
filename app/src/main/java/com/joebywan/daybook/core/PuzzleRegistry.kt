@@ -12,6 +12,7 @@ import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.Lamps
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.Lits
+import com.joebywan.daybook.puzzles.Loop
 import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Nonogram
@@ -23,6 +24,7 @@ import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Sets
 import com.joebywan.daybook.puzzles.Snap
 import com.joebywan.daybook.puzzles.Tally
+import com.joebywan.daybook.puzzles.Thermometers
 import com.joebywan.daybook.puzzles.Sand
 import com.joebywan.daybook.puzzles.Target
 import com.joebywan.daybook.puzzles.Tents
@@ -78,6 +80,8 @@ object PuzzleRegistry {
         Mini,
         Hexwords,
         Dwindle,
+        Loop,
+        Thermometers,
         Unblock,
     )
 

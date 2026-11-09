@@ -29,19 +29,34 @@ data class PearlsKeyResult(val cursor: Int?, val armed: Boolean, val board: Pear
  * cross through [PearlsState.tap] (so X on a line rubs it out, as a tap does), one state per key, so undo cannot differ. A move off the board's edge
  * draws nothing.
  */
-fun PearlsState.applyKey(cursor: Int?, armed: Boolean, action: PearlsKeyAction): PearlsKeyResult {
-    if (cursor == null) return PearlsKeyResult(if (action is PearlsKeyAction.Move) 0 else null, false, this)
+fun PearlsState.applyKey(cursor: Int?, armed: Boolean, action: PearlsKeyAction): PearlsKeyResult =
+    loopKey(size, cursor, armed, action, this, ::tap, ::drag).let { (c, a, b) -> PearlsKeyResult(c, a, b) }
+
+/**
+ * A key on any loop board whose points are an `side x side` lattice ([PearlsGrid]): Pearls' squares, Loop's dots. The
+ * cursor (a point), whether a cross is armed, and [board] after [tap] or [drag] of the edge the key names, or [board]
+ * itself when nothing changed. Shared so the two boards' keys cannot differ.
+ */
+internal fun <S> loopKey(
+    side: Int,
+    cursor: Int?,
+    armed: Boolean,
+    action: PearlsKeyAction,
+    board: S,
+    tap: (Int) -> S,
+    drag: (List<Int>) -> S,
+): Triple<Int?, Boolean, S> {
+    if (cursor == null) return Triple(if (action is PearlsKeyAction.Move) 0 else null, false, board)
     return when (action) {
-        PearlsKeyAction.Cross -> PearlsKeyResult(cursor, !armed, this)
+        PearlsKeyAction.Cross -> Triple(cursor, !armed, board)
         is PearlsKeyAction.Move -> {
-            val to = stepCursor(cursor, action.dRow, action.dCol, size, size)
-            val edge = if (to == cursor) -1 else PearlsGrid.of(size).between(cursor, to)
+            val to = stepCursor(cursor, action.dRow, action.dCol, side, side)
+            val edge = if (to == cursor) -1 else PearlsGrid.of(side).between(cursor, to)
             when {
-                armed -> PearlsKeyResult(cursor, false, if (edge >= 0) tap(edge) else this)
-                action.draw -> PearlsKeyResult(to, false, if (edge >= 0) drag(listOf(cursor, to)) else this)
-                else -> PearlsKeyResult(to, false, this)
+                armed -> Triple(cursor, false, if (edge >= 0) tap(edge) else board)
+                action.draw -> Triple(to, false, if (edge >= 0) drag(listOf(cursor, to)) else board)
+                else -> Triple(to, false, board)
             }
         }
     }
 }
-

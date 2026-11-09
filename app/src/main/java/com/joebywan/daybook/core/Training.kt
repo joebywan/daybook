@@ -215,6 +215,8 @@ object Training {
             ShikakuTraining,
             DominoesTraining,
             LitsTraining,
+            LoopTraining,
+            ThermometersTraining,
             UnblockTraining,
         )
     }

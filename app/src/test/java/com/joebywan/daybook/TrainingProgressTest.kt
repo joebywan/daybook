@@ -15,6 +15,7 @@ import com.joebywan.daybook.core.MamboTraining
 import com.joebywan.daybook.core.MinesTraining
 import com.joebywan.daybook.core.NonogramTraining
 import com.joebywan.daybook.core.TallyTraining
+import com.joebywan.daybook.core.ThermometersTraining
 import com.joebywan.daybook.core.TentsTraining
 import com.joebywan.daybook.puzzles.KingsState
 import com.joebywan.daybook.puzzles.KingsTeacher
@@ -26,6 +27,7 @@ import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.TallyState
+import com.joebywan.daybook.puzzles.ThermometersState
 import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.TentsTeacher
@@ -53,6 +55,7 @@ class TrainingProgressTest {
         MinesTraining to { s, i, f -> (s as MinesState).copy(marks = s.marks.with(i, (f as MinesState).marks[i])) },
         LampsTraining to { s, i, f -> (s as LampsState).withMark(i, (f as LampsState).marks[i]) },
         TallyTraining to { s, i, f -> (s as TallyState).copy(marks = s.marks.with(i, (f as TallyState).marks[i])) },
+        ThermometersTraining to { s, i, f -> (s as ThermometersState).copy(marks = s.marks.with(i, (f as ThermometersState).marks[i])) },
         MamboTraining to { s, i, f -> (s as MamboState).copy(cells = s.cells.toMutableList().also { it[i] = (f as MamboState).cells[i] }) },
         // A pearls target is an edge, numbered after the squares (PearlsTeacher.edgeIndex).
         PearlsTraining to { s, i, f -> (s as PearlsState).let { p -> p.copy(edges = p.edges.with(i - p.size * p.size, (f as PearlsState).edges[i - p.size * p.size])) } },
@@ -74,6 +77,7 @@ class TrainingProgressTest {
             is MinesState -> b.marks[i] != (f as MinesState).marks[i]
             is LampsState -> b.marks[i] != (f as LampsState).marks[i]
             is TallyState -> b.marks[i] != (f as TallyState).marks[i]
+            is ThermometersState -> b.marks[i] != (f as ThermometersState).marks[i]
             is MamboState -> b.cells[i] != (f as MamboState).cells[i]
             is PearlsState -> b.edges[i - b.size * b.size] != (f as PearlsState).edges[i - b.size * b.size]
             is AtomsState -> b.counts[i - b.atoms.size] != (f as AtomsState).counts[i - b.atoms.size]

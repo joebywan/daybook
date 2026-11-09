@@ -44,7 +44,7 @@ section 7. The settled play-screen UX (popover, finish frame, solve sound) and t
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
-Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS and Unblock, each technique practised on real positions found by walking generated boards by
+Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS, Loop, Thermometers and Unblock, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer (Pipes judges its own way: a
@@ -587,6 +587,45 @@ is hashed into every seed: never rename it.
   numbers can make it any more (solid `scheme.error`, so it cannot be mistaken for a Rose or Amber chip), after a 1 s debounce. Hue pair from `BoardHues.pair(digits.hashCode())`: A tints the target chips, B
   inks the circles. Highlight indices: squares `0 until n*n`, row target `n*n + r`, column target `n*n + n + c`.
 - The regions variant of the genre (sums per coloured region as well as per line) was deliberately not built; see `docs/TODO.md`.
+## Thermometers
+
+Straight and bent thermometers tile a square grid; fill each from its round bulb with no gap so every row and column holds its
+count of filled squares. Exactly one answer. `puzzles/ThermometersRules.kt` (state, `ThermometersLogic`: rules, the tap, the ladder,
+the exhaustive count, generator), `ThermometersTeacher.kt`, `Thermometers.kt` (board, keys, walkthrough, motif). `id = "thermometers"`
+is hashed into every seed: never rename it.
+
+- **State is the tubes, the answer and the marks**: `tubes` (each bulb first, in their bulbs' reading order), `fill` (`1`/`0`, the
+  answer), `marks` (`.`, `#` filled, `x` crossed: a note, counting as empty). Counts are derived from `fill`, never stored.
+  **`solved` checks the rules** (no filled square over an unfilled one in its tube, every line at its count), not `fill`.
+- **Input is Nonogram's and Tally's pen stack** (`core/PenMarks.kt`, `ui/PenBoard.kt`, `ui/TwinTaps.kt`), with one change: `tap` is
+  overridden (`ThermometersLogic.tubeTap`), one state and one move. Fill fills the tube from the bulb to the square and takes any fill
+  above back; on the top of a fill it lowers the fill below the square. Cross crosses from the square to the tip and takes any cross
+  below back; on the lowest of a run of crosses it clears the run. A double tap or long press is the other pen, a sweep marks only the
+  squares it passes. Counts are Tally's chips (`ui/LineChips.kt`, lifted from Tally): green when the line holds its count, red after
+  `rememberSettled`'s second once too many are filled or too few left open; a tube with a fill over a cross draws its outline red.
+- **Tiers: 5x5 tubes of 2-4 / 6x6 of 3-6 / 8x8 of 4-8 squares, and the rung a board must need, exactly** (`ThermometersLogic.depth`,
+  Tally's `Spec.needs`): Standard the lines and a tip that cannot fill (`TIPS`), Hard a bulb that must fill (`BULBS`), Expert a
+  what-if. A draw with a line counting 0 or every square is redrawn (Tally's rule: it gives itself away); with that rule no board is
+  finished by full and empty lines alone (0 of 170 proved 5x5 draws), so the brief's "lines only" Standard was dropped and the
+  rungs split tips from bulbs instead. Draws a board over a year: mean 16.8 / 14.9 / 102, most 106 / 83 / 714 of `ATTEMPTS` = 2000;
+  JVM median / p95 / max 0.5 / 3.6 / 23, 0.5 / 2.0 / 6.5, 9.9 / 39 / 88 ms; tubes 8.3 / 9.1 / 13.4 a board; 49-51% filled.
+- **Tubes are grown by `bentWalk`** (`core/Grid.kt`, lifted from Pointers' arrow bodies, Pointers' boards unmoved): from each bare
+  square in a shuffled order a walk of the tier's length; a lone square left joins a tube whose end is beside it, else the draw is
+  redrawn. Each tube is turned bulb-first at random. No hash container reaches the `Rng`.
+- **The ladder is the teacher's and the generator's** (`nextFact`, simplest first): `TUBE` (a thermometer fills from its bulb: below a
+  fill fills, above an empty empties), `DONE` / `ROOM` (Tally's shortcuts), `AT_MOST` (a line needing k more takes at most k of one
+  tube's open squares there, bulb side first: its next one and all above stay empty), `AT_LEAST` (the other tubes' open squares in a
+  line fall j short, so this one fills to its j-th), then a what-if (`MAX_LINKS` = 3 lines, each a line's rungs to its own fixpoint).
+  Every amount between a tube's least and most is possible for one line, so `AT_MOST`/`AT_LEAST` are all a single line says.
+- **A board ships only if the count proves one answer** (`countSolutions`: tube by tube over every level, cut when a line passes its
+  count or can no longer reach it; no budget; `Verdict`) **and the ladder finishes it at the tier's rung**, count first (it is the
+  cheaper). `ThermometersOracle` (test: square by square in reading order, no levels, no line logic) is the independent check.
+  `lastResort` is the first seed from 1 whose first draw the tier accepts, proved by a test; a year per tier never reaches it.
+- **Teacher:** reads only the tubes, counts and marks; a mistake is a mark the one answer disagrees with. No fallback exists:
+  200 boards a tier and a year a tier finish by hints alone, 15.1 / 21.8 / 38.3 steps a board, of which tips 4.1 / 6.2 / 10.3,
+  bulbs 0 / 2.5 / 7.5 and what-ifs 0 / 0 / 2.2 (every Hard board needs a bulb, every Expert board a what-if). Every single-tube step is one tap. Highlight indices:
+  squares `0 until n*n`, row count `n*n + r`, column count `n*n + n + c`.
+
 ## Sand (colour sort)
 
 Tubes of layered coloured sand; pour from tube to tube until every tube holds one colour (the water-sort family). Spec and decisions:
@@ -821,6 +860,46 @@ hit testing, walkthrough, motif). `id = "pearls"` is hashed into every seed: nev
   length, so hints never run out). A square with two lines has its other edges read as crossed (`PearlsTeacher.view`), so the
   hints never ask for tidying. Highlight indices: squares `0 until n*n`, edge `e` is `n*n + e`.
 
+## Loop (a loop along the squares' sides)
+
+One closed loop drawn from dot to dot along the squares' sides; a number says how many of its square's four sides the loop
+uses. The genre is published by Nikoli under its own name; that name never appears where the player sees it (`GuideTest`
+bans it). `puzzles/LoopRules.kt` (`LoopState`, `LoopLogic`: the numbers' rules, generator), `LoopTeacher.kt`, `Loop.kt`
+(board, walkthrough, motif). `id = "loop"` is hashed into every seed: never rename it.
+
+- **Pearls' machinery, lifted, not copied: `core/LoopEdges.kt`.** `LoopGrid` (Pearls' `PearlsGrid`, now a typealias: a
+  lattice of points, horizontal edges then vertical), the edge marks, the drag/tap/paint mutators, `edgeNear`, the point
+  rules, the loop rule, propagation, what-if, `settle`/`depth`/`takeBack`, the exhaustive count (`solutions`, sealed
+  `Verdict`) and loop growth (`growLoop`, Pearls' face-region grower with its scoring passed in). A puzzle supplies a
+  `LoopRules` (units, local rule, which units an edge touches, when a closed stretch is the whole answer). Loop's lattice
+  is the dots, `LoopGrid.of(size + 1)`, drawn half a square in from the box, so Pearls' `edgeNear`, `Pearls.trail`,
+  `Snap.cellsCrossed`, `gridCellAt` and keys (`loopKey`) work on the dots unchanged. Pearls' boards, tests and pins did not move.
+- **Tiers: 5x5 / 7x7 / 10x10 and the rung a board must need, exactly** (`LoopLogic.specFor`, `LoopEdges.depth`): Standard the
+  local rules (a number's count, a dot's one way on and dead end, a number with its corners), Hard the loop rule, Expert a
+  what-if (`MAX_ROUNDS` = 6). The corner rule is one number and the dots at its four corners together, every way to give it
+  its count with each dot taking no line or two; it is where the patterns players learn come from (3 in a corner, 1 in a
+  corner, a line into a 3's corner). Measured over a year (`LoopRulesTest`): numbers shown 43 / 41 / 36% of the squares;
+  draws 1.00 / 2.82 / 3.96 mean, at most 1 / 14 / 29 of `ATTEMPTS` = 200; JVM median / p95 / max 1 / 2 / 6, 6 / 18 / 33,
+  108 / 248 / 547 ms. Expert is the costliest; its browser times are not measured yet (the web build could not be made where Loop was written).
+- **A board ships only if the ladder finishes it and the count proves one loop.** The loop is grown (`growLoop`, uniform, no
+  scoring) to 50-80% of the dots' count in edges, every square numbered from it, numbers taken back in random order while the
+  tier's rungs still finish it (Pearls' two passes on Expert), then redrawn unless the walk needs exactly the tier's rung.
+  `LoopOracle` (test) shares nothing: it colours squares in or out (a simple loop is the boundary of one piece whose outside is
+  one piece, never touching at a corner) and agrees on every sampled board and on 400 random small boards of any verdict.
+  `lastResort` is seed 424242's board per tier, accepted by a test; a year never reaches it (`FallbackTest`).
+- **`solved` checks the rules**; a mistake is a line off the one loop or a cross on it, sound because the loop is unique.
+  Red after a 1 s settle, from the lines alone: a number with too many lines, a dot with three, a closed loop that is not the
+  whole answer. A number with all its lines drawn steps back (lighter, smaller), so colour is never the only signal.
+- **Hints never fall back** (the ladder is the generator's). Over 200 boards a tier: 31 / 59 / 122 steps a board, small loop
+  0 / 1.8 / 2.9 and what-if 0 / 0 / 10.2 a board; Expert hint median 0.03 ms, max 4 ms. A dot with two lines has its other
+  edges read as crossed (`LoopEdges.view`). Highlight indices: squares `0 until n*n`, edge `e` is `n*n + e`, dot `d` is
+  `n*n + edgeCount + d`.
+- **Input is Pearls'**: a drag from dot to dot draws (its first edge decides: over a line it rubs out), one state on lift; a
+  tap within 0.42 of a step of an edge's middle crosses it or rubs out what is there. The step is the box over (side + 1),
+  at most 64 dp; an edge takes taps in a disc 0.84 of a step across. Worked out from the layout, not rendered: at 390 wide the step
+  is about 62 / 47 / 34 dp (discs 52 / 39 / 29), at 375x537 about 58 / 44 / 32 dp (discs 49 / 37 / 27), the Expert step a little under
+  Pearls' 10x10 squares and well over Nonogram Expert's, the owner's floor for too small. Check it rendered (`tools/render/render.py`).
+
 ## Mini crossword
 
 A small, fully checked crossword: a clue for every word across and down; fill the grid. Spec and decisions: `docs/MINI_SPEC.md`.
@@ -989,7 +1068,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 - The mode row (`Daily/Random · Levels · Training`, `LaunchOptions`) sits above the tier row. Daily and Random share the first
   segment, the one in use large over the other small; a tap on it while selected swaps them (150 ms, snapped under reduced
   motion), and from another mode it returns to the last of the two (`tappedMode`, `dayMode` in `DaybookApp`; Daily on launch,
-  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 22"
+  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 24"
   graduated) so the three share one height; the swap scales the two lines rather than measuring them again, so the row's
   height never changes mid-swap. In Levels and Training the tier row stays laid out, invisible, under the level strip or the
   training strip, so the grid below cannot move when the mode changes. The sticky rows sit tight (4dp over, 4dp between,
@@ -1065,7 +1144,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`, `UnblockLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords, Dwindle and Unblock (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`, `LoopLogic`, `UnblockLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords, Dwindle, Unblock and Loop (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

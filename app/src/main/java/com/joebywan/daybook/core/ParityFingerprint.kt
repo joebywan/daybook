@@ -21,7 +21,9 @@ import com.joebywan.daybook.puzzles.MinesState
 import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.RegionsState
 import com.joebywan.daybook.puzzles.TallyState
+import com.joebywan.daybook.puzzles.ThermometersState
 import com.joebywan.daybook.puzzles.PearlsState
+import com.joebywan.daybook.puzzles.LoopState
 import com.joebywan.daybook.puzzles.SandState
 import com.joebywan.daybook.puzzles.UnblockState
 import com.joebywan.daybook.puzzles.TargetState
@@ -89,8 +91,10 @@ object ParityFingerprint {
             " sums=" + s.sums.joinToString(",") + " solution=" + s.grid.solution.joinToString("")
         is TargetState -> "start=${s.start.joinToString(",")} target=${s.target} par=${s.par}"
         is TallyState -> "n=${s.size} digits=${s.digits} keep=${s.keep}"
+        is ThermometersState -> "n=${s.size} tubes=" + s.tubes.joinToString(",") { it.joinToString(".") } + " fill=${s.fill}"
         is LampsState -> "n=${s.size} walls=${s.walls} solution=${s.solution}"
         is PearlsState -> "n=${s.size} pearls=${s.pearls} loop=${s.loop}"
+        is LoopState -> "n=${s.size} clues=${s.clues} loop=${s.loop}"
         is DominoState -> "${s.width}x${s.height} open=${s.open.joinToString("") { if (it) "1" else "0" }} " +
             "regions=${s.regionOf.joinToString(",")} rules=${s.rules.joinToString(",") { "${it.kind.name[0]}${it.n}" }} " +
             "tray=${s.tray.joinToString(",") { "${it.a}${it.b}" }} answer=${s.answer.joinToString(",") { "${it.first}-${it.second}" }}"

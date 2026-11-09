@@ -287,19 +287,6 @@ In order of measured demand, then fit:
   string (defaulted). Highlight indices are squares. *Reuse:* Pearls' drag, trail and edge drawing (lift
   `Pearls.trail` and the line-drawing helper into `ui/` rather than copy), Trail's path rendering if lighter, Kings'/
   Tents' `lastResort`/`generateVerified` shape. *L.*
-- [ ] **Loop through the dots (Slitherlink-style; 817K, the biggest pencil-puzzle candidate).** Draw one closed loop
-  along grid edges so each numbered square has exactly that many loop edges around it. Provable and rich, but tapping
-  edges on a phone is fiddly: prototype the input before committing. Pearls (built) has a loop's machinery to reuse: the
-  loop rule, the exhaustive count, edge hit testing (`Pearls.edgeNear`) and crosses as notes; its loop runs through
-  squares, this one along their edges, so lift the loop rule and edge indexing into a shared file rather than fork it.
-  Tiers 5x5 / 7x7 / 10x10 by depth (local corner and number rules / loop rule / what-if). *L.*
-- [ ] **Thermometers (Grids of Thermometers 266K).** Straight or bent thermometers fill the grid; fill each from its bulb
-  with no gaps so every row and column holds its count of filled squares. *Generation:* random thermometer layout (grow
-  tubes as Shikaku grows rectangles), random fill levels, counts read off; prove one answer (`Verdict`), gate on the
-  ladder. *Ladder:* line full / line empty (Tally's shortcuts), a thermometer's least and most in a line, a bulb that
-  must fill / a tip that cannot, what-if. *Input:* Nonogram's pen (Fill / Cross) through `penGrid` and `TwinTaps`, sweeps
-  one state; a tap on a thermometer square fills it up to there (one state). Counts turn green or red as Tally's chips do
-  (`rememberSettled`). Tiers 5x5 / 6x6 / 8x8. *M.*
 - [ ] **Equation codebreaker (Nerdle 214K).** Guess a hidden sum such as `12+35=47` in six tries; marks as Lexicon's.
   *Generation:* every valid equation of the tier's length is enumerable on the device (one `=`, no leading zeros, no
   negatives, whole results), sorted, the answer an index: no word list. Tiers by length 6 / 7 / 8. *Teacher:* Lexicon's

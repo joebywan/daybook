@@ -20,6 +20,8 @@ import com.joebywan.daybook.puzzles.MiniTeacher
 import com.joebywan.daybook.puzzles.MinesTeacher
 import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.PearlsTeacher
+import com.joebywan.daybook.puzzles.Loop
+import com.joebywan.daybook.puzzles.LoopTeacher
 import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.KingsTeacher
 import com.joebywan.daybook.puzzles.Lamps
@@ -58,10 +60,12 @@ class TechniqueNamesTest {
         "tower" to TowerTeacher.TECHNIQUES, "words" to LexiconTeacher.TECHNIQUES, "nonogram" to NonogramTeacher.TECHNIQUES,
         "inequality" to InequalityTeacher.TECHNIQUES, "chess" to ChessTeacher.TECHNIQUES, "tents" to TentsTeacher.TECHNIQUES,
         "regions" to RegionsTeacher.TECHNIQUES, "cages" to CageTeacher.TECHNIQUES, "target" to TargetTeacher.TECHNIQUES,
-        "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "dwindle" to DwindleTeacher.TECHNIQUES, "unblock" to com.joebywan.daybook.puzzles.UnblockTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
+        "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "dwindle" to DwindleTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
+        "thermometers" to com.joebywan.daybook.puzzles.ThermometersTeacher.TECHNIQUES,
+        "unblock" to com.joebywan.daybook.puzzles.UnblockTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
-        "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
+        "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES, "loop" to LoopTeacher.TECHNIQUES,
         "whoswho" to WhosWhoTeacher.TECHNIQUES,
         "mini" to MiniTeacher.TECHNIQUES,
         "hexwords" to com.joebywan.daybook.puzzles.HexwordsTeacher.TECHNIQUES,
@@ -94,11 +98,16 @@ class TechniqueNamesTest {
     @Test fun neededTechniqueMatchesTheTier() {
         val expected = mapOf(
             Tally to listOf(null, TallyTeacher.WAYS, TallyTeacher.WHAT_IF),
+            com.joebywan.daybook.puzzles.Thermometers to listOf(
+                com.joebywan.daybook.puzzles.ThermometersTeacher.AT_MOST, com.joebywan.daybook.puzzles.ThermometersTeacher.AT_LEAST,
+                com.joebywan.daybook.puzzles.ThermometersTeacher.WHAT_IF,
+            ),
             Dominoes to listOf(DominoTeacher.REGION_VALUE, DominoTeacher.COUNTING, DominoTeacher.WHAT_IF),
             Cipher to listOf(null, CipherTeacher.CHAIN, CipherTeacher.WHAT_IF),
             Lamps to listOf(null, LampsTeacher.STARVE, LampsTeacher.WHAT_IF),
             Codeword to listOf(null, CodewordTeacher.CROSSING, CodewordTeacher.ALL_WORDS),
             Pearls to listOf(null, PearlsTeacher.SMALL_LOOP, PearlsTeacher.WHAT_IF),
+            Loop to listOf(null, LoopTeacher.SMALL_LOOP, LoopTeacher.WHAT_IF),
             WhosWho to listOf(null, null, WhosWhoTeacher.WHAT_IF),
         )
         for ((p, want) in expected) for (t in Difficulty.entries) for (seed in 1L..10L) {

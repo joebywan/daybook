@@ -1,5 +1,6 @@
 package com.joebywan.daybook
 
+import com.joebywan.daybook.core.LoopEdges
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.PearlsGrid
@@ -58,7 +59,7 @@ class PearlsTutorialTest {
         // 4: a tap on the edge below the square after the black pearl.
         val cross = frames[3].accepts!!
         val e = g.between(1, 6)
-        val tapAt = Pearls.edgeNear(5, 1.5f, 1.0f)
+        val tapAt = LoopEdges.edgeNear(5, 1.5f, 1.0f)
         assertEquals(e, tapAt)
         val afterCross = board(3).tap(tapAt)
         assertTrue(cross(afterCross))

@@ -249,9 +249,10 @@ object WhosWhoGraph : PuzzleType {
     /**
      * Where each item sits: a column per category and a row per slot, or, grouped, each item in the row of the person its
      * links reach; a group with no person takes the first row free in all its columns, and an item linked to nothing the
-     * first row free in its own (drawn faint: it is placed nowhere).
+     * first row free in its own (drawn faint: it is placed nowhere). Every item takes exactly one row, so no column
+     * ever runs out, however the marks clash.
      */
-    private fun rows(s: WhosWhoGraphState, closure: WhosWhoGraphLogic.Closure, grouped: Boolean): Pair<IntArray, BooleanArray> {
+    internal fun rows(s: WhosWhoGraphState, closure: WhosWhoGraphLogic.Closure, grouped: Boolean): Pair<IntArray, BooleanArray> {
         val n = s.n
         val loose = BooleanArray(s.size)
         if (!grouped) return IntArray(s.size) { it % n } to loose
@@ -260,7 +261,10 @@ object WhosWhoGraph : PuzzleType {
         for (p in 0 until n) {
             row[p] = p
             used[0][p] = true
-            for (x in n until s.size) if (closure.at(p, x) == 1) {
+            // One item a square: a clash can link an item to two people (a second row would leave its column a row short
+            // for the rest, and `first` below found nothing: a crash), or a person to two items of a column (drawn on top
+            // of each other). The one left over takes a free row below.
+            for (x in n until s.size) if (row[x] < 0 && !used[x / n][p] && closure.at(p, x) == 1) {
                 row[x] = p
                 used[x / n][p] = true
             }

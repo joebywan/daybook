@@ -66,6 +66,7 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
         "6x6 tiles, 15 to 18 words, words up to 7 letters",
     ),
     "tally" to listOf("5x5 grid", "6x6 grid", "7x7 grid"),
+    "thermometers" to listOf("5x5 grid", "6x6 grid", "8x8 grid"),
     "sand" to listOf("5 colours, 7 tubes", "7 colours, 9 tubes", "8 colours, 10 tubes"),
     "unblock" to listOf("10 or 11 cars, par 6 to 10", "12 or 13 cars, par 13 to 18", "14 cars, par 20 or more"),
     "pointers" to listOf("6x7 grid, short arrows", "12x12 grid, longer arrows", "14x17 grid, the longest arrows"),
@@ -74,6 +75,7 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
     "lamps" to listOf("7x7 grid", "10x10 grid", "12x12 grid"),
     "codeword" to listOf("7x7 grid", "9x9 grid", "11x11 grid"),
     "pearls" to listOf("6x6 grid", "8x8 grid", "10x10 grid"),
+    "loop" to listOf("5x5 grid", "7x7 grid", "10x10 grid"),
     "whoswho" to listOf(
         "4 people, 1 thing each, clues name the person",
         "4 people, 2 things each, clues link things",
