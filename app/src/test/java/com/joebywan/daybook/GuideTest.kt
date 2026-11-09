@@ -280,6 +280,8 @@ class GuideTest {
         assertEquals("${b.technique}: the lines", moved.filterNot(::crossed).map(::edge).toSet(), step.lines.toSet())
         assertEquals("${b.technique}: the crosses", moved.filter(::crossed).map(::edge).toSet(), step.crosses.toSet())
         return Drawn(step.technique, step.focus.filter { it < n * n }.toSet())
+    }
+
     /** A Links board: a pair's number on each end, `lines` the lines drawn, `moves` the step's lines. One answer, checked. */
     private fun linksStep(b: Board): TeachStep? {
         val n = b.width
