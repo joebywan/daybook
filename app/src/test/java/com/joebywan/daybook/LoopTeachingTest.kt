@@ -131,6 +131,25 @@ class LoopTeachingTest {
         }
     }
 
+    @Test
+    fun `hints alone finish every daily board of a year on every tier, from blank, with no fallback`() {
+        var steps = 0
+        for (d in Difficulty.entries) for (day in 0 until 365) {
+            var s = Loop.generate(daySeed(day, Loop.id, d), d) as LoopState
+            var guard = 0
+            while (!s.solved) {
+                assertTrue("$d day $day: walk did not finish", guard++ < 1000)
+                val deduction = Loop.teach(s)
+                assertNotNull("$d day $day: no hint", deduction)
+                assertFalse("$d day $day: fallback", deduction!!.fallback)
+                assertFalse("$d day $day: mistake", deduction.mistake)
+                s = deduction.apply(s) as LoopState
+                steps++
+            }
+        }
+        println("a year a tier walked by hints: $steps steps, no fallback")
+    }
+
     // ---- the techniques, one by one ---------------------------------------------------------------
 
     @Test

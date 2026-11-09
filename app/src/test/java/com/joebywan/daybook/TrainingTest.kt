@@ -179,7 +179,7 @@ class TrainingTest {
         assertEquals(
             listOf(
                 "sudoku", "cages", "inequality", "regions", "kings", "pipes", "pearls", "atoms", "whoswho", "cipher", "chess",
-                "mosaic", "mambo", "nonogram", "tally", "mines", "lamps", "tents", "shikaku", "dominoes", "lits",
+                "mosaic", "mambo", "nonogram", "tally", "mines", "lamps", "tents", "shikaku", "dominoes", "lits", "loop",
             ),
             Training.COURSES.map { it.id },
         )
