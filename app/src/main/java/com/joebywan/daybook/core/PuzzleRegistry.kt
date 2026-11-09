@@ -12,6 +12,7 @@ import com.joebywan.daybook.puzzles.Kings
 import com.joebywan.daybook.puzzles.Lamps
 import com.joebywan.daybook.puzzles.Lexicon
 import com.joebywan.daybook.puzzles.Lits
+import com.joebywan.daybook.puzzles.Loop
 import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.Nonogram
@@ -77,6 +78,7 @@ object PuzzleRegistry {
         Mini,
         Hexwords,
         Dwindle,
+        Loop,
     )
 
     /**

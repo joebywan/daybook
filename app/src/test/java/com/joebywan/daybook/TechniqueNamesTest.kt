@@ -20,6 +20,8 @@ import com.joebywan.daybook.puzzles.MiniTeacher
 import com.joebywan.daybook.puzzles.MinesTeacher
 import com.joebywan.daybook.puzzles.Pearls
 import com.joebywan.daybook.puzzles.PearlsTeacher
+import com.joebywan.daybook.puzzles.Loop
+import com.joebywan.daybook.puzzles.LoopTeacher
 import com.joebywan.daybook.puzzles.InequalityTeacher
 import com.joebywan.daybook.puzzles.KingsTeacher
 import com.joebywan.daybook.puzzles.Lamps
@@ -61,7 +63,7 @@ class TechniqueNamesTest {
         "cipher" to CipherTeacher.TECHNIQUES, "wordwheel" to WordWheelTeacher.TECHNIQUES, "dwindle" to DwindleTeacher.TECHNIQUES, "tally" to TallyTeacher.TECHNIQUES,
         "sand" to SandTeacher.TECHNIQUES, "dominoes" to DominoTeacher.TECHNIQUES,
         "mines" to MinesTeacher.TECHNIQUES, "lamps" to LampsTeacher.TECHNIQUES,
-        "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES,
+        "codeword" to CodewordTeacher.TECHNIQUES, "pearls" to PearlsTeacher.TECHNIQUES, "loop" to LoopTeacher.TECHNIQUES,
         "whoswho" to WhosWhoTeacher.TECHNIQUES,
         "mini" to MiniTeacher.TECHNIQUES,
         "hexwords" to com.joebywan.daybook.puzzles.HexwordsTeacher.TECHNIQUES,
@@ -99,6 +101,7 @@ class TechniqueNamesTest {
             Lamps to listOf(null, LampsTeacher.STARVE, LampsTeacher.WHAT_IF),
             Codeword to listOf(null, CodewordTeacher.CROSSING, CodewordTeacher.ALL_WORDS),
             Pearls to listOf(null, PearlsTeacher.SMALL_LOOP, PearlsTeacher.WHAT_IF),
+            Loop to listOf(null, LoopTeacher.SMALL_LOOP, LoopTeacher.WHAT_IF),
             WhosWho to listOf(null, null, WhosWhoTeacher.WHAT_IF),
         )
         for ((p, want) in expected) for (t in Difficulty.entries) for (seed in 1L..10L) {

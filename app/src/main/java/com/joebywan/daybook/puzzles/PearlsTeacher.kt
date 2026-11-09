@@ -1,5 +1,7 @@
 package com.joebywan.daybook.puzzles
 
+import com.joebywan.daybook.core.LoopEdges
+import com.joebywan.daybook.core.LoopFound
 import com.joebywan.daybook.core.squareName
 
 /**
@@ -80,19 +82,7 @@ internal object PearlsTeacher {
      * The edges as the teacher reads them: the player's lines and crosses, and every open edge of a
      * square that already has two lines read as crossed.
      */
-    fun view(n: Int, edges: String): IntArray {
-        val g = PearlsGrid.of(n)
-        val st = PearlsLogic.stateOf(edges)
-        val lines = IntArray(g.squares)
-        for (e in 0 until g.edgeCount) if (st[e] == PearlsLogic.LINE) {
-            lines[g.endA[e]]++
-            lines[g.endB[e]]++
-        }
-        for (e in 0 until g.edgeCount) {
-            if (st[e] == PearlsLogic.OPEN && (lines[g.endA[e]] >= 2 || lines[g.endB[e]] >= 2)) st[e] = PearlsLogic.CROSS
-        }
-        return st
-    }
+    fun view(n: Int, edges: String): IntArray = LoopEdges.view(PearlsGrid.of(n), edges)
 
     // ---- mistakes ---------------------------------------------------------------------------
 
@@ -144,8 +134,8 @@ internal object PearlsTeacher {
     }
 
     /** Every local rule that settles something, square by square in reading order, pearl's rule first. */
-    private fun localFounds(g: PearlsGrid, pearls: String, st: IntArray): List<PearlsLogic.Found> = buildList {
-        for (s in 0 until g.squares) {
+    private fun localFounds(g: PearlsGrid, pearls: String, st: IntArray): List<LoopFound> = buildList {
+        for (s in 0 until g.nodes) {
             when (pearls[s]) {
                 PearlsLogic.BLACK -> PearlsLogic.blackRule(g, pearls, st, s)
                 PearlsLogic.WHITE -> PearlsLogic.whiteRule(g, st, s)
@@ -168,14 +158,14 @@ internal object PearlsTeacher {
         if (technique == SMALL_LOOP) {
             val f = PearlsLogic.smallLoop(g, pearls, st) ?: return emptyList()
             if (f.contradiction) return emptyList()
-            return f.crosses.map { e -> loopStep(g, st, PearlsLogic.Found(f.kind, f.square, IntArray(0), intArrayOf(e))) }
+            return f.crosses.map { e -> loopStep(g, st, LoopFound(f.kind, f.at, IntArray(0), intArrayOf(e))) }
         }
         return found.map { localStep(g, pearls, st, it) }.filter { it.technique == technique }
     }
 
-    private fun localStep(g: PearlsGrid, pearls: String, st: IntArray, f: PearlsLogic.Found): Step {
+    private fun localStep(g: PearlsGrid, pearls: String, st: IntArray, f: LoopFound): Step {
         val n = g.n
-        val s = f.square
+        val s = f.at
         val edgesOf = (0 until 4).mapNotNull { d -> g.edge(s, d).takeIf { it >= 0 } }
         fun step(technique: String, nudge: String, why: String, focus: Set<Int>, cited: Set<Int> = focus) = Step(
             technique, f.lines.toList(), f.crosses.toList(), focus = focus, cited = cited, nudge = nudge, explanation = why,
@@ -235,7 +225,7 @@ internal object PearlsTeacher {
         }
     }
 
-    private fun loopStep(g: PearlsGrid, st: IntArray, f: PearlsLogic.Found): Step {
+    private fun loopStep(g: PearlsGrid, st: IntArray, f: LoopFound): Step {
         val n = g.n
         val e = f.crosses[0]
         val a = g.endA[e]
@@ -254,13 +244,13 @@ internal object PearlsTeacher {
         )
     }
 
-    private fun whatIfStep(g: PearlsGrid, pearls: String, w: PearlsLogic.WhatIf): Step {
+    private fun whatIfStep(g: PearlsGrid, pearls: String, w: LoopEdges.WhatIf): Step {
         val n = g.n
         val e = w.edge
         val line = w.assume == PearlsLogic.LINE
         val a = g.endA[e]
         val b = g.endB[e]
-        val c = w.contradiction.square
+        val c = w.contradiction.at
         val broke = when (w.contradiction.kind) {
             PearlsLogic.C_THREE -> "${squareName(n, c)} would need three lines"
             PearlsLogic.C_DEAD_LINE -> "the line would run into a dead end at ${squareName(n, c)}"
