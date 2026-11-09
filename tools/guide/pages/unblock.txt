@@ -1,0 +1,85 @@
+# Unblock
+> Slide the cars aside and drive the red one out
+
+## How to play
+
+Drag a car to slide it. A car only slides along its length, forwards or back, and stops at the first car or wall in its way. Let go and it settles on the nearest square.
+
+Any slide, however far, is one move. The line over the yard counts your moves against the board's par: the fewest moves it can be done in. There is no move limit, and Undo takes a slide back.
+
+The red car carries an arrow pointing to the exit, so you never have to go by colour alone.
+
+On a keyboard, the arrow keys pick a car, and Shift with an arrow slides it one square. Each press is a move.
+
+Stuck? The first tap on Hint says where to look, and the second names the slide and what it frees. You make the move yourself, unless you ask for "Show me". A hint is always the first move of a shortest way out from where you are now, so following hints from the start finishes in par.
+
+Nothing you do can lose a board: any slide can be slid back. A slide that makes the way longer is just a longer way, never a mistake.
+
+## Rules
+
+- Get the red car out through the exit on the right of its row.
+- A car only slides along its length, over empty squares.
+
+## What changes per tier
+
+- Standard: 10 or 11 cars, par 6 to 10.
+- Hard: 12 or 13 cars, par 13 to 18. More of them are trucks, three squares long.
+- Expert: 14 cars, par 20 or more. Three trucks on every board.
+
+## Techniques
+
+These are the steps the hints teach. On each board, R is the red car and each other letter is one car; the exit is on the right of the third row. The tinted car is the one to slide, and the filled squares are where it ends up. Every board here is a real position from the game, and this is the step the hint gives on it.
+
+### exit | Driving the red car out
+
+When nothing stands between the red car and the exit, drive it out: that's the last move.
+
+### clear-the-way | Moving a car out of the red car's way
+
+Look along the red car's row to the exit. Any car standing in it has to go, up or down, far enough to leave the row clear.
+
+~~~board
+e . b b b .
+e . h j j d
+. . h R R d
+. . . . . .
+f f g g c c
+i i . . k k
+focus: r2c6-r3c6
+cite: r3c4-r3c5
+answer: r1c6=d r2c6=d
+caption: The car in column 6 is all that stands between the red car and the exit. The square above it is free, so it slides up one, and the red car can drive out.
+~~~
+
+### make-room | Making room for a car in the way
+
+Often the car in the way can't move yet: another car blocks it. Then that one moves first, to make room.
+
+~~~board
+e . . b b b
+e . h j j d
+. . h R R d
+. . . . . .
+f f g g c c
+i i . . k k
+focus: r1c4-r1c6
+cite: r2c6-r3c6
+answer: r1c3=b r1c4=b r1c5=b
+caption: The car in column 6 blocks the red car, and it can only clear the row by going up, where the truck along the top sits. The truck slides left one, and that makes room.
+~~~
+
+### plan | Thinking a few moves ahead
+
+Now and then the best move frees nothing at once: it gets a car out of the way of what comes next. Here the red car drives on early, before another car has to drop into its row behind it.
+
+~~~board
+e . h b b b
+e . h j j d
+R R . . . d
+. . . . . .
+f f g g c c
+i i . . k k
+focus: r3c1-r3c2
+answer: r3c4=R r3c5=R
+caption: Nothing is in the red car's way until column 6. Driving it up to that car now gets it past column 3 before the car there has to come down into its row, to let the truck along the top slide left.
+~~~

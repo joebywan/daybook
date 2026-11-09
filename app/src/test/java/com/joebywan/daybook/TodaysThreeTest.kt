@@ -18,9 +18,8 @@ class TodaysThreeTest {
 
     @Test fun `the three are pinned to the date`() {
         // Worked out by hand from the lists and the epoch day (20751): a change here moves everyone's three.
-        // 20751 mod 11 = 5 (mosaic), mod 9 = 6 (tally); the mid-weight list (15) shares 3 with the 99-day cycle, so it steps
-        // from 20751 mod 99 + 20751 / 99 = 269, and 269 mod 15 = 14 (thermometers, last in the registry's order).
-        assertEquals(listOf("mosaic", "thermometers", "tally"), TodaysThree.of(day))
+        // 20751 mod 11 = 5 (mosaic), mod 16 = 15 (unblock, last in the registry's order), mod 9 = 6 (tally).
+        assertEquals(listOf("mosaic", "unblock", "tally"), TodaysThree.of(day))
         assertEquals(listOf("kings", "sudoku", "hexwords"), TodaysThree.of(LocalDate(2026, 10, 26)))
         assertEquals(listOf("tents", "mambo", "dwindle"), TodaysThree.of(LocalDate(2026, 10, 27)))
     }
@@ -30,7 +29,7 @@ class TodaysThreeTest {
         val mid = ids.filter { it !in TodaysThree.QUICK && it !in TodaysThree.WORDS }
         tailrec fun gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)
         val sizes = listOf(TodaysThree.QUICK.size, mid.size, TodaysThree.WORDS.size)
-        assertEquals(listOf(11, 15, 9), sizes)
+        assertEquals(listOf(11, 16, 9), sizes)
         assertEquals("quick and words must stay coprime", 1, gcd(sizes[0], sizes[2]))
         val days = (0 until 1001).map { TodaysThree.of(LocalDate.fromEpochDays(day.toEpochDays() + it)) }
         assertEquals("no set repeats in 1,001 days", 1001, days.toSet().size)
@@ -40,7 +39,7 @@ class TodaysThreeTest {
             // A mid-weight list sharing a factor with the 99-day cycle skips one place at each turn of it (the code's doc).
             assertTrue("$id waits $gap days", gap <= 2 * sizes.max())
         }
-        // A new puzzle joining the mid-weight list makes it 16: still
+        // A new puzzle joining the mid-weight list makes it 17: still
         // no set repeats within a year.
         val more = ids + "new"
         assertEquals(365, (0 until 365).map { TodaysThree.of(LocalDate.fromEpochDays(day.toEpochDays() + it), more) }.toSet().size)

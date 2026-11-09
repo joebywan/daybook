@@ -31,6 +31,7 @@ import com.joebywan.daybook.puzzles.Tents
 import com.joebywan.daybook.puzzles.Shikaku
 import com.joebywan.daybook.puzzles.Sudoku
 import com.joebywan.daybook.puzzles.Tower
+import com.joebywan.daybook.puzzles.Unblock
 import com.joebywan.daybook.puzzles.WhosWho
 import com.joebywan.daybook.puzzles.WhosWhoGraph
 import com.joebywan.daybook.puzzles.Hexwords
@@ -81,6 +82,7 @@ object PuzzleRegistry {
         Dwindle,
         Loop,
         Thermometers,
+        Unblock,
     )
 
     /**

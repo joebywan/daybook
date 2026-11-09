@@ -182,6 +182,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Uncover a colour only when it has somewhere to go.",
         "A finished tube never needs touching again.",
     ),
+    "unblock" to listOf(
+        "Work back from the exit: what is in the red car's way?",
+        "A car in the way may need another car moved first.",
+        "A slide of any length is one move: go as far as helps.",
+        "Moving the red car back can let a car cross its row.",
+    ),
     "pointers" to listOf(
         "An arrow with an empty line to the edge can always go.",
         "Clearing an arrow never blocks another: free stays free.",

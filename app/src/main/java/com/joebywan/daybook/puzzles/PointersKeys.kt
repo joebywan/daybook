@@ -2,7 +2,7 @@ package com.joebywan.daybook.puzzles
 
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.core.arrowStep
-import kotlin.math.abs
+import com.joebywan.daybook.core.nearestPiece
 
 /**
  * The keyboard on a Pointers board (web, or a hardware keyboard): the arrow keys move a cursor from arrow to arrow,
@@ -30,23 +30,5 @@ fun pointersKeyAction(key: Key): PointersKeyAction? {
  */
 fun PointersState.cursorAfter(from: Int?, dRow: Int, dCol: Int): Int? {
     if (from == null) return arrows.indices.firstOrNull { it !in removed }?.let { arrows[it].last() }
-    val mine = arrowAt(from)
-    val fr = from / width
-    val fc = from % width
-    var best = from
-    var bestScore = Int.MAX_VALUE
-    for (cell in 0 until width * height) {
-        val a = arrowAt(cell)
-        if (a < 0 || a == mine) continue
-        val dr = cell / width - fr
-        val dc = cell % width - fc
-        val ahead = dr * dRow + dc * dCol
-        if (ahead <= 0) continue
-        val score = ahead + 2 * abs(dr * dCol + dc * dRow)
-        if (score < bestScore) {
-            bestScore = score
-            best = cell
-        }
-    }
-    return best
+    return nearestPiece(from, dRow, dCol, width, height) { arrowAt(it) }
 }

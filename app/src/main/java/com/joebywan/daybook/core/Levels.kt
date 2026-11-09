@@ -67,6 +67,7 @@ object Levels {
         "dwindle",
         "loop",
         "thermometers",
+        "unblock",
     )
 
     /** Deck 0, levels 1-5: the first this many pool ids, every one with a walkthrough. Never change it. */

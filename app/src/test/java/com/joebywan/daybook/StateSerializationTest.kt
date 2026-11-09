@@ -37,6 +37,8 @@ import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.DwindleState
 import com.joebywan.daybook.puzzles.WordWheelState
 import com.joebywan.daybook.puzzles.SandState
+import com.joebywan.daybook.puzzles.UnblockState
+import com.joebywan.daybook.puzzles.UnblockLogic
 import com.joebywan.daybook.puzzles.TentsState
 import com.joebywan.daybook.puzzles.NonogramState
 import com.joebywan.daybook.puzzles.PipesState
@@ -151,6 +153,7 @@ class StateSerializationTest {
         is WordWheelState -> state.enter(state.slots[1].word)
         is DwindleState -> state.enter(state.goals[1].word)
         is SandState -> state.pour(0, state.tubes.size - 1)!!
+        is UnblockState -> UnblockLogic.slides(state.cars).first().let { state.slide(it.car, it.by)!! }
         is TentsState -> state.withMark(state.trees.indexOfFirst { !it }, 1)
         is KingsState -> state.toggleMark(0).toggleKing(1)
         is LitsState -> state.toggle(0)

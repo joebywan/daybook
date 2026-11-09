@@ -15,6 +15,7 @@ import com.joebywan.daybook.puzzles.PuzzleState
 import com.joebywan.daybook.puzzles.SetsState
 import com.joebywan.daybook.puzzles.TargetState
 import com.joebywan.daybook.puzzles.TowerState
+import com.joebywan.daybook.puzzles.UnblockState
 import com.joebywan.daybook.puzzles.DwindleState
 import com.joebywan.daybook.puzzles.WordWheelState
 import kotlinx.datetime.LocalDate
@@ -218,13 +219,19 @@ fun shareCard(
                 else -> "A clean mate. Nothing to improve on."
             }
         }
-        is TargetState -> {
-            val steps = state.log.size
-            lines = listOf(ShareLine(moves.map { it.mark() }, tail = "   ${plural(steps, "step")} · par ${state.par}"))
-            key = listOf(Mark.GREEN to "step", Mark.YELLOW to "taken back", Mark.RED to "hint")
+        // Moves against the proved fewest: Target's steps, Unblock's slides.
+        is TargetState, is UnblockState -> {
+            val (made, par, unit) = when (state) {
+                is TargetState -> Triple(state.log.size, state.par, "step")
+                else -> (state as UnblockState).let { Triple(it.moves, it.par, "move") }
+            }
+            // Target's few steps a square each; Unblock's dozens in tenths.
+            val marks = if (state is TargetState) moves.map { it.mark() } else strip(moves)
+            lines = listOf(ShareLine(marks, tail = "   ${plural(made, unit)} · par $par"))
+            key = listOf(Mark.GREEN to unit, Mark.YELLOW to "taken back", Mark.RED to "hint")
             own = when {
-                undone > 0 -> "No hints, ${plural(undone, "step")} taken back. Fewer $next?"
-                steps > state.par -> "No hints, nothing taken back. Par is ${state.par}: $next?"
+                undone > 0 -> "No hints, ${plural(undone, unit)} taken back. Fewer $next?"
+                made > par -> "No hints, nothing taken back. Par is $par: $next?"
                 else -> "On par, nothing taken back. Nothing to improve on."
             }
         }

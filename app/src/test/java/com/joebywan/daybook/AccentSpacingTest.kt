@@ -52,6 +52,7 @@ class AccentSpacingTest {
             for (i in accents.indices) for (j in i + 1 until accents.size) {
                 val (a, ca) = accents[i]
                 val (b, cb) = accents[j]
+                if (setOf(a, b) in SHARED) continue
                 val d = de2000(ca, cb, m)
                 assertTrue("$a and $b accents are $d apart under $name vision, floor $floor", d >= floor)
             }
@@ -71,12 +72,17 @@ class AccentSpacingTest {
         val best = (0 until 360 step 2).flatMap { h -> (30..90 step 4).flatMap { s -> (30..70 step 2).map { l ->
             Color.hsl(h.toFloat(), s / 100f, l / 100f) } } }.filter(::fits).maxBy { c -> accents.minOf { apart(c, it.second) } }
         val gap = accents.minOf { apart(best, it.second) }
-        println("Next accent: 0x%08X, %.1f from the nearest accent".format(best.toArgb(), gap))
-        assertTrue(modes.all { (_, m) -> accents.all { de2000(best, it.second, m) >= COLOUR_BLIND_FLOOR } })
-        assertTrue(accents.all { de2000(best, it.second, null) >= NORMAL_FLOOR })
+        val room = modes.all { (_, m) -> accents.all { de2000(best, it.second, m) >= COLOUR_BLIND_FLOOR } } &&
+            accents.all { de2000(best, it.second, null) >= NORMAL_FLOOR }
+        // The set is full (2026-11-09: no colour keeps both floors once Unblock took the last). The owner: sharing is fine
+        // across a list this long, so a new puzzle reuses an accent and names the pair in [SHARED] (docs/COLOUR.md).
+        println("Next accent: 0x%08X, %.1f from the nearest accent%s".format(best.toArgb(), gap, if (room) "" else "; no room: share one"))
+        for (pair in SHARED) assertTrue("$pair: a shared pair must be one colour", pair.map { id -> accents.first { it.first == id }.second }.toSet().size == 1)
     }
 
     private companion object {
+        /** Puzzles that share an accent on purpose (the set is full; the owner, 2026-11-09). Pairs here skip the floors. */
+        val SHARED: Set<Set<String>> = emptySet()
         const val NORMAL_FLOOR = 5.7
         const val COLOUR_BLIND_FLOOR = 2.85
 

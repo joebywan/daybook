@@ -44,7 +44,7 @@ section 7. The settled play-screen UX (popover, finish frame, solve sound) and t
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
-Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS, Loop and Thermometers, each technique practised on real positions found by walking generated boards by
+Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS, Loop, Thermometers and Unblock, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer (Pipes judges its own way: a
@@ -658,6 +658,49 @@ palette, walkthrough, motif), `SandTeacher.kt`, `SandKeys.kt`. `id = "sand"` is 
 - Colours: six hues at three steps, ordered by CIEDE2000 with colour-blind vision for the 5 / 7 / 8 prefixes (`SandPaletteTest`), and a symbol on every
   layer. The grain and the uneven tops come from the tube and layer index, never random per frame and never stored.
 
+## Unblock (sliding cars)
+
+A 6x6 yard of cars 2 or 3 long, each sliding only along its length; slide them until the red car leaves by the exit on the right
+of row 3. `puzzles/UnblockRules.kt` (`UnblockState`, `UnblockLogic`: rules, the yard's space, generator), `UnblockTeacher.kt`,
+`Unblock.kt` (board, keys, walkthrough, motif). `id = "unblock"` is hashed into every seed: never rename it. "Unblock" is a plain
+word; the genre's trademarked names ("Rush Hour", "Unblock Me") never appear where a player sees them (`GuideTest` bans both).
+
+- **A move is one car slid any distance** (a drag, one state on lift; the drag is `remember`). Car 0 is the red car, lying across
+  row 3; `solved` is it at the exit (a rule check). Slides can be slid back, so every board stays solvable whatever is played:
+  **no mistakes exist**, many answers, and no move cap (Sand's choice). `UnblockState` is the cars, `par` and `moves`; no log, since
+  "Show me" is one slide forward and there is never anything to take back (the brief's Sand/Target log had nothing to do here).
+- **Tiers: 10-11 cars (1-2 trucks), par 6-10 / 12-13 cars (2-3 trucks), par 13-18 / 14 cars (3 trucks), par 20 or more**
+  (`UnblockLogic.specFor`). The brief's 24+ for Expert was measured and dropped: random 14-car yards reach 24 on about 0.5% of
+  draws against 0.8% for 20 (`UnblockMeasure`, not kept), and the tail of a year of Expert days ran to 2.5 s on the JVM. Over a
+  year (`UnblockRulesTest`): par mean 7.9 / 14.9 / 23.0, Expert's longest 41; draws median 2 / 6 / 146, most 15 / 48 / 2530 of
+  `ATTEMPTS` = 6000; JVM ms median / p95 / max 8 / 57 / 120, 32 / 249 / 869, 52 / 233 / 903 (a busy shared machine).
+- **Generation is the yard's whole space, not a search for a start.** A random yard (no car but the red one across row 3), its
+  space breadth first (`space`, a primitive hash table: this is the generator's whole cost; at most `SPACE_CAP` = 12,000
+  positions or the yard is redrawn), then a second pass from every exit at once gives each position its fewest moves. A yard
+  within `NEAR` (5) of the tier is climbed: up to `CLIMB` (15) times a car is moved elsewhere from the hardest position, kept when
+  the farthest is no nearer. The start is drawn among the positions at the tier's distance (the farthest, capped at the tier's
+  most), and ships only if a fresh `Search.shortest` from it says `Solvable` in exactly that many: the par is proved by a search
+  that shares nothing with the space. `UnblockOracle` (test: a picture of letters, one square a step, 0-1 breadth first) agrees.
+  `lastResort` is seed 1's board per tier, written out and proved by a test; a year per tier never reaches it (`FallbackTest`).
+- **`core/Search.kt` is shared with Sand**: `SearchVerdict` (`Solvable(path)` / `Unsolvable` / `Truncated`, lifted from
+  `SandLogic.Verdict`, moving no board) and `Search.shortest`, a breadth-first search Sand's plan line now runs on. Sand's
+  own depth-first `solve` stays its own: packed tubes and two prunings, and its budget counts decide which deals ship.
+- **Teacher: a fresh breadth-first search from the cars on the board**, never the stored road or `par`; the hint is the first
+  slide of a shortest way out, named by what it frees (the first later slide over a square it leaves): `exit`, `clear-the-way`
+  (the red car's), `make-room` (another car's), `plan` (frees nothing at once: the red car driving on early). Following hints from
+  the start finishes in exactly par (`UnblockTeachingTest`, each step one nearer by the oracle). Per board over 40 a tier:
+  make-room 4.5 / 10.8 / 18.2, clear-the-way 2.4 / 3.0 / 3.8, plan 0.05 / 0.15 / 0.1, exit 1. No fallback exists; a search out of
+  budget says so (`unsure`) and cannot happen on a board made here (its space is under the budget).
+- Cars are named by colour, kind and line ("the teal truck in column 5"); colours are derived from what never moves (which way a
+  car lies and its line), so two cars in one line never share one and a name always picks one car. The red car is Coral (nothing on
+  this board is ever right or wrong) and carries a chevron. A fixed-height line over the yard shows "Moves n · par p"; the share
+  card shows moves against par (Target's branch, shared). Keys: arrows pick a car (`nearestPiece`, lifted from Pointers), Shift
+  with an arrow slides it one square, a move a press. Highlight indices are squares.
+- **Training** (`core/training/UnblockTraining.kt`): clear the way, make room and plan, on Standard boards (exit, one slide,
+  is left out). Right is any shortest slide of the technique (`UnblockTeacher.steps`); since the game has no mistakes, a slide
+  is wrong in practice when a fresh search says it leaves the red car no nearer (a practice board sits on the hints' walk, so
+  it is `par - moves` from the exit). A shortest slide of another kind plays on. `UnblockTrainingTest` checks both with the oracle.
+
 ## Dominoes (domino placement on a region board)
 
 Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule: a total, `<n`, `>n`, `=` (all
@@ -1025,7 +1068,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 - The mode row (`Daily/Random · Levels · Training`, `LaunchOptions`) sits above the tier row. Daily and Random share the first
   segment, the one in use large over the other small; a tap on it while selected swaps them (150 ms, snapped under reduced
   motion), and from another mode it returns to the last of the two (`tappedMode`, `dayMode` in `DaybookApp`; Daily on launch,
-  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 23"
+  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 24"
   graduated) so the three share one height; the swap scales the two lines rather than measuring them again, so the row's
   height never changes mid-swap. In Levels and Training the tier row stays laid out, invisible, under the level strip or the
   training strip, so the grid below cannot move when the mode changes. The sticky rows sit tight (4dp over, 4dp between,
@@ -1040,7 +1083,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list; the lengths, 11 / 13 / 9, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths, 11 / 14 / 9, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
   **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
   once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,
@@ -1101,7 +1144,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`, `LoopLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords, Dwindle and Loop (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`, `LoopLogic`, `UnblockLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords, Dwindle, Unblock and Loop (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

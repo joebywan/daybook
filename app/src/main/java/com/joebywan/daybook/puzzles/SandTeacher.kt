@@ -1,6 +1,9 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.core.Deduction
+import com.joebywan.daybook.core.Reached
+import com.joebywan.daybook.core.Search
+import com.joebywan.daybook.core.SearchVerdict
 import com.joebywan.daybook.core.TeachStep
 
 /**
@@ -8,7 +11,7 @@ import com.joebywan.daybook.core.TeachStep
  *
  * Nothing is hidden: every layer is in sight and boards have many answers, so there is no stored answer to read and no
  * fallback in the usual sense. [deduce] is handed the tubes and the height and searches from there ([SandLogic.solve]).
- * A step is offered only when the board is still sortable after it ([SandLogic.Verdict.Solvable]), so a hint is always
+ * A step is offered only when the board is still sortable after it ([SearchVerdict.Solvable]), so a hint is always
  * on a real road.
  *
  * Steps, in ladder order: [FINISH] a pour that completes a colour; [GATHER] a pour onto a matching colour, uncovering a
@@ -19,8 +22,8 @@ import com.joebywan.daybook.core.TeachStep
  * [PLAN] step makes none but shortens the line, so following hints cannot go round in circles. The search's own road
  * can't serve here: it is depth first, and from one side of a neutral pour its first pour can be that pour's reverse.
  *
- * A mistake is a board no order of pours can sort, proved exhaustively ([SandLogic.Verdict.Unsolvable]); a search that
- * ran out of budget ([SandLogic.Verdict.Truncated]) is never called a mistake. The pour named is the one after the last
+ * A mistake is a board no order of pours can sort, proved exhaustively ([SearchVerdict.Unsolvable]); a search that
+ * ran out of budget ([SearchVerdict.Truncated]) is never called a mistake. The pour named is the one after the last
  * board in [SandState.log] that still sorts ([badPour]), and "Show me" takes it back with every pour after it. A board with
  * no log (made elsewhere) instead gets the sand of one pour that could have made it put back ([takeBack]). [STUCK] is the
  * same from a board with no pours left.
@@ -69,9 +72,9 @@ internal object SandTeacher {
     fun teach(s: SandState): Step? {
         if (s.solved) return null
         return when (val v = SandLogic.solve(s.tubes, s.height, HINT_BUDGET)) {
-            is SandLogic.Verdict.Solvable -> deduce(s.tubes, s.height, v.path)
-            SandLogic.Verdict.Unsolvable -> back(s, if (s.stuck) STUCK else MISTAKE)
-            SandLogic.Verdict.Truncated -> back(s, UNSURE)
+            is SearchVerdict.Solvable -> deduce(s.tubes, s.height, v.path)
+            SearchVerdict.Unsolvable -> back(s, if (s.stuck) STUCK else MISTAKE)
+            SearchVerdict.Truncated -> back(s, UNSURE)
         }
     }
 
@@ -105,7 +108,7 @@ internal object SandTeacher {
         if (road.isEmpty()) return null
         val here = progress(tubes, height)
         val pours = SandLogic.pours(tubes, height)
-        fun keeps(after: List<List<Int>>) = SandLogic.solve(after, height, HINT_BUDGET) is SandLogic.Verdict.Solvable
+        fun keeps(after: List<List<Int>>) = SandLogic.solve(after, height, HINT_BUDGET) is SearchVerdict.Solvable
         fun good(m: Pair<Int, Int>, after: List<List<Int>>) = closer(progress(after, height), here) && keeps(after)
 
         // 1. Finish a tube.
@@ -142,18 +145,17 @@ internal object SandTeacher {
         here: Triple<Int, Int, Int>,
         keeps: (List<List<Int>>) -> Boolean,
     ): List<Pair<Int, Int>>? {
-        val seen = hashSetOf(tubes)
-        val queue = ArrayDeque(listOf(tubes to emptyList<Pair<Int, Int>>()))
-        while (queue.isNotEmpty()) {
-            val (t, path) = queue.removeFirst()
-            for (m in SandLogic.pours(t, height)) {
-                val after = SandLogic.pour(t, height, m.first, m.second)
-                if (!seen.add(after)) continue
-                if (!closer(progress(after, height), here)) queue.addLast(after to path + m)
-                else if (keeps(after)) return path + m
+        val v = Search.shortest<List<List<Int>>, List<List<Int>>, Pair<Int, Int>>(
+            tubes, Int.MAX_VALUE, { it },
+            { t, emit -> for (m in SandLogic.pours(t, height)) emit(m, SandLogic.pour(t, height, m.first, m.second)) },
+        ) { after ->
+            when {
+                !closer(progress(after, height), here) -> Reached.EXPAND
+                keeps(after) -> Reached.GOAL
+                else -> Reached.DROP
             }
         }
-        return null
+        return (v as? SearchVerdict.Solvable)?.path
     }
 
     /** Where the colour now on top of [from] could go in [after]: a matching top with room, else an empty tube, else null. */
@@ -244,7 +246,7 @@ internal object SandTeacher {
                 seen += u.first
                 val line = chain + u
                 next += u.first to line
-                if (SandLogic.solve(u.first, s.height, HINT_BUDGET) !is SandLogic.Verdict.Solvable) continue
+                if (SandLogic.solve(u.first, s.height, HINT_BUDGET) !is SearchVerdict.Solvable) continue
                 val b = best
                 if (b == null || closer(progress(u.first, s.height), progress(b.first, s.height))) best = u.first to line
             }
@@ -257,7 +259,7 @@ internal object SandTeacher {
     /** The log index of the pour after which the board stopped being sortable (the latest board before it that sorts), or null. */
     fun badPour(s: SandState): Int? {
         for (j in s.log.indices.reversed()) {
-            if (SandLogic.solve(s.withoutFrom(j).tubes, s.height, HINT_BUDGET) is SandLogic.Verdict.Solvable) return j
+            if (SandLogic.solve(s.withoutFrom(j).tubes, s.height, HINT_BUDGET) is SearchVerdict.Solvable) return j
         }
         return null
     }
@@ -320,7 +322,7 @@ internal object SandTeacher {
             },
             reachedBy = { now ->
                 val n = now as SandState
-                if (back) n.solved || SandLogic.solve(n.tubes, n.height, HINT_BUDGET) is SandLogic.Verdict.Solvable
+                if (back) n.solved || SandLogic.solve(n.tubes, n.height, HINT_BUDGET) is SearchVerdict.Solvable
                 else n.solved || canonical(n.tubes) == target
             },
         )

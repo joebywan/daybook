@@ -193,6 +193,12 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "spare" to "using an empty tube",
         "plan" to "planning a pour ahead",
     ),
+    "unblock" to linkedMapOf(
+        "exit" to "driving the red car out",
+        "clear-the-way" to "moving a car out of the red car's way",
+        "make-room" to "making room for a car in the way",
+        "plan" to "thinking a few moves ahead",
+    ),
     "mines" to linkedMapOf(
         "all-found" to "a number with all its mines found",
         "all-mines" to "a number with as many squares as mines",
@@ -276,6 +282,7 @@ private val NOT_PRAISED: Map<String, Set<String>> = mapOf(
     "dwindle" to setOf("clue"),
     "mini" to setOf("clue"),
     "sand" to setOf("finish"),
+    "unblock" to setOf("exit"),
     "cipher" to setOf("only-letter"),
     "pearls" to setOf("pearl-ways"),
     "tents" to setOf("touch"),

@@ -217,6 +217,7 @@ object Training {
             LitsTraining,
             LoopTraining,
             ThermometersTraining,
+            UnblockTraining,
         )
     }
 

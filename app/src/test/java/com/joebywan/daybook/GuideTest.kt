@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.ui.play.guideUrl
+import com.joebywan.daybook.core.SearchVerdict
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.PuzzleRegistry
@@ -195,7 +196,21 @@ class GuideTest {
         "sets" to ::setsStep,
         "tower" to ::towerStep,
         "sand" to ::sandStep,
+        "unblock" to ::unblockStep,
     )
+
+    /** A yard: `R` the red car, any other token one car (its squares in a line; tokens sort in the game's car order), `.` empty. */
+    private fun unblockStep(b: Board): TeachStep? {
+        val tokens = b.rows.flatten()
+        val names = listOf("R") + tokens.filter { it != "." && it != "R" }.distinct().sorted() // letters in the game's car order
+        val cars = names.map { t ->
+            val sq = tokens.indices.filter { tokens[it] == t }
+            val across = sq.size > 1 && sq[1] == sq[0] + 1
+            com.joebywan.daybook.puzzles.UnblockCar(sq[0] / b.width, sq[0] % b.width, sq.size, across)
+        }
+        assertTrue("${b.technique}: a legal yard", com.joebywan.daybook.puzzles.UnblockLogic.isLegal(cars))
+        return com.joebywan.daybook.puzzles.UnblockTeacher.deduce(cars)
+    }
 
     /** A step's squares as a board draws them, for a teacher whose highlights are not all squares (or whose move is a line). */
     private class Drawn(override val technique: String, override val focus: Set<Int>, override val targets: Set<Int> = emptySet()) : TeachStep {
@@ -933,7 +948,7 @@ class GuideTest {
         val colours = Sand.colourNames.map { it.take(2) }
         val height = b.rows.size
         val tubes = (0 until b.width).map { t -> b.rows.reversed().map { it[t] }.filter { it != "." }.map(colours::indexOf) }
-        val road = (SandLogic.solve(tubes, height, SandTeacher.HINT_BUDGET) as? SandLogic.Verdict.Solvable)?.path
+        val road = (SandLogic.solve(tubes, height, SandTeacher.HINT_BUDGET) as? SearchVerdict.Solvable)?.path
             ?: error("${b.technique}: a board that sorts")
         val step = SandTeacher.deduce(tubes, height, road) ?: return null
         val landed = (tubes[step.to].size until step.after[step.to].size).map { (height - 1 - it) * b.width + step.to }
@@ -1018,7 +1033,7 @@ class GuideTest {
         val anyCase = listOf(
             "minesweeper", "masyu", "killer sudoku", "rullo", "akari", "wordle", "kakuro", "number sums", "hashiwokakero",
             "hashi", "takuzu", "binairo", "einstein", "zebra puzzle", "fill-a-pix", "nikoli", "new york times", "nyt",
-            "wordscapes", "water sort", "slitherlink",
+            "wordscapes", "water sort", "slitherlink", "rush hour", "unblock me",
         )
         for (p in pages) {
             for (word in exact) assertTrue("${p.id} says $word", !Regex("\\b$word\\b").containsMatchIn(p.text))
