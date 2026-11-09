@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.core.DailySeed
+import com.joebywan.daybook.core.SearchVerdict
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.puzzles.Sand
@@ -73,17 +74,17 @@ class SandRulesTest {
         for (d in Difficulty.entries) for (day in 0 until 60) {
             val s = SandLogic.generateVerified(daySeed(day, Sand.id, d), d)!!
             val v = SandLogic.solve(s.tubes, s.height, SandLogic.GEN_BUDGET)
-            assertTrue(v is SandLogic.Verdict.Solvable)
-            assertTrue("${d.name} day $day", SandOracle.replays(s.tubes, s.height, (v as SandLogic.Verdict.Solvable).path))
+            assertTrue(v is SearchVerdict.Solvable)
+            assertTrue("${d.name} day $day", SandOracle.replays(s.tubes, s.height, (v as SearchVerdict.Solvable).path))
         }
     }
 
     @Test
     fun `a solved board is solvable with no pours, and a small budget is never read as unsortable`() {
-        assertEquals(SandLogic.Verdict.Solvable(emptyList()), SandLogic.solve(sorted, 3, 1))
+        assertEquals(SearchVerdict.Solvable(emptyList<Pair<Int, Int>>()), SandLogic.solve(sorted, 3, 1))
         val s = Sand.generate(DailySeed.seedFor(TEST_START, Sand.id, Difficulty.EXPERT), Difficulty.EXPERT) as SandState
-        assertEquals(SandLogic.Verdict.Truncated, SandLogic.solve(s.tubes, s.height, 1))
-        assertEquals(SandLogic.Verdict.Truncated, SandLogic.solve(s.tubes, s.height, 5))
+        assertEquals(SearchVerdict.Truncated, SandLogic.solve(s.tubes, s.height, 1))
+        assertEquals(SearchVerdict.Truncated, SandLogic.solve(s.tubes, s.height, 5))
     }
 
     @Test
@@ -103,9 +104,9 @@ class SandRulesTest {
             }
             val truth = SandOracle.solve(t, h, 2_000_000).solvable
             when (val v = SandLogic.solve(t, h, 1_000_000)) {
-                is SandLogic.Verdict.Solvable -> { assertTrue("$t", truth); assertTrue(SandOracle.replays(t, h, v.path)); sortable++ }
-                SandLogic.Verdict.Unsolvable -> { assertFalse("$t", truth); unsortable++ }
-                SandLogic.Verdict.Truncated -> error("a small board ran out of budget: $t")
+                is SearchVerdict.Solvable -> { assertTrue("$t", truth); assertTrue(SandOracle.replays(t, h, v.path)); sortable++ }
+                SearchVerdict.Unsolvable -> { assertFalse("$t", truth); unsortable++ }
+                SearchVerdict.Truncated -> error("a small board ran out of budget: $t")
             }
         }
         println("sortable $sortable, unsortable $unsortable")
@@ -158,7 +159,7 @@ class SandRulesTest {
             assertFalse(s.solved)
             assertEquals(spec.colours + 2, s.tubes.size)
             for (c in 0 until spec.colours) assertEquals(spec.height, s.tubes.sumOf { t -> t.count { it == c } })
-            val v = SandLogic.solve(s.tubes, s.height, SandLogic.GEN_BUDGET) as SandLogic.Verdict.Solvable
+            val v = SandLogic.solve(s.tubes, s.height, SandLogic.GEN_BUDGET) as SearchVerdict.Solvable
             assertTrue(SandOracle.replays(s.tubes, s.height, v.path))
         }
     }

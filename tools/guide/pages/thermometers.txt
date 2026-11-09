@@ -1,0 +1,149 @@
+# Thermometers
+> Fill each one from the bulb up
+
+## How to play
+
+Tap a square to fill its thermometer from the bulb up to there. Tap the top of the fill to lower it by one. Double-tap or long-press a square to cross it out, and everything above it in its thermometer.
+
+Pick Fill or Cross under the board for what a single tap does. Drag along a row or column to mark several squares at once. A cross is only a note: a crossed square counts exactly like any other square left empty.
+
+On a keyboard, the arrows move, F fills to the square, X crosses from it, Space cycles, and Backspace clears. Shift and an arrow carries a mark along.
+
+A count turns green when its line holds that many filled squares. It turns red a moment after the line can no longer get there: too many filled, or too few squares left open. A thermometer's outline turns red if a filled square sits above a cross.
+
+Stuck? The first tap on Hint says where to look, and the second explains why. You make the move yourself, unless you ask for "Show me". If a mark you made is wrong, Hint points at that first. Every board has exactly one answer, and you never need to guess to find it.
+
+## Rules
+
+- Each thermometer fills from its round bulb, with no gaps: a filled square has every square below it filled.
+- The number beside each row, and under each column, is how many of its squares are filled.
+
+## What changes per tier
+
+- Standard: 5x5 grid. Lines and thermometers that can't reach the top are all it needs.
+- Hard: 6x6 grid, longer thermometers. Needs a bulb that must fill at least once.
+- Expert: 8x8 grid, longer thermometers still. Needs a what-if at least once.
+
+## Techniques
+
+These are the steps the hints teach, simplest first. Try them in this order. On each board, a thick line is a thermometer and the o is its bulb; a dark square is filled, an x is crossed out, the numbers in the margin are the counts, the tint is where to look, a ring is what the step leans on, and the filled square is the mark to make next. Every board here is a real position from the game, and this is the step the hint gives on it.
+
+### from-the-bulb | A thermometer filling from its bulb
+
+A thermometer has no gaps. Under a filled square everything is filled, down to the bulb; above an empty square nothing can fill.
+
+~~~board
+. . o . o 3
+. o . . . 4
+o o x x o 1
+. o o x . 2
+x x . x x 1
+2 1 4 2 2 _
+regions: .....a .....a .....a .....a .....a aaaaa.
+lines: r1c3-r2c3 r2c3-r2c4 r2c4-r2c5 r1c5-r1c4 r2c2-r1c2 r3c1-r2c1 r2c1-r1c1 r3c2-r3c3 r3c3-r3c4 r3c4-r4c4 r3c5-r4c5 r4c5-r5c5 r4c2-r5c2 r4c3-r5c3 r5c3-r5c4 r5c1-r4c1
+solid: r1c3 r2c3 r4c3 r5c3
+focus: r4c1
+cite: r5c1
+answer: r4c1=x
+caption: The thermometer in the bottom left has its bulb crossed out, so it is empty, and the square above the bulb is empty too. Cross it out.
+~~~
+
+### line-done | A line already holding its count
+
+When a row or column already has as many filled squares as its count, every other square in it stays empty.
+
+~~~board
+. . o o . 3
+x o . x x 1
+x o o . o 3
+x o . . . 4
+o . x x . 2
+2 4 2 3 2 _
+regions: .....a .....a .....a .....a .....a aaaaa.
+lines: r1c3-r2c3 r2c3-r2c4 r2c4-r2c5 r1c4-r1c5 r2c2-r1c2 r1c2-r1c1 r1c1-r2c1 r3c2-r3c1 r3c1-r4c1 r3c3-r3c4 r3c4-r4c4 r3c5-r4c5 r4c5-r5c5 r4c2-r4c3 r5c1-r5c2 r5c2-r5c3 r5c3-r5c4
+solid: r1c4 r3c3 r3c4 r3c5 r4c2 r4c3 r4c4 r4c5
+focus: r3c1-r3c6
+answer: r3c2=x
+caption: Row 3 counts 3 and already has 3 filled, so its one open square, a bulb, stays empty. Cross it out.
+~~~
+
+### line-room | A line with just enough room
+
+When a row or column has exactly as many open squares as it still needs, all of them fill.
+
+~~~board
+x x . x o 2
+o x . o x 3
+. . . x x 3
+x x x x . 1
+x x . o o 3
+2 1 4 2 3 _
+regions: .....a .....a .....a .....a .....a aaaaa.
+lines: r1c1-r1c2 r1c2-r2c2 r1c5-r2c5 r2c1-r3c1 r3c1-r3c2 r3c2-r3c3 r2c4-r2c3 r2c3-r1c3 r1c3-r1c4 r4c4-r4c3 r4c3-r4c2 r5c2-r5c1 r5c1-r4c1 r5c4-r5c3 r5c5-r4c5 r4c5-r3c5 r3c5-r3c4
+solid: r1c3 r2c1 r2c3 r2c4 r3c1 r3c2 r3c3 r5c3 r5c4
+focus: r1c1-r1c6
+answer: r1c5=fill
+caption: Row 1 counts 2 and has 1 filled, so it needs 1 more, and only one square is still open. It fills.
+~~~
+
+### tip-cannot | A tip that cannot fill
+
+A thermometer fills from its bulb, so its squares in a line fill in order. If a line needs only k more, one thermometer can give it at most k: its next open square in that line, and everything above it, stay empty.
+
+~~~board
+. . o . o 1
+. . . o . 3
+o o o . . 3
+. . . . . 1
+. . o o . 3
+1 3 3 3 1 _
+regions: .....a .....a .....a .....a .....a aaaaa.
+lines: r1c3-r2c3 r1c5-r1c4 r2c4-r2c5 r2c5-r3c5 r3c5-r3c4 r3c1-r2c1 r3c2-r2c2 r2c2-r1c2 r1c2-r1c1 r3c3-r4c3 r4c3-r4c2 r4c2-r4c1 r5c3-r5c2 r5c2-r5c1 r5c4-r4c4 r4c4-r4c5 r4c5-r5c5
+focus: r1c4 r1c5
+cite: r1c1 r1c2 r1c3
+answer: r1c4=x
+caption: Row 1 counts 1. The short thermometer at its right end lies along the row from its bulb, so filling its second square would put 2 in row 1. That tip stays empty.
+~~~
+
+### bulb-must | A bulb that must fill
+
+Count the open squares the other thermometers have in a line. If they fall short of what the line still needs, this thermometer has to make up the difference, so it fills from its bulb at least that far.
+
+~~~board
+o x x x . o 2
+. . . o . . 5
+. . o o . . 3
+. . . . . . 5
+o x x . . x 1
+o . o . o x 2
+4 3 3 2 4 2 _
+regions: ......a ......a ......a ......a ......a ......a aaaaaa.
+lines: r1c1-r2c1 r2c1-r3c1 r3c1-r4c1 r4c1-r4c2 r1c6-r1c5 r1c5-r1c4 r1c4-r1c3 r1c3-r1c2 r2c4-r2c5 r2c5-r2c6 r3c3-r3c2 r3c2-r2c2 r2c2-r2c3 r3c4-r3c5 r3c5-r3c6 r3c6-r4c6 r4c6-r5c6 r5c6-r6c6 r5c1-r5c2 r5c2-r5c3 r6c1-r6c2 r6c3-r6c4 r6c4-r5c4 r6c5-r5c5 r5c5-r4c5 r4c5-r4c4 r4c4-r4c3
+focus: r1c6
+cite: r1c1 r1c2 r1c3 r1c4 r1c5
+answer: r1c6=fill
+caption: Row 1 counts 2. The long thermometer down column 1 can give it only its bulb, so the thermometer along row 1 must give at least 1: its bulb fills.
+~~~
+
+### what-if | A what-if
+
+Suppose a square is filled, or empty, and follow what that forces through a few lines. If some line can no longer hold its count, your supposition was wrong, so the square is the other way. This isn't guessing: you only mark it once the other way has been shown to break.
+
+~~~board
+. o o . o x x x 3
+. x o . . o x x 3
+o x x . . x x x 2
+. x x . . . o x 4
+. x o . x o . o 5
+. . . . . x . . 4
+. x x x . o x x 1
+o o . . . . o x 3
+4 1 3 6 4 3 2 2 _
+regions: ........a ........a ........a ........a ........a ........a ........a ........a aaaaaaaa.
+lines: r1c2-r1c1 r1c1-r2c1 r2c1-r2c2 r1c3-r1c4 r1c5-r2c5 r2c5-r3c5 r3c5-r4c5 r4c5-r5c5 r2c3-r2c4 r2c4-r3c4 r3c4-r4c4 r4c4-r4c3 r4c3-r3c3 r2c6-r1c6 r1c6-r1c7 r1c7-r2c7 r2c7-r2c8 r2c8-r1c8 r3c1-r4c1 r4c1-r5c1 r5c1-r6c1 r6c1-r6c2 r6c2-r5c2 r5c2-r4c2 r4c2-r3c2 r4c7-r5c7 r5c3-r5c4 r5c4-r6c4 r6c4-r6c3 r5c6-r4c6 r4c6-r3c6 r3c6-r3c7 r3c7-r3c8 r3c8-r4c8 r5c8-r6c8 r6c8-r6c7 r7c6-r7c7 r7c7-r7c8 r7c8-r8c8 r8c1-r7c1 r7c1-r7c2 r7c2-r7c3 r7c3-r7c4 r8c2-r8c3 r8c3-r8c4 r8c7-r8c6 r8c6-r8c5 r8c5-r7c5 r7c5-r6c5 r6c5-r6c6
+solid: r1c5 r2c3 r2c4 r3c4 r4c4 r4c6 r5c3 r5c4 r5c6 r5c8 r6c8
+focus: r4c7
+cite: r2c5 r3c1 r3c5 r4c1 r4c5
+answer: r4c7=fill
+caption: If this bulb stayed empty, row 4 would need both of its other open squares, in columns 1 and 5. Their thermometers would then fill their squares in row 3 as well, giving row 3 three filled squares, one more than its 2. So the bulb fills.
+~~~

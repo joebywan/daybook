@@ -186,11 +186,25 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "every-way" to "the ways a line can make its target",
         "what-if" to "a what-if",
     ),
+    "thermometers" to linkedMapOf(
+        "from-the-bulb" to "a thermometer filling from its bulb",
+        "line-done" to "a line already holding its count",
+        "line-room" to "a line with just enough room",
+        "tip-cannot" to "a tip that cannot fill",
+        "bulb-must" to "a bulb that must fill",
+        "what-if" to "a what-if",
+    ),
     "sand" to linkedMapOf(
         "finish" to "pouring to finish a tube",
         "gather" to "gathering onto a matching colour",
         "spare" to "using an empty tube",
         "plan" to "planning a pour ahead",
+    ),
+    "unblock" to linkedMapOf(
+        "exit" to "driving the red car out",
+        "clear-the-way" to "moving a car out of the red car's way",
+        "make-room" to "making room for a car in the way",
+        "plan" to "thinking a few moves ahead",
     ),
     "mines" to linkedMapOf(
         "all-found" to "a number with all its mines found",
@@ -240,6 +254,14 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "small-loop" to "the loop that must be one",
         "what-if" to "a what-if",
     ),
+    "loop" to linkedMapOf(
+        "count" to "a number's count",
+        "one-way" to "a line with one way on",
+        "dead-end" to "a dead end",
+        "corner" to "a number and its corners",
+        "small-loop" to "the loop that must be one",
+        "what-if" to "a what-if",
+    ),
     "whoswho" to linkedMapOf(
         "clue" to "a clue that names someone",
         "only" to "the one item left",
@@ -268,6 +290,7 @@ private val NOT_PRAISED: Map<String, Set<String>> = mapOf(
     "dwindle" to setOf("clue"),
     "mini" to setOf("clue"),
     "sand" to setOf("finish"),
+    "unblock" to setOf("exit"),
     "cipher" to setOf("only-letter"),
     "pearls" to setOf("pearl-ways"),
     "tents" to setOf("touch"),

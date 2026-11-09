@@ -22,7 +22,7 @@ object Equation : PuzzleType {
     override val id = "equation"
     override val displayName = "Equation"
     override val tagline = "Find the hidden equation"
-    override val accent = 0xFFD062BA
+    override val accent = 0xFF278E8E // Lexicon's: the accent set is full, and the two are one family (AccentSpacingTest.SHARED)
     override val rules = listOf(
         "An equation such as 12+35=47 is hidden. Type a true one and press Enter to guess it.",
         "Green: the right symbol in the right place.",

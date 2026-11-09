@@ -3,6 +3,7 @@ package com.joebywan.daybook.puzzles
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PenMarks
 import com.joebywan.daybook.core.Rng
+import com.joebywan.daybook.core.lineSquares
 import kotlinx.serialization.Serializable
 
 /**
@@ -95,8 +96,7 @@ internal object NonogramLogic {
     fun clues(s: NonogramState): List<List<Int>> = rowClues(s) + colClues(s)
 
     /** A line's squares as indices into the board: rows first (0 until height), then columns (height until height + width). */
-    fun lineCells(width: Int, height: Int, line: Int): List<Int> =
-        if (line < height) List(width) { line * width + it } else List(height) { it * width + line - height }
+    fun lineCells(width: Int, height: Int, line: Int): List<Int> = lineSquares(width, height, line)
 
     /** Highlight indices for the clues, which sit after the squares (see [NonogramTeacher]). */
     fun rowClueIndex(width: Int, height: Int, r: Int): Int = width * height + r

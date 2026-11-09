@@ -176,11 +176,23 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "Circled numbers that already make the target: the rest go.",
         "List the ways a short line can make its target.",
     ),
+    "thermometers" to listOf(
+        "A filled square fills everything below it, down to the bulb.",
+        "A line needing one more takes at most one from each thermometer.",
+        "An empty square leaves everything above it empty too.",
+        "Count the open squares the other thermometers leave in a line.",
+    ),
     "sand" to listOf(
         "Pour onto a matching colour before using an empty tube.",
         "An empty tube is your spare room: try to keep one free.",
         "Uncover a colour only when it has somewhere to go.",
         "A finished tube never needs touching again.",
+    ),
+    "unblock" to listOf(
+        "Work back from the exit: what is in the red car's way?",
+        "A car in the way may need another car moved first.",
+        "A slide of any length is one move: go as far as helps.",
+        "Moving the red car back can let a car cross its row.",
     ),
     "pointers" to listOf(
         "An arrow with an empty line to the edge can always go.",
@@ -210,6 +222,12 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A black pearl on the edge of the board runs two squares inward.",
         "Three white pearls in a row can never share one straight line.",
         "A square with only one way in is never on the loop.",
+        "Never join the two ends of a line unless it is the whole loop.",
+    ),
+    "loop" to listOf(
+        "A 3 in a corner of the board takes both sides at that corner.",
+        "A 1 in a corner of the board takes neither side there.",
+        "A dot takes no line or two, never one or three.",
         "Never join the two ends of a line unless it is the whole loop.",
     ),
     "whoswho" to listOf(

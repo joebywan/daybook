@@ -85,13 +85,16 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Hexwords | Letter-spending | Spell words through touching hexes to reach a target score; a word's letters are used up, so which word to take first matters |
 | Dwindle | Vanishing letter grid | Find every listed word by swiping through touching tiles; each tile counts its uses left and vanishes at zero |
 | Tally | Sum-elimination grid | Remove numbers until what is left in every row and column adds up to its target |
+| Thermometers | Thermometer grid | Fill straight and bent thermometers from the bulb up, no gaps, so every row and column holds its count of filled squares |
 | Sand | Colour sort (water sort) | Pour layered sand from tube to tube until every tube holds one colour |
+| Unblock | Sliding-block puzzle | Slide cars along their length, in a 6x6 yard, until the red car can drive out of the exit; each board's par is its proved fewest moves |
 | Arrows | Arrow clearing | Tap arrows to slide them off the board the way they point; a bump into another arrow costs one of three lives |
 | Mines | Minefield, no guessing | Reveal every square without a mine; each number counts the mines touching it, the board opens with a clear patch, and a mine costs one of three lives |
 | Dominoes | Domino placement on a region board | Lay every domino from the tray on two neighbouring squares so each coloured region keeps its rule (a total, a bound, all equal or all different) |
 | Lamps | Lamp placement | Light every white square with lamps that shine along their row and column to a wall; no lamp may light another, and a numbered wall touches that many lamps |
 | Codeword | Codeword (number crossword) | A filled crossword in which every letter is a number: work out which letter each number stands for |
 | Pearls | Masyu (pearl loop) | One closed loop through square middles and every pearl: it turns on black pearls (running straight on either side) and goes straight through white ones (turning beside them) |
+| Loop | Slitherlink (loop through the dots) | One closed loop along the squares' sides, from dot to dot: each number says how many of its square's four sides the loop uses |
 | Who's Who | Logic grid | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house" |
 | Crossword | Mini crossword | A small crossword, every square in a word across and a word down: solve the clues and fill the grid |
 
@@ -128,14 +131,25 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
 - **Tally** — random digits and a random answer, kept only if a person's ladder finishes it (shortcuts, the ways one line can
   make its target, and on Expert a short what-if) needing exactly the tier's deepest step, and an exhaustive count finds one answer.
   An independent solver that lists every way each column can make its target confirms it in the tests.
+- **Thermometers** — thermometers grown as random bent walks and a random level for each, kept only if an exhaustive count finds
+  one answer and a person's ladder (a thermometer fills from its bulb, full and empty lines, what one thermometer can give a line,
+  and on Expert a short what-if) finishes it needing exactly the tier's deepest step. An independent solver that decides one square
+  at a time confirms it in the tests.
 - **Pearls** — a random loop grown so that the pearls it allows can pin it down, then pearls taken back while a person's ladder
   (the pearls' own rules, the loop that must be one, and on Expert a short what-if) still finishes it, needing exactly the tier's
   deepest step; an exhaustive count proves one loop, and an independent solver that decides every edge in reading order agrees.
+- **Loop** — a random loop grown on the dots, every square numbered from it, then numbers taken back while a person's ladder
+  (each number's count, its corners, the loop that must be one, and on Expert a short what-if) still finishes it, needing
+  exactly the tier's deepest step; an exhaustive count proves one loop, and an independent solver that colours squares in or
+  out agrees.
 - **Sand** — many answers by design, so what is proved is that one exists: a deal is kept only once a search has found a
   sequence of pours that sorts it (the found road is the proof; a search that runs out of budget proves nothing and the deal
   is redrawn). Deals that give the board away (a tube already one colour, a long run) are redrawn, and so is a board a player
   pouring at random sorts every time. An independent breadth-first search confirms in the tests every "can't be sorted" the
   game and its hints claim.
+- **Unblock** — many answers by design; what is proved is the par, the fewest moves. The yard's whole space of positions is
+  searched, every position given its distance to the exit, and a start is drawn at the tier's distance; a fresh breadth-first
+  search from that start must agree before it ships, and an independent solver that moves one square at a time confirms it in the tests.
 - **Pipes** — the solved board is a random spanning tree, so a fully-joined loop-free answer always
   exists.
 - **Nonogram** — a random picture is kept only if a line solver finishes it: for each row or column, work out

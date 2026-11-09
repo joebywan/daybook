@@ -105,10 +105,18 @@ marks; the board's own colours carry its meaning.
 | Cipher | `A879AA` | 0.64 0.090 325 | 0.249 | 3.4 / 3.1 | 4.0 / 4.8 | Sets 6.2 |
 | Atoms | `B2659A` | 0.61 0.119 340 | 0.211 | 3.9 / 3.6 | 3.5 / 4.2 | Target 5.8 |
 | Mosaic | `BC4C9C` | 0.59 0.171 340 | 0.183 | 4.4 / 4.0 | 3.1 / 3.7 | Atoms 6.2 |
+| Loop | `D062BA` | 0.66 0.174 336 | 0.257 | 3.3 / 3.1 | 4.1 / 4.9 | 5.9 (as `AccentSpacingTest` picked it) |
+| Thermometers | `9F568E` | 0.56 0.120 336 | 0.160 | held by `ContrastTest` | held by `ContrastTest` | 5.8 (as `AccentSpacingTest` picked it, after Loop) |
+| Unblock | `7B6F3D` | olive | | held by `ContrastTest` | held by `ContrastTest` | 5.8 (as `AccentSpacingTest` picked it, after Thermometers) |
+| Equation | `278E8E` | shared with Lexicon | | | | shared on purpose (`AccentSpacingTest.SHARED`): one family of guessing games |
 | Target | `B47699` | 0.64 0.090 345 | 0.250 | 3.4 / 3.1 | 4.0 / 4.8 | Atoms 5.8 |
 | Tally | `A26482` | 0.58 0.089 350 | 0.184 | 4.3 / 4.0 | 3.2 / 3.8 | Crossword 6.0 |
 | Trail | `CA4383` | 0.59 0.180 355 | 0.182 | 4.4 / 4.0 | 3.1 / 3.7 | Mines 6.2 |
 | Mines | `D45C91` | 0.64 0.161 355 | 0.237 | 3.5 / 3.3 | 3.9 / 4.6 | Trail 6.2 |
+
+**The set is full (2026-11-09).** After Unblock, no colour keeps both floors. The owner: with a list this long, sharing an
+accent is fine. A new puzzle reuses an existing accent (one far from it on the home grid) and names the pair in
+`AccentSpacingTest.SHARED`, which exempts exactly that pair from the floors.
 
 Design distance is CIEDE2000 under normal vision or twice the worst colour-blind one, whichever is smaller.
 

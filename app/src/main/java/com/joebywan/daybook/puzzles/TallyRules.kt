@@ -4,6 +4,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PenMarks
 import com.joebywan.daybook.core.Rng
 import com.joebywan.daybook.core.Verdict
+import com.joebywan.daybook.core.lineSquares
 import kotlinx.serialization.Serializable
 
 /**
@@ -75,8 +76,7 @@ internal object TallyLogic {
     // ---- geometry ---------------------------------------------------------------------------
 
     /** Rows first (0 until n), then columns (n until 2n). */
-    fun lineCells(n: Int, line: Int): List<Int> =
-        if (line < n) List(n) { line * n + it } else List(n) { it * n + (line - n) }
+    fun lineCells(n: Int, line: Int): List<Int> = lineSquares(n, n, line)
 
     /** Highlight indices for the targets, which sit after the squares (see [TallyTeacher]). */
     fun rowTargetIndex(n: Int, r: Int): Int = n * n + r

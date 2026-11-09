@@ -17,6 +17,7 @@ import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.MinesLogic
 import com.joebywan.daybook.puzzles.PearlsLogic
+import com.joebywan.daybook.puzzles.LoopLogic
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.RegionsLogic
@@ -57,6 +58,7 @@ class LevelBoardsProvedTest {
         "cipher" to Cipher::generateVerified,
         "wordwheel" to WordWheelLogic::generateVerified,
         "tally" to TallyLogic::generateVerified,
+        "thermometers" to com.joebywan.daybook.puzzles.ThermometersLogic::generateVerified,
         "sand" to SandLogic::generateVerified,
         "tents" to TentsLogic::generateVerified,
         "pointers" to PointersLogic::generateVerified,
@@ -67,9 +69,11 @@ class LevelBoardsProvedTest {
         "mines" to MinesLogic::generateVerified,
         "lamps" to LampsLogic::generateVerified,
         "pearls" to PearlsLogic::generateVerified,
+        "loop" to LoopLogic::generateVerified,
         "mini" to MiniLogic::generateVerified,
         "hexwords" to com.joebywan.daybook.puzzles.HexLogic::generateVerified,
         "dwindle" to DwindleLogic::generateVerified,
+        "unblock" to com.joebywan.daybook.puzzles.UnblockLogic::generateVerified,
     )
 
     @Test

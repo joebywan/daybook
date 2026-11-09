@@ -65,6 +65,9 @@ object Levels {
         "mini",
         "hexwords",
         "dwindle",
+        "loop",
+        "thermometers",
+        "unblock",
         "equation",
     )
 

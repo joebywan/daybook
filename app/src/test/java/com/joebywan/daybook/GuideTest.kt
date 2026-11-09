@@ -1,6 +1,7 @@
 package com.joebywan.daybook
 
 import com.joebywan.daybook.ui.play.guideUrl
+import com.joebywan.daybook.core.SearchVerdict
 import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.PlacementStep
 import com.joebywan.daybook.core.PuzzleRegistry
@@ -54,6 +55,7 @@ import com.joebywan.daybook.puzzles.NonogramLogic
 import com.joebywan.daybook.puzzles.NonogramTeacher
 import com.joebywan.daybook.puzzles.Pair2
 import com.joebywan.daybook.puzzles.PearlsTeacher
+import com.joebywan.daybook.puzzles.LoopTeacher
 import com.joebywan.daybook.puzzles.PipesTeacher
 import com.joebywan.daybook.puzzles.Placement
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -73,6 +75,8 @@ import com.joebywan.daybook.puzzles.SudokuTeacher
 import com.joebywan.daybook.puzzles.Sym
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyTeacher
+import com.joebywan.daybook.puzzles.ThermometersLogic
+import com.joebywan.daybook.puzzles.ThermometersTeacher
 import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.TentsTeacher
 import com.joebywan.daybook.puzzles.TowerTeacher
@@ -166,11 +170,13 @@ class GuideTest {
         "regions" to ::regionsStep,
         "cages" to ::cagesStep,
         "tally" to ::tallyStep,
+        "thermometers" to ::thermometersStep,
         "nonogram" to ::nonogramStep,
         "shikaku" to ::shikakuStep,
         "pipes" to ::pipesStep,
         "atoms" to ::atomsStep,
         "pearls" to ::pearlsStep,
+        "loop" to ::loopStep,
         "mosaic" to ::mosaicStep,
         "dominoes" to ::dominoesStep,
         // No techniques and so no boards (hints are off): these two lines are never asked.
@@ -194,7 +200,21 @@ class GuideTest {
         "sets" to ::setsStep,
         "tower" to ::towerStep,
         "sand" to ::sandStep,
+        "unblock" to ::unblockStep,
     )
+
+    /** A yard: `R` the red car, any other token one car (its squares in a line; tokens sort in the game's car order), `.` empty. */
+    private fun unblockStep(b: Board): TeachStep? {
+        val tokens = b.rows.flatten()
+        val names = listOf("R") + tokens.filter { it != "." && it != "R" }.distinct().sorted() // letters in the game's car order
+        val cars = names.map { t ->
+            val sq = tokens.indices.filter { tokens[it] == t }
+            val across = sq.size > 1 && sq[1] == sq[0] + 1
+            com.joebywan.daybook.puzzles.UnblockCar(sq[0] / b.width, sq[0] % b.width, sq.size, across)
+        }
+        assertTrue("${b.technique}: a legal yard", com.joebywan.daybook.puzzles.UnblockLogic.isLegal(cars))
+        return com.joebywan.daybook.puzzles.UnblockTeacher.deduce(cars)
+    }
 
     /** A step's squares as a board draws them, for a teacher whose highlights are not all squares (or whose move is a line). */
     private class Drawn(override val technique: String, override val focus: Set<Int>, override val targets: Set<Int> = emptySet()) : TeachStep {
@@ -256,6 +276,28 @@ class GuideTest {
         val moved = b.drawn("moves")
         assertEquals("${b.technique}: the lines", moved.filter { it.second != 'x' }.map(::edge).toSet(), step.lines.toSet())
         assertEquals("${b.technique}: the crosses", moved.filter { it.second == 'x' }.map(::edge).toSet(), step.crosses.toSet())
+        return Drawn(step.technique, step.focus.filter { it < n * n }.toSet())
+    }
+
+    /** Loop draws its lines from dot to dot (`draw: dots`): `r1c1` is a square's top-left corner, on a lattice one wider. */
+    private fun loopStep(b: Board): TeachStep? {
+        val n = b.width
+        val m = n + 1
+        val clues = b.rows.flatten().joinToString("")
+        fun edge(part: String): Int {
+            val (r1, c1, r2, c2) = Regex("\\d+").findAll(part).map { it.value.toInt() - 1 }.toList()
+            val (a, z) = listOf(r1 * m + c1, r2 * m + c2).sorted()
+            assertTrue("$part: one side of a square", z - a == 1 && a / m == z / m || z - a == m)
+            return if (z - a == 1) (a / m) * n + a % m else n * m + a
+        }
+        val parts = { key: String -> b.fields[key].orEmpty().split(' ').filter { it.isNotEmpty() } }
+        fun crossed(part: String) = Regex("r\\d+c\\d+([-x])").find(part)!!.groupValues[1] == "x"
+        val edges = CharArray(2 * n * m) { '.' }
+        for (p in parts("lines")) edges[edge(p)] = if (crossed(p)) 'x' else '-'
+        val step = LoopTeacher.deduce(n, clues, edges.concatToString()) ?: return null
+        val moved = parts("moves")
+        assertEquals("${b.technique}: the lines", moved.filterNot(::crossed).map(::edge).toSet(), step.lines.toSet())
+        assertEquals("${b.technique}: the crosses", moved.filter(::crossed).map(::edge).toSet(), step.crosses.toSet())
         return Drawn(step.technique, step.focus.filter { it < n * n }.toSet())
     }
 
@@ -457,6 +499,49 @@ class GuideTest {
         }
         val step = TallyTeacher.deduce(n, digits, targets, marks) ?: return null
         for (i in step.targets) assertEquals("${b.technique}: the number marked", digits[i].toString(), b.marks("answer")[board(i)])
+        fun mapped(i: Int) = when {
+            i < n * n -> board(i)
+            i < n * n + n -> (i - n * n) * b.width + n
+            else -> n * b.width + i - n * n - n
+        }
+        return Mapped(step, step.focus.map(::mapped).toSet(), step.targets.map(::mapped).toSet())
+    }
+
+    /**
+     * Counts in a margin right and below. `lines` draws each thermometer bulb first (`a-b`: `b` is the next square up it),
+     * a `solid` square is filled and an `x` crossed; both must agree with the one answer. An answer of `fill` fills, `x` crosses.
+     */
+    private fun thermometersStep(b: Board): TeachStep? {
+        val n = b.width - 1
+        fun board(i: Int) = i / n * b.width + i % n
+        val targets = List(n) { b.rows[it][n].toInt() } + List(n) { b.rows[n][it].toInt() }
+        val up = IntArray(n * n) { -1 }
+        val hasBelow = BooleanArray(n * n)
+        for (part in b.fields["lines"].orEmpty().split(' ').filter { it.isNotEmpty() }) {
+            val k = Regex("\\d+").findAll(part).map { it.value.toInt() - 1 }.toList()
+            up[k[0] * n + k[1]] = k[2] * n + k[3]
+            hasBelow[k[2] * n + k[3]] = true
+        }
+        val tubes = (0 until n * n).filter { !hasBelow[it] }.map { bulb -> generateSequence(bulb) { up[it].takeIf { u -> u >= 0 } }.toList() }
+        assertEquals("${b.technique}: every square in one thermometer", (0 until n * n).toList(), tubes.flatten().sorted())
+        val filled = b.squares("solid")
+        val marks = String(CharArray(n * n) {
+            when {
+                board(it) in filled -> ThermometersLogic.FILLED
+                b.rows[it / n][it % n] == "x" -> ThermometersLogic.CROSSED
+                else -> ThermometersLogic.UNMARKED
+            }
+        })
+        val answer = ThermometersLogic.countSolutions(n, tubes, targets)
+        assertTrue("${b.technique}: a position with one answer", answer is Verdict.ExactlyOne)
+        val fill = (answer as Verdict.ExactlyOne).value
+        for (i in 0 until n * n) {
+            if (marks[i] == ThermometersLogic.FILLED) assertEquals("${b.technique}: a filled square the answer empties", '1', fill[i])
+            if (marks[i] == ThermometersLogic.CROSSED) assertEquals("${b.technique}: a cross the answer fills", '0', fill[i])
+        }
+        val step = ThermometersTeacher.deduce(n, tubes, targets, marks) ?: return null
+        for (i in step.full) assertEquals("${b.technique}: a square filled", "fill", b.marks("answer")[board(i)])
+        for (i in step.empty) assertEquals("${b.technique}: a square crossed", "x", b.marks("answer")[board(i)])
         fun mapped(i: Int) = when {
             i < n * n -> board(i)
             i < n * n + n -> (i - n * n) * b.width + n
@@ -896,7 +981,7 @@ class GuideTest {
         val colours = Sand.colourNames.map { it.take(2) }
         val height = b.rows.size
         val tubes = (0 until b.width).map { t -> b.rows.reversed().map { it[t] }.filter { it != "." }.map(colours::indexOf) }
-        val road = (SandLogic.solve(tubes, height, SandTeacher.HINT_BUDGET) as? SandLogic.Verdict.Solvable)?.path
+        val road = (SandLogic.solve(tubes, height, SandTeacher.HINT_BUDGET) as? SearchVerdict.Solvable)?.path
             ?: error("${b.technique}: a board that sorts")
         val step = SandTeacher.deduce(tubes, height, road) ?: return null
         val landed = (tubes[step.to].size until step.after[step.to].size).map { (height - 1 - it) * b.width + step.to }
@@ -981,7 +1066,7 @@ class GuideTest {
         val anyCase = listOf(
             "minesweeper", "masyu", "killer sudoku", "rullo", "akari", "wordle", "kakuro", "number sums", "hashiwokakero",
             "hashi", "takuzu", "binairo", "einstein", "zebra puzzle", "fill-a-pix", "nikoli", "new york times", "nyt",
-            "wordscapes", "water sort",
+            "wordscapes", "water sort", "slitherlink", "rush hour", "unblock me",
         )
         for (p in pages) {
             for (word in exact) assertTrue("${p.id} says $word", !Regex("\\b$word\\b").containsMatchIn(p.text))
