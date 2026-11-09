@@ -88,19 +88,21 @@ class EquationTeachingTest {
 
     @Test
     fun `every step walked by hints is sound against independent checks - coverage`() {
-        val days = 120
+        val days = 365 // a year of daily boards a tier
         val report = StringBuilder()
+        val wins = LinkedHashMap<Difficulty, Int>()
         for (tier in Difficulty.entries) {
             var solved = 0
             var guessTotal = 0
             var fallbackBoards = 0
+            val lost = ArrayList<String>()
             var steps = 0
             var fallbackSteps = 0
             val techniques = sortedMapOf<String, Int>()
             for (day in 0 until days) {
                 val s = EquationSupport.board(day, tier)
                 val walk = EquationSupport.walkByHints(s)
-                if (walk.solved) solved++
+                if (walk.solved) solved++ else lost += s.answer
                 guessTotal += walk.guesses.size
                 if (walk.steps.any { it.technique in EquationTeacher.FALLBACKS }) fallbackBoards++
                 steps += walk.steps.size
@@ -151,13 +153,14 @@ class EquationTeachingTest {
             }
             report.appendLine(
                 "${tier.name}: solved $solved/$days, mean guesses ${"%.2f".format(guessTotal.toDouble() / days)}, " +
-                    "fallback on $fallbackSteps of $steps steps (${100 * fallbackSteps / steps}%), $fallbackBoards boards, steps $techniques",
+                    "fallback on $fallbackSteps of $steps steps (${100 * fallbackSteps / steps}%), $fallbackBoards boards, steps $techniques, lost $lost",
             )
-            assertTrue("${tier.name}: a player doing what the hints say won only $solved of $days", solved >= days * 95 / 100)
+            wins[tier] = solved
         }
         println(report)
         File("build/reports").mkdirs()
         File("build/reports/equation-teaching-coverage.txt").writeText(report.toString())
+        for ((tier, solved) in wins) assertTrue("${tier.name}: a player doing what the hints say won only $solved of $days", solved == days)
     }
 
     @Test

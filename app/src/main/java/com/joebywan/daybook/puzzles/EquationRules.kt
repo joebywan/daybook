@@ -60,16 +60,15 @@ object EquationLogic {
     class Shape(val length: Int, val guesses: Int)
 
     /**
-     * Standard six symbols and six guesses, Hard seven and six, Expert eight and five. Measured by `EquationBalanceTest`:
-     * a careful player needs about three guesses at every length (the marks split any list fast), so length alone does not
-     * make a tier harder by guesses. What length does is leave more to work out by hand: after the opener a median 3 / 20
-     * / 28 equations still fit. So the tiers grow by that, and Expert also has one guess fewer, which a hint follower
-     * still always wins (its worst board takes four).
+     * Six, seven and eight symbols, six guesses each. Measured by `EquationBalanceTest`: a careful player needs about three
+     * guesses at every length (the marks split any list fast), so the tiers are not told apart by guesses. What length
+     * does is leave more to work out by hand: more answers (206 / 5,431 / 15,963) and more of them still fitting after the
+     * opener. Expert with five guesses was tried and dropped: a player following the hints lost 2 of a year's 365 boards.
      */
     fun shape(difficulty: Difficulty): Shape = when (difficulty) {
         Difficulty.STANDARD -> Shape(6, 6)
         Difficulty.HARD -> Shape(7, 6)
-        Difficulty.EXPERT -> Shape(8, 5)
+        Difficulty.EXPERT -> Shape(8, 6)
     }
 
     /** Lengths [valid] can enumerate. */

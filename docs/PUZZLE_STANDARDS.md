@@ -85,7 +85,7 @@ What varies, as built:
 | LITS | grid | 6x6 / 7x7 / 8x8 |
 | Tower | slots, colours, guesses | 4/5/10, 5/6/12, 5/8/14 |
 | Lexicon | word length, guesses | 5/6, 5/5, 4/7 (four letters is the harder length; see `LexiconBalanceTest`) |
-| Equation | symbols, guesses | 6/6, 7/6, 8/5 (a careful player needs about three guesses at every length, so length adds equations left to work out by hand and Expert takes a guess away; `EquationBalanceTest`) |
+| Equation | symbols (six guesses throughout) | 6 / 7 / 8 (a careful player needs about three guesses at every length, so what grows is the equations left to work out by hand: 206 / 5,431 / 15,963 answers; `EquationBalanceTest`) |
 | Nonogram | side (55% filled throughout) | 5x5 / 10x10 / 15x15 (`NonogramLogic.specFor`; `NonogramRulesTest` `the tiers get larger in the order they are offered`) |
 | Mate | moves to mate | 2 / 3 / 4 (the tier picks the list in `ChessPositions`; a bundled list, not a generator, see `docs/CHESS_SPEC.md`) |
 | Inequality | side (clues are minimal at every size) | 4x4 / 5x5 / 6x6 (`InequalityLogic.sizeFor`; `InequalityRulesTest` `the tiers get larger in the order they are offered`) |

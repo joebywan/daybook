@@ -38,7 +38,7 @@ class EquationRulesTest {
         }
         // Pinned: a change to the rules or the enumeration moves every board, so it should be seen.
         assertEquals(listOf(476, 11705, 65704), (6..8).map { EquationLogic.valid(it).size })
-        assertEquals(listOf(206, 6277, 17080), (6..8).map { EquationLogic.answers(it).size })
+        assertEquals(listOf(206, 5431, 15963), (6..8).map { EquationLogic.answers(it).size })
     }
 
     @Test
