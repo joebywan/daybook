@@ -519,8 +519,8 @@ internal object LinksLogic {
     // ---- the exhaustive count -----------------------------------------------------------------------
 
     /**
-     * Every way to finish the board from no lines, counted to two: rungs 1-3 to a fixpoint (each sound for every answer:
-     * with the local rules alone, a wrong branch on a 10x10 could take seconds to refute), every pair's reach checked,
+     * Every way to finish the board from no lines, counted to two: the whole ladder to a fixpoint (each rung sound for every answer:
+     * with less, a wrong branch on a 10x10 took up to 12 minutes to refute), every pair's reach checked,
      * then a branch over the ways of the tip with fewest. No budget: only [Verdict.ExactlyOne] carries an answer (the masks).
      */
     fun solutions(b: Board): Verdict<IntArray> {
@@ -528,9 +528,9 @@ internal object LinksLogic {
         var first: IntArray? = null
         fun search(m: IntArray) {
             if (found >= 2) return
-            // Settle rungs 1-3.
+            // Settle the whole ladder.
             while (true) {
-                val s = nextStep(b, m, CUT) ?: break
+                val s = nextStep(b, m) ?: break
                 apply(b.n, m, s)
             }
             val v = View(b, m)
