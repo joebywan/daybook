@@ -15,7 +15,7 @@ batch) follow it; the rest of the puzzles are classified at the end.
 
 - **Training** (route `training`): a list of the puzzles that have it (Sudoku, Cage Sudoku, Inequality, Regions, Kings,
   Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes,
-  LITS), each
+  LITS, Thermometers), each
   with how many of its techniques are passed and a tick once it is finished (its final board passed).
 - **A puzzle's techniques** (route `training||…|<puzzle>`): its techniques in the teacher's ladder order
   (`core/TechniqueNames.kt`), each with its name and a tick once passed, and at the foot the final board.
@@ -57,7 +57,7 @@ batch) follow it; the rest of the puzzles are classified at the end.
   ladder needs every technique. Solving it without "Show me" earns the second achievement, and is celebrated as a pass
   is: "Graduated!" (stamped in, as a game's milestone), "<Puzzle> graduate", "The final board, solved", and the
   "<Puzzle> graduate" achievement the first time, its badge otherwise, then Training's progress as a whole,
-  "Training: n of 22 courses graduated"; "Back to <Puzzle> training" (a solve with a
+  "Training: n of 23 courses graduated"; "Back to <Puzzle> training" (a solve with a
   Show me is not celebrated and stays, to start again). The solve is answered once, saved across a recreation. Hints are allowed (they teach).
   It sounds and moves as a game board does, from the play screen's own locals (`LocalMoveCount`, `LocalUndoCount`,
   `LocalSolveCount`, `LocalBoardTones`; the owner, 2026-11-07: "I like the audio feedback for small milestones"): a
@@ -66,11 +66,11 @@ batch) follow it; the rest of the puzzles are classified at the end.
   chime. Technique practices and walkthroughs stay silent.
 - **Ways in:**
   - **Home's Training mode**, the third segment of the mode row (`Daily/Random · Levels · Training`): the tier row gives
-    way to one line, "N of 22 graduated · M techniques passed", and the grid shows only the puzzles with a course, in the
+    way to one line, "N of 23 graduated · M techniques passed", and the grid shows only the puzzles with a course, in the
     home grid's order, each tile saying "3 of 8" (techniques passed of its techniques) and ticked once graduated. A tap
     opens that course, as the rules sheet's Train does (`Route.Training(fromHint = true)`, `practiseFrom` = Home): back
     from it is Home, still in Training (the mode is saveable state, never stored), and back from a technique opened there
-    is the course. The segment's second line is "N of 22": **graduated** courses (`Course.graduated`: the final board
+    is the course. The segment's second line is "N of 23": **graduated** courses (`Course.graduated`: the final board
     passed, or every technique where a course has none, the list's tick) of `COURSES.size`; `Training.tally` counts both
     numbers. The mode, like the others, is not stored: the app always opens on Daily. Today's three folds away in
     Training and the grid slides up into its room, and back down as it returns (the owner, 1.33: the gap it left
@@ -129,6 +129,8 @@ batch) follow it; the rest of the puzzles are classified at the end.
   - Mambo: pair, sandwich, link and quota met on Standard, one short on Hard, the what-if on Expert (`MamboTeacher.depth`).
   - Nonogram: all four on Standard (58-60 of 60 Standard boards reach each).
   - Tally: the four shortcuts on Standard, every way on Hard, the what-if on Expert (`TallyLogic.accepts`).
+  - Thermometers: from the bulb, line done, line room and a tip that cannot fill on Standard, a bulb that must fill on Hard,
+    the what-if on Expert (`ThermometersLogic.accepts`; every Hard board needs a bulb, every Expert board a what-if).
   - Mines: single numbers on Standard, subset and pair on Hard (57 and 33 of 60 boards), the count against the numbers and
     the what-if on Expert (57 and 4 of 60).
   - Lamps: zero, done, room and only light on Standard; starve and dark on Hard (51 and 22 of 60); the what-if on Expert.
@@ -369,6 +371,8 @@ Nothing had to be excluded: every technique every teacher names is found within 
   short, every Expert board the what-if.
 - **Nonogram:** every technique 0-4 ms first and 0-2 ms a board after. Standard boards reach the full line on 58 of 60,
   the other three on all 60.
+- **Thermometers:** 1-64 ms first (the what-if 45); next boards a mean of 1-16 ms, at most 45 ms; judging at most 2.5 ms. Final
+  board index 0 (nearly every one of the first 60 Expert walks needs all six).
 - **Tally:** line done 9 ms first, the rest 0-5 ms first; next boards a mean of 0-7 ms, at most 17 ms (the what-if).
   Standard reaches the first three on all 60 and all left on 26; every Hard board reaches every way, every Expert board
   the what-if.
@@ -435,6 +439,10 @@ Nothing had to be excluded: every technique every teacher names is found within 
   ways and the small loop by counting lines and crosses; Atoms' room on each line, then with crossings and closed-off
   groups. Pipes' also turns the step's tile all the way round (never wrong, right at its turn) and every other tile a
   quarter (wrong when wet, play on when dry).
+- `ThermometersTrainingTest` checks 6 practices per technique: one answer by `ThermometersOracle`, the walked marks agree
+  with it, a one-thermometer step passes by the board's own single tap, any other instance (`ThermometersTeacher.steps`)
+  passes, a wrong fill or cross fails (the teacher's mistake: crosses are judged too, so no `wrong` is needed), and a true
+  mark no instance justifies plays on.
 - `MamboTrainingTest`, `NonogramTrainingTest` and `TallyTrainingTest` check 6 practices per technique as `KingsTrainingTest`
   does: one answer by `MamboOracle`, `NonogramOracle` and `TallyOracle`; the walked marks agree with it; each line's rung
   classified in the test by plain counting (Mambo's runs, gaps, links and halves; Nonogram's runs packed left and right
@@ -510,6 +518,7 @@ techniques no walk reached.
 | Tents | 6: no tree, line done, line full 29-30; one spot 1/25/21; shared 0/1/12; served 1/7/20 (touch: never) | move | 0-52 ms | **done** (grass no answer keeps is wrong in practice) |
 | Cipher | 5: leading carry, column, column pair 29-30; columns together 0/30/9; pair what-if 0/0/30 (only letter: never) | move | 1-10 ms | **done** (only letter dropped) |
 | Tally | 6: all reached; every way 0/30/30, what-if 0/0/30 | move | 2-11 ms | **done** |
+| Thermometers | 6: from the bulb 30/28/30, lines and tips 30 a tier; bulb must 0/30/30, what-if 0/0/30 | move | 9-61 ms | **done** (a wrong cross is the teacher's own mistake) |
 | Dominoes | 6: only place 10 a tier, counting 0/30/10, what-if 0/0/30, the rest 14-30 | move | 1-37 ms | **done** |
 | Mines | 6: subset 0/28/26, pair 0/17/17, count edge 0/0/29, what-if 0/0/1 (count: never) | move | 1-24 ms | **done** (what-if kept: 42 ms a board through the cache) |
 | Lamps | 7: all reached; dark 0/11/14 | move | 0-15 ms | **done** (a cross where the answer has a lamp is wrong in practice) |

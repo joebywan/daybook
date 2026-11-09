@@ -298,13 +298,6 @@ In order of measured demand, then fit:
   lift (snap to squares); keys: arrows select, Shift+arrow slides. *Reuse:* Sand's search and verdict (lift the generic
   BFS over canonical positions into `core/` if it fits both), Sand's `log`/`withoutFrom` for "Show me". The TODO once
   called this the least deductive candidate; the demand says build it anyway. *M.*
-- [ ] **Thermometers (Grids of Thermometers 266K).** Straight or bent thermometers fill the grid; fill each from its bulb
-  with no gaps so every row and column holds its count of filled squares. *Generation:* random thermometer layout (grow
-  tubes as Shikaku grows rectangles), random fill levels, counts read off; prove one answer (`Verdict`), gate on the
-  ladder. *Ladder:* line full / line empty (Tally's shortcuts), a thermometer's least and most in a line, a bulb that
-  must fill / a tip that cannot, what-if. *Input:* Nonogram's pen (Fill / Cross) through `penGrid` and `TwinTaps`, sweeps
-  one state; a tap on a thermometer square fills it up to there (one state). Counts turn green or red as Tally's chips do
-  (`rememberSettled`). Tiers 5x5 / 6x6 / 8x8. *M.*
 - [ ] **Equation codebreaker (Nerdle 214K).** Guess a hidden sum such as `12+35=47` in six tries; marks as Lexicon's.
   *Generation:* every valid equation of the tier's length is enumerable on the device (one `=`, no leading zeros, no
   negatives, whole results), sorted, the answer an index: no word list. Tiers by length 6 / 7 / 8. *Teacher:* Lexicon's

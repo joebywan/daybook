@@ -66,6 +66,7 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
         "6x6 tiles, 15 to 18 words, words up to 7 letters",
     ),
     "tally" to listOf("5x5 grid", "6x6 grid", "7x7 grid"),
+    "thermometers" to listOf("5x5 grid", "6x6 grid", "8x8 grid"),
     "sand" to listOf("5 colours, 7 tubes", "7 colours, 9 tubes", "8 colours, 10 tubes"),
     "pointers" to listOf("6x7 grid, short arrows", "12x12 grid, longer arrows", "14x17 grid, the longest arrows"),
     "dominoes" to listOf("5x5 board, 6 or 7 dominoes", "6x6 board, 9 or 10 dominoes", "7x7 board, 12 to 14 dominoes"),

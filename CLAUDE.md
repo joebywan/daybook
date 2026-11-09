@@ -44,7 +44,7 @@ section 7. The settled play-screen UX (popover, finish frame, solve sound) and t
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
-Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS and Loop, each technique practised on real positions found by walking generated boards by
+Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS, Loop and Thermometers, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer (Pipes judges its own way: a
@@ -587,6 +587,45 @@ is hashed into every seed: never rename it.
   numbers can make it any more (solid `scheme.error`, so it cannot be mistaken for a Rose or Amber chip), after a 1 s debounce. Hue pair from `BoardHues.pair(digits.hashCode())`: A tints the target chips, B
   inks the circles. Highlight indices: squares `0 until n*n`, row target `n*n + r`, column target `n*n + n + c`.
 - The regions variant of the genre (sums per coloured region as well as per line) was deliberately not built; see `docs/TODO.md`.
+## Thermometers
+
+Straight and bent thermometers tile a square grid; fill each from its round bulb with no gap so every row and column holds its
+count of filled squares. Exactly one answer. `puzzles/ThermometersRules.kt` (state, `ThermometersLogic`: rules, the tap, the ladder,
+the exhaustive count, generator), `ThermometersTeacher.kt`, `Thermometers.kt` (board, keys, walkthrough, motif). `id = "thermometers"`
+is hashed into every seed: never rename it.
+
+- **State is the tubes, the answer and the marks**: `tubes` (each bulb first, in their bulbs' reading order), `fill` (`1`/`0`, the
+  answer), `marks` (`.`, `#` filled, `x` crossed: a note, counting as empty). Counts are derived from `fill`, never stored.
+  **`solved` checks the rules** (no filled square over an unfilled one in its tube, every line at its count), not `fill`.
+- **Input is Nonogram's and Tally's pen stack** (`core/PenMarks.kt`, `ui/PenBoard.kt`, `ui/TwinTaps.kt`), with one change: `tap` is
+  overridden (`ThermometersLogic.tubeTap`), one state and one move. Fill fills the tube from the bulb to the square and takes any fill
+  above back; on the top of a fill it lowers the fill below the square. Cross crosses from the square to the tip and takes any cross
+  below back; on the lowest of a run of crosses it clears the run. A double tap or long press is the other pen, a sweep marks only the
+  squares it passes. Counts are Tally's chips (`ui/LineChips.kt`, lifted from Tally): green when the line holds its count, red after
+  `rememberSettled`'s second once too many are filled or too few left open; a tube with a fill over a cross draws its outline red.
+- **Tiers: 5x5 tubes of 2-4 / 6x6 of 3-6 / 8x8 of 4-8 squares, and the rung a board must need, exactly** (`ThermometersLogic.depth`,
+  Tally's `Spec.needs`): Standard the lines and a tip that cannot fill (`TIPS`), Hard a bulb that must fill (`BULBS`), Expert a
+  what-if. A draw with a line counting 0 or every square is redrawn (Tally's rule: it gives itself away); with that rule no board is
+  finished by full and empty lines alone (0 of 170 proved 5x5 draws), so the brief's "lines only" Standard was dropped and the
+  rungs split tips from bulbs instead. Draws a board over a year: mean 16.8 / 14.9 / 102, most 106 / 83 / 714 of `ATTEMPTS` = 2000;
+  JVM median / p95 / max 0.5 / 3.6 / 23, 0.5 / 2.0 / 6.5, 9.9 / 39 / 88 ms; tubes 8.3 / 9.1 / 13.4 a board; 49-51% filled.
+- **Tubes are grown by `bentWalk`** (`core/Grid.kt`, lifted from Pointers' arrow bodies, Pointers' boards unmoved): from each bare
+  square in a shuffled order a walk of the tier's length; a lone square left joins a tube whose end is beside it, else the draw is
+  redrawn. Each tube is turned bulb-first at random. No hash container reaches the `Rng`.
+- **The ladder is the teacher's and the generator's** (`nextFact`, simplest first): `TUBE` (a thermometer fills from its bulb: below a
+  fill fills, above an empty empties), `DONE` / `ROOM` (Tally's shortcuts), `AT_MOST` (a line needing k more takes at most k of one
+  tube's open squares there, bulb side first: its next one and all above stay empty), `AT_LEAST` (the other tubes' open squares in a
+  line fall j short, so this one fills to its j-th), then a what-if (`MAX_LINKS` = 3 lines, each a line's rungs to its own fixpoint).
+  Every amount between a tube's least and most is possible for one line, so `AT_MOST`/`AT_LEAST` are all a single line says.
+- **A board ships only if the count proves one answer** (`countSolutions`: tube by tube over every level, cut when a line passes its
+  count or can no longer reach it; no budget; `Verdict`) **and the ladder finishes it at the tier's rung**, count first (it is the
+  cheaper). `ThermometersOracle` (test: square by square in reading order, no levels, no line logic) is the independent check.
+  `lastResort` is the first seed from 1 whose first draw the tier accepts, proved by a test; a year per tier never reaches it.
+- **Teacher:** reads only the tubes, counts and marks; a mistake is a mark the one answer disagrees with. No fallback exists:
+  200 boards a tier and a year a tier finish by hints alone, 15.1 / 21.8 / 38.3 steps a board, of which tips 4.1 / 6.2 / 10.3,
+  bulbs 0 / 2.5 / 7.5 and what-ifs 0 / 0 / 2.2 (every Hard board needs a bulb, every Expert board a what-if). Every single-tube step is one tap. Highlight indices:
+  squares `0 until n*n`, row count `n*n + r`, column count `n*n + n + c`.
+
 ## Sand (colour sort)
 
 Tubes of layered coloured sand; pour from tube to tube until every tube holds one colour (the water-sort family). Spec and decisions:
@@ -986,7 +1025,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 - The mode row (`Daily/Random · Levels · Training`, `LaunchOptions`) sits above the tier row. Daily and Random share the first
   segment, the one in use large over the other small; a tap on it while selected swaps them (150 ms, snapped under reduced
   motion), and from another mode it returns to the last of the two (`tappedMode`, `dayMode` in `DaybookApp`; Daily on launch,
-  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 22"
+  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 23"
   graduated) so the three share one height; the swap scales the two lines rather than measuring them again, so the row's
   height never changes mid-swap. In Levels and Training the tier row stays laid out, invisible, under the level strip or the
   training strip, so the grid below cannot move when the mode changes. The sticky rows sit tight (4dp over, 4dp between,

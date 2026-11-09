@@ -71,6 +71,8 @@ import com.joebywan.daybook.puzzles.SudokuTeacher
 import com.joebywan.daybook.puzzles.Sym
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyTeacher
+import com.joebywan.daybook.puzzles.ThermometersLogic
+import com.joebywan.daybook.puzzles.ThermometersTeacher
 import com.joebywan.daybook.puzzles.TentsLogic
 import com.joebywan.daybook.puzzles.TentsTeacher
 import com.joebywan.daybook.puzzles.TowerTeacher
@@ -164,6 +166,7 @@ class GuideTest {
         "regions" to ::regionsStep,
         "cages" to ::cagesStep,
         "tally" to ::tallyStep,
+        "thermometers" to ::thermometersStep,
         "nonogram" to ::nonogramStep,
         "shikaku" to ::shikakuStep,
         "pipes" to ::pipesStep,
@@ -477,6 +480,49 @@ class GuideTest {
         }
         val step = TallyTeacher.deduce(n, digits, targets, marks) ?: return null
         for (i in step.targets) assertEquals("${b.technique}: the number marked", digits[i].toString(), b.marks("answer")[board(i)])
+        fun mapped(i: Int) = when {
+            i < n * n -> board(i)
+            i < n * n + n -> (i - n * n) * b.width + n
+            else -> n * b.width + i - n * n - n
+        }
+        return Mapped(step, step.focus.map(::mapped).toSet(), step.targets.map(::mapped).toSet())
+    }
+
+    /**
+     * Counts in a margin right and below. `lines` draws each thermometer bulb first (`a-b`: `b` is the next square up it),
+     * a `solid` square is filled and an `x` crossed; both must agree with the one answer. An answer of `fill` fills, `x` crosses.
+     */
+    private fun thermometersStep(b: Board): TeachStep? {
+        val n = b.width - 1
+        fun board(i: Int) = i / n * b.width + i % n
+        val targets = List(n) { b.rows[it][n].toInt() } + List(n) { b.rows[n][it].toInt() }
+        val up = IntArray(n * n) { -1 }
+        val hasBelow = BooleanArray(n * n)
+        for (part in b.fields["lines"].orEmpty().split(' ').filter { it.isNotEmpty() }) {
+            val k = Regex("\\d+").findAll(part).map { it.value.toInt() - 1 }.toList()
+            up[k[0] * n + k[1]] = k[2] * n + k[3]
+            hasBelow[k[2] * n + k[3]] = true
+        }
+        val tubes = (0 until n * n).filter { !hasBelow[it] }.map { bulb -> generateSequence(bulb) { up[it].takeIf { u -> u >= 0 } }.toList() }
+        assertEquals("${b.technique}: every square in one thermometer", (0 until n * n).toList(), tubes.flatten().sorted())
+        val filled = b.squares("solid")
+        val marks = String(CharArray(n * n) {
+            when {
+                board(it) in filled -> ThermometersLogic.FILLED
+                b.rows[it / n][it % n] == "x" -> ThermometersLogic.CROSSED
+                else -> ThermometersLogic.UNMARKED
+            }
+        })
+        val answer = ThermometersLogic.countSolutions(n, tubes, targets)
+        assertTrue("${b.technique}: a position with one answer", answer is Verdict.ExactlyOne)
+        val fill = (answer as Verdict.ExactlyOne).value
+        for (i in 0 until n * n) {
+            if (marks[i] == ThermometersLogic.FILLED) assertEquals("${b.technique}: a filled square the answer empties", '1', fill[i])
+            if (marks[i] == ThermometersLogic.CROSSED) assertEquals("${b.technique}: a cross the answer fills", '0', fill[i])
+        }
+        val step = ThermometersTeacher.deduce(n, tubes, targets, marks) ?: return null
+        for (i in step.full) assertEquals("${b.technique}: a square filled", "fill", b.marks("answer")[board(i)])
+        for (i in step.empty) assertEquals("${b.technique}: a square crossed", "x", b.marks("answer")[board(i)])
         fun mapped(i: Int) = when {
             i < n * n -> board(i)
             i < n * n + n -> (i - n * n) * b.width + n

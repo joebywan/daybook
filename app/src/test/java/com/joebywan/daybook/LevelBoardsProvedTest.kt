@@ -58,6 +58,7 @@ class LevelBoardsProvedTest {
         "cipher" to Cipher::generateVerified,
         "wordwheel" to WordWheelLogic::generateVerified,
         "tally" to TallyLogic::generateVerified,
+        "thermometers" to com.joebywan.daybook.puzzles.ThermometersLogic::generateVerified,
         "sand" to SandLogic::generateVerified,
         "tents" to TentsLogic::generateVerified,
         "pointers" to PointersLogic::generateVerified,

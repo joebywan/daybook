@@ -179,6 +179,14 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "every-way" to "the ways a line can make its target",
         "what-if" to "a what-if",
     ),
+    "thermometers" to linkedMapOf(
+        "from-the-bulb" to "a thermometer filling from its bulb",
+        "line-done" to "a line already holding its count",
+        "line-room" to "a line with just enough room",
+        "tip-cannot" to "a tip that cannot fill",
+        "bulb-must" to "a bulb that must fill",
+        "what-if" to "a what-if",
+    ),
     "sand" to linkedMapOf(
         "finish" to "pouring to finish a tube",
         "gather" to "gathering onto a matching colour",
