@@ -68,7 +68,7 @@ object Links : PuzzleType {
     override val id = "links"
     override val displayName = "Links"
     override val tagline = "Join every pair, fill every square"
-    override val accent = 0xFFD062BA
+    override val accent = 0xFF9F568E
 
     override val rules = listOf(
         "Join each pair of matching numbers with one path through squares that share a side.",

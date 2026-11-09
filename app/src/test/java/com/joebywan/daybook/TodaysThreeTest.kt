@@ -18,10 +18,11 @@ class TodaysThreeTest {
 
     @Test fun `the three are pinned to the date`() {
         // Worked out by hand from the lists and the epoch day (20751): a change here moves everyone's three.
-        // 20751 mod 11 = 5 (mosaic), mod 13 = 3 (tower, in the registry's order), mod 9 = 6 (tally).
-        assertEquals(listOf("mosaic", "tower", "tally"), TodaysThree.of(day))
-        assertEquals(listOf("kings", "nonogram", "hexwords"), TodaysThree.of(LocalDate(2026, 10, 26)))
-        assertEquals(listOf("tents", "inequality", "dwindle"), TodaysThree.of(LocalDate(2026, 10, 27)))
+        // 20751 mod 11 = 5 (mosaic), mod 9 = 6 (tally); the mid-weight 15 shares 3 with 9, so it steps by
+        // 20751 mod 99 + 20751 / 99 = 60 + 209 = 269, and 269 mod 15 = 14 (links, in the registry's order).
+        assertEquals(listOf("mosaic", "links", "tally"), TodaysThree.of(day))
+        assertEquals(listOf("kings", "sudoku", "hexwords"), TodaysThree.of(LocalDate(2026, 10, 26)))
+        assertEquals(listOf("tents", "mambo", "dwindle"), TodaysThree.of(LocalDate(2026, 10, 27)))
     }
 
     @Test fun `the slots' lengths are pairwise coprime, so each puzzle comes round every list length`() {
