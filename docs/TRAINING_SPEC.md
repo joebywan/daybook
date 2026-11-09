@@ -57,7 +57,7 @@ batch) follow it; the rest of the puzzles are classified at the end.
   ladder needs every technique. Solving it without "Show me" earns the second achievement, and is celebrated as a pass
   is: "Graduated!" (stamped in, as a game's milestone), "<Puzzle> graduate", "The final board, solved", and the
   "<Puzzle> graduate" achievement the first time, its badge otherwise, then Training's progress as a whole,
-  "Training: n of 24 courses graduated"; "Back to <Puzzle> training" (a solve with a
+  "Training: n of 25 courses graduated"; "Back to <Puzzle> training" (a solve with a
   Show me is not celebrated and stays, to start again). The solve is answered once, saved across a recreation. Hints are allowed (they teach).
   It sounds and moves as a game board does, from the play screen's own locals (`LocalMoveCount`, `LocalUndoCount`,
   `LocalSolveCount`, `LocalBoardTones`; the owner, 2026-11-07: "I like the audio feedback for small milestones"): a
@@ -66,11 +66,11 @@ batch) follow it; the rest of the puzzles are classified at the end.
   chime. Technique practices and walkthroughs stay silent.
 - **Ways in:**
   - **Home's Training mode**, the third segment of the mode row (`Daily/Random · Levels · Training`): the tier row gives
-    way to one line, "N of 24 graduated · M techniques passed", and the grid shows only the puzzles with a course, in the
+    way to one line, "N of 25 graduated · M techniques passed", and the grid shows only the puzzles with a course, in the
     home grid's order, each tile saying "3 of 8" (techniques passed of its techniques) and ticked once graduated. A tap
     opens that course, as the rules sheet's Train does (`Route.Training(fromHint = true)`, `practiseFrom` = Home): back
     from it is Home, still in Training (the mode is saveable state, never stored), and back from a technique opened there
-    is the course. The segment's second line is "N of 24": **graduated** courses (`Course.graduated`: the final board
+    is the course. The segment's second line is "N of 25": **graduated** courses (`Course.graduated`: the final board
     passed, or every technique where a course has none, the list's tick) of `COURSES.size`; `Training.tally` counts both
     numbers. The mode, like the others, is not stored: the app always opens on Daily. Today's three folds away in
     Training and the grid slides up into its room, and back down as it returns (the owner, 1.33: the gap it left
@@ -522,6 +522,7 @@ techniques no walk reached.
 | Dominoes | 6: only place 10 a tier, counting 0/30/10, what-if 0/0/30, the rest 14-30 | move | 1-37 ms | **done** |
 | Mines | 6: subset 0/28/26, pair 0/17/17, count edge 0/0/29, what-if 0/0/1 (count: never) | move | 1-24 ms | **done** (what-if kept: 42 ms a board through the cache) |
 | Lamps | 7: all reached; dark 0/11/14 | move | 0-15 ms | **done** (a cross where the answer has a lamp is wrong in practice) |
+| Links | 4: one way, two ways in (Standard, from 2.7% of boards), a cut (Hard), a what-if (Expert, on 31% of boards) | move | see `LinksTrainingTest` | **done** (no list of every instance yet: a practice passes on the hint's own lines) |
 | Pearls | 7: pearl's arms and lines 26-30, dead end 18/28/29, small loop 0/30/29, what-if 0/0/30 (pearl ways: never, left out) | move | 5-26 ms | **done** |
 | Loop | 6: count, one way on, dead end, a number with its corners (Standard), small loop (Hard), what-if (Expert); every one reached | move (Pearls' shape: `LoopTeacher.steps`, judged by the teacher's mistakes; final board `examIndex` 0) | not measured | **done** (`LoopTrainingTest`: practices checked against `LoopOracle`) |
 | Who's Who | 5: clue, only 29-30; link, house 0/29-30/30; what-if 0/0/30 | move | 1-77 ms | **done**: the steps are logic, the words only labels |

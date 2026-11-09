@@ -2,7 +2,6 @@ package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.vivid
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -46,7 +45,7 @@ import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.rememberSettled
 import com.joebywan.daybook.ui.theme.BoardHues
 import androidx.compose.ui.geometry.Rect
-import com.joebywan.daybook.ui.gridCellAt
+import com.joebywan.daybook.ui.squareDrag
 
 
 /**
@@ -85,20 +84,6 @@ object Pearls : PuzzleType {
         PearlsLogic.LOOP -> PearlsTeacher.SMALL_LOOP
         PearlsLogic.WHAT_IF -> PearlsTeacher.WHAT_IF
         else -> null
-    }
-
-    // ---- input geometry (pure, tested) ----------------------------------------------------------
-
-    /**
-     * A drag's trail after the finger reaches [cell]: added when it is a neighbour of the last square, taken
-     * back when it is the square before that (backing up along the drag undoes it), else unchanged.
-     */
-    fun trail(path: List<Int>, cell: Int, n: Int): List<Int> = when {
-        path.isEmpty() -> listOf(cell)
-        cell == path.last() -> path
-        path.size >= 2 && cell == path[path.size - 2] -> path.dropLast(1)
-        PearlsGrid.of(n).between(path.last(), cell) >= 0 -> path + cell
-        else -> path
     }
 
     // ---- the walkthrough ------------------------------------------------------------------------
@@ -493,37 +478,10 @@ object Pearls : PuzzleType {
                             if (e >= 0) emit(latest.tap(e))
                         }
                     }
-                    .pointerInput(n, interactive) {
-                        if (!interactive) return@pointerInput
-                        var lastX = 0f
-                        var lastY = 0f
-                        // The overload that hands over the *down* (the web's touch slop is wide): the drag starts where the finger did.
-                        detectDragGestures(
-                            orientationLock = null,
-                            onDragStart = { down, _, _ ->
-                                lastX = down.position.x / unitPx
-                                lastY = down.position.y / unitPx
-                                path = listOf(gridCellAt(Offset(lastX, lastY), 1f, n, n))
-                            },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                val x = change.position.x / unitPx
-                                val y = change.position.y / unitPx
-                                var p = path
-                                // Every square a fast swipe crosses, in order, as a slow one would.
-                                for (cell in Snap.cellsCrossed(n, n, lastX, lastY, x, y)) p = trail(p, cell, n)
-                                lastX = x
-                                lastY = y
-                                path = p
-                            },
-                            onDragEnd = {
-                                val p = path
-                                path = emptyList()
-                                val next = latest.drag(p)
-                                if (next !== latest) emit(next)
-                            },
-                            onDragCancel = { path = emptyList() },
-                        )
+                    // A drag draws (or rubs out) through squares, one state on lift; backing up along it undoes it.
+                    .squareDrag(n, n, unitPx, interactive, onTrail = { path = it }) { p ->
+                        val next = latest.drag(p)
+                        if (next !== latest) emit(next)
                     },
             ) {
                 Canvas(Modifier.fillMaxSize()) {

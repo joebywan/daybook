@@ -19,6 +19,8 @@ import com.joebywan.daybook.puzzles.Mines
 import com.joebywan.daybook.puzzles.MiniTeacher
 import com.joebywan.daybook.puzzles.MinesTeacher
 import com.joebywan.daybook.puzzles.Pearls
+import com.joebywan.daybook.puzzles.Links
+import com.joebywan.daybook.puzzles.LinksTeacher
 import com.joebywan.daybook.puzzles.PearlsTeacher
 import com.joebywan.daybook.puzzles.Loop
 import com.joebywan.daybook.puzzles.LoopTeacher
@@ -71,6 +73,7 @@ class TechniqueNamesTest {
         "whoswho" to WhosWhoTeacher.TECHNIQUES,
         "mini" to MiniTeacher.TECHNIQUES,
         "hexwords" to com.joebywan.daybook.puzzles.HexwordsTeacher.TECHNIQUES,
+        "links" to LinksTeacher.TECHNIQUES,
     )
     private val unnamed = setOf("mistake", "fallback")
 
@@ -131,6 +134,16 @@ class TechniqueNamesTest {
                 assertEquals("${p.id} $t seed $seed", want[t.ordinal], got)
             }
             assertTrue("${p.id} $t took $took", took.inWholeMilliseconds < 500)
+        }
+        // Links' Hard needs a cut; Expert a cut or a what-if: whichever its walk went deepest to.
+        val links = listOf(
+            setOf(null),
+            setOf(LinksTeacher.CUT),
+            setOf(LinksTeacher.CUT, LinksTeacher.WHAT_IF),
+        )
+        for (t in Difficulty.entries) for (seed in 1L..10L) {
+            val got = Links.neededTechnique(Links.generate(seed, t))
+            assertTrue("links $t seed $seed: $got", got in links[t.ordinal])
         }
         // Mines' Hard and Expert each gate on a level of two techniques: whichever the walk used.
         val mines = listOf(setOf(null), setOf(MinesTeacher.SUBSET, MinesTeacher.PAIR), setOf(MinesTeacher.EDGE, MinesTeacher.WHAT_IF))

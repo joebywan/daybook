@@ -18,6 +18,7 @@ import com.joebywan.daybook.puzzles.PointersLogic
 import com.joebywan.daybook.puzzles.MinesLogic
 import com.joebywan.daybook.puzzles.PearlsLogic
 import com.joebywan.daybook.puzzles.LoopLogic
+import com.joebywan.daybook.puzzles.LinksLogic
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.RegionsLogic
@@ -74,6 +75,7 @@ class LevelBoardsProvedTest {
         "hexwords" to com.joebywan.daybook.puzzles.HexLogic::generateVerified,
         "dwindle" to DwindleLogic::generateVerified,
         "unblock" to com.joebywan.daybook.puzzles.UnblockLogic::generateVerified,
+        "links" to LinksLogic::generateVerified,
     )
 
     @Test

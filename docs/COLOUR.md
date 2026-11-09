@@ -109,6 +109,7 @@ marks; the board's own colours carry its meaning.
 | Thermometers | `9F568E` | 0.56 0.120 336 | 0.160 | held by `ContrastTest` | held by `ContrastTest` | 5.8 (as `AccentSpacingTest` picked it, after Loop) |
 | Unblock | `7B6F3D` | olive | | held by `ContrastTest` | held by `ContrastTest` | 5.8 (as `AccentSpacingTest` picked it, after Thermometers) |
 | Equation | `278E8E` | shared with Lexicon | | | | shared on purpose (`AccentSpacingTest.SHARED`): one family of guessing games |
+| Links | `967028` | shared with Pearls | | | | shared on purpose (`AccentSpacingTest.SHARED`): both draw paths, far apart on the home grid |
 | Target | `B47699` | 0.64 0.090 345 | 0.250 | 3.4 / 3.1 | 4.0 / 4.8 | Atoms 5.8 |
 | Tally | `A26482` | 0.58 0.089 350 | 0.184 | 4.3 / 4.0 | 3.2 / 3.8 | Crossword 6.0 |
 | Trail | `CA4383` | 0.59 0.180 355 | 0.182 | 4.4 / 4.0 | 3.1 / 3.7 | Mines 6.2 |

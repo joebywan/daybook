@@ -6,8 +6,8 @@ import kotlinx.datetime.LocalDate
  * Today's three (`docs/REWARDS.md`): one quick puzzle, one mid-weight, one word or number puzzle, derived from the date
  * alone, so it is the same for everyone and nothing is stored. Each slot steps one place a day through its own list
  * (quick 11, words 10: coprime, so those two come round together every 110 days; the mid-weight list takes every other
- * puzzle, 16 now). A mid-weight list coprime with 110 just steps too, and no puzzle waits longer than its list's length;
- * one that shares 2, 5 or 11 with it, as 16 does, steps one more each time the 110-day quick-and-words cycle comes round
+ * puzzle, 17 now). A mid-weight list coprime with 110, as 17 is, just steps too, and no puzzle waits longer than its
+ * list's length; one that shares 2, 5 or 11 with it steps one more each time the 110-day quick-and-words cycle comes round
  * (`d mod 110 + d / 110`), so no set repeats within the year whatever its length, at the cost of one puzzle's gap doubling
  * at each turn of that cycle. Plain list indexing: no hash order, so the JVM and the web agree.
  *

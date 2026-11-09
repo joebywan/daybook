@@ -26,6 +26,8 @@ import com.joebywan.daybook.puzzles.Regions
 import com.joebywan.daybook.puzzles.RegionsLogic
 import com.joebywan.daybook.puzzles.Tally
 import com.joebywan.daybook.puzzles.Pearls
+import com.joebywan.daybook.puzzles.Links
+import com.joebywan.daybook.puzzles.LinksLogic
 import com.joebywan.daybook.puzzles.PearlsLogic
 import com.joebywan.daybook.puzzles.Loop
 import com.joebywan.daybook.puzzles.LoopLogic
@@ -196,6 +198,14 @@ class FallbackTest {
     /** [UnblockLogic.generateVerified] returns a board only when a fresh breadth-first search proves its par, the fewest moves, inside the tier. */
     @Test
     fun `unblock proves every daily board of a year on every tier`() = assertYearProved(Unblock) { seed, d -> UnblockLogic.generateVerified(seed, d) }
+
+    /**
+     * [LinksLogic.generateVerified] returns a board only when the tier's rungs finished it, needing exactly the tier's
+     * (Hard: the reach or a cut), and the exhaustive count proved one answer, the drawn one. Also measures the redraws.
+     */
+    @Test
+    fun `links proves every daily board of a year on every tier`() =
+        assertYearProved(Links, attempts = LinksLogic.ATTEMPTS, attempt = LinksLogic::attempt) { seed, d -> LinksLogic.generateVerified(seed, d) }
 
     /** [SandLogic.generateVerified] returns a board only when the search found a sorting road and the naive player does not always sort it. */
     @Test

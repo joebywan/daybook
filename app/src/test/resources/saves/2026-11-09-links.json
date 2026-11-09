@@ -1,0 +1,77 @@
+[
+    {
+        "key": "links|STANDARD|-429823893558030510",
+        "savedAt": 1792000000000,
+        "game": {
+            "state": {
+                "type": "com.joebywan.daybook.puzzles.LinksState",
+                "size": 6,
+                "ends": "..a..b.cb..c.....d...de...e...a.....",
+                "answer": "6a86a854296853aa9456a845552a9513aaa9",
+                "links": "280000000000000000000000000000000000",
+                "moves": 1
+            },
+            "history": [
+                {
+                    "type": "com.joebywan.daybook.puzzles.LinksState",
+                    "size": 6,
+                    "ends": "..a..b.cb..c.....d...de...e...a.....",
+                    "answer": "6a86a854296853aa9456a845552a9513aaa9"
+                }
+            ],
+            "hints": 1,
+            "seconds": 75,
+            "log": "hm"
+        }
+    },
+    {
+        "key": "links|HARD|6826232765370299980",
+        "savedAt": 1792000000000,
+        "game": {
+            "state": {
+                "type": "com.joebywan.daybook.puzzles.LinksState",
+                "size": 8,
+                "ends": "..............ab.....c.....d..e......f.....g........gd..bafe...c",
+                "answer": "6aaaaaac56aaaa81556ac2ac55543c455553c15555543c55555381551112aa91",
+                "links": "2800000000000000000000000000000000000000000000000000000000000000",
+                "moves": 1
+            },
+            "history": [
+                {
+                    "type": "com.joebywan.daybook.puzzles.LinksState",
+                    "size": 8,
+                    "ends": "..............ab.....c.....d..e......f.....g........gd..bafe...c",
+                    "answer": "6aaaaaac56aaaa81556ac2ac55543c455553c15555543c55555381551112aa91"
+                }
+            ],
+            "hints": 1,
+            "seconds": 75,
+            "log": "hm"
+        }
+    },
+    {
+        "key": "links|EXPERT|-411436409527978780",
+        "savedAt": 1792000000000,
+        "game": {
+            "state": {
+                "type": "com.joebywan.daybook.puzzles.LinksState",
+                "size": 10,
+                "ends": ".....a.b...c..de......f.........g.........h......b...c.g...i...h......dfj.je....a.........i.........",
+                "answer": "6aaac2c2ac52ac143ac55683c3ac55552c3ac5555543ac55515552c1555455383a9555112a82a9552aaaaaaa952aaaaaaaa9",
+                "links": "2800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "moves": 1
+            },
+            "history": [
+                {
+                    "type": "com.joebywan.daybook.puzzles.LinksState",
+                    "size": 10,
+                    "ends": ".....a.b...c..de......f.........g.........h......b...c.g...i...h......dfj.je....a.........i.........",
+                    "answer": "6aaac2c2ac52ac143ac55683c3ac55552c3ac5555543ac55515552c1555455383a9555112a82a9552aaaaaaa952aaaaaaaa9"
+                }
+            ],
+            "hints": 1,
+            "seconds": 75,
+            "log": "hm"
+        }
+    }
+]

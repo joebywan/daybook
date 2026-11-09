@@ -56,6 +56,8 @@ import com.joebywan.daybook.puzzles.NonogramTeacher
 import com.joebywan.daybook.puzzles.Pair2
 import com.joebywan.daybook.puzzles.PearlsTeacher
 import com.joebywan.daybook.puzzles.LoopTeacher
+import com.joebywan.daybook.puzzles.LinksLogic
+import com.joebywan.daybook.puzzles.LinksTeacher
 import com.joebywan.daybook.puzzles.PipesTeacher
 import com.joebywan.daybook.puzzles.Placement
 import com.joebywan.daybook.puzzles.PuzzleState
@@ -177,6 +179,7 @@ class GuideTest {
         "atoms" to ::atomsStep,
         "pearls" to ::pearlsStep,
         "loop" to ::loopStep,
+        "links" to ::linksStep,
         "mosaic" to ::mosaicStep,
         "dominoes" to ::dominoesStep,
         // No techniques and so no boards (hints are off): these two lines are never asked.
@@ -299,6 +302,19 @@ class GuideTest {
         assertEquals("${b.technique}: the lines", moved.filterNot(::crossed).map(::edge).toSet(), step.lines.toSet())
         assertEquals("${b.technique}: the crosses", moved.filter(::crossed).map(::edge).toSet(), step.crosses.toSet())
         return Drawn(step.technique, step.focus.filter { it < n * n }.toSet())
+    }
+
+    /** A Links board: a pair's number on each end, `lines` the lines drawn, `moves` the step's lines. One answer, checked. */
+    private fun linksStep(b: Board): TeachStep? {
+        val n = b.width
+        val ends = b.rows.flatten().joinToString("") { if (it == ".") "." else ('a' + (it.toInt() - 1)).toString() }
+        val m = IntArray(n * n)
+        for ((a, _, c) in b.drawn("lines")) LinksLogic.setLine(n, m, a, c, true)
+        assertEquals("${b.technique}: a position with one answer", 1L, LinksOracle.count(n, ends))
+        val step = LinksTeacher.deduce(n, ends, LinksLogic.maskString(m)) ?: return null
+        val moved = b.drawn("moves").map { it.first to it.third }.toSet()
+        assertEquals("${b.technique}: the lines", moved, step.lines.map { (x, y) -> minOf(x, y) to maxOf(x, y) }.toSet())
+        return Drawn(step.technique, step.focus)
     }
 
     /** The two things a Mosaic board's squares can't show (fills left, the colour poured), and how many colours it deals. */
@@ -1062,11 +1078,11 @@ class GuideTest {
     @Test
     fun `no page names a banned genre or trademark`() {
         // Capitalised only: a domino's pips, a lamp that lights up and a target's countdown are plain words.
-        val exact = listOf("Pips", "Light Up", "Countdown", "Kami", "Mastermind")
+        val exact = listOf("Pips", "Light Up", "Countdown", "Kami", "Mastermind", "Flow")
         val anyCase = listOf(
             "minesweeper", "masyu", "killer sudoku", "rullo", "akari", "wordle", "kakuro", "number sums", "hashiwokakero",
             "hashi", "takuzu", "binairo", "einstein", "zebra puzzle", "fill-a-pix", "nikoli", "new york times", "nyt",
-            "wordscapes", "water sort", "slitherlink", "rush hour", "unblock me",
+            "wordscapes", "water sort", "slitherlink", "numberlink", "flow free", "rush hour", "unblock me",
         )
         for (p in pages) {
             for (word in exact) assertTrue("${p.id} says $word", !Regex("\\b$word\\b").containsMatchIn(p.text))

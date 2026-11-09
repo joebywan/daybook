@@ -95,6 +95,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Codeword | Codeword (number crossword) | A filled crossword in which every letter is a number: work out which letter each number stands for |
 | Pearls | Masyu (pearl loop) | One closed loop through square middles and every pearl: it turns on black pearls (running straight on either side) and goes straight through white ones (turning beside them) |
 | Loop | Slitherlink (loop through the dots) | One closed loop along the squares' sides, from dot to dot: each number says how many of its square's four sides the loop uses |
+| Links | Numberlink (pair-joining paths) | Join each pair of matching numbers with one path through side-touching squares; paths never cross and every square is used |
 | Who's Who | Logic grid | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house" |
 | Crossword | Mini crossword | A small crossword, every square in a word across and a word down: solve the clues and fill the grid |
 
@@ -142,6 +143,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
   (each number's count, its corners, the loop that must be one, and on Expert a short what-if) still finishes it, needing
   exactly the tier's deepest step; an exhaustive count proves one loop, and an independent solver that colours squares in or
   out agrees.
+- **Links** — the board is a random cover of the grid by paths that never run beside themselves, their ends the numbers;
+  it is kept only if a person's ladder (a line's end with one way on, a square with two ways in, a way that would cut a
+  pair off or leave a square no pair can reach, and on Expert a short what-if) finishes it at the tier's depth, and an
+  exhaustive count proves one answer; an independent solver that decides every square's lines in reading order agrees.
 - **Sand** — many answers by design, so what is proved is that one exists: a deal is kept only once a search has found a
   sequence of pours that sorts it (the found road is the proof; a search that runs out of budget proves nothing and the deal
   is redrawn). Deals that give the board away (a tube already one colour, a long run) are redrawn, and so is a board a player

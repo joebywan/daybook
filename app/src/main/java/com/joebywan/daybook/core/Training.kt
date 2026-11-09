@@ -218,6 +218,7 @@ object Training {
             LoopTraining,
             ThermometersTraining,
             UnblockTraining,
+            LinksTraining,
         )
     }
 

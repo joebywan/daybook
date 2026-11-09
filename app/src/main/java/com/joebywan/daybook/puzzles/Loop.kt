@@ -40,6 +40,7 @@ import com.joebywan.daybook.core.Difficulty
 import com.joebywan.daybook.core.LoopEdges
 import com.joebywan.daybook.core.PuzzleType
 import com.joebywan.daybook.core.TutorialFrame
+import com.joebywan.daybook.core.dragTrail
 import com.joebywan.daybook.core.boardKeys
 import com.joebywan.daybook.core.gridCursor
 import com.joebywan.daybook.core.reportHighlight
@@ -66,7 +67,7 @@ import com.joebywan.daybook.ui.theme.vivid
  * proves one loop, so the hints teach that reasoning and never run out ([LoopTeacher]). Tiers: 5x5, 7x7, 10x10.
  *
  * The board is drawn on Pearls' lattice one step bigger: the dots are the middles of an `(n + 1) x (n + 1)` grid of
- * squares half a square in from the box's edge, so Pearls' input geometry ([LoopEdges.edgeNear], [Pearls.trail],
+ * squares half a square in from the box's edge, so Pearls' input geometry ([LoopEdges.edgeNear], [dragTrail],
  * [Snap.cellsCrossed], [gridCellAt]) and keys ([loopKey]) work on the dots unchanged.
  */
 object Loop : PuzzleType {
@@ -474,7 +475,7 @@ object Loop : PuzzleType {
                                 val y = change.position.y / unitPx
                                 var p = path
                                 // Every dot a fast swipe passes, in order, as a slow one would.
-                                for (d in Snap.cellsCrossed(m, m, lastX, lastY, x, y)) p = Pearls.trail(p, d, m)
+                                for (d in Snap.cellsCrossed(m, m, lastX, lastY, x, y)) p = dragTrail(p, d, m)
                                 lastX = x
                                 lastY = y
                                 path = p

@@ -15,6 +15,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import com.joebywan.daybook.core.dragTrail
 import org.junit.Test
 
 /** The keyboard, and the pure geometry the finger goes through (edge hit testing and the drag's trail). */
@@ -81,14 +82,14 @@ class PearlsKeysTest {
 
     @Test
     fun aDragTrailAddsNeighboursAndBacksUp() {
-        var p = Pearls.trail(emptyList(), 0, 4)
-        p = Pearls.trail(p, 1, 4)
-        p = Pearls.trail(p, 5, 4)
+        var p = dragTrail(emptyList(), 0, 4)
+        p = dragTrail(p, 1, 4)
+        p = dragTrail(p, 5, 4)
         assertEquals(listOf(0, 1, 5), p)
-        assertEquals(listOf(0, 1), Pearls.trail(p, 1, 4))
+        assertEquals(listOf(0, 1), dragTrail(p, 1, 4))
         // Not a neighbour of the last square: ignored.
-        assertEquals(p, Pearls.trail(p, 15, 4))
-        assertEquals(p, Pearls.trail(p, 5, 4))
+        assertEquals(p, dragTrail(p, 15, 4))
+        assertEquals(p, dragTrail(p, 5, 4))
         assertEquals(5, gridCellAt(Offset(1.2f, 1.9f), 1f, 4, 4))
         assertEquals(15, gridCellAt(Offset(9f, 9f), 1f, 4, 4))
     }
