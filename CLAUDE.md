@@ -791,7 +791,8 @@ ladder, the exhaustive count, the drag, the generator), `LinksTeacher.kt`, `Link
 - **Tiers: 6x6 with 5-7 pairs / 8x8 with 7-9 / 10x10 with 9-12, and the deepest rung the hints' walk needs** (`LinksLogic.specFor`,
   `Spec.needs` a range, as Atoms'): Standard the local rules alone; Hard a cut at least once, never a what-if; Expert a cut or
   a what-if (Mines' precedent). A what-if as Expert's floor was measured and dropped: 3% of 10x10 draws need it (the rest stall
-  or finish sooner), about 40 draws a board, over a second on the JVM. MEASURED_TIERS
+  or finish sooner), about 40 draws a board, over a second on the JVM. Over 40 daily boards a tier: 5.5 / 7.7 / 10.1 pairs; every Hard
+  board's deepest rung is a cut, 8 of 40 Expert boards' a what-if (31% of 150 in the coverage walk).
 - **The ladder, sound for every answer** (`LinksLogic.nextStep`, shared by the generator, the count and the teacher; no rung
   uses "a path never fills a 2x2", which holds only of one-answer boards): a tip with one square it can join, or an empty square
   with only two; a way that, taken, leaves something broken at once (a pair cut off, a square no pair reaches, a square with too
@@ -804,12 +805,14 @@ ladder, the exhaustive count, the drag, the generator), `LinksTeacher.kt`, `Link
   fewest free neighbours (ties drawn), never beside the worm's own body, for a drawn length; then ends are joined (shortest first)
   while no path would run beside itself, and a path under three squares grows into the middle of a neighbour (`repair`). Joining
   square by square from single squares stalled at 14-16 pairs on 8x8; letting paths touch themselves made 90% of 8x8 covers
-  ambiguous. A board ships only if the ladder finishes it at the tier's depth and `solutions` (rungs 1-3 to a fixpoint, then
-  a branch on the tip with fewest ways, no budget, `Verdict`) finds one answer, the drawn one. With the local rules alone the
-  count took seconds to refute a wrong branch on some 10x10s. `LinksOracle` (test: every square's right and down lines in
+  ambiguous. A board ships only if the ladder finishes it at the tier's depth and `solutions` (the whole ladder to a fixpoint,
+  then a branch on the tip with fewest ways, no budget, `Verdict`) finds one answer, the drawn one. `LinksOracle` (test: every square's right and down lines in
   reading order, a broken-profile count) is the independent check; it agrees with the count on every 3x3 with two pairs.
   `lastResort` is what seed 424242 drew per tier, accepted by a test; a year per tier never reaches it (`FallbackTest`).
-  MEASURED_GEN
+  Draws a board over a year (`FallbackTest`): 2.0 / 8.3 / 14.9 mean, most 10 / 63 / 88 of `ATTEMPTS` = 2000; JVM median / p95
+  / max 0.09 / 0.26 / 11, 12 / 45 / 110, 118 / 419 / 777 ms (`LinksRulesTest`, `build/reports/links-generation.txt`). The
+  count settles the whole ladder before it branches: without the what-if, one Expert day took twelve minutes. Not yet timed in
+  a browser.
 - **`solved` checks the rules** (`LinksLogic.isSolved`: every end one line, every other square two, every pair one piece); a
   mistake is a line the stored answer lacks, sound because the answer is unique. No red feedback is needed: the drag never
   makes a loop, joins two pairs or overfills a square, so a full board is a solved one.
@@ -821,7 +824,12 @@ ladder, the exhaustive count, the drag, the generator), `LinksTeacher.kt`, `Link
   another pair's end, or a joined pair, stops it. Loose lines exist because a hint's "two ways in" step can join two empty
   squares, and every step must be a move the player can make.
 - **Teacher:** steps are the ladder's, explained by technique; highlight indices are squares. Hints never fall back on a
-  generated board (there is no fallback). MEASURED_TEACH
+  generated board (there is no fallback). Over 150 boards a tier walked from blank by hints alone (`LinksTeachingTest`): 30.5 / 53.5 /
+  86.9 steps a board; a cut 0 / 6.4 / 6.1 a board, a what-if 0 / 0 / 0.57; two ways in is rare on Standard (0.05 a board: one
+  way on does nearly everything there). Expert hints: max 8 ms on the JVM. The walkthrough is a hand-built 5x5 with one
+  answer (by the oracle), finished by the local rules; it teaches drawing from an end, carrying a line on, a line from an empty
+  square, a slip that cuts a pair off, and rubbing out. Training: `core/training/LinksTraining.kt`, four techniques (no list of
+  every instance yet, so a practice passes on the hint's own lines).
 - **Colour:** twelve pair colours from the hue family's three fixed steps, greedy by CIEDE2000 with deuteranopia and
   protanopia (`LinksPaletteTest`: closest 14.6 / 13.9 / 8.3 for 7 / 9 / 12), the same in both schemes; Coral and Green are free
   (no right or wrong is shown). Every end carries its number; squares on a pair's line take a wash of its colour.
@@ -1009,7 +1017,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 
 Details: `docs/REWARDS.md` (Today's three; the finished frame).
 - **Today's three is the date alone** (`core/TodaysThree.kt`: a quick, a mid-weight and a word/number puzzle, each slot stepping
-  through its own list; the lengths, 11 / 13 / 9, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
+  through its own list; the lengths, 11 / 14 / 9, stay pairwise coprime, and a test says so), the same for everyone, and it absorbed today's pick ("Try me!" and its first-screen square are gone;
   the gold sparkles mark the three's next board). `TodaysThreeTest` pins three dates: editing a list moves everyone's three.
   **A new player gets the starter three** (`TodaysThree.starter`: fewer than `NEWCOMER_SOLVES` = 5 solves, counted from the
   once-a-day basis so a fifth solve never swaps the three mid-day): the shared quick slot, then `STARTER_MID` (Sudoku,
