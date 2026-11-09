@@ -50,13 +50,13 @@ data class LinksState(
  *
  * ## The ladder, simplest first ([nextStep])
  * 1. [ONE_WAY]: a tip with one square it can join takes it. [TWO_WAYS]: an empty square with only two it can join takes both.
- * 2. [REACH]: the same two, after striking every join that cannot be part of a pair's path. A square can belong to a pair
- *    only if both of that pair's tips can reach it (through empty squares, along loose lines); a join is struck when no
- *    pair could hold both its squares.
- * 3. [CUT]: a way that, taken, leaves something impossible at once (a pair cut off from its other end, a square no pair
- *    can reach, a square with too few ways) is struck, for tips and empty squares.
- * 4. [WHAT_IF]: a tip with two ways left: suppose one, follow rungs 1-2 at most [MAX_LINKS] steps (checking every
- *    pair's reach after each), and if something breaks, the tip takes the other.
+ * 2. [CUT]: a way that, taken, leaves something impossible at once (a pair cut off from its other end, a square no pair
+ *    can reach, a square with too few ways) is struck, for tips and empty squares; joins no pair could hold are struck
+ *    first ([reach]: a square can belong to a pair only if both of that pair's tips can reach it).
+ * 3. [WHAT_IF]: a tip with two ways left: suppose one, follow rung 1 at most [MAX_LINKS] steps (checking every pair's
+ *    reach after each), and if something breaks, the tip takes the other.
+ * The reach on its own (rung 1 again once the joins it strikes are gone) was a rung of its own and measured: it gave no
+ * step on 450 boards walked by hints, every such join being caught by rung 1 or by a cut, so it was dropped.
  * Every rung is sound for every answer (none assumes there is only one, so no "a path never fills a 2x2"), so the
  * generator ships a board only when its tier's rungs finish it, and the teacher ([LinksTeacher]) explains exactly these.
  */
@@ -69,9 +69,8 @@ internal object LinksLogic {
 
     /** Rungs, in the order they are tried; the depth of a board is the deepest it needed. */
     const val LOCAL = 1
-    const val REACH = 2
-    const val CUT = 3
-    const val WHAT_IF = 4
+    const val CUT = 2
+    const val WHAT_IF = 3
 
     /** Kinds of step: what made a line forced. */
     const val K_ONE_WAY = 0
@@ -291,31 +290,24 @@ internal object LinksLogic {
 
     fun reach(v: View): Reach {
         val b = v.b
-        val all = (1 shl b.pairs) - 1
-        // An uncoloured piece starts open to every pair; each round a pair's floods pass only pieces still open to it,
-        // and a piece keeps a pair only if both of that pair's tips reach it. Sets only shrink, so this settles.
-        var sets = IntArray(b.squares) { q -> if (v.piece[q] != q) 0 else if (v.colour[q] >= 0) 1 shl v.colour[q] else all }
+        // One round: a pair's floods pass any piece of no pair. Settling it over rounds (floods passing only pieces still
+        // open to the pair, until nothing changes) was measured and moved no board's depth, at three times the cost.
+        val open = IntArray(b.squares) { q -> if (v.piece[q] != q) 0 else if (v.colour[q] >= 0) 1 shl v.colour[q] else (1 shl b.pairs) - 1 }
+        val sets = IntArray(b.squares) { q -> if (v.piece[q] == q && v.colour[q] >= 0) 1 shl v.colour[q] else 0 }
         var cutOff = -1
         val fromA = BooleanArray(b.squares)
         val fromB = BooleanArray(b.squares)
         val queue = IntArray(b.squares)
-        for (round in 0..b.pairs + 1) {
-            val next = IntArray(b.squares) { q -> if (v.piece[q] == q && v.colour[q] >= 0) 1 shl v.colour[q] else 0 }
-            cutOff = -1
-            for (p in 0 until b.pairs) {
-                if (v.complete(p)) continue
-                val ta = v.tipOf(b.endA[p])
-                val tb = v.tipOf(b.endB[p])
-                flood(v, p, ta, fromA, queue, sets)
-                flood(v, p, tb, fromB, queue, sets)
-                if ((ta < 0 || tb < 0 || !fromA[tb]) && cutOff < 0) cutOff = p
-                for (q in 0 until b.squares) {
-                    if (fromA[q] && fromB[q] && v.colour[q] < 0) next[v.piece[q]] = next[v.piece[q]] or (1 shl p)
-                }
+        for (p in 0 until b.pairs) {
+            if (v.complete(p)) continue
+            val ta = v.tipOf(b.endA[p])
+            val tb = v.tipOf(b.endB[p])
+            flood(v, p, ta, fromA, queue, open)
+            flood(v, p, tb, fromB, queue, open)
+            if ((ta < 0 || tb < 0 || !fromA[tb]) && cutOff < 0) cutOff = p
+            for (q in 0 until b.squares) {
+                if (fromA[q] && fromB[q] && v.colour[q] < 0) sets[v.piece[q]] = sets[v.piece[q]] or (1 shl p)
             }
-            val same = next.contentEquals(sets)
-            sets = next
-            if (same || cutOff >= 0) break
         }
         var stranded = -1
         for (q in 0 until b.squares) {
@@ -412,11 +404,9 @@ internal object LinksLogic {
         val v = View(b, m)
         if (v.bad) return null
         local(v, null)?.let { return it.let { s -> Step(LOCAL, s.kind, s.square, s.lines) } }
-        if (maxRung < REACH) return null
+        if (maxRung < CUT) return null
         val r = reach(v)
         if (r.cutOff >= 0 || r.stranded >= 0) return null
-        local(v, r.sets)?.let { s -> return withStruck(v, s, r, REACH) }
-        if (maxRung < CUT) return null
         cut(v, r)?.let { return it }
         if (maxRung < WHAT_IF) return null
         return whatIf(v, r)
@@ -435,14 +425,6 @@ internal object LinksLogic {
             if (w.size == 2 && twoJoin(v, q, w[0], w[1], sets)) return Step(LOCAL, K_TWO_WAYS, q, listOf(w[0] to q, q to w[1]))
         }
         return null
-    }
-
-    /** [s] as a reach step: the ways the reach struck at its square. */
-    private fun withStruck(v: View, s: Step, r: Reach, rung: Int): Step {
-        val all = v.ways(s.square)
-        val kept = v.ways(s.square, r.sets)
-        val struck = all.filter { it !in kept }
-        return Step(rung, s.kind, s.square, s.lines, struck, struck.map { null })
     }
 
     /** What taking the line [a]-[x] would break at once (with reach), or null. */
@@ -474,34 +456,27 @@ internal object LinksLogic {
     }
 
     private fun whatIf(v: View, r: Reach): Step? {
-        val b = v.b
-        // Tips first, then empty squares, each in reading order: every way supposed in turn, and a square left with
-        // just the ways it needs takes them.
-        for (pass in 0..1) for (q in 0 until b.squares) {
-            val need = if (pass == 0) (if (v.isTip(q)) 1 else 0) else (if (v.isEmpty(q)) 2 else 0)
-            if (need == 0) continue
+        // Tips with two ways left, in reading order: each way supposed in turn. Supposing every way of every square was
+        // measured too: it finished no more boards and cost far more on a board it cannot finish.
+        for (q in 0 until v.b.squares) {
+            if (!v.isTip(q)) continue
             val w = v.ways(q, r.sets)
-            if (w.size <= need) continue
-            var first: Triple<Int, Broken, List<Int>>? = null
-            val kept = mutableListOf<Int>()
-            for (x in w) {
-                val (broke, chain) = follow(v, q, x)
-                if (broke == null) kept += x else if (first == null) first = Triple(x, broke, chain)
-                if (kept.size > need) break
+            if (w.size != 2) continue
+            for (i in 0..1) {
+                val (broke, chain) = follow(v, q, w[i])
+                if (broke == null) continue
+                val other = w[1 - i]
+                val struck = v.ways(q).filter { it != other }
+                return Step(
+                    WHAT_IF, K_ONE_WAY, q, listOf(q to other), struck, struck.map { null },
+                    supposed = w[i], chain = chain, chainBroke = broke,
+                )
             }
-            if (kept.size != need || first == null) continue
-            if (need == 2 && !twoJoin(v, q, kept[0], kept[1], r.sets)) continue
-            val lines = if (need == 1) listOf(q to kept[0]) else listOf(kept[0] to q, q to kept[1])
-            val struck = v.ways(q).filter { it !in kept }
-            return Step(
-                WHAT_IF, if (need == 1) K_ONE_WAY else K_TWO_WAYS, q, lines, struck, struck.map { null },
-                supposed = first.first, chain = first.third, chainBroke = first.second,
-            )
         }
         return null
     }
 
-    /** Suppose [a]-[x], then take at most [MAX_LINKS] steps of rungs 1-2: what breaks (null if nothing) and the squares drawn. */
+    /** Suppose [a]-[x], then take at most [MAX_LINKS] steps of rung 1: what breaks (null if nothing) and the squares drawn. */
     private fun follow(v: View, a: Int, x: Int): Pair<Broken?, List<Int>> {
         val m2 = v.m.copyOf()
         setLine(v.n, m2, a, x, true)
@@ -510,7 +485,7 @@ internal object LinksLogic {
             val v2 = View(v.b, m2)
             broken(v2, withReach = true)?.let { return it to chain }
             if (link == MAX_LINKS || v2.full) break
-            val s = nextStep(v.b, m2, REACH) ?: break
+            val s = nextStep(v.b, m2, LOCAL) ?: break
             for ((p, y) in s.lines) {
                 setLine(v.n, m2, p, y, true)
                 chain += y
@@ -544,23 +519,22 @@ internal object LinksLogic {
     // ---- the exhaustive count -----------------------------------------------------------------------
 
     /**
-     * Every way to finish the board from no lines, counted to two: the local rules to a fixpoint (each sound), every
-     * pair's reach checked, then a branch over the ways of the tip with fewest. No budget: only [Verdict.ExactlyOne]
-     * carries an answer (the masks).
+     * Every way to finish the board from no lines, counted to two: rungs 1-3 to a fixpoint (each sound for every answer:
+     * with the local rules alone, a wrong branch on a 10x10 could take seconds to refute), every pair's reach checked,
+     * then a branch over the ways of the tip with fewest. No budget: only [Verdict.ExactlyOne] carries an answer (the masks).
      */
     fun solutions(b: Board): Verdict<IntArray> {
         var found = 0
         var first: IntArray? = null
         fun search(m: IntArray) {
             if (found >= 2) return
-            // Settle the local rules.
+            // Settle rungs 1-3.
             while (true) {
-                val v = View(b, m)
-                if (v.bad) return
-                val s = local(v, null) ?: break
+                val s = nextStep(b, m, CUT) ?: break
                 apply(b.n, m, s)
             }
             val v = View(b, m)
+            if (v.bad) return
             if (v.full) {
                 if (isSolved(b, m)) {
                     found++
@@ -568,12 +542,14 @@ internal object LinksLogic {
                 }
                 return
             }
-            if (broken(v, withReach = true) != null) return
+            val r = reach(v)
+            if (broken(v, withReach = true, reach = r) != null) return
+            // Branch on the tip with fewest ways the reach leaves: exactly one of them is its next line in any answer.
             var best = -1
             var bestWays: IntArray? = null
             for (q in 0 until b.squares) {
                 if (!v.isTip(q)) continue
-                val w = v.ways(q)
+                val w = v.ways(q, r.sets)
                 if (bestWays == null || w.size < bestWays.size) {
                     best = q
                     bestWays = w
@@ -741,7 +717,7 @@ internal object LinksLogic {
 
     /**
      * Side, how many pairs a cover may end with, and the deepest rung a board's walk may need: Standard the local rules
-     * alone; Hard the reach or a cut at least once, never a what-if; Expert the reach, a cut or a what-if. A what-if as
+     * alone; Hard a cut at least once, never a what-if; Expert a cut or a what-if. A what-if as
      * Expert's floor was measured and dropped: 3% of 10x10 draws need it (the rest stall or finish sooner), so a board
      * would take about 40 draws, over a second on the JVM.
      */
@@ -749,8 +725,8 @@ internal object LinksLogic {
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
         Difficulty.STANDARD -> Spec(6, 5, 7, LOCAL..LOCAL)
-        Difficulty.HARD -> Spec(8, 7, 9, REACH..CUT)
-        Difficulty.EXPERT -> Spec(10, 9, 12, REACH..WHAT_IF)
+        Difficulty.HARD -> Spec(8, 7, 9, CUT..CUT)
+        Difficulty.EXPERT -> Spec(10, 9, 12, CUT..WHAT_IF)
     }
 
     var TOUCHING = true
@@ -940,14 +916,22 @@ internal object LinksLogic {
 
     /**
      * Only when none of [ATTEMPTS] draws was accepted, which a year of daily seeds on every tier never reaches
-     * (`FallbackTest`). A fixed board per tier, found by the generator from one seed, which `LinksRulesTest` proves is
-     * accepted at its tier.
+     * (`FallbackTest`). A fixed board per tier, what seed 424242 drew, which `LinksRulesTest` proves is accepted at its
+     * tier.
      */
     fun lastResort(difficulty: Difficulty): LinksState = LAST_RESORT[difficulty.ordinal]
 
     private val LAST_RESORT = listOf(
-        LinksState(2, "aa..", "60"),
-        LinksState(2, "aa..", "60"),
-        LinksState(2, "aa..", "60"),
+        LinksState(6, "a..........a.....b..c...de.ed.c..b..", "2aaaac6aaac156ac545545551151152a92a9"),
+        LinksState(
+            8,
+            ".........a....a......b....c.......d.e......c.f.....d.eb.g.fg....",
+            "6aaaaaac52aaaa8556aac2c5552c3c555545455555515155553838151382aaa9",
+        ),
+        LinksState(
+            10,
+            ".........a.......b.........cd....ef...g..............he.i.......f.j.......j.....d...h...g.b.ic..a...",
+            "6aaaaaaac456aaaaa855556aaac41555542c55455553c555555554151555555529455555552a9555155386a9152912a92aa9",
+        ),
     )
 }

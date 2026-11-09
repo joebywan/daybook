@@ -57,7 +57,7 @@ batch) follow it; the rest of the puzzles are classified at the end.
   ladder needs every technique. Solving it without "Show me" earns the second achievement, and is celebrated as a pass
   is: "Graduated!" (stamped in, as a game's milestone), "<Puzzle> graduate", "The final board, solved", and the
   "<Puzzle> graduate" achievement the first time, its badge otherwise, then Training's progress as a whole,
-  "Training: n of 21 courses graduated"; "Back to <Puzzle> training" (a solve with a
+  "Training: n of 22 courses graduated"; "Back to <Puzzle> training" (a solve with a
   Show me is not celebrated and stays, to start again). The solve is answered once, saved across a recreation. Hints are allowed (they teach).
   It sounds and moves as a game board does, from the play screen's own locals (`LocalMoveCount`, `LocalUndoCount`,
   `LocalSolveCount`, `LocalBoardTones`; the owner, 2026-11-07: "I like the audio feedback for small milestones"): a
@@ -66,11 +66,11 @@ batch) follow it; the rest of the puzzles are classified at the end.
   chime. Technique practices and walkthroughs stay silent.
 - **Ways in:**
   - **Home's Training mode**, the third segment of the mode row (`Daily/Random · Levels · Training`): the tier row gives
-    way to one line, "N of 21 graduated · M techniques passed", and the grid shows only the puzzles with a course, in the
+    way to one line, "N of 22 graduated · M techniques passed", and the grid shows only the puzzles with a course, in the
     home grid's order, each tile saying "3 of 8" (techniques passed of its techniques) and ticked once graduated. A tap
     opens that course, as the rules sheet's Train does (`Route.Training(fromHint = true)`, `practiseFrom` = Home): back
     from it is Home, still in Training (the mode is saveable state, never stored), and back from a technique opened there
-    is the course. The segment's second line is "N of 21": **graduated** courses (`Course.graduated`: the final board
+    is the course. The segment's second line is "N of 22": **graduated** courses (`Course.graduated`: the final board
     passed, or every technique where a course has none, the list's tick) of `COURSES.size`; `Training.tally` counts both
     numbers. The mode, like the others, is not stored: the app always opens on Daily. Today's three folds away in
     Training and the grid slides up into its room, and back down as it returns (the owner, 1.33: the gap it left

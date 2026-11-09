@@ -124,11 +124,11 @@ class TechniqueNamesTest {
             }
             assertTrue("${p.id} $t took $took", took.inWholeMilliseconds < 500)
         }
-        // Links' Hard needs the reach or a cut; Expert those or a what-if: whichever its walk went deepest to.
+        // Links' Hard needs a cut; Expert a cut or a what-if: whichever its walk went deepest to.
         val links = listOf(
             setOf(null),
-            setOf(LinksTeacher.REACH, LinksTeacher.CUT),
-            setOf(LinksTeacher.REACH, LinksTeacher.CUT, LinksTeacher.WHAT_IF),
+            setOf(LinksTeacher.CUT),
+            setOf(LinksTeacher.CUT, LinksTeacher.WHAT_IF),
         )
         for (t in Difficulty.entries) for (seed in 1L..10L) {
             val got = Links.neededTechnique(Links.generate(seed, t))

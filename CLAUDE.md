@@ -44,7 +44,7 @@ section 7. The settled play-screen UX (popover, finish frame, solve sound) and t
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
-Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes and LITS, each technique practised on real positions found by walking generated boards by
+Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS and Links, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer (Pipes judges its own way: a
@@ -778,6 +778,54 @@ hit testing, walkthrough, motif). `id = "pearls"` is hashed into every seed: nev
   length, so hints never run out). A square with two lines has its other edges read as crossed (`PearlsTeacher.view`), so the
   hints never ask for tidying. Highlight indices: squares `0 until n*n`, edge `e` is `n*n + e`.
 
+## Links (pair-joining paths)
+
+Numbered pairs of squares; join each pair with one path through side-touching squares, paths never meet, and every square is
+used. Never "Flow" (or Numberlink) where a player sees it. `puzzles/LinksRules.kt` (`LinksState`, `LinksLogic`: rules, the
+ladder, the exhaustive count, the drag, the generator), `LinksTeacher.kt`, `Links.kt` (board, palette, keys, walkthrough, motif).
+`id = "links"` is hashed into every seed: never rename it.
+
+- **State is the lines, a hex mask of sides per square** (`links`, bit 1 up, 2 right, 4 down, 8 left; every mutator writes both
+  squares of a line), never a pair number per square: a path may run beside itself, so which neighbours are joined cannot be
+  read off a colour per square. `ends` is `.` or `a`.. per square (shown 1, 2, ...); `answer` is read only for mistakes and tests.
+- **Tiers: 6x6 with 5-7 pairs / 8x8 with 7-9 / 10x10 with 9-12, and the deepest rung the hints' walk needs** (`LinksLogic.specFor`,
+  `Spec.needs` a range, as Atoms'): Standard the local rules alone; Hard a cut at least once, never a what-if; Expert a cut or
+  a what-if (Mines' precedent). A what-if as Expert's floor was measured and dropped: 3% of 10x10 draws need it (the rest stall
+  or finish sooner), about 40 draws a board, over a second on the JVM. MEASURED_TIERS
+- **The ladder, sound for every answer** (`LinksLogic.nextStep`, shared by the generator, the count and the teacher; no rung
+  uses "a path never fills a 2x2", which holds only of one-answer boards): a tip with one square it can join, or an empty square
+  with only two; a way that, taken, leaves something broken at once (a pair cut off, a square no pair reaches, a square with too
+  few ways), for tips and empty squares, after striking joins no pair could hold (a square holds pair p only if both of p's tips
+  reach it, one round of floods; settling it over rounds moved no board, at three times the cost); a tip with two ways, one
+  supposed and followed at most `MAX_LINKS` = 3 local steps. Measured and dropped: the reach as a rung of its own (no step on
+  450 boards walked by hints), and supposing every way of every square (it finished no more boards, at far more cost on a board
+  it cannot finish).
+- **Covers are worms, never self-touching** (`draw`): from the most hemmed-in free square, walk to the free neighbour with
+  fewest free neighbours (ties drawn), never beside the worm's own body, for a drawn length; then ends are joined (shortest first)
+  while no path would run beside itself, and a path under three squares grows into the middle of a neighbour (`repair`). Joining
+  square by square from single squares stalled at 14-16 pairs on 8x8; letting paths touch themselves made 90% of 8x8 covers
+  ambiguous. A board ships only if the ladder finishes it at the tier's depth and `solutions` (rungs 1-3 to a fixpoint, then
+  a branch on the tip with fewest ways, no budget, `Verdict`) finds one answer, the drawn one. With the local rules alone the
+  count took seconds to refute a wrong branch on some 10x10s. `LinksOracle` (test: every square's right and down lines in
+  reading order, a broken-profile count) is the independent check; it agrees with the count on every 3x3 with two pairs.
+  `lastResort` is what seed 424242 drew per tier, accepted by a test; a year per tier never reaches it (`FallbackTest`).
+  MEASURED_GEN
+- **`solved` checks the rules** (`LinksLogic.isSolved`: every end one line, every other square two, every pair one piece); a
+  mistake is a line the stored answer lacks, sound because the answer is unique. No red feedback is needed: the drag never
+  makes a loop, joins two pairs or overfills a square, so a full board is a solved one.
+- **The drag** (`LinksLogic.drag`, one state on lift; the trail is `core/DragTrail.kt`'s `dragTrail` and the gesture
+  `ui/SquareDrag.kt`'s `squareDrag`, both lifted from Pearls, which uses them unchanged): its first step decides. Along a line
+  it rubs out what it runs along (Pearls' pen); anywhere else it draws, from an end, a line's end, an empty square (a loose line,
+  drawn grey, takes a pair's colour when it reaches one) or the middle of a line (cut there; the side with an end stays).
+  Entering another pair's line cuts it there and drops the piece left without an end; going back onto its own line cuts it back;
+  another pair's end, or a joined pair, stops it. Loose lines exist because a hint's "two ways in" step can join two empty
+  squares, and every step must be a move the player can make.
+- **Teacher:** steps are the ladder's, explained by technique; highlight indices are squares. Hints never fall back on a
+  generated board (there is no fallback). MEASURED_TEACH
+- **Colour:** twelve pair colours from the hue family's three fixed steps, greedy by CIEDE2000 with deuteranopia and
+  protanopia (`LinksPaletteTest`: closest 14.6 / 13.9 / 8.3 for 7 / 9 / 12), the same in both schemes; Coral and Green are free
+  (no right or wrong is shown). Every end carries its number; squares on a pair's line take a wash of its colour.
+
 ## Mini crossword
 
 A small, fully checked crossword: a clue for every word across and down; fill the grid. Spec and decisions: `docs/MINI_SPEC.md`.
@@ -946,7 +994,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 - The mode row (`Daily/Random · Levels · Training`, `LaunchOptions`) sits above the tier row. Daily and Random share the first
   segment, the one in use large over the other small; a tap on it while selected swaps them (150 ms, snapped under reduced
   motion), and from another mode it returns to the last of the two (`tappedMode`, `dayMode` in `DaybookApp`; Daily on launch,
-  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 21"
+  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 22"
   graduated) so the three share one height; the swap scales the two lines rather than measuring them again, so the row's
   height never changes mid-swap. In Levels and Training the tier row stays laid out, invisible, under the level strip or the
   training strip, so the grid below cannot move when the mode changes. The sticky rows sit tight (4dp over, 4dp between,
@@ -1022,7 +1070,7 @@ actually got. LITS's real generator had *never once run*. When you add a fallbac
 fraction of seeds reach it, and measure rather than assume. Size the test's sample to the rate:
 Atoms once fell back on 13 of 365 Expert days (3.6%), which `FallbackTest`'s twenty seeds miss
 about half the time; its Atoms test now walks a full year of daily seeds on every tier (~2 s).
-Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords and Dwindle (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
+Every board with a fallback has `generateVerified` (null when nothing was proved), which is what tests assert: on the puzzle object for Kings, Atoms, Sets (public) and LITS, Mambo, Shikaku, Snap, Inequality, Cipher, Cages, Sudoku, Pipes (`internal`); on the rules object (`RegionsLogic`, `TentsLogic`, `TallyLogic`, `SandLogic`, `TargetLogic`, `WordWheelLogic`, `PointersLogic`, `NonogramLogic`, `DominoLogic`, `MinesLogic`, `LampsLogic`, `CodewordLogic`, `MiniLogic`, `HexLogic`, `DwindleLogic`, `LinksLogic`) for the rest. `FallbackTest` walks a year of daily seeds on every tier through it for Kings, Atoms, LITS, Shikaku, Snap, Inequality, Regions, Tents, Cipher, Word Wheel, Sand, Sudoku, Pointers, Pipes, Cages, Tally, Dominoes, Mines, Lamps, Codeword, Mini, Hexwords, Dwindle and Links (none ever falls back; `assertYearProved`, whose `onProved` hook lets Cages, Tally, Dominoes and Lamps count attempts too); Sets, Mambo and Target have their year in their own rules tests.
 
 **A truncated search is not a proof.** LITS reported "gave up" as "exactly one solution" because
 its node budget returned quietly. Make the distinction structural — a type where only the proved

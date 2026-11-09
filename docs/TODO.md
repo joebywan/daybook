@@ -275,18 +275,6 @@ sweeps), `ui/TwinTaps.kt` (tap / double tap), `ui/Settle.kt` (1 s red), `ui/Boar
 
 In order of measured demand, then fit:
 
-- [ ] **Links (pair-joining paths; Flow Free 226M, Flow Bridges 24M, Dot Link 29M).** Numbered (or coloured) pairs of
-  squares; join each pair with a path through side-touching squares, paths never meet, and every square is used. Never
-  "Flow" where a player sees it. *Generation:* a random cover of the grid by paths (grow paths from random seeds, merge
-  short ones), endpoints become the clues; prove one answer with an exhaustive count returning `core/Verdict` (no budget),
-  then gate on the teacher's walk. *Ladder (sound without assuming one answer):* a square with one way on; a path end
-  with one free neighbour; a square two paths cannot both reach; a cut that would strand a pair (connectivity); a
-  what-if, `MAX_LINKS` 3. Do **not** use the "no 2x2 of one path" shortcut: it assumes uniqueness. *Tiers:* 6x6 / 8x8 /
-  10x10 with the depth gate (Tally's `Spec.needs`). *Input:* drag from an end or a path's tip, backing up undoes (Pearls'
-  `Pearls.trail`), one state on lift, gestures through `rememberUpdatedState`. *State:* the path id per square as a
-  string (defaulted). Highlight indices are squares. *Reuse:* Pearls' drag, trail and edge drawing (lift
-  `Pearls.trail` and the line-drawing helper into `ui/` rather than copy), Trail's path rendering if lighter, Kings'/
-  Tents' `lastResort`/`generateVerified` shape. *L.*
 - [ ] **Unblock (sliding cars; Unblock Me 99M).** A 6x6 yard of cars two or three long, each sliding along its own axis;
   slide them until the marked car leaves by the exit. Not the trademarked name. *Generation:* random yard, breadth-first
   over positions for the exact minimum (positions are few on 6x6; still give the search a budget and a structural

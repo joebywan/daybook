@@ -17,8 +17,8 @@ Stuck? The first tap on Hint says where to look, and the second explains why. Yo
 ## What changes per tier
 
 - Standard: 6x6 grid, 5 to 7 pairs. A line's end with one way on, and a square with two ways in, finish it.
-- Hard: 8x8 grid, 7 to 9 pairs. Needs which paths can reach a square, or what a way would cut off.
-- Expert: 10x10 grid, 9 to 12 pairs. Needs a what-if.
+- Hard: 8x8 grid, 7 to 9 pairs. Needs what a way would cut off.
+- Expert: 10x10 grid, 9 to 12 pairs. Needs what a way would cut off, or a what-if.
 
 ## Techniques
 

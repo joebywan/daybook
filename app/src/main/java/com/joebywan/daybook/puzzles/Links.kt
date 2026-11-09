@@ -83,11 +83,10 @@ object Links : PuzzleType {
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState = LinksLogic.generate(seed, difficulty)
 
-    /** The reach, a cut or a what-if, as the tier demands ([LinksLogic.depth]); null for the local rules alone. */
+    /** A cut or a what-if, as the tier demands ([LinksLogic.depth]); null for the local rules alone. */
     override fun neededTechnique(state: PuzzleState): String? {
         val s = state as LinksState
         return when (LinksLogic.depth(LinksLogic.Board.of(s.size, s.ends))) {
-            LinksLogic.REACH -> LinksTeacher.REACH
             LinksLogic.CUT -> LinksTeacher.CUT
             LinksLogic.WHAT_IF -> LinksTeacher.WHAT_IF
             else -> null
@@ -97,14 +96,15 @@ object Links : PuzzleType {
     // ---- colours --------------------------------------------------------------------------------
 
     /**
-     * A colour per pair, the same in both schemes: eight hues at the mid step, then four at the deep step, ordered so
-     * every prefix is as far apart as it can be (`LinksPaletteTest`, colour-blind vision included). Every end also
-     * carries its number, which carries the rest.
+     * A colour per pair, the same in both schemes: the hue family's three fixed steps (pale, mid, deep), each next colour
+     * the one furthest from all before it by CIEDE2000, deuteranopia and protanopia included (`LinksPaletteTest`: the
+     * closest pair is 14.6 apart in Standard's seven, 13.9 in Hard's nine, 8.3 in Expert's twelve). Coral and Green are
+     * free here: the board shows no right or wrong. Every end also carries its number, which carries the rest.
      */
     val palette: List<Color> = listOf(
-        BoardHues.pinnedMark(215f), BoardHues.pinnedMark(34f), BoardHues.deep(145f, false), BoardHues.pinnedMark(330f),
-        BoardHues.pinnedFill(46f, false), BoardHues.deep(268f, false), BoardHues.pinnedMark(175f), BoardHues.deep(8f, false),
-        BoardHues.pinnedFill(268f, false), BoardHues.deep(215f, false), BoardHues.pinnedMark(46f), BoardHues.deep(330f, false),
+        BoardHues.pinnedMark(215f), BoardHues.pinnedMark(46f), BoardHues.deep(8f, false), BoardHues.pinnedFill(175f, false),
+        BoardHues.deep(268f, false), BoardHues.deep(175f, false), BoardHues.deep(46f, false), BoardHues.pinnedFill(215f, false),
+        BoardHues.pinnedFill(145f, false), BoardHues.deep(330f, false), BoardHues.deep(145f, false), BoardHues.pinnedMark(145f),
     )
 
     private fun colourOf(p: Int): Color = palette[p % palette.size]
@@ -114,7 +114,11 @@ object Links : PuzzleType {
     /** A mistake to take back or a step to reason out; see [LinksTeacher]. */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as LinksState
-        val step = LinksTeacher.teach(s) ?: return null
+        return deduction(LinksTeacher.teach(s) ?: return null)
+    }
+
+    /** [step] as the play screen's [Deduction] (Training builds its practices' steps with it too). */
+    internal fun deduction(step: LinksTeacher.Step): Deduction {
         return Deduction(
             step,
             mistake = step.technique == LinksTeacher.MISTAKE,

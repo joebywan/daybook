@@ -146,8 +146,8 @@ class LinksTeachingTest {
             val deepest = used.max()
             val want = when (d) {
                 Difficulty.STANDARD -> setOf(0, 1)
-                Difficulty.HARD -> setOf(2, 3)
-                Difficulty.EXPERT -> setOf(2, 3, 4)
+                Difficulty.HARD -> setOf(2)
+                Difficulty.EXPERT -> setOf(2, 3)
             }
             assertTrue("$d/$seed deepest ${LinksTeacher.TECHNIQUES[deepest]}", deepest in want)
         }

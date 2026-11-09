@@ -20,10 +20,8 @@ import com.joebywan.daybook.core.squareName
  * Techniques, simplest first:
  * 1. [ONE_WAY] — a line's end (or an end with no line yet) that can step to only one square goes there.
  * 2. [TWO_WAYS] — every square is on a path, so an empty square that only two neighbours can join is joined to both.
- * 3. [REACH] — the same two, once the squares a path cannot use are struck: a square belongs to a path only if both
- *    of its ends can reach it.
- * 4. [CUT] — a way that would cut a path off from its other end, or leave a square no path can fill, is struck.
- * 5. [WHAT_IF] — a line's end with two ways: suppose one, follow at most [LinksLogic.MAX_LINKS] forced steps, and
+ * 3. [CUT] — a way that would cut a path off from its other end, or leave a square no path can fill, is struck.
+ * 4. [WHAT_IF] — a line's end with two ways: suppose one, follow at most [LinksLogic.MAX_LINKS] forced steps, and
  *    something breaks, so it takes the other.
  *
  * Within a technique the first square in reading order wins, so a board gets the same hint on every platform.
@@ -35,13 +33,12 @@ internal object LinksTeacher {
 
     const val ONE_WAY = "one-way"
     const val TWO_WAYS = "two-ways"
-    const val REACH = "reach"
     const val CUT = "cut-off"
     const val WHAT_IF = "what-if"
     const val MISTAKE = "mistake"
 
     /** Every technique in the order [deduce] prefers them, for reports. */
-    val TECHNIQUES = listOf(ONE_WAY, TWO_WAYS, REACH, CUT, WHAT_IF)
+    val TECHNIQUES = listOf(ONE_WAY, TWO_WAYS, CUT, WHAT_IF)
 
     /** What the hint panel has room for (the test pins it). */
     const val MAX_NUDGE = 70
@@ -103,7 +100,6 @@ internal object LinksTeacher {
     /** The technique a ladder step is taught as. */
     fun techniqueOf(s: LinksLogic.Step): String = when (s.rung) {
         LinksLogic.LOCAL -> if (s.kind == LinksLogic.K_ONE_WAY) ONE_WAY else TWO_WAYS
-        LinksLogic.REACH -> REACH
         LinksLogic.CUT -> CUT
         else -> WHAT_IF
     }
@@ -123,12 +119,6 @@ internal object LinksTeacher {
         val explanation = when (technique) {
             ONE_WAY -> "${who.second.cap()} at $here can step to only one square: $goes. Draw it there."
             TWO_WAYS -> "Every square is on a path. The one at $here can only be joined from $goes, so its path runs through both."
-            REACH -> {
-                val out = struck.joinToString(" or ") { way(n, q, it.first) }
-                val lead = if (tip) "${who.second.cap()} at $here" else "The empty square at $here"
-                "$lead can't join the square $out: no path can reach both of them. " +
-                    if (tip) "So it goes $goes." else "That leaves $goes, so its path runs through both."
-            }
             CUT -> {
                 val first = struck.firstOrNull { it.second != null } ?: struck.first()
                 val because = first.second?.let { brokeText(v, it) } ?: "nothing could be finished"
