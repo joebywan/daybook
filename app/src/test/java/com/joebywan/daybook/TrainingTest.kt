@@ -180,6 +180,7 @@ class TrainingTest {
             listOf(
                 "sudoku", "cages", "inequality", "regions", "kings", "pipes", "pearls", "atoms", "whoswho", "cipher", "chess",
                 "mosaic", "mambo", "nonogram", "tally", "mines", "lamps", "tents", "shikaku", "dominoes", "lits",
+                "thermometers",
             ),
             Training.COURSES.map { it.id },
         )

@@ -114,6 +114,33 @@ internal object ThermometersTeacher {
         return whatIfStep(l, targets, grid, w)
     }
 
+    /**
+     * Every step of [technique] the board shows, from the same visible state as [deduce]: each thermometer's or line's
+     * fact of that rung (on a board with no tube fact left, as [deduce] asks), or every what-if within
+     * [ThermometersLogic.MAX_LINKS] (not only [deduce]'s shortest). Training reads them all: any instance counts.
+     */
+    fun steps(n: Int, tubes: List<List<Int>>, targets: List<Int>, marks: String, technique: String): List<Step> {
+        val l = ThermometersLogic.Layout(n, tubes)
+        val grid = ThermometersLogic.markState(marks)
+        if (ThermometersLogic.broken(l, grid, targets)) return emptyList()
+        val tubeFacts = tubes.indices.mapNotNull { ThermometersLogic.tubeFact(l, grid, it) }
+        val kind = when (technique) {
+            TUBE -> return tubeFacts.map { factStep(l, targets, grid, it) }
+            DONE -> ThermometersLogic.DONE
+            ROOM -> ThermometersLogic.ROOM
+            AT_MOST -> ThermometersLogic.AT_MOST
+            AT_LEAST -> ThermometersLogic.AT_LEAST
+            WHAT_IF -> -1
+            else -> return emptyList()
+        }
+        if (tubeFacts.isNotEmpty()) return emptyList()
+        if (kind >= 0) return (0 until 2 * n).flatMap { line -> ThermometersLogic.lineFacts(l, grid, targets, line, kind) }.map { factStep(l, targets, grid, it) }
+        if (ThermometersLogic.nextFact(l, grid, targets, ThermometersLogic.AT_LEAST) != null) return emptyList()
+        return (0 until n * n).filter { grid[it] == ThermometersLogic.OPEN }.flatMap { i ->
+            listOf(ThermometersLogic.FULL, ThermometersLogic.EMPTY).mapNotNull { a -> ThermometersLogic.whatIf(l, targets, grid, i, a)?.let { whatIfStep(l, targets, grid, it) } }
+        }
+    }
+
     private fun factStep(l: ThermometersLogic.Layout, targets: List<Int>, grid: IntArray, f: ThermometersLogic.Fact): Step {
         val n = l.n
         val squares = (f.full + f.empty).toSet()

@@ -5,10 +5,10 @@ import kotlinx.datetime.LocalDate
 /**
  * Today's three (`docs/REWARDS.md`): one quick puzzle, one mid-weight, one word or number puzzle, derived from the date
  * alone, so it is the same for everyone and nothing is stored. Each slot steps one place a day through its own list
- * (quick 11, mid-weight 14, words 9: pairwise coprime, so a set of three comes round again only after 1,386 days, and
+ * (quick 11, mid-weight 13, words 7: pairwise coprime, so a set of three comes round again only after 1,001 days, and
  * no puzzle waits longer than its list's length). If a new puzzle (which joins the mid-weight list unless listed) gives
- * the mid-weight list a factor of 3 or 11, it steps one more each time the 99-day quick-and-words cycle comes round
- * (`d mod 99 + d / 99`), so no set repeats within the year whatever its length, at the cost of one puzzle's gap doubling
+ * the mid-weight list a factor of 7 or 11, it steps one more each time the 77-day quick-and-words cycle comes round
+ * (`d mod 77 + d / 77`), so no set repeats within the year whatever its length, at the cost of one puzzle's gap doubling
  * at each turn of that cycle. Plain list indexing: no hash order, so the JVM and the web agree.
  *
  * The slots were sorted by what each puzzle asks (2026-10-26): quick is one gesture, or few rules and about a dozen hint

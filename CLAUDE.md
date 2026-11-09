@@ -44,7 +44,7 @@ section 7. The settled play-screen UX (popover, finish frame, solve sound) and t
 `docs/TEACHING.md`. Keep that table current when a teacher changes. Statistics opens a Techniques page (each puzzle's
 praised techniques, ticked once a hint explained one; stored as the `techniques_met` key set, not on the save; a record,
 never a drill): `docs/REWARDS.md` (Techniques). Training is the drill, separate from that record: for Sudoku, Cage
-Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes and LITS, each technique practised on real positions found by walking generated boards by
+Sudoku, Inequality, Regions, Kings, Pipes, Pearls, Atoms, Who's Who, Cipher, Chess, Mosaic, Mambo, Nonogram, Tally, Mines, Lamps, Tents, Shikaku, Dominoes, LITS and Thermometers, each technique practised on real positions found by walking generated boards by
 hints (`core/Training.kt`: one `Course` per puzzle, a new one its own file in `core/training/` plus one line appended to
 `Training.COURSES`; `PlacementDrill` for digit teachers, `MoveDrill` for the rest, judged by the teacher's own mistakes and
 any step of the technique being reached (`MoveDrill(next, every)`), never the stored answer (Pipes judges its own way: a
@@ -985,7 +985,7 @@ Spec and what was built: `docs/LEVELS_SPEC.md`. `core/Levels.kt` (the plan), `Se
 - The mode row (`Daily/Random · Levels · Training`, `LaunchOptions`) sits above the tier row. Daily and Random share the first
   segment, the one in use large over the other small; a tap on it while selected swaps them (150 ms, snapped under reduced
   motion), and from another mode it returns to the last of the two (`tappedMode`, `dayMode` in `DaybookApp`; Daily on launch,
-  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 21"
+  the mode is never stored). Every segment has a small second line (the other of Daily/Random, "Level N", "N of 22"
   graduated) so the three share one height; the swap scales the two lines rather than measuring them again, so the row's
   height never changes mid-swap. In Levels and Training the tier row stays laid out, invisible, under the level strip or the
   training strip, so the grid below cannot move when the mode changes. The sticky rows sit tight (4dp over, 4dp between,
