@@ -371,6 +371,8 @@ Nothing had to be excluded: every technique every teacher names is found within 
   short, every Expert board the what-if.
 - **Nonogram:** every technique 0-4 ms first and 0-2 ms a board after. Standard boards reach the full line on 58 of 60,
   the other three on all 60.
+- **Thermometers:** 1-64 ms first (the what-if 45); next boards a mean of 1-16 ms, at most 45 ms; judging at most 2.5 ms. Final
+  board index 0 (nearly every one of the first 60 Expert walks needs all six).
 - **Tally:** line done 9 ms first, the rest 0-5 ms first; next boards a mean of 0-7 ms, at most 17 ms (the what-if).
   Standard reaches the first three on all 60 and all left on 26; every Hard board reaches every way, every Expert board
   the what-if.
@@ -516,7 +518,7 @@ techniques no walk reached.
 | Tents | 6: no tree, line done, line full 29-30; one spot 1/25/21; shared 0/1/12; served 1/7/20 (touch: never) | move | 0-52 ms | **done** (grass no answer keeps is wrong in practice) |
 | Cipher | 5: leading carry, column, column pair 29-30; columns together 0/30/9; pair what-if 0/0/30 (only letter: never) | move | 1-10 ms | **done** (only letter dropped) |
 | Tally | 6: all reached; every way 0/30/30, what-if 0/0/30 | move | 2-11 ms | **done** |
-| Thermometers | 6: all reached; bulb must 0/30/30, what-if 0/0/30 | move | measured below | **done** |
+| Thermometers | 6: from the bulb 30/28/30, lines and tips 30 a tier; bulb must 0/30/30, what-if 0/0/30 | move | 9-61 ms | **done** (a wrong cross is the teacher's own mistake) |
 | Dominoes | 6: only place 10 a tier, counting 0/30/10, what-if 0/0/30, the rest 14-30 | move | 1-37 ms | **done** |
 | Mines | 6: subset 0/28/26, pair 0/17/17, count edge 0/0/29, what-if 0/0/1 (count: never) | move | 1-24 ms | **done** (what-if kept: 42 ms a board through the cache) |
 | Lamps | 7: all reached; dark 0/11/14 | move | 0-15 ms | **done** (a cross where the answer has a lamp is wrong in practice) |
