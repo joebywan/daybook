@@ -1,5 +1,6 @@
 package com.joebywan.daybook
 
+import com.joebywan.daybook.core.LoopEdges
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import com.joebywan.daybook.puzzles.Pearls
@@ -70,13 +71,13 @@ class PearlsKeysTest {
     @Test
     fun aTapNamesTheEdgeWhoseMiddleIsNearest() {
         // Square units: square (r, c) spans [c, c+1] x [r, r+1].
-        assertEquals(g.between(0, 1), Pearls.edgeNear(4, 1.05f, 0.45f))
-        assertEquals(g.between(0, 4), Pearls.edgeNear(4, 0.5f, 1.1f))
-        assertEquals(g.between(10, 14), Pearls.edgeNear(4, 2.6f, 3.0f))
+        assertEquals(g.between(0, 1), LoopEdges.edgeNear(4, 1.05f, 0.45f))
+        assertEquals(g.between(0, 4), LoopEdges.edgeNear(4, 0.5f, 1.1f))
+        assertEquals(g.between(10, 14), LoopEdges.edgeNear(4, 2.6f, 3.0f))
         // The middle of a square, and the outer frame, name nothing.
-        assertEquals(-1, Pearls.edgeNear(4, 1.5f, 1.5f))
-        assertEquals(-1, Pearls.edgeNear(4, 0.02f, 0.5f))
-        assertEquals(-1, Pearls.edgeNear(4, 3.98f, 3.5f))
+        assertEquals(-1, LoopEdges.edgeNear(4, 1.5f, 1.5f))
+        assertEquals(-1, LoopEdges.edgeNear(4, 0.02f, 0.5f))
+        assertEquals(-1, LoopEdges.edgeNear(4, 3.98f, 3.5f))
     }
 
     @Test

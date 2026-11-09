@@ -91,6 +91,7 @@ Each is a classic, published puzzle genre, implemented from its rules.
 | Lamps | Lamp placement | Light every white square with lamps that shine along their row and column to a wall; no lamp may light another, and a numbered wall touches that many lamps |
 | Codeword | Codeword (number crossword) | A filled crossword in which every letter is a number: work out which letter each number stands for |
 | Pearls | Masyu (pearl loop) | One closed loop through square middles and every pearl: it turns on black pearls (running straight on either side) and goes straight through white ones (turning beside them) |
+| Loop | Slitherlink (loop through the dots) | One closed loop along the squares' sides, from dot to dot: each number says how many of its square's four sides the loop uses |
 | Links | Numberlink (pair-joining paths) | Join each pair of matching numbers with one path through side-touching squares; paths never cross and every square is used |
 | Who's Who | Logic grid | Match each person to a house in a row and one or two more things (a pet, a job...) from clues like "the baker lives next to the red house" |
 | Crossword | Mini crossword | A small crossword, every square in a word across and a word down: solve the clues and fill the grid |
@@ -131,6 +132,10 @@ and works backwards, or verifies with a solver that the clues admit **exactly on
 - **Pearls** — a random loop grown so that the pearls it allows can pin it down, then pearls taken back while a person's ladder
   (the pearls' own rules, the loop that must be one, and on Expert a short what-if) still finishes it, needing exactly the tier's
   deepest step; an exhaustive count proves one loop, and an independent solver that decides every edge in reading order agrees.
+- **Loop** — a random loop grown on the dots, every square numbered from it, then numbers taken back while a person's ladder
+  (each number's count, its corners, the loop that must be one, and on Expert a short what-if) still finishes it, needing
+  exactly the tier's deepest step; an exhaustive count proves one loop, and an independent solver that colours squares in or
+  out agrees.
 - **Links** — the board is a random cover of the grid by paths that never run beside themselves, their ends the numbers;
   it is kept only if a person's ladder (a line's end with one way on, a square with two ways in, which pairs can still
   reach a square, a way that would cut a pair off, and on Expert a short what-if) finishes it at the tier's depth, and an

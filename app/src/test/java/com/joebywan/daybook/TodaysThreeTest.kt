@@ -29,17 +29,18 @@ class TodaysThreeTest {
         val mid = ids.filter { it !in TodaysThree.QUICK && it !in TodaysThree.WORDS }
         tailrec fun gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)
         val sizes = listOf(TodaysThree.QUICK.size, mid.size, TodaysThree.WORDS.size)
-        assertEquals(listOf(11, 14, 9), sizes)
-        assertTrue(sizes.indices.all { i -> sizes.indices.all { j -> i == j || gcd(sizes[i], sizes[j]) == 1 } })
-        val days = (0 until 1001).map { TodaysThree.of(LocalDate.fromEpochDays(day.toEpochDays() + it)) }
-        assertEquals("no set repeats in 1,001 days", 1001, days.toSet().size)
+        assertEquals(listOf(11, 15, 9), sizes)
+        // 15 shares 3 with the words' 9, so the mid-weight slot steps one more each time the 99-day quick-and-words cycle
+        // comes round ([TodaysThree.of]): no set repeats within a year, and at each turn one puzzle's gap at most doubles.
+        assertTrue(listOf(0 to 2, 1 to 0).all { (i, j) -> gcd(sizes[i], sizes[j]) == 1 })
+        val days = (0 until 365).map { TodaysThree.of(LocalDate.fromEpochDays(day.toEpochDays() + it)) }
+        assertEquals("no set repeats in a year", 365, days.toSet().size)
         ids.forEach { id ->
             val on = days.indices.filter { id in days[it] }
             val gap = on.zipWithNext { a, b -> b - a }.max()
-            assertTrue("$id waits $gap days", gap <= 14)
+            assertTrue("$id waits $gap days", gap <= 2 * sizes[1])
         }
-        // A new puzzle joining the mid-weight list makes it 14, sharing 2 with the words: the slot then skips, and still
-        // no set repeats within a year.
+        // Another puzzle joining the mid-weight list (16, coprime again): still no set repeats within a year.
         val more = ids + "new"
         assertEquals(365, (0 until 365).map { TodaysThree.of(LocalDate.fromEpochDays(day.toEpochDays() + it), more) }.toSet().size)
     }

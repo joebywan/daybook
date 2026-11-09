@@ -27,6 +27,7 @@ import com.joebywan.daybook.puzzles.LampsState
 import com.joebywan.daybook.puzzles.TallyLogic
 import com.joebywan.daybook.puzzles.TallyState
 import com.joebywan.daybook.puzzles.PearlsState
+import com.joebywan.daybook.puzzles.LoopState
 import com.joebywan.daybook.puzzles.LinksState
 import com.joebywan.daybook.puzzles.WhosWhoState
 import com.joebywan.daybook.puzzles.WhosWhoGraphState
@@ -140,6 +141,7 @@ class StateSerializationTest {
             state.withMark(it, LampsLogic.LAMP_MARK).withMark(state.walls.indexOf(LampsLogic.WHITE, it + 1), LampsLogic.CROSS)
         }
         is PearlsState -> state.drag(listOf(0, 1, 1 + state.size)).tap(state.size * (state.size - 1))
+        is LoopState -> state.drag(listOf(0, 1, 2 + state.size)).tap(state.size * (state.size + 1))
         is LinksState -> (0 until state.size * state.size - 1).first { it % state.size < state.size - 1 && state.ends[it] == '.' && state.ends[it + 1] == '.' }
             .let { state.drag(listOf(it, it + 1)) }
         is WhosWhoState -> state.mark(0, 0, 1, tick = true).mark(1, 1, 0, tick = false).strike(0)

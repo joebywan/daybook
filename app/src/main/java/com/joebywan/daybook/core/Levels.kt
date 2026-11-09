@@ -65,6 +65,7 @@ object Levels {
         "mini",
         "hexwords",
         "dwindle",
+        "loop",
         "links",
     )
 

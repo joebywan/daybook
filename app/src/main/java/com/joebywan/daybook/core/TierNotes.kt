@@ -73,6 +73,7 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
     "lamps" to listOf("7x7 grid", "10x10 grid", "12x12 grid"),
     "codeword" to listOf("7x7 grid", "9x9 grid", "11x11 grid"),
     "pearls" to listOf("6x6 grid", "8x8 grid", "10x10 grid"),
+    "loop" to listOf("5x5 grid", "7x7 grid", "10x10 grid"),
     "links" to listOf("6x6 grid, 5 to 7 pairs", "8x8 grid, 7 to 9 pairs", "10x10 grid, 9 to 12 pairs"),
     "whoswho" to listOf(
         "4 people, 1 thing each, clues name the person",

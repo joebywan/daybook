@@ -206,6 +206,11 @@ private val NOTES: Map<String, List<String>> = mapOf(
         "A square with only one way in is never on the loop.",
         "Never join the two ends of a line unless it is the whole loop.",
     ),
+    "loop" to listOf(
+        "A 3 in a corner of the board takes both sides at that corner.",
+        "A 1 in a corner of the board takes neither side there.",
+        "A dot takes no line or two, never one or three.",
+        "Never join the two ends of a line unless it is the whole loop.",
     "links" to listOf(
         "A corner square always has a path turning through it.",
         "A square with only two free neighbours joins both of them.",

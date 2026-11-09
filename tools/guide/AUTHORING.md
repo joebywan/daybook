@@ -63,7 +63,7 @@ caption: One or two sentences saying what the board shows. Required.
 - `corners` small text in a square's top-left (a cage total, a region's rule).
 - `solid` squares filled dark in both schemes, their text reversed (a wall, a hidden square, a filled square of a picture).
 - `tiles` marks on a guess: `r1c1=right`, `near` or `out`, each its own shape as well as a colour.
-- `draw` how a token is drawn: `spokes` (a pipe tile, its arms named from `urdl`), `discs` (a number in a disc, so lines pass behind it), `pearls` (`b` and `w`).
+- `draw` how a token is drawn: `spokes` (a pipe tile, its arms named from `urdl`), `discs` (a number in a disc, so lines pass behind it), `pearls` (`b` and `w`), `dots` (a dot at every corner, and `lines` and `moves` run along the squares' sides from dot to dot: `r1c1` is the top-left corner of square r1c1, up to one past the last row and column).
 - `top` and `left` label the columns and rows, outside the grid, one space-separated label each (`top: a b c d e f g h`, `left: Ann Ben`). A narrow board with labels gets side margins.
 - In `regions`, `.` is a square in no region: no tint, and no walls between such squares (a clue margin).
 - A token over three characters is drawn small, and `_` inside a longer token is a space (`r3c1=not_4`).

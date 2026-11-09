@@ -233,6 +233,12 @@ private val NAMES: Map<String, Map<String, String>> = mapOf(
         "small-loop" to "the loop that must be one",
         "what-if" to "a what-if",
     ),
+    "loop" to linkedMapOf(
+        "count" to "a number's count",
+        "one-way" to "a line with one way on",
+        "dead-end" to "a dead end",
+        "corner" to "a number and its corners",
+        "small-loop" to "the loop that must be one",
     "links" to linkedMapOf(
         "one-way" to "a line's end with one way on",
         "two-ways" to "a square with two ways in",
