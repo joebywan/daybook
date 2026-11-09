@@ -200,6 +200,27 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 - [ ] **Snap depth gate:** not possible yet. Snap has no teacher (a whole-board deducer leaves the real choices to a
   13-joint what-if; `docs/TEACHING.md`).
 
+## The five puzzles added 2026-11-09 (Loop, Thermometers, Unblock, Equation, Links)
+
+Built in parallel and merged in sequence (1.41-1.45). Open items they left:
+
+- [ ] **None was rendered.** The build container could not build the web app (yarn's fetch from codeload.github.com was
+  refused), so no board was seen in Chromium or WebKit, at 375x537 or on a tall screen, light or dark, and none on the
+  emulator. Each sizes from both axes in code. Render all five with `tools/render/render.py` and check them on a phone. *M.*
+- [ ] **Browser generation times not measured** for any of them (CLAUDE.md quotes Chromium / WebKit for every other
+  puzzle). The JVM worst cases to check first: Unblock Expert 0.9 s (its agent expects 2-3 s on the web, on one day in a
+  few hundred), Links Expert 0.78 s, Loop Expert 0.55 s. *S-M.*
+- [ ] **Equation's tiers are thin.** Length barely changes guesses needed (2.7 / 3.1 / 3.0); Hard and Expert differ by
+  24 vs 28 answers left after the first guess. Five guesses on Expert lost 2 boards a year to a hint-following player.
+  Find a measure that separates them (e.g. operators allowed), or accept it. *M.*
+- [ ] **Home tile colours by grid position?** The accent set is full; Equation shares Lexicon's and Links Pearls'
+  (`AccentSpacingTest.SHARED`). The owner suggested tiles coloured by their place on the grid so neighbours never match;
+  asked whether a tile and its board may then differ in colour. Waiting on that answer. *M.*
+- [ ] **Codebreaker on the shared guess marker.** Equation lifted Lexicon's marking into `core/GuessMarks.kt`; Tower keeps
+  its own peg scoring (a count is not a per-slot mark). Look at whether its teacher can share the rest. *S.*
+- [ ] **Links' Training passes only the hint's own line** (`every = null`): `LinksTeacher` has no "every instance of this
+  technique" function yet, so another correct instance plays on rather than passing. *S.*
+
 ## Future puzzle candidates
 
 - **Dwindle's marked-letter daily scoring mode.** The player's game also has a daily mode scored on letters marked on the board. Left out of the first
