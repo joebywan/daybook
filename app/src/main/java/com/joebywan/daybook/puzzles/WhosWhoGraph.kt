@@ -204,6 +204,13 @@ object WhosWhoGraph : PuzzleType {
 
     private fun title(b: WhosWhoState, category: Int) = if (category == 0) "Person" else WhosWhoWords.HEADERS[b.groups[category - 1]]
 
+    /** A category's drawn mark in its column's ink, named for a screen reader. */
+    @Composable
+    private fun Header(b: WhosWhoState, category: Int, dark: Boolean, modifier: Modifier) = WhosWhoIcons.Icon(
+        if (category == 0) WhosWhoIcons.PERSON else b.groups[category - 1],
+        BoardHues.ink(HUES[category % HUES.size], dark), dark, title(b, category), modifier,
+    )
+
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
         val s = state as WhosWhoGraphState
@@ -233,7 +240,7 @@ object WhosWhoGraph : PuzzleType {
                 ) {
                     Chip("Links", view < 0 && grouped == 0) { view = -1; grouped = 0 }
                     Chip("Group", view < 0 && grouped == 1) { view = -1; grouped = 1 }
-                    for (c in 0..b.columns) Chip(title(b, c), view == c) { view = c }
+                    for (c in 0..b.columns) Chip(null, view == c, { Header(b, c, dark, Modifier.size(20.dp)) }) { view = c }
                 }
                 Box(Modifier.weight(1.5f).fillMaxWidth().widthIn(max = 560.dp)) {
                     if (view < 0) {
@@ -260,7 +267,7 @@ object WhosWhoGraph : PuzzleType {
     }
 
     @Composable
-    private fun Chip(label: String, on: Boolean, onClick: () -> Unit) {
+    private fun Chip(label: String?, on: Boolean, icon: @Composable () -> Unit = {}, onClick: () -> Unit) {
         val scheme = MaterialTheme.colorScheme
         Box(
             Modifier
@@ -270,7 +277,8 @@ object WhosWhoGraph : PuzzleType {
                 .padding(horizontal = 10.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(label, fontSize = 13.sp, color = if (on) scheme.onSecondaryContainer else scheme.onSurfaceVariant, maxLines = 1)
+            if (label == null) icon()
+            else Text(label, fontSize = 13.sp, color = if (on) scheme.onSecondaryContainer else scheme.onSurfaceVariant, maxLines = 1)
         }
     }
 
@@ -350,16 +358,7 @@ object WhosWhoGraph : PuzzleType {
                     animateOffsetAsState(centre(i / n, row[i]), if (reduced) snap() else spring(dampingRatio = 0.8f, stiffness = 300f), label = "item")
                 }
             }
-            for (c in 0 until cols) {
-                Text(
-                    title(b, c),
-                    Modifier.width(cellW).offset(x = cellW * c),
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
+            for (c in 0 until cols) Header(b, c, dark, Modifier.width(cellW).height(HEADER).offset(x = cellW * c).padding(vertical = 2.dp))
             val ink = scheme.onSurface
             val faint = scheme.onSurfaceVariant
             val error = scheme.error
@@ -452,7 +451,7 @@ object WhosWhoGraph : PuzzleType {
         Column(Modifier.fillMaxSize().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (c in listOf(base) + others) {
-                    Text(title(b, c), Modifier.weight(1f), fontSize = 12.sp, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                    Header(b, c, dark, Modifier.weight(1f).height(18.dp))
                 }
             }
             for (slot in 0 until n) {
