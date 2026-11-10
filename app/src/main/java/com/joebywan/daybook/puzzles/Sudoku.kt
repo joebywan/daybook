@@ -26,6 +26,9 @@ import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.theme.ArcadeBoard
 import com.joebywan.daybook.ui.theme.ArcadeFill
+import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.material3.MaterialTheme
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.BoardGlyph
 import com.joebywan.daybook.ui.style
@@ -526,6 +529,11 @@ object Sudoku : PuzzleType {
     @Composable
     override fun Preview(modifier: Modifier) {
         val a = ArcadeBoard.current
+        // Classic (issue #418): as before Arcade, the variant's squares, the selection in hue A, entered digits in hue B.
+        val classic = classicLook()
+        val scheme = MaterialTheme.colorScheme
+        val dark = BoardHues.isDark(scheme)
+        val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
         BoxWithConstraints(modifier) {
             // Sized from both constraints, like Mosaic's board: a tile that is ever handed a
             // shorter box than it is wide should shrink rather than draw its bottom row outside.
@@ -534,7 +542,10 @@ object Sudoku : PuzzleType {
                 for (c in 0 until 3) {
                     val i = r * 3 + c
                     val given = PREVIEW_GIVENS[i]
-                    val fill = when {
+                    val fill = if (classic) {
+                        val ground = if (i == PREVIEW_SELECTED) BoardHues.mark(hueA).copy(alpha = 0.55f) else scheme.surfaceVariant
+                        ArcadeFill(ground, ground, if (given) scheme.onSurface else BoardHues.ink(hueB, dark))
+                    } else when {
                         i == PREVIEW_SELECTED -> a.selected
                         given -> ArcadeFill(a.given, a.given, a.givenInk)
                         PREVIEW_DIGITS[i] != 0 -> a.control
@@ -573,6 +584,7 @@ object Sudoku : PuzzleType {
             s = s,
             conflicts = s.conflicts(),
             interactive = interactive,
+            accent = accent,
             onSelect = { onState(s.select(it)) },
             onDeselect = { onState(withoutSelection(s)) },
             onEnter = { cell, digit, notesMode ->

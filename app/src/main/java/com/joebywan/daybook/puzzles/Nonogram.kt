@@ -1,6 +1,7 @@
 package com.joebywan.daybook.puzzles
 
 import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.theme.arcadeGlow
@@ -104,6 +105,13 @@ internal val NONOGRAM_FILLS_DARK = listOf(
     0xFFB14DFF to 0xFFFF2D9B, 0xFF00C2FF to 0xFF00E08A, 0xFFFF7A00 to 0xFFFF2D9B,
     0xFF9B5CFF to 0xFF00AEFF, 0xFF00E070 to 0xFF00A8FF, 0xFFFF2D87 to 0xFFFF8A00,
     0xFF4D7CFF to 0xFFC84DFF,
+)
+
+/** The Classic look's pairs (issue #418), as before Arcade: the same in both schemes, each board's picked by the same index rule. */
+private val NONOGRAM_FILLS_CLASSIC = listOf(
+    0xFF2E9E8F to 0xFFE0A030, 0xFF3E7CB1 to 0xFFD0507F, 0xFFE0703F to 0xFF7A52C8,
+    0xFF3FA55A to 0xFF2F9CC8, 0xFFD6A026 to 0xFFC0453F, 0xFF8A55C8 to 0xFF30B0A0,
+    0xFFCF4F7A to 0xFF3E7CB1,
 )
 
 /** A line that shows its numbers. There is no green among the board tokens, and only this board bands a finished line. */
@@ -321,6 +329,8 @@ object Nonogram : PuzzleType {
         val n = s.width * s.height
         val arcade = ArcadeBoard.of(scheme)
         val dark = BoardHues.isDark(scheme)
+        // Classic (issue #418): as before Arcade, plain squares, flat fills, a light cross, the outline's grid lines.
+        val classic = classicLook()
 
         // Squares.
         for (r in 0 until s.height) {
@@ -328,10 +338,21 @@ object Nonogram : PuzzleType {
                 val x = c * u
                 val y = r * u
                 val mark = s.cells[r * s.width + c]
-                drawRect(if (mark == NonogramLogic.CROSSED) arcade.given else arcade.square, Offset(x, y), Size(u, u))
+                drawRect(if (classic) scheme.surface else if (mark == NonogramLogic.CROSSED) arcade.given else arcade.square, Offset(x, y), Size(u, u))
                 feelSquare(feel, r * s.width + c, Offset(x, y), Size(u, u), accent) {
-                    when (mark) {
-                        NonogramLogic.FILLED -> {
+                    when {
+                        classic && mark == NonogramLogic.FILLED -> drawRoundRect(
+                            lerp(palette.first, palette.second, (r + c).toFloat() / (s.width + s.height - 2).coerceAtLeast(1)),
+                            Offset(x + u * 0.07f, y + u * 0.07f), Size(u * 0.86f, u * 0.86f), CornerRadius(u * 0.14f),
+                        )
+                        classic && mark == NonogramLogic.CROSSED -> {
+                            val a = u * 0.30f
+                            val stroke = maxOf(u * 0.09f, 1.2f)
+                            val ink = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            drawLine(ink, Offset(x + a, y + a), Offset(x + u - a, y + u - a), stroke, StrokeCap.Round)
+                            drawLine(ink, Offset(x + u - a, y + a), Offset(x + a, y + u - a), stroke, StrokeCap.Round)
+                        }
+                        mark == NonogramLogic.FILLED -> {
                             val t = (r + c).toFloat() / (s.width + s.height - 2).coerceAtLeast(1)
                             val at = Offset(x + u * 0.07f, y + u * 0.07f)
                             val side = Size(u * 0.86f, u * 0.86f)
@@ -341,7 +362,7 @@ object Nonogram : PuzzleType {
                             drawRoundRect(ArcadeFill(lerp(palette.first, palette.second, t * 0.55f), to, arcade.squareInk).brush(at, side), at, side, CornerRadius(u * 0.14f))
                             drawRoundRect(Color.White.copy(alpha = 0.24f), Offset(at.x + u * 0.1f, at.y + u * 0.07f), Size(side.width - u * 0.2f, u * 0.17f), CornerRadius(u * 0.085f))
                         }
-                        NonogramLogic.CROSSED -> {
+                        mark == NonogramLogic.CROSSED -> {
                             val a = u * 0.27f
                             val stroke = maxOf(u * 0.13f, 1.6f)
                             drawLine(arcade.givenInk, Offset(x + a, y + a), Offset(x + u - a, y + u - a), stroke, StrokeCap.Round)
@@ -356,6 +377,10 @@ object Nonogram : PuzzleType {
         val thin = maxOf(u * 0.03f, 1f) / zoom
         fun gridLine(i: Int, from: Offset, to: Offset) {
             val heavy = i % 5 == 0
+            if (classic) {
+                drawLine(if (heavy) scheme.onSurfaceVariant.copy(alpha = 0.7f) else scheme.outline, from, to, if (heavy) thin * 2f else thin)
+                return
+            }
             // Dark's translucent frame needs doubling to tell the heavy lines from the thin by more than width.
             drawLine(if (heavy && dark) arcade.frame.copy(alpha = arcade.frame.alpha * 2.5f) else arcade.frame, from, to, if (heavy) thin * 2.5f else thin)
         }
@@ -412,10 +437,36 @@ object Nonogram : PuzzleType {
         val n = s.width * s.height
         val arcade = ArcadeBoard.of(scheme)
         val doneFill = if (BoardHues.isDark(scheme)) NONOGRAM_DONE_DARK else NONOGRAM_DONE_LIGHT
+        val classic = classicLook()
 
         // [centre] places a number by how many numbers come after it in the line.
         fun clues(line: Int, band: Offset, bandSize: Size, centre: (after: Int) -> Offset) {
             val lit1 = lit && (n + line in highlight.strong || n + line in highlight.soft)
+            if (classic) {
+                // Classic, as before Arcade: a finished line's numbers fade on a green band; an impossible line's stay full
+                // strength in the error ink (no band under them, which would cut its contrast), boxed in a dashed outline.
+                if (lit1) drawRoundRect(overlay.glow.copy(alpha = 0.16f * overlay.pulse), band, bandSize, CornerRadius(u * 0.2f))
+                if (done[line] && !bad[line]) drawRoundRect(scheme.primary.copy(alpha = 0.16f), band, bandSize, CornerRadius(u * 0.2f))
+                if (bad[line]) {
+                    val w = maxOf(u * 0.06f, 1.5f)
+                    drawRoundRect(
+                        scheme.error, band + Offset(w, w) / 2f, Size(bandSize.width - w, bandSize.height - w), CornerRadius(u * 0.2f),
+                        style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(w * 2f, w * 1.5f))),
+                    )
+                }
+                val ink = when {
+                    bad[line] -> scheme.error
+                    done[line] -> scheme.onSurface.copy(alpha = 0.4f)
+                    else -> scheme.onSurface
+                }
+                val numbers = text[line]
+                for ((k, layout) in numbers.withIndex()) {
+                    val (cx, cy) = centre(numbers.size - 1 - k)
+                    val alpha = if (lit && !lit1) 0.35f else 1f
+                    drawText(layout, ink.copy(alpha = ink.alpha * alpha), Offset(cx - layout.size.width / 2f, cy - layout.size.height / 2f))
+                }
+                return
+            }
             // Three states that differ by more than hue. Inset, so each line's band stands apart from the next.
             val m = u * 0.03f
             val at = band + Offset(m, m)
@@ -477,7 +528,7 @@ object Nonogram : PuzzleType {
         BooleanArray(clues.size) { NonogramLogic.lineImpossible(clues[it], s.cells, NonogramLogic.lineCells(s.width, s.height, it)) }
 
     private fun paletteFor(s: NonogramState, dark: Boolean): Pair<Color, Color> =
-        (if (dark) NONOGRAM_FILLS_DARK else NONOGRAM_FILLS_LIGHT).let { it[(s.solution.hashCode() and Int.MAX_VALUE) % it.size] }
+        (if (classicLook()) NONOGRAM_FILLS_CLASSIC else if (dark) NONOGRAM_FILLS_DARK else NONOGRAM_FILLS_LIGHT).let { it[(s.solution.hashCode() and Int.MAX_VALUE) % it.size] }
             .let { Color(it.first) to Color(it.second) }
 
     @Composable
@@ -510,11 +561,13 @@ object Nonogram : PuzzleType {
                 contentAlignment = Alignment.Center,
             ) {
                 val g = Geometry(s, clues, maxWidth, maxHeight, density)
-                val text = remember(s.solution, g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Bold) }
+                // Classic's clues are the role's own weight, and never thin (issue #418).
+                val classic = classicLook()
+                val text = remember(s.solution, g.u, classic) { measureClues(measurer, clues, g.u, density, if (classic) BoardGlyph.CLUE.weight else FontWeight.Bold) }
                 val thin = remember(s.solution, g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Normal) }
 
                 val shown = taps.shown.swept(sweep.value)
-                val palette = remember(s.solution, arcade) { paletteFor(s, arcade === ArcadeBoard.Dark) }
+                val palette = remember(s.solution, arcade) { paletteFor(s, BoardHues.isDark(scheme)) }
                 // Lines finished by their clues, on the board as handed (not the sweep still under the finger).
                 val units = remember(s.solution) { lineUnits(s.width, s.height) }
                 val done = linesDone(s, clues)
@@ -553,15 +606,17 @@ object Nonogram : PuzzleType {
                                     translationY = view.value.offset.y
                                 }
                                 // The cursor is drawn with the grid, as a ring of two colours, so the shared one stays clear.
-                                .penGrid(taps, interactive, pen, g.u, sweep, cursor, Color.Transparent, sweeps = !view.value.zoomed)
-                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, vivid(accent), view.value.scale, cursor.value.takeIf { interactive }) },
+                                // Classic's cursor is the pen grid's own, in the primary colour, as before Arcade.
+                                .penGrid(taps, interactive, pen, g.u, sweep, cursor, if (classic) scheme.primary else Color.Transparent, sweeps = !view.value.zoomed)
+                                .drawBehind { drawGrid(shown, g.u, scheme, palette, HintGlow(highlight, glow, pulse.value), feel, vivid(accent), view.value.scale, cursor.value.takeIf { interactive && !classic }) },
                         )
                     }
                     if (view.value.zoomed) {
                         Box(g.corner, contentAlignment = Alignment.Center) {
                             IconButton(onClick = { view.value = GridView() }) {
                                 // Inside the button's own box, so it keeps its size and only its face changes.
-                                Icon(
+                                if (classic) Icon(Icons.Filled.ZoomOutMap, contentDescription = "Show the whole board", tint = scheme.onSurfaceVariant)
+                                else Icon(
                                     Icons.Filled.ZoomOutMap,
                                     contentDescription = "Show the whole board",
                                     tint = arcade.control.ink,
@@ -573,9 +628,20 @@ object Nonogram : PuzzleType {
                 }
             }
 
-            PenRow(s.pens, pen, interactive, vivid(accent), { if (it == NonogramLogic.FILLED) "Fill" else "Cross" }, { pen = it }, arcade = arcade) { option ->
+            val classicPens = classicLook()
+            PenRow(s.pens, pen, interactive, vivid(accent), { if (it == NonogramLogic.FILLED) "Fill" else "Cross" }, { pen = it }, arcade = arcade.takeIf { !classicPens }) { option ->
                 val chosen = option == pen
-                if (option == NonogramLogic.FILLED) {
+                if (classicPens) {
+                    // Classic's pens, as before Arcade: the accent's square, a plain cross.
+                    if (option == NonogramLogic.FILLED) {
+                        drawRoundRect(vivid(accent), Offset(2f, 2f), Size(size.width - 4f, size.height - 4f), CornerRadius(size.width * 0.18f))
+                    } else {
+                        val a = size.width * 0.2f
+                        val ink = scheme.onSurface.copy(alpha = 0.85f)
+                        drawLine(ink, Offset(a, a), Offset(size.width - a, size.height - a), 3f, StrokeCap.Round)
+                        drawLine(ink, Offset(size.width - a, a), Offset(a, size.height - a), 3f, StrokeCap.Round)
+                    }
+                } else if (option == NonogramLogic.FILLED) {
                     val at = Offset(2f, 2f)
                     val side = Size(size.width - 4f, size.height - 4f)
                     val corner = CornerRadius(size.width * 0.18f)
@@ -613,7 +679,8 @@ object Nonogram : PuzzleType {
         val done = remember { linesDone(motif, clues) }
         BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
             val g = Geometry(motif, clues, maxWidth, maxHeight, density)
-            val text = remember(g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Bold) }
+            val classic = classicLook()
+            val text = remember(g.u, classic) { measureClues(measurer, clues, g.u, density, if (classic) BoardGlyph.CLUE.weight else FontWeight.Bold) }
             val thin = remember(g.u) { measureClues(measurer, clues, g.u, density, FontWeight.Normal) }
             Canvas(g.box) {
                 translate(g.gridX, g.gridY) { drawGrid(motif, g.u, scheme, paletteFor(motif, BoardHues.isDark(scheme))) }
