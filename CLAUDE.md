@@ -210,6 +210,8 @@ Hashiwokakero as chemistry: bond atoms with single or double lines, no crossings
   year's worst is 10 / 39 / 71 draws. A board ships only if the gate holds and `countSolutions` (exhaustive, no budget) proves one
   answer; `AtomsTeachingTest` re-checks with its own atom-by-atom enumerator. `lastResort` is a three-atom chain no year reaches.
 - **`solved` checks the rules**; a mistake is a line with more bonds than the stored answer, sound because the answer is unique.
+- **A full board in pieces says so** (`AtomsState.fullButSplit`, issue #422): every atom at its number but more than one molecule
+  looked finished and was refused without a word, so after a 1 s settle a line always laid out under the board says how many molecules.
 
 ## Nonogram
 
