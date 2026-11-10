@@ -586,6 +586,23 @@ fun rememberHaptics(enabled: Boolean): Haptics = remember(enabled) {
     if (!enabled) Haptics.None else Haptics(tick = { vibrate(8) }, bump = { vibrate(50) }, success = { vibratePattern() }, thump = { vibrate(70) })
 }
 
+/** The browser's family from its user agent, for a bug report: Edge, Firefox, Chrome, Safari, else "a browser". */
+private fun browserName(): String = js("""(() => {
+    const ua = navigator.userAgent;
+    if (/Edg\//.test(ua)) return 'Edge';
+    if (/Firefox\/|FxiOS\//.test(ua)) return 'Firefox';
+    if (/Chrome\/|CriOS\//.test(ua)) return 'Chrome';
+    if (/Safari\//.test(ua)) return 'Safari';
+    return 'a browser';
+})()""")
+
+/**
+ * What a bug report needs to say which build it is: `version.txt` and the commit the page was built from
+ * ([WEB_VERSION], written by web/build.gradle.kts), and the browser. Shown in Settings to select and copy.
+ */
+@Composable
+fun rememberAppVersion(): String = remember { "Daybook $WEB_VERSION on the web (${browserName()})" }
+
 /** The web has no store to rate in, so the link is a star on GitHub. */
 @Composable
 fun rememberRateLink(): RateLink {

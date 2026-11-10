@@ -1,0 +1,55 @@
+name: Report a problem
+description: Something in Daybook went wrong, looked wrong, or didn't work as you expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Your version is in Daybook's Settings, under Help, in the "Version" row:
+        press and hold it to copy, then paste it below.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Daybook version
+      description: From Settings, Help, Version (for example "Daybook 1.45.612 on Android 14 (Google Pixel 7)").
+      placeholder: Daybook 1.45.612 on Android 14 (Google Pixel 7)
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version, or browser
+      description: For example "Galaxy S23, Android 14", or "Safari on an iPad" for the web version.
+    validations:
+      required: true
+  - type: input
+    id: puzzle
+    attributes:
+      label: Puzzle
+      description: Which puzzle, if it was in one (for example Sudoku, Lexicon, Arrows).
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Tier
+      options:
+        - Standard
+        - Hard
+        - Expert
+        - Not in a puzzle
+  - type: input
+    id: board
+    attributes:
+      label: Which board?
+      description: Daily (and its date), Random, a Level and its number, or Training.
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: A screenshot helps a lot. Drag it in here, or paste it.

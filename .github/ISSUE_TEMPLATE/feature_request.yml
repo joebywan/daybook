@@ -1,0 +1,26 @@
+name: Suggest something
+description: An idea for Daybook: a puzzle, a setting, a change to how something works.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What you'd like, and what it would make better for you.
+    validations:
+      required: true
+  - type: input
+    id: puzzle
+    attributes:
+      label: Puzzle
+      description: Which puzzle it's about, if any.
+  - type: input
+    id: version
+    attributes:
+      label: Daybook version
+      description: From Settings, Help, Version (press and hold to copy). Optional.
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot or sketch
+      description: Optional. Drag it in here, or paste it.

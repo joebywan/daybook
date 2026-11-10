@@ -44,6 +44,10 @@ import com.joebywan.daybook.ui.home.rememberLaunchPreferences
 import kotlinx.coroutines.launch
 import com.joebywan.daybook.platform.VIBRATION_NOTE
 import com.joebywan.daybook.platform.rememberRateLink
+import com.joebywan.daybook.platform.rememberAppVersion
+import com.joebywan.daybook.platform.rememberOpenUrl
+import com.joebywan.daybook.ui.play.GUIDE_URL
+import androidx.compose.foundation.text.selection.SelectionContainer
 import com.joebywan.daybook.ui.home.SegmentedControl
 import com.joebywan.daybook.ui.theme.Appearance
 
@@ -120,6 +124,7 @@ fun SettingsScreen(
                     onChecked = onTestPuzzles,
                 )
             }
+            item { HelpRows() }
             item { RateRow(rateLink) }
             item { Credits() }
         }
@@ -328,6 +333,37 @@ private fun SettingSwitch(
             CardText(title, detail)
         }
         Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+/**
+ * Help, under its own heading: the player guide's index, the issues board, and the version a report should name (in a
+ * [SelectionContainer], so it can be held and copied). Links only; never offered from a hint or a walkthrough.
+ */
+@Composable
+private fun HelpRows() {
+    val scheme = MaterialTheme.colorScheme
+    val openUrl = rememberOpenUrl()
+    val version = rememberAppVersion()
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            "Help",
+            style = MaterialTheme.typography.titleLarge,
+            color = scheme.onBackground,
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 12.dp),
+        )
+        LinkRow(
+            "Player guide",
+            "How every puzzle works, with worked examples of the techniques the hints teach. Opens in your browser.",
+        ) { openUrl(GUIDE_URL) }
+        LinkRow(
+            "Report a problem or suggest something",
+            "On Daybook's issues board on GitHub. Please say your version (below), your device or browser, and the " +
+                "puzzle and tier; a screenshot helps.",
+        ) { openUrl(ISSUES_URL) }
+        Column(Modifier.fillMaxWidth().card(scheme.surface).padding(14.dp)) {
+            SelectionContainer { Column { CardText("Version", "$version\nPress and hold to copy.") } }
+        }
     }
 }
 
