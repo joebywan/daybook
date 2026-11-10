@@ -425,3 +425,11 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
 
 ## Player guide
 
+
+- **Link the guide from every puzzle and from the app as a whole (the owner, 2026-11-10).** Today `guideUrl` is reached only
+  from a puzzle's rules sheet and the Techniques page. Check every puzzle's rules sheet actually shows it (Android and web),
+  and add one general link to the guide's index (`knowhowit.com.au/daybook/guide/`) somewhere a player looks for help, such
+  as Settings beside the GitHub row (`ui/settings/RateRow.kt`). Still never from a hint or a walkthrough.
+- **A link to the issues board so players can report a problem (the owner, 2026-11-10).**
+  `https://github.com/joebywan/daybook/issues`, as a Settings row ("Report a problem or suggest something") opened the way
+  the GitHub row is. Perhaps an issue template so reports arrive with the version and device.
