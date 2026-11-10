@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.toSize
 import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.Look
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.arcadeLift
 import com.joebywan.daybook.ui.theme.arcadePageBrush
@@ -208,6 +209,9 @@ fun HomeScreen(
     customOrder: Boolean,
     onOrder: (List<String>) -> Unit,
     resume: () -> Pair<PuzzleType, Difficulty>?,
+    /** Whether the player has chosen a look (issue #418); until they have, [LookOffer] asks once under the grid. */
+    lookAsked: Boolean = true,
+    onLook: (Look) -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
     val doneToday = remember(completions, today) {
@@ -349,6 +353,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
                 )
             }
+            if (!lookAsked) item { LookOffer(onLook) }
             item { ReminderOffer(completions, today) }
             item { GetTheAppCard() }
         }

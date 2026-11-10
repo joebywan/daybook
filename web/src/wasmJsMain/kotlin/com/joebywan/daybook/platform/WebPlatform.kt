@@ -188,17 +188,20 @@ fun BackButton(onBack: () -> Unit) {
 
 /**
  * The page behind the canvas (the safe-area margins, the loading note's colours) and the browser's
- * theme-color, set to the theme the app chose rather than the system's, so a Dark choice on a light
- * device has no light edges. index.html makes the same choice from storage before the app loads.
+ * theme-color, set to the theme and look the app chose rather than the system's, so a Dark choice on a light
+ * device has no light edges, and Classic's parchment never sits round Arcade's indigo or the other way round.
+ * index.html makes the same choice from storage before the app loads.
  */
-private fun setPageTheme(dark: Boolean): Unit = js("""(() => {
+private fun setPageTheme(dark: Boolean, classic: Boolean): Unit = js("""(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = dark ? '#120D33' : '#F4EFFF');
+    document.documentElement.dataset.look = classic ? 'classic' : 'arcade';
+    const colour = classic ? (dark ? '#11201C' : '#F6F1E7') : (dark ? '#120D33' : '#F4EFFF');
+    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.content = colour);
 })()""")
 
 @Composable
-fun SystemBarsAppearance(darkTheme: Boolean) {
-    SideEffect { setPageTheme(darkTheme) }
+fun SystemBarsAppearance(darkTheme: Boolean, classic: Boolean) {
+    SideEffect { setPageTheme(darkTheme, classic) }
 }
 
 /**

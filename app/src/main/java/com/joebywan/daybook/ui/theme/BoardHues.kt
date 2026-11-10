@@ -16,8 +16,9 @@ private val vividCache = HashMap<Long, Color>()
 
 internal fun useVividScheme(dark: Boolean) { if (vividIsDark != dark) vividIsDark = dark }
 
-/** A puzzle's accent in the scheme now showing: see [vividFor]. */
+/** A puzzle's accent in the scheme now showing: see [vividFor]. The raw accent in the Classic look, as before Arcade. */
 fun vivid(accent: Long): Color {
+    if (classicLook()) return Color(accent)
     val dark = vividIsDark
     return vividCache.getOrPut(if (dark) accent or (1L shl 40) else accent) { vividFor(accent, dark) }
 }
@@ -72,8 +73,9 @@ object BoardHues {
     /** Hue in degrees, in table order. */
     val all = listOf(8f, 34f, 46f, 145f, 175f, 215f, 268f, 330f)
 
-    /** Cell or region background; carries `onSurface` text. */
+    /** Cell or region background; carries `onSurface` text. Classic keeps the old recipe, [pinnedFill]. */
     fun fill(hue: Float, dark: Boolean): Color {
+        if (classicLook()) return pinnedFill(hue, dark)
         // Green and Teal at .85 are fluorescent at this lightness (Regions read as highlighter), so they stop at .65.
         if (!dark) return Color.hsl(hue, if (hue in 130f..190f) .65f else .85f, .76f)
         // hsl(h, .62, .34), a hundredth darker at a time where onSurface would miss 4.5:1 on it (Gold, Green, Teal).
@@ -85,12 +87,13 @@ object BoardHues {
     /**
      * Text or a thin stroke on the surface: lightness .38 (light) or .64 (dark), stepped darker or lighter, a hundredth
      * at a time, until it reaches 4.5:1 against both the scheme's surface and its background. Amber, Gold, Green and Teal step
-     * in light, Violet in dark; the rest keep the table's value.
+     * in light, Violet in dark; the rest keep the table's value. Saturation .8 in Arcade, .55 in Classic (the old recipe).
      */
-    fun ink(hue: Float, dark: Boolean): Color {
-        val scheme = if (dark) DarkScheme else LightScheme
+    fun ink(hue: Float, dark: Boolean, classic: Boolean = classicLook()): Color {
+        val scheme = lookScheme(dark, classic)
+        val saturation = if (classic) .55f else .8f
         val steps = if (dark) 64..100 else 38 downTo 0
-        return steps.map { Color.hsl(hue, .8f, it / 100f) }
+        return steps.map { Color.hsl(hue, saturation, it / 100f) }
             .firstOrNull { contrast(it, scheme.surface) >= 4.5f && contrast(it, scheme.background) >= 4.5f }
             ?: if (dark) Color.White else Color.Black
     }
@@ -129,8 +132,8 @@ object BoardHues {
     fun onTint(accent: Color, ground: Color, ratio: Float = 4.5f, alpha: Float = 0.22f) =
         textOn(accent, accent.copy(alpha = alpha).compositeOver(ground), ratio)
 
-    /** A solid shape (token, path, dot), either scheme. */
-    fun mark(hue: Float) = Color.hsl(hue, .8f, .56f)
+    /** A solid shape (token, path, dot), either scheme. Classic keeps the old recipe, [pinnedMark]. */
+    fun mark(hue: Float) = if (classicLook()) pinnedMark(hue) else Color.hsl(hue, .8f, .56f)
 
     // The old recipes, for the token palettes pinned by CIEDE2000 (Sand, Tower, Lits, Mosaic), left as they ship.
     fun pinnedFill(hue: Float, dark: Boolean) = if (dark) Color.hsl(hue, .40f, .30f) else Color.hsl(hue, .62f, .76f)
@@ -147,7 +150,10 @@ object BoardHues {
      * least 4.5:1 (else the best of the three). Computed per fill, never one colour for all (a mid-tone can fail both
      * ink and white). Draw it at full alpha: transparency lowers the ratio this guarantees.
      */
-    fun onFill(fill: Color): Color = TEXT.firstOrNull { contrast(it, fill) >= 4.5f } ?: TEXT.maxBy { contrast(it, fill) }
+    fun onFill(fill: Color): Color {
+        val text = if (classicLook()) CLASSIC_TEXT else TEXT
+        return text.firstOrNull { contrast(it, fill) >= 4.5f } ?: text.maxBy { contrast(it, fill) }
+    }
 
     /** WCAG contrast ratio of two opaque colours. */
     fun contrast(a: Color, b: Color): Float {
@@ -203,4 +209,5 @@ object BoardHues {
     }
 
     private val TEXT = listOf(Color(0xFF21145F), Color.White, Color.Black)
+    private val CLASSIC_TEXT = listOf(Color(0xFF1B2F29), Color.White, Color.Black)
 }

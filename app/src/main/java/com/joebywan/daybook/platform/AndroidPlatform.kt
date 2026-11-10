@@ -98,7 +98,8 @@ fun BackButton(onBack: () -> Unit) = Unit
  * Bar colours come from enableEdgeToEdge().
  */
 @Composable
-fun SystemBarsAppearance(darkTheme: Boolean) {
+@Suppress("UNUSED_PARAMETER") // the look: Android's bars are see-through, so only the icons' light or dark matters
+fun SystemBarsAppearance(darkTheme: Boolean, classic: Boolean) {
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {

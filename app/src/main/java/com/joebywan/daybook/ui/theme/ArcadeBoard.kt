@@ -12,6 +12,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
@@ -23,6 +24,8 @@ import kotlin.math.sin
 
 // The Arcade look's shared colours: boards take them from [ArcadeBoard.current], Home's tiles from [ArcadeBoard.tile].
 // Nothing here is stored. Every pair is measured in ArcadeBoardTest, in both schemes. Web-safe: no android.*, no java.*.
+// In the Classic look ([classicLook]) [ArcadeBoard.of] hands out [ArcadeBoard.ClassicLight] / [ArcadeBoard.ClassicDark], flat
+// fills in the old schemes' own colours; the glow, the hard shadow and the page gradient draw nothing, and Home's tiles are flat.
 
 /** A two-stop diagonal fill and the [ink] that reads on all of it. [glow] is for [arcadeGlow]; null means none in this scheme. */
 class ArcadeFill(val from: Color, val to: Color, val ink: Color, val glow: Color? = null) {
@@ -87,7 +90,43 @@ class ArcadeBoard private constructor(
             letter = AmberDark,
         )
 
-        fun of(scheme: ColorScheme) = if (BoardHues.isDark(scheme)) Dark else Light
+        // Classic: flat, in the old schemes' colours (ClassicLightScheme / ClassicDarkScheme). The boards that Arcade restyled
+        // branch on [classicLook] and draw what they drew before; these are for what is shared (pens, segmented pills, keys).
+        val ClassicLight = ArcadeBoard(
+            frame = Color(0xFFB9AE99),
+            square = Color(0xFFFFFBF2),
+            squareInk = Color(0xFF11201C),
+            given = Color(0xFFE8E0D0),
+            givenInk = Color(0xFF11201C),
+            selected = ArcadeFill(Color(0xFFB06C1E), Color(0xFFB06C1E), Color.White),
+            selectedEdge = Color(0xFF11201C),
+            error = Color(0xFFAD4D39),
+            errorInk = Color.White,
+            control = ArcadeFill(Color(0xFF1F6F5C), Color(0xFF1F6F5C), Color.White),
+            letter = ArcadeFill(Color(0xFFE8E0D0), Color(0xFFE8E0D0), Color(0xFF11201C)),
+        )
+
+        val ClassicDark = ArcadeBoard(
+            frame = Color(0xFF3C5B53),
+            square = Color(0xFF1B2F29),
+            squareInk = Color(0xFFF6F1E7),
+            given = Color(0xFF24403A),
+            givenInk = Color(0xFFF6F1E7),
+            selected = ArcadeFill(Color(0xFFD08A33), Color(0xFFD08A33), Color(0xFF11201C)),
+            selectedEdge = Color(0xFFF6F1E7),
+            error = Color(0xFFD08271),
+            errorInk = Color(0xFF11201C),
+            control = ArcadeFill(Color(0xFF3F9E7F), Color(0xFF3F9E7F), Color(0xFF11201C)),
+            letter = ArcadeFill(Color(0xFF24403A), Color(0xFF24403A), Color(0xFFF6F1E7)),
+        )
+
+        fun of(scheme: ColorScheme) = of(BoardHues.isDark(scheme))
+
+        /** The token set of the look showing, light or [dark]. */
+        fun of(dark: Boolean) = when {
+            classicLook() -> if (dark) ClassicDark else ClassicLight
+            else -> if (dark) Dark else Light
+        }
 
         val current: ArcadeBoard
             @Composable @ReadOnlyComposable get() = of(MaterialTheme.colorScheme)
@@ -98,9 +137,12 @@ class ArcadeBoard private constructor(
          * A home tile from its puzzle's accent: the accent's hue, saturated, running to a second hue. Blues, violets and pinks
          * (and warm or teal hues in light that can take it) are deep enough for white; what would turn to mud that deep is bright
          * instead, under a dark ink. An accent's own saturation and luminance decide how far it runs, so neighbouring accents
-         * do not land on one tile.
+         * do not land on one tile. Classic's tile is the flat surface under its ink ([classicTile]).
          */
-        fun tile(accent: Color, dark: Boolean): ArcadeFill = tiles.getOrPut(accent to dark) {
+        fun tile(accent: Color, dark: Boolean): ArcadeFill = if (classicLook()) classicTile(dark) else arcadeTile(accent, dark)
+
+        /** [tile] in the Arcade look, whichever look is showing (for a swatch of it). */
+        fun arcadeTile(accent: Color, dark: Boolean): ArcadeFill = tiles.getOrPut(accent to dark) {
             val h = hueOf(accent)
             val s = saturationOf(accent)
             val spread = ((accent.luminance() - .18f) / .075f).coerceIn(0f, 1f) // where it sat in the accents' luminance band
@@ -130,6 +172,12 @@ class ArcadeBoard private constructor(
                     glow,
                 )
             }
+        }
+
+        /** Classic's home tile: the plain surface, the old schemes' ink; a solved one is tinted by its caller. */
+        fun classicTile(dark: Boolean): ArcadeFill {
+            val s = lookScheme(dark, classic = true)
+            return ArcadeFill(s.surface, s.surface, s.onSurface)
         }
 
         /** The most relative luminance white text can sit on at 4.5:1 is .183; this leaves a margin. */
@@ -163,6 +211,7 @@ class ArcadeBoard private constructor(
 
 /** A glow without a blur, for a canvas: stacked rings round a rounded rect. A translucent [color] sets its own strength; a solid one glows at half. */
 fun DrawScope.arcadeGlow(color: Color, topLeft: Offset, size: Size, corner: Float, reach: Dp = 6.dp) {
+    if (classicLook()) return // Classic has no glow.
     val full = if (color.alpha < 1f) color.alpha else .5f
     for ((share, part) in listOf(1f to .2f, .66f to .3f, .33f to .5f)) {
         val g = reach.toPx() * share
@@ -176,7 +225,7 @@ fun Modifier.arcadeGlow(color: Color, corner: Dp, reach: Dp = 6.dp) =
 
 /** Light's raised sticker edge, straight down with no blur; before the `clip`. */
 fun Modifier.arcadeHardShadow(corner: Dp, drop: Dp = 3.dp) =
-    drawBehind { drawRoundRect(HardShadow, Offset(0f, drop.toPx()), size, CornerRadius(corner.toPx())) }
+    drawBehind { if (!classicLook()) drawRoundRect(HardShadow, Offset(0f, drop.toPx()), size, CornerRadius(corner.toPx())) }
 
 /** What lifts [fill] off the page: its glow in dark, the hard shadow in light. */
 fun Modifier.arcadeLift(fill: ArcadeFill, corner: Dp) =
@@ -184,8 +233,12 @@ fun Modifier.arcadeLift(fill: ArcadeFill, corner: Dp) =
 
 private val HardShadow = Color(0x4021145F)
 
-/** The page's gradient at 160 degrees, in pixels from the window's top left; a sticky row paints it too, by the same numbers. */
+/**
+ * The page's gradient at 160 degrees, in pixels from the window's top left; a sticky row paints it too, by the same numbers.
+ * Classic's page is flat, its scheme's background.
+ */
 fun arcadePageBrush(dark: Boolean, window: Size): Brush {
+    if (classicLook()) return SolidColor(lookScheme(dark).background)
     val angle = 160f * PI.toFloat() / 180f
     val dx = sin(angle)
     val dy = -cos(angle)

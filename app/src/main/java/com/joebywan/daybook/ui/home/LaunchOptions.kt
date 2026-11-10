@@ -49,6 +49,7 @@ import com.joebywan.daybook.ui.CappedFontScale
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.MotionChoice
 import com.joebywan.daybook.ui.theme.Appearance
+import com.joebywan.daybook.ui.theme.Look
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -152,6 +153,14 @@ class LaunchPreferences(private val store: KeyValueStore) {
     }
 
     /**
+     * Classic or Arcade (issue #418); null until the player has answered, in the welcome, Home's one card or Settings.
+     * An unanswered player sees Arcade, the look they had before the choice existed. A launch preference, never progress.
+     */
+    val look: Flow<Look?> = store.string(KEY_LOOK).map { stored -> Look.entries.firstOrNull { it.name == stored } }
+
+    suspend fun setLook(look: Look) = store.putString(KEY_LOOK, look.name)
+
+    /**
      * Whether a solved puzzle plays its short chime. On unless the player turned it off. The device
      * being on silent is a separate, platform check; this is the player's own switch.
      */
@@ -241,6 +250,8 @@ class LaunchPreferences(private val store: KeyValueStore) {
         const val KEY_SHOW_TIMER = "show_timer"
         // The web page reads it before the app loads, as `daybook_launch.appearance` (index.html).
         const val KEY_APPEARANCE = "appearance"
+        // Read by index.html too, as `daybook_launch.look`, so the page round the app starts in the right colours.
+        const val KEY_LOOK = "look"
     }
 }
 
