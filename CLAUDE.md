@@ -1117,11 +1117,15 @@ are never recorded (`DaybookApp`'s `onSolved`, the kept card), so no streak, sta
 starts `test:`. Graduating one means a new id in `all` with the full standards (`docs/PUZZLE_STANDARDS.md`).
 
 - **test:Who's who** (`test-whoswho`, `puzzles/WhosWhoGraph.kt`, `WhosWhoGraphRules.kt`): Who's Who's boards as a graph, every
-  item a node in its category's column, the player marking pairs linked or anti-linked (tap one, then another: link, anti-link,
-  open). `WhosWhoGraphState` holds a whole dealt `WhosWhoState` (its table marks unused) and the pair marks; what they imply
-  (links join groups, anti-links hold across groups, one-to-one, last item left) is derived by `WhosWhoGraphLogic.close`. Hints
-  are Who's Who's teacher asked of the table the closure makes, mapped to nodes; a mistake is a pair mark the answer disagrees
-  with. "Group" lines linked items up in their person's row; the category buttons show the marks as a table with any category
+  item a node in its category's column. Lines drawn from the chosen item say where it can be (the players' own reading, 2026-11-10:
+  one line into a category means that one, several mean one of those), so a line has an end: `>` / `<` drawn from the pair's
+  lower / higher item, `o` from both (an old save's link, which reads the same), `x` an anti-link. A tap from the chosen item
+  adds its line, then makes the pair `x`, then opens it. `WhosWhoGraphState` holds a whole dealt `WhosWhoState` (its table marks
+  unused) and the pair marks; `WhosWhoGraphLogic.close` anti-links an item to the items of a category it drew no line to (lines
+  are never followed further), then derives the rest (links join groups, anti-links hold across groups, one-to-one, last item
+  left). A line the closure rules out is drawn faint, never red. Hints are Who's Who's teacher asked of the table the closure
+  makes, mapped to nodes (a tick drawn from both ends, stray lines either end drew there ruled out); a mistake is an anti-link
+  on a true pair, or an item's lines into a category that leave out its partner. "Group" lines linked items up in their person's row; the category buttons show the marks as a table with any category
   as the rows. No walkthrough. Checked at 375 wide on the web only.
 
 ## Motion and haptics

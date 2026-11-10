@@ -76,8 +76,9 @@ import kotlin.math.roundToInt
 /**
  * Who's Who drawn as a graph, a lab puzzle (`PuzzleRegistry.lab`): shown only with Settings' "Test puzzles" on, and never
  * recorded, so it touches no streak, statistic or achievement. Same boards as Who's Who (its own seeds, by its own id);
- * the table is gone. Every item is a node in a column of its category; tap one, then an item of another category, and
- * the pair cycles through linked, anti-linked and open. What the marks imply is drawn faint ([WhosWhoGraphLogic.close]).
+ * the table is gone. Every item is a node in a column of its category; tap one, then items of another category, to draw
+ * where it can be (one line: that one; several: one of those); a line tapped again becomes an anti-link, then open. What
+ * the marks imply is drawn faint ([WhosWhoGraphLogic.close]).
  * "Group" lines linked items up in their person's row, so a solved board settles into the answer table; the category
  * buttons show the same marks as a table with any category as the rows.
  *
@@ -92,9 +93,10 @@ object WhosWhoGraph : PuzzleType {
 
     override val rules = listOf(
         "Every person and every item is a circle, one column per category. The clues fix who has what.",
-        "Tap a circle, then a circle in another column: the pair becomes linked (the same person's), then anti-linked (never the same person's), then open again.",
+        "Tap a circle, then circles in another column to draw where it can be: one line means that one, several mean one of those.",
+        "Tap a line again to rule the pair out (never the same person's), and again to clear it.",
         "What your marks imply is drawn faint: links join up, an anti-link holds across whole groups, and a category with one item left links to it.",
-        "With a circle chosen you see all its pairs: solid linked, dashed anti-linked, dotted still open.",
+        "With a circle chosen you see all its pairs: thick linked, thin one of its choices, dashed ruled out, dotted still open.",
         "Group lines linked items up in their person's row. The category buttons show the marks as a table, any category as the rows.",
         "Solved when every person is linked to one of everything and every clue is true.",
     )
@@ -131,7 +133,14 @@ object WhosWhoGraph : PuzzleType {
             applyTo = { now ->
                 var next = now as WhosWhoGraphState
                 val closed = WhosWhoGraphLogic.close(next)
-                for ((p, ref) in ticks) if (closed.at(p, ref) != 1) next = next.withMark(p, ref, WhosWhoGraphLogic.LINK)
+                // A tick is "is": the pair drawn from both ends, and any other line either end drew into the other's
+                // category ruled out, so a stray "might be" cannot keep it open.
+                for ((p, ref) in ticks) if (closed.at(p, ref) != 1) {
+                    next = next.withMark(p, ref, WhosWhoGraphLogic.LINK)
+                    for ((x, y) in listOf(p to ref, ref to p)) for (z in y / b.n * b.n until y / b.n * b.n + b.n) {
+                        if (z != y && next.drew(x, z)) next = next.withMark(x, z, WhosWhoGraphLogic.ANTI)
+                    }
+                }
                 for ((p, ref) in crosses) if (closed.at(p, ref) != -1) next = next.withMark(p, ref, WhosWhoGraphLogic.ANTI)
                 if (next.moves > now.moves) next.copy(moves = now.moves + 1) else next
             },
@@ -142,25 +151,44 @@ object WhosWhoGraph : PuzzleType {
         )
     }
 
-    /** The first marked pair, in order, whose mark the board's one answer disagrees with. */
+    /**
+     * The first mark the board's one answer disagrees with: an anti-link on a pair that goes together, or an item whose
+     * lines into a category leave out the one it really goes with. A line to a wrong item beside the right one is fine:
+     * it only says "one of these".
+     */
     private fun mistake(s: WhosWhoGraphState): Deduction? {
         val b = s.board
+        val n = b.n
+        fun same(x: Int, y: Int) = WhosWhoGraphLogic.holder(b, x) == WhosWhoGraphLogic.holder(b, y)
         for (a in 0 until s.size) for (c in a + 1 until s.size) {
-            val mark = s.mark(a, c)
-            if (mark == WhosWhoGraphLogic.OPEN) continue
-            val same = WhosWhoGraphLogic.holder(b, a) == WhosWhoGraphLogic.holder(b, c)
-            if (same == (mark == WhosWhoGraphLogic.LINK)) continue
-            val first = WhosWhoLogic.word(b, a)
-            val second = WhosWhoLogic.word(b, c)
+            if (s.mark(a, c) != WhosWhoGraphLogic.ANTI || !same(a, c)) continue
             return Deduction(
                 technique = WhosWhoTeacher.MISTAKE,
                 nudge = "One of your marks doesn't fit.",
-                explanation = if (same) "$first and $second go together, so that anti-link can't be kept."
-                else "$first and $second belong to different people, so that link can't be kept.",
+                explanation = "${WhosWhoLogic.word(b, a)} and ${WhosWhoLogic.word(b, c)} go together, so that anti-link can't be kept.",
                 focus = setOf(a, c), cited = emptySet(), targets = setOf(a, c),
                 mistake = true,
                 applyTo = { now -> (now as WhosWhoGraphState).withMark(a, c, WhosWhoGraphLogic.OPEN) },
                 reachedBy = { now -> (now as WhosWhoGraphState).mark(a, c) == WhosWhoGraphLogic.OPEN },
+            )
+        }
+        for (a in 0 until s.size) for (category in 0..b.columns) {
+            if (category == a / n) continue
+            val items = category * n until category * n + n
+            val drawn = items.filter { s.drew(a, it) }
+            if (drawn.isEmpty() || drawn.any { same(a, it) }) continue
+            val word = WhosWhoLogic.word(b, a)
+            return Deduction(
+                technique = WhosWhoTeacher.MISTAKE,
+                nudge = "One of your marks doesn't fit.",
+                explanation = "$word's lines to the ${title(b, category)} column leave out the right one, so they can't be kept.",
+                focus = setOf(a) + drawn, cited = emptySet(), targets = setOf(a) + drawn,
+                mistake = true,
+                applyTo = { now -> drawn.fold(now as WhosWhoGraphState) { acc, z -> acc.withoutLine(a, z) }.copy(moves = now.moves + 1) },
+                reachedBy = { now ->
+                    val left = items.filter { (now as WhosWhoGraphState).drew(a, it) }
+                    left.isEmpty() || left.any { same(a, it) }
+                },
             )
         }
         return null
@@ -345,11 +373,17 @@ object WhosWhoGraph : PuzzleType {
                         val gap = c / n - a / n
                         if (gap == 0 || (gap > 1) != skipping) continue
                         val touches = selected == a || selected == c
-                        val mine = s.mark(a, c) != WhosWhoGraphLogic.OPEN
+                        val mark = s.mark(a, c)
+                        val mine = mark != WhosWhoGraphLogic.OPEN
+                        val line = mine && mark != WhosWhoGraphLogic.ANTI
                         val v = closure.at(a, c)
+                        val dim = selected >= 0 && !touches
                         val (colour, width, effect) = when {
                             badPair[a * s.size + c] -> Triple(error, 3.dp, null)
-                            v == 1 -> Triple(ink.copy(alpha = if (selected >= 0 && !touches) 0.15f else if (mine) 0.9f else 0.4f), if (mine) 2.5.dp else 1.2.dp, null)
+                            v == 1 -> Triple(ink.copy(alpha = if (dim) 0.15f else if (mine) 0.9f else 0.4f), if (mine) 2.5.dp else 1.2.dp, null)
+                            // A "might be": thinner and lighter than a link; once the marks rule it out, fainter still.
+                            line && v == 0 -> Triple(ink.copy(alpha = if (dim) 0.12f else 0.55f), 1.5.dp, null)
+                            line -> Triple(faint.copy(alpha = if (dim) 0.1f else 0.3f), 1.dp, null)
                             v == -1 && touches -> Triple(error.copy(alpha = if (mine) 0.85f else 0.45f), if (mine) 1.6.dp else 1.dp, dash)
                             v == 0 && touches -> Triple(faint.copy(alpha = 0.7f), 1.2.dp, dot)
                             else -> continue
