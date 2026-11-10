@@ -234,12 +234,12 @@ Generator changes move every daily board of that puzzle (parity pins go red on p
 
 Built in parallel and merged in sequence (1.41-1.45). Open items they left:
 
-- [ ] **None was rendered.** The build container could not build the web app (yarn's fetch from codeload.github.com was
-  refused), so no board was seen in Chromium or WebKit, at 375x537 or on a tall screen, light or dark, and none on the
-  emulator. Each sizes from both axes in code. Render all five with `tools/render/render.py` and check them on a phone. *M.*
-- [ ] **Browser generation times not measured** for any of them (CLAUDE.md quotes Chromium / WebKit for every other
-  puzzle). The JVM worst cases to check first: Unblock Expert 0.9 s (its agent expects 2-3 s on the web, on one day in a
-  few hundred), Links Expert 0.78 s, Loop Expert 0.55 s. *S-M.*
+- [ ] **Not yet seen on the emulator.** All five were rendered on the web on 2026-11-11 (Chromium and WebKit, 375x537 and
+  390x844, light and dark, fresh and solved, every tier): Unblock's exit chevron ran off the right edge where width binds
+  (fixed), the rest fitted. Browser generation times are in CLAUDE.md; no day of a year takes over 1.3 s (Links Expert
+  2026-10-26, Loop Expert 2026-12-27 in WebKit, Unblock Hard 2026-10-16). Check them on a phone. *S.*
+- [ ] **Loop: a 0 never steps back.** A number with all its lines drawn turns lighter and smaller, but `k > 0` keeps every 0
+  at full weight, so on a solved board the 0s are the boldest thing left. Odd, not wrong: a 0 has nothing to draw. *S.*
 - [ ] **Equation's tiers are thin.** Length barely changes guesses needed (2.7 / 3.1 / 3.0); Hard and Expert differ by
   24 vs 28 answers left after the first guess. Five guesses on Expert lost 2 boards a year to a hint-following player.
   Find a measure that separates them (e.g. operators allowed), or accept it. *M.*

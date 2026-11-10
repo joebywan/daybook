@@ -19,7 +19,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 import render as R  # noqa: E402
 
 PAGES = ["?puzzle=wordwheel", "?puzzle=mini", "?puzzle=target", "?puzzle=dominoes", "?screen=stats",
-         "?screen=stats&share", "?puzzle=tower&finish=0&share", "?puzzle=pointers&finish=0&share"]
+         "?screen=stats&share", "?puzzle=tower&finish=0&share", "?puzzle=pointers&finish=0&share",
+         "?puzzle=loop", "?puzzle=thermometers", "?puzzle=unblock&finish=0&share", "?puzzle=equation&tier=expert", "?puzzle=links"]
 BAD_CONSOLE = ("gstatic", "FallbackFont", "Content Security Policy", "Refused to connect")
 
 

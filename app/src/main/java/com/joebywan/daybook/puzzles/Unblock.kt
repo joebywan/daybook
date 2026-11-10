@@ -277,7 +277,8 @@ object Unblock : PuzzleType {
                     )
                 }
             }
-            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(bottom = 12.dp), contentAlignment = Alignment.Center) {
+            // 16dp a side keeps the exit chevron, drawn outside the yard, off the screen's edge when width binds.
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp), contentAlignment = Alignment.Center) {
             val step = fitStep(n, n)
             Canvas(
                 Modifier

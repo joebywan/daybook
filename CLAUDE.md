@@ -157,7 +157,7 @@ each symbol is marked as Lexicon's letters are. Never "Nerdle" where a player se
 - **The lists are enumerated on the device, not stored** (`EquationLogic.valid`, sorted, cached per length): left sides
   built number by number with the running total and term, the last number solved for (a range for `+ - *`, the term's
   divisors for `/`). 476 / 11,705 / 65,704 true equations of 6 / 7 / 8 symbols, 206 / 5,431 / 15,963 answers (pinned).
-  A fresh enumeration takes under 25 ms on the JVM for eight symbols (not measured in a browser). `EquationOracle` (test) tries every left side of 3 to 6 symbols and evaluates it by folding × and ÷ out
+  A fresh enumeration takes under 25 ms on the JVM for eight symbols (not measured in a browser; once enumerated, a board takes under 1 ms in Chromium and WebKit on every tier). `EquationOracle` (test) tries every left side of 3 to 6 symbols and evaluates it by folding × and ÷ out
   of a token list: the lists agree exactly, and `problem` agrees with it on every true row, every one-symbol change of a
   sample and random rows. Changing a rule or the enumeration moves every board (`BoardPinTest`).
 - **Tiers: 6 / 7 / 8 symbols, six guesses each** (`EquationLogic.shape`). Measured (`EquationBalanceTest`, 100 days a tier):
@@ -658,7 +658,8 @@ is hashed into every seed: never rename it.
   what-if. A draw with a line counting 0 or every square is redrawn (Tally's rule: it gives itself away); with that rule no board is
   finished by full and empty lines alone (0 of 170 proved 5x5 draws), so the brief's "lines only" Standard was dropped and the
   rungs split tips from bulbs instead. Draws a board over a year: mean 16.8 / 14.9 / 102, most 106 / 83 / 714 of `ATTEMPTS` = 2000;
-  JVM median / p95 / max 0.5 / 3.6 / 23, 0.5 / 2.0 / 6.5, 9.9 / 39 / 88 ms; tubes 8.3 / 9.1 / 13.4 a board; 49-51% filled.
+  JVM median / p95 / max 0.5 / 3.6 / 23, 0.5 / 2.0 / 6.5, 9.9 / 39 / 88 ms; Chromium 0.2 / 1.0 / 1.6, 0.5 / 1.4 / 4.7, 13 / 42 / 115 ms; WebKit 0 / 2 / 3, 1 / 2 / 8, 21 / 64 / 174 (2026-11-11);
+  tubes 8.3 / 9.1 / 13.4 a board; 49-51% filled.
 - **Tubes are grown by `bentWalk`** (`core/Grid.kt`, lifted from Pointers' arrow bodies, Pointers' boards unmoved): from each bare
   square in a shuffled order a walk of the tier's length; a lone square left joins a tube whose end is beside it, else the draw is
   redrawn. Each tube is turned bulb-first at random. No hash container reaches the `Rng`.
@@ -723,7 +724,9 @@ word; the genre's trademarked names ("Rush Hour", "Unblock Me") never appear whe
   (`UnblockLogic.specFor`). The brief's 24+ for Expert was measured and dropped: random 14-car yards reach 24 on about 0.5% of
   draws against 0.8% for 20 (`UnblockMeasure`, not kept), and the tail of a year of Expert days ran to 2.5 s on the JVM. Over a
   year (`UnblockRulesTest`): par mean 7.9 / 14.9 / 23.0, Expert's longest 41; draws median 2 / 6 / 146, most 15 / 48 / 2530 of
-  `ATTEMPTS` = 6000; JVM ms median / p95 / max 8 / 57 / 120, 32 / 249 / 869, 52 / 233 / 903 (a busy shared machine).
+  `ATTEMPTS` = 6000; JVM ms median / p95 / max 8 / 57 / 120, 32 / 249 / 869, 52 / 233 / 903 (a busy shared machine);
+  Chromium 8 / 66 / 165, 34 / 308 / 1164, 52 / 217 / 950 ms, WebKit 8 / 68 / 175, 36 / 311 / 1155, 60 / 257 / 1173 (2026-11-11;
+  the worst are Hard 2026-10-16 and Expert 2026-10-20).
 - **Generation is the yard's whole space, not a search for a start.** A random yard (no car but the red one across row 3), its
   space breadth first (`space`, a primitive hash table: this is the generator's whole cost; at most `SPACE_CAP` = 12,000
   positions or the yard is redrawn), then a second pass from every exit at once gives each position its fewest moves. A yard
@@ -930,7 +933,8 @@ bans it). `puzzles/LoopRules.kt` (`LoopState`, `LoopLogic`: the numbers' rules, 
   its count with each dot taking no line or two; it is where the patterns players learn come from (3 in a corner, 1 in a
   corner, a line into a 3's corner). Measured over a year (`LoopRulesTest`): numbers shown 43 / 41 / 36% of the squares;
   draws 1.00 / 2.82 / 3.96 mean, at most 1 / 14 / 29 of `ATTEMPTS` = 200; JVM median / p95 / max 1 / 2 / 6, 6 / 18 / 33,
-  108 / 248 / 547 ms. Expert is the costliest; its browser times are not measured yet (the web build could not be made where Loop was written).
+  108 / 248 / 547 ms. Chromium 2.4 / 3.1 / 3.6, 10 / 28 / 53, 189 / 430 / 924 ms; WebKit 3 / 4 / 7, 13 / 37 / 70, 252 / 574 / 1222 (2026-11-11;
+  Expert's worst day is 2026-12-27).
 - **A board ships only if the ladder finishes it and the count proves one loop.** The loop is grown (`growLoop`, uniform, no
   scoring) to 50-80% of the dots' count in edges, every square numbered from it, numbers taken back in random order while the
   tier's rungs still finish it (Pearls' two passes on Expert), then redrawn unless the walk needs exactly the tier's rung.
@@ -948,7 +952,8 @@ bans it). `puzzles/LoopRules.kt` (`LoopState`, `LoopLogic`: the numbers' rules, 
   tap within 0.42 of a step of an edge's middle crosses it or rubs out what is there. The step is the box over (side + 1),
   at most 64 dp; an edge takes taps in a disc 0.84 of a step across. Worked out from the layout, not rendered: at 390 wide the step
   is about 62 / 47 / 34 dp (discs 52 / 39 / 29), at 375x537 about 58 / 44 / 32 dp (discs 49 / 37 / 27), the Expert step a little under
-  Pearls' 10x10 squares and well over Nonogram Expert's, the owner's floor for too small. Check it rendered (`tools/render/render.py`).
+  Pearls' 10x10 squares and well over Nonogram Expert's, the owner's floor for too small. Rendered 2026-11-11 (`tools/render/render.py`,
+  both browsers, 375x537 and 390x844): every tier fits on both.
 
 ## Links (pair-joining paths)
 
@@ -983,8 +988,8 @@ ladder, the exhaustive count, the drag, the generator), `LinksTeacher.kt`, `Link
   `lastResort` is what seed 424242 drew per tier, accepted by a test; a year per tier never reaches it (`FallbackTest`).
   Draws a board over a year (`FallbackTest`): 2.0 / 8.3 / 14.9 mean, most 10 / 63 / 88 of `ATTEMPTS` = 2000; JVM median / p95
   / max 0.09 / 0.26 / 11, 12 / 45 / 110, 118 / 419 / 777 ms (`LinksRulesTest`, `build/reports/links-generation.txt`). The
-  count settles the whole ladder before it branches: without the what-if, one Expert day took twelve minutes. Not yet timed in
-  a browser.
+  count settles the whole ladder before it branches: without the what-if, one Expert day took twelve minutes. Chromium 0.1 / 0.3 / 0.9,
+  15 / 59 / 138, 174 / 691 / 1268 ms; WebKit 0 / 1 / 1, 15 / 59 / 136, 165 / 655 / 1203 (2026-11-11; Expert's worst day is 2026-10-26).
 - **`solved` checks the rules** (`LinksLogic.isSolved`: every end one line, every other square two, every pair one piece); a
   mistake is a line the stored answer lacks, sound because the answer is unique. No red feedback is needed: the drag never
   makes a loop, joins two pairs or overfills a square, so a full board is a solved one.
