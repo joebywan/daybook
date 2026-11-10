@@ -28,7 +28,10 @@ data class WhosWhoGraphState(
     /** Items: the people and every column's. */
     val size: Int get() = board.n * (board.columns + 1)
 
-    /** The derived links make a full table and every clue holds. The rules, not [WhosWhoState.answer]. */
+    /**
+     * The derived links make a full table, every clue holds and every person has drawn a line to each of their items (an
+     * implied link is only a hint until drawn). The rules, not [WhosWhoState.answer].
+     */
     override val solved: Boolean get() = WhosWhoGraphLogic.isSolved(this)
 
     fun mark(a: Int, b: Int): Char = links.getOrElse(WhosWhoGraphLogic.pair(size, a, b)) { WhosWhoGraphLogic.OPEN }
@@ -199,10 +202,22 @@ internal object WhosWhoGraphLogic {
         return b.copy(marks = marks.concatToString())
     }
 
-    /** No marks that contradict each other, and the table they make is a solved Who's Who board. */
+    /** Whether [mark] holds a line from either end. */
+    fun isLine(mark: Char) = mark == LINK || mark == FROM_LOW || mark == FROM_HIGH
+
+    /** The first person-item pair the closure links that carries no line of the player's, as (person, item), or null. */
+    fun undrawn(s: WhosWhoGraphState, c: Closure = close(s)): Pair<Int, Int>? {
+        for (p in 0 until s.n) for (x in s.n until s.size) if (c.at(p, x) == 1 && !isLine(s.mark(p, x))) return p to x
+        return null
+    }
+
+    /**
+     * No marks that contradict each other, the table they make is a solved Who's Who board, and every person's links are
+     * drawn: the closure may imply them, but the player must draw them.
+     */
     fun isSolved(s: WhosWhoGraphState): Boolean {
         val c = close(s)
-        return !c.clash && WhosWhoLogic.isSolved(table(s, c))
+        return !c.clash && WhosWhoLogic.isSolved(table(s, c)) && undrawn(s, c) == null
     }
 
     /** The person who holds item [ref] in the board's one answer. */
