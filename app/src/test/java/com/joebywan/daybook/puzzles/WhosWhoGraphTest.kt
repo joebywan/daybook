@@ -116,7 +116,7 @@ class WhosWhoGraphTest {
     }
 
     @Test
-    fun `linking each person to one item and that item to the rest is solved only once every person's line is drawn`() {
+    fun `linking each person to one item and that item to the rest solves the board`() {
         for (difficulty in Difficulty.entries) for (day in 0 until 10) {
             var s = board(day, difficulty)
             assertFalse(s.solved)
@@ -126,44 +126,51 @@ class WhosWhoGraphTest {
                 s = s.cycle(p, house)
                 for (x in 2 * n until s.size) if (same(s, house, x)) s = s.cycle(house, x)
             }
-            // Every link is implied through the houses, but a person's line to their pet is not drawn.
-            assertTrue(WhosWhoLogic.isSolved(WhosWhoGraphLogic.table(s)))
-            assertFalse("$difficulty day $day", s.solved)
-            for (p in 0 until n) for (x in 2 * n until s.size) if (same(s, p, x)) s = s.cycle(p, x)
             assertTrue("$difficulty day $day", s.solved)
+            // A person's line to a pet is implied through the house, not drawn: the finish says it was elimination.
+            assertTrue(WhosWhoGraphLogic.leftImplied(s))
+            assertNotNull(WhosWhoGraph.finishNote(s))
         }
     }
 
     @Test
-    fun `anti-links that force every link do not solve the board until the person lines are drawn`() {
+    fun `anti-links alone that force every link solve the board, with no line drawn`() {
         for (difficulty in Difficulty.entries) for (day in 0 until 10) {
             var s = board(day, difficulty)
             val n = s.n
             for ((a, b) in pairs(s)) if (a < n && !same(s, a, b)) s = s.withMark(a, b, WhosWhoGraphLogic.ANTI)
+            assertFalse(s.links.any { WhosWhoGraphLogic.isLine(it) })
             val c = WhosWhoGraphLogic.close(s)
             for (p in 0 until n) for (x in n until s.size) assertEquals(if (same(s, p, x)) 1 else -1, c.at(p, x))
-            assertFalse("$difficulty day $day: solved with no line drawn", s.solved)
-            // The hint asks for a line, and following it fills them all in.
-            var steps = 0
-            while (!s.solved) {
-                val step = WhosWhoGraph.teach(s)!!
-                assertEquals(WhosWhoGraph.DRAW, step.technique)
-                assertFalse(step.isReached(s))
-                s = step.apply(s) as WhosWhoGraphState
-                assertTrue(step.isReached(s))
-                assertTrue(++steps <= n * s.board.columns)
-            }
-            for (p in 0 until n) for (x in n until s.size) if (same(s, p, x)) {
-                assertTrue(WhosWhoGraphLogic.isLine(s.mark(p, x)))
-            }
+            assertTrue("$difficulty day $day: elimination alone is a win", s.solved)
+            assertNull(WhosWhoGraph.teach(s))
+            assertTrue(WhosWhoGraphLogic.leftImplied(s))
         }
-        // Drawn by hand from either end counts too.
-        var s = board(2, Difficulty.STANDARD)
-        val n = s.n
-        for ((a, b) in pairs(s)) if (a < n && !same(s, a, b)) s = s.withMark(a, b, WhosWhoGraphLogic.ANTI)
-        for (p in 0 until n) for (x in n until s.size) if (same(s, p, x)) s = if (x % 2 == 0) s.withLine(p, x) else s.withLine(x, p)
-        assertTrue(s.solved)
-        assertNull(WhosWhoGraph.teach(s))
+    }
+
+    @Test
+    fun `the finish note praises an elimination, varies, and says nothing when every link was drawn`() {
+        val n0 = board(2, Difficulty.STANDARD).n
+        var implied = board(2, Difficulty.STANDARD)
+        for ((a, b) in pairs(implied)) if (a < n0 && !same(implied, a, b)) implied = implied.withMark(a, b, WhosWhoGraphLogic.ANTI)
+        assertTrue(implied.solved)
+        // Every draw is one of the set, and a run of solves meets most of them.
+        val seen = (0 until 200).map { WhosWhoGraph.finishNote(implied, Random(it))!! }.toSet()
+        assertTrue(seen.all { it in WhosWhoGraph.ELIMINATION_NOTES })
+        assertTrue(seen.size >= WhosWhoGraph.ELIMINATION_NOTES.size - 1)
+        // The same draw gives the same note: the frame keeps the one it was given.
+        assertEquals(WhosWhoGraph.finishNote(implied, Random(5)), WhosWhoGraph.finishNote(implied, Random(5)))
+        assertTrue(WhosWhoGraph.ELIMINATION_NOTES.all { it.isNotBlank() && it.length <= 100 })
+        assertEquals(WhosWhoGraph.ELIMINATION_NOTES.size, WhosWhoGraph.ELIMINATION_NOTES.toSet().size)
+
+        // Every person's line to each of their items drawn, from either end: no note.
+        var drawn = implied
+        for (p in 0 until n0) for (x in n0 until drawn.size) if (same(drawn, p, x)) drawn = if (x % 2 == 0) drawn.withLine(p, x) else drawn.withLine(x, p)
+        assertTrue(drawn.solved)
+        assertFalse(WhosWhoGraphLogic.leftImplied(drawn))
+        assertNull(WhosWhoGraph.finishNote(drawn, Random(1)))
+        // Nor on a board not yet solved.
+        assertNull(WhosWhoGraph.finishNote(board(2, Difficulty.STANDARD), Random(1)))
     }
 
     @Test

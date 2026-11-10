@@ -114,6 +114,12 @@ interface PuzzleType {
     fun neededTechnique(state: PuzzleState): String? = null
 
     /**
+     * A line of this puzzle's own for the finished frame, about how [state] (solved) was finished, or null for none. Asked
+     * once per solve, as the praise is made, and saved with it, so a note drawn at random stays put on a rotation.
+     */
+    fun finishNote(state: PuzzleState): String? = null
+
+    /**
      * A walkthrough played on this puzzle's own [Board], or empty for none. The "How to play"
      * button opens it when present, and a first-time player is offered it once.
      */
