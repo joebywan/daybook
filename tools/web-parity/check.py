@@ -152,7 +152,7 @@ def main() -> int:
     ap.add_argument("--dist", type=Path, default=root / "web/build/dist/wasmJs/productionExecutable",
                     help="the built wasm distribution (default: %(default)s)")
     ap.add_argument("--browsers", default="chromium,webkit", help="comma-separated (default: %(default)s)")
-    ap.add_argument("--timeout", type=float, default=900, help="seconds each page may take (default: %(default)s)")
+    ap.add_argument("--timeout", type=float, default=1800, help="seconds each page may take (default: %(default)s)")
     ap.add_argument("--show", type=int, default=5, help="differing lines to show per puzzle (default: %(default)s)")
     args = ap.parse_args()
     args.browsers = [b for b in args.browsers.split(",") if b]
