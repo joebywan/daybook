@@ -5,11 +5,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextAlign
+import com.joebywan.daybook.ui.rememberSettled
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +43,6 @@ import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.GLOW_ALPHA
 import com.joebywan.daybook.ui.rememberMoveFeel
 import androidx.compose.ui.graphics.drawscope.scale
-import com.joebywan.daybook.ui.fitStep
 import com.joebywan.daybook.core.union
 import androidx.compose.ui.graphics.drawscope.DrawScope
 
@@ -68,26 +71,38 @@ data class AtomsState(
     override val solved: Boolean
         get() = atoms.indices.all { degree(it) == atoms[it].bonds } &&
             pairs.indices.none { p -> counts[p] > 0 && crosses(p) } &&
-            connected()
+            pieces() == 1
 
-    private fun connected(): Boolean {
+    /** How many separate molecules the bonds make: 1 once every atom is joined. */
+    fun pieces(): Int {
         val seen = BooleanArray(atoms.size)
-        val stack = ArrayDeque<Int>()
-        seen[0] = true
-        stack.addLast(0)
-        while (stack.isNotEmpty()) {
-            val a = stack.removeLast()
-            pairs.forEachIndexed { p, pair ->
-                if (counts[p] == 0 || (pair.a != a && pair.b != a)) return@forEachIndexed
-                val b = if (pair.a == a) pair.b else pair.a
-                if (!seen[b]) {
-                    seen[b] = true
-                    stack.addLast(b)
+        var found = 0
+        for (start in atoms.indices) {
+            if (seen[start]) continue
+            found++
+            seen[start] = true
+            val stack = ArrayDeque(listOf(start))
+            while (stack.isNotEmpty()) {
+                val a = stack.removeLast()
+                pairs.forEachIndexed { p, pair ->
+                    if (counts[p] == 0 || (pair.a != a && pair.b != a)) return@forEachIndexed
+                    val b = if (pair.a == a) pair.b else pair.a
+                    if (!seen[b]) {
+                        seen[b] = true
+                        stack.addLast(b)
+                    }
                 }
             }
         }
-        return seen.all { it }
+        return found
     }
+
+    /**
+     * Every atom has its number but the molecule is in pieces, so the board looks finished and is not
+     * (issue #422). Bonds never cross (a move refuses one), so this is the only way a full board fails.
+     */
+    val fullButSplit: Boolean
+        get() = atoms.indices.all { degree(it) == atoms[it].bonds } && pieces() > 1
 
     fun degree(atom: Int): Int =
         pairs.indices.sumOf { if (pairs[it].a == atom || pairs[it].b == atom) counts[it] else 0 }
@@ -620,188 +635,206 @@ object Atoms : PuzzleType {
 
         // Sized from both axes (CLAUDE.md), so a tall board or a short screen never runs it under
         // the hint slot.
+        // A full board in pieces says so after a pause, in a line always laid out so it never moves the board.
+        val splitSettled = rememberSettled(s.fullButSplit, reset = s.atoms, change = s.counts)
         BoxWithConstraints(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
-            val step = fitStep(s.size, s.size)
+            val step = if (constraints.hasBoundedHeight) {
+                minOf(maxWidth / s.size, (maxHeight - NOTE_HEIGHT) / s.size)
+            } else {
+                maxWidth / s.size
+            }
             val stepPx = with(LocalDensity.current) { step.toPx() }
             val radius = stepPx * 0.34f
 
-            Canvas(
-                Modifier
-                    .width(step * s.size)
-                    .height(step * s.size)
-                    .reportHighlight { size, named ->
-                        // Atoms by their circles, lines by the two atoms they join.
-                        val px = size.width / s.size.toFloat()
-                        var box: androidx.compose.ui.geometry.Rect? = null
-                        fun include(atom: Atom) {
-                            val r = androidx.compose.ui.geometry.Rect(
-                                androidx.compose.ui.geometry.Offset(atom.col * px, atom.row * px),
-                                androidx.compose.ui.geometry.Offset((atom.col + 1) * px, (atom.row + 1) * px),
-                            )
-                            box = box?.union(r) ?: r
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Canvas(
+                    Modifier
+                        .width(step * s.size)
+                        .height(step * s.size)
+                        .reportHighlight { size, named ->
+                            // Atoms by their circles, lines by the two atoms they join.
+                            val px = size.width / s.size.toFloat()
+                            var box: androidx.compose.ui.geometry.Rect? = null
+                            fun include(atom: Atom) {
+                                val r = androidx.compose.ui.geometry.Rect(
+                                    androidx.compose.ui.geometry.Offset(atom.col * px, atom.row * px),
+                                    androidx.compose.ui.geometry.Offset((atom.col + 1) * px, (atom.row + 1) * px),
+                                )
+                                box = box?.union(r) ?: r
+                            }
+                            for (index in named.strong + named.soft) {
+                                if (index in s.atoms.indices) {
+                                    include(s.atoms[index])
+                                } else {
+                                    val p = s.pairs.indices.firstOrNull { AtomsTeacher.pairCell(s.atoms.size, it) == index }
+                                    if (p != null) {
+                                        include(s.atoms[s.pairs[p].a])
+                                        include(s.atoms[s.pairs[p].b])
+                                    }
+                                }
+                            }
+                            box
                         }
-                        for (index in named.strong + named.soft) {
-                            if (index in s.atoms.indices) {
-                                include(s.atoms[index])
-                            } else {
-                                val p = s.pairs.indices.firstOrNull { AtomsTeacher.pairCell(s.atoms.size, it) == index }
-                                if (p != null) {
-                                    include(s.atoms[s.pairs[p].a])
-                                    include(s.atoms[s.pairs[p].b])
+                        // Drag first, so that once it claims the pointer the tap detector sees the
+                        // consumed moves and cancels itself. A clean tap consumes nothing and still
+                        // reaches the detector below.
+                        .pointerInput(s, interactive) {
+                            if (!interactive) return@pointerInput
+                            // The overload that hands over the touch-down itself. The plain one reports
+                            // where the finger crossed the touch slop, and on the web that slop is wider
+                            // than an Expert atom's reach, so no drag there could ever start on an atom.
+                            detectDragGestures(
+                                orientationLock = null,
+                                onDragStart = { down, _, _ ->
+                                    dragFrom = atomAt(s, down.position, stepPx)
+                                    dragAt = down.position
+                                },
+                                onDrag = { change, _ ->
+                                    change.consume()
+                                    dragAt = change.position
+                                },
+                                onDragEnd = { _ ->
+                                    val from = dragFrom
+                                    val at = dragAt
+                                    if (from != null && at != null) {
+                                        val target = dragTarget(s, from, at, stepPx)
+                                        if (target != null) s.link(target)?.let(onState)
+                                    }
+                                    dragFrom = null
+                                    dragAt = null
+                                },
+                                onDragCancel = {
+                                    dragFrom = null
+                                    dragAt = null
+                                },
+                            )
+                        }
+                        .pointerInput(s, interactive) {
+                            if (!interactive) return@pointerInput
+                            detectTapGestures { offset: Offset ->
+                                val hit = s.pairs.indices.minByOrNull { index ->
+                                    distanceToPair(s, index, offset, stepPx)
+                                } ?: return@detectTapGestures
+                                if (distanceToPair(s, hit, offset, stepPx) < stepPx * 0.34f) {
+                                    onState(s.cycle(hit))
                                 }
                             }
                         }
-                        box
-                    }
-                    // Drag first, so that once it claims the pointer the tap detector sees the
-                    // consumed moves and cancels itself. A clean tap consumes nothing and still
-                    // reaches the detector below.
-                    .pointerInput(s, interactive) {
-                        if (!interactive) return@pointerInput
-                        // The overload that hands over the touch-down itself. The plain one reports
-                        // where the finger crossed the touch slop, and on the web that slop is wider
-                        // than an Expert atom's reach, so no drag there could ever start on an atom.
-                        detectDragGestures(
-                            orientationLock = null,
-                            onDragStart = { down, _, _ ->
-                                dragFrom = atomAt(s, down.position, stepPx)
-                                dragAt = down.position
-                            },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                dragAt = change.position
-                            },
-                            onDragEnd = { _ ->
-                                val from = dragFrom
-                                val at = dragAt
-                                if (from != null && at != null) {
-                                    val target = dragTarget(s, from, at, stepPx)
-                                    if (target != null) s.link(target)?.let(onState)
-                                }
-                                dragFrom = null
-                                dragAt = null
-                            },
-                            onDragCancel = {
-                                dragFrom = null
-                                dragAt = null
-                            },
+                ) {
+                    fun centre(atom: Atom) =
+                        Offset((atom.col + 0.5f) * stepPx, (atom.row + 0.5f) * stepPx)
+
+                    // The lattice the atoms stand on. Bonds run along these very lines, so the grid is
+                    // drawn first and kept to a hairline at low alpha: heavy enough to answer "do these
+                    // two line up?", far too faint to be mistaken for a bond.
+                    drawLattice(s.size, stepPx, Offset.Zero, size.height, scheme.outline.copy(alpha = 0.40f))
+
+                    // Lines a hint names, drawn as a wide glow along the line whether or not it holds a
+                    // bond yet: "this gap" has to be findable before anything is in it.
+                    s.pairs.forEachIndexed { index, pair ->
+                        val cell = AtomsTeacher.pairCell(s.atoms.size, index)
+                        val strong = cell in highlight.strong
+                        if (!strong && cell !in highlight.soft) return@forEachIndexed
+                        drawLine(
+                            color = glow.copy(alpha = if (strong) 0.38f * pulse.value else 0.14f),
+                            start = centre(s.atoms[pair.a]),
+                            end = centre(s.atoms[pair.b]),
+                            strokeWidth = stepPx * if (strong) 0.30f else 0.20f,
                         )
                     }
-                    .pointerInput(s, interactive) {
-                        if (!interactive) return@pointerInput
-                        detectTapGestures { offset: Offset ->
-                            val hit = s.pairs.indices.minByOrNull { index ->
-                                distanceToPair(s, index, offset, stepPx)
-                            } ?: return@detectTapGestures
-                            if (distanceToPair(s, hit, offset, stepPx) < stepPx * 0.34f) {
-                                onState(s.cycle(hit))
+
+                    s.pairs.forEachIndexed { index, pair ->
+                        val count = s.counts[index]
+                        if (count == 0) return@forEachIndexed
+                        // Everything a highlight does not name steps back.
+                        val ink = vivid(accent).copy(alpha = if (named(AtomsTeacher.pairCell(s.atoms.size, index))) 1f else 0.28f)
+                        drawBond(centre(s.atoms[pair.a]), centre(s.atoms[pair.b]), pair.horizontal, count, stepPx * 0.09f, stepPx * 0.055f, ink)
+                    }
+
+                    // The bond the finger is reaching for, drawn faint under the atoms so the player
+                    // can see which neighbour a drag has locked on to before lifting off.
+                    val from = dragFrom
+                    val at = dragAt
+                    if (from != null && at != null) {
+                        val target = dragTarget(s, from, at, stepPx)
+                        val end = if (target == null) at else {
+                            val pair = s.pairs[target]
+                            centre(s.atoms[if (pair.a == from) pair.b else pair.a])
+                        }
+                        drawLine(
+                            color = vivid(accent).copy(alpha = if (target == null) 0.25f else 0.55f),
+                            start = centre(s.atoms[from]),
+                            end = end,
+                            strokeWidth = stepPx * 0.055f,
+                        )
+                    }
+
+                    s.atoms.forEachIndexed { index, atom ->
+                        val c = centre(atom)
+                        val complete = s.degree(index) == atom.bonds
+                        val fade = if (named(index)) 1f else 0.28f
+                        scale(feel.scale(index), c) {
+                            drawCircle(color = scheme.background, radius = radius, center = c)
+                            // An atom that has just got its last bond glows once, inside its ring.
+                            val lit = feel.glow(index)
+                            if (lit > 0f) drawCircle(vivid(accent).copy(alpha = GLOW_ALPHA * lit), radius, c)
+                            drawCircle(
+                                color = when {
+                                    index in overloaded -> scheme.error
+                                    complete -> vivid(accent)
+                                    else -> scheme.onBackground
+                                }.copy(alpha = fade),
+                                radius = radius,
+                                center = c,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.05f),
+                            )
+                            // The named atoms get a ring outside their own: strong pulses, soft is quiet.
+                            if (index in highlight.strong) {
+                                drawCircle(
+                                    color = glow.copy(alpha = pulse.value),
+                                    radius = radius + stepPx * 0.09f,
+                                    center = c,
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.07f),
+                                )
+                            } else if (index in highlight.soft) {
+                                drawCircle(
+                                    color = glow.copy(alpha = 0.5f),
+                                    radius = radius + stepPx * 0.07f,
+                                    center = c,
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.03f),
+                                )
                             }
-                        }
-                    }
-            ) {
-                fun centre(atom: Atom) =
-                    Offset((atom.col + 0.5f) * stepPx, (atom.row + 0.5f) * stepPx)
-
-                // The lattice the atoms stand on. Bonds run along these very lines, so the grid is
-                // drawn first and kept to a hairline at low alpha: heavy enough to answer "do these
-                // two line up?", far too faint to be mistaken for a bond.
-                drawLattice(s.size, stepPx, Offset.Zero, size.height, scheme.outline.copy(alpha = 0.40f))
-
-                // Lines a hint names, drawn as a wide glow along the line whether or not it holds a
-                // bond yet: "this gap" has to be findable before anything is in it.
-                s.pairs.forEachIndexed { index, pair ->
-                    val cell = AtomsTeacher.pairCell(s.atoms.size, index)
-                    val strong = cell in highlight.strong
-                    if (!strong && cell !in highlight.soft) return@forEachIndexed
-                    drawLine(
-                        color = glow.copy(alpha = if (strong) 0.38f * pulse.value else 0.14f),
-                        start = centre(s.atoms[pair.a]),
-                        end = centre(s.atoms[pair.b]),
-                        strokeWidth = stepPx * if (strong) 0.30f else 0.20f,
-                    )
-                }
-
-                s.pairs.forEachIndexed { index, pair ->
-                    val count = s.counts[index]
-                    if (count == 0) return@forEachIndexed
-                    // Everything a highlight does not name steps back.
-                    val ink = vivid(accent).copy(alpha = if (named(AtomsTeacher.pairCell(s.atoms.size, index))) 1f else 0.28f)
-                    drawBond(centre(s.atoms[pair.a]), centre(s.atoms[pair.b]), pair.horizontal, count, stepPx * 0.09f, stepPx * 0.055f, ink)
-                }
-
-                // The bond the finger is reaching for, drawn faint under the atoms so the player
-                // can see which neighbour a drag has locked on to before lifting off.
-                val from = dragFrom
-                val at = dragAt
-                if (from != null && at != null) {
-                    val target = dragTarget(s, from, at, stepPx)
-                    val end = if (target == null) at else {
-                        val pair = s.pairs[target]
-                        centre(s.atoms[if (pair.a == from) pair.b else pair.a])
-                    }
-                    drawLine(
-                        color = vivid(accent).copy(alpha = if (target == null) 0.25f else 0.55f),
-                        start = centre(s.atoms[from]),
-                        end = end,
-                        strokeWidth = stepPx * 0.055f,
-                    )
-                }
-
-                s.atoms.forEachIndexed { index, atom ->
-                    val c = centre(atom)
-                    val complete = s.degree(index) == atom.bonds
-                    val fade = if (named(index)) 1f else 0.28f
-                    scale(feel.scale(index), c) {
-                        drawCircle(color = scheme.background, radius = radius, center = c)
-                        // An atom that has just got its last bond glows once, inside its ring.
-                        val lit = feel.glow(index)
-                        if (lit > 0f) drawCircle(vivid(accent).copy(alpha = GLOW_ALPHA * lit), radius, c)
-                        drawCircle(
-                            color = when {
-                                index in overloaded -> scheme.error
-                                complete -> vivid(accent)
-                                else -> scheme.onBackground
-                            }.copy(alpha = fade),
-                            radius = radius,
-                            center = c,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.05f),
-                        )
-                        // The named atoms get a ring outside their own: strong pulses, soft is quiet.
-                        if (index in highlight.strong) {
-                            drawCircle(
-                                color = glow.copy(alpha = pulse.value),
-                                radius = radius + stepPx * 0.09f,
-                                center = c,
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.07f),
+                            val layout = measurer.measure(
+                                atom.bonds.toString(),
+                                TextStyle(
+                                    color = (if (complete) vivid(accent) else scheme.onBackground).copy(alpha = fade),
+                                    fontSize = (step * 0.34f).toSp(),
+                                    fontWeight = FontWeight.Bold,
+                                ),
                             )
-                        } else if (index in highlight.soft) {
-                            drawCircle(
-                                color = glow.copy(alpha = 0.5f),
-                                radius = radius + stepPx * 0.07f,
-                                center = c,
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = stepPx * 0.03f),
+                            drawText(
+                                layout,
+                                topLeft = Offset(
+                                    c.x - layout.size.width / 2f,
+                                    c.y - layout.size.height / 2f,
+                                ),
                             )
                         }
-                        val layout = measurer.measure(
-                            atom.bonds.toString(),
-                            TextStyle(
-                                color = (if (complete) vivid(accent) else scheme.onBackground).copy(alpha = fade),
-                                fontSize = (step * 0.34f).toSp(),
-                                fontWeight = FontWeight.Bold,
-                            ),
-                        )
-                        drawText(
-                            layout,
-                            topLeft = Offset(
-                                c.x - layout.size.width / 2f,
-                                c.y - layout.size.height / 2f,
-                            ),
-                        )
                     }
                 }
+                Text(
+                    if (s.fullButSplit && splitSettled) "Every atom is full, but it's ${s.pieces()} molecules" else "",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.fillMaxWidth().height(NOTE_HEIGHT),
+                )
             }
         }
     }
+
+    private val NOTE_HEIGHT = 20.dp
 
     /** The lattice: a hairline through the middle of each of [n] rows and columns of side [step], [extent] long. */
     private fun DrawScope.drawLattice(n: Int, step: Float, origin: Offset, extent: Float, colour: Color) {
