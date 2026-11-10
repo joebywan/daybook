@@ -71,9 +71,6 @@ from a measurement or review, so you can check it is still true.
   and the calendar's day cells (sized from width, ~40dp at 360). The archive calendar's day cells size from both axes and
   are as large as the box allows: ~44dp at 375x537 and ~41dp on a phone on its side (844x390), where six weeks must fit
   under the title; dropping the "N days, all unlocked" line when the box is short would buy them about 5dp. *S each.*
-- [ ] **Screenshots show the old names.** Snap, Mambo, Tower and Pointers became Trail, Sun & Moon, Codebreaker and Arrows
-  (2026-10-25); the store shots (`7-snap.png` and the home shot) still show the old ones. Recapture
-  with `tools/screenshots/capture.sh` on an emulator nobody else is using (it resets the clock, size and app). *S.*
 - [ ] **The walkthrough offer: players from before the re-offer.** The offer now returns on every visit until the walkthrough is
   opened or the puzzle solved, recorded in the same `tutorialsOffered` set the once-only offer wrote on a first visit, so a
   player who saw the old offer once is never offered it again (nor shown the first-board walkthrough). A new key would
@@ -175,10 +172,6 @@ Nothing below can be verified from a desktop browser. The tester has the device.
 
 ## Infrastructure
 
-- [ ] **`tools/screenshots/capture.sh` stops at Sudoku.** A puzzle's first board now opens on its walkthrough, so the script's
-  `tap Hint` finds no Hint ("no 'Hint' on screen") and it exits before the README copies; it also looks for "Snap", shown as
-  Trail. It needs a Skip tap after each `open_puzzle`. `docs/screenshots/home.png` was recaptured by hand (2026-10-28, clean
-  install, 7 Oct 2026, 1080x2400 halved); the store shots and the README's board shots were not. *S.*
 - [ ] **Can Renovate's token update workflow files?** No Renovate PR among the last 60 touched `.github/`, and GitHub
   normally refuses workflow changes from a token without the `workflows` permission. If a GitHub Actions update fails on
   the Dependency Dashboard, it needs a `RENOVATE_TOKEN` PAT with that scope. Owner only. *S.*

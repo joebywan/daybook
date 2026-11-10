@@ -19,8 +19,8 @@ adb shell settings put global auto_time 0
 adb shell settings put global auto_time_zone 0
 adb shell setprop persist.sys.timezone UTC
 adb shell date 100712002026.00 >/dev/null     # MMDDhhmmYYYY.ss: Wed 7 Oct 2026, noon
-# Today's three come from the date (core/TodaysThree.kt): this day, Sets, Cage Sudoku and Cipher. A chip's name matches
-# before its tile's, so tap() opens those three from the row; it is the same daily either way.
+# Today's three come from the date (core/TodaysThree.kt; a clean install gets the starter three). A chip's name can
+# match before its tile's, so a puzzle may open from that row; it is the same daily either way.
 adb shell settings put global hide_error_dialogs 1   # a slow CI emulator ANRs the launcher after the clock jump
 sleep 10
 adb shell wm size 1080x1920
@@ -81,7 +81,10 @@ print("none")' "$1") || { sleep 2; continue; }
     elif [ "$y" -gt $((h * 92 / 100)) ]; then
       adb shell input swipe $((w / 2)) $((h * 65 / 100)) $((w / 2)) $((h * 45 / 100)) 400; sleep 1
     else
-      adb shell input tap "$x" "$y"; sleep 1; return 0
+      adb shell input tap "$x" "$y"; sleep 3
+      # A puzzle's first board opens on its walkthrough (autoWalkthrough); Skip leaves it for the board.
+      if adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q 'text="Skip"'; then tap Skip; fi
+      return 0
     fi
   done
   echo "no '$1' on the home grid" >&2; return 1
@@ -114,7 +117,7 @@ shots() {
   open_puzzle "Word Wheel"; sleep 2; shot 4-word-wheel; back
   open_puzzle Kings; sleep 2; shot 5-kings; back
   open_puzzle Mosaic; sleep 2; shot 6-mosaic; back
-  open_puzzle Snap; sleep 2; shot 7-snap; back
+  open_puzzle Trail; sleep 2; shot 7-trail; back
 }
 shots
 
