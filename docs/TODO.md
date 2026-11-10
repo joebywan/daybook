@@ -7,6 +7,35 @@ Six boards are fully converted (`docs/COLOUR.md`, top). The other 25 are on the 
 - Drawn accent spacing: `vivid()` measured 2.34 light / 1.94 dark on the closest pair against 5.79 for the raw accents, and `AccentSpacingTest` reads only the raw ones. The real form is an accent pair per puzzle, solved as a set per scheme, replacing `vivid()`'s global flag.
 - The hint popover, finish popup and solved pills are not on the Arcade tokens; `hintRims` stays muted in light.
 - Word Wheel's home motif uses its old colours.
+
+## Classic look as a setting (issue #418, owner said yes 2026-11-10; L, about a day)
+
+Players asked for the pre-Arcade colours back (too intense, distracting on hard boards, "flashbang" in the morning); the owner
+answered on the issue that it will come back as a settings option. Build a **Look** choice (Classic / Arcade) beside
+Appearance (System / Light / Dark) in Settings; Appearance stays as it is and applies to both looks.
+- **Where Arcade came in:** `3369cc46` (schemes, `vivid()`, `BoardHues` recipes), `148b79b3` (calmer fills), `c0a54027`
+  (`ArcadeBoard` tokens, gradient home tiles). Classic is what `3369cc46^` drew: read the old colours from there.
+- **The switches, all in `ui/theme/`:** a global look beside `useVividScheme` (the trial's own global flag, set from `DaybookTheme`).
+  `vivid(accent)` (72 uses, 41 files) returns `Color(accent)` in Classic, so no call site changes. `BoardHues.fill`/`mark` go back to
+  `pinnedFill`/`pinnedMark` (exactly the old recipes) and `ink` to saturation .55; `TEXT`'s first ink back to `0xFF1B2F29`.
+  `Palette.kt` gets the old `LightScheme`/`DarkScheme` back as Classic schemes. `arcadeGlow` (21 uses) draws nothing in Classic.
+- **The real work:** `ArcadeBoard` (27 uses, 12 files: Sudoku and Cages' grid, Nonogram, Tents, Word Wheel, `GuessBoard`, `PenBoard`,
+  Home, Levels, Today's three, `LaunchOptions`) replaced each board's own colours; add a Classic token set that reproduces them
+  (the Sudoku grid is the one players named). Home's gradient tiles (`HomeScreen.kt`, ~110 lines in `c0a54027`) go back to the
+  flat tile behind the switch. `BoardHues.selected`/`selectedRing` were new with Arcade; Classic uses what Sudoku drew before.
+- **Boards that have only ever been drawn in Arcade** (Dwindle, Equation, Hexwords, Links, Loop, Thermometers, Unblock, the Who's
+  Who graph and icons): render each in Classic, light and dark, at 375x537 and tall (`tools/render/render.py`, WebKit too), and on the
+  emulator.
+- **Storage:** a launch preference like Appearance's (never progress, never a save). Default: Arcade for existing and new players
+  unless the owner says otherwise (ask). Saves and board parity are untouched: colour only.
+- **Tests:** `ContrastTest`, `ArcadeBoardTest` and the palette tests must hold in both looks (the raw accents were designed to 3:1 on
+  the old schemes in `341ceda4`, so Classic should pass). The web page background (`WebPlatform.kt`, `index.html`) follows the look.
+- **Keep it behind the switch from now on:** the Arcade section above (the other 25 boards, the per-scheme accent pairs replacing
+  `vivid()`'s flag) must leave Classic looking as it does now.
+- **Not colour:** the move feel (squares settling, units popping) is separate and already stills under reduced motion; leave it unless
+  the owner wants Classic to calm it too.
+- Version: a feature players notice, so bump the middle number of `version.txt`, rewrite "What's new"
+  (`fastlane/.../changelogs/default.txt`), and comment on #418 when it ships.
 The one list of outstanding work. Small enough to read in a minute; maintained as part of normal work.
 
 **How to keep it current**
