@@ -1252,6 +1252,16 @@ on both schemes, clear of the error red and the success green, spread for the la
 accent comes from `AccentSpacingTest`, which prints the candidate that keeps those rules furthest from every accent and pins
 the floors; the palette tests share its maths (`ColourDistance`).
 
+**Two looks, Classic and Arcade** (issue #418; the owner, 2026-11-10: "ask players what they want"). Classic is what the app
+drew before Arcade (`3369cc46^`): parchment schemes, raw accents, the old `BoardHues` recipes, flat home tiles, no glow. The
+switch is `classicLook()` in `ui/theme/Theme.kt`, a global set by `DaybookTheme` (as `vivid()`'s dark flag is); `lookScheme`,
+`vivid`, `BoardHues.fill`/`mark`/`ink`/`onFill`, `ArcadeBoard.of`/`tile`, `arcadeGlow`/`arcadeHardShadow` and the page brush
+follow it, and the six Arcade-converted boards (Sudoku and Cage Sudoku, Nonogram, Tents, Word Wheel, `GuessBoard`) and Home
+branch on it to draw exactly what they drew before. Stored as the `look` launch preference (null until answered: Arcade),
+asked once (the welcome for a new player, `LookOffer` on Home for one from before), held in Settings (`ui/home/LookChoice.kt`).
+**Arcade work stays behind the switch**: a board converted to Arcade keeps its Classic drawing. Tests run in both looks
+(`forEachLook`, `ContrastTest`, `ClassicLookTest`, the palette tests).
+
 ## Rules that keep being relearned
 
 **Never ship a board the generator has not proved.** Kings, LITS, Mosaic and Shikaku each had a
