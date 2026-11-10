@@ -1125,8 +1125,11 @@ starts `test:`. Graduating one means a new id in `all` with the full standards (
   are never followed further), then derives the rest (links join groups, anti-links hold across groups, one-to-one, last item
   left). A line the closure rules out is drawn faint, never red. Hints are Who's Who's teacher asked of the table the closure
   makes, mapped to nodes (a tick drawn from both ends, stray lines either end drew there ruled out); a mistake is an anti-link
-  on a true pair, or an item's lines into a category that leave out its partner. "Group" lines linked items up in their person's row; the category buttons show the marks as a table with any category
-  as the rows. No walkthrough. Checked at 375 wide on the web only.
+  on a true pair, or an item's lines into a category that leave out its partner. "Group" lines linked items up in their person's
+  row; the category buttons (drawn icons in each column's hue, `WhosWhoIcons.kt`, as are the column heads) show the marks as a
+  table with that category as the rows, drawn with the same nodes: they glide, grow and square off into their cells (one 350 ms
+  tween, snapped under reduced motion), an item not yet certain fades where it stands and its row's cell says what is left, and
+  the table takes no taps. No walkthrough. Checked at 375 wide on the web only.
 
 ## Motion and haptics
 
