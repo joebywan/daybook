@@ -1353,7 +1353,7 @@ checked in). Then check on the emulator; several bugs only appeared there. For t
 checked-in harness: `tools/render/render.py` (see "Rendering harness" under Web build).
 
 **README screenshots go stale silently.** `docs/screenshots/*.png` are emulator captures at half
-scale (540x1200), taken on a *clean install* with the date pinned so the home screen shows a fresh streak badge and unplayed
+scale (540x960, from `tools/screenshots/capture.sh`'s 1080x1920 store shots), taken on a *clean install* with the date pinned so the home screen shows a fresh streak badge and unplayed
 boards rather than whatever the session happened to leave behind. Nothing checks them, so a change
 to a board's look or to the home grid means recapturing them in the same pass — the home shot in
 particular names the puzzle count in its alt text.
