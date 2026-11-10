@@ -16,10 +16,27 @@ private val vividCache = HashMap<Long, Color>()
 
 internal fun useVividScheme(dark: Boolean) { if (vividIsDark != dark) vividIsDark = dark }
 
-/** A puzzle's accent in the scheme now showing: see [vividFor]. The raw accent in the Classic look, as before Arcade. */
+private val classicCache = HashMap<Long, Color>()
+
+/**
+ * The Classic look's accent (issue #418): the raw accent, as before Arcade, wherever it reaches 3:1 on the old scheme's surface
+ * and background, which every accent from before Arcade does. One chosen since (Dwindle's, 2.8:1 on the old dark surface) is
+ * mixed towards white in dark (black in light), a fiftieth at a time, until it does.
+ */
+fun classicAccent(accent: Long, dark: Boolean): Color {
+    val s = lookScheme(dark, classic = true)
+    val toward = if (dark) Color.White else Color.Black
+    for (step in 0..50) {
+        val c = androidx.compose.ui.graphics.lerp(Color(accent), toward, step / 50f)
+        if (BoardHues.contrast(c, s.surface) >= 3f && BoardHues.contrast(c, s.background) >= 3f) return c
+    }
+    return toward
+}
+
+/** A puzzle's accent in the scheme now showing: see [vividFor]. In the Classic look, [classicAccent]. */
 fun vivid(accent: Long): Color {
-    if (classicLook()) return Color(accent)
     val dark = vividIsDark
+    if (classicLook()) return classicCache.getOrPut(if (dark) accent or (1L shl 40) else accent) { classicAccent(accent, dark) }
     return vividCache.getOrPut(if (dark) accent or (1L shl 40) else accent) { vividFor(accent, dark) }
 }
 

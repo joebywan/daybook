@@ -27,7 +27,8 @@ class SetsPaletteTest {
     private fun contrast(a: Color, b: Color) = (maxOf(luminance(a), luminance(b)) + 0.05) / (minOf(luminance(a), luminance(b)) + 0.05)
 
     // The card surface of ui/theme/Palette.kt: light, then dark.
-    private val surfaces = listOf(Color(0xFFFFFBF2) to false, Color(0xFF1B2F29) to true)
+    // Both looks (issue #418): Classic's surfaces, then Arcade's.
+    private val surfaces = listOf(Color(0xFFFFFBF2) to false, Color(0xFF1B2F29) to true, Color.White to false, Color(0xFF211A5C) to true)
 
     @Test
     fun `the three card colours are far apart in both schemes, all three kinds of colour-blindness included`() {
@@ -64,8 +65,12 @@ class SetsPaletteTest {
 
     @Test
     fun `no card colour is a Coral or Green step, which are the right and wrong colours`() {
-        val reserved = listOf(8f, 145f).flatMap { h ->
-            listOf(false, true).flatMap { d -> listOf(BoardHues.fill(h, d), BoardHues.ink(h, d), BoardHues.mark(h)) }
+        // In both looks: Classic's fill, ink and mark are the older recipes (issue #418).
+        val reserved = mutableListOf<Color>()
+        forEachLook {
+            reserved += listOf(8f, 145f).flatMap { h ->
+                listOf(false, true).flatMap { d -> listOf(BoardHues.fill(h, d), BoardHues.ink(h, d), BoardHues.mark(h)) }
+            }
         }
         for ((_, dark) in surfaces) for (p in Sets.palette(dark)) assertTrue("a card colour is a reserved hue", p !in reserved)
     }

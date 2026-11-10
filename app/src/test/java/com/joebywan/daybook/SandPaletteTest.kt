@@ -31,7 +31,9 @@ class SandPaletteTest {
 
     @Test
     fun `no colour is Coral or Green, and every one has a name`() {
-        val reserved = listOf(8f, 145f).flatMap { listOf(BoardHues.fill(it, false), BoardHues.ink(it, false), BoardHues.mark(it)) }
+        // In both looks: Classic's fill, ink and mark are the older recipes (issue #418).
+        val reserved = mutableListOf<Color>()
+        forEachLook { reserved += listOf(8f, 145f).flatMap { listOf(BoardHues.fill(it, false), BoardHues.ink(it, false), BoardHues.mark(it)) } }
         for (p in Sand.palette) assertTrue("a colour is a reserved hue", p !in reserved)
         assertEquals(8, Sand.palette.toSet().size)
         assertEquals(Sand.palette.size, Sand.colourNames.toSet().size)

@@ -4,8 +4,6 @@ import androidx.compose.ui.graphics.Color
 import com.joebywan.daybook.ColourDistance.lin
 import com.joebywan.daybook.puzzles.Mosaic
 import com.joebywan.daybook.puzzles.MosaicTeacher
-import com.joebywan.daybook.ui.theme.DarkScheme
-import com.joebywan.daybook.ui.theme.LightScheme
 import com.joebywan.daybook.ui.theme.BoardHues
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -56,14 +54,19 @@ class MosaicPaletteTest {
     @Test
     fun `every colour is clear of the board surface in both schemes`() {
         // Measured closest 13.8 (Amber on parchment, colour-blind); areas also carry heavy outlines, so this is a floor.
-        for (surface in listOf(LightScheme.background, DarkScheme.background, LightScheme.surface, DarkScheme.surface)) {
-            for (c in Mosaic.palette) assertTrue("a colour sits on the surface: ${apart(c, surface)}", apart(c, surface) >= 12)
+        // In both looks (issue #418).
+        forEachLook { look ->
+            for ((_, s) in lookSchemes(look)) for (surface in listOf(s.background, s.surface)) {
+                for (c in Mosaic.palette) assertTrue("a colour sits on the ${look.label} surface: ${apart(c, surface)}", apart(c, surface) >= 12)
+            }
         }
     }
 
     @Test
     fun `no colour is Coral or Green, which are the error and right colours`() {
-        val reserved = listOf(8f, 145f).flatMap { listOf(BoardHues.fill(it, false), BoardHues.ink(it, false), BoardHues.mark(it)) }
+        // In both looks: Classic's fill, ink and mark are the older recipes (issue #418).
+        val reserved = mutableListOf<Color>()
+        forEachLook { reserved += listOf(8f, 145f).flatMap { listOf(BoardHues.fill(it, false), BoardHues.ink(it, false), BoardHues.mark(it)) } }
         for (p in Mosaic.palette) assertTrue("a colour is a reserved hue", p !in reserved)
     }
 

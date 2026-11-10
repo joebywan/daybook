@@ -98,7 +98,8 @@ class ArcadeBoard private constructor(
             squareInk = Color(0xFF11201C),
             given = Color(0xFFE8E0D0),
             givenInk = Color(0xFF11201C),
-            selected = ArcadeFill(Color(0xFFB06C1E), Color(0xFFB06C1E), Color.White),
+            // The old secondary, B06C1E, a step deeper: white on it was 4.2:1, under the 4.5 its label needs.
+            selected = ArcadeFill(Color(0xFFA6631A), Color(0xFFA6631A), Color.White),
             selectedEdge = Color(0xFF11201C),
             error = Color(0xFFAD4D39),
             errorInk = Color.White,
