@@ -2,6 +2,7 @@ package com.joebywan.daybook.ui.home
 
 import com.joebywan.daybook.ui.theme.vivid
 import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.data.levelBoardDone
 import com.joebywan.daybook.ui.card
@@ -122,17 +123,24 @@ internal fun LevelGrid(
             val board = boards.getOrNull(i)
             if (board == null) {
                 val tone = scheme.secondary
+                // Classic (issue #418): a tint of the tone behind the icon, the footer in the variant's ink, as before Arcade.
+                val classic = classicLook()
                 HomeTile(
                     name = "All levels", accent = tone, tile = ArcadeBoard.tile(tone, BoardHues.isDark(scheme)), solved = false, onClick = { onAllLevels?.invoke() }, modifier = modifier,
                     motif = {
                         Box(
-                            Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)).background(scheme.surface),
+                            Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)).background(if (classic) tone.copy(alpha = 0.14f) else scheme.surface),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Default.FormatListNumbered, null, tint = BoardHues.textOn(tone, scheme.surface, 3f), modifier = Modifier.size(previewSize * 0.42f))
+                            Icon(Icons.Default.FormatListNumbered, null, tint = if (classic) tone else BoardHues.textOn(tone, scheme.surface, 3f), modifier = Modifier.size(previewSize * 0.42f))
                         }
                     },
-                    footer = { TileFooter(if (progress.done.isEmpty()) "" else "${progress.done.size} done", ArcadeBoard.tile(tone, BoardHues.isDark(scheme)).ink) },
+                    footer = {
+                        TileFooter(
+                            if (progress.done.isEmpty()) "" else "${progress.done.size} done",
+                            if (classic) scheme.onSurfaceVariant else ArcadeBoard.tile(tone, BoardHues.isDark(scheme)).ink,
+                        )
+                    },
                 )
             } else {
                 val (puzzle, tier) = board
