@@ -376,8 +376,10 @@ Shikaku, Dominoes and LITS; Mosaic has its own judge
 
 - [ ] **test:Who's who** (`puzzles/WhosWhoGraph.kt`, `CLAUDE.md` "Test puzzles"). Built to try Who's Who as a graph; hidden
   behind Settings' "Test puzzles". Open: hints are Who's Who's teacher, so their words still say "row", "column", "tick" and
-  "cross off" (`WhosWhoTeacher` lines 148-274); give the graph its own phrasing or a word map. No walkthrough. Not yet
-  checked on the emulator or a tablet. Whether it graduates (a new id in `all` with the full standards), replaces the table,
+  "cross off" (`WhosWhoTeacher` lines 148-274); give the graph its own phrasing or a word map. No walkthrough. Seen on the
+  emulator (Pixel 6, 2026-11-11): links, the closure's dashed anti-links and the table views' glide all work; not yet on a
+  tablet. Odd: a drawn line runs from the middle of each pill, so it is drawn over the names it joins (Gus, water); stopping
+  it at the pill's edge would keep them readable. Whether it graduates (a new id in `all` with the full standards), replaces the table,
   or goes is the owner's call after playing it. *M to finish.*
 
 ## Owner's call
