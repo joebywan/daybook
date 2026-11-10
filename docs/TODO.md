@@ -26,8 +26,16 @@ Appearance (System / Light / Dark) in Settings; Appearance stays as it is and ap
 - **Boards that have only ever been drawn in Arcade** (Dwindle, Equation, Hexwords, Links, Loop, Thermometers, Unblock, the Who's
   Who graph and icons): render each in Classic, light and dark, at 375x537 and tall (`tools/render/render.py`, WebKit too), and on the
   emulator.
-- **Storage:** a launch preference like Appearance's (never progress, never a save). Default: Arcade for existing and new players
-  unless the owner says otherwise (ask). Saves and board parity are untouched: colour only.
+- **Storage:** a launch preference like Appearance's (never progress, never a save). Saves and board parity are untouched: colour only.
+- **Players choose; no default is imposed** (the owner, 2026-11-10: "ask players what they want"). Two ways in, each asked once:
+  - *New players:* the welcome (`ui/home/Welcome.kt`) asks, with a small swatch of each look (a few squares of the Sudoku grid and
+    a home tile, drawn in that look, not a screenshot) and Start under it. This reverses the welcome's own "No question" (its doc
+    comment, `de598d58`); update the comment. The pick applies at once, so the grid after Start is already in it.
+  - *Existing players* never see the welcome (`needsWelcome` marks anyone who has played as welcomed), and they are the ones who
+    asked on #418. Give them a one-time card on Home, the reminder offer's pattern (`ui/home/Reminder.kt`, `ReminderOffer`: shown
+    until answered either way, never again; a choice in Settings answers it too), with the same two swatches. Until they answer they
+    stay on Arcade, what they have now.
+  - Either way, Settings holds the choice afterwards, and the card/welcome text says so.
 - **Tests:** `ContrastTest`, `ArcadeBoardTest` and the palette tests must hold in both looks (the raw accents were designed to 3:1 on
   the old schemes in `341ceda4`, so Classic should pass). The web page background (`WebPlatform.kt`, `index.html`) follows the look.
 - **Keep it behind the switch from now on:** the Arcade section above (the other 25 boards, the per-scheme accent pairs replacing
