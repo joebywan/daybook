@@ -4,14 +4,17 @@ import kotlinx.serialization.Serializable
 
 /**
  * A Who's Who board played as a graph (the lab puzzle `test-whoswho`, `WhosWhoGraph`): every item is a node, the people
- * included, and the player marks a pair of items from different categories as linked (the same person's) or anti-linked
- * (never the same person's). No category is the base, so the board can be read from the house, a pet or a person alike.
+ * included. The player draws lines from an item to the items of another category it can be (one line: that one; several:
+ * one of those), or marks a pair anti-linked (never the same person's). No category is the base, so the board can be read
+ * from the house, a pet or a person alike.
  *
  * [board] is a dealt Who's Who board, kept whole for its names, words, clues, answer and struck clues; its own table
  * marks are never used. [links] holds one character per pair `a < b` of items at `a * size + b` (items are
- * `category * n + slot`, category 0 the names, as [WhoClue]'s): `.` open, `o` a link, `x` an anti-link. Shorter
- * strings mean the rest are open, so a fresh board stores nothing. What the marks imply is derived
- * ([WhosWhoGraphLogic.close]), never stored.
+ * `category * n + slot`, category 0 the names, as [WhoClue]'s): `.` open, `>` a line drawn from `a`, `<` one drawn from
+ * `b`, `o` drawn from both ends, `x` an anti-link. A line has an end because "house 1 is one of Fred's" says nothing about
+ * house 1's other people. Saves from before the ends kept `o` for a link, which reads the same now. Shorter strings mean
+ * the rest are open, so a fresh board stores nothing. What the marks imply is derived ([WhosWhoGraphLogic.close]), never
+ * stored.
  */
 @Serializable
 data class WhosWhoGraphState(
@@ -38,15 +41,32 @@ data class WhosWhoGraphState(
         return copy(links = next.concatToString().trimEnd(WhosWhoGraphLogic.OPEN), moves = moves + 1)
     }
 
-    /** A tap on the pair: open, then a link, then an anti-link, then open again. */
-    fun cycle(a: Int, b: Int): WhosWhoGraphState = withMark(
-        a, b,
-        when (mark(a, b)) {
-            WhosWhoGraphLogic.OPEN -> WhosWhoGraphLogic.LINK
-            WhosWhoGraphLogic.LINK -> WhosWhoGraphLogic.ANTI
-            else -> WhosWhoGraphLogic.OPEN
-        },
+    /** Whether [from] has drawn a line to [to]. */
+    fun drew(from: Int, to: Int): Boolean = WhosWhoGraphLogic.drew(mark(from, to), from < to)
+
+    /** The pair with [from]'s line added (kept if there already). */
+    fun withLine(from: Int, to: Int): WhosWhoGraphState = withMark(
+        from, to,
+        if (drew(to, from)) WhosWhoGraphLogic.LINK else if (from < to) WhosWhoGraphLogic.FROM_LOW else WhosWhoGraphLogic.FROM_HIGH,
     )
+
+    /** The pair with [from]'s line taken away; a line from the other end stays. */
+    fun withoutLine(from: Int, to: Int): WhosWhoGraphState = withMark(
+        from, to,
+        if (!drew(from, to)) mark(from, to)
+        else if (!drew(to, from)) WhosWhoGraphLogic.OPEN
+        else if (to < from) WhosWhoGraphLogic.FROM_LOW else WhosWhoGraphLogic.FROM_HIGH,
+    )
+
+    /**
+     * A tap on [tapped] with [selected] chosen: an anti-link opens; a line [selected] drew becomes an anti-link (both ends'
+     * lines go); otherwise [selected]'s line is added.
+     */
+    fun cycle(selected: Int, tapped: Int): WhosWhoGraphState = when {
+        mark(selected, tapped) == WhosWhoGraphLogic.ANTI -> withMark(selected, tapped, WhosWhoGraphLogic.OPEN)
+        drew(selected, tapped) -> withMark(selected, tapped, WhosWhoGraphLogic.ANTI)
+        else -> withLine(selected, tapped)
+    }
 
     /** Clue [clue] struck through, or back: a note. One move. */
     fun strike(clue: Int): WhosWhoGraphState = copy(board = board.strike(clue), moves = moves + 1)
@@ -59,15 +79,25 @@ data class WhosWhoGraphState(
 internal object WhosWhoGraphLogic {
 
     const val OPEN = '.'
+    /** A line drawn from both ends. */
     const val LINK = 'o'
     const val ANTI = 'x'
+
+    /** A line drawn from the lower item of the pair. */
+    const val FROM_LOW = '>'
+
+    /** A line drawn from the higher item of the pair. */
+    const val FROM_HIGH = '<'
+
+    /** Whether [mark] holds a line from the pair's lower end ([fromLow]) or its higher one. */
+    fun drew(mark: Char, fromLow: Boolean) = mark == LINK || mark == if (fromLow) FROM_LOW else FROM_HIGH
 
     fun pair(size: Int, a: Int, b: Int) = minOf(a, b) * size + maxOf(a, b)
 
     /**
      * Every pair's mark once the player's are carried through: [at] is 1 linked, -1 anti-linked, 0 open, for both orders.
-     * [badPair] flags a pair where the marks say both; [badItem] an item linked to two of one category, or with nothing left
-     * in some category.
+     * [badPair] flags a pair the marks force both ways; [badItem] an item linked to two of one category, or with nothing
+     * left in some category. A line the closure rules out is neither: it was only ever a "might be".
      */
     class Closure(val size: Int, val n: Int, val m: IntArray, val badPair: BooleanArray, val badItem: BooleanArray) {
         fun at(a: Int, b: Int) = m[a * size + b]
@@ -79,7 +109,9 @@ internal object WhosWhoGraphLogic {
     }
 
     /**
-     * The player's marks carried to a fixpoint by four rules: links join groups (whatever is linked to one is linked to
+     * The player's marks carried to a fixpoint. An item's lines into a category say where it can be, so it is anti-linked
+     * to every item there it drew no line to (one line leaves one, which the last rule links); lines are never followed
+     * further, so "Fred might be in house 1" says nothing of house 1's pet. Then four rules: links join groups (whatever is linked to one is linked to
      * all); an anti-link between two items holds between their whole groups; an item linked to one of a category is
      * anti-linked to the rest of it; an item with one item of a category left is linked to it.
      */
@@ -90,14 +122,17 @@ internal object WhosWhoGraphLogic {
         val badPair = BooleanArray(size * size)
         val badItem = BooleanArray(size)
         fun cat(i: Int) = i / n
-        for (a in 0 until size) for (b in a + 1 until size) {
-            val v = when (s.mark(a, b)) {
-                LINK -> 1
-                ANTI -> -1
-                else -> 0
+        for (a in 0 until size) for (b in a + 1 until size) if (s.mark(a, b) == ANTI) {
+            m[a * size + b] = -1
+            m[b * size + a] = -1
+        }
+        for (a in 0 until size) for (c in 0..s.board.columns) {
+            val items = c * n until c * n + n
+            if (c == cat(a) || items.none { s.drew(a, it) }) continue
+            for (z in items) if (!s.drew(a, z)) {
+                m[a * size + z] = -1
+                m[z * size + a] = -1
             }
-            m[a * size + b] = v
-            m[b * size + a] = v
         }
         var changed = true
         fun set(a: Int, b: Int, v: Int) {

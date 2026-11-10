@@ -1,8 +1,12 @@
 package com.joebywan.daybook.puzzles
 
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateOffsetAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -76,10 +80,11 @@ import kotlin.math.roundToInt
 /**
  * Who's Who drawn as a graph, a lab puzzle (`PuzzleRegistry.lab`): shown only with Settings' "Test puzzles" on, and never
  * recorded, so it touches no streak, statistic or achievement. Same boards as Who's Who (its own seeds, by its own id);
- * the table is gone. Every item is a node in a column of its category; tap one, then an item of another category, and
- * the pair cycles through linked, anti-linked and open. What the marks imply is drawn faint ([WhosWhoGraphLogic.close]).
+ * the table is gone. Every item is a node in a column of its category; tap one, then items of another category, to draw
+ * where it can be (one line: that one; several: one of those); a line tapped again becomes an anti-link, then open. What
+ * the marks imply is drawn faint ([WhosWhoGraphLogic.close]).
  * "Group" lines linked items up in their person's row, so a solved board settles into the answer table; the category
- * buttons show the same marks as a table with any category as the rows.
+ * buttons (drawn icons, [WhosWhoIcons]) re-sort the same nodes into a table with that category as the rows.
  *
  * Highlight indices: item `ref` (`category * n + slot`), clue `k` [WhosWhoTeacher.CLUE_BASE] `+ k`.
  */
@@ -92,9 +97,10 @@ object WhosWhoGraph : PuzzleType {
 
     override val rules = listOf(
         "Every person and every item is a circle, one column per category. The clues fix who has what.",
-        "Tap a circle, then a circle in another column: the pair becomes linked (the same person's), then anti-linked (never the same person's), then open again.",
+        "Tap a circle, then circles in another column to draw where it can be: one line means that one, several mean one of those.",
+        "Tap a line again to rule the pair out (never the same person's), and again to clear it.",
         "What your marks imply is drawn faint: links join up, an anti-link holds across whole groups, and a category with one item left links to it.",
-        "With a circle chosen you see all its pairs: solid linked, dashed anti-linked, dotted still open.",
+        "With a circle chosen you see all its pairs: thick linked, thin one of its choices, dashed ruled out, dotted still open.",
         "Group lines linked items up in their person's row. The category buttons show the marks as a table, any category as the rows.",
         "Solved when every person is linked to one of everything and every clue is true.",
     )
@@ -131,7 +137,14 @@ object WhosWhoGraph : PuzzleType {
             applyTo = { now ->
                 var next = now as WhosWhoGraphState
                 val closed = WhosWhoGraphLogic.close(next)
-                for ((p, ref) in ticks) if (closed.at(p, ref) != 1) next = next.withMark(p, ref, WhosWhoGraphLogic.LINK)
+                // A tick is "is": the pair drawn from both ends, and any other line either end drew into the other's
+                // category ruled out, so a stray "might be" cannot keep it open.
+                for ((p, ref) in ticks) if (closed.at(p, ref) != 1) {
+                    next = next.withMark(p, ref, WhosWhoGraphLogic.LINK)
+                    for ((x, y) in listOf(p to ref, ref to p)) for (z in y / b.n * b.n until y / b.n * b.n + b.n) {
+                        if (z != y && next.drew(x, z)) next = next.withMark(x, z, WhosWhoGraphLogic.ANTI)
+                    }
+                }
                 for ((p, ref) in crosses) if (closed.at(p, ref) != -1) next = next.withMark(p, ref, WhosWhoGraphLogic.ANTI)
                 if (next.moves > now.moves) next.copy(moves = now.moves + 1) else next
             },
@@ -142,25 +155,44 @@ object WhosWhoGraph : PuzzleType {
         )
     }
 
-    /** The first marked pair, in order, whose mark the board's one answer disagrees with. */
+    /**
+     * The first mark the board's one answer disagrees with: an anti-link on a pair that goes together, or an item whose
+     * lines into a category leave out the one it really goes with. A line to a wrong item beside the right one is fine:
+     * it only says "one of these".
+     */
     private fun mistake(s: WhosWhoGraphState): Deduction? {
         val b = s.board
+        val n = b.n
+        fun same(x: Int, y: Int) = WhosWhoGraphLogic.holder(b, x) == WhosWhoGraphLogic.holder(b, y)
         for (a in 0 until s.size) for (c in a + 1 until s.size) {
-            val mark = s.mark(a, c)
-            if (mark == WhosWhoGraphLogic.OPEN) continue
-            val same = WhosWhoGraphLogic.holder(b, a) == WhosWhoGraphLogic.holder(b, c)
-            if (same == (mark == WhosWhoGraphLogic.LINK)) continue
-            val first = WhosWhoLogic.word(b, a)
-            val second = WhosWhoLogic.word(b, c)
+            if (s.mark(a, c) != WhosWhoGraphLogic.ANTI || !same(a, c)) continue
             return Deduction(
                 technique = WhosWhoTeacher.MISTAKE,
                 nudge = "One of your marks doesn't fit.",
-                explanation = if (same) "$first and $second go together, so that anti-link can't be kept."
-                else "$first and $second belong to different people, so that link can't be kept.",
+                explanation = "${WhosWhoLogic.word(b, a)} and ${WhosWhoLogic.word(b, c)} go together, so that anti-link can't be kept.",
                 focus = setOf(a, c), cited = emptySet(), targets = setOf(a, c),
                 mistake = true,
                 applyTo = { now -> (now as WhosWhoGraphState).withMark(a, c, WhosWhoGraphLogic.OPEN) },
                 reachedBy = { now -> (now as WhosWhoGraphState).mark(a, c) == WhosWhoGraphLogic.OPEN },
+            )
+        }
+        for (a in 0 until s.size) for (category in 0..b.columns) {
+            if (category == a / n) continue
+            val items = category * n until category * n + n
+            val drawn = items.filter { s.drew(a, it) }
+            if (drawn.isEmpty() || drawn.any { same(a, it) }) continue
+            val word = WhosWhoLogic.word(b, a)
+            return Deduction(
+                technique = WhosWhoTeacher.MISTAKE,
+                nudge = "One of your marks doesn't fit.",
+                explanation = "$word's lines to the ${title(b, category)} column leave out the right one, so they can't be kept.",
+                focus = setOf(a) + drawn, cited = emptySet(), targets = setOf(a) + drawn,
+                mistake = true,
+                applyTo = { now -> drawn.fold(now as WhosWhoGraphState) { acc, z -> acc.withoutLine(a, z) }.copy(moves = now.moves + 1) },
+                reachedBy = { now ->
+                    val left = items.filter { (now as WhosWhoGraphState).drew(a, it) }
+                    left.isEmpty() || left.any { same(a, it) }
+                },
             )
         }
         return null
@@ -174,7 +206,17 @@ object WhosWhoGraph : PuzzleType {
     private val CHIPS = 34.dp
     private val HEADER = 20.dp
 
+    /** How long a change of view takes to re-sort the board. */
+    private const val MORPH_MS = 350
+
     private fun title(b: WhosWhoState, category: Int) = if (category == 0) "Person" else WhosWhoWords.HEADERS[b.groups[category - 1]]
+
+    /** A category's drawn mark in its column's ink, named for a screen reader. */
+    @Composable
+    private fun Header(b: WhosWhoState, category: Int, dark: Boolean, modifier: Modifier) = WhosWhoIcons.Icon(
+        if (category == 0) WhosWhoIcons.PERSON else b.groups[category - 1],
+        BoardHues.ink(HUES[category % HUES.size], dark), dark, title(b, category), modifier,
+    )
 
     @Composable
     override fun Board(state: PuzzleState, onState: (PuzzleState) -> Unit, interactive: Boolean) {
@@ -205,23 +247,19 @@ object WhosWhoGraph : PuzzleType {
                 ) {
                     Chip("Links", view < 0 && grouped == 0) { view = -1; grouped = 0 }
                     Chip("Group", view < 0 && grouped == 1) { view = -1; grouped = 1 }
-                    for (c in 0..b.columns) Chip(title(b, c), view == c) { view = c }
+                    for (c in 0..b.columns) Chip(null, view == c, { Header(b, c, dark, Modifier.size(20.dp)) }) { view = c }
                 }
                 Box(Modifier.weight(1.5f).fillMaxWidth().widthIn(max = 560.dp)) {
-                    if (view < 0) {
-                        Graph(s, closure, selected, grouped == 1, badItem, badPair, paint.highlight, paint.glow, paint.pulse, dark, interactive) { i ->
-                            val now = selected
-                            selected = when {
-                                i < 0 -> -1
-                                now < 0 || now / b.n == i / b.n -> if (i == now) -1 else i
-                                else -> {
-                                    onState(s.cycle(now, i))
-                                    now
-                                }
+                    Graph(s, closure, selected, grouped == 1, view, badItem, badPair, paint.highlight, paint.glow, paint.pulse, dark, interactive) { i ->
+                        val now = selected
+                        selected = when {
+                            i < 0 -> -1
+                            now < 0 || now / b.n == i / b.n -> if (i == now) -1 else i
+                            else -> {
+                                onState(s.cycle(now, i))
+                                now
                             }
                         }
-                    } else {
-                        Table(s, closure, view, dark)
                     }
                 }
                 Clues(b, badClue, paint.highlight, paint.glow, paint.pulse, dark, interactive, Modifier.weight(1f).fillMaxWidth().widthIn(max = 560.dp)) {
@@ -232,7 +270,7 @@ object WhosWhoGraph : PuzzleType {
     }
 
     @Composable
-    private fun Chip(label: String, on: Boolean, onClick: () -> Unit) {
+    private fun Chip(label: String?, on: Boolean, icon: @Composable () -> Unit = {}, onClick: () -> Unit) {
         val scheme = MaterialTheme.colorScheme
         Box(
             Modifier
@@ -242,7 +280,8 @@ object WhosWhoGraph : PuzzleType {
                 .padding(horizontal = 10.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(label, fontSize = 13.sp, color = if (on) scheme.onSecondaryContainer else scheme.onSurfaceVariant, maxLines = 1)
+            if (label == null) icon()
+            else Text(label, fontSize = 13.sp, color = if (on) scheme.onSecondaryContainer else scheme.onSurfaceVariant, maxLines = 1)
         }
     }
 
@@ -289,6 +328,7 @@ object WhosWhoGraph : PuzzleType {
         closure: WhosWhoGraphLogic.Closure,
         selected: Int,
         grouped: Boolean,
+        view: Int,
         badItem: BooleanArray,
         badPair: BooleanArray,
         highlight: com.joebywan.daybook.core.BoardHighlight,
@@ -317,21 +357,39 @@ object WhosWhoGraph : PuzzleType {
             val h: Dp = minOf(cellH * 0.78f, 46.dp)
             val density = LocalDensity.current
             val centre = { col: Int, r: Int -> with(density) { Offset((cellW * (col + 0.5f)).toPx(), (HEADER + cellH * (r + 0.5f)).toPx()) } }
-            val pos = List(s.size) { i ->
+            // A table view is the same box and the same nodes: the chosen category's items head the rows, every other item
+            // moves into the row it is certainly linked to and grows into its cell; one still open has no cell, so it
+            // fades out where it stands and the row's cell says what is left. One tween for everything, so the board reads
+            // as re-sorting in one movement.
+            val table = view >= 0
+            val lastTable = remember { intArrayOf(0) }
+            if (table) lastTable[0] = view
+            val base = lastTable[0]
+            val order = if (table) listOf(view) + (0 until cols).filter { it != view } else (0 until cols).toList()
+            val colOf = IntArray(cols).also { for ((k, c) in order.withIndex()) it[c] = k }
+            fun tableRow(x: Int): Int = if (x / n == base) x % n else closure.linked(x, base).let { if (it >= 0) it % n else -1 }
+            fun <T> ease(): AnimationSpec<T> = if (reduced) snap() else tween(MORPH_MS, easing = FastOutSlowInEasing)
+            val t by animateFloatAsState(if (table) 1f else 0f, ease(), label = "table")
+            class Node(val pos: State<Offset>, val w: State<Dp>, val h: State<Dp>, val corner: State<Dp>, val alpha: State<Float>)
+            val nodes = List(s.size) { i ->
                 key(i) {
-                    animateOffsetAsState(centre(i / n, row[i]), if (reduced) snap() else spring(dampingRatio = 0.8f, stiffness = 300f), label = "item")
+                    val r = if (table) tableRow(i) else -1
+                    val open = table && r < 0
+                    Node(
+                        animateOffsetAsState(if (table) centre(colOf[i / n], if (open) i % n else r) else centre(i / n, row[i]), ease(), label = "item"),
+                        animateDpAsState(if (open) w / 2 else if (table) cellW - 4.dp else w, ease(), label = "w"),
+                        animateDpAsState(if (open) h / 2 else if (table) cellH - 4.dp else h, ease(), label = "h"),
+                        animateDpAsState(if (table) 8.dp else h / 2, ease(), label = "corner"),
+                        animateFloatAsState(if (open) 0f else if (!table && loose[i]) 0.45f else 1f, ease(), label = "alpha"),
+                    )
                 }
             }
+            val pos = nodes.map { it.pos }
             for (c in 0 until cols) {
-                Text(
-                    title(b, c),
-                    Modifier.width(cellW).offset(x = cellW * c),
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
+                val x by animateDpAsState(cellW * colOf[c], ease(), label = "header")
+                Header(b, c, dark, Modifier.width(cellW).height(HEADER).offset(x = x).padding(vertical = 2.dp))
             }
+            if (t > 0f) Cells(s, closure, base, cellW, cellH, t)
             val ink = scheme.onSurface
             val faint = scheme.onSurfaceVariant
             val error = scheme.error
@@ -345,11 +403,17 @@ object WhosWhoGraph : PuzzleType {
                         val gap = c / n - a / n
                         if (gap == 0 || (gap > 1) != skipping) continue
                         val touches = selected == a || selected == c
-                        val mine = s.mark(a, c) != WhosWhoGraphLogic.OPEN
+                        val mark = s.mark(a, c)
+                        val mine = mark != WhosWhoGraphLogic.OPEN
+                        val line = mine && mark != WhosWhoGraphLogic.ANTI
                         val v = closure.at(a, c)
+                        val dim = selected >= 0 && !touches
                         val (colour, width, effect) = when {
                             badPair[a * s.size + c] -> Triple(error, 3.dp, null)
-                            v == 1 -> Triple(ink.copy(alpha = if (selected >= 0 && !touches) 0.15f else if (mine) 0.9f else 0.4f), if (mine) 2.5.dp else 1.2.dp, null)
+                            v == 1 -> Triple(ink.copy(alpha = if (dim) 0.15f else if (mine) 0.9f else 0.4f), if (mine) 2.5.dp else 1.2.dp, null)
+                            // A "might be": thinner and lighter than a link; once the marks rule it out, fainter still.
+                            line && v == 0 -> Triple(ink.copy(alpha = if (dim) 0.12f else 0.55f), 1.5.dp, null)
+                            line -> Triple(faint.copy(alpha = if (dim) 0.1f else 0.3f), 1.dp, null)
                             v == -1 && touches -> Triple(error.copy(alpha = if (mine) 0.85f else 0.45f), if (mine) 1.6.dp else 1.dp, dash)
                             v == 0 && touches -> Triple(faint.copy(alpha = 0.7f), 1.2.dp, dot)
                             else -> continue
@@ -368,34 +432,39 @@ object WhosWhoGraph : PuzzleType {
                     }
                 }
             }
-            Box(edges(false))
+            if (t < 1f) Box(edges(false).alpha(1f - t))
             for (i in 0 until s.size) {
                 val hue = HUES[(i / n) % HUES.size]
                 val hint = highlight.look(i)
-                val p = pos[i]
+                val node = nodes[i]
+                val p = node.pos
+                val nw = node.w.value
+                val nh = node.h.value
+                val shape = RoundedCornerShape(node.corner.value)
                 Box(
                     Modifier
-                        .offset { IntOffset((p.value.x - w.toPx() / 2).roundToInt(), (p.value.y - h.toPx() / 2).roundToInt()) }
-                        .size(w, h)
+                        .offset { IntOffset((p.value.x - nw.toPx() / 2).roundToInt(), (p.value.y - nh.toPx() / 2).roundToInt()) }
+                        .size(nw, nh)
+                        .alpha(node.alpha.value)
                         .highlightAnchor(i)
-                        .ring(hint, glow, pulse, h / 2, outside = true)
-                        .clip(RoundedCornerShape(50))
+                        .ring(hint, glow, pulse, node.corner.value, outside = true)
+                        .clip(shape)
                         .background(BoardHues.fill(hue, dark))
                         .border(
                             if (i == selected || badItem[i]) 2.5.dp else 0.5.dp,
                             if (badItem[i]) scheme.error else if (i == selected) scheme.onSurface else BoardHues.ink(hue, dark),
-                            RoundedCornerShape(50),
+                            shape,
                         )
-                        .clickable(enabled = interactive) { onItem(i) }
-                        .alpha(if (loose[i]) 0.45f else 1f)
+                        // A table is for reading: its taps did nothing before it shared the nodes, and still do nothing.
+                        .clickable(enabled = interactive && !table) { onItem(i) }
                         .dimmed(hint),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         WhosWhoLogic.word(b, i),
                         Modifier.padding(horizontal = 2.dp),
-                        fontSize = minOf(h * 0.4f, 14.dp).boardSp(),
-                        lineHeight = minOf(h * 0.5f, 18.dp).boardSp(),
+                        fontSize = minOf(nh * 0.4f, 14.dp).boardSp(),
+                        lineHeight = minOf(nh * 0.5f, 18.dp).boardSp(),
                         fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal,
                         color = scheme.onSurface,
                         textAlign = TextAlign.Center,
@@ -404,67 +473,44 @@ object WhosWhoGraph : PuzzleType {
                     )
                 }
             }
-            Box(edges(true))
+            if (t < 1f) Box(edges(true).alpha(1f - t))
         }
     }
 
-    /** The marks as a table: a row per item of [base], a column per other category, its link or what is left. */
+    /**
+     * The table's cells behind the nodes, faded in by [t]: a tinted square per cell, and where the row's head is not yet
+     * linked to anything in a column, what is left there ("any", the items, or "none left" in red).
+     */
     @Composable
-    private fun Table(s: WhosWhoGraphState, closure: WhosWhoGraphLogic.Closure, base: Int, dark: Boolean) {
+    private fun Cells(s: WhosWhoGraphState, closure: WhosWhoGraphLogic.Closure, base: Int, cellW: Dp, cellH: Dp, t: Float) {
         val b = s.board
         val n = b.n
         val scheme = MaterialTheme.colorScheme
-        val others = (0..b.columns).filter { it != base }
-        Column(Modifier.fillMaxSize().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                for (c in listOf(base) + others) {
-                    Text(title(b, c), Modifier.weight(1f), fontSize = 12.sp, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                }
+        val order = listOf(base) + (0..b.columns).filter { it != base }
+        for (r in 0 until n) for ((k, c) in order.withIndex()) {
+            val head = base * n + r
+            val open = c != base && closure.linked(head, c) < 0
+            val left = (c * n until c * n + n).filter { closure.at(head, it) != -1 }
+            Box(
+                Modifier
+                    .offset(cellW * k + 2.dp, HEADER + cellH * r + 2.dp)
+                    .size(cellW - 4.dp, cellH - 4.dp)
+                    .alpha(t)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(scheme.surfaceVariant.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (open) Text(
+                    if (left.size == n) "any" else left.joinToString(" ") { WhosWhoLogic.word(b, it) }.ifEmpty { "none left" },
+                    Modifier.padding(horizontal = 3.dp),
+                    fontSize = minOf(cellH * 0.22f, 11.dp).boardSp(),
+                    lineHeight = minOf(cellH * 0.27f, 13.dp).boardSp(),
+                    color = if (left.isEmpty()) scheme.error else scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 3,
+                    overflow = TextOverflow.Clip,
+                )
             }
-            for (slot in 0 until n) {
-                val a = base * n + slot
-                Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Cell(WhosWhoLogic.word(b, a), bold = true, faint = false, bad = false, hue = HUES[base % HUES.size], dark = dark)
-                    for (c in others) {
-                        val linked = closure.linked(a, c)
-                        val left = (c * n until c * n + n).filter { closure.at(a, it) != -1 }
-                        if (linked >= 0) Cell(WhosWhoLogic.word(b, linked), bold = true, faint = false, bad = false, hue = HUES[c % HUES.size], dark = dark)
-                        else Cell(
-                            if (left.size == n) "any" else left.joinToString(" ") { WhosWhoLogic.word(b, it) }.ifEmpty { "none left" },
-                            bold = false, faint = true, bad = left.isEmpty(), hue = null, dark = dark,
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun androidx.compose.foundation.layout.RowScope.Cell(text: String, bold: Boolean, faint: Boolean, bad: Boolean, hue: Float?, dark: Boolean) {
-        val scheme = MaterialTheme.colorScheme
-        Box(
-            Modifier
-                .weight(1f)
-                .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (hue != null) BoardHues.fill(hue, dark) else scheme.surfaceVariant.copy(alpha = 0.5f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text,
-                Modifier.padding(horizontal = 3.dp),
-                fontSize = if (faint) 11.sp else 14.sp,
-                lineHeight = if (faint) 13.sp else 16.sp,
-                fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-                color = when {
-                    bad -> scheme.error
-                    faint -> scheme.onSurfaceVariant
-                    else -> scheme.onSurface
-                },
-                textAlign = TextAlign.Center,
-                maxLines = 3,
-                overflow = TextOverflow.Clip,
-            )
         }
     }
 
