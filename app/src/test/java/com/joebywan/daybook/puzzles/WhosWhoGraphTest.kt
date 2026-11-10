@@ -116,7 +116,7 @@ class WhosWhoGraphTest {
     }
 
     @Test
-    fun `linking each person to one item and that item to the rest solves the board`() {
+    fun `linking each person to one item and that item to the rest is solved only once every person's line is drawn`() {
         for (difficulty in Difficulty.entries) for (day in 0 until 10) {
             var s = board(day, difficulty)
             assertFalse(s.solved)
@@ -126,8 +126,44 @@ class WhosWhoGraphTest {
                 s = s.cycle(p, house)
                 for (x in 2 * n until s.size) if (same(s, house, x)) s = s.cycle(house, x)
             }
+            // Every link is implied through the houses, but a person's line to their pet is not drawn.
+            assertTrue(WhosWhoLogic.isSolved(WhosWhoGraphLogic.table(s)))
+            assertFalse("$difficulty day $day", s.solved)
+            for (p in 0 until n) for (x in 2 * n until s.size) if (same(s, p, x)) s = s.cycle(p, x)
             assertTrue("$difficulty day $day", s.solved)
         }
+    }
+
+    @Test
+    fun `anti-links that force every link do not solve the board until the person lines are drawn`() {
+        for (difficulty in Difficulty.entries) for (day in 0 until 10) {
+            var s = board(day, difficulty)
+            val n = s.n
+            for ((a, b) in pairs(s)) if (a < n && !same(s, a, b)) s = s.withMark(a, b, WhosWhoGraphLogic.ANTI)
+            val c = WhosWhoGraphLogic.close(s)
+            for (p in 0 until n) for (x in n until s.size) assertEquals(if (same(s, p, x)) 1 else -1, c.at(p, x))
+            assertFalse("$difficulty day $day: solved with no line drawn", s.solved)
+            // The hint asks for a line, and following it fills them all in.
+            var steps = 0
+            while (!s.solved) {
+                val step = WhosWhoGraph.teach(s)!!
+                assertEquals(WhosWhoGraph.DRAW, step.technique)
+                assertFalse(step.isReached(s))
+                s = step.apply(s) as WhosWhoGraphState
+                assertTrue(step.isReached(s))
+                assertTrue(++steps <= n * s.board.columns)
+            }
+            for (p in 0 until n) for (x in n until s.size) if (same(s, p, x)) {
+                assertTrue(WhosWhoGraphLogic.isLine(s.mark(p, x)))
+            }
+        }
+        // Drawn by hand from either end counts too.
+        var s = board(2, Difficulty.STANDARD)
+        val n = s.n
+        for ((a, b) in pairs(s)) if (a < n && !same(s, a, b)) s = s.withMark(a, b, WhosWhoGraphLogic.ANTI)
+        for (p in 0 until n) for (x in n until s.size) if (same(s, p, x)) s = if (x % 2 == 0) s.withLine(p, x) else s.withLine(x, p)
+        assertTrue(s.solved)
+        assertNull(WhosWhoGraph.teach(s))
     }
 
     @Test

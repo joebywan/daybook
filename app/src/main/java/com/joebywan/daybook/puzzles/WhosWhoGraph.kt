@@ -72,6 +72,7 @@ import com.joebywan.daybook.ui.boardSp
 import com.joebywan.daybook.ui.dimmed
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
+import com.joebywan.daybook.ui.rememberHintPulse
 import com.joebywan.daybook.ui.rememberSettledFlags
 import com.joebywan.daybook.ui.ring
 import com.joebywan.daybook.ui.theme.BoardHues
@@ -82,7 +83,8 @@ import kotlin.math.roundToInt
  * recorded, so it touches no streak, statistic or achievement. Same boards as Who's Who (its own seeds, by its own id);
  * the table is gone. Every item is a node in a column of its category; tap one, then items of another category, to draw
  * where it can be (one line: that one; several: one of those); a line tapped again becomes an anti-link, then open. What
- * the marks imply is drawn faint ([WhosWhoGraphLogic.close]).
+ * the marks imply is drawn faint ([WhosWhoGraphLogic.close]); a person's implied link is dashed and breathes, since the
+ * board is solved only once the player has drawn every person's line to each of their items.
  * "Group" lines linked items up in their person's row, so a solved board settles into the answer table; the category
  * buttons (drawn icons, [WhosWhoIcons]) re-sort the same nodes into a table with that category as the rows.
  *
@@ -99,11 +101,14 @@ object WhosWhoGraph : PuzzleType {
         "Every person and every item is a circle, one column per category. The clues fix who has what.",
         "Tap a circle, then circles in another column to draw where it can be: one line means that one, several mean one of those.",
         "Tap a line again to rule the pair out (never the same person's), and again to clear it.",
-        "What your marks imply is drawn faint: links join up, an anti-link holds across whole groups, and a category with one item left links to it.",
+        "What your marks imply is drawn faint: links join up, an anti-link holds across whole groups, and a category with one item left links to it. A person's implied link is dashed until you draw it.",
         "With a circle chosen you see all its pairs: thick linked, thin one of its choices, dashed ruled out, dotted still open.",
         "Group lines linked items up in their person's row. The category buttons show the marks as a table, any category as the rows.",
-        "Solved when every person is linked to one of everything and every clue is true.",
+        "Solved when you've drawn every person's line to each of their items and every clue is true.",
     )
+
+    /** The hint for a link the marks imply that the player has not drawn yet. */
+    const val DRAW = "draw"
 
     override fun generate(seed: Long, difficulty: Difficulty): PuzzleState =
         WhosWhoGraphState(WhosWhoLogic.generate(seed, difficulty))
@@ -114,13 +119,14 @@ object WhosWhoGraph : PuzzleType {
 
     /**
      * A mark of the player's that the one answer disagrees with first; else Who's Who's own teacher, asked of the table
-     * the marks imply, its cells read as their person and its ticks and crosses made as links and anti-links.
+     * the marks imply, its cells read as their person and its ticks and crosses made as links and anti-links; once it has
+     * nothing left, a person's link the marks imply but no line shows yet ([DRAW]).
      */
     override fun teach(state: PuzzleState): Deduction? {
         val s = state as WhosWhoGraphState
         if (s.solved) return null
         mistake(s)?.let { return it }
-        val step = WhosWhoTeacher.teach(WhosWhoGraphLogic.table(s)) ?: return null
+        val step = WhosWhoTeacher.teach(WhosWhoGraphLogic.table(s)) ?: return draw(s)
         if (step.technique == WhosWhoTeacher.MISTAKE) return null
         val b = s.board
         fun item(mark: Int): Pair<Int, Int> {
@@ -152,6 +158,19 @@ object WhosWhoGraph : PuzzleType {
                 val closed = WhosWhoGraphLogic.close(now as WhosWhoGraphState)
                 ticks.all { (p, ref) -> closed.at(p, ref) == 1 } && crosses.all { (p, ref) -> closed.at(p, ref) == -1 }
             },
+        )
+    }
+
+    /** A person-item link the marks imply with no line drawn: ask for the line. Applying it draws the pair from both ends. */
+    private fun draw(s: WhosWhoGraphState): Deduction? {
+        val (p, x) = WhosWhoGraphLogic.undrawn(s) ?: return null
+        val b = s.board
+        return Deduction(
+            DRAW, "Some of what you've worked out isn't drawn yet.",
+            "Your marks already say ${WhosWhoLogic.word(b, p)} ${WhosWhoLogic.has(b, x)}: draw the line.",
+            focus = setOf(p, x), cited = emptySet(), targets = setOf(p, x),
+            applyTo = { now -> (now as WhosWhoGraphState).withMark(p, x, WhosWhoGraphLogic.LINK) },
+            reachedBy = { now -> WhosWhoGraphLogic.isLine((now as WhosWhoGraphState).mark(p, x)) },
         )
     }
 
@@ -231,6 +250,9 @@ object WhosWhoGraph : PuzzleType {
         var view by rememberSaveable { mutableIntStateOf(-1) }
         var grouped by rememberSaveable { mutableIntStateOf(0) }
         val paint = rememberHintPaint()
+        // A person's link the marks imply but no line shows: dashed and breathing (held under reduced motion), so "draw
+        // these" reads at a glance. Breathes only while one is left.
+        val invite = rememberHintPulse(WhosWhoGraphLogic.undrawn(s, closure) != null, low = 0.35f, high = 0.85f)
         val dark = BoardHues.isDark(scheme)
 
         val grid = WhosWhoLogic.gridOf(b.n, b.columns, table.marks)
@@ -250,7 +272,7 @@ object WhosWhoGraph : PuzzleType {
                     for (c in 0..b.columns) Chip(null, view == c, { Header(b, c, dark, Modifier.size(20.dp)) }) { view = c }
                 }
                 Box(Modifier.weight(1.5f).fillMaxWidth().widthIn(max = 560.dp)) {
-                    Graph(s, closure, selected, grouped == 1, view, badItem, badPair, paint.highlight, paint.glow, paint.pulse, dark, interactive) { i ->
+                    Graph(s, closure, selected, grouped == 1, view, badItem, badPair, paint.highlight, paint.glow, paint.pulse, invite, dark, interactive) { i ->
                         val now = selected
                         selected = when {
                             i < 0 -> -1
@@ -334,6 +356,7 @@ object WhosWhoGraph : PuzzleType {
         highlight: com.joebywan.daybook.core.BoardHighlight,
         glow: Color,
         pulse: State<Float>,
+        invite: State<Float>,
         dark: Boolean,
         interactive: Boolean,
         onItem: (Int) -> Unit,
@@ -410,6 +433,8 @@ object WhosWhoGraph : PuzzleType {
                         val dim = selected >= 0 && !touches
                         val (colour, width, effect) = when {
                             badPair[a * s.size + c] -> Triple(error, 3.dp, null)
+                            // A person's implied link is the player's to draw: dashed, breathing, until a line is there.
+                            v == 1 && !mine && a < n -> Triple(ink.copy(alpha = if (dim) 0.15f else invite.value), 2.dp, dash)
                             v == 1 -> Triple(ink.copy(alpha = if (dim) 0.15f else if (mine) 0.9f else 0.4f), if (mine) 2.5.dp else 1.2.dp, null)
                             // A "might be": thinner and lighter than a link; once the marks rule it out, fainter still.
                             line && v == 0 -> Triple(ink.copy(alpha = if (dim) 0.12f else 0.55f), 1.5.dp, null)
