@@ -1,7 +1,8 @@
 package com.joebywan.daybook.puzzles
 
-import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateOffsetAsState
@@ -368,7 +369,7 @@ object WhosWhoGraph : PuzzleType {
             val order = if (table) listOf(view) + (0 until cols).filter { it != view } else (0 until cols).toList()
             val colOf = IntArray(cols).also { for ((k, c) in order.withIndex()) it[c] = k }
             fun tableRow(x: Int): Int = if (x / n == base) x % n else closure.linked(x, base).let { if (it >= 0) it % n else -1 }
-            fun <T> ease(): AnimationSpec<T> = if (reduced) snap() else tween(MORPH_MS, easing = FastOutSlowInEasing)
+            fun <T> ease(): FiniteAnimationSpec<T> = if (reduced) snap() else tween(MORPH_MS, easing = FastOutSlowInEasing)
             val t by animateFloatAsState(if (table) 1f else 0f, ease(), label = "table")
             class Node(val pos: State<Offset>, val w: State<Dp>, val h: State<Dp>, val corner: State<Dp>, val alpha: State<Float>)
             val nodes = List(s.size) { i ->
@@ -389,14 +390,19 @@ object WhosWhoGraph : PuzzleType {
                 val x by animateDpAsState(cellW * colOf[c], ease(), label = "header")
                 Header(b, c, dark, Modifier.width(cellW).height(HEADER).offset(x = x).padding(vertical = 2.dp))
             }
-            if (t > 0f) Cells(s, closure, base, cellW, cellH, t)
+            // One table to another fades the old cells out under the new, as the nodes move: the cells alone snapped.
+            if (t > 0f) Crossfade(base, animationSpec = ease(), label = "cells") {
+                // Full size: a fading layer is only as big as its content, and cells placed by offset outside it were cut off.
+                Box(Modifier.fillMaxSize()) { Cells(s, closure, it, cellW, cellH, t) }
+            }
             val ink = scheme.onSurface
             val faint = scheme.onSurfaceVariant
             val error = scheme.error
             // Pairs in neighbouring columns are drawn under the pills; a pair that skips a column over them, so it plainly
             // passes over the pills between rather than seeming to end at one (behind them it read as a chain through them).
+            // The alpha comes first: a layer only fades what is drawn after it, so behind `drawBehind` the lines popped.
             val edges = { skipping: Boolean ->
-                Modifier.fillMaxSize().drawBehind {
+                Modifier.fillMaxSize().alpha(1f - t).drawBehind {
                     val dash = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx()))
                     val dot = PathEffect.dashPathEffect(floatArrayOf(1.dp.toPx(), 5.dp.toPx()))
                     for (a in 0 until s.size) for (c in a + 1 until s.size) {
@@ -432,7 +438,7 @@ object WhosWhoGraph : PuzzleType {
                     }
                 }
             }
-            if (t < 1f) Box(edges(false).alpha(1f - t))
+            if (t < 1f) Box(edges(false))
             for (i in 0 until s.size) {
                 val hue = HUES[(i / n) % HUES.size]
                 val hint = highlight.look(i)
@@ -473,7 +479,7 @@ object WhosWhoGraph : PuzzleType {
                     )
                 }
             }
-            if (t < 1f) Box(edges(true).alpha(1f - t))
+            if (t < 1f) Box(edges(true))
         }
     }
 
