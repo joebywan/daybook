@@ -24,6 +24,15 @@ from a measurement or review, so you can check it is still true.
 
 ## Could affect players
 
+- [ ] **The Classic look (#418) has not been rendered.** Built from the code at `3369cc46^` and checked by compile and tests
+  only: the web build could not be made where it was written (yarn's fetch of Kotlin's karma fork from codeload.github.com
+  got 403) and there is no emulator. Render with `tools/render/render.py --storage` seeding `{"daybook_launch.look": "CLASSIC"}`
+  (and once with no `look`, to see Home's one-time card and the welcome's two swatches), light and dark, 375x537 and tall,
+  WebKit too: Home, Settings' Look card, Sudoku, Cage Sudoku, Nonogram, Tents, Word Wheel, Lexicon, and the boards only ever
+  drawn in Arcade (Dwindle, Equation, Hexwords, Links, Loop, Thermometers, Unblock, test:Who's who). Things to look for: Word
+  Wheel's and Dwindle's Enter button (post-Arcade; Classic gives it the side buttons' quiet pill), Sudoku's note discs (#407,
+  post-Arcade; Classic uses the twin square's tint), the welcome at 375x537 (the swatches sit with Start, outside the scroll).
+  Then on the emulator. Comment on #418 once it ships. *M.*
 - [ ] **Boards not yet on the digit scale** (`BoardGlyph`, `ui/BoardText.kt`). Moved: Sudoku, Cage Sudoku, Inequality,
   Regions, Nonogram, Tally, Mosaic. Still on their own shares: Tents' clues (0.55 SemiBold), Mines' numbers (0.6), Lamps'
   wall numbers, Shikaku (0.46), Atoms (0.42 Bold), Cipher (0.56 Medium), Dominoes' badges (0.27), Target, Lits' piece
