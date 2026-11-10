@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -358,10 +359,10 @@ object WhosWhoGraph : PuzzleType {
             val h: Dp = minOf(cellH * 0.78f, 46.dp)
             val density = LocalDensity.current
             val centre = { col: Int, r: Int -> with(density) { Offset((cellW * (col + 0.5f)).toPx(), (HEADER + cellH * (r + 0.5f)).toPx()) } }
-            // A table view is the same box and the same nodes: the chosen category's items head the rows, every other item
-            // moves into the row it is certainly linked to and grows into its cell; one still open has no cell, so it
-            // fades out where it stands and the row's cell says what is left. One tween for everything, so the board reads
-            // as re-sorting in one movement.
+            // A table view is the same box and the same pills (the owner: one shape for one item in every view): the chosen
+            // category's items head the rows, every other item slides into the row it is certainly linked to; one still open
+            // has no place, so it fades out where it stands and the row's slot says what is left. One tween for everything,
+            // so the board reads as re-sorting in one movement.
             val table = view >= 0
             val lastTable = remember { intArrayOf(0) }
             if (table) lastTable[0] = view
@@ -371,16 +372,13 @@ object WhosWhoGraph : PuzzleType {
             fun tableRow(x: Int): Int = if (x / n == base) x % n else closure.linked(x, base).let { if (it >= 0) it % n else -1 }
             fun <T> ease(): FiniteAnimationSpec<T> = if (reduced) snap() else tween(MORPH_MS, easing = FastOutSlowInEasing)
             val t by animateFloatAsState(if (table) 1f else 0f, ease(), label = "table")
-            class Node(val pos: State<Offset>, val w: State<Dp>, val h: State<Dp>, val corner: State<Dp>, val alpha: State<Float>)
+            class Node(val pos: State<Offset>, val alpha: State<Float>)
             val nodes = List(s.size) { i ->
                 key(i) {
                     val r = if (table) tableRow(i) else -1
                     val open = table && r < 0
                     Node(
                         animateOffsetAsState(if (table) centre(colOf[i / n], if (open) i % n else r) else centre(i / n, row[i]), ease(), label = "item"),
-                        animateDpAsState(if (open) w / 2 else if (table) cellW - 4.dp else w, ease(), label = "w"),
-                        animateDpAsState(if (open) h / 2 else if (table) cellH - 4.dp else h, ease(), label = "h"),
-                        animateDpAsState(if (table) 8.dp else h / 2, ease(), label = "corner"),
                         animateFloatAsState(if (open) 0f else if (!table && loose[i]) 0.45f else 1f, ease(), label = "alpha"),
                     )
                 }
@@ -444,16 +442,16 @@ object WhosWhoGraph : PuzzleType {
                 val hint = highlight.look(i)
                 val node = nodes[i]
                 val p = node.pos
-                val nw = node.w.value
-                val nh = node.h.value
-                val shape = RoundedCornerShape(node.corner.value)
+                val nw = w
+                val nh = h
+                val shape = RoundedCornerShape(h / 2)
                 Box(
                     Modifier
                         .offset { IntOffset((p.value.x - nw.toPx() / 2).roundToInt(), (p.value.y - nh.toPx() / 2).roundToInt()) }
                         .size(nw, nh)
                         .alpha(node.alpha.value)
                         .highlightAnchor(i)
-                        .ring(hint, glow, pulse, node.corner.value, outside = true)
+                        .ring(hint, glow, pulse, h / 2, outside = true)
                         .clip(shape)
                         .background(BoardHues.fill(hue, dark))
                         .border(
@@ -484,8 +482,9 @@ object WhosWhoGraph : PuzzleType {
     }
 
     /**
-     * The table's cells behind the nodes, faded in by [t]: a tinted square per cell, and where the row's head is not yet
-     * linked to anything in a column, what is left there ("any", the items, or "none left" in red).
+     * The table's open slots, faded in by [t]: where the row's head is not yet linked to anything in a column, what is left
+     * there ("any", the items, or "none left" in red), as plain text where a pill would sit. No cell is drawn: an item is the
+     * same pill in every view, so a table must not turn into a grid of rectangles (the owner).
      */
     @Composable
     private fun Cells(s: WhosWhoGraphState, closure: WhosWhoGraphLogic.Closure, base: Int, cellW: Dp, cellH: Dp, t: Float) {
@@ -495,28 +494,23 @@ object WhosWhoGraph : PuzzleType {
         val order = listOf(base) + (0..b.columns).filter { it != base }
         for (r in 0 until n) for ((k, c) in order.withIndex()) {
             val head = base * n + r
-            val open = c != base && closure.linked(head, c) < 0
+            if (c == base || closure.linked(head, c) >= 0) continue
             val left = (c * n until c * n + n).filter { closure.at(head, it) != -1 }
-            Box(
+            Text(
+                if (left.size == n) "any" else left.joinToString(" ") { WhosWhoLogic.word(b, it) }.ifEmpty { "none left" },
                 Modifier
-                    .offset(cellW * k + 2.dp, HEADER + cellH * r + 2.dp)
-                    .size(cellW - 4.dp, cellH - 4.dp)
+                    .offset(cellW * k, HEADER + cellH * r)
+                    .size(cellW, cellH)
                     .alpha(t)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(scheme.surfaceVariant.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (open) Text(
-                    if (left.size == n) "any" else left.joinToString(" ") { WhosWhoLogic.word(b, it) }.ifEmpty { "none left" },
-                    Modifier.padding(horizontal = 3.dp),
-                    fontSize = minOf(cellH * 0.22f, 11.dp).boardSp(),
-                    lineHeight = minOf(cellH * 0.27f, 13.dp).boardSp(),
-                    color = if (left.isEmpty()) scheme.error else scheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 3,
-                    overflow = TextOverflow.Clip,
-                )
-            }
+                    .wrapContentHeight()
+                    .padding(horizontal = 3.dp),
+                fontSize = minOf(cellH * 0.22f, 11.dp).boardSp(),
+                lineHeight = minOf(cellH * 0.27f, 13.dp).boardSp(),
+                color = if (left.isEmpty()) scheme.error else scheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Clip,
+            )
         }
     }
 
