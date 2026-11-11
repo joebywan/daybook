@@ -14,7 +14,8 @@ import kotlinx.serialization.Serializable
 
 /**
  * What the finished frame says (`docs/REWARDS.md`). [title] is the banner's headline (null: "Congratulations!", for a
- * frame nobody judged); [big] makes it louder (7, 30, 100 days); [lines] is at most one, so the frame stays calm.
+ * frame nobody judged); [big] makes it louder (7, 30, 100 days); [lines] is at most one, so the frame stays calm, plus
+ * the puzzle's own [com.joebywan.daybook.core.PuzzleType.finishNote] above it when it has one.
  */
 @Serializable
 data class Praise(

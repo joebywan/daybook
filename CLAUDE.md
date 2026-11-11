@@ -1130,10 +1130,12 @@ starts `test:`. Graduating one means a new id in `all` with the full standards (
   adds its line, then makes the pair `x`, then opens it. `WhosWhoGraphState` holds a whole dealt `WhosWhoState` (its table marks
   unused) and the pair marks; `WhosWhoGraphLogic.close` anti-links an item to the items of a category it drew no line to (lines
   are never followed further), then derives the rest (links join groups, anti-links hold across groups, one-to-one, last item
-  left). A line the closure rules out is drawn faint, never red. **Every link must be drawn** (the owner, 2026-11-10: anti-links
-  alone once finished a board with no line on it): `solved` also needs a player line (`o`, `>` or `<`) on every person-item pair
-  the closure links (`WhosWhoGraphLogic.undrawn`); such a link, implied but not drawn, is dashed and breathes (held under reduced
-  motion), and once the teacher has nothing left the hint asks for it (`WhosWhoGraph.DRAW`). Hints are Who's Who's teacher asked of the table the closure
+  left). A line the closure rules out is drawn faint, never red. Implied links count: anti-links that rule out everything
+  else win the board with no line drawn (the owner, 2026-11-10, after a build that demanded every link be drawn "wasn't fun").
+  When a solve left some person-item link implied, not drawn (`WhosWhoGraphLogic.leftImplied`), the finished frame says so
+  above the praise with one of `WhosWhoGraph.ELIMINATION_NOTES` (drawn from `kotlin.random` by `PuzzleType.finishNote`,
+  asked once per solve and saved with the praise); and a solve turns the board to the people's table (view 0, the 350 ms
+  tween, once per board, `rememberSaveable`). Hints are Who's Who's teacher asked of the table the closure
   makes, mapped to nodes (a tick drawn from both ends, stray lines either end drew there ruled out); a mistake is an anti-link
   on a true pair, or an item's lines into a category that leave out its partner. "Group" lines linked items up in their person's
   row; the category buttons (drawn icons in each column's hue, `WhosWhoIcons.kt`, as are the column heads) show the marks as a

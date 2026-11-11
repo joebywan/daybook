@@ -727,8 +727,11 @@ private fun DaybookScreens(
                                     ?.takeIf { three.all { id -> id == puzzle.id || (id to difficulty) in doneToday } }
                             else -> null
                         }
+                        // The puzzle's own word on how it was finished goes first, over the one line of praise.
+                        val note = puzzle.finishNote(state)
                         praise.copy(
                             title = if (levelDone) "Level $level done" else praise.title,
+                            lines = if (note != null) listOf(note) + praise.lines else praise.lines,
                             share = card,
                             setShare = setShare,
                             setShareLabel = if (level != null) "Share level" else "Share three",
