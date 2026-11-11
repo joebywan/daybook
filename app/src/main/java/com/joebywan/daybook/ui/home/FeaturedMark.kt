@@ -84,7 +84,8 @@ fun Modifier.sparkleFrame(corner: Dp = 18.dp): Modifier {
     }
 }
 
-private fun DrawScope.sparkle(c: Offset, r: Float, alpha: Float) {
+/** A four-pointed star of radius [r] at [c], gold unless told otherwise; Arrows' quick-launch trail draws them too. */
+internal fun DrawScope.sparkle(c: Offset, r: Float, alpha: Float, colour: Color = SparkleGold) {
     val k = r * 0.28f
     val path = Path().apply {
         moveTo(c.x, c.y - r)
@@ -92,7 +93,7 @@ private fun DrawScope.sparkle(c: Offset, r: Float, alpha: Float) {
         lineTo(c.x, c.y + r); lineTo(c.x - k, c.y + k); lineTo(c.x - r, c.y)
         lineTo(c.x - k, c.y - k); close()
     }
-    drawPath(path, SparkleGold, alpha)
+    drawPath(path, colour, alpha)
 }
 
 /**

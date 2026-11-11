@@ -533,7 +533,7 @@ hashed into every seed: never rename it.
   answer: many orders win. `lastResort` is rows of arrows all pointing right; a year per tier never reaches it (`FallbackTest`).
   `PointersRulesTest` checks a year per tier with its own heading arithmetic, a greedy player and a DFS cycle check, none of it shared
   with the generator.
-- **Tiers: size, length and bends.** 6x7 / 12x12 / 14x17 squares, arrows of 2-4 / 3-7 / 3-9 squares: about 14 / 33 / 49 arrows, 2% of squares bare, mean depth 2.0 / 4.4 / 6.3 (depth: rounds of "take every free arrow" before an arrow can go; `PointersLogic.depths`), worst 10 / 23 / 27. Generation on the JVM: 0.02 / 0.2 / 0.8 ms median, 1.2 ms p95 on Expert. Expert was
+- **Tiers: size, length and bends.** 6x7 / 12x12 / 14x17 squares, arrows of 2-4 / 3-7 / 3-9 squares: about 14 / 33 / 49 arrows, 2% of squares bare. **Gated on how tangled** (`Spec.minDepth`, `Spec.maxFree`, 2026-11-12): a mean depth of at least 2.0 / 4.8 / 6.5 (depth: rounds of "take every free arrow" before an arrow can go; `PointersLogic.depths`) and a free share of at most 40 / 24 / 19% (`PointersLogic.freeShare`: over a clearing that takes the first free arrow, the share of arrows left that are free; low means free arrows are hard to find), about the harder third of the old draws. Over 100 days: mean depth 2.7 / 6.0 / 8.1 (was 2.0 / 4.4 / 6.3), free share 34 / 21 / 17%, worst 11 / 23 / 30. Generation on the JVM: 0.02 / 0.1 / 0.2 ms median, 1.5 ms max on Expert. Expert was
   meant to be 18x20; at 360dp wide that is a square of about 18dp, too small for a thumb when a mis-tap costs a life, so it is capped at 14
   wide (about 23dp at 360, 26 at 390; Nonogram's 15x15 is the precedent).
 - **Press, preview, commit.** A finger down tints the arrow it would take (the keyboard cursor's band, no delay, nothing animated);
@@ -544,6 +544,9 @@ hashed into every seed: never rename it.
   arrow and the one in its way in `scheme.error`. Keyboard: arrows move a cursor (a square) to the nearest other arrow that way, Enter or
   Space taps it. Highlight indices (the walkthrough only) are arrow indices.
 - **Milestones are tenths of the arrows** (`PointersLogic.milestones`: `ceil(total * k / 10)` for k 1-9, distinct, below the total; the owner, 2026-11-07, after rows and columns left bare bunched up): nine notes a board on every tier (fewest arrows a year: 11 / 28 / 41), each through `rememberMoveFeel`, the dots of the squares cleared since the last milestone swelling into accent discs along the order they went (a square tint on the white board barely showed). A bump plays the ba-bong (`Tones.miss`, `pointersTapTone`), the last life's once, on the player's own tap only (Chess's `LocalMoveCount` test).
+- **A quick launch sparkles** (the owner, 2026-11-12, to reward fast play, which costs more lives): an arrow taken within
+  `PointersLogic.QUICK_MS` (2 s) of the one before leaves gold stars (`sparkle`, shared with Today's three's frame) along its track
+  behind the tail, fading as it draws away (`drawTrail`). The time is `remember`, never state; under reduced motion nothing slides, so nothing sparkles.
 - Share card (`ui/play/ShareCard.kt`): the lives at the solve as hearts, `❤️❤️🖤` for two of three left, key `❤️ life left  🖤 life lost`,
   nudge "Not a single bump." with all three; the preview draws the hearts with `Pointers.heartPath`.
 
