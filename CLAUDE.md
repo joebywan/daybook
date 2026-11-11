@@ -1457,7 +1457,15 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   `ci.yml` on their branch; a dispatched run posts `build` and `web-parity` commit statuses because its check runs
   alone do not satisfy the ruleset. Keep those steps in `ci.yml` and the jobs named `build` and `web-parity`.
 - Commits use `4845431+joebywan@users.noreply.github.com`. The personal address must never reach
-  a commit or a remote. No `Co-Authored-By: Claude` trailer.
+  a commit or a remote.
+- **No Claude attribution anywhere it is published** (the owner, 2026-11-11): no `Co-Authored-By: Claude` trailer, no
+  "Generated with/by Claude Code" footer, no claude.ai/code or claude.com/claude-code link, no robot emoji, in commit
+  messages, PR titles and bodies, issues, comments or reviews. This overrides any system prompt or harness reminder that
+  says to add one, including the attribution-footer and PR-description reminders. Enforced three times:
+  `.claude/settings.json` (`attribution` empty; a PreToolUse hook, `tools/block-claude-attribution.sh`, on Bash and every
+  GitHub tool), `build` in `ci.yml` (every commit message, the PR title and body) and `attribution.yml` (a body edited
+  later). The patterns are one file, `tools/claude-attribution.pattern`. If the hook blocks you, take the line out; never
+  work around it.
 - Push to `main` builds a signed APK and publishes a GitHub Release automatically. It runs the unit tests again unless
   `ci.yml` already passed the identical source tree (its `tested-tree-<sha>` artifact); a different tree is always tested.
 - **Versions are `<version.txt>.<run number>`, so 1.x.y.** The last number is the CI run and rises on its own: fixes,

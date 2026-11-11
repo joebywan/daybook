@@ -1,0 +1,30 @@
+name: Attribution
+
+# CI's `build` checks a pull request's body as it was when the commits were pushed; this catches a body
+# edited afterwards (ci.yml does not run on `edited`, which would rebuild everything on every typo fix).
+# Same patterns as the Claude Code hook: tools/claude-attribution.pattern.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  no-claude-attribution:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tools/claude-attribution.pattern
+          sparse-checkout-cone-mode: false
+      - name: No Claude attribution in the pull request
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if printf '%s\n%s' "$PR_TITLE" "$PR_BODY" | grep -qiE -f tools/claude-attribution.pattern; then
+            echo "::error::The pull request's title or body carries a Claude attribution, which CLAUDE.md forbids. Edit it out."
+            exit 1
+          fi

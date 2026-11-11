@@ -35,20 +35,31 @@ jobs:
           persist-credentials: false   # the job's token can post statuses; keep it out of .git/config, where Gradle could read it
           fetch-depth: 0   # the commit-message check below needs the pull request's whole range
 
-      # CLAUDE.md forbids a `Co-Authored-By: Claude` trailer, and a rule written there lost to the
-      # harness's own attribution reminder in session after session. `.claude/settings.json` now blocks
-      # the commit at the tool, and this is the server-side backstop: `build` is a required check, so a
-      # pull request carrying such a commit cannot merge, however it was made (`git commit -F` included).
-      - name: No Claude attribution trailer in the commits
+      # CLAUDE.md forbids Claude attribution anywhere (a Co-Authored-By trailer, a "Generated with
+      # Claude Code" footer), and a rule written there lost to the harness's own reminders in session
+      # after session. `.claude/settings.json` blocks it at the tool (tools/block-claude-attribution.sh),
+      # and this is the server-side backstop with the same patterns: `build` is a required check, so a
+      # pull request carrying it in a commit or its body cannot merge, however it was made. A body edited
+      # later is checked by attribution.yml.
+      - name: No Claude attribution in the commits or the pull request
         if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
-          BAD="$(git log --format='%h %s' -i -E --grep='^co-authored-by:[[:space:]]*(claude|.*noreply@anthropic\.com)' "$RANGE")"
-          if [ -n "$BAD" ]; then
-            echo "::error::These commits carry a Co-Authored-By: Claude trailer, which CLAUDE.md forbids. Reword them (git rebase -i, then force-push your own branch) and push again."
-            echo "$BAD"
-            exit 1
+          FAIL=0
+          for c in $(git rev-list "$RANGE"); do
+            if git log -1 --format=%B "$c" | grep -qiE -f tools/claude-attribution.pattern; then
+              echo "::error::Commit $(git log -1 --format='%h %s' "$c") carries a Claude attribution, which CLAUDE.md forbids. Reword it and force-push your own branch."
+              FAIL=1
+            fi
+          done
+          if printf '%s\n%s' "$PR_TITLE" "$PR_BODY" | grep -qiE -f tools/claude-attribution.pattern; then
+            echo "::error::The pull request's title or body carries a Claude attribution, which CLAUDE.md forbids. Edit it out, then re-run this check."
+            FAIL=1
           fi
+          exit $FAIL
 
       - uses: ./.github/actions/setup-build
 
