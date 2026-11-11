@@ -36,9 +36,6 @@ demo_bar() {
 }
 demo_bar
 
-adb uninstall $PKG >/dev/null 2>&1 || true
-adb install -r "$APK" >/dev/null
-
 # Taps the centre of the first node whose text or description equals $1, retrying for ~30 s because a
 # slow emulator sometimes returns no dump or has not drawn the screen yet; fails if it never appears.
 tap() {
@@ -94,32 +91,69 @@ shot() { adb exec-out screencap -p > "$DIR/$1.png"; }
 # A cold start lands on the home grid whatever the board or hint popover was doing.
 back() { adb shell am start -S -n $PKG/.MainActivity >/dev/null; sleep 4; }
 
-adb shell am start -n $PKG/.MainActivity >/dev/null
-# A clean install opens on the welcome (ui/home/Welcome.kt); Start leaves it for good.
-tap Start
-# A cold CI emulator can take a while to draw; the date text doubles as the check that the pin took.
-for _ in $(seq 20); do
-  adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Wednesday 7 October" && break
-  sleep 2
-done
-adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Wednesday 7 October" || {
+# A clean install, opened past the welcome (ui/home/Welcome.kt) in the look $1: Start waits for a look to be picked.
+fresh() {
+  adb uninstall $PKG >/dev/null 2>&1 || true
+  adb install -r "$APK" >/dev/null
+  adb shell am start -n $PKG/.MainActivity >/dev/null
+  tap "$1"; tap Start
+  # A cold CI emulator can take a while to draw; the date text doubles as the check that the pin took.
+  for _ in $(seq 20); do
+    adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -q "Wednesday 7 October" && return 0
+    sleep 2
+  done
   echo "date pin failed; device date: $(adb shell date)" >&2
   adb exec-out uiautomator dump /dev/tty 2>/dev/null | grep -o 'text="[^"]\+"' | head -20 >&2
   exit 1
 }
-shot 1-home
-
-# The set, in store order. A Hard Cage Sudoku with a hint open shows the cages best; the tier is a saved
-# setting, so it goes back to Standard straight after.
-shots() {
-  open_puzzle Sudoku; sleep 2; tap Hint; tap "Why?"; sleep 3; shot 2-sudoku-hint; back
-  tap Hard; open_puzzle "Cage Sudoku"; sleep 2; tap Hint; tap "Why?"; sleep 3; shot 3-cage-sudoku-hint; back; tap Standard
-  open_puzzle "Word Wheel"; sleep 2; shot 4-word-wheel; back
-  open_puzzle Kings; sleep 2; shot 5-kings; back
-  open_puzzle Mosaic; sleep 2; shot 6-mosaic; back
-  open_puzzle Trail; sleep 2; shot 7-trail; back
+# Types $1 on the on-screen keyboard, then Enter. A key's letter can also be on a tile above, so each tap takes the
+# lowest node with that text.
+type_keys() {
+  local k xy
+  for k in $(echo "$1" | grep -o .) Enter; do
+    xy=$(adb exec-out uiautomator dump /dev/tty 2>/dev/null | python3 -c '
+import re, sys, xml.etree.ElementTree as ET
+raw = sys.stdin.read()
+hits = [list(map(int, re.findall(r"\d+", n.get("bounds")))) for n in
+        ET.fromstring(raw[raw.index("<?xml"):raw.rindex("</hierarchy>") + 12]).iter("node") if n.get("text") == sys.argv[1]]
+x0, y0, x1, y1 = max(hits, key=lambda b: b[1])
+print((x0 + x1) // 2, (y0 + y1) // 2)' "$k")
+    adb shell input tap $xy
+  done
+  sleep 2
 }
-shots
+# The hint's move made: Hint, Why?, Show me.
+show_me() { tap Hint; tap "Why?"; tap "Show me"; sleep 1; }
+# The home screen in Classic over the same screen in Arcade, "New Look!" across the seam.
+FONT=app/src/main/res/font/fredoka_bold.ttf
+new_look() {
+  local w h band
+  read -r w h < <(identify -format '%w %h\n' "$DIR/1-home.png")
+  band=$((h / 11))
+  convert \( "$DIR/classic.png" -crop "${w}x$((h / 2))+0+0" +repage \) \
+          \( "$DIR/1-home.png" -crop "${w}x$((h - h / 2))+0+$((h / 2))" +repage \) -append \
+    -fill '#000a' -draw "rectangle 0,$((h / 2 - band / 2 + band / 12)) $w,$((h / 2 + band / 2 + band / 12))" \
+    -fill '#2b2140' -draw "rectangle 0,$((h / 2 - band / 2)) $w,$((h / 2 + band / 2))" \
+    -font "$FONT" -pointsize $((band * 6 / 10)) -fill white -gravity center -annotate +0+0 'New Look!' \
+    "$DIR/2-new-look.png"
+  rm "$DIR/classic.png"
+}
+
+# The set, in store order: the home screen, then the puzzles most players look for.
+pass() {
+  fresh Classic; shot classic
+  fresh Arcade; shot 1-home
+  new_look
+  open_puzzle Sudoku; sleep 2; tap Hint; tap "Why?"; sleep 3; shot 3-sudoku-hint; back
+  open_puzzle Lexicon; sleep 2
+  type_keys RAISE; type_keys CLOUT
+  shot 4-lexicon; back
+  open_puzzle Crossword; sleep 2; tap Hint; sleep 3; shot 5-crossword-hint; back
+  open_puzzle "Word Wheel"; sleep 2; shot 6-word-wheel; back
+  open_puzzle Nonogram; sleep 2; for _ in 1 2 3 4; do show_me; done; sleep 2; shot 7-nonogram; back
+  open_puzzle Mines; sleep 2; shot 8-mines; back
+}
+pass
 
 # Tablet pass: the same set in landscape, where the board sits beside the controls. 2560x1440 at 320 dpi is a
 # 1280x720 dp window (a 10-inch tablet's shape) and fits both of Play's tablet slots (16:9, sides 1080-3840).
@@ -131,18 +165,18 @@ DIR=$TABLET
 adb shell wm size 2560x1440
 adb shell wm density 320
 sleep 5; demo_bar
-back; sleep 2; shot 1-home
-shots
+pass
 
 demo exit
 adb shell wm size reset
 adb shell wm density reset
 for l in $LAUNCHERS; do adb shell pm enable $l >/dev/null 2>&1 || true; done
-# README copies are half scale: home, sudoku, cage sudoku, word wheel, and the tablet layout
-for p in 1-home:home 2-sudoku-hint:sudoku 3-cage-sudoku-hint:cage-sudoku 4-word-wheel:word-wheel; do
+# README copies are half scale: home, sudoku, lexicon, word wheel, and the tablet layout
+rm -f docs/screenshots/*.png
+for p in 1-home:home 3-sudoku-hint:sudoku 4-lexicon:lexicon 6-word-wheel:word-wheel; do
   convert "$OUT/${p%%:*}.png" -resize 50% "docs/screenshots/${p##*:}.png"
 done
-convert "$TABLET/3-cage-sudoku-hint.png" -resize 50% docs/screenshots/tablet-cage-sudoku.png
+convert "$TABLET/3-sudoku-hint.png" -resize 50% docs/screenshots/tablet-sudoku.png
 # F-Droid reads its listing images from the repo (fastlane layout), so they travel with the Play set.
 F=fastlane/metadata/android/en-US/images
 rm -f $F/phoneScreenshots/*.png $F/sevenInchScreenshots/*.png $F/tenInchScreenshots/*.png
