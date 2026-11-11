@@ -191,6 +191,9 @@ fun techniqueLine(puzzleId: String, hints: Int, taught: List<String>, needed: St
 /** Where a shared result points: the web build, which anyone can open without installing anything. */
 const val SHARE_URL = "https://knowhowit.com.au/daybook/"
 
+/** The player guide's index (`tools/guide/`): every puzzle's page. Settings links it; a puzzle's rules sheet links [guideUrl]. */
+const val GUIDE_URL = "${SHARE_URL}guide/"
+
 /** A puzzle's page in the player guide, at [technique]'s heading if given. The slash stays: a redirect could lose the anchor. */
 fun guideUrl(puzzleId: String, technique: String? = null): String =
-    "${SHARE_URL}guide/$puzzleId/" + if (technique != null) "#$technique" else ""
+    "$GUIDE_URL$puzzleId/" + if (technique != null) "#$technique" else ""

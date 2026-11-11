@@ -19,23 +19,33 @@ import androidx.compose.ui.unit.dp
  */
 class RateLink(val title: String, val detail: String, val open: () -> Unit)
 
+/** Daybook's source on GitHub. */
+const val GITHUB_URL = "https://github.com/joebywan/daybook"
+
+/** The issues board, where a player reports a problem or suggests something (`.github/ISSUE_TEMPLATE/`). */
+const val ISSUES_URL = "$GITHUB_URL/issues"
+
 /** Where no store takes ratings (F-Droid, a downloaded APK, the web): a star on GitHub, opened through [openUri]. */
 fun githubRateLink(openUri: (String) -> Unit) = RateLink(
     title = "Star Daybook on GitHub",
     detail = "Daybook is open source. If it has earned it, a star on GitHub helps other puzzlers find it.",
-    open = { openUri("https://github.com/joebywan/daybook") },
+    open = { openUri(GITHUB_URL) },
 )
 
 /** The same rounded row as a setting, but the whole row is one button that opens [link]. */
 @Composable
-fun RateRow(link: RateLink) {
+fun RateRow(link: RateLink) = LinkRow(link.title, link.detail, link.open)
+
+/** A setting-shaped row that is one button: the guide, the issues board, a rating. */
+@Composable
+fun LinkRow(title: String, detail: String, open: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
             .card(MaterialTheme.colorScheme.surface)
-            .clickable(role = Role.Button, onClick = link.open)
+            .clickable(role = Role.Button, onClick = open)
             .padding(14.dp),
     ) {
-        CardText(link.title, link.detail)
+        CardText(title, detail)
     }
 }

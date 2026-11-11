@@ -120,6 +120,8 @@ tasks.withType<Test>().configureEach {
     maxParallelForks = minOf(4, Runtime.getRuntime().availableProcessors())
     // GuideTest reads these. The build cache would otherwise replay its last pass on a change to a page alone.
     inputs.dir("../tools/guide/pages").withPathSensitivity(PathSensitivity.RELATIVE)
+    // HelpLinksTest reads the issue forms, for the same reason.
+    inputs.dir("../.github/ISSUE_TEMPLATE").withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 // AGP 9 compiles Kotlin itself (built-in Kotlin), so there is no kotlin-android plugin; this is the

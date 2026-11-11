@@ -1069,7 +1069,7 @@ private fun ToolButton(icon: ImageVector, label: String, modifier: Modifier, onC
 /**
  * A puzzle's rules, scrolling, under [title]: the tagline first, then the bullets, then what each tier changes (the board's
  * own [difficulty] marked), with a "Got it" and, given [onWalkthrough], a way into the walkthrough (the play screen's "?":
- * the rules are a tap away, the walkthrough one more). [onGuide] opens the puzzle's guide page, which the sheet never needs.
+ * the rules are a tap away, the walkthrough one more). [onGuide] opens the puzzle's guide page ("Read the guide", beside "Got it").
  */
 @Composable
 internal fun RulesDialog(
@@ -1084,6 +1084,9 @@ internal fun RulesDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Got it") } },
+        // Beside "Got it", outside the scrolling text, so it shows without scrolling past the rules and tiers (at the foot
+        // of a long sheet it went unseen). Extra reading, so a walkthrough's sheet, which passes none, has no button.
+        dismissButton = onGuide?.let { guide -> { TextButton(onClick = guide) { Text("Read the guide") } } },
         title = { Text(title) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -1100,11 +1103,6 @@ internal fun RulesDialog(
                 onTrain?.let {
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Train: practise the techniques") }
-                }
-                // Extra reading, so not offered inside a walkthrough, which passes none.
-                onGuide?.let {
-                    Spacer(Modifier.height(4.dp))
-                    TextButton(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Read more in the guide") }
                 }
             }
         },

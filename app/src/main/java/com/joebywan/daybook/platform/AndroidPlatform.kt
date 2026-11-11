@@ -287,6 +287,23 @@ fun rememberHaptics(enabled: Boolean): Haptics {
 }
 
 /**
+ * What a bug report needs to say which build it is: the version name (`<version.txt>.<run>`) and the device, shown in
+ * Settings where it can be selected and copied. Read once from the package; no permission.
+ */
+@Composable
+fun rememberAppVersion(): String {
+    val context = LocalContext.current
+    return remember(context) {
+        val name = try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        } catch (_: Exception) {
+            null
+        } ?: "unknown"
+        "Daybook $name on Android ${Build.VERSION.RELEASE} (${Build.MANUFACTURER} ${Build.MODEL})"
+    }
+}
+
+/**
  * Play installs rate on Play (the store app, or its web page when the store app is missing). Anything else,
  * F-Droid or a downloaded APK, has no store that takes ratings, so the link is a star on GitHub instead.
  */
