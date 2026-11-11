@@ -1,18 +1,19 @@
 {
   "attribution": {
     "commit": "",
+    "pr": "",
     "sessionUrl": false
   },
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|mcp__github__.*",
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/block-claude-trailer.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/tools/block-claude-attribution.sh",
             "timeout": 10,
-            "statusMessage": "Checking the commit message for an attribution trailer"
+            "statusMessage": "Checking for Claude attribution"
           }
         ]
       }

@@ -1,0 +1,7 @@
+co-authored-by:[[:space:]]*(claude|anthropic)
+noreply@anthropic\.com
+claude-session:
+generated[[:space:]]+(with|by)[[:space:]]+\[?claude
+claude\.ai/code
+claude\.com/claude-code
+🤖
