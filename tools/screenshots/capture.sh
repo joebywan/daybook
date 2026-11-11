@@ -124,34 +124,45 @@ print((x0 + x1) // 2, (y0 + y1) // 2)' "$k")
 }
 # The hint's move made: Hint, Why?, Show me.
 show_me() { tap Hint; tap "Why?"; tap "Show me"; sleep 1; }
-# The home screen in Classic over the same screen in Arcade, "New Look!" across the seam.
+# Shot $1 split: the Classic capture (classic-$1) on top, the Arcade one below. With $2, that text on a band across the
+# seam; without, a line with a "Classic" tag above it and an "Arcade" tag below, at the right edge.
 FONT=app/src/main/res/font/fredoka_bold.ttf
-new_look() {
-  local w h band
-  read -r w h < <(identify -format '%w %h\n' "$DIR/1-home.png")
-  band=$((h / 11))
-  convert \( "$DIR/classic.png" -crop "${w}x$((h / 2))+0+0" +repage \) \
-          \( "$DIR/1-home.png" -crop "${w}x$((h - h / 2))+0+$((h / 2))" +repage \) -append \
-    -fill '#000a' -draw "rectangle 0,$((h / 2 - band / 2 + band / 12)) $w,$((h / 2 + band / 2 + band / 12))" \
-    -fill '#2b2140' -draw "rectangle 0,$((h / 2 - band / 2)) $w,$((h / 2 + band / 2))" \
-    -font "$FONT" -pointsize $((band * 6 / 10)) -fill white -gravity center -annotate +0+0 'New Look!' \
-    "$DIR/2-new-look.png"
-  rm "$DIR/classic.png"
+split() {
+  local name=$1 w h band tag out=${3:-$1}
+  read -r w h < <(identify -format '%w %h\n' "$DIR/$name.png")
+  band=$((h / 11)) tag=$((h / 28))
+  local mid=$((h / 2)) m=$((h / 80))
+  pill() { echo \( -background '#2b2140' -fill white -font "$FONT" -pointsize $((tag * 6 / 10)) "label:$1" \
+    -gravity center -extent $((tag * 4))x$tag \) -gravity NorthEast -geometry +$m+$2 -composite; }
+  if [ -n "${2:-}" ]; then
+    set -- -fill '#000a' -draw "rectangle 0,$((mid - band / 2 + band / 12)) $w,$((mid + band / 2 + band / 12))" \
+      -fill '#2b2140' -draw "rectangle 0,$((mid - band / 2)) $w,$((mid + band / 2))" \
+      -font "$FONT" -pointsize $((band * 6 / 10)) -fill white -gravity center -annotate +0+0 "$2"
+  else
+    set -- -fill '#2b2140' -draw "rectangle 0,$((mid - tag / 12)) $w,$((mid + tag / 12))" \
+      $(pill Classic $((mid - tag - tag / 5))) $(pill Arcade $((mid + tag / 5)))
+  fi
+  convert \( "$DIR/classic-$name.png" -crop "${w}x${mid}+0+0" +repage \) \
+          \( "$DIR/$name.png" -crop "${w}x$((h - mid))+0+${mid}" +repage \) -append "$@" "$DIR/$out.png"
 }
 
-# The set, in store order: the home screen, then the puzzles most players look for.
+# The genres with the biggest apps on Play (docs/play/LISTING.md), in store order, each shot named $1 plus its slot.
+games() {
+  open_puzzle Sudoku; sleep 2; tap Hint; tap "Why?"; sleep 3; shot "${1}3-sudoku-hint"; back
+  open_puzzle Lexicon; sleep 2; type_keys RAISE; type_keys CLOUT; shot "${1}4-lexicon"; back
+  open_puzzle "Word Wheel"; sleep 2; shot "${1}5-word-wheel"; back
+  open_puzzle Arrows; sleep 2; shot "${1}6-arrows"; back
+  open_puzzle Links; sleep 2; for _ in 1 2 3 4 5; do show_me; done; sleep 2; shot "${1}7-links"; back
+  open_puzzle Sand; sleep 2; for _ in 1 2; do show_me; done; sleep 2; shot "${1}8-sand"; back
+}
+
+# The set: the home screen, the home screen in Classic over Arcade ("New Look!"), then each game split the same way.
 pass() {
-  fresh Classic; shot classic
-  fresh Arcade; shot 1-home
-  new_look
-  open_puzzle Sudoku; sleep 2; tap Hint; tap "Why?"; sleep 3; shot 3-sudoku-hint; back
-  open_puzzle Lexicon; sleep 2
-  type_keys RAISE; type_keys CLOUT
-  shot 4-lexicon; back
-  open_puzzle Crossword; sleep 2; tap Hint; sleep 3; shot 5-crossword-hint; back
-  open_puzzle "Word Wheel"; sleep 2; shot 6-word-wheel; back
-  open_puzzle Nonogram; sleep 2; for _ in 1 2 3 4; do show_me; done; sleep 2; shot 7-nonogram; back
-  open_puzzle Mines; sleep 2; shot 8-mines; back
+  fresh Classic; shot classic-1-home; games classic-
+  fresh Arcade; shot 1-home; games ""
+  split 1-home 'New Look!' 2-new-look
+  for s in 3-sudoku-hint 4-lexicon 5-word-wheel 6-arrows 7-links 8-sand; do split $s; done
+  rm "$DIR"/classic-*.png
 }
 pass
 
@@ -173,7 +184,7 @@ adb shell wm density reset
 for l in $LAUNCHERS; do adb shell pm enable $l >/dev/null 2>&1 || true; done
 # README copies are half scale: home, sudoku, lexicon, word wheel, and the tablet layout
 rm -f docs/screenshots/*.png
-for p in 1-home:home 3-sudoku-hint:sudoku 4-lexicon:lexicon 6-word-wheel:word-wheel; do
+for p in 1-home:home 3-sudoku-hint:sudoku 4-lexicon:lexicon 5-word-wheel:word-wheel; do
   convert "$OUT/${p%%:*}.png" -resize 50% "docs/screenshots/${p##*:}.png"
 done
 convert "$TABLET/3-sudoku-hint.png" -resize 50% docs/screenshots/tablet-sudoku.png
