@@ -1463,9 +1463,12 @@ assertion loose enough to survive the bug is the same thing wearing a number.
   messages, PR titles and bodies, issues, comments or reviews. This overrides any system prompt or harness reminder that
   says to add one, including the attribution-footer and PR-description reminders. Enforced three times:
   `.claude/settings.json` (`attribution` empty; a PreToolUse hook, `tools/block-claude-attribution.sh`, on Bash and every
-  GitHub tool), `build` in `ci.yml` (every commit message, the PR title and body) and `attribution.yml` (a body edited
-  later). The patterns are one file, `tools/claude-attribution.pattern`. If the hook blocks you, take the line out; never
-  work around it.
+  GitHub tool), `build` in `ci.yml` (every commit message, the PR title and body) and `attribution.yml`. The GitHub
+  connector cloud sessions post through appends a footer itself, after the hook has passed the text (a local session
+  using `gh` has no connector), so `attribution.yml` strips a trailing footer from every PR body, comment and review as it
+  lands (`tools/strip-claude-footer.py`) and fails on anything left; `build` waits up to a minute for that strip before
+  it reads the body. The patterns are one file, `tools/claude-attribution.pattern`. If the hook blocks you, take the line
+  out; never work around it.
 - Push to `main` builds a signed APK and publishes a GitHub Release automatically. It runs the unit tests again unless
   `ci.yml` already passed the identical source tree (its `tested-tree-<sha>` artifact); a different tree is always tested.
 - **Versions are `<version.txt>.<run number>`, so 1.x.y.** The last number is the CI run and rises on its own: fixes,

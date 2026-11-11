@@ -1,11 +1,20 @@
 name: Attribution
 
-# CI's `build` checks a pull request's body as it was when the commits were pushed; this catches a body
-# edited afterwards (ci.yml does not run on `edited`, which would rebuild everything on every typo fix).
-# Same patterns as the Claude Code hook: tools/claude-attribution.pattern.
+# CLAUDE.md forbids Claude attribution on anything published. `tools/block-claude-attribution.sh`
+# stops it at the tool, but the GitHub connector Claude's cloud sessions post through appends a footer
+# itself, after the hook has passed the text. So this strips a trailing footer from a pull request
+# body, a comment or a review as it lands (`tools/strip-claude-footer.py`), then fails if any
+# attribution is left (`tools/claude-attribution.pattern`, the hook's patterns). Edits made with
+# GITHUB_TOKEN start no new runs, so the strip cannot loop.
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited]
 
 permissions:
   contents: read
@@ -13,18 +22,45 @@ permissions:
 jobs:
   no-claude-attribution:
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write   # to edit a PR body, review or review comment
+      issues: write          # to edit a conversation comment
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          sparse-checkout: tools/claude-attribution.pattern
+          sparse-checkout: |
+            tools/claude-attribution.pattern
+            tools/strip-claude-footer.py
           sparse-checkout-cone-mode: false
-      - name: No Claude attribution in the pull request
+
+      - name: Strip a Claude footer, then check for attribution
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          REVIEW_ID: ${{ github.event.review.id }}
         run: |
-          if printf '%s\n%s' "$PR_TITLE" "$PR_BODY" | grep -qiE -f tools/claude-attribution.pattern; then
-            echo "::error::The pull request's title or body carries a Claude attribution, which CLAUDE.md forbids. Edit it out."
+          case "$EVENT" in
+            pull_request)                URL="repos/$REPO/pulls/$PR_NUMBER";           METHOD=PATCH ;;
+            issue_comment)               URL="repos/$REPO/issues/comments/$COMMENT_ID"; METHOD=PATCH ;;
+            pull_request_review_comment) URL="repos/$REPO/pulls/comments/$COMMENT_ID";  METHOD=PATCH ;;
+            pull_request_review)         URL="repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID"; METHOD=PUT ;;
+          esac
+          gh api "$URL" > item.json
+          jq -r '.body // ""' item.json > body.txt
+          python3 -I tools/strip-claude-footer.py < body.txt > stripped.txt
+          if ! cmp -s body.txt stripped.txt; then
+            echo "Stripping a Claude footer from $URL"
+            jq -n --rawfile b stripped.txt '{body: $b}' | gh api -X "$METHOD" "$URL" --input - > /dev/null
+            cp stripped.txt body.txt
+          fi
+          { jq -r '.title // ""' item.json; cat body.txt; } > text.txt
+          if grep -qiE -f tools/claude-attribution.pattern text.txt; then
+            echo "::error::This carries a Claude attribution that is not a plain trailing footer, which CLAUDE.md forbids. Edit it out."
+            grep -niE -f tools/claude-attribution.pattern text.txt
             exit 1
           fi

@@ -47,9 +47,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}   # this step only; reads the title and body as they are now, so a re-run after an edit sees the edit
         run: |
-          PR="$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}")"
-          PR_TITLE="$(printf '%s' "$PR" | jq -r .title)"
-          PR_BODY="$(printf '%s' "$PR" | jq -r '.body // ""')"
+          # attribution.yml strips a trailing footer the GitHub connector adds; give it a minute to land.
+          for wait in 0 15 15 15 15; do
+            sleep "$wait"
+            PR="$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}")"
+            PR_TITLE="$(printf '%s' "$PR" | jq -r .title)"
+            PR_BODY="$(printf '%s' "$PR" | jq -r '.body // ""')"
+            printf '%s\n%s' "$PR_TITLE" "$PR_BODY" | grep -qiE -f tools/claude-attribution.pattern || break
+          done
           RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
           FAIL=0
           for c in $(git rev-list "$RANGE"); do
