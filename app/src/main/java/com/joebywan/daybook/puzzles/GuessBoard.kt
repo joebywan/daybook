@@ -45,6 +45,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.arcadeGlow
 import com.joebywan.daybook.ui.theme.arcadeHardShadow
@@ -96,11 +98,30 @@ internal object GuessBoard {
 
     @Composable
     @ReadOnlyComposable
-    private fun isDark() = ArcadeBoard.current === ArcadeBoard.Dark
+    private fun isDark() = BoardHues.isDark(MaterialTheme.colorScheme)
+
+    /**
+     * The Classic look's marks (issue #418), as Lexicon drew them before Arcade: flat green and gold with the letter's ink
+     * picked per fill (white was 3.2:1 on green and 2.3:1 on gold), absent the outline at 45%.
+     */
+    @Composable
+    @ReadOnlyComposable
+    private fun classicMarks(): Marks {
+        val absent = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+        return Marks(
+            ArcadeFill(CLASSIC_CORRECT, CLASSIC_CORRECT, BoardHues.onFill(CLASSIC_CORRECT)),
+            ArcadeFill(CLASSIC_PRESENT, CLASSIC_PRESENT, BoardHues.onFill(CLASSIC_PRESENT)),
+            absent,
+            MaterialTheme.colorScheme.onSurface,
+        )
+    }
+
+    internal val CLASSIC_CORRECT = Color(0xFF4E9F6C)
+    internal val CLASSIC_PRESENT = Color(0xFFD1A32F)
 
     @Composable
     @ReadOnlyComposable
-    fun marks() = if (isDark()) DarkMarks else LightMarks
+    fun marks() = if (classicLook()) classicMarks() else if (isDark()) DarkMarks else LightMarks
 
     /** Right's ring or present's dot, in the fill's ink; [unit] is the ring's stroke. Drawn, so it takes no room. */
     private fun Modifier.markCue(mark: Int?, ink: Color, unit: Dp) = when (mark) {
@@ -252,10 +273,11 @@ internal object GuessBoard {
                     s.failed -> lost(s)
                     else -> "${s.maxGuesses - s.guesses.size} guesses left"
                 }
+                val classic = classicLook()
                 Text(
                     line,
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (notice != null || s.failed) a.error else scheme.onSurfaceVariant,
+                    color = if (notice != null || s.failed) (if (classic) scheme.error else a.error) else scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     minLines = 1,
@@ -275,7 +297,7 @@ internal object GuessBoard {
                 ) { it < s.guesses.size }
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val cell = minOf(maxWidth / s.length, maxHeight / s.maxGuesses, MAX_CELL * scale).coerceAtLeast(0.dp)
-                    Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses).clip(RoundedCornerShape(8.dp)).background(a.frame)) {
+                    Column(Modifier.size(cell * s.length, cell * s.maxGuesses).highlightGrid(s.length, s.maxGuesses).clip(RoundedCornerShape(8.dp)).background(if (classic) Color.Transparent else a.frame)) {
                         repeat(s.maxGuesses) { row ->
                             Row {
                                 repeat(s.length) { slot ->
@@ -313,19 +335,30 @@ internal object GuessBoard {
                             if (pad > 0f) Spacer(Modifier.weight(pad))
                             if (last) {
                                 KeyButton("Del", Modifier.weight(1.5f), playable, GuessTeacher.DELETE, highlight, glow, pulse,
-                                    a.control.brush, a.control.ink, a.control.glow, null, small = true, scale) {
+                                    if (classic) SolidColor(scheme.surfaceVariant) else a.control.brush,
+                                    if (classic) scheme.onSurfaceVariant else a.control.ink, a.control.glow, null, small = true, scale) {
                                     press(GuessKeyAction.Backspace)
                                 }
                             }
                             symbols.forEach { c ->
                                 val mark = known[alphabet.indexOf(c)]
-                                val fill = when (mark) {
+                                // Classic, as before Arcade: the variant, faded once absent, the mark's flat colour once found.
+                                val fill = if (classic) when (mark) {
+                                    -1 -> SolidColor(scheme.surfaceVariant)
+                                    GuessMarks.ABSENT -> SolidColor(scheme.surfaceVariant.copy(alpha = 0.3f))
+                                    GuessMarks.CORRECT -> SolidColor(CLASSIC_CORRECT)
+                                    else -> SolidColor(CLASSIC_PRESENT)
+                                } else when (mark) {
                                     -1 -> SolidColor(a.given)
                                     GuessMarks.ABSENT -> SolidColor(m.absent)
                                     GuessMarks.CORRECT -> m.correct.brush
                                     else -> m.present.brush
                                 }
-                                val text = when (mark) {
+                                val text = if (classic) when (mark) {
+                                    -1 -> scheme.onSurfaceVariant
+                                    GuessMarks.ABSENT -> scheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    else -> m.correct.ink.takeIf { mark == GuessMarks.CORRECT } ?: m.present.ink
+                                } else when (mark) {
                                     -1 -> a.givenInk
                                     GuessMarks.ABSENT -> m.absentInk
                                     GuessMarks.CORRECT -> m.correct.ink
@@ -337,14 +370,15 @@ internal object GuessBoard {
                                     else -> null
                                 }
                                 KeyButton(label(c), Modifier.weight(1f), playable, GuessTeacher.KEY + alphabet.indexOf(c), highlight, glow, pulse,
-                                    fill, text, lift, mark, small = false, scale) {
+                                    fill, text, lift.takeIf { !classic }, mark.takeIf { !classic }, small = false, scale) {
                                     press(GuessKeyAction.Letter(c))
                                 }
                             }
                             if (pad > 0f) Spacer(Modifier.weight(pad))
                             if (last) {
                                 KeyButton("Enter", Modifier.weight(1.5f), playable, GuessTeacher.ENTER, highlight, glow, pulse,
-                                    a.control.brush, a.control.ink, a.control.glow, null, small = true, scale) {
+                                    if (classic) SolidColor(scheme.surfaceVariant) else a.control.brush,
+                                    if (classic) scheme.onSurfaceVariant else a.control.ink, a.control.glow, null, small = true, scale) {
                                     press(GuessKeyAction.Enter)
                                 }
                             }
@@ -381,6 +415,43 @@ internal object GuessBoard {
         val m = marks()
         val shape = RoundedCornerShape(6.dp)
         val corner = 6.dp
+        if (classicLook()) {
+            // Classic, as before Arcade: a marked square is its flat colour; an unmarked one an outline, heavier once typed in.
+            val scheme = MaterialTheme.colorScheme
+            val typed = place == TilePlace.TYPED || place == TilePlace.REFUSED
+            Box(
+                Modifier
+                    .size(cell)
+                    .then(modifier)
+                    .padding(2.dp)
+                    .ring(look, glow, pulse, corner, outside = true)
+                    .dimmed(look)
+                    .clip(shape)
+                    .then(
+                        when (mark) {
+                            null -> Modifier.border(if (typed) 2.dp else 1.dp, if (typed) scheme.onSurfaceVariant else scheme.outline, shape)
+                            GuessMarks.CORRECT -> Modifier.background(m.correct.from)
+                            GuessMarks.PRESENT -> Modifier.background(m.present.from)
+                            else -> Modifier.background(m.absent)
+                        }
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (letter != null) {
+                    Text(
+                        letter,
+                        fontSize = (cell * 0.46f).boardSp(), lineHeight = (cell * 0.46f).boardSp() * 1.2f,
+                        fontWeight = FontWeight.Bold,
+                        color = when (mark) {
+                            GuessMarks.CORRECT -> m.correct.ink
+                            GuessMarks.PRESENT -> m.present.ink
+                            else -> scheme.onSurface
+                        },
+                    )
+                }
+            }
+            return
+        }
         val fill: ArcadeFill? = when {
             mark == GuessMarks.CORRECT -> m.correct
             mark == GuessMarks.PRESENT -> m.present

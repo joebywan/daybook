@@ -9,6 +9,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.toSize
 import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.classicLook
+import com.joebywan.daybook.ui.theme.Look
 import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.arcadeLift
 import com.joebywan.daybook.ui.theme.arcadePageBrush
@@ -208,6 +210,9 @@ fun HomeScreen(
     customOrder: Boolean,
     onOrder: (List<String>) -> Unit,
     resume: () -> Pair<PuzzleType, Difficulty>?,
+    /** Whether the player has chosen a look (issue #418); until they have, [LookOffer] asks once under the grid. */
+    lookAsked: Boolean = true,
+    onLook: (Look) -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
     val doneToday = remember(completions, today) {
@@ -349,6 +354,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
                 )
             }
+            if (!lookAsked) item { LookOffer(onLook) }
             item { ReminderOffer(completions, today) }
             item { GetTheAppCard() }
         }
@@ -363,6 +369,8 @@ private val TopPadding = 14.dp
 private fun ContinueRow(puzzle: PuzzleType, tier: Difficulty, modifier: Modifier, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val tile = ArcadeBoard.tile(Color(puzzle.accent), BoardHues.isDark(scheme))
+    // Classic (issue #418): the plain surface, the arrow in the accent, as before Arcade.
+    val classic = classicLook()
     Row(
         modifier
             .fillMaxWidth()
@@ -374,7 +382,7 @@ private fun ContinueRow(puzzle: PuzzleType, tier: Difficulty, modifier: Modifier
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        puzzle.Preview(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(scheme.surface))
+        puzzle.Preview(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).then(if (classic) Modifier else Modifier.background(scheme.surface)))
         Spacer(Modifier.width(12.dp))
         Text(
             "Continue ${puzzle.displayName} · ${tier.label}",
@@ -384,7 +392,7 @@ private fun ContinueRow(puzzle: PuzzleType, tier: Difficulty, modifier: Modifier
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = tile.ink, modifier = Modifier.size(20.dp))
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = if (classic) Color(puzzle.accent) else tile.ink, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -650,7 +658,8 @@ private fun PuzzleGrid(
                         ) { ink ->
                             TierDots(
                                 accent = ink,
-                                onTile = ink,
+                                // Classic's unsolved rings are the variant's ink, as before Arcade.
+                                onTile = ink.takeIf { !classicLook() },
                                 selected = difficulty,
                                 cleared = { tier -> (id to tier) in doneToday },
                                 popped = justSolved?.takeIf { it.first == id }?.second,
@@ -769,10 +778,13 @@ internal fun PuzzleTile(
         onClick = onClick,
         modifier = modifier,
         motif = {
-            puzzle.Preview(Modifier.size(previewSize).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surface))
+            puzzle.Preview(
+                Modifier.size(previewSize).clip(RoundedCornerShape(10.dp))
+                    .then(if (classicLook()) Modifier else Modifier.background(MaterialTheme.colorScheme.surface))
+            )
             if (started) InProgressLabel(previewSize, Modifier.align(Alignment.Center))
         },
-        footer = { footer(tile.ink) },
+        footer = { footer(if (classicLook()) classicTileInk(accent, MaterialTheme.colorScheme.surface) else tile.ink) },
     )
 }
 
@@ -826,15 +838,23 @@ internal fun HomeTile(
 ) {
     val scheme = MaterialTheme.colorScheme
     val pop = rememberPop(justSolved, solved, 1.15f)
-    val tick = tileInk(accent, scheme.surface)
+    // Classic (issue #418): the flat surface tile from before Arcade, a solve tinting it with the accent; no ring, no lift.
+    val classic = classicLook()
+    val tick = if (classic) classicTileInk(accent, scheme.surface) else tileInk(accent, scheme.surface)
     Column(
         modifier
             .arcadeLift(tile, 18.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(tile.brush)
+            .then(
+                if (classic) Modifier.drawBehind {
+                    val t = if (solved) pop.value.coerceAtMost(1f) else 0f
+                    if (t < 1f) drawRect(scheme.surface.copy(alpha = 1f - t))
+                    if (t > 0f) drawRect(accent.copy(alpha = 0.20f * t))
+                } else Modifier.background(tile.brush)
+            )
             .drawWithContent {
                 drawContent()
-                val t = if (solved) pop.value.coerceAtMost(1f) else 0f
+                val t = if (solved && !classic) pop.value.coerceAtMost(1f) else 0f
                 if (t > 0f) {
                     val w = SOLVED_RING.toPx()
                     drawRoundRect(
@@ -868,7 +888,7 @@ internal fun HomeTile(
             Text(
                 name,
                 style = style,
-                color = tile.ink,
+                color = if (classic && solved) tick else tile.ink,
                 textAlign = TextAlign.Center,
                 maxLines = if (oneWord) 1 else 2,
                 softWrap = !oneWord,
@@ -893,6 +913,9 @@ internal fun tileInk(accent: Color, surface: Color): Color {
     return (0..50).map { androidx.compose.ui.graphics.lerp(accent, toward, it / 50f) }
         .firstOrNull { BoardHues.contrast(it, heavy) >= 4.5f && BoardHues.contrast(it, surface) >= 4.5f } ?: toward
 }
+
+/** Classic's [accent] as text on a tile, solved (tinted 20% with it) or not, as before Arcade. */
+internal fun classicTileInk(accent: Color, surface: Color): Color = BoardHues.onTint(accent, surface, alpha = 0.20f)
 
 /** A solved tile's ring, and a solved chip's in Today's three. */
 internal val SOLVED_RING = 3.dp

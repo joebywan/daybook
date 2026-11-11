@@ -36,6 +36,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.semantics.contentDescription
@@ -68,6 +69,7 @@ import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.BoardHues
 import com.joebywan.daybook.ui.theme.arcadeGlow
 import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.classicLook
 import com.joebywan.daybook.ui.BoardGlyph
 import com.joebywan.daybook.ui.style
 
@@ -84,6 +86,9 @@ internal val SudokuTwin = ArcadeFill(Color(0xFF5CF2C8), Color(0xFF14D3A6), Color
 
 /** The hint's ring in light, seen on both a white square and the indigo frame (amber misses on white, the frame's ink on the frame). */
 internal val SudokuHintLight = Color(0xFFE6007E)
+
+/** How strongly a note is inked in the Classic look (its size is `BoardGlyph.NOTE`). Tuned by rendering, before Arcade. */
+private const val SUDOKU_NOTE_ALPHA_CLASSIC = 0.85f
 
 /** Every other box's empty squares. */
 internal fun ArcadeBoard.boxShade() = lerp(square, given, 0.35f)
@@ -124,6 +129,8 @@ internal fun SudokuGridBoard(
     s: SudokuState,
     conflicts: Set<Int>,
     interactive: Boolean,
+    /** The puzzle's accent: the Classic look's move feel. */
+    accent: Long,
     onSelect: (Int) -> Unit,
     onDeselect: () -> Unit,
     onEnter: (cell: Int, digit: Int, notesMode: Boolean) -> Unit,
@@ -138,10 +145,17 @@ internal fun SudokuGridBoard(
         if (u < units.size) complete(u) else s.cells.allNine(u - units.size + 1)
     }
     val a = ArcadeBoard.current
-    val dark = BoardHues.isDark(MaterialTheme.colorScheme)
+    val scheme = MaterialTheme.colorScheme
+    val dark = BoardHues.isDark(scheme)
     val boxShade = a.boxShade()
     val keyShape = RoundedCornerShape(10.dp)
-    val (highlight, glow, pulse) = rememberHintPaint(if (dark) a.selected.from else SudokuHintLight)
+    // The Classic look (issue #418) draws what Sudoku drew before Arcade: hues derived per render from the solution, never
+    // stored (docs/COLOUR.md "Roles"), A the structure (box tint, selection, pencil), B the player's digits and their twins.
+    val classic = classicLook()
+    val (hueA, hueB) = BoardHues.pair(s.solution.hashCode())
+    val boxTint = BoardHues.fill(hueA, dark).copy(alpha = if (dark) 0.55f else 0.30f).compositeOver(scheme.surface)
+    val classicTwin = BoardHues.fill(hueB, dark).copy(alpha = 0.8f).compositeOver(scheme.surface)
+    val (highlight, glow, pulse) = if (classic) rememberHintPaint() else rememberHintPaint(if (dark) a.selected.from else SudokuHintLight)
     // Which way the digit keys act. Transient UI state, so it lives here and not in the state:
     // PlayScreen would otherwise make every flip of it an undo step.
     var notesMode by rememberSaveable { mutableStateOf(false) }
@@ -184,7 +198,8 @@ internal fun SudokuGridBoard(
         val padWidth = maxWidth
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
-                Modifier.size(side).highlightGrid(9, 9).background(a.frame, RoundedCornerShape(8.dp)).drawBehind {
+                Modifier.size(side).highlightGrid(9, 9).background(if (classic) Color.Transparent else a.frame, RoundedCornerShape(8.dp)).drawBehind {
+                    if (classic) return@drawBehind
                     // The frame again over a box's edge: dark's is translucent, and one layer of it hardly parts the boxes.
                     for (k in 1..2) {
                         val at = size.width * k / 3f
@@ -201,7 +216,21 @@ internal fun SudokuGridBoard(
                         val look = highlight.look(i)
                         val wrong = i in conflicts
                         // A state by colour also changes shape or weight: wrong is underlined and heavy, selected and twins have an edge.
-                        val fill = when {
+                        val fill = if (classic) {
+                            // Classic: no fill for a wrong square (its digit turns the error colour), no frame, no edge.
+                            val ground = when {
+                                isSelected -> BoardHues.mark(hueA).copy(alpha = if (dark) 0.55f else 0.40f).compositeOver(scheme.surface)
+                                sameValue -> classicTwin
+                                (r / 3 + c / 3) % 2 == 0 -> boxTint
+                                else -> scheme.surface
+                            }
+                            val ink = when {
+                                wrong -> scheme.error
+                                s.givens[i] -> scheme.onSurface
+                                else -> BoardHues.ink(hueB, dark)
+                            }
+                            ArcadeFill(ground, ground, ink)
+                        } else when {
                             wrong -> ArcadeFill(a.error, a.error, a.errorInk)
                             isSelected -> a.selected
                             sameValue -> SudokuTwin
@@ -216,11 +245,14 @@ internal fun SudokuGridBoard(
                                 .then(if (look.strong || look.soft) Modifier.zIndex(1f) else Modifier)
                                 .padding(start = cell * c, top = cell * r)
                                 .size(cell)
-                                .moveFeel(feel, i, a.selected.from)
-                                .padding(start = gap(c), end = gap(c + 1), top = gap(r), bottom = gap(r + 1))
+                                .moveFeel(feel, i, if (classic) Color(accent) else a.selected.from)
+                                .then(
+                                    if (classic) Modifier.padding(1.dp)
+                                    else Modifier.padding(start = gap(c), end = gap(c + 1), top = gap(r), bottom = gap(r + 1))
+                                )
                                 .then(a.selected.glow?.takeIf { isSelected }?.let { Modifier.arcadeGlow(it, 4.dp, 1.5.dp) } ?: Modifier)
                                 // Under the dimming, so a dimmed square fades to itself and not to the frame.
-                                .background(a.square, RoundedCornerShape(4.dp))
+                                .then(if (classic) Modifier else Modifier.background(a.square, RoundedCornerShape(4.dp)))
                                 .dimmed(look)
                                 .ring(look, glow, pulse, corner = 4.dp)
                                 .clip(RoundedCornerShape(4.dp))
@@ -234,6 +266,7 @@ internal fun SudokuGridBoard(
                                 .background(fill.brush)
                                 .then(
                                     when {
+                                        classic -> Modifier
                                         isSelected -> Modifier.border(2.dp, if (wrong) a.errorInk else a.selectedEdge, RoundedCornerShape(4.dp))
                                         sameValue && !wrong -> Modifier.border(1.dp, fill.ink, RoundedCornerShape(4.dp))
                                         else -> Modifier
@@ -250,7 +283,13 @@ internal fun SudokuGridBoard(
                         ) {
                             val noted = s.visibleNotes(i)
                             if (noted != 0) {
-                                val ink = if (isSelected) a.selected.ink else a.givenInk
+                                val ink = when {
+                                    classic -> scheme.onSurface.copy(alpha = SUDOKU_NOTE_ALPHA_CLASSIC)
+                                    isSelected -> a.selected.ink
+                                    else -> a.givenInk
+                                }
+                                // The disc behind a highlighted digit's note: Classic's twin square colour, under its own ink.
+                                val twinFill = if (classic) ArcadeFill(classicTwin, classicTwin, scheme.onSurface) else SudokuTwin
                                 // A square that carries a label (a cage's total) gives its top band to it.
                                 val band = topBand(i)
                                 // Three rows fit under the label and above the selected square's border; a square with no label is untouched.
@@ -273,11 +312,11 @@ internal fun SudokuGridBoard(
                                             val edge = if (isSelected) 2.dp.toPx() else 0f
                                             val radius = minOf(sub / 2f - edge, rowHeight / 2f - if (band > 0f) 0f else edge)
                                             val centre = Offset(c * sub + sub / 2f, top + rowHeight / 2f)
-                                            drawCircle(SudokuTwin.brush(centre - Offset(radius, radius), Size(radius * 2f, radius * 2f)), radius, centre)
+                                            drawCircle(twinFill.brush(centre - Offset(radius, radius), Size(radius * 2f, radius * 2f)), radius, centre)
                                         }
                                         drawText(
                                             laid,
-                                            color = if (twin) SudokuTwin.ink else ink,
+                                            color = if (twin) twinFill.ink else ink,
                                             topLeft = Offset(
                                                 c * sub + (sub - laid.size.width) / 2f,
                                                 top + (rowHeight - laid.size.height) / 2f,
@@ -292,7 +331,7 @@ internal fun SudokuGridBoard(
                                     // Under a label the digit sits a little low, so a two-figure cage total clears it.
                                     modifier = Modifier.padding(top = cell * topBand(i) * 0.7f),
                                     style = (if (s.givens[i]) BoardGlyph.GIVEN else BoardGlyph.ENTERED).style(cell).let {
-                                        if (wrong) it.copy(fontWeight = FontWeight.Black, textDecoration = TextDecoration.Underline) else it
+                                        if (wrong && !classic) it.copy(fontWeight = FontWeight.Black, textDecoration = TextDecoration.Underline) else it
                                     },
                                     color = fill.ink,
                                     textAlign = TextAlign.Center,
@@ -319,7 +358,13 @@ internal fun SudokuGridBoard(
                     val inert = notesMode && at != null && !s.canNote(at)
                     PadKey(
                         SudokuTeacher.pad(digit), highlight, glow, pulse,
-                        fill = Color.Transparent,
+                        // Classic's keys are flat: the surface, hue A's tint when pencilled, the variant once a digit is used up.
+                        fill = when {
+                            !classic -> Color.Transparent
+                            pencilled -> BoardHues.mark(hueA).copy(alpha = 0.40f)
+                            remaining == 0 -> scheme.surfaceVariant
+                            else -> scheme.surface
+                        },
                         enabled = interactive && !inert,
                         onClick = {
                             // In notes mode the keys are dimmed and inert on a filled or given cell
@@ -331,6 +376,7 @@ internal fun SudokuGridBoard(
                         // Through modifier, not fill: a key's fill is one colour. A used-up digit lies flat and thin, a pencilled one has an edge.
                         modifier = Modifier.alpha(if (inert) 0.35f else 1f).then(
                             when {
+                                classic -> Modifier
                                 pencilled -> Modifier.arcadeLift(a.selected, 10.dp).background(a.selected.brush, keyShape).border(2.dp, a.selectedEdge, keyShape)
                                 remaining == 0 -> Modifier.background(a.given, keyShape)
                                 // The alpha's layer clips to the key, which would square off a lift.
@@ -341,8 +387,10 @@ internal fun SudokuGridBoard(
                     ) {
                         Text(
                             digit.toString(),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = if (remaining == 0) FontWeight.Normal else FontWeight.Bold),
+                            style = if (classic) MaterialTheme.typography.titleMedium
+                            else MaterialTheme.typography.titleMedium.copy(fontWeight = if (remaining == 0) FontWeight.Normal else FontWeight.Bold),
                             color = when {
+                                classic -> if (remaining == 0) scheme.outline else scheme.onSurface
                                 pencilled -> a.selected.ink
                                 remaining == 0 -> a.givenInk
                                 else -> a.control.ink
@@ -353,21 +401,26 @@ internal fun SudokuGridBoard(
                 // The mode switch lives with the keys it changes. Not a state: see notesMode.
                 PadKey(
                     SudokuTeacher.NOTES_KEY, highlight, glow, pulse,
-                    fill = Color.Transparent,
+                    fill = if (!classic) Color.Transparent else if (notesMode) BoardHues.mark(hueA) else scheme.surface,
                     enabled = interactive,
                     onClick = {
                         notesMode = !notesMode
                         notedAt = null
                     },
                     modifier = Modifier.semantics { contentDescription = if (notesMode) "Notes on" else "Notes off" }.then(
-                        if (notesMode) Modifier.arcadeLift(a.selected, 10.dp).background(a.selected.brush, keyShape).border(2.dp, a.selectedEdge, keyShape)
+                        if (classic) Modifier
+                        else if (notesMode) Modifier.arcadeLift(a.selected, 10.dp).background(a.selected.brush, keyShape).border(2.dp, a.selectedEdge, keyShape)
                         else Modifier.background(a.given, keyShape)
                     ),
                 ) {
                     Icon(
                         Icons.Default.Edit,
                         contentDescription = null,
-                        tint = if (notesMode) a.selected.ink else a.givenInk,
+                        tint = when {
+                            classic -> if (notesMode) Color.White else scheme.onSurface
+                            notesMode -> a.selected.ink
+                            else -> a.givenInk
+                        },
                         modifier = Modifier.size(18.dp),
                     )
                 }

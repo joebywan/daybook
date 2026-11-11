@@ -45,7 +45,9 @@ import kotlinx.coroutines.launch
 import com.joebywan.daybook.platform.VIBRATION_NOTE
 import com.joebywan.daybook.platform.rememberRateLink
 import com.joebywan.daybook.ui.home.SegmentedControl
+import com.joebywan.daybook.ui.home.LookSetting
 import com.joebywan.daybook.ui.theme.Appearance
+import com.joebywan.daybook.ui.theme.Look
 
 /**
  * The player's switches. Reached from the gear on Home; the system back button (or, on the web,
@@ -66,6 +68,8 @@ fun SettingsScreen(
     onResetOrder: () -> Unit,
     appearance: Appearance,
     onAppearance: (Appearance) -> Unit,
+    look: Look,
+    onLook: (Look) -> Unit,
     onBack: () -> Unit,
     /** Opens Training (`docs/TRAINING_SPEC.md`): its list of puzzles. */
     onTraining: () -> Unit = {},
@@ -98,6 +102,7 @@ fun SettingsScreen(
             }
             if (OFFERS_REMINDER) item { ReminderSetting() }
             item { AppearanceChoice(appearance, onAppearance) }
+            item { LookSetting(look, onLook) }
             item { AccessibilityHeading() }
             item { MotionSetting(motionChoice, onMotionChoice) }
             item {

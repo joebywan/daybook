@@ -5,6 +5,7 @@ import com.joebywan.daybook.ui.MotionChoice
 import com.joebywan.daybook.ui.home.LaunchPreferences
 import com.joebywan.daybook.ui.home.timerShown
 import com.joebywan.daybook.ui.theme.Appearance
+import com.joebywan.daybook.ui.theme.Look
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -76,6 +77,20 @@ class LaunchPreferencesTest {
         assertEquals("not marked until Start", true, fresh.needsWelcome { false })
         fresh.setWelcomed()
         assertEquals(false, fresh.needsWelcome { false })
+    }
+
+    @Test
+    fun theLookIsUnansweredUntilChosenAndTheWebPageCanReadIt() = runBlocking {
+        val store = MemoryStore()
+        val prefs = LaunchPreferences(store)
+        assertEquals("unanswered until the welcome, Home's card or Settings", null, prefs.look.first())
+        prefs.setLook(Look.CLASSIC)
+        assertEquals(Look.CLASSIC, prefs.look.first())
+        assertEquals("index.html's start-up script reads this exact value", "CLASSIC", store.strings.value["look"])
+        prefs.setLook(Look.ARCADE)
+        assertEquals(Look.ARCADE, prefs.look.first())
+        store.putString("look", "garbage")
+        assertEquals("an unknown value counts as unanswered", null, prefs.look.first())
     }
 
     @Test

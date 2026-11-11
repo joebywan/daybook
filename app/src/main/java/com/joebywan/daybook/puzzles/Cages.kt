@@ -36,6 +36,9 @@ import com.joebywan.daybook.core.TutorialFrame
 import com.joebywan.daybook.core.TutorialPath
 import com.joebywan.daybook.core.placementDeduction
 import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.material3.MaterialTheme
 import kotlinx.serialization.Serializable
 import com.joebywan.daybook.ui.BoardGlyph
 import com.joebywan.daybook.ui.style
@@ -333,6 +336,11 @@ object Cages : PuzzleType {
     override fun Preview(modifier: Modifier) {
         val a = ArcadeBoard.current
         val measurer = rememberTextMeasurer()
+        // Classic (issue #418): as before Arcade, the variant's squares, digits in hue B, cage lines in hue A, no halo or chips.
+        val classic = classicLook()
+        val scheme = MaterialTheme.colorScheme
+        val dark = BoardHues.isDark(scheme)
+        val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
         BoxWithConstraints(modifier) {
             val cell = minOf(maxWidth, maxHeight) / 3
             for (r in 0 until 3) for (c in 0 until 3) {
@@ -343,23 +351,24 @@ object Cages : PuzzleType {
                         .size(cell)
                         .padding(1.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(a.square),
+                        .background(if (classic) scheme.surfaceVariant else a.square),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (PREVIEW_DIGITS[i] != 0) {
                         Text(
                             text = PREVIEW_DIGITS[i].toString(),
                             style = BoardGlyph.ENTERED.style(cell),
-                            color = a.squareInk,
+                            color = if (classic) BoardHues.ink(hueB, dark) else a.squareInk,
                             textAlign = TextAlign.Center,
                         )
                     }
                 }
             }
-            val label = BoardGlyph.CORNER.style(cell).copy(color = a.squareInk)
+            val label = BoardGlyph.CORNER.style(cell).copy(color = if (classic) scheme.onSurface else a.squareInk)
+            val cageInk = if (classic) BoardHues.ink(hueA, dark) else a.givenInk
             Canvas(Modifier.fillMaxSize()) {
                 val px = size.width.coerceAtMost(size.height) / 3f
-                drawCages(PREVIEW_CAGES, 3, px, a.givenInk, a.square, stroke = px * 0.045f)
+                drawCages(PREVIEW_CAGES, 3, px, cageInk, if (classic) Color.Transparent else a.square, stroke = px * 0.045f)
                 drawTotals(PREVIEW_CAGES, PREVIEW_SUMS, 3, px, measurer, label, a.square) { false }
             }
         }
@@ -382,6 +391,7 @@ object Cages : PuzzleType {
             s = s.grid,
             conflicts = s.conflicts(),
             interactive = interactive,
+            accent = accent,
             onSelect = { onState(s.select(it)) },
             onDeselect = { onState(withoutSelection(s)) },
             onEnter = { cell, digit, notesMode ->
@@ -407,12 +417,18 @@ object Cages : PuzzleType {
 
     @Composable
     private fun BoxScope.CageOverlay(s: CageState, cell: Dp, a: ArcadeBoard, measurer: TextMeasurer) {
-        val label = BoardGlyph.CORNER.style(cell).copy(color = a.squareInk)
+        // Classic (issue #418): as before Arcade, the lines in hue A's ink with no halo, the totals bare in the surface's ink.
+        val classic = classicLook()
+        val scheme = MaterialTheme.colorScheme
+        val dark = BoardHues.isDark(scheme)
+        val (hueA, _) = BoardHues.pair(s.grid.solution.hashCode())
+        val label = BoardGlyph.CORNER.style(cell).copy(color = if (classic) scheme.onSurface.copy(alpha = 0.85f) else a.squareInk)
+        val ink = if (classic) BoardHues.ink(hueA, dark) else a.squareInk
         // Not a pointer target: taps fall through to the squares underneath.
         Canvas(Modifier.fillMaxSize()) {
             val px = size.width / 9f
-            drawCages(s.cageOf, 9, px, a.squareInk, a.square, stroke = 1.5.dp.toPx())
-            drawTotals(s.cageOf, s.sums, 9, px, measurer, label, a.square) { s.grid.cells[it] != 0 || s.grid.selected == it }
+            drawCages(s.cageOf, 9, px, ink, if (classic) Color.Transparent else a.square, stroke = 1.5.dp.toPx())
+            drawTotals(s.cageOf, s.sums, 9, px, measurer, label, a.square) { !classic && (s.grid.cells[it] != 0 || s.grid.selected == it) }
         }
     }
 }

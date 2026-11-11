@@ -28,7 +28,9 @@ class TowerPaletteTest {
 
     @Test
     fun `no peg is Coral or Green, which are the right and wrong colours`() {
-        val reserved = listOf(8f, 145f).flatMap { listOf(BoardHues.fill(it, false), BoardHues.ink(it, false), BoardHues.mark(it)) }
+        // In both looks: Classic's fill, ink and mark are the older recipes (issue #418).
+        val reserved = mutableListOf<Color>()
+        forEachLook { reserved += listOf(8f, 145f).flatMap { listOf(BoardHues.fill(it, false), BoardHues.ink(it, false), BoardHues.mark(it)) } }
         for (p in Tower.palette) assertTrue("a peg is a reserved hue", p !in reserved)
     }
 

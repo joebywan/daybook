@@ -375,8 +375,10 @@ object Chess : PuzzleType {
                         for (sq in 0..63) {
                             drawRect(if ((sq % 8 + sq / 8) % 2 == 0) dark else light, at(sq), Size(c, c))
                         }
-                        for (sq in lastSquares) drawRect(warm.copy(alpha = 0.55f), at(sq), Size(c, c))
-                        if (selected >= 0) drawRect(warm.copy(alpha = 0.85f), at(selected), Size(c, c))
+                        // Classic (issue #418): the accent over the squares, as before Arcade.
+                        val classic = com.joebywan.daybook.ui.theme.classicLook()
+                        for (sq in lastSquares) drawRect(if (classic) note.copy(alpha = 0.30f) else warm.copy(alpha = 0.55f), at(sq), Size(c, c))
+                        if (selected >= 0) drawRect(if (classic) note.copy(alpha = 0.55f) else warm.copy(alpha = 0.85f), at(selected), Size(c, c))
                         if (kingSq >= 0) {
                             drawCircle(scheme.error.copy(alpha = 0.55f), c * 0.46f, at(kingSq) + Offset(c / 2, c / 2))
                         }

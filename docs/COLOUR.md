@@ -1,5 +1,11 @@
 # Colour: the board palette
 
+**Classic and Arcade (2026-11-10, issue #418).** Players choose a look (Settings; asked once in the welcome or on Home). Classic is
+the app before Arcade (`3369cc46^`): the parchment `ClassicLightScheme` / `ClassicDarkScheme`, raw accents (Dwindle's, chosen since,
+lifted to 3:1 on the old dark page: `classicAccent`), the old `BoardHues` recipes (`pinnedFill`, `pinnedMark`, ink at saturation .55),
+flat home tiles and no glow. Everything below about Arcade applies to the Arcade look only; `classicLook()` is the switch, and a board
+converted to Arcade must keep drawing its Classic self (CLAUDE.md, Colour).
+
 **Arcade (2026-10-31).** The app is indigo and vivid now (`ui/theme/Palette.kt`; players asked for more juice). Home and the converted
 boards draw from `ui/theme/ArcadeBoard.kt`: deep frame, plain squares, gradient fills that carry their own ink, measured by `ArcadeBoardTest`.
 Converted: Sudoku, Cage Sudoku, Lexicon, Nonogram, Tents, Word Wheel. The other boards still use the layers below on the Arcade scheme, with the

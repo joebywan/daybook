@@ -35,13 +35,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.PuzzleRegistry
 import com.joebywan.daybook.ui.stats.MedalIcon
+import com.joebywan.daybook.ui.theme.Look
 
 /**
  * Shown once, in place of the home grid, to a new player (`LaunchPreferences.needsWelcome`): one line on what Daybook is
- * and a few pointers to what the home screen holds, then Start. No question, no tour of pages, nothing over the grid.
+ * and a few pointers to what the home screen holds, then the one question, Classic or Arcade (issue #418: the owner,
+ * "ask players what they want"), with a swatch of each, and Start. The pick applies at once, so the grid after Start is
+ * already in it; Start waits for a pick. No tour of pages, nothing over the grid.
  */
 @Composable
-internal fun Welcome(onStart: () -> Unit) {
+internal fun Welcome(look: Look?, onLook: (Look) -> Unit, onStart: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val icon = Modifier.size(22.dp)
     val small = Modifier.size(18.dp)
@@ -95,7 +98,20 @@ internal fun Welcome(onStart: () -> Unit) {
                         "to pick up lead among the rest.",
                 )
             }
-            Button(onClick = onStart, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp).height(52.dp)) {
+            // Outside the scroll with Start, so the question is never scrolled away on a short screen.
+            Column(Modifier.padding(horizontal = 24.dp).padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Pick a look. You can change it any time in Settings.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onBackground,
+                )
+                LookPicker(look, onLook)
+            }
+            Button(
+                onClick = onStart,
+                enabled = look != null,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp).height(52.dp),
+            ) {
                 Text("Start", style = MaterialTheme.typography.titleMedium)
             }
         }

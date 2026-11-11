@@ -1,6 +1,2 @@
-- New puzzle: Links. Join each pair of numbers with a path, filling every square.
-- New puzzle: Equation. Find the hidden equation, one true sum at a time.
-- New puzzle: Unblock. Slide the cars aside and drive the red one out, in as few moves as par.
-- New puzzle: Thermometers. Fill each from its bulb so every row and column holds its count.
-- New puzzle: Loop. Draw one loop round the numbers, dot to dot.
-- Each has a guide page, and all but Equation a Training course.
+- New: a Look setting. Classic brings back Daybook's original, calmer colours; Arcade keeps the bright ones. You'll be asked once which you prefer, and can change it any time in Settings.
+- The player guide and a way to report a problem are now linked from Settings.

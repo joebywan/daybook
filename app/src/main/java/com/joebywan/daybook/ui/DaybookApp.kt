@@ -80,6 +80,7 @@ import com.joebywan.daybook.ui.stats.AchievementsScreen
 import com.joebywan.daybook.ui.stats.TechniquesScreen
 import com.joebywan.daybook.ui.stats.StatsScreen
 import com.joebywan.daybook.ui.theme.Appearance
+import com.joebywan.daybook.ui.theme.Look
 import com.joebywan.daybook.ui.theme.DaybookTheme
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -242,13 +243,28 @@ fun DaybookApp(startAt: Route = Route.Home, startMode: LaunchMode = LaunchMode.D
     val launchPrefs = remember(launchFile) { LaunchPreferences(launchFile) }
     val scope = rememberCoroutineScope()
     var appearance by rememberSaveable { mutableStateOf<Appearance?>(null) }
-    LaunchedEffect(Unit) { if (appearance == null) appearance = launchPrefs.appearance.first() }
-    val current = appearance ?: return
-    DaybookTheme(current) {
-        DaybookScreens(startAt, startMode, launchPrefs, current) { picked ->
-            appearance = picked
-            scope.launch { launchPrefs.setAppearance(picked) }
+    // The look (issue #418), read with the appearance so the first frame is already in it. Null until answered: Arcade then.
+    var look by rememberSaveable { mutableStateOf<Look?>(null) }
+    LaunchedEffect(Unit) {
+        if (appearance == null) {
+            look = launchPrefs.look.first()
+            appearance = launchPrefs.appearance.first()
         }
+    }
+    val current = appearance ?: return
+    DaybookTheme(current, look ?: Look.ARCADE) {
+        DaybookScreens(
+            startAt, startMode, launchPrefs, current,
+            onAppearance = { picked ->
+                appearance = picked
+                scope.launch { launchPrefs.setAppearance(picked) }
+            },
+            look = look,
+            onLook = { picked ->
+                look = picked
+                scope.launch { launchPrefs.setLook(picked) }
+            },
+        )
     }
 }
 
@@ -259,6 +275,9 @@ private fun DaybookScreens(
     launchPrefs: LaunchPreferences,
     appearance: Appearance,
     onAppearance: (Appearance) -> Unit,
+    /** The player's look, null until they answer (the welcome, Home's card or Settings). */
+    look: Look?,
+    onLook: (Look) -> Unit,
 ) {
     val progressFile = rememberKeyValueStore(KeyValueStore.PROGRESS)
     val store = remember(progressFile) { ProgressStore(progressFile) }
@@ -382,7 +401,7 @@ private fun DaybookScreens(
     when (current) {
         Route.Home -> when (welcome) {
             null -> Unit
-            true -> Welcome(onStart = {
+            true -> Welcome(look, onLook, onStart = {
                 welcome = false
                 scope.launch { launchPrefs.setWelcomed() }
             })
@@ -468,6 +487,8 @@ private fun DaybookScreens(
                 customOrder = customOrder.isNotEmpty(),
                 onOrder = setOrder,
                 resume = { resume.value },
+                lookAsked = look != null,
+                onLook = onLook,
             )
             }
             }
@@ -533,6 +554,8 @@ private fun DaybookScreens(
             onMotionChoice = setMotionChoice,
             appearance = appearance,
             onAppearance = onAppearance,
+            look = look ?: Look.ARCADE,
+            onLook = onLook,
             customOrder = customOrder.isNotEmpty(),
             onResetOrder = { setOrder(emptyList()) },
             onBack = { route = Route.Home },

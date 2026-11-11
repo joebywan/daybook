@@ -98,6 +98,20 @@ class ArcadeBoardTest {
         }
     }
 
+    @Test fun `Classic's shared tokens read, in both schemes`() {
+        // The pens, segmented pills and keys that Classic (issue #418) draws from its flat token set.
+        for ((name, b) in listOf("light" to ArcadeBoard.ClassicLight, "dark" to ArcadeBoard.ClassicDark)) {
+            atLeast(4.5f, b.squareInk, b.square, "Classic $name square ink")
+            atLeast(4.5f, b.givenInk, b.given, "Classic $name given ink")
+            atLeast(4.5f, b.errorInk, b.error, "Classic $name error ink")
+            readsOn(b.selected, "Classic $name selected")
+            readsOn(b.control, "Classic $name control")
+            readsOn(b.letter, "Classic $name letter")
+            atLeast(3f, b.selectedEdge, b.square, "Classic $name selected edge on a square")
+            assertTrue("Classic $name has no glow", listOf(b.selected, b.control, b.letter).all { it.glow == null && it.from == it.to })
+        }
+    }
+
     @Test fun `Sudoku's own colours read, in both schemes`() {
         for ((name, b) in listOf("light" to ArcadeBoard.Light, "dark" to ArcadeBoard.Dark)) {
             readsOn(SudokuTwin, "$name twin")

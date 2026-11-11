@@ -1065,7 +1065,8 @@ object Lits : PuzzleType {
      * player who cannot separate two of these hues reads the glyph instead.
      */
     /** An unshaded square. Light's surfaceVariant sits too near the pieces (`LitsPaletteTest`), so it has its own paler lavender. */
-    internal fun unshaded(scheme: ColorScheme) = if (BoardHues.isDark(scheme)) scheme.surfaceVariant else Color(0xFFF1EDFF)
+    internal fun unshaded(scheme: ColorScheme) =
+        if (BoardHues.isDark(scheme) || com.joebywan.daybook.ui.theme.classicLook()) scheme.surfaceVariant else Color(0xFFF1EDFF) // Classic: as before Arcade
 
     val palette: Map<Piece, Color> = mapOf(
         Piece.I to BoardHues.pinnedFill(215f, false),

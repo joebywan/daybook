@@ -3,8 +3,6 @@ package com.joebywan.daybook
 import androidx.compose.ui.graphics.Color
 import com.joebywan.daybook.ColourDistance.lin
 import com.joebywan.daybook.puzzles.Lits
-import com.joebywan.daybook.ui.theme.DarkScheme
-import com.joebywan.daybook.ui.theme.LightScheme
 import com.joebywan.daybook.ui.theme.BoardHues
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -46,16 +44,21 @@ class LitsPaletteTest {
     @Test
     fun `pieces are clear of the surface, the unshaded square and the in-progress tan in both schemes`() {
         val inProgress = Color(Lits.accent)
-        for (s in listOf(LightScheme, DarkScheme)) {
-            for (other in listOf(s.background, s.surface, Lits.unshaded(s), inProgress)) {
-                for (c in colours) assertTrue("a piece sits on $other: ${apart(c, other)}", apart(c, other) >= MIN_CLEAR)
+        // In both looks (issue #418): Classic's schemes, and its unshaded square, are the ones from before Arcade.
+        forEachLook { look ->
+            for ((_, s) in lookSchemes(look)) {
+                for (other in listOf(s.background, s.surface, Lits.unshaded(s), inProgress)) {
+                    for (c in colours) assertTrue("a piece sits on $other: ${apart(c, other)}", apart(c, other) >= MIN_CLEAR)
+                }
             }
         }
     }
 
     @Test
     fun `no piece is Coral or Green, which are the error and right colours`() {
-        val reserved = listOf(8f, 145f).flatMap { listOf(BoardHues.fill(it, false), BoardHues.ink(it, false), BoardHues.mark(it)) }
+        // In both looks: Classic's fill, ink and mark are the older recipes (issue #418).
+        val reserved = mutableListOf<Color>()
+        forEachLook { reserved += listOf(8f, 145f).flatMap { listOf(BoardHues.fill(it, false), BoardHues.ink(it, false), BoardHues.mark(it)) } }
         for (p in colours) assertTrue("a piece is a reserved hue", p !in reserved)
     }
 
