@@ -34,17 +34,18 @@ a newspaper's or app's puzzle) may not. Play's policy keeps "free" and "no ads" 
 |---|---|---|
 | App icon | `../../android/play-icon-512.png` | 512x512 |
 | Feature graphic | `feature-graphic.png` | 1024x500, no alpha (`python3 docs/social-preview/make.py`) |
-| Phone screenshots | `screenshots/1-home.png` ... `8-sand.png` | 1080x1920, 9:16 (the first set was 2:1, which Play also accepted). The emulator's own 1080x2400 is over 2:1 |
-| Tablet screenshots (7-inch and 10-inch) | `tablet-screenshots/1-home.png` ... `8-sand.png` | 2560x1440 landscape at 320 dpi (a 1280x720 dp window, so the board sits beside the controls). One set fills both slots |
+| Phone screenshots | `screenshots/1-home.png` ... `8-cages-tally.png` | 1080x1920, 9:16 (the first set was 2:1, which Play also accepted). The emulator's own 1080x2400 is over 2:1 |
+| Tablet screenshots (7-inch and 10-inch) | `tablet-screenshots/1-home.png` ... `8-cages-tally.png` | 2560x1440 landscape at 320 dpi (a 1280x720 dp window, so the board sits beside the controls). One set fills both slots |
 
 The screenshots are emulator captures made by `tools/screenshots/capture.sh` (`wm size 1080x1920`, then 2560x1440 for the tablet set, a clean install, the date pinned to 7 Oct 2026, demo-mode
 status bar: 9:00, no notifications). The set: the home screen; the home screen in
-Classic over Arcade with "New Look!" across the seam; then six games split the same way (a "Classic" and an "Arcade" tag at
-the seam). The games are the genres with the biggest apps on Play, since the app collects no play counts of its own.
+Classic over Arcade with "New Look!" across the seam; then twelve games in Arcade, two to a shot, each board on a card
+with its name, the two cards stepped apart on the app's lavender page (`pair` in the script). No hint is left open.
+The games are the genres with the biggest apps on Play, since the app collects no play counts of its own.
 Play's install brackets, read 2026-11-12: 100M+ for Sudoku (Sudoku.com), Word Wheel (Wordscapes), Arrows (Easybrain's Arrow
 Puzzle), Links (Flow Free) and Sand (SortPuz Water Sort); 50M+ for Nonogram (Easybrain) and Unblock (Unblock Me); 10M+ for
-Lexicon's genre on Play (and Crossword, Cage Sudoku), but Wordle had 4.2 billion web solves in 2025 (NYT), so Lexicon is in.
-Crossword (1.4B NYT Mini solves) and Nonogram are the next to swap in; Mines' genre could not be confirmed past 100K+.
+Lexicon's genre on Play, but Wordle had 4.2 billion web solves in 2025 (NYT), so Lexicon is in; 10M+ for Crossword and Cage
+Sudoku, 5M+ for Tally, 1M+ for Tents. Mines' genre could not be confirmed past 100K+.
 Run the **Update screenshots** workflow (Actions, manual): it captures, uploads to the listing with `tools/screenshots/upload-play.py` (the service account needs "Manage store presence"; Google reviews the change and the live listing keeps the old images meanwhile) and opens a PR for the `docs/` images, which makes them part of the same "recapture when
 the look changes" duty as `docs/screenshots/`.
 

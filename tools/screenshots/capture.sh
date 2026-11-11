@@ -124,45 +124,99 @@ print((x0 + x1) // 2, (y0 + y1) // 2)' "$k")
 }
 # The hint's move made: Hint, Why?, Show me.
 show_me() { tap Hint; tap "Why?"; tap "Show me"; sleep 1; }
-# Shot $1 split: the Classic capture (classic-$1) on top, the Arcade one below. With $2, that text on a band across the
-# seam; without, a line with a "Classic" tag above it and an "Arcade" tag below, at the right edge.
 FONT=app/src/main/res/font/fredoka_bold.ttf
-split() {
-  local name=$1 w h band tag out=${3:-$1}
-  read -r w h < <(identify -format '%w %h\n' "$DIR/$name.png")
-  band=$((h / 11)) tag=$((h / 28))
-  local mid=$((h / 2)) m=$((h / 80))
-  pill() { echo \( -background '#2b2140' -fill white -font "$FONT" -pointsize $((tag * 6 / 10)) "label:$1" \
-    -gravity center -extent $((tag * 4))x$tag \) -gravity NorthEast -geometry +$m+$2 -composite; }
-  if [ -n "${2:-}" ]; then
-    set -- -fill '#000a' -draw "rectangle 0,$((mid - band / 2 + band / 12)) $w,$((mid + band / 2 + band / 12))" \
-      -fill '#2b2140' -draw "rectangle 0,$((mid - band / 2)) $w,$((mid + band / 2))" \
-      -font "$FONT" -pointsize $((band * 6 / 10)) -fill white -gravity center -annotate +0+0 "$2"
+# The home screen in Classic over the same screen in Arcade, "New Look!" across the seam.
+new_look() {
+  local w h band
+  read -r w h < <(identify -format '%w %h\n' "$DIR/1-home.png")
+  band=$((h / 11))
+  convert \( "$DIR/classic.png" -crop "${w}x$((h / 2))+0+0" +repage \) \
+          \( "$DIR/1-home.png" -crop "${w}x$((h - h / 2))+0+$((h / 2))" +repage \) -append \
+    -fill '#000a' -draw "rectangle 0,$((h / 2 - band / 2 + band / 12)) $w,$((h / 2 + band / 2 + band / 12))" \
+    -fill '#2b2140' -draw "rectangle 0,$((h / 2 - band / 2)) $w,$((h / 2 + band / 2))" \
+    -font "$FONT" -pointsize $((band * 6 / 10)) -fill white -gravity center -annotate +0+0 'New Look!' \
+    "$DIR/2-new-look.png"
+  rm "$DIR/classic.png"
+}
+
+# Two games in one store screenshot: each board on a rounded card with a dark name tag,
+# cards stepped apart on the app's lavender page (A up-left, B down-right).
+# Usage: DIR=... FONT=.../fredoka_bold.ttf; pair A B OUT LABEL_A LABEL_B
+# Phone (1080x1920) or tablet (2560x1440) is read from game-A's width. Needs ImageMagick 6 only.
+pair() {
+  local A=$1 B=$2 OUT=$3 LA=$4 LB=$5 T W H g pad pt cw ch gra grb geo
+  T=$(mktemp -d)
+  if [ "$(identify -format %w "$DIR/game-$A.png")" -gt 2000 ]; then
+    W=2560 H=1440 g=1860x1370+700+70 pad=36 pt=84 cw=1150 ch=1240 gra=west grb=east geo=(+90-50 +90+50)
   else
-    set -- -fill '#2b2140' -draw "rectangle 0,$((mid - tag / 12)) $w,$((mid + tag / 12))" \
-      $(pill Classic $((mid - tag - tag / 5))) $(pill Arcade $((mid + tag / 5)))
+    W=1080 H=1920 g=1080x1430+0+250 pad=28 pt=77 cw=940 ch=900 gra=northwest grb=southeast geo=(+50+40 +50+40)
   fi
-  convert \( "$DIR/classic-$name.png" -crop "${w}x${mid}+0+0" +repage \) \
-          \( "$DIR/$name.png" -crop "${w}x$((h - mid))+0+${mid}" +repage \) -append "$@" "$DIR/$out.png"
+  _tag() { # text out: white name on a #2b2140 pill
+    convert -background none -font "$FONT" -pointsize $pt -fill white label:"$1" -trim +repage "$T/t.png"
+    local w h; w=$(identify -format %w "$T/t.png"); h=$(identify -format %h "$T/t.png")
+    local pw=$((w+pt*12/10)) ph=$((h+pt*8/10))
+    convert -size ${pw}x${ph} xc:none -fill '#2b2140' -draw "roundrectangle 0,0 $((pw-1)),$((ph-1)) $((ph/2)),$((ph/2))" \
+      "$T/t.png" -gravity center -composite "$2"
+  }
+  _card() { # game label out: crop past header/panel/toolbar, trim the page, card it with the tag on top
+    local page top w h fill cw2 ch2
+    page=$(convert "$DIR/game-$1.png" -format '%[pixel:p{6,400}]' info:)
+    _tag "$2" "$T/tag.png"
+    top=$(( $(identify -format %h "$T/tag.png") + pad/2 ))
+    convert "$DIR/game-$1.png" -crop $g +repage -fuzz 4% -trim +repage -bordercolor "$page" -border 24 \
+      -resize "$((cw-2*pad))x$((ch-2*pad-top))" "$T/b.png"
+    w=$(identify -format %w "$T/b.png"); h=$(identify -format %h "$T/b.png")
+    fill=$(convert "$T/b.png" -format '%[pixel:p{2,2}]' info:)
+    cw2=$((w+2*pad)) ch2=$((h+2*pad+top))
+    convert -size ${cw2}x${ch2} xc:none -fill "$fill" -stroke white -strokewidth 8 \
+      -draw "roundrectangle 4,4 $((cw2-5)),$((ch2-5)) $((pad*2)),$((pad*2))" \
+      "$T/b.png" -gravity north -geometry +0+$((pad+top)) -composite \
+      "$T/tag.png" -gravity northwest -geometry +$pad+$pad -composite "$3"
+  }
+  _card "$A" "$LA" "$T/ca.png"; _card "$B" "$LB" "$T/cb.png"
+  local R=$(( (W<H?W:H) / 2 ))
+  convert -size ${W}x${H} gradient:'#f3eeff'-'#fbeef8' \
+    -fill '#961bf0' -draw "circle $W,0 $W,$R" -fill '#d6119b' -draw "circle 0,$H 0,$((H-R))" -blur 0x$((R/6)) "$T/bg.png"
+  convert -size ${W}x${H} xc:none "$T/ca.png" -gravity $gra -geometry ${geo[0]} -composite \
+    "$T/cb.png" -gravity $grb -geometry ${geo[1]} -composite "$T/layer.png"
+  convert "$T/bg.png" \( "$T/layer.png" -background '#1a1030' -shadow 45x28+0+24 \) "$T/layer.png" -layers flatten \
+    -background white -alpha remove -alpha off -strip PNG24:"$DIR/$OUT.png"
+  rm -rf "$T"
 }
 
-# The genres with the biggest apps on Play (docs/play/LISTING.md), in store order, each shot named $1 plus its slot.
+# Games in Arcade, two to a shot, the genres with the biggest apps on Play first (docs/play/LISTING.md). No hint
+# is left open: a Show me makes its move and closes, which only puts some progress on the board.
 games() {
-  open_puzzle Sudoku; sleep 2; tap Hint; tap "Why?"; sleep 3; shot "${1}3-sudoku-hint"; back
-  open_puzzle Lexicon; sleep 2; type_keys RAISE; type_keys CLOUT; shot "${1}4-lexicon"; back
-  open_puzzle "Word Wheel"; sleep 2; shot "${1}5-word-wheel"; back
-  open_puzzle Arrows; sleep 2; shot "${1}6-arrows"; back
-  open_puzzle Links; sleep 2; for _ in 1 2 3 4 5; do show_me; done; sleep 2; shot "${1}7-links"; back
-  open_puzzle Sand; sleep 2; for _ in 1 2; do show_me; done; sleep 2; shot "${1}8-sand"; back
+  open_puzzle Sudoku; sleep 2; shot game-sudoku; back
+  open_puzzle "Word Wheel"; sleep 2; shot game-wordwheel; back
+  open_puzzle Arrows; sleep 2; shot game-arrows; back
+  open_puzzle Links; sleep 2; for _ in 1 2 3 4 5; do show_me; done; sleep 2; shot game-links; back
+  open_puzzle Sand; sleep 2; for _ in 1 2; do show_me; done; sleep 2; shot game-sand; back
+  open_puzzle Nonogram; sleep 2; for _ in 1 2 3 4; do show_me; done; sleep 2; shot game-nonogram; back
+  open_puzzle Unblock; sleep 2; for _ in 1 2; do show_me; done; sleep 2; shot game-unblock; back
+  open_puzzle Lexicon; sleep 2; type_keys RAISE; type_keys CLOUT; shot game-lexicon; back
+  open_puzzle Crossword; sleep 2; shot game-crossword; back
+  open_puzzle "Cage Sudoku"; sleep 2; shot game-cages; back
+  open_puzzle Tally; sleep 2; shot game-tally; back
+  open_puzzle Tents; sleep 2; shot game-tents; back
 }
 
-# The set: the home screen, the home screen in Classic over Arcade ("New Look!"), then each game split the same way.
+# The set: the home screen, the home screen in Classic over Arcade ("New Look!"), then twelve games two to a shot.
 pass() {
-  fresh Classic; shot classic-1-home; games classic-
-  fresh Arcade; shot 1-home; games ""
-  split 1-home 'New Look!' 2-new-look
-  for s in 3-sudoku-hint 4-lexicon 5-word-wheel 6-arrows 7-links 8-sand; do split $s; done
-  rm "$DIR"/classic-*.png
+  fresh Classic; shot classic
+  fresh Arcade; shot 1-home
+  new_look
+  games
+  pairs
+  mkdir -p "$DIR/games"; mv "$DIR"/game-*.png "$DIR/games/"   # whole screens, for the README copies
+}
+pairs() {
+  pair sudoku lexicon 3-sudoku-lexicon Sudoku Lexicon
+  pair wordwheel arrows 4-wordwheel-arrows "Word Wheel" Arrows
+  pair links sand 5-links-sand Links Sand
+  pair nonogram unblock 6-nonogram-unblock Nonogram Unblock
+  pair crossword tents 7-crossword-tents Crossword Tents
+  pair cages tally 8-cages-tally "Cage Sudoku" Tally
 }
 pass
 
@@ -182,12 +236,14 @@ demo exit
 adb shell wm size reset
 adb shell wm density reset
 for l in $LAUNCHERS; do adb shell pm enable $l >/dev/null 2>&1 || true; done
-# README copies are half scale: home, sudoku, lexicon, word wheel, and the tablet layout
+# README copies are half scale: home, three games whole, and the tablet layout
 rm -f docs/screenshots/*.png
-for p in 1-home:home 3-sudoku-hint:sudoku 4-lexicon:lexicon 5-word-wheel:word-wheel; do
-  convert "$OUT/${p%%:*}.png" -resize 50% "docs/screenshots/${p##*:}.png"
+convert "$OUT/1-home.png" -resize 50% docs/screenshots/home.png
+for g in sudoku lexicon wordwheel:word-wheel; do
+  convert "$OUT/games/game-${g%%:*}.png" -resize 50% "docs/screenshots/${g##*:}.png"
 done
-convert "$TABLET/3-sudoku-hint.png" -resize 50% docs/screenshots/tablet-sudoku.png
+convert "$TABLET/games/game-sudoku.png" -resize 50% docs/screenshots/tablet-sudoku.png
+[ -n "${KEEP_GAMES:-}" ] || rm -r "$OUT/games" "$TABLET/games"   # KEEP_GAMES=1 keeps them to rework the pairs
 # F-Droid reads its listing images from the repo (fastlane layout), so they travel with the Play set.
 F=fastlane/metadata/android/en-US/images
 rm -f $F/phoneScreenshots/*.png $F/sevenInchScreenshots/*.png $F/tenInchScreenshots/*.png
