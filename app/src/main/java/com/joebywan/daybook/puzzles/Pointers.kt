@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
@@ -59,6 +60,7 @@ import com.joebywan.daybook.ui.LocalMoveCount
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.MoveFeel
 import com.joebywan.daybook.ui.feelSquare
+import com.joebywan.daybook.ui.home.sparkle
 import com.joebywan.daybook.ui.look
 import com.joebywan.daybook.ui.rememberHintPaint
 import com.joebywan.daybook.ui.rememberMoveFeel
@@ -67,6 +69,7 @@ import com.joebywan.daybook.ui.theme.vivid
 import kotlin.math.floor
 import kotlin.math.sqrt
 import kotlinx.coroutines.launch
+import kotlin.time.TimeSource
 
 /** The tone a tap of the player's plays here: the ba-bong when it bumped (a life lost), else none (milestones are [rememberMoveFeel]'s). */
 internal fun pointersTapTone(pushed: Boolean, bumpsBefore: Int, bumpsAfter: Int): Int? =
@@ -313,6 +316,26 @@ object Pointers : PuzzleType {
     }
 
     /** Faint dots on every square, so a line's way to the edge can be read across bare squares; a line cleared glows along them. */
+    /**
+     * The sparkles a quick launch leaves: gold stars along the track behind the tail, which has moved [shift] squares, each
+     * fading as the tail draws away from it, all faded by [fade]. Where each sits and turns is fixed by its place and [seed].
+     */
+    private fun DrawScope.drawTrail(arrow: List<Int>, w: Int, unit: Float, shift: Float, fade: Float, seed: Int, gold: Color) {
+        val tr = track(arrow, w, shift.toInt() + 2)
+        var k = 0
+        while (k * TRAIL_STEP < shift) {
+            val t = k * TRAIL_STEP
+            val behind = (shift - t) / TRAIL_SQUARES
+            if (behind < 1f) {
+                val h = (k * 7 + seed * 13) % 9 // 0..8, a fixed jitter per sparkle
+                val c = at(tr, t) * unit + Offset((h % 3 - 1) * 0.18f * unit, (h / 3 - 1) * 0.18f * unit)
+                val r = (0.18f + 0.04f * (h % 4)) * unit * (1f - 0.4f * behind)
+                rotate(h * 10f, c) { sparkle(c, r, fade * (1f - behind), gold) }
+            }
+            k++
+        }
+    }
+
     private fun DrawScope.drawDots(w: Int, h: Int, unit: Float, colour: Color, feel: MoveFeel, glow: Color) {
         for (r in 0 until h) for (c in 0 until w) {
             // A milestone's glow swells the bare squares' dots into discs of the accent: a square tint on white barely shows.
@@ -397,9 +420,15 @@ object Pointers : PuzzleType {
     // ---- the board ------------------------------------------------------------------------------
 
     private const val SLIDE_MS = 420
+    private const val TRAIL_STEP = 0.5f // squares between sparkles
+    private const val TRAIL_SQUARES = 4f // how far behind the tail a sparkle has faded out
+    private val TRAIL_GOLD_LIGHT = Color(0xFFE8A317) // deeper on a white board, where the pale gold washes out
+    private val TRAIL_GOLD_DARK = Color(0xFFF5C542)
+    private val launchClock = TimeSource.Monotonic.markNow()
     private const val BUMP_MS = 600
 
-    private class Slide(val arrow: Int, val progress: Animatable<Float, *>)
+    /** [sparkly]: launched within [PointersLogic.QUICK_MS] of the arrow before, so it leaves a trail of sparkles. */
+    private class Slide(val arrow: Int, val progress: Animatable<Float, *>, val sparkly: Boolean)
     /** [reach]: squares along its line from where the arrow sits to touching the blocker. */
     private class Bump(val arrow: Int, val blocker: Int, val reach: Float, val progress: Animatable<Float, *>)
 
@@ -418,6 +447,8 @@ object Pointers : PuzzleType {
         // The arrow under a finger that is down: tinted at once, taken on release over the same arrow; sliding off it clears
         // the tint and cancels. Transient, never state.
         var pressed by remember(s.arrows) { mutableStateOf(-1) }
+        // When the last arrow was launched (ms on [launchClock], -1 for none): a quick one after it sparkles. Transient.
+        val lastLaunch = remember(s.arrows) { longArrayOf(-1L) }
         // Reduced motion: a cleared arrow simply goes and a bump flashes, nothing lunging or knocked; the lost heart is just out.
         val still = LocalReducedMotion.current
         val live = interactive && !s.solved && !s.failed
@@ -450,7 +481,9 @@ object Pointers : PuzzleType {
                     if (bump === b) bump = null
                 }
             } else if (!still) {
-                val slide = Slide(i, Animatable(0f))
+                val now = launchClock.elapsedNow().inWholeMilliseconds
+                val slide = Slide(i, Animatable(0f), PointersLogic.quick(lastLaunch[0], now))
+                lastLaunch[0] = now
                 slides += slide
                 scope.launch {
                     slide.progress.animateTo(1f, tween(SLIDE_MS, easing = FastOutLinearInEasing))
@@ -565,6 +598,7 @@ object Pointers : PuzzleType {
                             val a = s.arrows[slide.arrow]
                             val dist = PointersLogic.ray(a, s.width, s.height).size + a.size + 1f
                             val p = slide.progress.value
+                            if (slide.sparkly) drawTrail(a, s.width, unit, p * dist, 1f - p * p * p, slide.arrow, if (dark) TRAIL_GOLD_DARK else TRAIL_GOLD_LIGHT)
                             drawArrow(a, s.width, unit, BoardHues.ink(HUES[hues[slide.arrow]], dark).copy(alpha = 1f - p * p), p * dist)
                         }
                     }

@@ -40,19 +40,48 @@ class PointersRulesTest {
             .toList()
     }
 
-    private fun free(s: PointersState, gone: Set<Int>, i: Int): Boolean {
+    private fun free(s: PointersState, gone: Set<Int>, i: Int): Boolean = i in freeNow(s, gone)
+
+    /** Every arrow still on the board whose way is clear, with the taken squares worked out once. */
+    private fun freeNow(s: PointersState, gone: Set<Int>): List<Int> {
         val taken = s.arrows.indices.filter { it !in gone }.flatMap { s.arrows[it] }.toSet()
-        return way(s, s.arrows[i]).none { it in taken }
+        return s.arrows.indices.filter { it !in gone && way(s, s.arrows[it]).none { c -> c in taken } }
     }
 
     /** Takes any free arrow until none is: the greedy player. */
     private fun greedyClears(s: PointersState): Boolean {
         val gone = mutableSetOf<Int>()
         while (gone.size < s.arrows.size) {
-            val next = s.arrows.indices.firstOrNull { it !in gone && free(s, gone, it) } ?: return false
+            val next = freeNow(s, gone).firstOrNull() ?: return false
             gone += next
         }
         return true
+    }
+
+    /** Mean rounds of "take every free arrow" before each arrow goes, by rounds rather than [PointersLogic.depths]' recursion. */
+    private fun meanRounds(s: PointersState): Double {
+        val gone = mutableSetOf<Int>()
+        var round = 0
+        var total = 0
+        while (gone.size < s.arrows.size) {
+            val now = freeNow(s, gone)
+            total += round * now.size
+            gone += now
+            round++
+        }
+        return total.toDouble() / s.arrows.size
+    }
+
+    /** Mean share of the arrows left that are free, over a clearing that always takes the lowest-numbered free arrow. */
+    private fun shareFree(s: PointersState): Double {
+        val gone = mutableSetOf<Int>()
+        var sum = 0.0
+        while (gone.size < s.arrows.size) {
+            val now = freeNow(s, gone)
+            sum += now.size.toDouble() / (s.arrows.size - gone.size)
+            gone += now.first()
+        }
+        return sum / s.arrows.size
     }
 
     /** x -> y when x has a square on y's way. True if that graph has a cycle (white/grey/black DFS). */
@@ -99,9 +128,21 @@ class PointersRulesTest {
                 assertWellFormed(s, label)
                 assertFalse("$label: a cycle of arrows in each other's way", hasCycle(s))
                 assertTrue("$label: the greedy player is stranded", greedyClears(s))
-                assertTrue("$label: every arrow is free from the start", s.arrows.indices.any { !free(s, emptySet(), it) })
+                assertTrue("$label: every arrow is free from the start", freeNow(s, emptySet()).size < s.arrows.size)
+                val spec = PointersLogic.specFor(tier)
+                assertTrue("$label: shallower than the tier", meanRounds(s) >= spec.minDepth)
+                assertTrue("$label: free arrows easier to find than the tier", shareFree(s) <= spec.maxFree + 1e-9)
             }
         }
+    }
+
+    @Test
+    fun `a launch within two seconds of the last is quick, and the first never is`() {
+        assertFalse(PointersLogic.quick(-1, 0))
+        assertFalse(PointersLogic.quick(-1, 500))
+        assertTrue(PointersLogic.quick(1000, 1000))
+        assertTrue(PointersLogic.quick(1000, 2999))
+        assertFalse(PointersLogic.quick(1000, 3000))
     }
 
     @Test
@@ -111,10 +152,11 @@ class PointersRulesTest {
             val gone = mutableSetOf<Int>()
             // Along a greedy clearing, every arrow free before a removal is free after it.
             while (gone.size < s.arrows.size) {
-                val before = s.arrows.indices.filter { it !in gone && free(s, gone, it) }
+                val before = freeNow(s, gone)
                 val take = before.last()
                 gone += take
-                for (i in before) if (i != take) assertTrue("${tier.name} day $day: removing $take blocked $i", free(s, gone, i))
+                val after = freeNow(s, gone)
+                for (i in before) if (i != take) assertTrue("${tier.name} day $day: removing $take blocked $i", i in after)
             }
         }
     }
@@ -128,7 +170,7 @@ class PointersRulesTest {
             val cells = boards[0].width * boards[0].height
             val depth = boards.map { PointersLogic.depths(it).average() }.average()
             val bare = boards.map { s -> s.width * s.height - s.arrows.sumOf { it.size } }.average() / cells
-            println("pointers ${tier.name}: ${boards[0].width}x${boards[0].height}, arrows ${boards.map { it.arrows.size }.average()}, mean depth $depth, bare ${"%.1f".format(bare * 100)}%")
+            println("pointers ${tier.name}: ${boards[0].width}x${boards[0].height}, arrows ${boards.map { it.arrows.size }.average()}, mean depth $depth, worst ${boards.maxOf { PointersLogic.depths(it).max() }}, free share ${boards.map { PointersLogic.freeShare(it)!! }.average()}, bare ${"%.1f".format(bare * 100)}%")
             assertTrue("${tier.name} is no bigger than the tier before", cells > lastCells)
             assertTrue("${tier.name} is no more tangled than the tier before", depth > lastDepth)
             assertTrue("${tier.name} leaves over 6% of the board bare", bare < 0.06)

@@ -69,7 +69,7 @@ data class PointersState(
  * Rules and generator. A board ships only if it can be cleared: arrows are added one at a time, and an arrow goes
  * down only where the "is in the way of" relation stays acyclic, so some order always clears it (and since taking
  * an arrow away only ever opens lines, any arrow free now stays free, so a player can never be stranded). The
- * finished board is then cleared greedily as a check before it ships ([clearable]).
+ * finished board is then cleared greedily as a check before it ships ([freeShare]).
  *
  * Web parity: no hash container anywhere here; every walk is over arrays in index order and every choice is the
  * [Rng]'s over a list.
@@ -78,8 +78,14 @@ internal object PointersLogic {
 
     const val LIVES = 3
 
+    /** A launch within this many ms of the one before is quick, and leaves a trail of sparkles. */
+    const val QUICK_MS = 2000L
+
+    /** Whether a launch at [now] ms is quick after one at [last] (-1: none yet). */
+    fun quick(last: Long, now: Long): Boolean = last >= 0 && now - last < QUICK_MS
+
     /** Attempts before [lastResort]; each is a fresh `Rng(seed + attempt)`. */
-    private const val ATTEMPTS = 12
+    private const val ATTEMPTS = 100
 
     /** Row and column step of each direction: up, right, down, left. */
     val DR = WALK_DR
@@ -87,14 +93,18 @@ internal object PointersLogic {
 
     /**
      * [width] x [height] squares; arrows of [minLength] to [maxLength] squares that keep straight with
-     * [straight] percent chance a step; a board ships with at most [maxEmpty] squares left bare.
+     * [straight] percent chance a step; a board ships with at most [maxEmpty] squares left bare, a mean [depths] of at
+     * least [minDepth] and a [freeShare] of at most [maxFree].
      */
-    class Spec(val width: Int, val height: Int, val minLength: Int, val maxLength: Int, val straight: Int, val maxEmpty: Int)
+    class Spec(
+        val width: Int, val height: Int, val minLength: Int, val maxLength: Int, val straight: Int, val maxEmpty: Int,
+        val minDepth: Double, val maxFree: Double,
+    )
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
-        Difficulty.STANDARD -> Spec(6, 7, 2, 4, 50, 3)
-        Difficulty.HARD -> Spec(12, 12, 3, 7, 35, 8)
-        Difficulty.EXPERT -> Spec(14, 17, 3, 9, 30, 14)
+        Difficulty.STANDARD -> Spec(6, 7, 2, 4, 50, 3, 2.0, 0.40)
+        Difficulty.HARD -> Spec(12, 12, 3, 7, 35, 8, 4.8, 0.24)
+        Difficulty.EXPERT -> Spec(14, 17, 3, 9, 30, 14, 6.5, 0.19)
     }
 
     /**
@@ -161,16 +171,6 @@ internal object PointersLogic {
         return out
     }
 
-    /** Takes every free arrow away until none is free; true if that empties the board. */
-    fun clearable(s: PointersState): Boolean {
-        var cur = s.copy(removed = emptyList())
-        while (!cur.solved) {
-            val free = cur.arrows.indices.firstOrNull { it !in cur.removed && cur.blocker(it) < 0 } ?: return false
-            cur = cur.copy(removed = cur.removed + free)
-        }
-        return true
-    }
-
     /**
      * How deep each arrow sits: 0 when its way is clear at the start, else one more than the deepest arrow in its
      * way. The number of rounds of "take every free arrow" before it can go; a measure of how tangled a board is.
@@ -194,7 +194,32 @@ internal object PointersLogic {
         return depth
     }
 
-    /** A board that covers the grid to the tier's density and clears, or null if no attempt made one. */
+    /**
+     * The mean, over the taps of a player who always takes the first free arrow, of the share of the arrows left that
+     * are free: how easily a free arrow is found. Lower is harder. Null if the board does not clear.
+     */
+    fun freeShare(s: PointersState): Double? {
+        val n = s.arrows.size
+        val owner = IntArray(s.width * s.height) { -1 }
+        s.arrows.forEachIndexed { i, a -> a.forEach { owner[it] = i } }
+        val rays = s.arrows.map { ray(it, s.width, s.height) }
+        val gone = BooleanArray(n)
+        var sum = 0.0
+        for (left in n downTo 1) {
+            var first = -1
+            var free = 0
+            for (i in 0 until n) if (!gone[i] && rays[i].all { owner[it] < 0 || gone[owner[it]] }) {
+                if (first < 0) first = i
+                free++
+            }
+            if (first < 0) return null
+            sum += free.toDouble() / left
+            gone[first] = true
+        }
+        return sum / n
+    }
+
+    /** A board that covers the grid to the tier's density, clears and is as tangled as the tier asks, or null if no attempt made one. */
     fun generateVerified(seed: Long, difficulty: Difficulty): PointersState? {
         val spec = specFor(difficulty)
         for (attempt in 0 until ATTEMPTS) {
@@ -203,7 +228,9 @@ internal object PointersLogic {
             if (bare > spec.maxEmpty) continue
             val s = PointersState(spec.width, spec.height, arrows)
             if (s.arrows.indices.all { s.blocker(it) < 0 }) continue
-            if (clearable(s)) return s
+            if (depths(s).average() < spec.minDepth) continue
+            val share = freeShare(s) ?: continue
+            if (share <= spec.maxFree) return s
         }
         return null
     }
