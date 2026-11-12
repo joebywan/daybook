@@ -21,7 +21,7 @@ case "$tool" in
     # No branch named claude/ (the owner, 2026-11-13): a branch name is published too. Deleting one is fine.
     if printf '%s' "$text" | grep -qE 'git[[:space:]].*(checkout[[:space:]]+-[bB]|switch[[:space:]]+-[cC]|branch|worktree[[:space:]]+add|push).*(^|[[:space:]:/])claude/' \
       && ! printf '%s' "$text" | grep -qE '(^|[[:space:]])(-d|-D|--delete)([[:space:]]|$)|[[:space:]]:(refs/heads/)?claude/'; then
-      echo "Blocked: branches must not be named claude/... (CLAUDE.md, Git and releases). Rename it first: git branch -m <new-name>." >&2
+      echo "Blocked: branches must not be named claude/... (CLAUDE.md, Git and releases). Rename it with a purpose prefix first: git branch -m fix/<name> (feat/ docs/ chore/ ...)." >&2
       exit 2
     fi
     # Only a command that publishes text can carry one; a grep for the phrase must not be blocked.
