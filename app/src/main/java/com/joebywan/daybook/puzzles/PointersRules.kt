@@ -94,17 +94,18 @@ internal object PointersLogic {
     /**
      * [width] x [height] squares; arrows of [minLength] to [maxLength] squares that keep straight with
      * [straight] percent chance a step; a board ships with at most [maxEmpty] squares left bare, a mean [depths] of at
-     * least [minDepth] and a [freeShare] of at most [maxFree].
+     * least [minDepth] and a [freeShare] of at most [maxFree]. With [longFirst], a body shorter than [minLength] is refused
+     * until a round places nothing, so the long arrows go down before the gaps fill.
      */
     class Spec(
         val width: Int, val height: Int, val minLength: Int, val maxLength: Int, val straight: Int, val maxEmpty: Int,
-        val minDepth: Double, val maxFree: Double,
+        val minDepth: Double, val maxFree: Double, val longFirst: Boolean = false,
     )
 
     fun specFor(difficulty: Difficulty): Spec = when (difficulty) {
         Difficulty.STANDARD -> Spec(6, 7, 2, 4, 50, 3, 2.0, 0.40)
-        Difficulty.HARD -> Spec(12, 12, 3, 7, 35, 8, 4.8, 0.24)
-        Difficulty.EXPERT -> Spec(14, 17, 3, 9, 30, 14, 6.5, 0.19)
+        Difficulty.HARD -> Spec(22, 22, 6, 20, 30, 20, 8.0, 0.19, longFirst = true)
+        Difficulty.EXPERT -> Spec(30, 37, 12, 60, 40, 40, 13.5, 0.145, longFirst = true)
     }
 
     /**
@@ -247,7 +248,7 @@ internal object PointersLogic {
      * with a body walked back from it; a candidate goes down when it keeps "in the way of" acyclic. When a round
      * places nothing, bare squares next to an arrow's tail are folded into that arrow where that stays acyclic.
      */
-    private fun build(rng: Rng, spec: Spec): List<List<Int>> {
+    internal fun build(rng: Rng, spec: Spec): List<List<Int>> {
         val w = spec.width
         val h = spec.height
         val n = w * h
@@ -281,6 +282,8 @@ internal object PointersLogic {
         val onRay = BooleanArray(n)
         val walk = ArrayList<Int>()
 
+        var shortest = 2
+
         fun tryPlace(head: Int, dir: Int, length: Int): Boolean {
             val hr = head / w
             val hc = head % w
@@ -296,6 +299,7 @@ internal object PointersLogic {
             walk += br * w + bc
             bentWalk(rng, walk, (dir + 2) % 4, length, w, h, spec.straight) { owner[it] < 0 && !onRay[it] }
             ray.forEach { onRay[it] = false }
+            if (walk.size < shortest) return false
             // Acyclic: no arrow this one would be in the way of may already (indirectly) be in this one's way.
             val waitsFor = ArrayList<Int>()
             for (cell in ray) {
@@ -317,6 +321,7 @@ internal object PointersLogic {
             return true
         }
 
+        if (spec.longFirst) shortest = spec.minLength
         while (true) {
             val bare = (0 until n).filter { owner[it] < 0 }
             if (bare.isEmpty()) break
@@ -331,7 +336,10 @@ internal object PointersLogic {
                     }
                 }
             }
-            if (!placed) break
+            if (!placed) {
+                if (shortest == 2) break
+                shortest = 2
+            }
         }
 
         // Fold leftover squares into a neighbouring arrow's tail where that stays acyclic.

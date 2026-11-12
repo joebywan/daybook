@@ -20,5 +20,5 @@ Arrows has no hints and no undo. A free arrow can be seen to be free, and taking
 ## What changes per tier
 
 - Standard: 6x7 grid, short arrows. About 14 arrows.
-- Hard: 12x12 grid, longer arrows. About 33 arrows.
-- Expert: 14x17 grid, the longest arrows. About 49 arrows.
+- Hard: 22x22 grid, long winding arrows. About 61 arrows. Pinch to zoom in.
+- Expert: 30x37 grid, the longest arrows. About 99 arrows. Pinch to zoom in.
