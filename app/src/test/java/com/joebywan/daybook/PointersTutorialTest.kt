@@ -3,6 +3,7 @@ package com.joebywan.daybook
 import com.joebywan.daybook.core.TutorialStep
 import com.joebywan.daybook.puzzles.Pointers
 import com.joebywan.daybook.puzzles.PointersState
+import com.joebywan.daybook.puzzles.ZOOM_FROM_WIDTH
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -40,7 +41,7 @@ class PointersTutorialTest {
 
     @Test
     fun `each frame accepts the taps it asks for, in order, and refuses every other`() {
-        assertEquals(5, frames.size)
+        assertEquals(6, frames.size)
         assertNull(frames[0].judge)
         // The arrows each move frame asks for, in order; the glow names each one as it comes.
         val asks = listOf(listOf(Pointers.TOP), listOf(Pointers.ROW), listOf(Pointers.SIDE, Pointers.ROW))
@@ -63,7 +64,7 @@ class PointersTutorialTest {
             }
             assertEquals("frame ${k + 1} starts where frame $k ends", s, frames[k + 1].state)
         }
-        assertTrue(frames.last().freePlay)
+        assertTrue(frames[4].freePlay)
     }
 
     @Test
@@ -76,13 +77,30 @@ class PointersTutorialTest {
 
     @Test
     fun `the last frame is finished by taking the blocker first, and the other order bumps`() {
-        val s = frames.last().state as PointersState
+        val s = frames[4].state as PointersState
         assertEquals(setOf(Pointers.HOOK, Pointers.SHORT), s.arrows.indices.filter { it !in s.removed }.toSet())
         val won = s.tap(arrows[Pointers.HOOK][0])!!.tap(arrows[Pointers.SHORT][0])!!
         assertTrue(won.solved)
         val bumped = s.tap(arrows[Pointers.SHORT][0])!!
         assertEquals(s.lives - 1, bumped.lives)
         assertFalse(bumped.failed)
+    }
+
+    @Test
+    fun `the zoom frame is a board that zooms, and takes only its glowing arrow, whose way is clear`() {
+        val frame = frames.last()
+        val s = frame.state as PointersState
+        assertTrue(s.width >= ZOOM_FROM_WIDTH)
+        assertEquals(Pointers.zoomBoard(), s)
+        val target = Pointers.zoomTarget(s)
+        assertEquals(setOf(target), frame.highlight.strong)
+        assertEquals(-1, s.blocker(target))
+        // As small as a free arrow gets on this board: the one that wants zooming in to hit.
+        assertEquals(s.arrows.indices.filter { s.blocker(it) < 0 }.minOf { s.arrows[it].size }, s.arrows[target].size)
+        val judge = frame.judge!!
+        for ((i, next) in tapsFrom(s)) {
+            assertEquals("tapping arrow $i", if (i == target) TutorialStep.DONE else TutorialStep.REJECT, judge(next))
+        }
     }
 
     @Test

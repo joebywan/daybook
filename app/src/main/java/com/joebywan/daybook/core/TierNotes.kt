@@ -70,7 +70,7 @@ private val TIER_NOTES: Map<String, List<String>> = mapOf(
     "thermometers" to listOf("5x5 grid", "6x6 grid", "8x8 grid"),
     "sand" to listOf("5 colours, 7 tubes", "7 colours, 9 tubes", "8 colours, 10 tubes"),
     "unblock" to listOf("10 or 11 cars, par 6 to 10", "12 or 13 cars, par 13 to 18", "14 cars, par 20 or more"),
-    "pointers" to listOf("6x7 grid, short arrows", "12x12 grid, longer arrows", "14x17 grid, the longest arrows"),
+    "pointers" to listOf("6x7 grid, short arrows", "22x22 grid, long winding arrows", "30x37 grid, the longest arrows"),
     "dominoes" to listOf("5x5 board, 6 or 7 dominoes", "6x6 board, 9 or 10 dominoes", "7x7 board, 12 to 14 dominoes"),
     "mines" to listOf("8x8 field, 10 mines", "8x10 field, 16 mines", "9x10 field, 21 mines"),
     "lamps" to listOf("7x7 grid", "10x10 grid", "12x12 grid"),

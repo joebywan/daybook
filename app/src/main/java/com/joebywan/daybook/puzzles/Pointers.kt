@@ -17,7 +17,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -37,6 +42,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -46,7 +53,9 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.joebywan.daybook.core.BoardHighlight
 import com.joebywan.daybook.core.Difficulty
@@ -132,12 +141,21 @@ object Pointers : PuzzleType {
 
     internal fun tutorialBoard() = PointersState(4, 4, TUTORIAL_ARROWS)
 
+    /** A Hard board for the walkthrough's last frame, which teaches the zoom: a fixed seed, so every player sees one board. */
+    internal fun zoomBoard(): PointersState = PointersLogic.generateVerified(ZOOM_SEED, Difficulty.HARD) ?: PointersLogic.lastResort(Difficulty.HARD)
+    internal const val ZOOM_SEED = 7L
+
+    /** The zoom frame's arrow: the shortest whose way out is clear (the first, if several), small enough to want zooming. */
+    internal fun zoomTarget(s: PointersState): Int = s.arrows.indices.filter { s.blocker(it) < 0 }.minBy { s.arrows[it].size }
+
     override val tutorial: List<TutorialFrame> by lazy {
         val s0 = tutorialBoard()
         val s1 = s0.tap(TUTORIAL_ARROWS[TOP][0])!!
         val s2 = s1.tap(TUTORIAL_ARROWS[ROW][0])!!
         val s3 = s2.tap(TUTORIAL_ARROWS[SIDE][0])!!
         val s4 = s3.tap(TUTORIAL_ARROWS[ROW][0])!!
+        val big = zoomBoard()
+        val target = zoomTarget(big)
         listOf(
             TutorialFrame(
                 state = s0,
@@ -180,6 +198,14 @@ object Pointers : PuzzleType {
                 caption = "Your turn: clear the last two. Which one is in the other's way?",
                 freePlay = true,
                 done = "Cleared. That's all there is to it.",
+            ),
+            TutorialFrame(
+                state = big,
+                caption = "Hard and Expert boards are big. Pinch with two fingers to zoom in, then tap the small glowing arrow.",
+                highlight = BoardHighlight(strong = setOf(target)),
+                accepts = { it is PointersState && it.removed == listOf(target) && it.bumps.isEmpty() },
+                retry = "Pinch to zoom in, then tap the glowing arrow.",
+                done = "Zoomed in, drag with one finger to look around; \"Show the whole board\" zooms back out.",
             ),
         )
     }
@@ -428,6 +454,31 @@ object Pointers : PuzzleType {
     private const val BUMP_MS = 600
 
     /** [sparkly]: launched within [PointersLogic.QUICK_MS] of the arrow before, so it leaves a trail of sparkles. */
+    /** Height of the line under a big board that says it zooms, or zooms it back out. */
+    private val ZOOM_LINE = 36.dp
+
+    /** A square this size when zoomed all the way in: a thumb's, whatever the board. */
+    private val ZOOM_SQUARE: Dp = 40.dp
+
+    @Composable
+    private fun ZoomLine(zoomed: Boolean, whole: () -> Unit) {
+        Box(Modifier.height(ZOOM_LINE), contentAlignment = Alignment.Center) {
+            if (zoomed) {
+                TextButton(onClick = whole) {
+                    Icon(Icons.Filled.ZoomOutMap, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text("  Show the whole board", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                }
+            } else {
+                Text(
+                    "Pinch to zoom in",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+
     private class Slide(val arrow: Int, val progress: Animatable<Float, *>, val sparkly: Boolean)
     /** [reach]: squares along its line from where the arrow sits to touching the blocker. */
     private class Bump(val arrow: Int, val blocker: Int, val reach: Float, val progress: Animatable<Float, *>)
@@ -532,11 +583,39 @@ object Pointers : PuzzleType {
                 Modifier.weight(1f).fillMaxWidth().padding(bottom = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
+                // A big board zooms (NonogramZoom.kt): a line under it, always laid out, says so, or zooms back out.
+                val zooms = s.width >= ZOOM_FROM_WIDTH
+                val prompt = if (zooms) ZOOM_LINE else 0.dp
                 // Both axes, as Mosaic: whichever runs out first sets the square.
-                val step = minOf(maxWidth / s.width, maxHeight / s.height)
+                val step = minOf(maxWidth / s.width, (maxHeight - prompt) / s.height)
+                val gridPx = with(LocalDensity.current) { Size((step * s.width).toPx(), (step * s.height).toPx()) }
+                // The screen's view, never state: reset for each board, zooming in until a square is about ZOOM_SQUARE.
+                val view = remember(s.arrows, step) { mutableStateOf(GridView(max = (ZOOM_SQUARE / step).coerceIn(1f, 5f))) }
+                // A bump brings both arrows into view, so a life is never lost to something off screen; the end shows it all.
+                LaunchedEffect(bump) {
+                    val b = bump ?: return@LaunchedEffect
+                    if (!view.value.zoomed) return@LaunchedEffect
+                    val cells = s.arrows[b.arrow] + s.arrows[b.blocker]
+                    val unit = gridPx.width / s.width
+                    val xs = cells.minOf { it % s.width } * unit..(cells.maxOf { it % s.width } + 1) * unit
+                    val ys = cells.minOf { it / s.width } * unit..(cells.maxOf { it / s.width } + 1) * unit
+                    view.glideTo(view.value.showing(xs, ys, gridPx), still)
+                }
+                LaunchedEffect(s.solved || s.failed) {
+                    if (s.solved || s.failed) view.glideTo(GridView(max = view.value.max), still)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(step * s.width, step * s.height).clipToBounds().gridZoom(view, Offset.Zero, gridPx, zooms && interactive)) {
                 Canvas(
                     Modifier
-                        .size(step * s.width, step * s.height)
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            transformOrigin = TransformOrigin(0f, 0f)
+                            scaleX = view.value.scale
+                            scaleY = view.value.scale
+                            translationX = view.value.offset.x
+                            translationY = view.value.offset.y
+                        }
                         .pointerInput(s, live) {
                             if (!live) return@pointerInput
                             fun arrowUnder(p: Offset): Int {
@@ -549,6 +628,7 @@ object Pointers : PuzzleType {
                                 pressed = a
                                 while (true) {
                                     val c = awaitPointerEvent().changes.firstOrNull { it.id == first.id } ?: break
+                                    if (c.isConsumed) break // a pinch or a pan took it: nothing is tapped
                                     val over = arrowUnder(c.position)
                                     if (!c.pressed) {
                                         if (a >= 0 && over == a) tapAt(s.arrows[a].last())
@@ -602,6 +682,9 @@ object Pointers : PuzzleType {
                             drawArrow(a, s.width, unit, BoardHues.ink(HUES[hues[slide.arrow]], dark).copy(alpha = 1f - p * p), p * dist)
                         }
                     }
+                }
+                }
+                if (zooms) ZoomLine(view.value.zoomed) { view.value = GridView(max = view.value.max) }
                 }
             }
         }

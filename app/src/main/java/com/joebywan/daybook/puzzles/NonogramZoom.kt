@@ -27,24 +27,25 @@ import kotlin.math.pow
 // marks; on the whole board everything is as it was. The view is the screen's, never the board's:
 // it is not saved, has no undo, and every screen gets the same puzzle.
 
-/** The most a board zooms: about 40dp squares from Expert's 16 on a short phone. */
+/** The most a Nonogram board zooms: about 40dp squares from Expert's 16 on a short phone. */
 internal const val MAX_ZOOM = 2.5f
 
-/** Boards this wide or more zoom; the 5x5 (and its walkthrough, which teaches the sweep) never does. */
+/** Boards this wide or more zoom (Nonogram's and Arrows'); the small ones and their walkthroughs never do. */
 internal const val ZOOM_FROM_WIDTH = 10
 
 /**
  * How the grid is shown in its box: [scale] 1 is the whole grid; [offset] is where its top-left
- * sits, in pixels, so it is never above zero and never far enough left or up to show past an edge.
+ * sits, in pixels, so it is never above zero and never far enough left or up to show past an edge; [max] is
+ * the most it zooms.
  */
 @Immutable
-internal data class GridView(val scale: Float = 1f, val offset: Offset = Offset.Zero) {
+internal data class GridView(val scale: Float = 1f, val offset: Offset = Offset.Zero, val max: Float = MAX_ZOOM) {
     val zoomed: Boolean get() = scale > 1.001f
 
-    /** Zoomed by [factor] about [focus] (a point in the box), within 1 and [MAX_ZOOM]. */
+    /** Zoomed by [factor] about [focus] (a point in the box), within 1 and [max]. */
     fun zoomedBy(factor: Float, focus: Offset, box: Size): GridView {
-        val next = (scale * factor).coerceIn(1f, MAX_ZOOM)
-        return GridView(next, focus - (focus - offset) * (next / scale)).within(box)
+        val next = (scale * factor).coerceIn(1f, max)
+        return GridView(next, focus - (focus - offset) * (next / scale), max).within(box)
     }
 
     fun pannedBy(delta: Offset, box: Size): GridView = copy(offset = offset + delta).within(box)
@@ -64,7 +65,7 @@ internal data class GridView(val scale: Float = 1f, val offset: Offset = Offset.
     fun showing(xs: ClosedFloatingPointRange<Float>?, ys: ClosedFloatingPointRange<Float>?, box: Size): GridView {
         if (!zoomed) return this
         fun fit(span: ClosedFloatingPointRange<Float>?, room: Float) =
-            span?.let { room / (it.endInclusive - it.start).coerceAtLeast(1f) } ?: MAX_ZOOM
+            span?.let { room / (it.endInclusive - it.start).coerceAtLeast(1f) } ?: max
         val next = minOf(scale, fit(xs, box.width), fit(ys, box.height)).coerceAtLeast(1f)
         fun axis(span: ClosedFloatingPointRange<Float>?, at: Float, room: Float): Float {
             // Keep the middle of the view where it was, then centre on the span if that leaves it out.
@@ -74,12 +75,12 @@ internal data class GridView(val scale: Float = 1f, val offset: Offset = Offset.
             val hi = span.endInclusive * next + kept
             return if (lo >= 0f && hi <= room) kept else room / 2 - (span.start + span.endInclusive) / 2 * next
         }
-        return GridView(next, Offset(axis(xs, offset.x, box.width), axis(ys, offset.y, box.height))).within(box)
+        return GridView(next, Offset(axis(xs, offset.x, box.width), axis(ys, offset.y, box.height)), max).within(box)
     }
 
     companion object {
         fun lerp(a: GridView, b: GridView, t: Float) =
-            GridView(a.scale + (b.scale - a.scale) * t, lerp(a.offset, b.offset, t))
+            GridView(a.scale + (b.scale - a.scale) * t, lerp(a.offset, b.offset, t), b.max)
     }
 }
 
