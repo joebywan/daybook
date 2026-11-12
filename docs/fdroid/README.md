@@ -2,7 +2,7 @@
 
 Two routes, both fed by the same listing files in `fastlane/metadata/android/en-US/` (title, descriptions,
 icon, feature graphic, screenshots). `tools/screenshots/capture.sh` refreshes the screenshots there along
-with Play's, so the **Update screenshots** workflow updates every store at once. The text is also what Play
+with Play's, and merging them updates every store at once (`play-screenshots.yml` for Play). The text is also what Play
 shows: `.github/workflows/play-listing.yml` pushes it there, so it is the one copy.
 
 ## 1. Our own repo (live)
