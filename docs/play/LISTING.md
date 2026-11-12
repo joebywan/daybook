@@ -46,8 +46,13 @@ Play's install brackets, read 2026-11-12: 100M+ for Sudoku (Sudoku.com), Word Wh
 Puzzle), Links (Flow Free) and Sand (SortPuz Water Sort); 50M+ for Nonogram (Easybrain) and Unblock (Unblock Me); 10M+ for
 Lexicon's genre on Play, but Wordle had 4.2 billion web solves in 2025 (NYT), so Lexicon is in; 10M+ for Crossword and Cage
 Sudoku, 5M+ for Tally, 1M+ for Tents. Mines' genre could not be confirmed past 100K+.
-Run the **Update screenshots** workflow (Actions, manual): it captures, uploads to the listing with `tools/screenshots/upload-play.py` (the service account needs "Manage store presence"; Google reviews the change and the live listing keeps the old images meanwhile) and opens a PR for the `docs/` images, which makes them part of the same "recapture when
-the look changes" duty as `docs/screenshots/`.
+A merge to `main` that changes `docs/play/screenshots/` or `docs/play/tablet-screenshots/` sends them to the listing
+(`.github/workflows/play-screenshots.yml`, running `tools/screenshots/upload-play.py`; the service account needs "Manage store
+presence"; Google reviews the change and the live listing keeps the old images meanwhile). A slot Play already holds the same
+images for, by sha256, is left alone, and a run that changes nothing commits no edit, so it never starts a review. To recapture,
+run `capture.sh` locally or the **Update screenshots** workflow (Actions, manual), which opens a PR with the new images; either
+way they are reviewed in the PR before they reach Play. This is part of the same "recapture when the look changes" duty as
+`docs/screenshots/`.
 
 ## Declarations
 

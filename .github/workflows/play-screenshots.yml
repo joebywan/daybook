@@ -1,0 +1,63 @@
+name: Play listing screenshots
+
+# Pushes the committed screenshots in docs/play/ to the Play listing whenever they change on main
+# (tools/screenshots/upload-play.py, which skips a slot Play already holds the same images for).
+# They are captured with tools/screenshots/capture.sh, locally or by the manual "Update screenshots"
+# workflow, and reviewed in a pull request before they get here. Every listing change goes to Google review.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/play/screenshots/*.png'
+      - 'docs/play/tablet-screenshots/*.png'
+      - 'tools/screenshots/upload-play.py'
+      - '.github/workflows/play-screenshots.yml'
+  pull_request:
+    paths:
+      - 'docs/play/screenshots/*.png'
+      - 'docs/play/tablet-screenshots/*.png'
+      - 'tools/screenshots/upload-play.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play-listing   # shared with play-listing.yml: Play allows one open edit per app
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Pull requests only count the files, so a set Play would refuse fails before it merges.
+      - name: Check
+        run: python3 tools/screenshots/upload-play.py --check
+
+  # A job of its own so that only the upload, never a pull request's check, runs in the release environment.
+  upload:
+    needs: screenshots
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    environment: release   # holds the Play service account
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Upload to Play
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::PLAY_SERVICE_ACCOUNT_JSON is not set; the screenshots were not uploaded."
+            exit 1
+          fi
+          pip install --quiet google-api-python-client google-auth
+          python3 tools/screenshots/upload-play.py
