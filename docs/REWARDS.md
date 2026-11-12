@@ -253,7 +253,7 @@ One button, Start. No question, no pages, nothing drawn over the grid (the owner
 only when the launch file has no `welcomed` key and `ProgressStore.hasPlayed()` is false (the timer default's rule); a
 player who has played is marked welcomed on the spot, so an existing player never sees it. Start writes `welcomed`. Home
 draws nothing until the answer is known, so neither the grid nor the welcome flashes. `render.py --home` on clean storage
-shows it; `tools/screenshots/capture.sh` taps Start.
+shows it; `tools/screenshots/capture.sh` picks a look and taps Start.
 
 ## Continue (`ContinueRow` in `ui/home/HomeScreen.kt`)
 
