@@ -46,7 +46,10 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}   # this step only; reads the title and body as they are now, so a re-run after an edit sees the edit
+          HEAD_REF: ${{ github.head_ref }}
         run: |
+          # A branch name is published too: no claude/ branches (the owner, 2026-11-13; a ruleset also refuses creating them).
+          case "$HEAD_REF" in claude/*) echo "::error::Branch $HEAD_REF is named claude/..., which CLAUDE.md forbids. Push it under another name and reopen the pull request."; exit 1 ;; esac
           # attribution.yml strips a trailing footer the GitHub connector adds; give it a minute to land.
           for wait in 0 15 15 15 15; do
             sleep "$wait"
