@@ -64,7 +64,12 @@ import com.joebywan.daybook.ui.LocalBoardTones
 import com.joebywan.daybook.ui.LocalReducedMotion
 import com.joebywan.daybook.ui.rememberMoveFeel
 import com.joebywan.daybook.ui.theme.vivid
+import com.joebywan.daybook.ui.theme.ArcadeBoard
+import com.joebywan.daybook.ui.theme.ArcadeFill
 import com.joebywan.daybook.ui.theme.BoardHues
+import com.joebywan.daybook.ui.theme.arcadeLift
+import com.joebywan.daybook.ui.theme.classicLook
+import androidx.compose.material3.ColorScheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -166,22 +171,44 @@ object Hexwords : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = BoardHues.HUE_PAIRS[0]
-        val fill = BoardHues.fill(hueB, dark)
-        val mark = BoardHues.mark(hueA)
+        val hexTones = HexTones.of(scheme, hueA, hueB)
         val rows = listOf(3, 4, 3)
         Canvas(modifier) {
             val g = HexGeometry(rows, size.width, size.height)
             for (i in g.xs.indices) {
                 val c = Offset(g.xs[i], g.ys[i])
+                val box = Offset(c.x - g.apothem, c.y - g.radius) to Size(g.apothem * 2f, g.radius * 2f)
                 when (i) {
-                    MOTIF_GONE[0], MOTIF_GONE[1] -> drawPath(hexPath(c, g.radius * 0.92f), fill.copy(alpha = 0.3f), style = Stroke(g.radius * 0.1f))
-                    in MOTIF_WORD -> drawPath(hexPath(c, g.radius * 0.92f), mark)
-                    else -> drawPath(hexPath(c, g.radius * 0.92f), fill)
+                    MOTIF_GONE[0], MOTIF_GONE[1] -> drawPath(hexPath(c, g.radius * 0.92f), hexTones.gone(0.3f), style = Stroke(g.radius * 0.1f))
+                    in MOTIF_WORD -> drawPath(hexPath(c, g.radius * 0.92f), hexTones.picked.brush(box.first, box.second))
+                    else -> drawPath(hexPath(c, g.radius * 0.92f), hexTones.free.brush(box.first, box.second))
                 }
             }
-            val ink = BoardHues.onFill(mark)
+            val ink = hexTones.picked.ink
             MOTIF_WORD.zipWithNext { a, b ->
                 drawLine(ink, Offset(g.xs[a], g.ys[a]), Offset(g.xs[b], g.ys[b]), g.radius * 0.22f, StrokeCap.Round)
+            }
+        }
+    }
+
+    /**
+     * A block's colours. Classic, as before Arcade: the pair's fill for a hex, its mark for a picked one, the mark faded for the
+     * trail. Arcade: Word Wheel's letter tiles (the board's amber) for a hex, the control's gradient for a picked one.
+     */
+    private class HexTones(val free: ArcadeFill, val picked: ArcadeFill, val trail: Color, private val goneTone: Color) {
+        /** A gone hex's outline at [alpha] of its tone. */
+        fun gone(alpha: Float) = goneTone.copy(alpha = goneTone.alpha * alpha)
+
+        companion object {
+            fun of(scheme: ColorScheme, hueA: Float, hueB: Float): HexTones {
+                if (!classicLook()) {
+                    val a = ArcadeBoard.of(scheme)
+                    return HexTones(a.letter, a.control, a.selectedEdge.copy(alpha = 0.55f), if (a.frame.alpha < 1f) a.squareInk else a.frame)
+                }
+                val dark = BoardHues.isDark(scheme)
+                val fill = BoardHues.fill(hueB, dark)
+                val mark = BoardHues.mark(hueA)
+                return HexTones(ArcadeFill(fill, fill, BoardHues.onFill(fill)), ArcadeFill(mark, mark, BoardHues.onFill(mark)), mark.copy(alpha = 0.55f), fill)
             }
         }
     }
@@ -237,6 +264,9 @@ object Hexwords : PuzzleType {
         val scheme = MaterialTheme.colorScheme
         val dark = BoardHues.isDark(scheme)
         val (hueA, hueB) = remember(s.letters) { BoardHues.pair(s.letters.hashCode()) }
+        val classic = classicLook()
+        val hexTones = HexTones.of(scheme, hueA, hueB)
+        val wrong = if (classic) scheme.error else ArcadeBoard.current.error
         val (highlight, glow, pulse) = rememberHintPaint()
         val playable = interactive && !s.solved
         val measurer = rememberTextMeasurer()
@@ -351,7 +381,7 @@ object Hexwords : PuzzleType {
                 Text(
                     notice ?: headerOf(s, stuck, lostShown),
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (notice != null || ((stuck || lostShown) && !s.solved)) scheme.error else scheme.onSurfaceVariant,
+                    color = if (notice != null || ((stuck || lostShown) && !s.solved)) wrong else scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -363,15 +393,16 @@ object Hexwords : PuzzleType {
                         val pts = HexLogic.points(picked.size)
                         Box(
                             Modifier
+                                .then(if (classic) Modifier else Modifier.arcadeLift(hexTones.picked, 50.dp))
                                 .clip(RoundedCornerShape(50))
-                                .background(BoardHues.mark(hueA))
+                                .background(hexTones.picked.brush)
                                 .clickable(enabled = playable) { submit(picked) }
                                 .padding(horizontal = 18.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 picked.map { s.letters[it].uppercaseChar() }.joinToString("") + if (pts > 0) "  +$pts" else "",
-                                color = BoardHues.onFill(BoardHues.mark(hueA)),
+                                color = hexTones.picked.ink,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -451,9 +482,9 @@ object Hexwords : PuzzleType {
                     // A hex on its way back stays an empty outline until it lands; one the player has already picked just shows.
                     val landing = returning.filterIndexed { k, i -> leaveProgress(k, ms) < 1f && i !in picked }
                     val shown = landing.fold(free) { m, i -> m and (1L shl i).inv() }
-                    drawBlock(s, shown, picked, finger, highlight, glow, pulse.value, hueA, hueB, dark, measurer, feel, vivid(accent))
-                    drawLeaving(s, leaving, ms, BoardHues.mark(hueA), false, measurer)
-                    drawLeaving(s, returning.map { if (it in landing) it else -1 }, ms, BoardHues.fill(hueB, dark), true, measurer)
+                    drawBlock(s, shown, picked, finger, highlight, glow, pulse.value, hexTones, measurer, feel, if (classic) vivid(accent) else ArcadeBoard.of(scheme).selected.from)
+                    drawLeaving(s, leaving, ms, hexTones.picked, false, measurer)
+                    drawLeaving(s, returning.map { if (it in landing) it else -1 }, ms, hexTones.free, true, measurer)
                 }
                 Text(
                     takenLine(s),
@@ -469,7 +500,7 @@ object Hexwords : PuzzleType {
     }
 
     /** [hexes] going, or with [back] coming back, in turn; a hex of -1 keeps its turn and draws nothing. */
-    private fun DrawScope.drawLeaving(s: HexwordsState, hexes: List<Int>, ms: Float, tone: Color, back: Boolean, measurer: TextMeasurer) {
+    private fun DrawScope.drawLeaving(s: HexwordsState, hexes: List<Int>, ms: Float, tone: ArcadeFill, back: Boolean, measurer: TextMeasurer) {
         if (hexes.isEmpty()) return
         val g = HexGeometry(s.rows, size.width, size.height)
         hexes.forEachIndexed { k, i ->
@@ -478,10 +509,10 @@ object Hexwords : PuzzleType {
             val t = if (back) 1f - p else p
             val c = Offset(g.xs[i], g.ys[i])
             scale(1f - 0.5f * t, c) {
-                drawPath(hexPath(c, g.radius * 0.94f), tone.copy(alpha = 1f - t))
+                drawPath(hexPath(c, g.radius * 0.94f), tone.brush(Offset(c.x - g.apothem, c.y - g.radius), Size(g.apothem * 2f, g.radius * 2f)), alpha = 1f - t)
                 val layout = measurer.measure(
                     s.letters[i].uppercase(),
-                    TextStyle(color = BoardHues.onFill(tone).copy(alpha = 1f - t), fontSize = (g.radius * 0.95f).toSp(), lineHeight = (g.radius * 1.14f).toSp(), fontWeight = FontWeight.Bold),
+                    TextStyle(color = tone.ink.copy(alpha = 1f - t), fontSize = (g.radius * 0.95f).toSp(), lineHeight = (g.radius * 1.14f).toSp(), fontWeight = FontWeight.Bold),
                 )
                 drawText(layout, topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
             }
@@ -496,16 +527,12 @@ object Hexwords : PuzzleType {
         highlight: BoardHighlight,
         glow: Color,
         pulse: Float,
-        hueA: Float,
-        hueB: Float,
-        dark: Boolean,
+        tones: HexTones,
         measurer: TextMeasurer,
         feel: MoveFeel,
         accent: Color,
     ) {
         val g = HexGeometry(s.rows, size.width, size.height)
-        val mark = BoardHues.mark(hueA)
-        val fill = BoardHues.fill(hueB, dark)
         val body = g.radius * 0.94f
         for (i in g.xs.indices) {
             val c = Offset(g.xs[i], g.ys[i])
@@ -513,13 +540,14 @@ object Hexwords : PuzzleType {
             val alpha = if (look.dim) 0.3f else 1f
             if (free shr i and 1L == 1L) {
                 val chosen = i in picked
-                val tone = if (chosen) mark else fill
+                val tone = if (chosen) tones.picked else tones.free
                 val box = Size(g.apothem * 2f, g.radius * 2f)
-                feelSquare(feel, i, Offset(c.x - g.apothem, c.y - g.radius), box, accent) {
-                    drawPath(hexPath(c, body), tone.copy(alpha = alpha))
+                val at = Offset(c.x - g.apothem, c.y - g.radius)
+                feelSquare(feel, i, at, box, accent) {
+                    drawPath(hexPath(c, body), tone.brush(at, box), alpha = alpha)
                 }
             } else {
-                drawPath(hexPath(c, body), fill.copy(alpha = 0.25f * alpha), style = Stroke(g.radius * 0.05f))
+                drawPath(hexPath(c, body), tones.gone(0.25f * alpha), style = Stroke(g.radius * 0.05f))
             }
             if (look.strong || look.soft) {
                 drawPath(
@@ -530,7 +558,7 @@ object Hexwords : PuzzleType {
             }
         }
         if (picked.isNotEmpty()) {
-            val line = mark.copy(alpha = 0.55f)
+            val line = tones.trail
             val w = g.radius * 0.2f
             for (k in 1 until picked.size) {
                 drawLine(line, Offset(g.xs[picked[k - 1]], g.ys[picked[k - 1]]), Offset(g.xs[picked[k]], g.ys[picked[k]]), w, StrokeCap.Round)
@@ -542,11 +570,11 @@ object Hexwords : PuzzleType {
             if (free shr i and 1L == 0L) continue
             val c = Offset(g.xs[i], g.ys[i])
             val alpha = if (highlight.look(i).dim) 0.3f else 1f
-            val tone = if (i in picked) mark else fill
+            val tone = if (i in picked) tones.picked else tones.free
             feelSquare(feel, i, Offset(c.x - g.apothem, c.y - g.radius), Size(g.apothem * 2f, g.radius * 2f), accent) {
                 val layout = measurer.measure(
                     s.letters[i].uppercase(),
-                    TextStyle(color = BoardHues.onFill(tone).copy(alpha = alpha), fontSize = (g.radius * 0.95f).toSp(), lineHeight = (g.radius * 1.14f).toSp(), fontWeight = FontWeight.Bold),
+                    TextStyle(color = tone.ink.copy(alpha = alpha), fontSize = (g.radius * 0.95f).toSp(), lineHeight = (g.radius * 1.14f).toSp(), fontWeight = FontWeight.Bold),
                 )
                 drawText(layout, topLeft = Offset(c.x - layout.size.width / 2f, c.y - layout.size.height / 2f))
             }
