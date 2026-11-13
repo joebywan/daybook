@@ -195,7 +195,7 @@ techniques), `tierFor` (usually `tierByIndex(...)`), a `Drill`, the trained badg
     null keeps to the teacher's one step. Pearls' `PearlsTeacher.steps` lists each square's local rule of the kind, and
     each edge that would close a small loop; Atoms' `AtomsTeacher.steps` each atom the technique's level forces; Pipes'
     `PipesTeacher.steps` each tile of the technique the reasoning pins (for the simpler techniques, only those pinned
-    before the first no-loop, which needed nothing more). A what-if is only ever the teacher's one pick in all three.
+    before the first no-loop, which needed nothing more). A what-if is only ever the teacher's one pick in all three. Links' `LinksTeacher.steps` lists every square of the rung (`LinksLogic.steps`, the ladder's own loops run on past their first find), each tip's what-if included.
     Who's Who: `WhosWhoTeacher.steps` over `WhosWhoLogic.clueSteps`/`onlySteps`/
     `linkSteps`/`houseSteps` (every step of each rung, in the order the ladder's direct pick takes its first; kept
     beside the picks rather than replacing them, since `firstOrNull()` over them made Expert generation 23% slower) and, for a what-if, every
@@ -522,7 +522,7 @@ techniques no walk reached.
 | Dominoes | 6: only place 10 a tier, counting 0/30/10, what-if 0/0/30, the rest 14-30 | move | 1-37 ms | **done** |
 | Mines | 6: subset 0/28/26, pair 0/17/17, count edge 0/0/29, what-if 0/0/1 (count: never) | move | 1-24 ms | **done** (what-if kept: 42 ms a board through the cache) |
 | Lamps | 7: all reached; dark 0/11/14 | move | 0-15 ms | **done** (a cross where the answer has a lamp is wrong in practice) |
-| Links | 4: one way, two ways in (Standard, from 2.7% of boards), a cut (Hard), a what-if (Expert, on 31% of boards) | move | see `LinksTrainingTest` | **done** (no list of every instance yet: a practice passes on the hint's own lines) |
+| Links | 4: one way, two ways in (Standard, from 2.7% of boards), a cut (Hard), a what-if (Expert, on 31% of boards) | move | see `LinksTrainingTest` | **done** (any instance passes: `LinksTeacher.steps`) |
 | Pearls | 7: pearl's arms and lines 26-30, dead end 18/28/29, small loop 0/30/29, what-if 0/0/30 (pearl ways: never, left out) | move | 5-26 ms | **done** |
 | Loop | 6: count, one way on, dead end, a number with its corners (Standard), small loop (Hard), what-if (Expert); every one reached | move (Pearls' shape: `LoopTeacher.steps`, judged by the teacher's mistakes; final board `examIndex` 0) | not measured | **done** (`LoopTrainingTest`: practices checked against `LoopOracle`) |
 | Who's Who | 5: clue, only 29-30; link, house 0/29-30/30; what-if 0/0/30 | move | 1-77 ms | **done**: the steps are logic, the words only labels |

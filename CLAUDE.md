@@ -1020,8 +1020,8 @@ ladder, the exhaustive count, the drag, the generator), `LinksTeacher.kt`, `Link
   86.9 steps a board; a cut 0 / 6.4 / 6.1 a board, a what-if 0 / 0 / 0.57; two ways in is rare on Standard (0.05 a board: one
   way on does nearly everything there). Expert hints: max 8 ms on the JVM. The walkthrough is a hand-built 5x5 with one
   answer (by the oracle), finished by the local rules; it teaches drawing from an end, carrying a line on, a line from an empty
-  square, a slip that cuts a pair off, and rubbing out. Training: `core/training/LinksTraining.kt`, four techniques (no list of
-  every instance yet, so a practice passes on the hint's own lines).
+  square, a slip that cuts a pair off, and rubbing out. Training: `core/training/LinksTraining.kt`, four techniques; any
+  instance of the technique passes (`LinksTeacher.steps`).
 - **Colour:** twelve pair colours from the hue family's three fixed steps, greedy by CIEDE2000 with deuteranopia and
   protanopia (`LinksPaletteTest`: closest 14.6 / 13.9 / 8.3 for 7 / 9 / 12), the same in both schemes; Coral and Green are free
   (no right or wrong is shown). Every end carries its number; squares on a pair's line take a wash of its colour.

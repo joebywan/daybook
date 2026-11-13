@@ -97,6 +97,23 @@ internal object LinksTeacher {
         return explain(v, s)
     }
 
+    /**
+     * Every step of [technique] on the visible board, [deduce]'s pick first when it is one: Training's "any instance counts"
+     * (`MoveDrill(every)`). Never the answer.
+     */
+    fun steps(n: Int, ends: String, links: String, technique: String): List<Step> {
+        val b = LinksLogic.Board.of(n, ends)
+        val m = LinksLogic.masksOf(links)
+        val rung = when (technique) {
+            ONE_WAY, TWO_WAYS -> LinksLogic.LOCAL
+            CUT -> LinksLogic.CUT
+            WHAT_IF -> LinksLogic.WHAT_IF
+            else -> return emptyList()
+        }
+        val v = LinksLogic.View(b, m)
+        return LinksLogic.steps(b, m, rung).filter { techniqueOf(it) == technique }.map { explain(v, it) }
+    }
+
     /** The technique a ladder step is taught as. */
     fun techniqueOf(s: LinksLogic.Step): String = when (s.rung) {
         LinksLogic.LOCAL -> if (s.kind == LinksLogic.K_ONE_WAY) ONE_WAY else TWO_WAYS

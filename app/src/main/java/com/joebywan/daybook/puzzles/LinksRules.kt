@@ -403,7 +403,7 @@ internal object LinksLogic {
     fun nextStep(b: Board, m: IntArray, maxRung: Int = WHAT_IF): Step? {
         val v = View(b, m)
         if (v.bad) return null
-        local(v, null)?.let { return it.let { s -> Step(LOCAL, s.kind, s.square, s.lines) } }
+        local(v, null)?.let { return it }
         if (maxRung < CUT) return null
         val r = reach(v)
         if (r.cutOff >= 0 || r.stranded >= 0) return null
@@ -412,17 +412,38 @@ internal object LinksLogic {
         return whatIf(v, r)
     }
 
+    /**
+     * Every forced step on [m] that [rung] finds, in the order [nextStep] would meet them (its pick, when it is on [rung], is
+     * the first), for Training's "any instance counts". Each is sound for every answer, as [nextStep]'s are.
+     */
+    fun steps(b: Board, m: IntArray, rung: Int): List<Step> {
+        val v = View(b, m)
+        if (v.bad) return emptyList()
+        val all = mutableListOf<Step>()
+        if (rung == LOCAL) {
+            local(v, null, all)
+            return all
+        }
+        val r = reach(v)
+        if (r.cutOff >= 0 || r.stranded >= 0) return emptyList()
+        if (rung == CUT) cut(v, r, all) else whatIf(v, r, all)
+        return all
+    }
+
     /** A bare step found by the local rules, with [sets] striking joins when given. */
-    private fun local(v: View, sets: IntArray?): Step? {
+    /** The first bare step found by the local rules, with [sets] striking joins when given; or each of them into [all]. */
+    private fun local(v: View, sets: IntArray?, all: MutableList<Step>? = null): Step? {
         for (q in 0 until v.b.squares) {
             if (!v.isTip(q)) continue
             val w = v.ways(q, sets)
-            if (w.size == 1) return Step(LOCAL, K_ONE_WAY, q, listOf(q to w[0]))
+            if (w.size == 1) Step(LOCAL, K_ONE_WAY, q, listOf(q to w[0])).let { if (all == null) return it else all += it }
         }
         for (q in 0 until v.b.squares) {
             if (!v.isEmpty(q)) continue
             val w = v.ways(q, sets)
-            if (w.size == 2 && twoJoin(v, q, w[0], w[1], sets)) return Step(LOCAL, K_TWO_WAYS, q, listOf(w[0] to q, q to w[1]))
+            if (w.size == 2 && twoJoin(v, q, w[0], w[1], sets)) {
+                Step(LOCAL, K_TWO_WAYS, q, listOf(w[0] to q, q to w[1])).let { if (all == null) return it else all += it }
+            }
         }
         return null
     }
@@ -435,7 +456,7 @@ internal object LinksLogic {
         return broken(v2, withReach = true)
     }
 
-    private fun cut(v: View, r: Reach): Step? {
+    private fun cut(v: View, r: Reach, all: MutableList<Step>? = null): Step? {
         val b = v.b
         // Tips first, then empty squares, each in reading order.
         for (pass in 0..1) for (q in 0 until b.squares) {
@@ -448,14 +469,14 @@ internal object LinksLogic {
             if (kept.size != need) continue
             if (need == 2 && !twoJoin(v, q, kept[0], kept[1], r.sets)) continue
             val lines = if (need == 1) listOf(q to kept[0]) else listOf(kept[0] to q, q to kept[1])
-            val all = v.ways(q)
-            val struck = all.filter { it !in kept }
-            return Step(CUT, if (need == 1) K_ONE_WAY else K_TWO_WAYS, q, lines, struck, struck.map { x -> why.getOrNull(w.indexOf(x)) })
+            val struck = v.ways(q).filter { it !in kept }
+            Step(CUT, if (need == 1) K_ONE_WAY else K_TWO_WAYS, q, lines, struck, struck.map { x -> why.getOrNull(w.indexOf(x)) })
+                .let { if (all == null) return it else all += it }
         }
         return null
     }
 
-    private fun whatIf(v: View, r: Reach): Step? {
+    private fun whatIf(v: View, r: Reach, all: MutableList<Step>? = null): Step? {
         // Tips with two ways left, in reading order: each way supposed in turn. Supposing every way of every square was
         // measured too: it finished no more boards and cost far more on a board it cannot finish.
         for (q in 0 until v.b.squares) {
@@ -467,10 +488,13 @@ internal object LinksLogic {
                 if (broke == null) continue
                 val other = w[1 - i]
                 val struck = v.ways(q).filter { it != other }
-                return Step(
+                val step = Step(
                     WHAT_IF, K_ONE_WAY, q, listOf(q to other), struck, struck.map { null },
                     supposed = w[i], chain = chain, chainBroke = broke,
                 )
+                if (all == null) return step
+                all += step
+                break
             }
         }
         return null
